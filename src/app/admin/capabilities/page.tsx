@@ -827,82 +827,82 @@ export default async function CapabilitiesPage() {
             "Operating expense register — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses, software, one-off purchases. Recurring amounts auto-normalised to grosze/month for like-for-like totals; KPI cards show monthly recurring, annualised, payroll subtotal, and one-off spend over the last 30 days. Per-location scoping (or chain-wide), category and payroll-role breakdowns, archive vs delete, next-due reminders.",
         },
         {
-          name: "Finance simulation (sandbox P&L)",
+          name: "Finance calculator (sandbox P&L)",
           status: "live",
           href: "/admin/simulation",
           summary:
             "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
         },
         {
-          name: "Simulation actuals (real-order ground truth)",
+          name: "Calculator actuals (real-order ground truth)",
           status: "live",
           href: "/admin/simulation#unit-economics",
           summary:
-            "GET /api/admin/simulation/actuals?days=90 returns a rolling-window snapshot from the live orders table: orders/day, avg ticket, menu-mix-weighted COGS (Σqty×cost ÷ Σqty×price across every line item, modifiers honoured), delivery vs takeout share, refund/cancellation rate. The Simulation tab renders this as a strip above the inputs with variance vs the operator's typed values; flagged as warning when scenario drifts > 15% from reality. One-click 'Apply actuals' button writes the snapshot back to the scenario. seedSimulationFromHistory also pulls it, so /api/admin/simulation?seed=1 starts from reality instead of defaults.",
+            "GET /api/admin/simulation/actuals?days=90 returns a rolling-window snapshot from the live orders table: orders/day, avg ticket, menu-mix-weighted COGS (Σqty×cost ÷ Σqty×price across every line item, modifiers honoured), delivery vs takeout share, refund/cancellation rate. The Calculator tab renders this as a strip above the inputs with variance vs the operator's typed values; flagged as warning when scenario drifts > 15% from reality. One-click 'Apply actuals' button writes the snapshot back to the scenario. seedSimulationFromHistory also pulls it, so /api/admin/simulation?seed=1 starts from reality instead of defaults.",
         },
         {
-          name: "Simulation customer economics (cohort / LTV / CAC)",
+          name: "Calculator customer economics (cohort / LTV / CAC)",
           status: "live",
           href: "/admin/simulation#customer-economics",
           summary:
-            "GET /api/admin/simulation/cohorts?days=180 groups real orders by phone (using the loyalty engine's checkout capture per CLAUDE.md rule #6) and returns repeat rate, orders per customer, GP per customer (item + modifier level), acquisition velocity, and the new-vs-returning revenue mix. The Simulation tab renders an 8-KPI strip with CAC (implied = marketing fixed cost ÷ new customers per month), LTV/CAC ratio against the institutional 3× gate, customer payback period, and the share of revenue from net-new vs prior-window customers (returning > new is the institutional green light).",
+            "GET /api/admin/simulation/cohorts?days=180 groups real orders by phone (using the loyalty engine's checkout capture per CLAUDE.md rule #6) and returns repeat rate, orders per customer, GP per customer (item + modifier level), acquisition velocity, and the new-vs-returning revenue mix. The Calculator tab renders an 8-KPI strip with CAC (implied = marketing fixed cost ÷ new customers per month), LTV/CAC ratio against the institutional 3× gate, customer payback period, and the share of revenue from net-new vs prior-window customers (returning > new is the institutional green light).",
         },
         {
-          name: "Simulation comp-sales (SSSG)",
+          name: "Calculator comp-sales (SSSG)",
           status: "live",
           href: "/admin/simulation#top-line-growth",
           summary:
             "GET /api/admin/simulation/sssg?days=30 compares trailing-window revenue to the prior trailing window of the same length and decomposes the move into revenue / order / ticket / customer growth so the operator sees what drove the change. The most-watched chain metric in restaurants.",
         },
         {
-          name: "Simulation institutional KPIs (EBITDA / CCC / channel CM1)",
+          name: "Calculator institutional KPIs (EBITDA / CCC / channel CM1)",
           status: "live",
           href: "/admin/simulation#unit-economics",
           summary:
-            "EBITDA / EBITDAR / cash-on-cash / occupancy ratio / contribution-per-labor-hour / promo-adjusted AOV / refund-adjusted net sales / True CM1 per order — all computed client-side from the scenario + actuals. Plus per-channel CM1 panel showing cash / on-site card / Glovo / Wolt contribution per order side-by-side (red < 20%, value-destructive); attachment-efficiency panel ranking each enabled attach lever by absolute monthly profit lift; unit-economics breakdown panel reproducing the institutional audit's per-order build-up (Revenue → -COGS → -Packaging → -Waste → -Refund → -Loyalty → -Fees → -Marketing CAC = True CM1 → -Labor → -Fixed = True CM2); margin-traps callout flagging delivery-only marketplace casualties, spoilage-risk items, and prep-heavy false-high-revenue plates. The IC-grade surface that turns the simulator from operator calculator into FP&A dashboard.",
+            "EBITDA / EBITDAR / cash-on-cash / occupancy ratio / contribution-per-labor-hour / promo-adjusted AOV / refund-adjusted net sales / True CM1 per order — all computed client-side from the scenario + actuals. Plus per-channel CM1 panel showing cash / on-site card / Glovo / Wolt contribution per order side-by-side (red < 20%, value-destructive); attachment-efficiency panel ranking each enabled attach lever by absolute monthly profit lift; unit-economics breakdown panel reproducing the institutional audit's per-order build-up (Revenue → -COGS → -Packaging → -Waste → -Refund → -Loyalty → -Fees → -Marketing CAC = True CM1 → -Labor → -Fixed = True CM2); margin-traps callout flagging delivery-only marketplace casualties, spoilage-risk items, and prep-heavy false-high-revenue plates. The IC-grade surface that turns the calculator from a basic operator tool into an FP&A dashboard.",
         },
         {
-          name: "Simulation menu engineering matrix",
+          name: "Calculator menu engineering matrix",
           status: "live",
           href: "/admin/simulation#menu-strategy",
           summary:
-            "GET /api/admin/simulation/menu-engineering?days=90 computes per-item unitsSold + GP/unit (modifier deltas folded in) across real orders and groups items into the Kasavana-Smith quadrants (star / plowhorse / puzzle / dog), splitting at the median velocity and median GP. The Simulation tab renders a 2×2 grid with per-quadrant verdict ('Reprice up or re-engineer', 'Delete unless strategic') and the top 6 items per quadrant.",
+            "GET /api/admin/simulation/menu-engineering?days=90 computes per-item unitsSold + GP/unit (modifier deltas folded in) across real orders and groups items into the Kasavana-Smith quadrants (star / plowhorse / puzzle / dog), splitting at the median velocity and median GP. The Calculator tab renders a 2×2 grid with per-quadrant verdict ('Reprice up or re-engineer', 'Delete unless strategic') and the top 6 items per quadrant.",
         },
         {
-          name: "Simulation sensitivity tornado",
+          name: "Calculator sensitivity tornado",
           status: "live",
           href: "/admin/simulation#sensitivity",
           summary:
             "Computed client-side on every render. Flexes each key driver independently around the current scenario (orders ±10%, ticket ±10%, food cost ±5pp, labor ±10%, fixed ±10%, payment fee ±0.5pp, waste/refund ±1pp, CIT 9%↔19%, Glovo commission ±3pp), measures the net-profit swing, and sorts bars descending. Renders as horizontal bars centred on the current value with red downside / green upside. The IC-grade 'where would I look first?' answer.",
         },
         {
-          name: "Simulation daypart + hourly throughput",
+          name: "Calculator daypart + hourly throughput",
           status: "live",
           href: "/admin/simulation#operations",
           summary:
-            "GET /api/admin/simulation/dayparts?days=90 (lunch 11-15, dinner 17-22, late-night 22-04, off-peak) and /api/admin/simulation/hourly?days=30 (24 rows). The Simulation tab renders a daypart table with GP-rate colour coding plus a 24-bar throughput chart overlaid with the kitchenCapacity ceiling (red over capacity, amber within 15%). Together they expose menu-mix and peak-hour blow-out risk the daily-aggregated view hides.",
+            "GET /api/admin/simulation/dayparts?days=90 (lunch 11-15, dinner 17-22, late-night 22-04, off-peak) and /api/admin/simulation/hourly?days=30 (24 rows). The Calculator tab renders a daypart table with GP-rate colour coding plus a 24-bar throughput chart overlaid with the kitchenCapacity ceiling (red over capacity, amber within 15%). Together they expose menu-mix and peak-hour blow-out risk the daily-aggregated view hides.",
         },
         {
-          name: "Simulation fleet model (multi-unit / franchise)",
+          name: "Calculator fleet model (multi-unit / franchise)",
           status: "live",
           href: "/admin/simulation#fleet",
           summary:
-            "Multi-unit P&L module on the Simulation tab. Set Unit count ≥ 2 to activate. Models HQ overhead absorption, supply discount at scale (default −10% COGS at 5 units), commissary savings (default −4% at 4 units), franchise royalty (default 6%) + marketing fund (default 2%), DMA cannibalisation (default 15% revenue drag per overlapping prior unit, compounded), and build-out learning curve (default 5%/unit decline to a 55% floor). Renders fleet revenue / EBITDA / EBITDA-per-unit / HQ absorption / fleet build-out KPIs plus a per-unit table breaking down revenue, COGS, labor, royalty, mkt fund, EBITDA, setup cost. The franchise/scale conversation a CFO would actually approve a multi-unit rollout on.",
+            "Multi-unit P&L module on the Calculator tab. Set Unit count ≥ 2 to activate. Models HQ overhead absorption, supply discount at scale (default −10% COGS at 5 units), commissary savings (default −4% at 4 units), franchise royalty (default 6%) + marketing fund (default 2%), DMA cannibalisation (default 15% revenue drag per overlapping prior unit, compounded), and build-out learning curve (default 5%/unit decline to a 55% floor). Renders fleet revenue / EBITDA / EBITDA-per-unit / HQ absorption / fleet build-out KPIs plus a per-unit table breaking down revenue, COGS, labor, royalty, mkt fund, EBITDA, setup cost. The franchise/scale conversation a CFO would actually approve a multi-unit rollout on.",
         },
         {
-          name: "Simulation operational bottlenecks",
+          name: "Calculator operational bottlenecks",
           status: "live",
           href: "/admin/simulation#operations",
           summary:
             "Three panels answering the audit's operator-eye questions. Oven curve: Neapolitan physics (pizzas/cycle × cycle seconds × efficiency) vs observed peak hour from real orders; status banner from headroom → blown out at 85% saturation. Prep flow & queue model: modeled ticket time from per-attach prep seconds (pasta 240s, coffee 30s), peak-hour queue formation when ordersPerDay × peakShare exceeds realistic oven capacity, wait minutes, and a red callout sizing the monthly orders + contribution lost to conversion drop (5%/min past 5 min, capped 60%). Shift plan: maps the uniform labor mix onto prep / lunch / dinner / late-night / close with per-daypart coverage ratio (green < 20%, red > 35%). Menu-engineering panel surfaces hero / profit-driver / anchor tags from the menu definition.",
         },
         {
-          name: "Simulation AI enhancements",
+          name: "Calculator AI enhancements",
           status: has("ANTHROPIC_API_KEY") ? "live" : "needs-config",
           href: "/admin/simulation",
           envVars: ["ANTHROPIC_API_KEY"],
           summary:
-            "Below the sensitivity row on /admin/simulation, a Claude-powered card analyses the current scenario (revenue inputs + assumptions + weather + computed KPIs) and returns 4–6 specific enhancements with category (revenue/cost/risk/operations), severity, problem (citing real numbers), recommendation, and an estimated monthly grosze impact. Manual trigger (button click) to bound API spend. Degrades gracefully to a needs-config banner when the API key is missing — the rest of the simulator stays fully functional without AI.",
+            "Below the sensitivity row on /admin/simulation, a Claude-powered card analyses the current scenario (revenue inputs + assumptions + weather + computed KPIs) and returns 4–6 specific enhancements with category (revenue/cost/risk/operations), severity, problem (citing real numbers), recommendation, and an estimated monthly grosze impact. Manual trigger (button click) to bound API spend. Degrades gracefully to a needs-config banner when the API key is missing — the rest of the calculator stays fully functional without AI.",
         },
         {
           name: "Slots",

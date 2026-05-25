@@ -129,7 +129,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/reports", label: "Reports", icon: BarChart3, shortcut: "r", requiredRole: "manager" },
       { href: "/admin/cash", label: "Cash", icon: Banknote, requiredRole: "manager" },
       { href: "/admin/business-costs", label: "Business costs", icon: Wallet, requiredRole: "manager" },
-      { href: "/admin/simulation", label: "Simulation", icon: LineChart, requiredRole: "manager", featureFlag: "simulation" },
+      { href: "/admin/simulation", label: "Calculator", icon: LineChart, requiredRole: "manager", featureFlag: "simulation" },
     ],
   },
   {

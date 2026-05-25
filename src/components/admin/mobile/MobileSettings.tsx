@@ -81,7 +81,7 @@ export function MobileSettings() {
         toast.error("Could not update toggle");
         return;
       }
-      toast.success(next ? "Simulation enabled" : "Simulation disabled");
+      toast.success(next ? "Calculator enabled" : "Calculator disabled");
       window.dispatchEvent(new Event("sud-admin-settings-updated"));
     } finally {
       setSimBusy(false);
@@ -184,9 +184,9 @@ export function MobileSettings() {
               </div>
             </Section>
 
-            <Section title="Finance simulation (sandbox)">
+            <Section title="Finance calculator (sandbox)">
               <ToggleField
-                label="Show Simulation in the Finance nav"
+                label="Show Calculator in the Finance nav"
                 description="Sandbox monthly P&L modeller. Nothing here writes to your real business-costs ledger."
                 checked={!!settings.simulationEnabled}
                 disabled={simBusy}

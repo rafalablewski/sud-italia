@@ -198,7 +198,7 @@ function AdminSettingsDesktop() {
         body: JSON.stringify({ simulationEnabled: next }),
       });
       if (res.ok) {
-        toast.success(next ? "Simulation enabled" : "Simulation disabled");
+        toast.success(next ? "Calculator enabled" : "Calculator disabled");
         window.dispatchEvent(new Event("sud-admin-settings-updated"));
         await Promise.all([fetchSettings(), fetchAudit()]);
       } else {
@@ -470,13 +470,13 @@ function AdminSettingsDesktop() {
 
           <Card>
             <CardHeader
-              title="Finance simulation (sandbox)"
+              title="Finance calculator (sandbox)"
               description="Sandbox monthly P&L: type orders/day, ticket size, labor mix and fixed costs to see net profit, margin and break-even. Persists separately from the real business-costs ledger — nothing here writes to your books."
               actions={<FlaskConical className="h-4 w-4 v2-muted" />}
             />
             <CardBody>
               <label className="v2-field">
-                <span className="v2-field-label">Show Simulation in the Finance nav</span>
+                <span className="v2-field-label">Show Calculator in the Finance nav</span>
                 <span className="inline-flex items-center gap-2 mt-1">
                   <input
                     type="checkbox"
