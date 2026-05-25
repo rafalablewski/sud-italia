@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#0A0C10;
+    --bg-2:#0E1117;
+    --panel:#11151C;
+    --panel-2:#141922;
+    --card:#151B25;
+    --hair:rgba(255,255,255,0.07);
+    --hair-strong:rgba(255,255,255,0.12);
+    --grid:rgba(255,255,255,0.04);
+    --text:#E8EBF0;
+    --text-dim:#9097A3;
+    --text-faint:#646B78;
+    --accent:#4C8DFF;
+    --accent-soft:rgba(76,141,255,0.14);
+    --amber:#E8A33D;
+    --amber-soft:rgba(232,163,61,0.12);
+    --red:#F0524B;
+    --red-soft:rgba(240,82,75,0.14);
+    --green:#37D295;
+    --green-soft:rgba(55,210,149,0.12);
+    --violet:#8B5CF6;
+    --violet-soft:rgba(139,92,246,0.16);
+    --neutral:#646B78;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:28px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:13px;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ---------- Header ---------- */
+  header{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:var(--s5);
+    height:52px;padding:0 var(--s6);
+    background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3)}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint)}
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--text-dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;
+  }
+  .filters{display:flex;gap:var(--s1);margin-left:auto}
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--text-dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.02em;padding:6px 11px;border-radius:6px;
+    cursor:pointer;transition:all .12s ease;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#06101f;font-weight:600}
+
+  /* stage segmented control */
+  .stages{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;
+    overflow:hidden;background:var(--panel-2);
+  }
+  .stage{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.02em;color:var(--text-dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:6px;transition:all .12s ease;
+    border-right:1px solid var(--hair);white-space:nowrap;
+  }
+  .stage:last-child{border-right:0}
+  .stage:hover{color:var(--text)}
+  .stage .scount{
+    font-size:10px;font-weight:600;min-width:17px;height:16px;padding:0 4px;border-radius:4px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair);color:var(--text-dim);
+  }
+  .stage[aria-pressed="true"]{background:var(--accent);color:#06101f;font-weight:600}
+  .stage[aria-pressed="true"] .scount{background:rgba(6,16,31,0.22);color:#06101f}
+
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--text-dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:all .12s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+  .gallery-link{
+    font-size:11px;color:var(--text-faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:all .12s ease;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .clock{
+    font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);
+    min-width:74px;text-align:right;
+  }
+
+  /* ---------- Metrics row ---------- */
+  .metrics{
+    flex:0 0 auto;
+    display:grid;grid-template-columns:repeat(9,1fr);gap:1px;
+    background:var(--hair);
+    border-bottom:1px solid var(--hair);
+  }
+  .metric{
+    background:var(--bg-2);
+    padding:var(--s4) var(--s5);
+    display:flex;flex-direction:column;gap:var(--s2);
+    min-width:0;
+  }
+  .metric .m-label{
+    font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint);
+    display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+  }
+  .metric .m-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s2)}
+  .metric .m-val{
+    font-family:var(--mono);font-size:30px;font-weight:600;line-height:0.9;letter-spacing:-0.01em;color:var(--text);
+  }
+  .metric .m-unit{font-size:10px;color:var(--text-faint);letter-spacing:0.04em;margin-bottom:3px}
+  .metric .m-spark{flex:0 0 auto}
+  .metric.alert .m-val{color:var(--red)}
+  .metric.warn .m-val{color:var(--amber)}
+  .metric.good .m-val{color:var(--green)}
+  .metric.pace .m-val{color:var(--violet)}
+  .metric .m-foot{font-size:10px;color:var(--text-faint);letter-spacing:0.02em}
+  .metric .m-foot b{color:var(--text-dim);font-weight:600}
+
+  /* ---------- Pace · capacity vs demand ---------- */
+  .subbar{
+    flex:0 0 auto;
+    display:flex;align-items:stretch;gap:var(--s6);
+    padding:var(--s4) var(--s6);
+    background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+
+  /* hero capacity / bottleneck meter */
+  .capmeter{
+    flex:0 0 auto;width:248px;display:flex;flex-direction:column;gap:var(--s2);justify-content:center;
+    padding:var(--s3) var(--s4);border:1px solid var(--hair);border-radius:10px;
+    background:var(--bg-2);transition:border-color .3s ease,box-shadow .3s ease;
+  }
+  .capmeter.breach{
+    border-color:rgba(139,92,246,0.55);
+    box-shadow:0 0 0 1px rgba(139,92,246,0.22),0 0 22px rgba(139,92,246,0.16);
+  }
+  .cap-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+  .cap-label{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint)}
+  .cap-state{
+    font-size:9px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;color:var(--text-dim);
+    padding:2px 7px;border-radius:999px;border:1px solid var(--hair);
+  }
+  .capmeter.breach .cap-state{color:var(--violet);border-color:rgba(139,92,246,0.5);background:var(--violet-soft)}
+  .cap-val{font-family:var(--mono);font-size:38px;font-weight:600;line-height:0.9;letter-spacing:-0.01em;color:var(--text)}
+  .capmeter.breach .cap-val{color:var(--violet)}
+  .capmeter.warn .cap-val{color:var(--amber)}
+  .cap-row{display:flex;align-items:flex-end;gap:var(--s3)}
+  .cap-bottleneck{font-size:10px;color:var(--text-dim);letter-spacing:0.02em;line-height:1.3}
+  .cap-bottleneck b{color:var(--text);font-weight:600}
+  .cap-bar{
+    position:relative;height:7px;border-radius:4px;background:var(--grid);overflow:hidden;
+  }
+  .cap-bar .cap-100{position:absolute;top:-2px;bottom:-2px;left:62.5%;width:1px;background:var(--hair-strong);z-index:2}
+  .cap-bar .cap-fill{
+    position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent);transition:width .3s ease,background-color .3s ease;
+  }
+
+  .stationload{flex:1 1 auto;display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+  .sl-head{
+    font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .sl-bars{display:flex;align-items:flex-end;gap:var(--s4);height:56px}
+  .sl-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0}
+  /* per-station pace gauge: bar fills toward capacity, ghost segment = +forecast */
+  .sl-track{
+    position:relative;width:100%;height:42px;background:var(--grid);border-radius:3px;
+    display:flex;align-items:flex-end;overflow:hidden;
+  }
+  .sl-cap{
+    position:absolute;left:0;right:0;height:1px;background:var(--hair-strong);z-index:3;pointer-events:none;
+  }
+  .sl-fill{
+    position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:3px 3px 0 0;
+    transition:height .3s ease,background-color .3s ease;min-height:2px;z-index:1;
+  }
+  .sl-fill.amber{background:var(--amber)}
+  .sl-fill.violet{background:var(--violet)}
+  /* ghosted forecast segment stacked above current load */
+  .sl-fc{
+    position:absolute;left:0;right:0;border-radius:2px 2px 0 0;z-index:2;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,0.16) 0 2px,transparent 2px 4px);
+    border-top:1px dashed rgba(255,255,255,0.28);transition:height .3s ease,bottom .3s ease;
+  }
+  .sl-name{font-size:9px;letter-spacing:0.06em;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .sl-num{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .sl-num .pct{color:var(--text-faint)}
+  .sl-num.amber{color:var(--amber)}
+  .sl-num.violet{color:var(--violet)}
+  .sl-fc-badge{
+    font-family:var(--mono);font-size:9px;letter-spacing:0.02em;color:var(--text-faint);
+    padding:1px 4px;border:1px dashed var(--hair-strong);border-radius:4px;
+  }
+
+  .legend{
+    flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:6px;
+    padding-left:var(--s6);border-left:1px solid var(--hair);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:7px;font-size:10px;color:var(--text-dim);letter-spacing:0.02em}
+  .swatch{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+  .swatch.fc{
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,0.30) 0 2px,transparent 2px 4px);
+    border:1px dashed var(--hair-strong);
+  }
+
+  /* ---------- Board / lanes ---------- */
+  .board{
+    flex:1 1 auto;min-height:0;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--hair);
+  }
+  .lane{background:var(--bg);display:flex;flex-direction:column;min-height:0}
+  .lane-head{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .lane-title{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+  .lane-count{font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+  .lane-body{
+    flex:1 1 auto;overflow-y:auto;padding:var(--s4) var(--s5);
+    display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .lane-body::-webkit-scrollbar{width:7px}
+  .lane-body::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .lane-body::-webkit-scrollbar-track{background:transparent}
+
+  /* condensed ticket */
+  .ticket{
+    position:relative;background:var(--card);border:1px solid var(--hair);border-radius:8px;
+    padding:var(--s3) var(--s4);overflow:hidden;
+  }
+  .ticket::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--neutral);
+  }
+  .ticket.warn::before{background:var(--amber)}
+  .ticket.danger::before{background:var(--red)}
+  .ticket.calm::before{background:var(--green)}
+  .ticket.warn{border-color:rgba(232,163,61,0.30)}
+  .ticket.danger{border-color:rgba(240,82,75,0.40)}
+  .ticket.calm{border-color:rgba(55,210,149,0.26)}
+
+  .t-row1{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+  .t-id{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:0.03em;color:var(--text)}
+  .t-sla{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:0.02em;color:var(--text-dim)}
+  .t-sla.warn{color:var(--amber)}
+  .t-sla.danger{color:var(--red)}
+  .t-sla.calm{color:var(--green)}
+  .t-row2{
+    display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:var(--text-dim);
+  }
+  .t-row2 .nm{color:var(--text)}
+  .t-row2 .dot{width:3px;height:3px;border-radius:50%;background:var(--text-faint);flex:0 0 auto}
+  .t-row2 .chan{display:inline-flex;align-items:center;gap:4px}
+  .t-row2 .chan svg{width:11px;height:11px;opacity:.65}
+
+  .t-items{margin-top:var(--s3);display:flex;flex-direction:column;gap:2px}
+  .it{display:flex;gap:var(--s2);font-size:12px;line-height:1.35}
+  .it .q{font-family:var(--mono);color:var(--text-dim);min-width:20px;font-size:11px}
+  .it .nm{color:var(--text-dim)}
+  .it .cat{margin-left:auto;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);align-self:center}
+  .it .note{display:block;font-size:10.5px;color:var(--amber);margin-top:1px}
+  .order-note{
+    margin-top:var(--s2);padding:5px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--hair);
+    border-radius:6px;font-size:10.5px;color:var(--text-dim);display:flex;gap:6px;align-items:flex-start;
+  }
+  .order-note svg{width:11px;height:11px;flex:0 0 auto;margin-top:1px;opacity:.7}
+
+  .t-foot{
+    margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--hair);
+    display:flex;align-items:center;gap:var(--s3);
+  }
+  .t-stat{display:flex;flex-direction:column;gap:1px}
+  .t-stat .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint)}
+  .t-stat .v{font-family:var(--mono);font-size:13px;color:var(--text-dim)}
+  .t-meta{font-size:9px;letter-spacing:0.06em;color:var(--text-faint);text-transform:uppercase}
+  .act{
+    margin-left:auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;
+    font-weight:600;letter-spacing:0.04em;border-radius:6px;padding:7px 12px;white-space:nowrap;
+    border:1px solid var(--accent);background:var(--accent);color:#06101f;transition:all .12s ease;
+  }
+  .act:hover{filter:brightness(1.08)}
+  .act.ghost{background:transparent;color:var(--green);border-color:var(--green)}
+  .act.ghost:hover{background:var(--green-soft)}
+
+  .empty{
+    color:var(--text-faint);font-size:12px;text-align:center;padding:var(--s6) var(--s4);
+    border:1px dashed var(--hair);border-radius:8px;
+  }
+
+  /* single-stage view: full-width wrapping grid of condensed tickets */
+  .board.solo{
+    display:flex;flex-direction:column;background:var(--bg);
+  }
+  .board.solo .solo-head{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    padding:var(--s3) var(--s6);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .board.solo .solo-head .lane-title{font-size:11px}
+  .board.solo .solo-grid{
+    flex:1 1 auto;min-height:0;overflow-y:auto;
+    padding:var(--s4) var(--s6);
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:var(--s4);align-content:start;
+  }
+  .board.solo .solo-grid::-webkit-scrollbar{width:7px}
+  .board.solo .solo-grid::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .board.solo .ticket{align-self:start}
+  .board.solo .empty{grid-column:1/-1}
+
+  /* ---------- Fullscreen / wall-mounted mode ---------- */
+  .is-fullscreen header{height:46px}
+  .is-fullscreen .kd-label,
+  .is-fullscreen .gallery-link{display:none}
+  .is-fullscreen .metric{padding:var(--s3) var(--s5)}
+  .is-fullscreen .metric .m-val{font-size:30px}
+  .is-fullscreen .cap-val{font-size:42px}
+  .is-fullscreen .t-id{font-size:15px}
+  .is-fullscreen .t-sla{font-size:17px}
+  .is-fullscreen .it{font-size:13px}
+  .is-fullscreen .lane-title{font-size:11px}
+  .is-fullscreen .t-stat .v{font-size:14px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Kitchen Display</span>
+    </div>
+    <span class="design-tag">10 · Operations</span>
+    <div class="filters" id="filters" role="group" aria-label="Station filter"></div>
+    <div class="stages" id="stages" role="group" aria-label="Stage filter"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <section class="metrics" id="metrics" aria-label="Live operations metrics"></section>
+
+  <div class="subbar">
+    <div class="capmeter" id="capMeter" aria-label="Capacity vs demand bottleneck">
+      <div class="cap-top">
+        <span class="cap-label">Capacity · bottleneck</span>
+        <span class="cap-state" id="capState">—</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-val tnum" id="capVal">—</span>
+        <span class="cap-bottleneck" id="capBottleneck"></span>
+      </div>
+      <div class="cap-bar"><div class="cap-fill" id="capFill"></div><div class="cap-100"></div></div>
+    </div>
+    <div class="stationload">
+      <div class="sl-head"><span>Station pace · demand vs capacity</span><span class="sl-num tnum" id="slTotal"></span></div>
+      <div class="sl-bars" id="slBars"></div>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="swatch" style="background:var(--accent)"></i>Calm &lt; 80%</span>
+      <span><i class="swatch" style="background:var(--amber)"></i>Tight 80–100%</span>
+      <span><i class="swatch" style="background:var(--violet)"></i>Pre-breach &gt; 100%</span>
+      <span><i class="swatch fc"></i>+ Forecast 15m</span>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+<script>
+  "use strict";
+
+  const ORDERS = [
+    { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:288, status:"prep",
+      items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza"},{q:1,n:"Espresso",c:"Drinks"}] },
+    { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, status:"prep",
+      items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}], note:"Leave at reception" },
+    { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, status:"new",
+      items:[{q:1,n:"Diavola",c:"Pizza"},{q:2,n:"Aranciata",c:"Drinks"}] },
+    { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, status:"new",
+      items:[{q:3,n:"Margherita",c:"Pizza"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+    { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, status:"prep",
+      items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+    { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   status:"ready",
+      items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+    { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, status:"new",
+      items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta"}] },
+    { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   status:"ready",
+      items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+  ];
+
+  // working copy (deep clone so the source dataset stays intact)
+  let tickets = ORDERS.map(o=>({ ...o, items:o.items.map(i=>({...i})) }));
+
+  const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+  const LOAD_STATIONS = STATIONS.slice(1); // exclude "All"
+  let activeStation = "All";
+
+  const LANES = [
+    { key:"new",   title:"New" },
+    { key:"prep",  title:"In progress" },
+    { key:"ready", title:"Ready · Expo" },
+  ];
+  // stage switcher: "all" or a single stage key — filters ONLY the ticket board,
+  // never the metrics / sparklines / station-load analytics above.
+  let activeStage = "all";
+  const STAGE_TABS = [
+    { key:"all",   title:"All" },
+    { key:"new",   title:"New" },
+    { key:"prep",  title:"In progress" },
+    { key:"ready", title:"Ready · Expo" },
+  ];
+  const STAGE_TITLE = { new:"New", prep:"In progress", ready:"Ready · Expo" };
+  const NEXT = { new:"prep", prep:"ready", ready:"__done__" };
+  const ACTION_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
+
+  // fixed operational figures (reasonable, per spec)
+  const THROUGHPUT_HR = 23;
+  const ON_SHIFT = 4;
+
+  /* ---------- Pace · capacity-vs-demand config ---------- */
+  const PACE = {
+    coversHr: 31,
+    revenueHr: 1180,           // Polish złoty
+    stations: [
+      { id:"Pizza",     cap:10, fc:7 },
+      { id:"Pasta",     cap:8,  fc:6 },
+      { id:"Antipasti", cap:9,  fc:3 },
+      { id:"Panini",    cap:8,  fc:2 },
+      { id:"Drinks",    cap:20, fc:5 },
+      { id:"Desserts",  cap:10, fc:2 },
+    ],
+  };
+
+  // format an integer with thin-grouped thousands, e.g. 1180 -> "1 180"
+  function groupZl(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," "); }
+
+  // recompute live per-station pace from the EXISTING active (non-ready) tickets.
+  // currentLoad = sum of quantities of active items whose category === station.
+  function computePace(){
+    const active = tickets.filter(t=>t.status!=="ready");
+    const load = {};
+    PACE.stations.forEach(s=>load[s.id]=0);
+    active.forEach(t=>t.items.forEach(i=>{ if(load[i.c]!==undefined) load[i.c]+=i.q; }));
+    const stations = PACE.stations.map(s=>{
+      const currentLoad = load[s.id];
+      const demand = currentLoad + s.fc;
+      const utilization = demand / s.cap;
+      return { id:s.id, cap:s.cap, fc:s.fc, currentLoad, demand, utilization };
+    });
+    // bottleneck = the station with the MAX utilization
+    const bottleneck = stations.reduce((a,b)=> b.utilization>a.utilization ? b : a, stations[0]);
+    return { stations, bottleneck };
+  }
+  function paceColorVar(util){
+    if(util>1.0) return "var(--violet)";
+    if(util>=0.8) return "var(--amber)";
+    return "var(--accent)";
+  }
+  function paceClass(util){
+    if(util>1.0) return "violet";
+    if(util>=0.8) return "amber";
+    return "";
+  }
+
+  const ICON = {
+    takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
+    delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+    note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+  };
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function fmtElapsed(s){ return Math.floor(s/60)+":"+pad(s%60); }
+  function fmtSla(s){
+    if(s<0){ const a=Math.abs(s); return "Late "+Math.floor(a/60)+":"+pad(a%60); }
+    return Math.floor(s/60)+":"+pad(s%60);
+  }
+  function urgency(t){
+    if(t.status==="ready") return "calm";
+    if(t.sla<0) return "danger";
+    if(t.sla<180) return "warn";
+    return "neutral";
+  }
+  function matchesStation(t){
+    if(activeStation==="All") return true;
+    return t.items.some(i=>i.c===activeStation);
+  }
+
+  /* ---------- inline SVG sparkline (static, tasteful) ---------- */
+  function sparkline(points, color){
+    const w=56, h=18, max=Math.max(...points,1), min=Math.min(...points,0);
+    const span=(max-min)||1;
+    const step=w/(points.length-1);
+    const coords=points.map((p,i)=>[ (i*step).toFixed(1), (h-2 - ((p-min)/span)*(h-4)).toFixed(1) ]);
+    const d="M"+coords.map(c=>c[0]+" "+c[1]).join(" L ");
+    const area=d+" L "+w+" "+h+" L 0 "+h+" Z";
+    return '<svg class="m-spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+
+      '<path d="'+area+'" fill="'+color+'" opacity="0.12"/>'+
+      '<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '</svg>';
+  }
+  function gauge(frac, color){
+    // half-ring micro gauge
+    const w=40,h=22,cx=20,cy=20,r=16;
+    const a0=Math.PI, a1=Math.PI*(1-Math.min(Math.max(frac,0),1));
+    const arc=(start,end)=> "M "+(cx+r*Math.cos(start)).toFixed(1)+" "+(cy+ -r*Math.sin(start)).toFixed(1)+
+      " A "+r+" "+r+" 0 0 1 "+(cx+r*Math.cos(end)).toFixed(1)+" "+(cy+ -r*Math.sin(end)).toFixed(1);
+    return '<svg class="m-spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+
+      '<path d="'+arc(a0,0)+'" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="3" stroke-linecap="round"/>'+
+      '<path d="'+arc(a0,a1)+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round"/>'+
+      '</svg>';
+  }
+
+  /* ---------- metrics ---------- */
+  function computeMetrics(){
+    const active = tickets.filter(t=>t.status!=="ready");
+    const ready  = tickets.filter(t=>t.status==="ready");
+    const late   = active.filter(t=>t.sla<0);
+    const dueSoon= active.filter(t=>t.sla>=0 && t.sla<180);
+    // average wait = mean elapsed across active tickets
+    const avgWait = active.length ? Math.round(active.reduce((s,t)=>s+t.elapsed,0)/active.length) : 0;
+    // oldest in flight = max elapsed across active
+    const oldest = active.length ? Math.max(...active.map(t=>t.elapsed)) : 0;
+    return { activeN:active.length, readyN:ready.length, lateN:late.length, dueSoonN:dueSoon.length, avgWait, oldest };
+  }
+
+  function renderMetrics(){
+    const m = computeMetrics();
+    const el = document.getElementById("metrics");
+    const cards = [
+      { label:"Active", val:m.activeN, unit:"tickets",
+        cls:"", art:sparkline([4,6,5,7,6,8,m.activeN], "var(--accent)"),
+        foot:'<b>'+m.readyN+'</b> ready · <b>'+(m.activeN+m.readyN)+'</b> total' },
+      { label:"Late", val:m.lateN, unit:"over SLA",
+        cls:m.lateN>0?"alert":"good", art:gauge(m.lateN/Math.max(m.activeN,1), m.lateN>0?"var(--red)":"var(--green)"),
+        foot:m.lateN>0?'needs attention':'all on time' },
+      { label:"Due soon", val:m.dueSoonN, unit:"< 3 min",
+        cls:m.dueSoonN>0?"warn":"", art:gauge(m.dueSoonN/Math.max(m.activeN,1), "var(--amber)"),
+        foot:'plate within 3:00' },
+      { label:"Avg wait", val:fmtSla(m.avgWait), unit:"mm:ss",
+        cls:"", art:sparkline([3,4,4,5,4,6,Math.round(m.avgWait/60)], "var(--accent)"),
+        foot:'across active', mono:true },
+      { label:"Oldest", val:fmtSla(m.oldest), unit:"in flight",
+        cls:m.oldest>=480?"alert":(m.oldest>=300?"warn":""), art:sparkline([2,3,5,6,7,8,Math.round(m.oldest/60)], "var(--amber)"),
+        foot:'longest open', mono:true },
+      { label:"Throughput", val:THROUGHPUT_HR, unit:"per hr",
+        cls:"good", art:sparkline([14,18,16,20,19,22,THROUGHPUT_HR], "var(--green)"),
+        foot:'last 60 min' },
+      { label:"On shift", val:ON_SHIFT, unit:"line cooks",
+        cls:"", art:gauge(ON_SHIFT/6, "var(--accent)"),
+        foot:'2 pizza · 1 pasta · 1 expo' },
+      { label:"Covers / hr", val:PACE.coversHr, unit:"covers",
+        cls:"pace", art:sparkline([22,25,24,27,29,28,PACE.coversHr], "var(--violet)"),
+        foot:'projected pace' },
+      { label:"Revenue / hr", val:groupZl(PACE.revenueHr)+'<span class="m-unit"> zł</span>', unit:"zł",
+        cls:"pace", art:sparkline([840,910,880,1010,1080,1120,PACE.revenueHr], "var(--violet)"),
+        foot:'<b>'+groupZl(PACE.revenueHr)+' zł</b> run-rate' },
+    ];
+    el.innerHTML = cards.map(c=>
+      '<div class="metric '+c.cls+'">'+
+        '<div class="m-label"><span>'+c.label+'</span></div>'+
+        '<div class="m-row">'+
+          '<span class="m-val tnum">'+c.val+'</span>'+
+          c.art+
+        '</div>'+
+        '<div class="m-foot">'+c.foot+'</div>'+
+      '</div>'
+    ).join("");
+  }
+
+  /* ---------- station pace gauges (demand vs capacity) ---------- */
+  function renderStationLoad(){
+    const pace = computePace();
+    // scale every gauge against the same ceiling so >100% visibly overflows the cap line
+    const maxUtil = Math.max(1.0, ...pace.stations.map(s=>s.utilization));
+    const TRACK_TOP = 0.96; // fraction of track height the tallest bar can use
+    const bars=document.getElementById("slBars");
+    bars.innerHTML=pace.stations.map(s=>{
+      const cls = paceClass(s.utilization);
+      // capacity reference line position (100% util) within the scaled track
+      const capPct  = (1.0 / maxUtil) * 100 * TRACK_TOP;
+      // current-load utilization (without forecast) drives the solid bar base
+      const loadUtil = s.currentLoad / s.cap;
+      const loadPct = (loadUtil / maxUtil) * 100 * TRACK_TOP;
+      const demandPct = (s.utilization / maxUtil) * 100 * TRACK_TOP;
+      const fcPct = Math.max(0, demandPct - loadPct);
+      const utilTxt = Math.round(s.utilization*100)+"%";
+      const figure = s.demand+"/"+s.cap;
+      return '<div class="sl-col" title="'+s.id+' · demand '+s.demand+' of cap '+s.cap+' ('+utilTxt+'), incl. +'+s.fc+' forecast">'+
+        '<span class="sl-fc-badge">+'+s.fc+'</span>'+
+        '<div class="sl-track">'+
+          '<div class="sl-cap" style="bottom:'+capPct.toFixed(1)+'%"></div>'+
+          '<div class="sl-fill '+cls+'" style="height:'+(s.currentLoad?Math.max(loadPct,3):0).toFixed(1)+'%"></div>'+
+          '<div class="sl-fc" style="bottom:'+loadPct.toFixed(1)+'%;height:'+fcPct.toFixed(1)+'%"></div>'+
+        '</div>'+
+        '<span class="sl-num tnum '+cls+'">'+figure+' <span class="pct">'+utilTxt+'</span></span>'+
+        '<span class="sl-name">'+s.id+'</span>'+
+      '</div>';
+    }).join("");
+    const active = tickets.filter(t=>t.status!=="ready");
+    document.getElementById("slTotal").textContent = active.length+" open · +"+
+      pace.stations.reduce((a,s)=>a+s.fc,0)+" forecast";
+
+    renderCapacityMeter(pace);
+  }
+
+  /* ---------- hero capacity meter (bottleneck = max station utilization) ---------- */
+  function renderCapacityMeter(pace){
+    const b = pace.bottleneck;
+    const util = b.utilization;
+    const pct = Math.round(util*100);
+    const meter = document.getElementById("capMeter");
+    const breach = util>1.0;
+    const tight  = !breach && util>=0.8;
+    meter.classList.toggle("breach", breach);
+    meter.classList.toggle("warn", tight);
+
+    document.getElementById("capVal").textContent = pct+"%";
+    document.getElementById("capState").textContent = breach ? "Pre-breach" : tight ? "Tight" : "On pace";
+    document.getElementById("capBottleneck").innerHTML =
+      'bottleneck <b>'+b.id+'</b><br>demand '+b.demand+' · cap '+b.cap+' · +'+b.fc+' next 15m';
+
+    // bar: cap line sits at 62.5% (matches the .cap-100 marker), so 100% util => 62.5% width
+    const fill = document.getElementById("capFill");
+    const w = Math.min(100, (util/1.6)*100); // 160% fills the full bar
+    fill.style.width = w.toFixed(1)+"%";
+    fill.style.background = breach ? "var(--violet)" : tight ? "var(--amber)" : "var(--accent)";
+  }
+
+  /* ---------- filters ---------- */
+  const filtersEl=document.getElementById("filters");
+  function buildFilters(){
+    filtersEl.innerHTML="";
+    STATIONS.forEach(s=>{
+      const b=document.createElement("button");
+      b.className="chip";
+      b.textContent=s;
+      b.setAttribute("aria-pressed", String(s===activeStation));
+      b.addEventListener("click", ()=>{ activeStation=s; buildFilters(); buildStages(); render(); });
+      filtersEl.appendChild(b);
+    });
+  }
+
+  /* ---------- stage switcher (filters board only) ---------- */
+  const stagesEl=document.getElementById("stages");
+  function stageCount(key){
+    return tickets.filter(t=>t.status===key && matchesStation(t)).length;
+  }
+  function buildStages(){
+    stagesEl.innerHTML="";
+    STAGE_TABS.forEach(s=>{
+      const b=document.createElement("button");
+      b.className="stage";
+      b.type="button";
+      b.setAttribute("aria-pressed", String(s.key===activeStage));
+      const n = s.key==="all"
+        ? tickets.filter(matchesStation).length
+        : stageCount(s.key);
+      b.innerHTML='<span>'+s.title+'</span><span class="scount tnum" data-stage-count="'+s.key+'">'+n+'</span>';
+      b.addEventListener("click", ()=>{ activeStage=s.key; buildStages(); render(); });
+      stagesEl.appendChild(b);
+    });
+  }
+  function updateStageCounts(){
+    STAGE_TABS.forEach(s=>{
+      const el=stagesEl.querySelector('[data-stage-count="'+s.key+'"]');
+      if(!el) return;
+      el.textContent = s.key==="all"
+        ? tickets.filter(matchesStation).length
+        : stageCount(s.key);
+    });
+  }
+
+  /* ---------- board ---------- */
+  const board=document.getElementById("board");
+  function ticketHtml(t){
+    const u=urgency(t);
+    const cls=u==="warn"?"warn":u==="danger"?"danger":u==="calm"?"calm":"";
+    const slaCls=u==="danger"?"danger":u==="warn"?"warn":u==="calm"?"calm":"";
+    const count=t.items.reduce((s,i)=>s+i.q,0);
+    let itemsHtml="";
+    t.items.forEach(i=>{
+      itemsHtml+='<div class="it"><span class="q tnum">'+i.q+'×</span><span class="nm">'+i.n+
+        (i.note?'<span class="note">— '+i.note+'</span>':'')+'</span><span class="cat">'+i.c+'</span></div>';
+    });
+    if(t.note){
+      itemsHtml+='<div class="order-note">'+ICON.note+'<span>'+t.note+'</span></div>';
+    }
+    return '<article class="ticket '+cls+'" data-id="'+t.id+'">'+
+      '<div class="t-row1">'+
+        '<span class="t-id">#'+t.id+'</span>'+
+        '<span class="t-sla tnum '+slaCls+'" data-sla>'+(t.status==="ready"?"Ready":fmtSla(t.sla))+'</span>'+
+      '</div>'+
+      '<div class="t-row2">'+
+        '<span class="nm">'+t.name+'</span>'+
+        '<span class="dot"></span>'+
+        '<span class="chan">'+ICON[t.channel]+(t.channel==="delivery"?"Delivery":"Takeout")+'</span>'+
+        '<span class="dot"></span>'+
+        '<span>'+t.loc+'</span>'+
+      '</div>'+
+      '<div class="t-items">'+itemsHtml+'</div>'+
+      '<div class="t-foot">'+
+        '<div class="t-stat"><span class="lab">Elapsed</span><span class="v tnum" data-elapsed>'+fmtElapsed(t.elapsed)+'</span></div>'+
+        '<div class="t-stat"><span class="lab">Slot · Items</span><span class="v tnum">'+t.slot+' · '+count+'</span></div>'+
+        '<button class="act'+(t.status==="ready"?" ghost":"")+'" data-advance>'+ACTION_LABEL[t.status]+'</button>'+
+      '</div>'+
+    '</article>';
+  }
+
+  function render(){
+    board.innerHTML="";
+
+    if(activeStage!=="all"){
+      // single stage: full-width wrapping grid; analytics above stay unfiltered
+      board.classList.add("solo");
+      const list=tickets
+        .filter(t=>t.status===activeStage && matchesStation(t))
+        .sort((a,b)=>a.sla-b.sla);
+      const grid = list.length
+        ? list.map(ticketHtml).join("")
+        : '<div class="empty">No tickets in this stage.</div>';
+      board.innerHTML=
+        '<div class="solo-head"><span class="lane-title">'+STAGE_TITLE[activeStage]+'</span>'+
+          '<span class="lane-count tnum">'+pad(list.length)+' tickets</span></div>'+
+        '<div class="solo-grid">'+grid+'</div>';
+    } else {
+      board.classList.remove("solo");
+      LANES.forEach(lane=>{
+        const laneEl=document.createElement("section");
+        laneEl.className="lane";
+        const list=tickets
+          .filter(t=>t.status===lane.key && matchesStation(t))
+          .sort((a,b)=>a.sla-b.sla);
+        let body = list.length
+          ? list.map(ticketHtml).join("")
+          : '<div class="empty">No tickets.</div>';
+        laneEl.innerHTML=
+          '<div class="lane-head"><span class="lane-title">'+lane.title+'</span>'+
+            '<span class="lane-count tnum">'+pad(list.length)+'</span></div>'+
+          '<div class="lane-body">'+body+'</div>';
+        board.appendChild(laneEl);
+      });
+    }
+
+    board.querySelectorAll("[data-advance]").forEach(btn=>{
+      const id=btn.closest(".ticket").dataset.id;
+      btn.addEventListener("click", ()=>advance(id));
+    });
+    renderMetrics();
+    renderStationLoad();
+    updateStageCounts();
+  }
+
+  function advance(id){
+    const t=tickets.find(x=>x.id===id);
+    if(!t) return;
+    const nx=NEXT[t.status];
+    if(nx==="__done__"){ tickets=tickets.filter(x=>x.id!==id); }
+    else { t.status=nx; if(nx==="ready") t.sla=0; }
+    render();
+  }
+
+  /* ---------- live tick ---------- */
+  function tick(){
+    // clock
+    const d=new Date();
+    document.getElementById("clock").textContent=pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+
+    let toneChanged=false;
+    tickets.forEach(t=>{
+      const before=urgency(t);
+      t.elapsed+=1;
+      if(t.status!=="ready") t.sla-=1;
+      if(urgency(t)!==before) toneChanged=true;
+    });
+
+    // update visible cards in place; re-apply urgency color
+    board.querySelectorAll(".ticket").forEach(card=>{
+      const t=tickets.find(x=>x.id===card.dataset.id);
+      if(!t) return;
+      const u=urgency(t);
+      card.classList.remove("warn","danger","calm");
+      if(u==="warn") card.classList.add("warn");
+      else if(u==="danger") card.classList.add("danger");
+      else if(u==="calm") card.classList.add("calm");
+
+      const el=card.querySelector("[data-elapsed]");
+      if(el) el.textContent=fmtElapsed(t.elapsed);
+      const sl=card.querySelector("[data-sla]");
+      if(sl && t.status!=="ready"){
+        sl.textContent=fmtSla(t.sla);
+        sl.classList.remove("warn","danger","calm");
+        if(u==="danger") sl.classList.add("danger");
+        else if(u==="warn") sl.classList.add("warn");
+      }
+    });
+
+    // metrics depend on live timers — refresh every tick
+    renderMetrics();
+    renderStationLoad();
+    updateStageCounts();
+    // if urgency crossed a threshold, re-sort lanes so the worst float up
+    if(toneChanged) render();
+  }
+
+  /* ---------- fullscreen ---------- */
+  const fsbtn=document.getElementById("fsbtn");
+  function syncFs(){
+    const on=!!document.fullscreenElement;
+    document.documentElement.classList.toggle("is-fullscreen", on);
+    fsbtn.setAttribute("aria-pressed", String(on));
+  }
+  function fallbackToggle(){
+    const on=!document.documentElement.classList.contains("is-fullscreen");
+    document.documentElement.classList.toggle("is-fullscreen", on);
+    fsbtn.setAttribute("aria-pressed", String(on));
+  }
+  fsbtn.addEventListener("click", ()=>{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen();
+      else fallbackToggle();
+    } else {
+      const req=document.documentElement.requestFullscreen;
+      if(req) req.call(document.documentElement).catch(fallbackToggle);
+      else fallbackToggle();
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFs);
+
+  buildFilters();
+  buildStages();
+  render();
+  tick();
+  setInterval(tick,1000);
+</script>
+</body>
+</html>

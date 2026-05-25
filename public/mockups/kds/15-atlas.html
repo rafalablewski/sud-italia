@@ -1,0 +1,1285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia KDS — Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    /* surfaces */
+    --canvas:#0A0C10;
+    --panel:#11151B;
+    --raised:#1A2129;
+    --hair:rgba(255,255,255,0.08);
+    --hair-strong:rgba(255,255,255,0.14);
+    /* text */
+    --text:#E9EDF2;
+    --dim:#9098A3;
+    --faint:#5C6571;
+    /* tone palette */
+    --queued:#5B6573;
+    --firing:#3B82F6;
+    --warn:#F5A623;
+    --risk:#8B5CF6;   /* signature predictive tier */
+    --late:#E5484D;
+    --ready:#3DD68C;
+    /* soft tints */
+    --firing-soft:rgba(59,130,246,0.14);
+    --warn-soft:rgba(245,166,35,0.13);
+    --risk-soft:rgba(139,92,246,0.16);
+    --late-soft:rgba(229,72,77,0.14);
+    --ready-soft:rgba(61,214,140,0.13);
+    /* 8px grid */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--canvas);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:13px;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ====================== Header ====================== */
+  header{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:var(--s4);
+    height:56px;padding:0 var(--s5);
+    background:var(--panel);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3);min-width:max-content}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);
+    border-left:1px solid var(--hair);padding-left:var(--s3);
+  }
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;white-space:nowrap;
+  }
+
+  .hgroup{display:flex;align-items:center;gap:var(--s1)}
+  .filters{display:flex;gap:var(--s1);flex-wrap:nowrap}
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.01em;padding:6px 10px;border-radius:6px;
+    cursor:pointer;transition:color .16s ease,border-color .16s ease,background .16s ease;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--raised);border-color:var(--hair-strong);color:var(--text);font-weight:600}
+
+  /* lines switcher — segmented */
+  .lines{
+    display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;
+    overflow:hidden;background:var(--canvas);
+  }
+  .line{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--sans);font-size:11.5px;letter-spacing:0.01em;color:var(--dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+    border-right:1px solid var(--hair);transition:color .16s ease,background .16s ease;
+  }
+  .line:last-child{border-right:0}
+  .line:hover{color:var(--text)}
+  .line .lcount{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:10px;font-weight:600;min-width:18px;height:16px;padding:0 5px;border-radius:4px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--hair);color:var(--dim);transition:background .16s ease,color .16s ease;
+  }
+  .line[aria-pressed="true"]{background:var(--raised);color:var(--text);font-weight:600}
+  .line[aria-pressed="true"] .lcount{background:var(--hair-strong);color:var(--text)}
+  .line[data-line="ready"][aria-pressed="true"]{color:var(--ready)}
+  .line[data-line="ready"][aria-pressed="true"] .lcount{background:var(--ready-soft);color:var(--ready)}
+
+  .spacer{margin-left:auto}
+
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline-flex}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+
+  .gallery-link{
+    font-size:11px;color:var(--faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+
+  .clock{
+    font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);
+    min-width:78px;text-align:right;
+  }
+
+  /* ====================== Fleet command bar ====================== */
+  .fleetbar{
+    flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--hair);
+    padding:var(--s3) var(--s5);display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .fb-eyebrow{display:flex;align-items:center;gap:var(--s3)}
+  .fb-brandline{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);font-weight:700;white-space:nowrap}
+  .fb-brandline svg{width:13px;height:13px;opacity:.7;flex:0 0 auto}
+  .fb-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .fb-trucks{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .fb-trucks b{color:var(--text);font-weight:700}
+
+  .fb-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+    background:var(--hair);border:1px solid var(--hair);border-radius:9px;overflow:hidden;
+  }
+  .ftile{
+    position:relative;background:var(--panel);padding:var(--s3) var(--s3) var(--s3) var(--s4);
+    display:flex;flex-direction:column;gap:3px;min-width:0;
+  }
+  .ftile::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 2px 2px 0;background:var(--queued);opacity:.45}
+  .ftile.risk::before{background:var(--risk);opacity:1}
+  .ftile.alert::before{background:var(--late);opacity:1}
+  .ftile.good::before{background:var(--ready);opacity:.9}
+  .ft-lab{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ft-val{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+  .ft-val.risk{color:var(--risk)}
+  .ft-val.alert{color:var(--late)}
+  .ft-val.good{color:var(--ready)}
+  .ft-sub{font-size:9.5px;color:var(--faint);letter-spacing:0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* cross-truck benchmark block */
+  .fb-benchmark{display:flex;flex-direction:column;gap:var(--s2)}
+  .fb-bm-lab{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
+  .bm-rows{display:flex;flex-direction:column;gap:var(--s2);margin-top:2px}
+  .bm-row{display:flex;align-items:center;gap:var(--s3)}
+  .bm-name{font-size:11px;color:var(--dim);min-width:78px;display:flex;align-items:center;gap:6px}
+  .bm-name .lead{
+    font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ready);
+    border:1px solid var(--ready);border-radius:3px;padding:0 4px;line-height:13px;
+  }
+  .bm-track{flex:1 1 auto;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;position:relative}
+  .bm-fill{display:block;height:100%;border-radius:3px;transition:width .3s ease,background .3s ease}
+  .bm-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.5}
+  .bm-pct{font-family:var(--mono);font-size:12px;color:var(--text);min-width:40px;text-align:right}
+  .bm-foot{font-size:10px;color:var(--faint);letter-spacing:0.02em;margin-top:2px}
+  .bm-foot b{color:var(--dim);font-weight:600}
+
+  /* ====================== Boards region ====================== */
+  .boards{
+    flex:1 1 auto;min-height:0;
+    display:grid;grid-template-columns:1fr 1fr;gap:1px;
+    background:var(--hair);
+  }
+  .boards.drill{grid-template-columns:1fr}
+  .truck{
+    background:var(--canvas);
+    display:flex;flex-direction:column;min-height:0;min-width:0;
+  }
+  /* when drilled in, hide the non-active board */
+  .boards.drill .truck[data-hidden="1"]{display:none}
+
+  /* ----- truck header ----- */
+  .t-head{
+    flex:0 0 auto;
+    background:var(--panel);border-bottom:1px solid var(--hair);
+    padding:var(--s4) var(--s5);
+    cursor:pointer;
+    transition:background .16s ease;
+  }
+  .truck.is-drill .t-head{cursor:default}
+  .t-head:hover{background:var(--raised)}
+  .truck.is-drill .t-head:hover{background:var(--panel)}
+  .th-top{display:flex;align-items:center;gap:var(--s3)}
+  .th-loc{font-size:16px;font-weight:650;letter-spacing:-0.01em;color:var(--text);display:flex;align-items:center;gap:8px}
+  .th-loc svg{width:14px;height:14px;opacity:.55}
+  .drill-back{
+    appearance:none;border:1px solid var(--hair);background:transparent;color:var(--dim);
+    font-family:var(--sans);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;
+    display:none;align-items:center;gap:6px;transition:color .16s ease,border-color .16s ease;
+  }
+  .drill-back:hover{color:var(--text);border-color:var(--hair-strong)}
+  .truck.is-drill .drill-back{display:inline-flex}
+  .th-drillhint{
+    font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);
+    margin-left:auto;display:inline-flex;align-items:center;gap:5px;opacity:0;transition:opacity .16s ease;
+  }
+  .t-head:hover .th-drillhint{opacity:.9}
+  .truck.is-drill .th-drillhint{display:none}
+
+  /* health score + ring */
+  .health{margin-left:auto;display:flex;align-items:center;gap:var(--s3)}
+  .truck.is-drill .health{margin-left:0}
+  .truck.is-drill .th-top{gap:var(--s4)}
+  .health-ring{position:relative;width:52px;height:52px;flex:0 0 auto}
+  .health-ring svg{width:52px;height:52px;transform:rotate(-90deg)}
+  .health-ring .hr-num{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);
+  }
+  .health-meta{display:flex;flex-direction:column;gap:1px}
+  .health-meta .hm-lab{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
+  .health-meta .hm-state{font-size:12px;font-weight:600}
+  .health-meta .hm-state.good{color:var(--ready)}
+  .health-meta .hm-state.warn{color:var(--warn)}
+  .health-meta .hm-state.risk{color:var(--risk)}
+  .health-meta .hm-state.alert{color:var(--late)}
+
+  /* truck stat row */
+  .th-stats{
+    display:flex;align-items:stretch;gap:var(--s2);margin-top:var(--s3);
+    padding-top:var(--s3);border-top:1px solid var(--hair);flex-wrap:wrap;
+  }
+  .th-stat{
+    flex:1 1 auto;min-width:62px;display:flex;flex-direction:column;gap:5px;
+    padding:8px 12px;border:1px solid var(--hair);border-radius:9px;background:var(--canvas);
+    position:relative;overflow:hidden;
+  }
+  .th-stat .lab{font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint)}
+  .th-stat .val{font-family:var(--mono);font-size:21px;font-weight:700;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+  .th-stat.is-risk{border-color:rgba(139,92,246,0.4);background:var(--risk-soft)}
+  .th-stat.is-risk .val{color:var(--risk)}
+  .th-stat.is-alert{border-color:rgba(229,72,77,0.4);background:var(--late-soft)}
+  .th-stat.is-alert .val{color:var(--late)}
+  .th-stat.is-good{border-color:rgba(61,214,140,0.35);background:var(--ready-soft)}
+  .th-stat.is-good .val{color:var(--ready)}
+  .th-spark{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;padding-left:var(--s3)}
+  .th-spark .sp-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+
+  /* ----- truck body / ticket stack ----- */
+  .t-body{
+    flex:1 1 auto;overflow-y:auto;min-height:0;
+    padding:var(--s4) var(--s5);
+    display:flex;flex-direction:column;gap:var(--s4);
+  }
+  .truck.is-drill .t-body{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+    gap:var(--s4);align-content:start;
+  }
+  .t-body::-webkit-scrollbar{width:7px}
+  .t-body::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .t-body::-webkit-scrollbar-track{background:transparent}
+
+  /* ====================== Ticket card ====================== */
+  .ticket{
+    position:relative;background:var(--raised);border:1px solid var(--hair);border-radius:12px;
+    padding:var(--s4) var(--s4) var(--s4) calc(var(--s4) + 4px);overflow:hidden;
+    transition:border-color .16s ease,background .16s ease;
+  }
+  .ticket::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--queued);
+    transition:background .16s ease;
+  }
+  .ticket.firing::before{background:var(--firing)}
+  .ticket.warn::before{background:var(--warn)}
+  .ticket.risk::before{background:var(--risk)}
+  .ticket.late::before{background:var(--late)}
+  .ticket.ready::before{background:var(--ready)}
+  /* flood-tint ONLY late & at-risk */
+  .ticket.risk{border-color:rgba(139,92,246,0.45);background:#2C2A4A}
+  .ticket.late{border-color:rgba(229,72,77,0.5);background:#3B272F}
+  .ticket.ready{border-color:rgba(61,214,140,0.3)}
+
+  .t-r1{display:flex;align-items:center;gap:var(--s2)}
+  .t-id{font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:0.03em;color:var(--text)}
+  .t-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
+  .t-chan svg{width:12px;height:12px;opacity:.6}
+  .t-name{margin-left:auto;font-size:13px;font-weight:500;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
+
+  /* dual timer block */
+  .t-timer{
+    display:flex;align-items:center;gap:var(--s4);margin-top:var(--s4);
+  }
+  .timer-ring{position:relative;width:54px;height:54px;flex:0 0 auto}
+  .timer-ring svg{width:54px;height:54px;transform:rotate(-90deg)}
+  .timer-ring .tr-cap{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.02em;color:var(--dim);
+  }
+  .timer-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
+  .ti-row{display:flex;align-items:baseline;gap:var(--s2)}
+  .ti-elapsed{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1;letter-spacing:0.01em;color:var(--text)}
+  .ti-elapsed-lab{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint)}
+  .ti-due{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--dim)}
+  .ti-due.firing{color:var(--firing)}
+  .ti-due.warn{color:var(--warn)}
+  .ti-due.risk{color:var(--risk)}
+  .ti-due.late{color:var(--late)}
+  .ti-due.ready{color:var(--ready)}
+  .ti-pred{font-size:11.5px;color:var(--faint);letter-spacing:0.02em}
+  .ti-pred b{color:var(--risk);font-weight:600}
+
+  /* risk flag pill */
+  .risk-pill{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--risk);background:var(--risk-soft);border:1px solid rgba(139,92,246,0.4);
+    padding:2px 6px;border-radius:5px;
+  }
+  .risk-pill svg{width:9px;height:9px}
+
+  .t-items{margin-top:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+  /* station/category grouping */
+  .it-group{display:flex;flex-direction:column;gap:5px}
+  .it-group.is-dim{opacity:.38}
+  .ig-head{display:flex;align-items:center;gap:9px;font-size:9.5px;letter-spacing:0.13em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .ig-name{order:0}
+  .ig-head::after{content:"";order:1;flex:1 1 auto;height:1px;background:var(--hair)}
+  .ig-count{order:2;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--dim);background:var(--hair);border-radius:4px;padding:0 6px;line-height:15px}
+  .it{display:flex;flex-direction:column;gap:4px;padding-left:2px}
+  .it-main{display:flex;gap:var(--s3);align-items:baseline}
+  .it .q{
+    font-family:var(--mono);font-weight:600;font-size:13px;color:var(--text);
+    min-width:34px;text-align:center;background:rgba(255,255,255,0.05);
+    border:1px solid var(--hair);border-radius:5px;padding:2px 6px;flex:0 0 auto;
+  }
+  .it .nm{color:var(--text);font-size:14px;font-weight:500;line-height:1.3}
+  .it .req{
+    display:inline-flex;align-items:center;gap:6px;margin-left:46px;
+    font-size:12.5px;color:var(--warn);font-weight:500;letter-spacing:0.01em;
+  }
+  .it .req svg{width:13px;height:13px;opacity:.9;flex:0 0 auto}
+  /* Notes & requests block */
+  .t-notes{
+    margin-top:var(--s3);border:1px solid rgba(245,166,35,0.28);background:rgba(245,166,35,0.07);
+    border-radius:8px;padding:var(--s3);display:flex;flex-direction:column;gap:var(--s2);
+  }
+  .tn-head{
+    display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--warn);font-weight:700;
+  }
+  .tn-head svg{width:13px;height:13px;flex:0 0 auto}
+  .tn-line{font-size:13px;color:var(--text);line-height:1.45;padding-left:20px}
+  /* Allergen alert — distinct, safety-critical, kept separate from notes */
+  .t-allergy{
+    margin-top:var(--s3);border:1px solid rgba(229,72,77,0.45);background:rgba(229,72,77,0.11);
+    border-radius:8px;padding:var(--s3);display:flex;flex-direction:column;gap:5px;
+  }
+  .ta-head{
+    display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--late);font-weight:700;
+  }
+  .ta-head svg{width:14px;height:14px;flex:0 0 auto}
+  .ta-body{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;padding-left:21px}
+
+  .t-foot{
+    margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--hair);
+    display:flex;align-items:center;gap:var(--s3);
+  }
+  .t-meta{font-size:10px;letter-spacing:0.06em;color:var(--faint);text-transform:uppercase}
+  .t-meta b{color:var(--dim);font-weight:600}
+  .act{
+    margin-left:auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;
+    font-weight:600;letter-spacing:0.03em;border-radius:7px;padding:9px 17px;white-space:nowrap;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    transition:filter .16s ease,background .16s ease,border-color .16s ease;
+  }
+  .act:hover{border-color:var(--text);background:rgba(255,255,255,0.06)}
+  .act.ready{color:var(--ready);border-color:rgba(61,214,140,0.5)}
+  .act.ready:hover{background:var(--ready-soft)}
+
+  .empty{
+    color:var(--faint);font-size:12px;text-align:center;padding:var(--s6) var(--s4);
+    border:1px dashed var(--hair);border-radius:8px;
+  }
+  .truck.is-drill .empty{grid-column:1/-1}
+
+  /* legend strip (bottom of each board, only in fleet view) */
+  .t-legend{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+    padding:var(--s2) var(--s5);background:var(--panel);border-top:1px solid var(--hair);
+  }
+  .truck.is-drill .t-legend{display:none}
+  .t-legend span{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;color:var(--dim);letter-spacing:0.02em}
+  .t-legend i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+
+  /* ====================== Pace (capacity vs demand) ====================== */
+  /* per-truck capacity meter + covers/hr + revenue/hr — lives in truck header */
+  .pace-head{
+    display:flex;align-items:stretch;gap:var(--s5);margin-top:var(--s3);
+    padding-top:var(--s3);border-top:1px solid var(--hair);flex-wrap:wrap;
+  }
+  .pace-rate{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .pace-rate .lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+  .pace-rate .val{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text)}
+  .pace-rate .val small{font-size:9px;color:var(--faint);letter-spacing:0.04em;font-weight:400}
+
+  .cap-meter{flex:1 1 240px;min-width:200px;display:flex;flex-direction:column;gap:6px}
+  .cm-top{display:flex;align-items:center;gap:var(--s2)}
+  .cm-lab{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)}
+  .cm-pct{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text);margin-left:auto;line-height:1}
+  .cm-pct.warn{color:var(--warn)}
+  .cm-pct.risk{color:var(--risk)}
+  .cap-track{
+    height:10px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);
+    border-radius:6px;overflow:hidden;position:relative;
+  }
+  .cap-fill{display:block;height:100%;border-radius:6px 0 0 6px;transition:width .35s ease,background .3s ease}
+  .cap-fill.calm{background:var(--ready)}
+  .cap-fill.warn{background:var(--warn)}
+  .cap-fill.risk{background:var(--risk);box-shadow:0 0 14px rgba(139,92,246,0.55)}
+  .cap-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.5}
+  .cm-foot{display:flex;align-items:center;gap:var(--s2)}
+  .cm-station{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:var(--dim)}
+  .cm-station .dotb{width:7px;height:7px;border-radius:2px;background:var(--dim);flex:0 0 auto}
+  .cm-station.warn{color:var(--warn)} .cm-station.warn .dotb{background:var(--warn)}
+  .cm-station.risk{color:var(--risk)} .cm-station.risk .dotb{background:var(--risk)}
+  .cm-hint{margin-left:auto;font-size:9.5px;color:var(--faint);letter-spacing:0.02em}
+  .cm-hint.risk{color:var(--risk)}
+
+  /* per-station pace gauges row inside the body */
+  .pace-gauges{
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:var(--s2);
+    padding:var(--s3) var(--s5) var(--s4);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .pg-title{
+    grid-column:1/-1;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);
+    white-space:nowrap;margin-bottom:2px;
+  }
+  .gauge{
+    flex:1 1 130px;min-width:120px;display:flex;flex-direction:column;gap:7px;
+    padding:var(--s3);border:1px solid var(--hair);border-radius:8px;background:var(--canvas);
+    position:relative;
+  }
+  .gauge.warn{border-color:rgba(245,166,35,0.4)}
+  .gauge.risk{border-color:rgba(139,92,246,0.55);background:var(--risk-soft)}
+  .g-top{display:flex;align-items:baseline;gap:6px}
+  .g-name{font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.01em}
+  .g-pct{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--dim);margin-left:auto;line-height:1}
+  .g-pct.warn{color:var(--warn)}
+  .g-pct.risk{color:var(--risk)}
+  .g-track{height:7px;background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:4px;overflow:hidden;position:relative}
+  .g-fill{display:block;height:100%;border-radius:4px 0 0 4px;transition:width .35s ease,background .3s ease}
+  .g-fill.calm{background:var(--ready)}
+  .g-fill.warn{background:var(--warn)}
+  .g-fill.risk{background:var(--risk);box-shadow:0 0 10px rgba(139,92,246,0.5)}
+  .g-mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--text);opacity:.45}
+  .g-foot{display:flex;align-items:center;gap:6px}
+  .g-fig{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .g-fc{margin-left:auto;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--dim);background:var(--hair);border-radius:5px;padding:1px 6px;letter-spacing:0.02em;white-space:nowrap}
+  .g-fc.risk{color:var(--risk);background:var(--risk-soft)}
+  /* in drill, gauges go full width and a touch larger */
+  .truck.is-drill .pace-gauges{padding:var(--s4) var(--s5)}
+  .truck.is-drill .gauge{flex:1 1 160px}
+  .is-fullscreen .gauge .g-name{font-size:13px}
+  .is-fullscreen .pace-rate .val{font-size:18px}
+
+  /* ====================== Fullscreen tweaks ====================== */
+  .is-fullscreen header{height:50px}
+  .is-fullscreen .kd-label,
+  .is-fullscreen .gallery-link{display:none}
+  .is-fullscreen .ti-elapsed{font-size:28px}
+  .is-fullscreen .th-loc{font-size:18px}
+  .is-fullscreen .ft-val{font-size:24px}
+  .is-fullscreen .it .nm{font-size:15px}
+  .is-fullscreen .tn-line,.is-fullscreen .ta-body{font-size:14px}
+
+  /* ====================== Responsive ====================== */
+  /* Tablet & below: drop the fixed-viewport "wall" model for a scrollable
+     document, stack the two trucks into one column, and let the header
+     controls + fleet bar reflow / scroll instead of overflowing. */
+  @media (max-width:1024px){
+    html,body{height:auto}
+    body{overflow:visible}
+    header{height:auto;flex-wrap:wrap;padding:10px var(--s4);row-gap:10px}
+    .spacer{flex-basis:100%;height:0;margin:0}
+    .filters,.lines{min-width:0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .filters::-webkit-scrollbar,.lines::-webkit-scrollbar{display:none}
+    .clock{margin-left:auto}
+    .fb-grid{grid-template-columns:repeat(4,1fr)}
+    .boards{display:flex;flex-direction:column}
+    .truck{min-height:0}
+    .t-body{overflow:visible}            /* grow with content; the page scrolls */
+  }
+  /* Phone: trim secondary chrome, tighten spacing, two-up the small tiles. */
+  @media (max-width:560px){
+    .kd-label,.design-tag,.gallery-link{display:none}
+    header{padding:8px 12px;gap:8px}
+    .fleetbar{padding:var(--s3) var(--s4)}
+    .t-body{padding:var(--s3) var(--s4)}
+    .pace-gauges{padding:var(--s3) var(--s4)}
+    .fb-grid{grid-template-columns:repeat(2,1fr)}
+    .ft-val{font-size:19px}
+    .th-stats{gap:var(--s4)}
+    .th-spark{display:none}
+    .pace-gauges{grid-template-columns:repeat(2,1fr)}
+    .t-name{max-width:36%}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Kitchen Display</span>
+    </div>
+    <span class="design-tag">15 · Atlas</span>
+    <div class="hgroup filters" id="filters" role="group" aria-label="Station filter"></div>
+    <div class="lines" id="lines" role="group" aria-label="Lines switcher"></div>
+    <div class="spacer"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <section class="fleetbar" id="fleetbar" aria-label="Fleet aggregate metrics"></section>
+
+  <div class="boards" id="boards"></div>
+
+<script>
+  "use strict";
+
+  /* ====================== Dataset ====================== */
+  const ORDERS = [
+    { id:"A4F9C2", name:"Marco R.",  channel:"takeout",  loc:"Kraków",   slot:"15:20", elapsed:192, sla:150, pred:130, status:"prep",
+      note:"Call on arrival — collecting by bike",
+      items:[{q:2,n:"Margherita",c:"Pizza"},{q:1,n:"Diavola",c:"Pizza",note:"extra spicy · light cheese"},{q:1,n:"Espresso",c:"Drinks"}] },
+    { id:"B7K2D1", name:"Giulia M.", channel:"delivery", loc:"Kraków",   slot:"15:15", elapsed:540, sla:-65, pred:80,  status:"prep",
+      note:"Leave at reception", allergy:"Nut allergy — prep separately",
+      items:[{q:1,n:"Quattro Formaggi",c:"Pizza"},{q:1,n:"Spaghetti Carbonara",c:"Pasta",note:"no garlic"},{q:1,n:"Tiramisù",c:"Desserts"}] },
+    { id:"C1M8X4", name:"Paweł K.",  channel:"takeout",  loc:"Warszawa", slot:"15:30", elapsed:48,  sla:612, pred:300, status:"new",
+      items:[{q:1,n:"Diavola",c:"Pizza",note:"well done"},{q:2,n:"Aranciata",c:"Drinks"}] },
+    { id:"D9P3Q7", name:"Anna W.",   channel:"delivery", loc:"Warszawa", slot:"15:28", elapsed:95,  sla:505, pred:560, status:"new",
+      note:"Ring buzzer 4B · 3rd floor, no lift",
+      items:[{q:3,n:"Margherita",c:"Pizza",note:"1× gluten-free base"},{q:1,n:"Penne Arrabbiata",c:"Pasta"},{q:2,n:"Limonata Fresca",c:"Drinks"}] },
+    { id:"E5R6T2", name:"Luca B.",   channel:"takeout",  loc:"Kraków",   slot:"15:22", elapsed:300, sla:120, pred:150, status:"prep",
+      note:"Add cutlery + napkins",
+      items:[{q:1,n:"Tartufata Reale",c:"Pizza",note:"extra truffle"},{q:1,n:"Burrata con Pomodorini",c:"Antipasti"}] },
+    { id:"F2H4J8", name:"Sofia L.",  channel:"takeout",  loc:"Kraków",   slot:"15:10", elapsed:720, sla:0,   pred:0,   status:"ready",
+      items:[{q:1,n:"Panino Caprese",c:"Panini"},{q:1,n:"Garlic Bread",c:"Antipasti"},{q:1,n:"Espresso",c:"Drinks"}] },
+    { id:"G8L1N5", name:"Tomek Z.",  channel:"delivery", loc:"Warszawa", slot:"15:32", elapsed:150, sla:450, pred:360, status:"new",
+      items:[{q:2,n:"Penne Arrabbiata",c:"Pasta"},{q:1,n:"Linguine al Pesto",c:"Pasta",note:"no parmesan · vegan"}] },
+    { id:"H3W7Y9", name:"Elena P.",  channel:"takeout",  loc:"Kraków",   slot:"15:08", elapsed:660, sla:0,   pred:0,   status:"ready",
+      items:[{q:1,n:"Prosciutto e Rucola",c:"Pizza"},{q:1,n:"Arancini (3 pcs)",c:"Antipasti"}] },
+  ];
+  const FLEET = {
+    "Kraków":   { throughputHr:23, promiseAcc:93, onShift:4 },
+    "Warszawa": { throughputHr:18, promiseAcc:88, onShift:3 },
+  };
+  const TRUCKS = ["Kraków","Warszawa"];
+  const PROMISE_TARGET = 90; // target promise-accuracy %
+
+  // synthetic per-truck throughput spark history (visual only)
+  const SPARK = {
+    "Kraków":  [16,19,17,21,20,18,22,23],
+    "Warszawa":[12,15,14,17,16,15,17,18],
+  };
+
+  /* ====================== Pace config (capacity vs demand) ====================== */
+  // per-truck covers/hr + revenue/hr headline rates, plus per-station capacity + forecast
+  const PACE_BY_TRUCK = {
+    "Kraków":   { coversHr:18, revenueHr:690, stations:[
+      {id:"Pizza",cap:6,fc:4},{id:"Pasta",cap:5,fc:3},{id:"Antipasti",cap:5,fc:2},{id:"Panini",cap:4,fc:1},{id:"Drinks",cap:12,fc:3},{id:"Desserts",cap:6,fc:1} ] },
+    "Warszawa": { coversHr:13, revenueHr:490, stations:[
+      {id:"Pizza",cap:5,fc:3},{id:"Pasta",cap:4,fc:3},{id:"Antipasti",cap:4,fc:1},{id:"Panini",cap:4,fc:1},{id:"Drinks",cap:10,fc:2},{id:"Desserts",cap:5,fc:1} ] },
+  };
+  // zł formatting with a thin space thousands separator (matches "1 180 zł")
+  function zl(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" zł"; }
+  function paceTier(util){ return util>1.0 ? "risk" : (util>=0.8 ? "warn" : "calm"); }
+
+  // compute each station's live load/demand/utilisation for ONE truck from its ACTIVE tickets
+  function truckPace(loc){
+    const cfg=PACE_BY_TRUCK[loc];
+    const active=truckTickets(loc).filter(t=>t.status!=="ready");
+    const stations=cfg.stations.map(st=>{
+      let currentLoad=0;
+      active.forEach(t=>t.items.forEach(i=>{ if(i.c===st.id) currentLoad+=i.q; }));
+      const demand=currentLoad+st.fc;
+      const util=st.cap>0 ? demand/st.cap : 0;
+      return { id:st.id, cap:st.cap, fc:st.fc, currentLoad, demand, util, tier:paceTier(util) };
+    });
+    // bottleneck = MAX utilisation station → drives the capacity meter
+    let bottleneck=stations[0];
+    stations.forEach(s=>{ if(s.util>bottleneck.util) bottleneck=s; });
+    // shared scale so every bar in this truck is comparable and the 100% mark
+    // lines up; bars fill past the mark when a station is over capacity.
+    const maxScale=Math.max(1.5, bottleneck.util);
+    const markLeft=+((1/maxScale)*100).toFixed(1);
+    stations.forEach(s=>{ s.pct=Math.round(s.util*100); s.fillW=+Math.min(100,(s.util/maxScale)*100).toFixed(1); });
+    return { coversHr:cfg.coversHr, revenueHr:cfg.revenueHr, stations, bottleneck, maxScale, markLeft };
+  }
+
+  // working copy (deep clone so source dataset stays intact)
+  let tickets = ORDERS.map(o=>({ ...o, items:o.items.map(i=>({...i})) }));
+  // remember each ticket's original promised SLA so a ring can deplete against it
+  const PROMISE0 = {}; ORDERS.forEach(o=>{ PROMISE0[o.id] = Math.max(o.sla, o.elapsed*0.1, 60); });
+
+  /* ====================== Tone (implement exactly) ====================== */
+  function tone(o){
+    if(o.status==='ready')   return 'ready';
+    if(o.sla < 0)            return 'late';
+    if((o.pred||0) > o.sla)  return 'risk';   // model predicts the promise WILL be missed — BEFORE it actually is
+    if(o.sla < 180)          return 'warn';
+    return o.status==='new' ? 'queued' : 'firing';
+  }
+  const TONE_COLOR = {
+    queued:"var(--queued)", firing:"var(--firing)", warn:"var(--warn)",
+    risk:"var(--risk)", late:"var(--late)", ready:"var(--ready)",
+  };
+
+  /* ====================== Config ====================== */
+  const STATIONS = ["All","Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+  let activeStation = "All";
+
+  // lines switcher: All / New / In progress / Ready / Expo
+  const LINES = [
+    { key:"all",   title:"All" },
+    { key:"new",   title:"New" },
+    { key:"prep",  title:"In progress" },
+    { key:"ready", title:"Ready" },
+    { key:"expo",  title:"Expo" },
+  ];
+  let activeLine = "all";
+
+  let drillTruck = null; // null = two-up fleet view; truck name = drilled in
+
+  const NEXT = { new:"prep", prep:"ready", ready:"__done__" };
+  const ACTION_LABEL = { new:"Start prep", prep:"Mark ready", ready:"Bump · Done" };
+
+  const ICON = {
+    takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
+    delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+    note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+    msg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>',
+    req:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>',
+    pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    risk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="10"/></svg>',
+    back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+    expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5a2 2 0 0 1 2-2h4"/><path d="M21 9V5a2 2 0 0 0-2-2h-4"/><path d="M3 15v4a2 2 0 0 0 2 2h4"/><path d="M21 15v4a2 2 0 0 1-2 2h-4"/></svg>',
+  };
+
+  /* ====================== Format helpers ====================== */
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function mmss(s){ const a=Math.abs(s); return Math.floor(a/60)+":"+pad(a%60); }
+  function dueLabel(t){
+    if(t.status==="ready") return "Ready";
+    if(t.sla<0) return "Late "+mmss(t.sla);
+    return "Due "+mmss(t.sla);
+  }
+  function matchesStation(t){
+    if(activeStation==="All") return true;
+    return t.items.some(i=>i.c===activeStation);
+  }
+  // map the lines switcher onto a ticket
+  function matchesLine(t){
+    if(activeLine==="all") return true;
+    if(activeLine==="new")  return t.status==="new";
+    if(activeLine==="prep") return t.status==="prep";
+    if(activeLine==="ready")return t.status==="ready";
+    if(activeLine==="expo") return t.status==="ready"; // expo handoff = ready stage at the pass
+    return true;
+  }
+  // line counts aggregated across the WHOLE fleet, composing with the station filter
+  function lineCount(key){
+    return tickets.filter(t=>{
+      if(!matchesStation(t)) return false;
+      if(key==="all") return true;
+      if(key==="new") return t.status==="new";
+      if(key==="prep") return t.status==="prep";
+      if(key==="ready") return t.status==="ready";
+      if(key==="expo") return t.status==="ready";
+      return false;
+    }).length;
+  }
+
+  /* ====================== SVG bits ====================== */
+  // depleting ring: frac 0..1 of promise remaining
+  function ringSVG(size,frac,color,track,strokeW){
+    const r=(size-strokeW)/2, cx=size/2, cy=size/2, C=2*Math.PI*r;
+    const f=Math.min(Math.max(frac,0),1);
+    const off=(C*(1-f)).toFixed(1);
+    return '<svg viewBox="0 0 '+size+' '+size+'" aria-hidden="true">'+
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r.toFixed(1)+'" fill="none" stroke="'+track+'" stroke-width="'+strokeW+'"/>'+
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r.toFixed(1)+'" fill="none" stroke="'+color+'" stroke-width="'+strokeW+'" '+
+        'stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off+'"/>'+
+      '</svg>';
+  }
+  function sparkline(points,color){
+    const w=64,h=20,max=Math.max(...points,1),min=Math.min(...points,0);
+    const span=(max-min)||1, step=w/(points.length-1);
+    const coords=points.map((p,i)=>[(i*step).toFixed(1),(h-2-((p-min)/span)*(h-4)).toFixed(1)]);
+    const d="M"+coords.map(c=>c[0]+" "+c[1]).join(" L ");
+    const area=d+" L "+w+" "+h+" L 0 "+h+" Z";
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+
+      '<path d="'+area+'" fill="'+color+'" opacity="0.12"/>'+
+      '<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '</svg>';
+  }
+
+  /* ====================== Per-truck derived stats ====================== */
+  function truckTickets(loc){ return tickets.filter(t=>t.loc===loc); }
+
+  function truckStats(loc){
+    const list=truckTickets(loc);
+    const active=list.filter(t=>t.status!=="ready");
+    const ready=list.filter(t=>t.status==="ready");
+    const late=active.filter(t=>tone(t)==="late");
+    const risk=active.filter(t=>tone(t)==="risk");
+    const promiseAcc=FLEET[loc].promiseAcc;
+
+    // HEALTH SCORE: start 100, subtract per late / at-risk ticket and for promise-accuracy below target
+    let health=100;
+    health-=late.length*18;
+    health-=risk.length*9;
+    if(promiseAcc<PROMISE_TARGET) health-=(PROMISE_TARGET-promiseAcc)*2;
+    health=Math.max(0,Math.min(100,Math.round(health)));
+
+    let hState,hCls;
+    if(health>=85){hState="Healthy";hCls="good";}
+    else if(health>=70){hState="Steady";hCls="good";}
+    else if(health>=55){hState="Strained";hCls="warn";}
+    else if(risk.length>=late.length){hState="At risk";hCls="risk";}
+    else {hState="Critical";hCls="alert";}
+
+    return {
+      list, active:active.length, ready:ready.length, late:late.length, risk:risk.length,
+      promiseAcc, throughputHr:FLEET[loc].throughputHr, onShift:FLEET[loc].onShift,
+      health, hState, hCls,
+      healthColor: hCls==="alert"?"var(--late)":hCls==="risk"?"var(--risk)":hCls==="warn"?"var(--warn)":"var(--ready)",
+    };
+  }
+
+  /* ====================== Fleet benchmark bar ====================== */
+  function renderFleetBar(){
+    const k=truckStats("Kraków"), w=truckStats("Warszawa");
+    const totalActive=k.active+w.active;
+    const totalRisk=k.risk+w.risk;
+    const totalLate=k.late+w.late;
+    const totalReady=k.ready+w.ready;
+    const totalThru=k.throughputHr+w.throughputHr;
+    // fleet pace totals (covers/hr + revenue/hr) = sum of per-truck rates
+    const fleetCovers=PACE_BY_TRUCK["Kraków"].coversHr+PACE_BY_TRUCK["Warszawa"].coversHr;
+    const fleetRevenue=PACE_BY_TRUCK["Kraków"].revenueHr+PACE_BY_TRUCK["Warszawa"].revenueHr;
+    // fleet promise-accuracy = throughput-weighted mean
+    const fleetAcc=Math.round((k.promiseAcc*k.throughputHr + w.promiseAcc*w.throughputHr)/totalThru);
+    const leader=k.promiseAcc>=w.promiseAcc?"Kraków":"Warszawa";
+    const lagger=leader==="Kraków"?"Warszawa":"Kraków";
+    const gap=Math.abs(k.promiseAcc-w.promiseAcc);
+
+    const riskCls=totalRisk>0?"risk":"";
+    const lateCls=totalLate>0?"alert":"good";
+
+    function bmRow(loc,stats){
+      const isLeader=loc===leader;
+      const color=stats.promiseAcc>=PROMISE_TARGET?"var(--ready)":stats.promiseAcc>=PROMISE_TARGET-5?"var(--warn)":"var(--late)";
+      return '<div class="bm-row">'+
+        '<span class="bm-name">'+loc+(isLeader?'<span class="lead">Lead</span>':'')+'</span>'+
+        '<span class="bm-track"><span class="bm-fill" style="width:'+stats.promiseAcc+'%;background:'+color+'"></span>'+
+          '<span class="bm-mark" style="left:'+PROMISE_TARGET+'%" title="target '+PROMISE_TARGET+'%"></span></span>'+
+        '<span class="bm-pct tnum">'+stats.promiseAcc+'%</span>'+
+      '</div>';
+    }
+    function tile(lab,val,sub,cls){
+      return '<div class="ftile '+(cls||'')+'">'+
+        '<span class="ft-lab">'+lab+'</span>'+
+        '<span class="ft-val tnum '+(cls||'')+'">'+val+'</span>'+
+        '<span class="ft-sub">'+sub+'</span>'+
+      '</div>';
+    }
+
+    document.getElementById("fleetbar").innerHTML =
+      '<div class="fb-eyebrow">'+
+        '<span class="fb-brandline">'+ICON.pin+'Fleet command</span>'+
+        '<span class="fb-sep"></span>'+
+        '<span class="fb-trucks"><b>2</b> trucks live</span>'+
+      '</div>'+
+      '<div class="fb-grid">'+
+        tile("Active", totalActive, totalReady+" ready", "")+
+        tile("At risk", totalRisk, "predicted miss", riskCls)+
+        tile("Late", totalLate, "over SLA", lateCls)+
+        tile("Ready", totalReady, "for expo", totalReady?"good":"")+
+        tile("Throughput", totalThru, "/ hr fleet", "good")+
+        tile("Covers", fleetCovers, "/ hr fleet", "")+
+        tile("Revenue", zl(fleetRevenue), "/ hr fleet", "")+
+      '</div>'+
+      '<div class="fb-benchmark">'+
+        '<span class="fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>'+
+        '<div class="bm-rows">'+ bmRow("Kraków",k)+bmRow("Warszawa",w) +'</div>'+
+        '<div class="bm-foot">Kraków <b>'+k.promiseAcc+'%</b> · Warszawa <b>'+w.promiseAcc+'%</b> · fleet <b>'+fleetAcc+'%</b> — '+
+          '<b style="color:var(--ready)">'+leader+'</b> leads '+lagger+' by '+gap+' pts (target '+PROMISE_TARGET+'%)</div>'+
+      '</div>';
+  }
+
+  /* ====================== Ticket card ====================== */
+  function ticketHtml(t){
+    const tn=tone(t);
+    const color=TONE_COLOR[tn];
+    const count=t.items.reduce((s,i)=>s+i.q,0);
+
+    // depleting SLA ring: fraction of promise remaining; violet when pred>sla, red at breach
+    let frac, ringColor;
+    if(t.status==="ready"){ frac=1; ringColor="var(--ready)"; }
+    else if(t.sla<0){ frac=0; ringColor="var(--late)"; }
+    else {
+      frac=Math.min(1, t.sla/PROMISE0[t.id]);
+      ringColor = (tn==="risk")?"var(--risk)" : (tn==="warn")?"var(--warn)" : "var(--firing)";
+    }
+
+    // group items by station/category, in canonical station order
+    let itemsHtml="";
+    {
+      const groups={};
+      t.items.forEach(i=>{ (groups[i.c]=groups[i.c]||[]).push(i); });
+      Object.keys(groups)
+        .sort((a,b)=>{ const ia=STATIONS.indexOf(a), ib=STATIONS.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); })
+        .forEach(cat=>{
+          const dim=(activeStation!=="All" && activeStation!==cat)?" is-dim":"";
+          const qty=groups[cat].reduce((s,i)=>s+i.q,0);
+          itemsHtml+='<div class="it-group'+dim+'"><div class="ig-head"><span class="ig-name">'+cat+'</span><span class="ig-count tnum">'+qty+'</span></div>';
+          groups[cat].forEach(i=>{
+            itemsHtml+='<div class="it"><div class="it-main"><span class="q tnum">'+i.q+'×</span><span class="nm">'+i.n+'</span></div>'+
+              (i.note?'<span class="req">'+ICON.req+i.note+'</span>':'')+'</div>';
+          });
+          itemsHtml+='</div>';
+        });
+    }
+    // allergen alert — safety-critical, its own block, kept separate from notes
+    let allergyHtml="";
+    if(t.allergy){
+      allergyHtml='<div class="t-allergy">'+
+        '<div class="ta-head">'+ICON.note+'Allergen alert</div>'+
+        '<div class="ta-body">'+t.allergy+'</div>'+
+      '</div>';
+    }
+    // notes & requests block — order special instructions only
+    let notesHtml="";
+    if(t.note){
+      notesHtml='<div class="t-notes">'+
+        '<div class="tn-head">'+ICON.msg+'Notes &amp; requests</div>'+
+        '<div class="tn-line">'+t.note+'</div>'+
+      '</div>';
+    }
+
+    // predicted-ready line; flag the at-risk story explicitly
+    let predHtml;
+    if(t.status==="ready"){
+      predHtml='<span class="ti-pred">Plated · ready for expo</span>';
+    } else if(tn==="risk"){
+      predHtml='<span class="ti-pred">Model: <b>~'+mmss(t.pred)+' to ready</b> · over promise</span>';
+    } else if(tn==="late"){
+      predHtml='<span class="ti-pred">Model: ~'+mmss(t.pred)+' to ready</span>';
+    } else {
+      predHtml='<span class="ti-pred">Predicted ready in '+mmss(t.pred)+'</span>';
+    }
+
+    const ringCap = t.status==="ready" ? "OK" : (t.sla<0 ? "LATE" : mmss(t.sla));
+
+    return '<article class="ticket '+tn+'" data-id="'+t.id+'">'+
+      '<div class="t-r1">'+
+        '<span class="t-id">#'+t.id+'</span>'+
+        '<span class="t-chan">'+ICON[t.channel]+(t.channel==="delivery"?"Delivery":"Takeout")+'</span>'+
+        (tn==="risk"?'<span class="risk-pill">'+ICON.risk+'At risk</span>':'')+
+        '<span class="t-name">'+t.name+'</span>'+
+      '</div>'+
+      '<div class="t-timer">'+
+        '<div class="timer-ring" data-ring style="--rc:'+ringColor+'">'+
+          ringSVG(54,frac,ringColor,"rgba(255,255,255,0.09)",4)+
+          '<span class="tr-cap mono" data-ringcap>'+ringCap+'</span>'+
+        '</div>'+
+        '<div class="timer-info">'+
+          '<div class="ti-row">'+
+            '<span class="ti-elapsed" data-elapsed>'+mmss(t.elapsed)+'</span>'+
+            '<span class="ti-elapsed-lab">elapsed</span>'+
+            '<span class="ti-due '+tn+'" data-due style="margin-left:auto">'+dueLabel(t)+'</span>'+
+          '</div>'+
+          '<div data-pred>'+predHtml+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="t-items">'+itemsHtml+'</div>'+
+      allergyHtml+
+      notesHtml+
+      '<div class="t-foot">'+
+        '<span class="t-meta">Slot <b>'+t.slot+'</b> · <b>'+count+'</b> items</span>'+
+        '<button class="act'+(t.status==="ready"?" ready":"")+'" data-advance>'+ACTION_LABEL[t.status]+'</button>'+
+      '</div>'+
+    '</article>';
+  }
+
+  /* ====================== Truck board ====================== */
+  // capacity meter (bottleneck) + covers/hr + revenue/hr, rendered into the truck header
+  function paceHeadHtml(loc){
+    const p=truckPace(loc);
+    const b=p.bottleneck;
+    const tier=b.tier; // calm | warn | risk
+    const pct=Math.round(b.util*100);
+    const fillW=Math.min(100,+((b.util/p.maxScale)*100).toFixed(1));
+    const hint=tier==="risk"?"predicted to fall behind":tier==="warn"?"nearing capacity":"within capacity";
+    return '<div class="pace-head" data-pacehead="'+loc+'">'+
+      '<div class="pace-rate">'+
+        '<span class="lab">Covers / hr</span>'+
+        '<span class="val tnum">'+p.coversHr+'</span>'+
+      '</div>'+
+      '<div class="pace-rate">'+
+        '<span class="lab">Revenue / hr</span>'+
+        '<span class="val tnum">'+zl(p.revenueHr)+'</span>'+
+      '</div>'+
+      '<div class="cap-meter" data-capmeter="'+loc+'">'+
+        '<div class="cm-top">'+
+          '<span class="cm-lab">Capacity · bottleneck</span>'+
+          '<span class="cm-pct '+tier+'" data-cappct>'+pct+'%</span>'+
+        '</div>'+
+        '<div class="cap-track"><span class="cap-fill '+tier+'" data-capfill style="width:'+fillW+'%"></span>'+
+          '<span class="cap-mark" data-capmark style="left:'+p.markLeft+'%" title="100% capacity"></span></div>'+
+        '<div class="cm-foot">'+
+          '<span class="cm-station '+tier+'" data-capstation><span class="dotb"></span>'+b.id+'</span>'+
+          '<span class="cm-hint'+(tier==="risk"?" risk":"")+'" data-caphint>'+hint+'</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function truckHeadHtml(loc,s){
+    const ring=ringSVG(52,s.health/100,s.healthColor,"rgba(255,255,255,0.08)",4);
+    return '<div class="t-head" data-truck="'+loc+'">'+
+      '<div class="th-top">'+
+        '<button class="drill-back" data-back type="button">'+ICON.back+'Fleet</button>'+
+        '<span class="th-loc">'+ICON.pin+loc+'</span>'+
+        '<span class="th-drillhint">'+ICON.expand+' Drill in</span>'+
+        '<div class="health">'+
+          '<div class="health-meta">'+
+            '<span class="hm-lab">Health</span>'+
+            '<span class="hm-state '+s.hCls+'">'+s.hState+'</span>'+
+          '</div>'+
+          '<div class="health-ring">'+ring+'<span class="hr-num">'+s.health+'</span></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="th-stats">'+
+        '<div class="th-stat"><span class="lab">Active</span><span class="val">'+s.active+'</span></div>'+
+        '<div class="th-stat'+(s.risk?" is-risk":"")+'"><span class="lab">At risk</span><span class="val">'+s.risk+'</span></div>'+
+        '<div class="th-stat'+(s.late?" is-alert":"")+'"><span class="lab">Late</span><span class="val">'+s.late+'</span></div>'+
+        '<div class="th-stat'+(s.ready?" is-good":"")+'"><span class="lab">Ready</span><span class="val">'+s.ready+'</span></div>'+
+        '<div class="th-stat"><span class="lab">On shift</span><span class="val">'+s.onShift+'</span></div>'+
+        '<div class="th-spark">'+
+          '<span class="sp-lab">'+s.throughputHr+' / hr</span>'+
+          sparkline(SPARK[loc],s.healthColor)+
+        '</div>'+
+      '</div>'+
+      paceHeadHtml(loc)+
+    '</div>';
+  }
+
+  // per-station pace gauges row (sits at the top of the truck body region)
+  function paceGaugesHtml(loc){
+    const p=truckPace(loc);
+    let cells='';
+    p.stations.forEach(st=>{
+      const tier=st.tier;
+      const figCls=tier==="risk"?"risk":tier==="warn"?"warn":"";
+      cells+='<div class="gauge '+tier+'" data-gauge="'+loc+'|'+st.id+'">'+
+        '<div class="g-top">'+
+          '<span class="g-name">'+st.id+'</span>'+
+          '<span class="g-pct '+figCls+'" data-gpct>'+st.pct+'%</span>'+
+        '</div>'+
+        '<div class="g-track"><span class="g-fill '+tier+'" data-gfill style="width:'+st.fillW+'%"></span>'+
+          '<span class="g-mark" data-gmark style="left:'+p.markLeft+'%"></span></div>'+
+        '<div class="g-foot">'+
+          '<span class="g-fig" data-gfig>'+st.demand+'/'+st.cap+'</span>'+
+          '<span class="g-fc'+(tier==="risk"?" risk":"")+'" data-fc>+'+st.fc+' / 15m</span>'+
+        '</div>'+
+      '</div>';
+    });
+    return '<div class="pace-gauges" data-gauges="'+loc+'">'+
+      '<span class="pg-title">Pace · next 15m</span>'+cells+
+    '</div>';
+  }
+
+  const LEGEND =
+    '<div class="t-legend" aria-hidden="true">'+
+      '<span><i style="background:var(--queued)"></i>Queued</span>'+
+      '<span><i style="background:var(--firing)"></i>Firing</span>'+
+      '<span><i style="background:var(--warn)"></i>Due soon</span>'+
+      '<span><i style="background:var(--risk)"></i>At risk</span>'+
+      '<span><i style="background:var(--late)"></i>Late</span>'+
+      '<span><i style="background:var(--ready)"></i>Ready</span>'+
+    '</div>';
+
+  function truckBodyList(loc){
+    // tone-weighted ordering so the worst float to the top
+    const order={late:0,risk:1,warn:2,firing:3,queued:4,ready:5};
+    return truckTickets(loc)
+      .filter(t=>matchesStation(t) && matchesLine(t))
+      .sort((a,b)=>{
+        const d=order[tone(a)]-order[tone(b)];
+        if(d!==0) return d;
+        return a.sla-b.sla;
+      });
+  }
+
+  /* ====================== Render ====================== */
+  const boardsEl=document.getElementById("boards");
+
+  function render(){
+    boardsEl.classList.toggle("drill", !!drillTruck);
+    boardsEl.innerHTML="";
+
+    TRUCKS.forEach(loc=>{
+      const s=truckStats(loc);
+      const section=document.createElement("section");
+      section.className="truck";
+      section.dataset.loc=loc;
+      if(drillTruck===loc) section.classList.add("is-drill");
+      if(drillTruck && drillTruck!==loc) section.dataset.hidden="1";
+
+      const list=truckBodyList(loc);
+      const body = list.length
+        ? list.map(ticketHtml).join("")
+        : '<div class="empty">No tickets in this view.</div>';
+
+      section.innerHTML = truckHeadHtml(loc,s) +
+        paceGaugesHtml(loc) +
+        '<div class="t-body">'+body+'</div>' + LEGEND;
+      boardsEl.appendChild(section);
+    });
+
+    // wire actions
+    boardsEl.querySelectorAll("[data-advance]").forEach(btn=>{
+      const id=btn.closest(".ticket").dataset.id;
+      btn.addEventListener("click",(e)=>{ e.stopPropagation(); advance(id); });
+    });
+    // drill-in on truck header
+    boardsEl.querySelectorAll(".t-head").forEach(h=>{
+      const loc=h.dataset.truck;
+      h.addEventListener("click",()=>{ if(drillTruck!==loc){ drillTruck=loc; render(); } });
+    });
+    // back control
+    boardsEl.querySelectorAll("[data-back]").forEach(b=>{
+      b.addEventListener("click",(e)=>{ e.stopPropagation(); drillTruck=null; render(); });
+    });
+
+    renderFleetBar();
+    updateLineCounts();
+  }
+
+  function advance(id){
+    const t=tickets.find(x=>x.id===id);
+    if(!t) return;
+    const nx=NEXT[t.status];
+    if(nx==="__done__"){ tickets=tickets.filter(x=>x.id!==id); }
+    else { t.status=nx; if(nx==="ready"){ t.sla=0; t.pred=0; } }
+    render();
+  }
+
+  /* ====================== Station filter ====================== */
+  const filtersEl=document.getElementById("filters");
+  function buildFilters(){
+    filtersEl.innerHTML="";
+    STATIONS.forEach(s=>{
+      const b=document.createElement("button");
+      b.className="chip";b.type="button";
+      b.textContent=s;
+      b.setAttribute("aria-pressed",String(s===activeStation));
+      b.addEventListener("click",()=>{ activeStation=s; buildFilters(); render(); });
+      filtersEl.appendChild(b);
+    });
+  }
+
+  /* ====================== Lines switcher ====================== */
+  const linesEl=document.getElementById("lines");
+  function buildLines(){
+    linesEl.innerHTML="";
+    LINES.forEach(l=>{
+      const b=document.createElement("button");
+      b.className="line";b.type="button";
+      b.dataset.line=l.key;
+      b.setAttribute("aria-pressed",String(l.key===activeLine));
+      b.innerHTML='<span>'+l.title+'</span><span class="lcount tnum" data-linecount="'+l.key+'">'+lineCount(l.key)+'</span>';
+      b.addEventListener("click",()=>{ activeLine=l.key; buildLines(); render(); });
+      linesEl.appendChild(b);
+    });
+  }
+  function updateLineCounts(){
+    LINES.forEach(l=>{
+      const el=linesEl.querySelector('[data-linecount="'+l.key+'"]');
+      if(el) el.textContent=lineCount(l.key);
+    });
+  }
+
+  /* ====================== Live tick (in-place updates) ====================== */
+  function updateCardsInPlace(){
+    boardsEl.querySelectorAll(".ticket").forEach(card=>{
+      const t=tickets.find(x=>x.id===card.dataset.id);
+      if(!t) return;
+      const tn=tone(t);
+
+      // recolor card tone class
+      ["queued","firing","warn","risk","late","ready"].forEach(c=>card.classList.remove(c));
+      card.classList.add(tn);
+
+      // elapsed
+      const el=card.querySelector("[data-elapsed]");
+      if(el) el.textContent=mmss(t.elapsed);
+
+      // due label
+      const due=card.querySelector("[data-due]");
+      if(due){
+        due.textContent=dueLabel(t);
+        ["queued","firing","warn","risk","late","ready"].forEach(c=>due.classList.remove(c));
+        due.classList.add(tn);
+      }
+
+      // ring redraw
+      const ring=card.querySelector("[data-ring]");
+      if(ring){
+        let frac,ringColor;
+        if(t.status==="ready"){ frac=1; ringColor="var(--ready)"; }
+        else if(t.sla<0){ frac=0; ringColor="var(--late)"; }
+        else {
+          frac=Math.min(1,t.sla/PROMISE0[t.id]);
+          ringColor=(tn==="risk")?"var(--risk)":(tn==="warn")?"var(--warn)":"var(--firing)";
+        }
+        const svg=ring.querySelector("svg");
+        if(svg) svg.outerHTML=ringSVG(54,frac,ringColor,"rgba(255,255,255,0.09)",4);
+        const cap=ring.querySelector("[data-ringcap]");
+        if(cap) cap.textContent = t.status==="ready"?"OK":(t.sla<0?"LATE":mmss(t.sla));
+      }
+
+      // pred line + risk pill (DOM-light: just update text + presence)
+      const predBox=card.querySelector("[data-pred]");
+      if(predBox){
+        let predHtml;
+        if(t.status==="ready") predHtml='<span class="ti-pred">Plated · ready for expo</span>';
+        else if(tn==="risk") predHtml='<span class="ti-pred">Model: <b>~'+mmss(t.pred)+' to ready</b> · over promise</span>';
+        else if(tn==="late") predHtml='<span class="ti-pred">Model: ~'+mmss(t.pred)+' to ready</span>';
+        else predHtml='<span class="ti-pred">Predicted ready in '+mmss(t.pred)+'</span>';
+        predBox.innerHTML=predHtml;
+      }
+      const r1=card.querySelector(".t-r1");
+      const hasPill=!!card.querySelector(".risk-pill");
+      if(tn==="risk" && !hasPill && r1){
+        const pill=document.createElement("span");
+        pill.className="risk-pill";
+        pill.innerHTML=ICON.risk+"At risk";
+        r1.insertBefore(pill, card.querySelector(".t-name"));
+      } else if(tn!=="risk" && hasPill){
+        card.querySelector(".risk-pill").remove();
+      }
+    });
+  }
+
+  // recompute the Pace surfaces (capacity meter + per-station gauges) in place every tick
+  function updatePaceInPlace(){
+    TRUCKS.forEach(loc=>{
+      const p=truckPace(loc);
+
+      // capacity meter (bottleneck)
+      const cm=boardsEl.querySelector('[data-capmeter="'+loc+'"]');
+      if(cm){
+        const b=p.bottleneck, tier=b.tier, pct=Math.round(b.util*100);
+        const fillW=Math.min(100,+((b.util/p.maxScale)*100).toFixed(1));
+        const fill=cm.querySelector('[data-capfill]');
+        if(fill){ fill.style.width=fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+        const mk=cm.querySelector('[data-capmark]'); if(mk) mk.style.left=p.markLeft+'%';
+        const pe=cm.querySelector('[data-cappct]');
+        if(pe){ pe.textContent=pct+'%'; ["warn","risk"].forEach(c=>pe.classList.remove(c)); if(tier!=="calm") pe.classList.add(tier); }
+        const stn=cm.querySelector('[data-capstation]');
+        if(stn){ ["warn","risk"].forEach(c=>stn.classList.remove(c)); if(tier!=="calm") stn.classList.add(tier); stn.innerHTML='<span class="dotb"></span>'+b.id; }
+        const hint=cm.querySelector('[data-caphint]');
+        if(hint){ hint.textContent=(tier==="risk"?"predicted to fall behind":tier==="warn"?"nearing capacity":"within capacity"); hint.classList.toggle("risk",tier==="risk"); }
+      }
+
+      // per-station gauges
+      const wrap=boardsEl.querySelector('[data-gauges="'+loc+'"]');
+      if(wrap){
+        p.stations.forEach(st=>{
+          const g=wrap.querySelector('[data-gauge="'+loc+'|'+st.id+'"]');
+          if(!g) return;
+          const tier=st.tier;
+          ["calm","warn","risk"].forEach(c=>g.classList.remove(c)); g.classList.add(tier);
+          const fill=g.querySelector('[data-gfill]');
+          if(fill){ fill.style.width=st.fillW+'%'; ["calm","warn","risk"].forEach(c=>fill.classList.remove(c)); fill.classList.add(tier); }
+          const mk=g.querySelector('[data-gmark]'); if(mk) mk.style.left=p.markLeft+'%';
+          const pc=g.querySelector('[data-gpct]');
+          if(pc){ pc.textContent=st.pct+'%'; ["warn","risk"].forEach(c=>pc.classList.remove(c)); if(tier!=="calm") pc.classList.add(tier); }
+          const fig=g.querySelector('[data-gfig]');
+          if(fig){ fig.textContent=st.demand+'/'+st.cap; }
+          const fc=g.querySelector('[data-fc]');
+          if(fc){ fc.textContent='+'+st.fc+' / 15m'; fc.classList.toggle("risk",tier==="risk"); }
+        });
+      }
+    });
+  }
+
+  let lastToneSig="";
+  function toneSignature(){
+    return tickets.map(t=>t.id+tone(t)).join("|");
+  }
+
+  function tick(){
+    // wall clock
+    const d=new Date();
+    document.getElementById("clock").textContent=pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+
+    // advance timers
+    tickets.forEach(t=>{
+      if(t.status==="ready") return;
+      t.elapsed+=1;
+      t.sla-=1;
+      t.pred=Math.max(0,(t.pred||0)-1);
+    });
+
+    const sig=toneSignature();
+    if(sig!==lastToneSig){
+      // a tone crossed a threshold somewhere — full re-render to re-sort + recolor everything
+      lastToneSig=sig;
+      render();
+    } else {
+      updateCardsInPlace();
+      updatePaceInPlace();
+      renderFleetBar();
+      updateLineCounts();
+    }
+  }
+
+  /* ====================== Fullscreen ====================== */
+  const fsbtn=document.getElementById("fsbtn");
+  function syncFs(){
+    const on=!!document.fullscreenElement;
+    document.documentElement.classList.toggle("is-fullscreen",on);
+    fsbtn.setAttribute("aria-pressed",String(on));
+  }
+  function fallbackToggle(){
+    const on=!document.documentElement.classList.contains("is-fullscreen");
+    document.documentElement.classList.toggle("is-fullscreen",on);
+    fsbtn.setAttribute("aria-pressed",String(on));
+  }
+  fsbtn.addEventListener("click",()=>{
+    if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen().catch(fallbackToggle);
+      else fallbackToggle();
+    } else {
+      const req=document.documentElement.requestFullscreen;
+      if(req) req.call(document.documentElement).catch(fallbackToggle);
+      else fallbackToggle();
+    }
+  });
+  document.addEventListener("fullscreenchange",syncFs);
+
+  /* ====================== Boot ====================== */
+  buildFilters();
+  buildLines();
+  lastToneSig=toneSignature();
+  render();
+  tick();
+  setInterval(tick,1000);
+</script>
+</body>
+</html>
