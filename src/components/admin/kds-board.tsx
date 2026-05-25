@@ -5,6 +5,7 @@ import {
   FlaskConical,
   MapPin,
   Timer,
+  Users,
 } from "lucide-react";
 import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
@@ -175,7 +176,11 @@ export function Ticket({ order, stationFilter, onAdvance, isUpdating, nowMs }: T
           <span className="v2-ticket-channel">
             <FulfillmentIcon type={order.fulfillmentType} className="h-3 w-3" />
             {fulfillmentLabel(order.fulfillmentType)}
-            {order.fulfillmentType === "dine-in" && order.partySize ? ` ·${order.partySize}` : ""}
+            {order.fulfillmentType === "dine-in" && order.partySize ? (
+              <span className="v2-ticket-party">
+                <Users className="h-3 w-3" /> {order.partySize}
+              </span>
+            ) : null}
             <span className="v2-ticket-loc">
               <MapPin className="h-3 w-3" /> {order.locationSlug}
             </span>

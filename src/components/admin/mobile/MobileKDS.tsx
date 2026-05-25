@@ -11,6 +11,7 @@ import {
   PauseCircle,
   PlayCircle,
   Timer,
+  Users,
 } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -436,6 +437,12 @@ function TicketCard({
           <div style={{ fontSize: 16, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {order.customerName}
           </div>
+          {order.fulfillmentType === "dine-in" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>
+              <Users className="h-3.5 w-3.5" aria-hidden />
+              Dine-in{order.partySize ? ` · ${order.partySize} ${order.partySize === 1 ? "guest" : "guests"}` : ""}
+            </div>
+          )}
         </div>
         <div
           className="tabular"
