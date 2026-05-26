@@ -445,10 +445,18 @@
     .editor{grid-template-columns:1fr 340px}
   }
 
-  /* ---- Phones / narrow tablets: stack the editor, compact the chrome ---- */
+  /* ---- Phones / narrow tablets: let the whole page scroll, stack the editor ---- */
   @media (max-width:760px){
-    /* header wraps and sheds non-essential chrome */
-    header{height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3)}
+    /* Abandon the fixed-height app shell on phones — the desktop model pins
+       body{overflow:hidden} and scrolls inner panes, which traps scrolling on
+       mobile. Here the document scrolls naturally and the header stays pinned. */
+    html,body{height:auto;min-height:100%}
+    body{overflow:visible}
+
+    header{
+      position:sticky;top:0;z-index:30;
+      height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3);
+    }
     .kd-label,.design-tag,.gallery-link,.clock,.ctl-lbl,.spacer{display:none}
     .brand{min-width:0}
     .wordmark{font-size:13px;letter-spacing:0.14em}
@@ -461,23 +469,26 @@
     .tab{width:172px;min-height:66px}
     .tab-new{width:96px;min-height:66px}
 
-    /* products on top, order ticket below — each pane scrolls independently so the
-       Charge button stays on screen while the menu scrolls above it */
-    .editor{grid-template-columns:1fr;grid-template-rows:minmax(0,1.1fr) minmax(0,1fr)}
+    /* editor + its panes flow at natural height; the page scrolls, not the panes */
+    .editor{display:flex;flex-direction:column;min-height:0}
+    .products,.ticket{min-height:0}
     .ticket{border-top:1px solid var(--hair-strong)}
+    .grid-scroll{overflow:visible;flex:0 0 auto;padding:var(--s3)}
+    .ticket-inner{overflow:visible;flex:0 0 auto;min-height:0}
+    .lines{overflow:visible;flex:0 0 auto;min-height:0;max-height:none}
+
     .cats{padding:var(--s2) var(--s3);gap:6px}
-    .grid-scroll{padding:var(--s3)}
     .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
     .card{min-height:86px;padding:var(--s2) var(--s3)}
     .combo-strip{padding:var(--s2) var(--s3)}
-    .ticket-head,.lines,.totals{padding-left:var(--s3);padding-right:var(--s3)}
+    .ticket-head,.totals{padding-left:var(--s3);padding-right:var(--s3)}
     .charge-area{padding:0 var(--s3) var(--s3)}
 
     /* steering strip: let the reason wrap onto its own line */
     .steer-strip{flex-wrap:wrap;gap:var(--s2) var(--s3);padding:var(--s2) var(--s3)}
     .ss-reason{white-space:normal;flex-basis:100%;order:3}
 
-    /* tender sheet rises from the bottom of the screen, not the half-height ticket */
+    /* tender sheet rises from the bottom of the whole screen */
     .overlay{position:fixed}
 
     footer{height:auto;min-height:32px;padding:var(--s2) var(--s3)}
