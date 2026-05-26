@@ -188,7 +188,11 @@ export function AdminPos({
   );
 
   const fetchTabs = useCallback(async () => {
-    if (!pageLoc) return;
+    if (!pageLoc) {
+      // No truck resolved yet — don't sit on a spinner forever.
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
       if (!res.ok) return;
@@ -197,6 +201,8 @@ export function AdminPos({
       if (pending.current > 0) return; // don't clobber an in-flight edit
       setTabs(server);
       setActiveTabId((cur) => (server.some((t) => t.id === cur) ? cur : (server[0]?.id ?? null)));
+    } catch {
+      /* network blip — keep what we have; the next poll retries */
     } finally {
       setLoading(false);
     }
@@ -204,8 +210,6 @@ export function AdminPos({
 
   useEffect(() => {
     setLoading(true);
-    setTabs([]);
-    setActiveTabId(null);
     fetchTabs();
     const id = setInterval(fetchTabs, 8000);
     return () => clearInterval(id);
@@ -765,7 +769,13 @@ export function AdminPos({
       {/* Editor */}
       {!active ? (
         <div className="v2-pos2-empty">
-          {loading ? (
+          {locationKeys.length === 0 ? (
+            <EmptyState
+              icon={MapPin}
+              title="No active location"
+              description="This POS has no truck to ring up against. Activate a location in Locations, then reload."
+            />
+          ) : loading ? (
             <span className="v2-muted">Loading checks…</span>
           ) : (
             <EmptyState
