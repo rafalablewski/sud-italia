@@ -15,6 +15,7 @@ import {
   ParkingSquare,
   Plus,
   Receipt,
+  RefreshCw,
   Send,
   ShoppingBag,
   Sparkles,
@@ -191,19 +192,24 @@ export function AdminPos({
     toastTimer.current = setTimeout(() => setToastMsg(null), 2400);
   }, []);
 
-  // --- Tables (dine-in) — read-only at staff level, fetched lazily ---------
+  // --- Tables (dine-in) — read-only at staff level ------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
-  const tablesLoadedFor = useRef<string>("");
+  const [tablesLoading, setTablesLoading] = useState(false);
   const fetchTables = useCallback(async () => {
     if (!pageLoc) return;
+    setTablesLoading(true);
     try {
       const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(pageLoc)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setTables([]);
+        return;
+      }
       const data: FloorTable[] = await res.json();
       setTables(Array.isArray(data) ? data : []);
-      tablesLoadedFor.current = pageLoc;
     } catch {
-      /* non-fatal */
+      /* non-fatal — picker shows the empty state */
+    } finally {
+      setTablesLoading(false);
     }
   }, [pageLoc]);
   const tableById = useCallback(
@@ -499,15 +505,12 @@ export function AdminPos({
     };
   }, [steer, pageLoc]);
 
-  // --- Tables: reset on location change, lazy-load when a dine-in tab exists.
+  // Load tables for the active truck up front (small list) and refresh on every
+  // location change — so a table added on the Floor page shows up here, and the
+  // picker never opens against a stale/empty cache.
   useEffect(() => {
-    setTables([]);
-    tablesLoadedFor.current = "";
-  }, [pageLoc]);
-  const anyDineIn = tabs.some((t) => t.channel === "dine-in");
-  useEffect(() => {
-    if (anyDineIn && tablesLoadedFor.current !== pageLoc) void fetchTables();
-  }, [anyDineIn, pageLoc, fetchTables]);
+    void fetchTables();
+  }, [fetchTables]);
 
   // --- Overlays ------------------------------------------------------------
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
@@ -975,7 +978,7 @@ export function AdminPos({
                               : ""
                         }
                         onClick={() => {
-                          if (tablesLoadedFor.current !== pageLoc) void fetchTables();
+                          void fetchTables();
                           setTablePickerOpen(true);
                         }}
                       >
@@ -1215,6 +1218,13 @@ export function AdminPos({
                 Clear table
               </Button>
             )}
+            <Button
+              variant="ghost"
+              leadingIcon={<RefreshCw className={tablesLoading ? "v2-spin" : undefined} />}
+              onClick={() => void fetchTables()}
+            >
+              Refresh
+            </Button>
             <Button variant="secondary" onClick={() => setTablePickerOpen(false)}>
               Cancel
             </Button>
@@ -1225,8 +1235,12 @@ export function AdminPos({
           <EmptyState
             compact
             icon={Armchair}
-            title="No tables configured"
-            description="Add tables on the Floor page to seat dine-in checks."
+            title={tablesLoading ? "Loading tables…" : `No tables for ${locName}`}
+            description={
+              tablesLoading
+                ? undefined
+                : `This truck has no floor tables yet. Add them on the Floor page (make sure it's set to ${locName}), then Refresh.`
+            }
           />
         ) : (
           <div className="v2-pos-tables">
