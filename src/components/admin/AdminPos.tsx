@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertTriangle,
   Armchair,
   Banknote,
   Check,
@@ -34,6 +33,15 @@ import {
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
 import type { CartItem } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
+import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
+
+// Floor-table status → admin Badge tone (standard admin styling for the picker).
+const TABLE_STATUS_TONE: Record<FloorTable["status"], BadgeTone> = {
+  available: "success",
+  seated: "info",
+  reserved: "warning",
+  "out-of-service": "danger",
+};
 
 // Prices are grosze (integers); the chain renders PLN with a comma decimal.
 const fmtPLN = (g: number) => `${(g / 100).toFixed(2).replace(".", ",")} zł`;
@@ -174,6 +182,47 @@ export function AdminPos({
     [tabs, activeTabId],
   );
 
+  // --- Toast ---------------------------------------------------------------
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 2400);
+  }, []);
+
+  // --- Tables (dine-in) — read-only at staff level, fetched lazily ---------
+  const [tables, setTables] = useState<FloorTable[]>([]);
+  const tablesLoadedFor = useRef<string>("");
+  const fetchTables = useCallback(async () => {
+    if (!pageLoc) return;
+    try {
+      const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const data: FloorTable[] = await res.json();
+      setTables(Array.isArray(data) ? data : []);
+      tablesLoadedFor.current = pageLoc;
+    } catch {
+      /* non-fatal */
+    }
+  }, [pageLoc]);
+  const tableById = useCallback(
+    (id?: string) => (id ? tables.find((t) => t.id === id) : undefined),
+    [tables],
+  );
+  // Tables occupied by another active (non-parked) dine-in check.
+  const tabsOnTable = useCallback(
+    (tableId: string, exceptId: string) =>
+      tabs.filter(
+        (t) =>
+          t.id !== exceptId &&
+          t.channel === "dine-in" &&
+          t.status !== "parked" &&
+          t.tableId === tableId,
+      ),
+    [tabs],
+  );
+
   // Debounced per-tab persistence — every edit lands in the store so a refresh
   // (or a second till) sees the same open checks. orderId stays server-owned.
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -267,9 +316,18 @@ export function AdminPos({
   );
 
   const changeCovers = useCallback(
-    (delta: number) =>
-      mutateActive((t) => ({ ...t, covers: Math.max(1, Math.min(50, (t.covers ?? 2) + delta)) })),
-    [mutateActive],
+    (delta: number) => {
+      const t = getActive();
+      if (!t) return;
+      const next = Math.max(1, Math.min(50, (t.covers ?? 2) + delta));
+      mutateActive((x) => ({ ...x, covers: next }));
+      // Flag the moment the party outgrows the seats the assigned table has.
+      const table = tableById(t.tableId);
+      if (delta > 0 && table && table.seats < next) {
+        toast(`Table ${table.number} seats ${table.seats} — party of ${next} may not fit`);
+      }
+    },
+    [getActive, mutateActive, tableById, toast],
   );
 
   const setAddress = useCallback(
@@ -301,15 +359,6 @@ export function AdminPos({
       /* offline — the New tab button is a no-op until the network returns */
     }
   }, [pageLoc]);
-
-  // --- Toast ---------------------------------------------------------------
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const toast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(null), 2400);
-  }, []);
 
   // --- Send to KDS / charge ------------------------------------------------
   const [busyTabId, setBusyTabId] = useState<string | null>(null);
@@ -450,21 +499,7 @@ export function AdminPos({
     };
   }, [steer, pageLoc]);
 
-  // --- Tables (dine-in) ----------------------------------------------------
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const tablesLoadedFor = useRef<string>("");
-  const fetchTables = useCallback(async () => {
-    if (!pageLoc) return;
-    try {
-      const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(pageLoc)}`);
-      if (!res.ok) return;
-      const data: FloorTable[] = await res.json();
-      setTables(Array.isArray(data) ? data : []);
-      tablesLoadedFor.current = pageLoc;
-    } catch {
-      /* non-fatal */
-    }
-  }, [pageLoc]);
+  // --- Tables: reset on location change, lazy-load when a dine-in tab exists.
   useEffect(() => {
     setTables([]);
     tablesLoadedFor.current = "";
@@ -473,19 +508,6 @@ export function AdminPos({
   useEffect(() => {
     if (anyDineIn && tablesLoadedFor.current !== pageLoc) void fetchTables();
   }, [anyDineIn, pageLoc, fetchTables]);
-
-  // Tables occupied by another active (non-parked) dine-in check.
-  const tabsOnTable = useCallback(
-    (tableId: string, exceptId: string) =>
-      tabs.filter(
-        (t) =>
-          t.id !== exceptId &&
-          t.channel === "dine-in" &&
-          t.status !== "parked" &&
-          t.tableId === tableId,
-      ),
-    [tabs],
-  );
 
   // --- Overlays ------------------------------------------------------------
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
@@ -664,6 +686,38 @@ export function AdminPos({
     active?.channel === "delivery" &&
     steerPlan.deliveryCapNextWindow === 0;
 
+  // Dine-in seating signals for the active check: the assigned table, whether
+  // another open check is already on it (conflict), and whether the party
+  // outgrows the table's seats (over capacity). Both are soft — staff can still
+  // seat — but they're surfaced so nothing is silently wrong.
+  const activeCovers = active?.covers ?? 2;
+  const activeTable = active?.tableId ? tableById(active.tableId) : undefined;
+  const activeTableConflict =
+    !!active && active.channel === "dine-in" && !!active.tableId && tabsOnTable(active.tableId, active.id).length > 0;
+  const activeOverCapacity =
+    !!activeTable && active?.channel === "dine-in" && activeTable.seats < activeCovers;
+
+  const handlePickTable = useCallback(
+    (id: string | null) => {
+      setTablePickerOpen(false);
+      assignTable(id);
+      const t = getActive();
+      if (id == null || !t) return;
+      const table = tableById(id);
+      const notes: string[] = [];
+      if (tabsOnTable(id, t.id).length > 0) notes.push(`also on another open check`);
+      if (table && table.seats < (t.covers ?? 2)) {
+        notes.push(`seats ${table.seats} for a party of ${t.covers ?? 2}`);
+      }
+      toast(
+        notes.length
+          ? `Table ${table?.number} — ${notes.join(" · ")}`
+          : `Seated at table ${table?.number}`,
+      );
+    },
+    [assignTable, getActive, tableById, tabsOnTable, toast],
+  );
+
   const locOptions = locationKeys.map((slug) => ({
     slug,
     label: activeLocations.find((l) => l.slug === slug)?.city ?? slug,
@@ -758,9 +812,11 @@ export function AdminPos({
         <div className="pos-tabrail-scroll">
           {tabs.map((t) => {
             const cnt = itemCount(t);
+            const railTable = t.channel === "dine-in" && t.tableId ? tableById(t.tableId) : undefined;
             const clash =
-              t.channel === "dine-in" && t.tableId && tabsOnTable(t.tableId, t.id).length > 0;
-            const tableNo = t.tableId ? tables.find((x) => x.id === t.tableId)?.number : undefined;
+              (t.channel === "dine-in" && !!t.tableId && tabsOnTable(t.tableId, t.id).length > 0) ||
+              (!!railTable && railTable.seats < (t.covers ?? 2));
+            const tableNo = railTable?.number;
             return (
               <button
                 key={t.id}
@@ -909,12 +965,15 @@ export function AdminPos({
                       <button
                         type="button"
                         className={`pos-detail-btn${
-                          active.tableId && !(active.tableId && tabsOnTable(active.tableId, active.id).length)
-                            ? " assigned"
-                            : ""
-                        }${
-                          active.tableId && tabsOnTable(active.tableId, active.id).length ? " conflict" : ""
-                        }`}
+                          active.tableId && !activeTableConflict && !activeOverCapacity ? " assigned" : ""
+                        }${activeTableConflict || activeOverCapacity ? " conflict" : ""}`}
+                        title={
+                          activeTableConflict
+                            ? "Another open check is already on this table"
+                            : activeOverCapacity
+                              ? `Table seats ${activeTable?.seats} — party of ${activeCovers}`
+                              : ""
+                        }
                         onClick={() => {
                           if (tablesLoadedFor.current !== pageLoc) void fetchTables();
                           setTablePickerOpen(true);
@@ -922,10 +981,8 @@ export function AdminPos({
                       >
                         <Armchair />
                         <span>
-                          {active.tableId
-                            ? `Table ${tables.find((x) => x.id === active.tableId)?.number ?? "?"}${
-                                tabsOnTable(active.tableId, active.id).length ? " ⚠" : ""
-                              }`
+                          {activeTable
+                            ? `Table ${activeTable.number}${activeTableConflict || activeOverCapacity ? " ⚠" : ""}`
                             : "Assign table"}
                         </span>
                       </button>
@@ -1106,102 +1163,6 @@ export function AdminPos({
                 </div>
               </div>
 
-              {/* Table picker overlay */}
-              <div className={`pos-overlay center${tablePickerOpen ? " open" : ""}`}>
-                <div className="pos-table-sheet">
-                  <div className="pos-ts-head">
-                    <span className="pos-ts-title">Assign table</span>
-                    <span className="pos-th-id tnum">{active ? `#${active.id}` : ""}</span>
-                  </div>
-                  {tables.length === 0 ? (
-                    <div className="pos-table-hint">
-                      <AlertTriangle className="pos-inline-ic" /> No tables configured — add them on the Floor page.
-                    </div>
-                  ) : (
-                    <>
-                      {tables.some((t) => active && tabsOnTable(t.id, active.id).length > 0) && (
-                        <div className="pos-table-hint">
-                          <i /> Amber = in use by another open check
-                        </div>
-                      )}
-                      <div className="pos-table-grid">
-                        {tables.map((t) => {
-                          const taken = active ? tabsOnTable(t.id, active.id).length > 0 : false;
-                          const sel = active?.tableId === t.id;
-                          return (
-                            <button
-                              key={t.id}
-                              type="button"
-                              className={`pos-table-cell${sel ? " sel" : ""}${taken ? " taken" : ""}`}
-                              onClick={() => {
-                                assignTable(t.id);
-                                setTablePickerOpen(false);
-                                if (active && tabsOnTable(t.id, active.id).length) {
-                                  toast(`Table ${t.number} also on another check`);
-                                }
-                              }}
-                            >
-                              {t.number}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                  <div className="pos-table-foot">
-                    <button
-                      type="button"
-                      className="pos-ta-btn"
-                      onClick={() => {
-                        assignTable(null);
-                        setTablePickerOpen(false);
-                      }}
-                    >
-                      Clear
-                    </button>
-                    <button type="button" className="pos-ta-btn" onClick={() => setTablePickerOpen(false)}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Delivery address overlay */}
-              <div className={`pos-overlay center${addrOpen ? " open" : ""}`}>
-                <div className="pos-addr-sheet">
-                  <div className="pos-ts-head">
-                    <span className="pos-ts-title">Delivery address</span>
-                    <span className="pos-th-id tnum">{active ? `#${active.id}` : ""}</span>
-                  </div>
-                  <textarea
-                    className="pos-addr-input"
-                    rows={3}
-                    value={addrDraft}
-                    onChange={(e) => setAddrDraft(e.target.value)}
-                    placeholder="Street & number, flat / buzzer, city — plus any note for the driver"
-                  />
-                  <div className="pos-table-foot">
-                    <button type="button" className="pos-ta-btn" onClick={() => setAddrDraft("")}>
-                      Clear
-                    </button>
-                    <button type="button" className="pos-ta-btn" onClick={() => setAddrOpen(false)}>
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="pos-ta-btn primary"
-                      onClick={() => {
-                        setAddress(addrDraft);
-                        setAddrOpen(false);
-                        if (addrDraft.trim()) toast("Address saved");
-                      }}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               {toastMsg && (
                 <div className="pos-toast show">
                   <Check /> {toastMsg}
@@ -1237,6 +1198,119 @@ export function AdminPos({
           <span className="pos-kbd">Esc</span> cancel
         </div>
       </footer>
+
+      {/* Assign-table + delivery-address use the standard admin Dialog (portaled
+          to document.body) — not the dark POS chrome — so they read as normal
+          admin modals. */}
+      <Dialog
+        open={tablePickerOpen}
+        onClose={() => setTablePickerOpen(false)}
+        size="md"
+        title="Assign a table"
+        description={`Party of ${activeCovers}. Tables already on another open check, or with fewer seats than the party, are flagged — you can still seat there.`}
+        footer={
+          <>
+            {active?.tableId && (
+              <Button variant="ghost" onClick={() => handlePickTable(null)}>
+                Clear table
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setTablePickerOpen(false)}>
+              Cancel
+            </Button>
+          </>
+        }
+      >
+        {tables.length === 0 ? (
+          <EmptyState
+            compact
+            icon={Armchair}
+            title="No tables configured"
+            description="Add tables on the Floor page to seat dine-in checks."
+          />
+        ) : (
+          <div className="v2-pos-tables">
+            {tables.map((t) => {
+              const taken = active ? tabsOnTable(t.id, active.id).length > 0 : false;
+              const tooSmall = t.seats < activeCovers;
+              const sel = active?.tableId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`v2-pos-table${sel ? " is-selected" : ""}`}
+                  onClick={() => handlePickTable(t.id)}
+                >
+                  <div className="v2-pos-table-top">
+                    <span className="v2-pos-table-num">T{t.number}</span>
+                    {sel && (
+                      <Badge tone="brand" variant="soft">
+                        Selected
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="v2-pos-table-meta v2-muted">
+                    {t.seats} seat{t.seats === 1 ? "" : "s"}
+                    {t.zone ? ` · ${t.zone}` : ""}
+                  </span>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <Badge tone={TABLE_STATUS_TONE[t.status]} variant="soft" dot>
+                      {t.status}
+                    </Badge>
+                    {taken && (
+                      <Badge tone="warning" variant="soft">
+                        In use
+                      </Badge>
+                    )}
+                    {tooSmall && (
+                      <Badge tone="warning" variant="soft">
+                        Seats {t.seats} &lt; {activeCovers}
+                      </Badge>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={addrOpen}
+        onClose={() => setAddrOpen(false)}
+        size="md"
+        title="Delivery address"
+        description={active ? `Open check #${active.id}` : undefined}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAddrDraft("")}>
+              Clear
+            </Button>
+            <Button variant="secondary" onClick={() => setAddrOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setAddress(addrDraft);
+                setAddrOpen(false);
+                if (addrDraft.trim()) toast("Address saved");
+              }}
+            >
+              Save address
+            </Button>
+          </>
+        }
+      >
+        <textarea
+          className="v2-input"
+          style={{ minHeight: 110, resize: "vertical", width: "100%" }}
+          rows={4}
+          value={addrDraft}
+          onChange={(e) => setAddrDraft(e.target.value)}
+          placeholder="Street & number, flat / buzzer, city — plus any note for the driver"
+        />
+      </Dialog>
     </div>
   );
 
