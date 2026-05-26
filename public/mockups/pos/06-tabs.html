@@ -318,7 +318,6 @@
   .th-id{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:0.03em}
   .th-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
   .th-chan svg{width:12px;height:12px;opacity:.7}
-  .th-actions{display:flex;gap:var(--s2)}
   /* big channel selector inside the order column */
   .th-channel{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
   .th-chan-btn{
@@ -335,14 +334,35 @@
   .th-channel.req .th-chan-btn{border-color:rgba(245,166,35,0.5)}
   .th-chan-req{display:none;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--warn);letter-spacing:0.02em}
   .th-chan-req i{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto;animation:ssPulse 1.6s ease-in-out infinite}
-  .mini-btn{
-    appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.02em;
+
+  /* channel-specific detail row — table+covers (dine-in) / address (delivery).
+     Lives on its own line so the Park / Send-to-KDS row below stays identical
+     for every channel. */
+  .th-detail{display:flex;gap:var(--s2);align-items:stretch}
+  .detail-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);flex:1 1 auto;min-width:0;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
     border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
-    border-radius:7px;padding:7px 12px;display:inline-flex;align-items:center;gap:6px;
+    border-radius:9px;padding:11px 12px;font-size:12.5px;font-weight:600;letter-spacing:0.02em;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .detail-btn svg{width:15px;height:15px;flex:0 0 auto}
+  .detail-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .detail-btn:hover{color:var(--text);border-color:var(--text)}
+  .detail-btn.assigned{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .detail-btn.conflict{color:var(--warn);border-color:var(--warn);background:rgba(245,166,35,0.12)}
+
+  /* Park / Send-to-KDS — a fixed two-up grid so both read the same size on any
+     channel, never reflowing when the detail controls above change. */
+  .th-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+  .mini-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0.02em;width:100%;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
+    border-radius:9px;padding:11px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:color .16s ease,border-color .16s ease,background .16s ease;
   }
   .mini-btn:hover{color:var(--text);border-color:var(--text)}
-  .mini-btn svg{width:13px;height:13px}
+  .mini-btn svg{width:15px;height:15px;flex:0 0 auto}
   .mini-btn.park.is-parked{color:var(--faint);border-color:var(--faint)}
   .mini-btn.kds:hover{color:var(--firing);border-color:var(--firing)}
   .mini-btn.kds.sent{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
@@ -438,8 +458,10 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   /* table assignment (dine-in) */
-  .mini-btn.tablebtn.assigned{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
   .tab-table{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.30);border-radius:5px;padding:1px 5px;flex:0 0 auto}
+  /* delivery-address chip on the tab rail */
+  .tab-addr{display:inline-flex;align-items:center;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.30);border-radius:5px;padding:2px 4px;flex:0 0 auto}
+  .tab-addr svg{width:10px;height:10px}
   .overlay.center{align-items:center}
   .table-sheet{
     width:min(360px,calc(100% - 28px));background:var(--panel);border:1px solid var(--hair-strong);
@@ -459,16 +481,30 @@
   .table-foot .ta-btn{flex:1 1 0;appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--dim);font-family:var(--sans);font-size:12.5px;padding:11px;border-radius:10px}
   .table-foot .ta-btn:hover{background:var(--raised);color:var(--text)}
 
-  /* covers stepper (dine-in) */
-  .covers{display:inline-flex;align-items:center;gap:1px;border:1px solid var(--hair-strong);background:var(--raised);border-radius:7px;padding:2px 2px 2px 7px}
+  /* covers stepper (dine-in) — sits beside the table button in the detail row */
+  .covers{display:inline-flex;align-items:center;gap:1px;flex:0 0 auto;border:1px solid var(--hair-strong);background:var(--raised);border-radius:9px;padding:2px 4px 2px 9px}
   .covers .cov-ic{display:inline-flex;align-items:center;color:var(--faint)}
-  .covers .cov-ic svg{width:13px;height:13px}
-  .covers .cov-btn{appearance:none;cursor:pointer;width:24px;height:24px;border:0;background:transparent;color:var(--dim);font-size:16px;line-height:1;border-radius:5px}
+  .covers .cov-ic svg{width:14px;height:14px}
+  .covers .cov-btn{appearance:none;cursor:pointer;width:28px;height:28px;border:0;background:transparent;color:var(--dim);font-size:17px;line-height:1;border-radius:6px}
   .covers .cov-btn:hover{background:#202832;color:var(--text)}
-  .covers .cov-n{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);min-width:30px;text-align:center}
+  .covers .cov-n{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--text);min-width:28px;text-align:center}
+
+  /* delivery address sheet */
+  .addr-sheet{
+    width:min(420px,calc(100% - 28px));background:var(--panel);border:1px solid var(--hair-strong);
+    border-radius:14px;padding:var(--s5);box-shadow:0 20px 60px -20px rgba(0,0,0,0.75);animation:slideUp .2s ease;
+  }
+  .addr-input{
+    width:100%;resize:vertical;min-height:96px;background:var(--raised);border:1px solid var(--hair-strong);
+    border-radius:10px;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;
+    padding:12px 14px;margin-bottom:var(--s3);
+  }
+  .addr-input:focus{outline:none;border-color:var(--accent)}
+  .addr-input::placeholder{color:var(--faint)}
+  .table-foot .ta-btn.primary{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
+  .table-foot .ta-btn.primary:hover{background:var(--accent-soft);filter:brightness(1.1)}
 
   /* table conflict — two open dine-in checks on one table */
-  .mini-btn.tablebtn.conflict{color:var(--warn);border-color:var(--warn);background:rgba(245,166,35,0.12)}
   .tab-table.conflict{color:var(--warn);background:rgba(245,166,35,0.14);border-color:rgba(245,166,35,0.40)}
   .table-cell.taken{border-color:var(--warn);color:var(--warn)}
   .table-cell.taken::after{content:"";position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--warn)}
@@ -522,7 +558,7 @@
     html{overflow-x:hidden}
     .tr-eyebrow{flex-wrap:wrap}
     .tr-summary{white-space:normal}
-    .th-actions{flex-wrap:wrap}
+    .th-detail{flex-wrap:wrap}
 
     header{
       position:sticky;top:0;z-index:30;
@@ -760,13 +796,14 @@ const promiseLabel = sec => sec<=0 ? "~0 min" : sec<90 ? "~1 min" : "~"+Math.rou
 let tabSeq = 4;
 let tabs = [
   // Open, not-yet-sent checks start with NO channel — the operator must pick one
-  // (no default). Only the already-pushed "ready to pay" check carries a channel,
-  // since it could not have been sent without one.
+  // (no default). Tabs that already carry a channel (the ready-to-pay walk-up and
+  // the in-progress delivery) show the channel-specific detail controls populated.
   { id:"A4F9C2", name:"Marco",          chan:null,       status:"open", sentKds:false,
     items:[{id:"margherita",q:2},{id:"diavola",q:1},{id:"espresso",q:1}], combos:[] },
   { id:"W1B7K2", name:"Walk-up",        chan:"Takeout",  status:"pay",  sentKds:true,
     items:[{id:"slice",q:2},{id:"limonata",q:1}], combos:["lunch"] },
-  { id:"D9P3Q7", name:"Giulia",         chan:null,       status:"open", sentKds:false,
+  { id:"D9P3Q7", name:"Giulia",         chan:"Delivery", status:"open", sentKds:false,
+    address:"ul. Floriańska 12/4, 31-019 Kraków — buzzer 4, call on arrival",
     items:[{id:"quattro",q:1},{id:"carbonara",q:1},{id:"tiramisu",q:1}], combos:["trio"] },
   { id:"T6D2N8", name:"Anna",           chan:null,       status:"open", sentKds:false,
     items:[{id:"margherita",q:1},{id:"pesto",q:1},{id:"limonata",q:2}], combos:[] },
@@ -828,7 +865,7 @@ function newTab(){
   // No default channel — the operator MUST pick Takeout/Delivery/Dine-in before
   // the order can be sent to the KDS or charged. chan stays null until chosen.
   const t={ id:newTabId(), name:"Tab "+tabSeq, chan:null, status:"open", sentKds:false,
-            table:undefined, covers:undefined, items:[], combos:[] };
+            table:undefined, covers:undefined, address:undefined, items:[], combos:[] };
   tabs.push(t);
   activeTabId=t.id;
   render();
@@ -872,6 +909,7 @@ function renderTabs(){
         <span class="tab-dot"></span>
         <span class="tab-name">${t.name}</span>
         ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
+        ${t.chan==="Delivery"&&t.address&&t.address.trim()?`<span class="tab-addr" title="${t.address.trim().replace(/"/g,"&quot;")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg></span>`:""}
         <span class="tab-chan">${t.chan?CHAN_ICON[t.chan]:""}</span>
       </div>
       <span class="tab-id tnum">#${t.id}</span>
@@ -1043,22 +1081,31 @@ function renderTicket(){
     document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
   }
 
-  // table chip + covers — dine-in only
+  // channel-specific detail row — table+covers (dine-in) / address (delivery)
+  const detail=document.getElementById("thDetail");
   const tableBtn=document.getElementById("tableBtn");
   const coversCtl=document.getElementById("coversCtl");
-  if(tableBtn && coversCtl){
-    if(t && t.chan==="Dine-in"){
-      tableBtn.style.display="inline-flex";
+  const deliveryBtn=document.getElementById("deliveryBtn");
+  if(detail && tableBtn && coversCtl && deliveryBtn){
+    const isDine = !!t && t.chan==="Dine-in";
+    const isDelivery = !!t && t.chan==="Delivery";
+    detail.style.display = (isDine||isDelivery) ? "flex" : "none";
+    tableBtn.style.display = isDine ? "inline-flex" : "none";
+    coversCtl.style.display = isDine ? "inline-flex" : "none";
+    deliveryBtn.style.display = isDelivery ? "inline-flex" : "none";
+    if(isDine){
       const clash = t.table!=null && tabsOnTable(t.table,t.id).length>0;
       tableBtn.classList.toggle("assigned", t.table!=null && !clash);
       tableBtn.classList.toggle("conflict", !!clash);
       document.getElementById("tableLbl").textContent =
         t.table!=null ? ("Table "+t.table+(clash?" ⚠":"")) : "Assign table";
-      coversCtl.style.display="inline-flex";
       document.getElementById("coversN").textContent = (t.covers||2);
-    } else {
-      tableBtn.style.display="none";
-      coversCtl.style.display="none";
+    }
+    if(isDelivery){
+      const addr = t.address && t.address.trim();
+      deliveryBtn.classList.toggle("assigned", !!addr);
+      deliveryBtn.title = addr || "";
+      document.getElementById("deliveryLbl").textContent = addr ? addr : "Add delivery address";
     }
   }
 
@@ -1148,10 +1195,14 @@ function buildEditorShell(){
         </div>
         <div class="th-channel" id="thChannel" role="group" aria-label="Channel"></div>
         <span class="th-chan-req" id="thChanReq" style="display:none"><i></i>Choose a channel to send or charge this order</span>
-        <div class="th-actions">
-          <button class="mini-btn tablebtn" id="tableBtn" type="button" style="display:none">
+        <div class="th-detail" id="thDetail" style="display:none">
+          <button class="detail-btn" id="tableBtn" type="button" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
             <span id="tableLbl">Assign table</span>
+          </button>
+          <button class="detail-btn" id="deliveryBtn" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>
+            <span id="deliveryLbl">Add delivery address</span>
           </button>
           <div class="covers" id="coversCtl" style="display:none">
             <span class="cov-ic" title="Covers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
@@ -1159,6 +1210,8 @@ function buildEditorShell(){
             <span class="cov-n tnum" id="coversN">2</span>
             <button class="cov-btn" id="covInc" type="button" aria-label="More covers">+</button>
           </div>
+        </div>
+        <div class="th-actions">
           <button class="mini-btn park" id="parkBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16V9h3.5a2.5 2.5 0 0 1 0 5H9"/></svg>
             <span id="parkLbl">Park</span>
@@ -1215,6 +1268,18 @@ function buildEditorShell(){
           </div>
         </div>
 
+        <div class="overlay center" id="addrPicker">
+          <div class="addr-sheet">
+            <div class="ts-head"><span class="ts-title">Delivery address</span><span class="th-id tnum" id="addrPickerTab"></span></div>
+            <textarea class="addr-input" id="addrInput" rows="3" placeholder="Street &amp; number, flat / buzzer, city — plus any note for the driver"></textarea>
+            <div class="table-foot">
+              <button class="ta-btn" id="addrClear" type="button">Clear</button>
+              <button class="ta-btn" id="addrCancel" type="button">Cancel</button>
+              <button class="ta-btn primary" id="addrSave" type="button">Save</button>
+            </div>
+          </div>
+        </div>
+
         <div class="toast" id="toast"></div>
       </div>
     </div>`;
@@ -1236,6 +1301,12 @@ function buildEditorShell(){
   document.getElementById("tableCancel").onclick=closeTablePicker;
   document.getElementById("covDec").onclick=()=>changeCovers(-1);
   document.getElementById("covInc").onclick=()=>changeCovers(1);
+
+  // delivery address sheet
+  document.getElementById("deliveryBtn").onclick=openAddrPicker;
+  document.getElementById("addrClear").onclick=clearAddr;
+  document.getElementById("addrCancel").onclick=closeAddrPicker;
+  document.getElementById("addrSave").onclick=saveAddr;
 }
 
 function renderEmptyEditor(){
@@ -1283,6 +1354,26 @@ function assignTable(n){
 function changeCovers(delta){
   const t=getActive(); if(!t || t.chan!=="Dine-in") return;
   t.covers = Math.max(1, (t.covers||2) + delta);
+  render();
+}
+
+/* ====================== Delivery address (delivery) ====================== */
+function openAddrPicker(){
+  const t=getActive(); if(!t || t.chan!=="Delivery") return;
+  document.getElementById("addrPickerTab").textContent="#"+t.id;
+  const inp=document.getElementById("addrInput");
+  inp.value=t.address||"";
+  document.getElementById("addrPicker").classList.add("open");
+  inp.focus();
+}
+function closeAddrPicker(){ const e=document.getElementById("addrPicker"); if(e) e.classList.remove("open"); }
+function clearAddr(){ const inp=document.getElementById("addrInput"); if(inp){ inp.value=""; inp.focus(); } }
+function saveAddr(){
+  const t=getActive(); if(!t) return;
+  const v=document.getElementById("addrInput").value.trim();
+  t.address = v || null;
+  closeAddrPicker();
+  if(v) toast("Address saved → #"+t.id);
   render();
 }
 
@@ -1442,9 +1533,12 @@ document.addEventListener("fullscreenchange",syncFs);
 
 /* ====================== Keyboard ====================== */
 document.addEventListener("keydown",(e)=>{
+  if(e.key==="Escape"){ closeTender(); closeTablePicker(); closeAddrPicker(); return; }
+  // Don't hijack typing in a text field (e.g. the delivery-address sheet).
+  const el=e.target;
+  if(el && (el.tagName==="INPUT" || el.tagName==="TEXTAREA" || el.isContentEditable)) return;
   if(e.key.toLowerCase()==="n"){ newTab(); return; }
   if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
-  if(e.key==="Escape"){ closeTender(); closeTablePicker(); return; }
   if(/^[1-9]$/.test(e.key)){
     const idx=parseInt(e.key,10)-1;
     if(tabs[idx]) setActive(tabs[idx].id);
