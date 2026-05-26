@@ -9,6 +9,7 @@ import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket } from "@/lib/kds-ticket";
 import { KdsTicketCard } from "../kds/KdsTicketCard";
+import { SegControl } from "../command";
 import { toneForTicket } from "../kds-board";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
@@ -205,18 +206,18 @@ export function MobileKDS() {
       {/* Atlas chrome — the mobile floor board matches the fleet board exactly:
           same dark panel, station chips and lane switcher, only the lanes differ. */}
       <div className="kds-atlas kds-floor-dark">
-        <header className="ka-head">
-          <div className="ka-brand">
-            <span className="ka-wordmark">SUD ITALIA</span>
-            <span className="ka-kd-label">{location ? `${location} · floor` : "Floor"}</span>
+        <header className="cmd-head">
+          <div className="cmd-brand">
+            <span className="cmd-wordmark">SUD ITALIA</span>
+            <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
             {simEnabled && <span className="ka-sandbox">Sandbox</span>}
           </div>
-          <div className="ka-filters" role="group" aria-label="Station filter">
+          <div className="cmd-chips" role="group" aria-label="Station filter">
             {STATIONS.map((s) => (
               <button
                 key={s.id}
                 type="button"
-                className="ka-chip"
+                className="cmd-chip"
                 aria-pressed={station === s.id}
                 onClick={() => setStation(s.id)}
               >
@@ -224,25 +225,21 @@ export function MobileKDS() {
               </button>
             ))}
           </div>
-          <div className="ka-lines" role="group" aria-label="Stage focus">
-            {LANES.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                className="ka-line"
-                data-line={l.id === "ready" ? "ready" : l.id === "preparing" ? "prep" : "new"}
-                aria-pressed={lane === l.id}
-                onClick={() => setLane(l.id)}
-              >
-                <span>{l.label}</span>
-                <span className="ka-lcount tabular">{laneCounts.get(l.id) ?? 0}</span>
-              </button>
-            ))}
-          </div>
-          <div className="ka-spacer" />
+          <SegControl
+            ariaLabel="Stage focus"
+            value={lane}
+            onChange={setLane}
+            options={LANES.map((l) => ({
+              value: l.id,
+              label: l.label,
+              count: laneCounts.get(l.id) ?? 0,
+              dataLine: l.id === "ready" ? "ready" : l.id === "preparing" ? "prep" : "new",
+            }))}
+          />
+          <div className="cmd-spacer" />
           <button
             type="button"
-            className="ka-fsbtn"
+            className="cmd-btn"
             aria-label={muted ? "Unmute" : "Mute"}
             aria-pressed={!muted}
             onClick={() => setMuted((m) => !m)}
@@ -251,7 +248,7 @@ export function MobileKDS() {
           </button>
           <button
             type="button"
-            className="ka-fsbtn"
+            className="cmd-btn"
             aria-label={paused ? "Resume" : "Pause"}
             aria-pressed={paused}
             onClick={() => setPaused((p) => !p)}
@@ -260,13 +257,13 @@ export function MobileKDS() {
           </button>
           {simEnabled && (
             <>
-              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
+              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
                 Add 1
               </button>
-              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
+              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
                 Add 5
               </button>
-              <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
+              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
                 Purge
               </button>
             </>

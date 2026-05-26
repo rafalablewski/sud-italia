@@ -77,17 +77,17 @@ export function KdsTicketCard({
   let ringColor: string;
   if (t.status === "ready") {
     frac = 1;
-    ringColor = "var(--ka-ready)";
+    ringColor = "var(--cmd-ready)";
   } else if (slaRem !== null && slaRem < 0) {
     frac = 0;
-    ringColor = "var(--ka-late)";
+    ringColor = "var(--cmd-late)";
   } else if (slaRem !== null && t.promisedReadyAtMs !== null) {
     const promiseWindow = Math.max(60, (t.promisedReadyAtMs - t.paidAtMs) / 1000);
     frac = Math.min(1, slaRem / promiseWindow);
-    ringColor = tone === "risk" ? "var(--ka-risk)" : tone === "warn" ? "var(--ka-warn)" : "var(--ka-firing)";
+    ringColor = tone === "risk" ? "var(--cmd-risk)" : tone === "warn" ? "var(--cmd-warn)" : "var(--cmd-firing)";
   } else {
     frac = 1;
-    ringColor = "var(--ka-firing)";
+    ringColor = "var(--cmd-firing)";
   }
   const ringCap = t.status === "ready" ? "OK" : slaRem !== null && slaRem < 0 ? "LATE" : slaRem !== null ? mmss(slaRem) : "—";
 

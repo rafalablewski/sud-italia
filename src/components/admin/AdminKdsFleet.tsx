@@ -16,6 +16,8 @@ import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
+import { SegControl, SectionEyebrow } from "./command";
+import { useFullscreen } from "./command/useFullscreen";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -126,8 +128,9 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const [now, setNow] = useState(() => Date.now());
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [line, setLine] = useState<LineKey>("all");
-  const [fullscreen, setFullscreen] = useState(false);
+  const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
+  const [simBusy, setSimBusy] = useState(false);
   const inFlight = useRef(false);
 
   const load = useCallback(async () => {
@@ -154,42 +157,60 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     return () => clearInterval(t);
   }, [load]);
 
+  // Sandbox controls, fleet edition. The floor board stages a rush on one
+  // truck; from the fleet wall the owner stages it across the whole fleet, so
+  // Add spawns the marked SIMULATION tickets into every live truck at once and
+  // Purge clears them everywhere. No-ops cleanly when no trucks are live.
+  const simSpawn = useCallback(
+    async (count: number) => {
+      const tiles = data?.tiles ?? [];
+      if (tiles.length === 0) return;
+      setSimBusy(true);
+      try {
+        const results = await Promise.all(
+          tiles.map((t) =>
+            fetch(`/api/admin/kds-simulator?location=${encodeURIComponent(t.slug)}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "spawn", count }),
+            }).then((r) => r.ok),
+          ),
+        );
+        if (results.some((ok) => !ok)) {
+          toast.error("Couldn't add sandbox tickets", "Check the simulator is enabled in Settings.");
+        }
+      } catch {
+        toast.error("Couldn't add sandbox tickets", "Network error — try again.");
+      } finally {
+        setSimBusy(false);
+        void load();
+      }
+    },
+    [data, load, toast],
+  );
+
+  const simPurge = useCallback(async () => {
+    setSimBusy(true);
+    try {
+      await fetch("/api/admin/kds-simulator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "purge" }),
+      });
+    } catch {
+      /* non-fatal — the next poll reconciles */
+    } finally {
+      setSimBusy(false);
+      void load();
+    }
+  }, [load]);
+
   // 1 s tick drives live timers + tone thresholds (the predictive tier shifts
   // across the SLA boundary in real time, between server polls).
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-
-  // Fullscreen — request native fullscreen, fall back to the immersive class.
-  const enterFs = useCallback(() => {
-    setFullscreen(true);
-    void document.documentElement.requestFullscreen?.().catch(() => {});
-  }, []);
-  const exitFs = useCallback(() => {
-    setFullscreen(false);
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-  }, []);
-  useEffect(() => {
-    const onChange = () => {
-      if (!document.fullscreenElement) setFullscreen(false);
-    };
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
-  useEffect(() => {
-    if (!fullscreen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") exitFs();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [fullscreen, exitFs]);
 
   const advance = useCallback(
     async (t: WireTicket) => {
@@ -277,18 +298,18 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const board = (
     <div className={`kds-atlas${fullscreen ? " is-fullscreen" : ""}`}>
       {/* ---------------- Header ---------------- */}
-      <header className="ka-head">
-        <div className="ka-brand">
-          <span className="ka-wordmark">SUD ITALIA</span>
-          <span className="ka-kd-label">Fleet command</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">Fleet command</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="ka-filters" role="group" aria-label="Station filter">
+        <div className="cmd-chips" role="group" aria-label="Station filter">
           {STATIONS.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="ka-chip"
+              className="cmd-chip"
               aria-pressed={s.id === station}
               onClick={() => setStation(s.id as MenuCategory | "all")}
             >
@@ -296,25 +317,20 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
           ))}
         </div>
-        <div className="ka-lines" role="group" aria-label="Lines switcher">
-          {LINES.map((l) => (
-            <button
-              key={l.key}
-              type="button"
-              className="ka-line"
-              data-line={l.key}
-              aria-pressed={l.key === line}
-              onClick={() => setLine(l.key)}
-            >
-              <span>{l.title}</span>
-              <span className="ka-lcount tabular">{lineCounts[l.key]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="ka-spacer" />
+        <SegControl
+          ariaLabel="Lines switcher"
+          value={line}
+          onChange={setLine}
+          options={LINES.map((l) => ({ value: l.key, label: l.title, count: lineCounts[l.key], dataLine: l.key }))}
+        />
+        <div className="cmd-spacer" />
+        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           onClick={fullscreen ? exitFs : enterFs}
           aria-pressed={fullscreen}
           title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen fleet wall"}
@@ -322,12 +338,23 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{fullscreen ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" onClick={() => void load()} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        <div className="ka-clock tabular">{clock}</div>
+        <div className="cmd-clock tabular">{clock}</div>
       </header>
+
+      {/* Sandbox controls live on a strip under the shared header (not in it). */}
+      {simEnabled && (
+        <div className="cmd-subbar" role="group" aria-label="Sandbox controls">
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(1)} title="Add 1 sandbox ticket to every live truck">
+            Add 1
+          </button>
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(5)} title="Add 5 sandbox tickets to every live truck">
+            Add 5
+          </button>
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simPurge()} title="Clear all sandbox tickets across the fleet">
+            Purge
+          </button>
+        </div>
+      )}
 
       {/* ---------------- Fleet command bar ---------------- */}
       {data && (
@@ -418,31 +445,27 @@ function FleetBar({
 
   return (
     <section className="ka-fleetbar" aria-label="Fleet aggregate metrics">
-      <div className="ka-fb-eyebrow">
-        <span className="ka-fb-brandline">
-          <MapPin className="h-3 w-3" /> Fleet command
-        </span>
-        <span className="ka-fb-sep" />
-        <span className="ka-fb-trucks">
-          <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
-        </span>
-      </div>
+      <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Fleet command">
+        <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
+      </SectionEyebrow>
       <KdsStatGrid stats={stats} />
       <div className="ka-fb-benchmark">
         <span className="ka-fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>
         <div className="ka-bm-rows">
           {data.tiles.map((t) => {
-            const isLeader = t.name === benchmark.leader && data.tiles.length > 1;
+            // Only crown a leader when there's an actual margin — a tied fleet
+            // has no leader (otherwise we'd badge "Lead" on a 0-pt gap).
+            const isLeader = t.name === benchmark.leader && data.tiles.length > 1 && benchmark.gap > 0;
             const color =
               t.promiseAccuracy >= promiseTarget
-                ? "var(--ka-ready)"
+                ? "var(--cmd-ready)"
                 : t.promiseAccuracy >= promiseTarget - 5
-                  ? "var(--ka-warn)"
-                  : "var(--ka-late)";
+                  ? "var(--cmd-warn)"
+                  : "var(--cmd-late)";
             return (
               <div className="ka-bm-row" key={t.slug}>
                 <span className="ka-bm-name">
-                  {t.name}
+                  <span className="ka-bm-name-text">{t.name}</span>
                   {isLeader && <span className="ka-bm-lead">Lead</span>}
                 </span>
                 <span className="ka-bm-track">
@@ -462,11 +485,13 @@ function FleetBar({
             </span>
           ))}
           {" · "}fleet <b>{benchmark.fleetAccuracy}%</b>
-          {benchmark.leader && benchmark.lagger && benchmark.leader !== benchmark.lagger && (
+          {benchmark.gap > 0 && benchmark.leader && benchmark.lagger && benchmark.leader !== benchmark.lagger ? (
             <>
               {" — "}
-              <b style={{ color: "var(--ka-ready)" }}>{benchmark.leader}</b> leads {benchmark.lagger} by {benchmark.gap} pts
+              <b style={{ color: "var(--cmd-ready)" }}>{benchmark.leader}</b> leads {benchmark.lagger} by {benchmark.gap} pts
             </>
+          ) : (
+            <> — all trucks level</>
           )}
           {" (target "}
           {promiseTarget}%)
@@ -519,12 +544,12 @@ function TruckBoard({
   const liveHealth = computeHealth({ late, risk, promiseAcc: tile.promiseAccuracy });
   const healthColor =
     liveHealth.cls === "alert"
-      ? "var(--ka-late)"
+      ? "var(--cmd-late)"
       : liveHealth.cls === "risk"
-        ? "var(--ka-risk)"
+        ? "var(--cmd-risk)"
         : liveHealth.cls === "warn"
-          ? "var(--ka-warn)"
-          : "var(--ka-ready)";
+          ? "var(--cmd-warn)"
+          : "var(--cmd-ready)";
 
   const visible = tile.tickets
     .filter((t) => matchesStation(t) && matchesLine(t))

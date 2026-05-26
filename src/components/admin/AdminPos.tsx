@@ -34,6 +34,7 @@ import {
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
 import type { CartItem } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
+import { SegControl, SectionEyebrow } from "./command";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
@@ -170,6 +171,28 @@ export function AdminPos({
     setActiveTabId(null);
     void loadTabs();
   }, [loadTabs]);
+
+  // Live tab sync — poll the store so checks opened/closed/edited on another
+  // till (or the same operator's other device) appear without a manual refresh.
+  // Skipped while a local edit is mid-debounce so an in-flight check is never
+  // clobbered by a stale server snapshot.
+  useEffect(() => {
+    if (!pageLoc) return;
+    const id = setInterval(async () => {
+      if (persistTimers.current.size > 0) return;
+      try {
+        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+        if (!res.ok) return;
+        const data: { tabs?: PosTab[] } = await res.json();
+        const list = Array.isArray(data.tabs) ? data.tabs : [];
+        setTabs(list);
+        setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
+      } catch {
+        /* non-fatal — next tick retries */
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [pageLoc]);
 
   const getActive = useCallback(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
@@ -508,10 +531,25 @@ export function AdminPos({
 
   // Load tables for the active truck up front (small list) and refresh on every
   // location change — so a table added on the Floor page shows up here, and the
-  // picker never opens against a stale/empty cache.
+  // picker never opens against a stale/empty cache. Then poll so seat / status
+  // changes made on the Floor page surface live without a manual refresh.
   useEffect(() => {
     void fetchTables();
   }, [fetchTables]);
+  useEffect(() => {
+    if (!pageLoc) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(pageLoc)}`);
+        if (!res.ok) return;
+        const data: FloorTable[] = await res.json();
+        if (Array.isArray(data)) setTables(data);
+      } catch {
+        /* non-fatal — next tick retries */
+      }
+    }, 10000);
+    return () => clearInterval(id);
+  }, [pageLoc]);
 
   // --- Overlays ------------------------------------------------------------
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
@@ -535,6 +573,17 @@ export function AdminPos({
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
+  // Lock body scroll while the fullscreen till covers the viewport — otherwise
+  // the page behind keeps its scrollbar, which shows as a pale strip down the
+  // edge of the dark till.
+  useEffect(() => {
+    if (!kiosk) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [kiosk]);
 
   // --- Clock ---------------------------------------------------------------
   const [clock, setClock] = useState("--:--:--");
@@ -745,54 +794,52 @@ export function AdminPos({
   const page = (
     <div className={`pos-tabs${kiosk ? " is-fullscreen" : ""}`}>
       {/* Header */}
-      <header className="pos-header">
-        <div className="pos-brand">
-          <span className="pos-wordmark">SUD ITALIA</span>
-          <span className="pos-kd-label">Point of Sale · {locName}</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">Point of Sale · {locName}</span>
         </div>
         <div className="pos-ctl">
-          <span className="pos-ctl-lbl">Loc</span>
-          <div className="pos-seg-group" role="group" aria-label="Location">
-            {locOptions.map((o) => (
-              <button
-                key={o.slug}
-                type="button"
-                className="pos-seg"
-                aria-pressed={o.slug === pageLoc}
-                onClick={() => setPageLoc(o.slug)}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
+          <SegControl
+            ariaLabel="Location"
+            value={pageLoc}
+            onChange={setPageLoc}
+            options={locOptions.map((o) => ({ value: o.slug, label: o.label }))}
+          />
         </div>
         <div className="pos-ctl">
-          <span className="pos-ctl-lbl">Channel</span>
-          <div className="pos-seg-group" role="group" aria-label="Channel">
-            {CHANNELS.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                className="pos-seg"
-                aria-pressed={!!active && active.channel === c.value}
-                disabled={!active}
-                onClick={() => setChannel(c.value)}
-              >
-                {c.icon}
-                <span>{c.label}</span>
-              </button>
-            ))}
-          </div>
+          <SegControl
+            ariaLabel="Channel"
+            value={active?.channel ?? null}
+            onChange={setChannel}
+            disabled={!active}
+            options={CHANNELS.map((c) => ({ value: c.value, label: c.label, icon: c.icon }))}
+          />
           {deliveryPaused && (
             <span className="pos-chan-paused">
               <span className="pos-cp-dot" /> Delivery intake paused
             </span>
           )}
         </div>
-        <div className="pos-spacer" />
+        <div className="cmd-spacer" />
         <button
           type="button"
-          className="pos-steer-chip"
+          className="cmd-btn"
+          aria-pressed={kiosk}
+          onClick={kiosk ? exitKiosk : enterKiosk}
+          title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        >
+          {kiosk ? <Minimize2 /> : <Maximize2 />}
+          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
+        </button>
+        <div className="cmd-clock tnum">{clock}</div>
+      </header>
+
+      {/* Steer toggle lives on a strip under the shared header (not in it). */}
+      <div className="cmd-subbar" role="group" aria-label="Pace steering">
+        <button
+          type="button"
+          className="cmd-btn pos-steer-chip"
           aria-pressed={steer}
           onClick={() => setSteer((s) => !s)}
           title="Toggle Pace → POS steering"
@@ -801,33 +848,16 @@ export function AdminPos({
           <Gauge />
           <span>Steer</span>
         </button>
-        <button
-          type="button"
-          className="pos-fsbtn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        >
-          {kiosk ? <Minimize2 /> : <Maximize2 />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="pos-clock tnum">{clock}</div>
-      </header>
+      </div>
 
       {/* Tab rail */}
       <section className="pos-tabrail" aria-label="Open checks">
-        <div className="pos-tr-eyebrow">
-          <span className="pos-tr-brandline">
-            <MapPin /> Open checks
-          </span>
-          <span className="pos-tr-sep" />
-          <span className="pos-tr-summary">
-            <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
-            <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
-            <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
-            <b>{fmtPLN(railSummary.openValue)}</b>
-          </span>
-        </div>
+        <SectionEyebrow icon={<MapPin />} label="Open checks">
+          <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
+          <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
+          <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
+          <b>{fmtPLN(railSummary.openValue)}</b>
+        </SectionEyebrow>
         <div className="pos-tabrail-scroll">
           {tabs.map((t) => {
             const cnt = itemCount(t);
@@ -1367,7 +1397,7 @@ function CatChip({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="pos-chip" aria-pressed={isActive} onClick={onClick}>
+    <button type="button" className="cmd-chip" aria-pressed={isActive} onClick={onClick}>
       <span className="pos-cemoji">{emoji}</span>
       <span>{label}</span>
       {promiseSec != null && promiseSec > 0 && (

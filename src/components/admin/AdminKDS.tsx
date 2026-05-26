@@ -7,6 +7,7 @@ import {
   Bell,
   BellOff,
   ChefHat,
+  ChevronLeft,
   Flame,
   MapPin,
   Maximize2,
@@ -16,7 +17,6 @@ import {
   RefreshCw,
   RotateCcw,
   Timer,
-  Truck,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import dynamic from "next/dynamic";
@@ -40,6 +40,8 @@ import {
   totalPrepSeconds,
 } from "./kds-board";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
+import { SegControl, SectionEyebrow } from "./command";
+import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -50,12 +52,11 @@ const MobileKDS = dynamic(
   { ssr: false },
 );
 
-const KDS_MODE_KEY = "sud-kds-mode";
-
 /**
  * Role-aware KDS shell. One live-order engine, three lenses:
- *   • owner   → Fleet command (cross-truck health) by default, with a
- *               switcher down into any truck's floor board.
+ *   • owner   → Fleet command (cross-truck health) by default. Drilling into
+ *               a truck swaps the same window to that truck's floor board, with
+ *               a single "Back to fleet" control to step back out.
  *   • manager → Floor board (single location).
  *   • kitchen/staff → Floor board (the line view they've always had).
  * Mobile keeps the dedicated MobileKDS regardless of role.
@@ -64,7 +65,9 @@ export function AdminKDS() {
   const { isMobile, ready } = useIsMobile();
   const { setLocation } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
-  const [mode, setMode] = useState<"fleet" | "floor">("floor");
+  // Owners always land on the fleet; the only way to a single-location floor
+  // board is drilling into a truck, which flips this to "floor" for that truck.
+  const [mode, setMode] = useState<"fleet" | "floor">("fleet");
 
   useEffect(() => {
     let cancelled = false;
@@ -75,16 +78,6 @@ export function AdminKDS() {
         const r = j?.role as AdminRole | undefined;
         if (!r) return;
         setRole(r);
-        if (r === "owner") {
-          let initial: "fleet" | "floor" = "fleet";
-          try {
-            const saved = localStorage.getItem(KDS_MODE_KEY);
-            if (saved === "fleet" || saved === "floor") initial = saved;
-          } catch {
-            /* storage may be blocked */
-          }
-          setMode(initial);
-        }
       })
       .catch(() => {
         /* non-fatal — falls back to the floor board */
@@ -94,24 +87,15 @@ export function AdminKDS() {
     };
   }, []);
 
-  const chooseMode = useCallback((m: "fleet" | "floor") => {
-    setMode(m);
-    try {
-      localStorage.setItem(KDS_MODE_KEY, m);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
   // Managers + franchisees get the floor-control ops header; kitchen/staff
   // get the chef line strip (station focus + queue depth + quick 86); the
   // pre-resolve null state gets the plain board.
   const managerControls = role === "manager" || role === "franchisee";
   const chef = role === "kitchen" || role === "staff";
 
-  // Only owners get the Atlas fleet lens + the Fleet ↔ Floor switcher. Everyone
-  // else (incl. the pre-resolve null state) gets the floor board: the dedicated
-  // mobile KDS on a phone, the desktop floor board otherwise.
+  // Only owners get the Atlas fleet lens. Everyone else (incl. the pre-resolve
+  // null state) gets the floor board directly: the dedicated mobile KDS on a
+  // phone, the desktop floor board otherwise.
   if (role !== "owner") {
     if (ready && isMobile) {
       return <MobileKDS />;
@@ -119,36 +103,32 @@ export function AdminKDS() {
     return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
 
-  // Owner — Atlas fleet command, with a switch down to the floor board. The
-  // Atlas board reflows to its responsive layout on a phone; its floor view is
-  // the dedicated mobile KDS there and the desktop floor board otherwise.
+  // Owner — Atlas fleet command is the default. Drilling into a truck swaps
+  // this same window down to that truck's floor board (a "Back to fleet"
+  // control steps back out). The Atlas board reflows to its responsive layout
+  // on a phone; its floor view is the dedicated mobile KDS there and the
+  // desktop floor board otherwise.
   const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader />;
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
-        <Button
-          variant={mode === "fleet" ? "primary" : "ghost"}
-          size="sm"
-          leadingIcon={<Truck className="h-3.5 w-3.5" />}
-          onClick={() => chooseMode("fleet")}
-        >
-          Fleet
-        </Button>
-        <Button
-          variant={mode === "floor" ? "primary" : "ghost"}
-          size="sm"
-          leadingIcon={<ChefHat className="h-3.5 w-3.5" />}
-          onClick={() => chooseMode("floor")}
-        >
-          Floor board
-        </Button>
-      </div>
+      {mode === "floor" && (
+        <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />}
+            onClick={() => setMode("fleet")}
+          >
+            Back to fleet
+          </Button>
+        </div>
+      )}
       {mode === "fleet" ? (
         <AdminKdsFleet
           onDrillIn={(slug) => {
             setLocation(slug);
-            chooseMode("floor");
+            setMode("floor");
           }}
         />
       ) : (
@@ -202,44 +182,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Fullscreen kitchen-display (kiosk) mode. Flips the board into an
   // edge-to-edge, dedicated dark high-contrast surface and requests native
   // browser fullscreen so a wall-mounted screen reads cleanly across the line.
-  const [kiosk, setKiosk] = useState(false);
-
-  const enterKiosk = useCallback(() => {
-    setKiosk(true);
-    // Best-effort native fullscreen — the immersive layout stands on its own
-    // if the browser denies it (sandboxed iframe, kiosk policy, etc.).
-    void document.documentElement.requestFullscreen?.().catch(() => {});
-  }, []);
-  const exitKiosk = useCallback(() => {
-    setKiosk(false);
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-  }, []);
-
-  // Keep React state in lock-step with the browser: pressing Esc (or the
-  // browser's own control) leaving native fullscreen drops us out of kiosk.
-  useEffect(() => {
-    const onFsChange = () => {
-      if (!document.fullscreenElement) setKiosk(false);
-    };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, []);
-
-  // Lock body scroll while the kiosk overlay covers the viewport, and let Esc
-  // exit even when native fullscreen was denied (no fullscreenchange to catch).
-  useEffect(() => {
-    if (!kiosk) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") exitKiosk();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [kiosk, exitKiosk]);
+  const { active: kiosk, enter: enterKiosk, exit: exitKiosk } = useFullscreen();
 
   // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
   // loop. We mirror the stream into a local copy so optimistic updates from
@@ -460,18 +403,18 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const page = (
     <div className={`kds-atlas kds-floor-dark${kiosk ? " is-fullscreen" : ""}`}>
       {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
-      <header className="ka-head">
-        <div className="ka-brand">
-          <span className="ka-wordmark">SUD ITALIA</span>
-          <span className="ka-kd-label">{location ? `${location} · floor` : "Floor"}</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="ka-filters" role="group" aria-label="Station filter">
+        <div className="cmd-chips" role="group" aria-label="Station filter">
           {STATION_FILTERS.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="ka-chip"
+              className="cmd-chip"
               aria-pressed={s.id === station}
               onClick={() => setStation(s.id as MenuCategory | "all")}
             >
@@ -479,29 +422,28 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             </button>
           ))}
         </div>
-        <div className="ka-lines" role="group" aria-label="Stage focus">
-          <button type="button" className="ka-line" aria-pressed={lane === "all"} onClick={() => setLane("all")}>
-            <span>All</span>
-            <span className="ka-lcount tabular">{laneCounts.all}</span>
-          </button>
-          {KDS_COLUMNS.map((col) => (
-            <button
-              key={col.id}
-              type="button"
-              className="ka-line"
-              data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
-              aria-pressed={lane === col.id}
-              onClick={() => setLane(col.id)}
-            >
-              <span>{col.label}</span>
-              <span className="ka-lcount tabular">{laneCounts[col.id]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="ka-spacer" />
+        <SegControl
+          ariaLabel="Stage focus"
+          value={lane}
+          onChange={setLane}
+          options={[
+            { value: "all" as const, label: "All", count: laneCounts.all },
+            ...KDS_COLUMNS.map((col) => ({
+              value: col.id,
+              label: col.label,
+              count: laneCounts[col.id],
+              dataLine: col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new",
+            })),
+          ]}
+        />
+        <div className="cmd-spacer" />
+        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           aria-pressed={kiosk}
           onClick={kiosk ? exitKiosk : enterKiosk}
           title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
@@ -509,19 +451,15 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{kiosk ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        <div className="ka-clock tabular">{clock}</div>
+        <div className="cmd-clock tabular">{clock}</div>
       </header>
 
       {/* Board controls — sound / pause (and sandbox sim) live on a thin strip
           under the header so the header keeps just refresh, fullscreen + clock. */}
-      <div className="ka-subbar" role="group" aria-label="Board controls">
+      <div className="cmd-subbar" role="group" aria-label="Board controls">
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           aria-pressed={soundOn}
           onClick={() => setSoundOn((s) => !s)}
           title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
@@ -529,20 +467,20 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
           <span>{soundOn ? "Sound" : "Muted"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+        <button type="button" className="cmd-btn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
           {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
           <span>{paused ? "Resume" : "Pause"}</span>
         </button>
         {simEnabled && (
           <>
-            <span className="ka-subbar-sep" />
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
+            <span className="cmd-subbar-sep" />
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
               Add 1
             </button>
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
               Add 5
             </button>
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
               Purge
             </button>
           </>
@@ -562,7 +500,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             <button
               key={entry.orderId}
               type="button"
-              className="ka-fsbtn"
+              className="cmd-btn"
               disabled={updatingId === entry.orderId}
               onClick={() => recall(entry.orderId)}
               title={`Recall ${entry.label} to the expo column`}
@@ -707,15 +645,9 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   return (
     <Card padding="compact" className="v2-kds-ops">
       <CardBody>
-        <div className="ka-fb-eyebrow">
-          <span className="ka-fb-brandline">
-            <MapPin className="h-3 w-3" /> Floor command
-          </span>
-          <span className="ka-fb-sep" />
-          <span className="ka-fb-trucks">
-            <b>{orders.length}</b> open
-          </span>
-        </div>
+        <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Floor command">
+          <b>{orders.length}</b> open
+        </SectionEyebrow>
         <KdsStatGrid stats={stats} />
 
         <div className="v2-kds-ops-86">
