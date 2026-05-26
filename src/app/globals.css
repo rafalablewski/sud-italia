@@ -359,6 +359,12 @@ html { scroll-behavior: smooth; }
   .v2-shell { grid-template-columns: 1fr; }
 }
 
+/* Immersive KDS — drilling into a single truck's floor board drops the nav
+   sidebar so the kitchen screen runs edge-to-edge. Toggled by AdminKDS adding
+   `kds-immersive` to <body> while a truck floor board is open. */
+body.kds-immersive .v2-shell { grid-template-columns: 1fr; }
+body.kds-immersive .v2-shell > .v2-sidebar { display: none; }
+
 /* --- Sidebar --- */
 .v2-sidebar {
   position: sticky;
@@ -2274,6 +2280,11 @@ html { scroll-behavior: smooth; }
   justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
+}
+.v2-kds-col-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .v2-kds-col-count {
   font-size: var(--text-2xs);
@@ -8343,9 +8354,8 @@ select.pub-input {
 :is(.kds-atlas, .kds-floor-dark) .ka-it-group { display: flex; flex-direction: column; gap: 5px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-it-group.is-dim { opacity: .38; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ig-head { display: flex; align-items: center; gap: 9px; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--cmd-faint); font-weight: 700; }
-:is(.kds-atlas, .kds-floor-dark) .ka-ig-head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--cmd-hair); order: 1; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ig-name { order: 0; }
-:is(.kds-atlas, .kds-floor-dark) .ka-ig-count { order: 2; font-size: 9.5px; font-weight: 600; color: var(--cmd-dim); background: var(--cmd-hair); border-radius: 4px; padding: 0 6px; line-height: 15px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-ig-count { order: 2; margin-left: auto; font-size: 9.5px; font-weight: 600; color: var(--cmd-dim); background: var(--cmd-hair); border-radius: 4px; padding: 0 6px; line-height: 15px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-it { display: flex; flex-direction: column; gap: 4px; padding-left: 2px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-it-main { display: flex; gap: 12px; align-items: baseline; }
 :is(.kds-atlas, .kds-floor-dark) .ka-q { font-weight: 600; font-size: 13px; min-width: 34px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid var(--cmd-hair); border-radius: 5px; padding: 2px 6px; flex: 0 0 auto; }
@@ -8357,7 +8367,7 @@ select.pub-input {
 :is(.kds-atlas, .kds-floor-dark) .ka-t-notes { margin-top: 12px; border: 1px solid rgba(245,166,35,0.28); background: rgba(245,166,35,0.07); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-tn-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmd-warn); font-weight: 700; }
 :is(.kds-atlas, .kds-floor-dark) .ka-tn-line { font-size: 13px; line-height: 1.45; }
-:is(.kds-atlas, .kds-floor-dark) .ka-t-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--cmd-hair); display: flex; align-items: center; gap: 12px; }
+:is(.kds-atlas, .kds-floor-dark) .ka-t-foot { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-t-meta { font-size: 10px; letter-spacing: 0.06em; color: var(--cmd-faint); text-transform: uppercase; }
 :is(.kds-atlas, .kds-floor-dark) .ka-t-meta b { color: var(--cmd-dim); }
 :is(.kds-atlas, .kds-floor-dark) .ka-act { margin-left: auto; appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 7px; padding: 9px 17px; white-space: nowrap; border: 1px solid var(--cmd-hair-strong); background: var(--cmd-raised); color: var(--cmd-text); transition: background .16s, border-color .16s; }
@@ -8378,8 +8388,25 @@ select.pub-input {
 .kds-atlas .ka-floor-body .v2-kds-col-body { max-height: none; }
 .kds-atlas .ka-floor-body .v2-kds-lane-grid { max-height: none; }
 .kds-atlas .ka-sandbox { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmd-warn); background: var(--cmd-warn-soft); border: 1px solid rgba(245, 166, 35, 0.4); border-radius: 5px; padding: 2px 7px; }
-.kds-atlas .ka-recall { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
-.kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cmd-faint); font-weight: 700; }
+/* Stage switcher — full-width row of big, glove-friendly buttons sitting right
+   above the ticket cards so the line flips lanes at a glance. */
+.kds-atlas .kds-stage-switch { flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; padding: 12px 20px; background: var(--cmd-panel); border-bottom: 1px solid var(--cmd-hair); }
+.kds-atlas .kds-stage-btn { appearance: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; padding: 10px 16px; border: 1px solid var(--cmd-hair); border-radius: 10px; background: var(--cmd-canvas); color: var(--cmd-dim); font: inherit; font-size: 14px; font-weight: 600; transition: color .16s, border-color .16s, background .16s; }
+.kds-atlas .kds-stage-btn:hover { color: var(--cmd-text); border-color: var(--cmd-hair-strong); }
+.kds-atlas .kds-stage-btn[aria-pressed="true"] { background: var(--cmd-raised); border-color: var(--cmd-hair-strong); color: var(--cmd-text); }
+.kds-atlas .kds-stage-btn[data-line="ready"][aria-pressed="true"] { color: var(--cmd-ready); border-color: rgba(61,214,140,0.5); }
+.kds-atlas .kds-stage-count { font-size: 12.5px; font-weight: 700; min-width: 24px; height: 22px; padding: 0 7px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--cmd-hair); color: var(--cmd-dim); }
+.kds-atlas .kds-stage-btn[aria-pressed="true"] .kds-stage-count { background: var(--cmd-hair-strong); color: var(--cmd-text); }
+@media (max-width: 720px) {
+  .kds-atlas .kds-stage-switch { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; }
+}
+
+/* Recall — expo-station control in the Ready · Expo column header that puts the
+   most recently bumped ticket back on the board (the classic expo recall key). */
+.kds-atlas .ka-expo-recall { appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 7px; border: 1px solid rgba(61,214,140,0.5); background: var(--cmd-ready-soft); color: var(--cmd-ready); transition: background .16s, border-color .16s; }
+.kds-atlas .ka-expo-recall:hover { background: rgba(61,214,140,0.2); }
+.kds-atlas .ka-expo-recall:disabled { opacity: .5; cursor: default; }
+.kds-atlas .ka-expo-recall svg { width: 13px; height: 13px; }
 /* Shared secondary strip under the command header — KDS sandbox controls / POS steer toggle. */
 .cmd-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
 .cmd-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--cmd-hair); }
@@ -8682,8 +8709,7 @@ select.pub-input {
 .pos-e-emoji { font-size: 30px; opacity: .5; }
 .pos-e-text { font-size: 14px; color: var(--pos-dim); }
 .pos-e-sub { font-size: 12px; }
-.pos-line { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--pos-hair); }
-.pos-line:last-child { border-bottom: 0; }
+.pos-line { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
 .pos-line-body { flex: 1 1 auto; min-width: 0; }
 .pos-line-name { font-size: 13.5px; font-weight: 600; line-height: 1.2; }
 .pos-line-each { font-family: var(--pos-mono); font-size: 10.5px; color: var(--pos-faint); margin-top: 2px; }
