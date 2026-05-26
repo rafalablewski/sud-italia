@@ -49,6 +49,9 @@ async function buildOrderShape(
 > {
   if (!tab.channel) return { error: "Pick a channel first", status: 400 };
   if (tab.items.length === 0) return { error: "Tab has no items", status: 400 };
+  if (tab.channel === "delivery" && !tab.address?.trim()) {
+    return { error: "Add a delivery address first", status: 400 };
+  }
 
   const menu = await getMenuWithOverrides(locationSlug);
   const byId = new Map(menu.map((m) => [m.id, m]));

@@ -142,13 +142,6 @@ export function AdminPos({
   // category shows just its grid. Falls back to All if the active category
   // disappears (e.g. after a location switch).
   const [activeCat, setActiveCat] = useState<MenuCategory | "all">("all");
-  const presentCats = useMemo(() => {
-    const present = new Set(menu.filter((m) => m.available).map((m) => m.category));
-    return CAT_ORDER.filter((c) => present.has(c));
-  }, [menu]);
-  useEffect(() => {
-    if (activeCat !== "all" && !presentCats.includes(activeCat)) setActiveCat("all");
-  }, [presentCats, activeCat]);
 
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
@@ -232,35 +225,43 @@ export function AdminPos({
   // Debounced per-tab persistence — every edit lands in the store so a refresh
   // (or a second till) sees the same open checks. orderId stays server-owned.
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const persistTab = useCallback(
-    (tab: PosTab) => {
-      const timers = persistTimers.current;
-      const existing = timers.get(tab.id);
-      if (existing) clearTimeout(existing);
-      timers.set(
-        tab.id,
-        setTimeout(() => {
-          timers.delete(tab.id);
-          void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: tab.id,
-              name: tab.name,
-              channel: tab.channel,
-              status: tab.status,
-              items: tab.items,
-              tableId: tab.tableId,
-              covers: tab.covers,
-              address: tab.address,
-              sentKds: tab.sentKds,
-            }),
-          }).catch(() => {});
-        }, 350),
-      );
-    },
-    [pageLoc],
-  );
+  // Cancel any pending debounced writes on unmount so they can't fire after the
+  // component is gone (and leak timers).
+  useEffect(() => {
+    const timers = persistTimers.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+  const persistTab = useCallback((tab: PosTab) => {
+    const timers = persistTimers.current;
+    const existing = timers.get(tab.id);
+    if (existing) clearTimeout(existing);
+    timers.set(
+      tab.id,
+      setTimeout(() => {
+        timers.delete(tab.id);
+        // Write to the tab's OWN location, not the page's current one — a fast
+        // location switch mid-debounce must not redirect the write elsewhere.
+        void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(tab.locationSlug)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: tab.id,
+            name: tab.name,
+            channel: tab.channel,
+            status: tab.status,
+            items: tab.items,
+            tableId: tab.tableId,
+            covers: tab.covers,
+            address: tab.address,
+            sentKds: tab.sentKds,
+          }),
+        }).catch(() => {});
+      }, 350),
+    );
+  }, []);
 
   const mutateActive = useCallback(
     (mutator: (t: PosTab) => PosTab) => {
@@ -586,6 +587,21 @@ export function AdminPos({
   const locName =
     activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc;
 
+  // Channel-scoped menu: deliveryOnly SKUs only appear on the Delivery channel
+  // (business rule). Drives the grid, combo auto-add and AI offers so a
+  // delivery-only item can never land on a takeout / dine-in check.
+  const filteredMenu = useMemo(
+    () => menu.filter((m) => active?.channel === "delivery" || !m.deliveryOnly),
+    [menu, active?.channel],
+  );
+  const presentCats = useMemo(() => {
+    const present = new Set(filteredMenu.filter((m) => m.available).map((m) => m.category));
+    return CAT_ORDER.filter((c) => present.has(c));
+  }, [filteredMenu]);
+  useEffect(() => {
+    if (activeCat !== "all" && !presentCats.includes(activeCat)) setActiveCat("all");
+  }, [presentCats, activeCat]);
+
   const railSummary = useMemo(() => {
     const pay = tabs.filter((t) => t.status === "pay").length;
     const parked = tabs.filter((t) => t.status === "parked").length;
@@ -607,20 +623,20 @@ export function AdminPos({
       if (deal.requiredItems?.length) {
         for (const r of deal.requiredItems) {
           if (have((m) => m.id.endsWith(r.suffix))) continue;
-          const m = menu.find((x) => x.available && x.id.endsWith(r.suffix));
+          const m = filteredMenu.find((x) => x.available && x.id.endsWith(r.suffix));
           if (m) addLine(m.id);
         }
       } else {
         for (const cat of deal.categories) {
           if (have((m) => m.category === cat)) continue;
-          const m = menu
+          const m = filteredMenu
             .filter((x) => x.available && x.category === cat)
             .sort((a, b) => a.price - b.price)[0];
           if (m) addLine(m.id);
         }
       }
     },
-    [getActive, byId, menu, addLine],
+    [getActive, byId, filteredMenu, addLine],
   );
 
   const offers = useMemo<Offer[]>(() => {
@@ -645,7 +661,7 @@ export function AdminPos({
         apply: () => completeCombo(deal),
       });
     }
-    const sugg = getCartSuggestions(cartOf(active), menu, 4, config).filter(
+    const sugg = getCartSuggestions(cartOf(active), filteredMenu, 4, config).filter(
       (s) => !active.items.some((l) => l.menuItemId === s.item.id),
     );
     for (const s of sugg) {
@@ -658,7 +674,7 @@ export function AdminPos({
       });
     }
     return out.slice(0, 3);
-  }, [active, comboOf, cartOf, menu, config, addLine, completeCombo]);
+  }, [active, comboOf, cartOf, filteredMenu, config, addLine, completeCombo]);
 
   // Steering helpers for the active tab.
   const bottleneckCat = steer && steerPlan?.active ? steerPlan.bottleneck?.id ?? null : null;
@@ -908,7 +924,7 @@ export function AdminPos({
             )}
             <div className="pos-grid-scroll">
               <ProductGrid
-                menu={menu}
+                menu={filteredMenu}
                 activeCat={activeCat}
                 steerPlan={steer ? steerPlan : null}
                 bottleneckCat={bottleneckCat}

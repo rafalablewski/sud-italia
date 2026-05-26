@@ -10498,14 +10498,24 @@ export async function savePosTab(
       input.status && POS_TAB_STATUSES.includes(input.status)
         ? input.status
         : existing?.status ?? "open";
+    const items =
+      input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
+    // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
+    // can never outlive the order it was sent as, even if the client claims it.
+    const itemsChanged =
+      input.items !== undefined &&
+      (!existing ||
+        existing.items.length !== items.length ||
+        existing.items.some(
+          (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
+        ));
     const tab: PosTab = {
       id,
       locationSlug: input.locationSlug,
       name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
       channel: input.channel === undefined ? existing?.channel ?? null : channel,
       status,
-      items:
-        input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [],
+      items,
       tableId:
         input.tableId !== undefined
           ? input.tableId || undefined
@@ -10518,8 +10528,12 @@ export async function savePosTab(
         input.address !== undefined
           ? (input.address || "").toString().trim().slice(0, 400) || undefined
           : existing?.address,
-      // Editing items un-sends the check; otherwise preserve the sent flag.
-      sentKds: input.sentKds !== undefined ? !!input.sentKds : existing?.sentKds ?? false,
+      // Editing items forces sentKds false; otherwise honour the input / preserve.
+      sentKds: itemsChanged
+        ? false
+        : input.sentKds !== undefined
+          ? !!input.sentKds
+          : existing?.sentKds ?? false,
       // orderId is server-owned — never overwritten by the caller.
       orderId: existing?.orderId,
       createdAt: existing?.createdAt ?? input.createdAt ?? now,

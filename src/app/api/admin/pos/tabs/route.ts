@@ -48,6 +48,12 @@ export const PUT = withAdmin(
     if (!body || typeof body.id !== "string") {
       return NextResponse.json({ error: "Tab id required" }, { status: 400 });
     }
+    // Scope the write to the caller's truck — a till can't hijack or overwrite
+    // another location's open check by passing its id.
+    const existing = await getPosTab(body.id);
+    if (existing && existing.locationSlug !== locationSlug) {
+      return NextResponse.json({ error: "Tab not found" }, { status: 404 });
+    }
     // savePosTab sanitises lines/channel/status and preserves the server-owned
     // orderId — so a stray "pay" status or order link can't be forged here.
     const tab = await savePosTab({
