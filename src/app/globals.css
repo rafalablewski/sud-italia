@@ -8380,8 +8380,9 @@ select.pub-input {
 .kds-atlas .ka-sandbox { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cmd-warn); background: var(--cmd-warn-soft); border: 1px solid rgba(245, 166, 35, 0.4); border-radius: 5px; padding: 2px 7px; }
 .kds-atlas .ka-recall { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
 .kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cmd-faint); font-weight: 700; }
-.kds-atlas .ka-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
-.kds-atlas .ka-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--cmd-hair); }
+/* Shared secondary strip under the command header — KDS sandbox controls / POS steer toggle. */
+.cmd-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
+.cmd-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--cmd-hair); }
 
 /* ---- states ---- */
 .kds-atlas .ka-loading { padding: 48px 24px; text-align: center; color: var(--cmd-dim); font-size: 13px; }
@@ -8404,7 +8405,7 @@ select.pub-input {
   .kds-atlas .cmd-head { gap: 8px; padding: 8px 12px; }
   .kds-atlas .cmd-chips, .kds-atlas .cmd-seg-group { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .kds-atlas .cmd-chips::-webkit-scrollbar, .kds-atlas .cmd-seg-group::-webkit-scrollbar { display: none; }
-  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges, .kds-atlas .ka-subbar { padding-left: 14px; padding-right: 14px; }
+  .kds-atlas .ka-fleetbar, .kds-atlas .ka-thead, .kds-atlas .ka-tbody, .kds-atlas .ka-pace-gauges, .kds-atlas .cmd-subbar { padding-left: 14px; padding-right: 14px; }
   .kds-atlas .ka-fb-grid { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-pace-gauges { grid-template-columns: repeat(2, 1fr); }
   .kds-atlas .ka-th-spark { display: none; }

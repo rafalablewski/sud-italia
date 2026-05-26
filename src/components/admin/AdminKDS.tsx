@@ -437,6 +437,10 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           ]}
         />
         <div className="cmd-spacer" />
+        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
         <button
           type="button"
           className="cmd-btn"
@@ -447,16 +451,12 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{kiosk ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
         <div className="cmd-clock tabular">{clock}</div>
       </header>
 
       {/* Board controls — sound / pause (and sandbox sim) live on a thin strip
           under the header so the header keeps just refresh, fullscreen + clock. */}
-      <div className="ka-subbar" role="group" aria-label="Board controls">
+      <div className="cmd-subbar" role="group" aria-label="Board controls">
         <button
           type="button"
           className="cmd-btn"
@@ -473,7 +473,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
         </button>
         {simEnabled && (
           <>
-            <span className="ka-subbar-sep" />
+            <span className="cmd-subbar-sep" />
             <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
               Add 1
             </button>

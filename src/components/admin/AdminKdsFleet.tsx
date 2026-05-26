@@ -324,6 +324,10 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           options={LINES.map((l) => ({ value: l.key, label: l.title, count: lineCounts[l.key], dataLine: l.key }))}
         />
         <div className="cmd-spacer" />
+        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span>Refresh</span>
+        </button>
         <button
           type="button"
           className="cmd-btn"
@@ -334,44 +338,23 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{fullscreen ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        {simEnabled && (
-          <>
-            <span className="ka-subbar-sep" />
-            <button
-              type="button"
-              className="cmd-btn"
-              disabled={simBusy}
-              onClick={() => void simSpawn(1)}
-              title="Add 1 sandbox ticket to every live truck"
-            >
-              Add 1
-            </button>
-            <button
-              type="button"
-              className="cmd-btn"
-              disabled={simBusy}
-              onClick={() => void simSpawn(5)}
-              title="Add 5 sandbox tickets to every live truck"
-            >
-              Add 5
-            </button>
-            <button
-              type="button"
-              className="cmd-btn"
-              disabled={simBusy}
-              onClick={() => void simPurge()}
-              title="Clear all sandbox tickets across the fleet"
-            >
-              Purge
-            </button>
-          </>
-        )}
         <div className="cmd-clock tabular">{clock}</div>
       </header>
+
+      {/* Sandbox controls live on a strip under the shared header (not in it). */}
+      {simEnabled && (
+        <div className="cmd-subbar" role="group" aria-label="Sandbox controls">
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(1)} title="Add 1 sandbox ticket to every live truck">
+            Add 1
+          </button>
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(5)} title="Add 5 sandbox tickets to every live truck">
+            Add 5
+          </button>
+          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simPurge()} title="Clear all sandbox tickets across the fleet">
+            Purge
+          </button>
+        </div>
+      )}
 
       {/* ---------------- Fleet command bar ---------------- */}
       {data && (

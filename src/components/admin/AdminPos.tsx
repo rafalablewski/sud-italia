@@ -776,17 +776,6 @@ export function AdminPos({
         <div className="cmd-spacer" />
         <button
           type="button"
-          className="cmd-btn pos-steer-chip"
-          aria-pressed={steer}
-          onClick={() => setSteer((s) => !s)}
-          title="Toggle Pace → POS steering"
-        >
-          <span className="pos-sc-dot" />
-          <Gauge />
-          <span>Steer</span>
-        </button>
-        <button
-          type="button"
           className="cmd-btn"
           aria-pressed={kiosk}
           onClick={kiosk ? exitKiosk : enterKiosk}
@@ -797,6 +786,21 @@ export function AdminPos({
         </button>
         <div className="cmd-clock tnum">{clock}</div>
       </header>
+
+      {/* Steer toggle lives on a strip under the shared header (not in it). */}
+      <div className="cmd-subbar" role="group" aria-label="Pace steering">
+        <button
+          type="button"
+          className="cmd-btn pos-steer-chip"
+          aria-pressed={steer}
+          onClick={() => setSteer((s) => !s)}
+          title="Toggle Pace → POS steering"
+        >
+          <span className="pos-sc-dot" />
+          <Gauge />
+          <span>Steer</span>
+        </button>
+      </div>
 
       {/* Tab rail */}
       <section className="pos-tabrail" aria-label="Open checks">
