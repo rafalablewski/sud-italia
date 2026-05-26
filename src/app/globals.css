@@ -8183,8 +8183,9 @@ select.pub-input {
 .kds-atlas .ka-fb-bm-lab { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ka-faint); }
 .kds-atlas .ka-bm-rows { display: flex; flex-direction: column; gap: 8px; }
 .kds-atlas .ka-bm-row { display: flex; align-items: center; gap: 12px; }
-.kds-atlas .ka-bm-name { font-size: 11px; color: var(--ka-dim); min-width: 90px; display: flex; align-items: center; gap: 6px; }
-.kds-atlas .ka-bm-lead { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ka-ready); border: 1px solid var(--ka-ready); border-radius: 3px; padding: 0 4px; line-height: 13px; }
+.kds-atlas .ka-bm-name { font-size: 11px; color: var(--ka-dim); flex: 0 0 168px; width: 168px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.kds-atlas .ka-bm-name-text { overflow: hidden; text-overflow: ellipsis; }
+.kds-atlas .ka-bm-lead { flex: none; margin-left: auto; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ka-ready); border: 1px solid var(--ka-ready); border-radius: 3px; padding: 0 4px; line-height: 13px; }
 .kds-atlas .ka-bm-track { flex: 1 1 auto; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; position: relative; }
 .kds-atlas .ka-bm-fill { display: block; height: 100%; border-radius: 3px; transition: width .3s, background .3s; }
 .kds-atlas .ka-bm-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ka-text); opacity: .5; }
