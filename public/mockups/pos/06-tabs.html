@@ -331,6 +331,10 @@
   .th-chan-btn svg{width:16px;height:16px;flex:0 0 auto}
   .th-chan-btn:hover{color:var(--text);border-color:var(--text)}
   .th-chan-btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  /* required state — no channel chosen yet */
+  .th-channel.req .th-chan-btn{border-color:rgba(245,166,35,0.5)}
+  .th-chan-req{display:none;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--warn);letter-spacing:0.02em}
+  .th-chan-req i{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto;animation:ssPulse 1.6s ease-in-out infinite}
   .mini-btn{
     appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.02em;
     border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
@@ -818,8 +822,10 @@ function removeCombo(id){
 /* ====================== Tab ops ====================== */
 function newTab(){
   tabSeq++;
-  const t={ id:newTabId(), name:"Tab "+tabSeq, chan:channel, status:"open", sentKds:false,
-            table:undefined, covers: channel==="Dine-in"?2:undefined, items:[], combos:[] };
+  // No default channel — the operator MUST pick Takeout/Delivery/Dine-in before
+  // the order can be sent to the KDS or charged. chan stays null until chosen.
+  const t={ id:newTabId(), name:"Tab "+tabSeq, chan:null, status:"open", sentKds:false,
+            table:undefined, covers:undefined, items:[], combos:[] };
   tabs.push(t);
   activeTabId=t.id;
   render();
@@ -831,16 +837,13 @@ function togglePark(){
 }
 function sendKds(){
   const t=getActive();if(!t || t.items.length===0) return;
+  if(!t.chan){ toast("⚠ Pick a channel first"); render(); return; }
   t.sentKds=true;
   if(t.status==="open") t.status="pay";
   toast("Sent to KDS — #"+t.id);
   render();
 }
-function setActive(id){
-  activeTabId=id;
-  const t=getActive(); if(t){ channel=t.chan; buildChanSwitcher(); }
-  render();
-}
+function setActive(id){ activeTabId=id; render(); }
 
 /* ====================== Format ====================== */
 function pad(n){return String(n).padStart(2,"0");}
@@ -866,7 +869,7 @@ function renderTabs(){
         <span class="tab-dot"></span>
         <span class="tab-name">${t.name}</span>
         ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
-        <span class="tab-chan">${CHAN_ICON[t.chan]}</span>
+        <span class="tab-chan">${t.chan?CHAN_ICON[t.chan]:""}</span>
       </div>
       <span class="tab-id tnum">#${t.id}</span>
       <div class="tab-foot">
@@ -1032,8 +1035,8 @@ function renderTicket(){
     dot.className="th-dot "+(t?t.status:"");
     document.getElementById("thName").textContent=t?t.name:"—";
     document.getElementById("thId").textContent=t?("#"+t.id):"";
-    document.getElementById("thChanLbl").textContent=t?t.chan:"";
-    document.getElementById("thChanIcon").innerHTML=t?CHAN_ICON[t.chan]:"";
+    document.getElementById("thChanLbl").textContent=(t&&t.chan)?t.chan:"No channel";
+    document.getElementById("thChanIcon").innerHTML=(t&&t.chan)?CHAN_ICON[t.chan]:"";
     document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
   }
 
@@ -1085,8 +1088,9 @@ function renderTicket(){
 
   // charge button
   const charge=document.getElementById("chargeBtn");
-  charge.disabled=!t||t.items.length===0;
-  document.getElementById("chargeLbl").textContent="Charge "+fmtPLN(grand);
+  charge.disabled=!t||t.items.length===0||!t.chan;
+  document.getElementById("chargeLbl").textContent=
+    (t && t.items.length>0 && !t.chan) ? "Select a channel" : "Charge "+fmtPLN(grand);
 
   // park + kds button states
   const parkBtn=document.getElementById("parkBtn");
@@ -1110,15 +1114,14 @@ function renderTicketChannel(){
     b.className="th-chan-btn";b.type="button";
     b.innerHTML=CHAN_ICON[c]+`<span>${c}</span>`;
     b.setAttribute("aria-pressed",String(!!t && t.chan===c));
-    b.onclick=()=>{
-      channel=c;
-      const at=getActive();
-      if(at){ at.chan=c; if(c==="Dine-in" && at.covers==null) at.covers=2; }
-      buildChanSwitcher();
-      render();
-    };
+    b.onclick=()=>setChannel(c);
     g.appendChild(b);
   });
+  // Required cue: until a channel is chosen, flag the selector + show the hint.
+  const needsChannel = !!t && !t.chan;
+  g.classList.toggle("req", needsChannel);
+  const hint=document.getElementById("thChanReq");
+  if(hint) hint.style.display = needsChannel ? "flex" : "none";
 }
 
 /* ====================== Build editor shell once ====================== */
@@ -1141,6 +1144,7 @@ function buildEditorShell(){
           <span class="th-promise" id="thPromise" style="display:none"></span>
         </div>
         <div class="th-channel" id="thChannel" role="group" aria-label="Channel"></div>
+        <span class="th-chan-req" id="thChanReq" style="display:none"><i></i>Choose a channel to send or charge this order</span>
         <div class="th-actions">
           <button class="mini-btn tablebtn" id="tableBtn" type="button" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
@@ -1282,6 +1286,7 @@ function changeCovers(delta){
 /* ====================== Charge / tender / pay ====================== */
 function openTender(){
   const t=getActive();if(!t||t.items.length===0) return;
+  if(!t.chan){ toast("⚠ Pick a channel first"); return; }
   document.getElementById("tenderAmt").textContent=fmtPLN(grandG(t));
   document.getElementById("tender").classList.add("open");
 }
@@ -1327,6 +1332,7 @@ function render(){
   renderCats();
   renderGrid();
   renderTicket();
+  buildChanSwitcher();
   renderTicketChannel();
   renderChanSteer();
 }
@@ -1360,7 +1366,8 @@ function renderChanSteer(){
   const g=document.getElementById("chanGroup");
   if(!g) return;
   let note=document.getElementById("chanPaused");
-  const paused = STEER && steerPlan && steerPlan.active && channel==="Delivery" && steerPlan.deliveryCap===0;
+  const t=getActive();
+  const paused = STEER && steerPlan && steerPlan.active && t && t.chan==="Delivery" && steerPlan.deliveryCap===0;
   if(paused){
     if(!note){
       note=document.createElement("span");
@@ -1373,7 +1380,6 @@ function renderChanSteer(){
 
 /* ====================== Location / channel switchers ====================== */
 const LOCS=["Kraków","Warszawa"];
-let channel="Takeout";
 const CHANS=["Takeout","Delivery","Dine-in"];
 function buildLocSwitcher(){
   const g=document.getElementById("locGroup");g.innerHTML="";
@@ -1385,18 +1391,25 @@ function buildLocSwitcher(){
     g.appendChild(b);
   });
 }
+// Single source of truth for the active tab's channel — both the header seg and
+// the big in-column selector call this. No global default; a tab has no channel
+// until one is chosen here.
+function setChannel(c){
+  const t=getActive(); if(!t) return;
+  t.chan=c;
+  if(c==="Dine-in" && t.covers==null) t.covers=2;
+  render();
+}
 function buildChanSwitcher(){
-  const g=document.getElementById("chanGroup");g.innerHTML="";
+  const g=document.getElementById("chanGroup");if(!g) return;
+  g.innerHTML="";
+  const t=getActive();
   CHANS.forEach(c=>{
     const b=document.createElement("button");
     b.className="seg";b.type="button";
     b.innerHTML=CHAN_ICON[c]+`<span>${c}</span>`;
-    b.setAttribute("aria-pressed",String(c===channel));
-    b.onclick=()=>{
-      channel=c; buildChanSwitcher();
-      // new tabs inherit the chosen channel; also update active tab's channel
-      const t=getActive(); if(t){ t.chan=c; render(); }
-    };
+    b.setAttribute("aria-pressed",String(!!t && t.chan===c));
+    b.onclick=()=>setChannel(c);
     g.appendChild(b);
   });
 }
