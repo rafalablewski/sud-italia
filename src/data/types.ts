@@ -579,6 +579,45 @@ export interface Reservation {
   createdAt: string;
 }
 
+// --- POS open checks (tabs) ---
+
+export type PosTabStatus = "open" | "parked" | "pay";
+
+/** A single ordered line on an open check. Stores the menu-item id + quantity
+ *  only — never a price. Prices + discounts are resolved server-side against
+ *  the location's real menu when the tab is sent to the kitchen or charged, so
+ *  the till can never dictate what an item costs. */
+export interface PosTabLine {
+  menuItemId: string;
+  quantity: number;
+}
+
+/** An open check at the counter — the "Tabs" POS lets staff juggle several at
+ *  once. Persisted server-side (per location) so it survives a refresh and is
+ *  shared across tills. `orderId` is set once the check is sent to the KDS or
+ *  charged: from then on the real Order is the source of truth for the kitchen,
+ *  and this tab just tracks the till-side editing state until it's paid off. */
+export interface PosTab {
+  id: string;
+  locationSlug: string;
+  name: string;
+  /** No default — staff must pick a channel before a tab can be sent or charged. */
+  channel: FulfillmentType | null;
+  status: PosTabStatus;
+  items: PosTabLine[];
+  /** Dine-in: assigned floor table (FloorTable.id) + party size. */
+  tableId?: string;
+  covers?: number;
+  /** Delivery: free-text address + driver note. */
+  address?: string;
+  /** True once the check has been fired to the kitchen display. */
+  sentKds: boolean;
+  /** The real Order created on send / charge. Absent until then. */
+  orderId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // --- Inventory (per-location stock for an ingredient) ---
 
 export interface IngredientStock {
