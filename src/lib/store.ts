@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -10393,6 +10393,53 @@ export async function deleteTable(id: string): Promise<boolean> {
     const filtered = list.filter((t) => t.id !== id);
     if (filtered.length === list.length) return false;
     await writeJSON("floor-tables.json", filtered);
+    return true;
+  });
+}
+
+// --- POS: open checks ("tabs") --------------------------------------------
+// Server-persisted working orders for the till. JSON-backed list (mirrors the
+// floor-tables pattern): withLock + readJSON/writeJSON, upsert by id, scoped to
+// location on read. A tab stores only menuItemId + quantity — never a price —
+// so totals are always recomputed against the live menu. Sending to the KDS or
+// charging promotes the tab to a real Order; pay deletes the closed tab.
+
+export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
+  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+  const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
+  return scoped.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getPosTab(id: string): Promise<PosTab | null> {
+  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+  return list.find((t) => t.id === id) ?? null;
+}
+
+export async function savePosTab(
+  input: Omit<PosTab, "createdAt" | "updatedAt"> & { createdAt?: string },
+): Promise<PosTab> {
+  return withLock("pos-tabs.json", async () => {
+    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+    const now = new Date().toISOString();
+    const i = list.findIndex((t) => t.id === input.id);
+    const tab: PosTab = {
+      ...input,
+      createdAt: input.createdAt ?? (i >= 0 ? list[i].createdAt : now),
+      updatedAt: now,
+    };
+    if (i >= 0) list[i] = tab;
+    else list.push(tab);
+    await writeJSON("pos-tabs.json", list);
+    return tab;
+  });
+}
+
+export async function deletePosTab(id: string): Promise<boolean> {
+  return withLock("pos-tabs.json", async () => {
+    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+    const filtered = list.filter((t) => t.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("pos-tabs.json", filtered);
     return true;
   });
 }

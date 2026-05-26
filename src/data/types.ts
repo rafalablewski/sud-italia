@@ -554,6 +554,40 @@ export interface FloorTable {
   createdAt: string;
 }
 
+/** A POS open check ("tab") — the till's working order before it's charged.
+ *  Server-persisted so several concurrent checks survive a reload and are
+ *  shared across terminals at the same truck. Becomes a real Order when sent
+ *  to the KDS or charged, and is deleted once paid. Lines carry only
+ *  menuItemId + quantity — never a price — so totals are always re-priced
+ *  against the live menu server-side. */
+export type PosTabStatus = "open" | "parked" | "pay";
+
+export interface PosTabLine {
+  menuItemId: string;
+  quantity: number;
+}
+
+export interface PosTab {
+  id: string;
+  locationSlug: string;
+  name: string;
+  /** null until the operator picks a channel; required before send / charge. */
+  channel: FulfillmentType | null;
+  status: PosTabStatus;
+  items: PosTabLine[];
+  /** dine-in: assigned FloorTable.id + covers. */
+  tableId?: string;
+  covers?: number;
+  /** delivery: free-text address + driver note. */
+  address?: string;
+  /** True once a kitchen ticket (Order) has been fired for this check. */
+  sentKds: boolean;
+  /** The Order.id created on send / charge, so pay marks the right order paid. */
+  orderId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ReservationStatus =
   | "booked"
   | "seated"
