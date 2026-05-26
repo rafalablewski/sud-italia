@@ -414,6 +414,28 @@
   .toast svg{width:15px;height:15px}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+  /* table assignment (dine-in) */
+  .mini-btn.tablebtn.assigned{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .tab-table{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.30);border-radius:5px;padding:1px 5px;flex:0 0 auto}
+  .overlay.center{align-items:center}
+  .table-sheet{
+    width:min(360px,calc(100% - 28px));background:var(--panel);border:1px solid var(--hair-strong);
+    border-radius:14px;padding:var(--s5);box-shadow:0 20px 60px -20px rgba(0,0,0,0.75);animation:slideUp .2s ease;
+  }
+  .ts-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--s4)}
+  .ts-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em}
+  .table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s2);margin-bottom:var(--s3)}
+  .table-cell{
+    appearance:none;cursor:pointer;font-family:var(--mono);font-size:15px;font-weight:700;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    border-radius:10px;padding:13px 0;transition:all .12s ease;
+  }
+  .table-cell:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  .table-cell.sel{background:var(--accent);border-color:var(--accent);color:#06140d}
+  .table-foot{display:flex;gap:var(--s2)}
+  .table-foot .ta-btn{flex:1 1 0;appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--dim);font-family:var(--sans);font-size:12.5px;padding:11px;border-radius:10px}
+  .table-foot .ta-btn:hover{background:var(--raised);color:var(--text)}
+
   .empty-editor{
     grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:var(--s3);color:var(--faint);background:var(--canvas);text-align:center;padding:var(--s7);
@@ -692,6 +714,8 @@ let tabs = [
     items:[{id:"slice",q:2},{id:"limonata",q:1}], combos:["lunch"] },
   { id:"D9P3Q7", name:"Delivery · Giulia", chan:"Delivery", status:"open", sentKds:false,
     items:[{id:"quattro",q:1},{id:"carbonara",q:1},{id:"tiramisu",q:1}], combos:["trio"] },
+  { id:"T6D2N8", name:"Dine-in · Anna",    chan:"Dine-in",  status:"open", sentKds:false, table:6,
+    items:[{id:"margherita",q:1},{id:"pesto",q:1},{id:"limonata",q:2}], combos:[] },
 ];
 let activeTabId = "A4F9C2";
 let activeCat = "Pizza";
@@ -787,6 +811,7 @@ function renderTabs(){
       <div class="tab-top">
         <span class="tab-dot"></span>
         <span class="tab-name">${t.name}</span>
+        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table">T${t.table}</span>`:""}
         <span class="tab-chan">${CHAN_ICON[t.chan]}</span>
       </div>
       <span class="tab-id tnum">#${t.id}</span>
@@ -939,6 +964,18 @@ function renderTicket(){
     document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
   }
 
+  // table chip — dine-in only
+  const tableBtn=document.getElementById("tableBtn");
+  if(tableBtn){
+    if(t && t.chan==="Dine-in"){
+      tableBtn.style.display="inline-flex";
+      tableBtn.classList.toggle("assigned", t.table!=null);
+      document.getElementById("tableLbl").textContent = t.table!=null ? ("Table "+t.table) : "Assign table";
+    } else {
+      tableBtn.style.display="none";
+    }
+  }
+
   // per-tab promise (only when STEER on): max station promise across this tab's categories
   const promEl=document.getElementById("thPromise");
   if(promEl){
@@ -1000,6 +1037,10 @@ function buildEditorShell(){
           <span class="th-promise" id="thPromise" style="display:none"></span>
         </div>
         <div class="th-actions">
+          <button class="mini-btn tablebtn" id="tableBtn" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
+            <span id="tableLbl">Assign table</span>
+          </button>
           <button class="mini-btn park" id="parkBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16V9h3.5a2.5 2.5 0 0 1 0 5H9"/></svg>
             <span id="parkLbl">Park</span>
@@ -1044,6 +1085,17 @@ function buildEditorShell(){
           </div>
         </div>
 
+        <div class="overlay center" id="tablePicker">
+          <div class="table-sheet">
+            <div class="ts-head"><span class="ts-title">Assign table</span><span class="th-id tnum" id="tablePickerTab"></span></div>
+            <div class="table-grid" id="tableGrid"></div>
+            <div class="table-foot">
+              <button class="ta-btn" id="tableClear" type="button">Clear</button>
+              <button class="ta-btn" id="tableCancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <div class="toast" id="toast"></div>
       </div>
     </div>`;
@@ -1054,6 +1106,15 @@ function buildEditorShell(){
   document.getElementById("chargeBtn").onclick=openTender;
   document.getElementById("tenderCancel").onclick=closeTender;
   document.querySelectorAll(".tender-opt").forEach(b=>b.onclick=()=>pay(b.dataset.method));
+
+  // table picker (dine-in)
+  const tg=document.getElementById("tableGrid");
+  let tgh=""; for(let i=1;i<=TABLE_COUNT;i++) tgh+=`<button class="table-cell" data-table="${i}" type="button">${i}</button>`;
+  tg.innerHTML=tgh;
+  tg.querySelectorAll(".table-cell").forEach(b=>b.onclick=()=>assignTable(Number(b.dataset.table)));
+  document.getElementById("tableBtn").onclick=openTablePicker;
+  document.getElementById("tableClear").onclick=()=>assignTable(null);
+  document.getElementById("tableCancel").onclick=closeTablePicker;
 }
 
 function renderEmptyEditor(){
@@ -1064,6 +1125,23 @@ function renderEmptyEditor(){
     <button class="ee-btn" id="emptyNewBtn" type="button">+ Start a new tab</button>
   </div>`;
   document.getElementById("emptyNewBtn").onclick=newTab;
+}
+
+/* ====================== Table assignment (dine-in) ====================== */
+const TABLE_COUNT=12;
+function openTablePicker(){
+  const t=getActive(); if(!t || t.chan!=="Dine-in") return;
+  document.getElementById("tablePickerTab").textContent="#"+t.id;
+  document.querySelectorAll("#tableGrid .table-cell").forEach(c=>c.classList.toggle("sel",Number(c.dataset.table)===t.table));
+  document.getElementById("tablePicker").classList.add("open");
+}
+function closeTablePicker(){ const e=document.getElementById("tablePicker"); if(e) e.classList.remove("open"); }
+function assignTable(n){
+  const t=getActive(); if(!t) return;
+  t.table = (n==null ? null : n);
+  closeTablePicker();
+  if(n!=null) toast("Table "+n+" → #"+t.id);
+  render();
 }
 
 /* ====================== Charge / tender / pay ====================== */
@@ -1214,7 +1292,7 @@ document.addEventListener("fullscreenchange",syncFs);
 document.addEventListener("keydown",(e)=>{
   if(e.key.toLowerCase()==="n"){ newTab(); return; }
   if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
-  if(e.key==="Escape"){ closeTender(); return; }
+  if(e.key==="Escape"){ closeTender(); closeTablePicker(); return; }
   if(/^[1-9]$/.test(e.key)){
     const idx=parseInt(e.key,10)-1;
     if(tabs[idx]) setActive(tabs[idx].id);
