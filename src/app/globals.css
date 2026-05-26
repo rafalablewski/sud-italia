@@ -8450,7 +8450,7 @@ select.pub-input {
 .pos-header {
   flex: 0 0 auto; display: flex; align-items: center; gap: 16px;
   min-height: 56px; padding: 8px 20px; background: var(--pos-panel);
-  border-bottom: 1px solid var(--pos-hair); flex-wrap: wrap;
+  border-bottom: 1px solid var(--pos-hair);
 }
 .pos-brand { display: flex; align-items: baseline; gap: 12px; min-width: max-content; }
 .pos-wordmark { font-weight: 700; font-size: 14px; letter-spacing: 0.22em; }
