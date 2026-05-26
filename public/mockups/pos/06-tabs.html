@@ -512,6 +512,13 @@
        mobile. Here the document scrolls naturally and the header stays pinned. */
     html,body{height:auto;min-height:100%}
     body{overflow:visible}
+    /* Kill the sideways black gutter: clip any stray horizontal overflow, and let
+       the open-checks summary + ticket action buttons wrap instead of forcing the
+       document wider than the viewport. */
+    html{overflow-x:hidden}
+    .tr-eyebrow{flex-wrap:wrap}
+    .tr-summary{white-space:normal}
+    .th-actions{flex-wrap:wrap}
 
     header{
       position:sticky;top:0;z-index:30;
