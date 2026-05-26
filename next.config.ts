@@ -106,6 +106,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // The service worker must never be HTTP-cached, or a browser can stay
+        // pinned to an old SW (and thus an old cached app shell) indefinitely.
+        // Force revalidation on every load so a new SW version is always picked
+        // up — this is what un-sticks a stale /admin page after a deploy.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         // Negative-lookahead so the strict CSP doesn't double-up on /mockups/*
         // (browsers intersect duplicate CSP headers, so leaving both would
         // re-block the fonts even after the relaxed rule is added).
