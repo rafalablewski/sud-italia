@@ -549,6 +549,9 @@ const byId = id => MENU.find(m=>m.id===id);
    STEER is true. STEER = ?steer=1 in the URL, OR the header "Steer" chip is toggled on.
    When STEER is false the mockup behaves byte-for-byte as before. */
 let STEER = (()=>{ try{ return new URLSearchParams(location.search).get("steer")==="1"; }catch(_){ return false; } })();
+// The header chip only appears once steering has been engaged via the URL flag, so with no
+// flag the header is byte-for-byte identical to today. Once shown, the chip can toggle on/off.
+const STEER_CHIP_VISIBLE = STEER;
 
 // Real Kraków food costs (grosze) — lets the steering rank items by true margin.
 const COST = {margherita:820,quattro:1140,diavola:1010,prosciutto:1240,ortolana:880,pizzaiolo:1660,tartufata:2390,personale:540,slice:280,carbonara:850,arrabbiata:590,pesto:770,bolognese:1090,bruschetta:390,garlic:220,burrata:740,arancini:520,caprese:580,milano:740,espresso:140,limonata:240,aranciata:320,water:110,limonata1l:380,tiramisu:520,cannoli:470,pannacotta:360};
@@ -1057,7 +1060,7 @@ function render(){
   renderCats();
   renderGrid();
   renderTicket();
-  if(STEER) renderChanSteer();
+  renderChanSteer();
 }
 
 /* ====================== Render: steering strip (only when STEER on) ====================== */
@@ -1167,8 +1170,9 @@ document.addEventListener("keydown",(e)=>{
 /* ====================== Steering toggle chip ====================== */
 const steerChip=document.getElementById("steerChip");
 function syncSteerChip(){
-  // Chip is always discoverable; pressed state mirrors STEER.
-  steerChip.style.display="inline-flex";
+  // Chip is hidden entirely unless steering was engaged via ?steer=1 — keeps the
+  // default (no-flag) header byte-for-byte unchanged. Pressed state mirrors STEER.
+  steerChip.style.display = STEER_CHIP_VISIBLE ? "inline-flex" : "none";
   steerChip.setAttribute("aria-pressed",String(STEER));
 }
 steerChip.addEventListener("click",()=>{
