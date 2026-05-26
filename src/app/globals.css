@@ -8430,14 +8430,22 @@ select.pub-input {
   line-height: 1.4;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 53px);
+  /* Inset rounded card matching the KDS Atlas board (margin-top + 14px radius);
+     height drops the 12px top gap so the till still fits the viewport exactly. */
+  height: calc(100vh - 53px - 12px);
   min-height: 0;
   overflow: hidden;
+  margin-top: 12px;
+  border: 1px solid var(--pos-hair);
+  border-radius: 14px;
 }
 .pos-tabs.is-fullscreen {
   position: fixed;
   inset: 0;
   height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
   /* Below the admin Dialog root (z-index 100) so the standard table / address
      modals — portaled to body — still render above the fullscreen till; above
      all admin shell chrome (topbar 20, drawers/sheets ≤ 60). */
