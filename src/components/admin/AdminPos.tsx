@@ -26,7 +26,6 @@ import {
   Input,
   ORDER_STATUS_TONE,
   Select,
-  Tabs,
   useToast,
 } from "./v2/ui";
 import type { BadgeTone } from "./v2/ui";
@@ -45,10 +44,17 @@ function fmtPLN(grosze: number): string {
 }
 
 const CHANNELS: { value: FulfillmentType; label: string; icon: React.ReactNode }[] = [
-  { value: "takeout", label: "Takeout", icon: <Package className="h-3.5 w-3.5" /> },
-  { value: "delivery", label: "Delivery", icon: <Truck className="h-3.5 w-3.5" /> },
-  { value: "dine-in", label: "Dine-in", icon: <Utensils className="h-3.5 w-3.5" /> },
+  { value: "takeout", label: "Takeout", icon: <Package className="h-4 w-4" /> },
+  { value: "delivery", label: "Delivery", icon: <Truck className="h-4 w-4" /> },
+  { value: "dine-in", label: "Dine-in", icon: <Utensils className="h-4 w-4" /> },
 ];
+
+// Category-chip className (solid brand when active, neutral outline otherwise).
+function chipCls(active: boolean): string {
+  return `v2-badge v2-badge-${active ? "solid" : "outline"} v2-badge-tone-${
+    active ? "brand" : "neutral"
+  } v2-pos-chip`;
+}
 
 const ROLE_LABELS: Record<NonNullable<MenuItem["menuRole"]>, { label: string; tone: BadgeTone }> = {
   hero: { label: "Hero", tone: "info" },
@@ -119,18 +125,21 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
     return (Object.keys(MENU_CATEGORY_LABELS) as MenuCategory[]).filter((c) => present.has(c));
   }, [channelMenu]);
 
-  const [activeCat, setActiveCat] = useState<MenuCategory | null>(null);
+  // "all" shows every item grouped by category; a single category shows just its grid.
+  const [activeCat, setActiveCat] = useState<MenuCategory | "all">("all");
   useEffect(() => {
-    // Keep the active category valid as the channel/location changes.
-    if (categories.length === 0) {
-      setActiveCat(null);
-    } else if (!activeCat || !categories.includes(activeCat)) {
-      setActiveCat(categories[0]);
+    // If the selected category disappears (channel/location change), fall back to All.
+    if (activeCat !== "all" && !categories.includes(activeCat)) {
+      setActiveCat("all");
     }
   }, [categories, activeCat]);
 
-  const gridItems = useMemo(
-    () => channelMenu.filter((m) => m.category === activeCat),
+  const grouped = useMemo(
+    () => categories.map((c) => ({ category: c, items: channelMenu.filter((m) => m.category === c) })),
+    [categories, channelMenu],
+  );
+  const singleItems = useMemo(
+    () => (activeCat === "all" ? [] : channelMenu.filter((m) => m.category === activeCat)),
     [channelMenu, activeCat],
   );
 
@@ -170,6 +179,37 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
     () => cart.reduce((s, l) => s + l.item.price * l.quantity, 0),
     [cart],
   );
+
+  const renderProduct = (item: MenuItem) => {
+    const role = item.menuRole ? ROLE_LABELS[item.menuRole] : null;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className="v2-pos-product"
+        onClick={() => addItem(item)}
+      >
+        <div className="v2-pos-product-top">
+          <span className="v2-pos-product-name">{item.name}</span>
+          {(role || item.isLimited) && (
+            <span className="v2-pos-product-badges">
+              {role && (
+                <Badge tone={role.tone} variant="soft">
+                  {role.label}
+                </Badge>
+              )}
+              {item.isLimited && !role && (
+                <Badge tone="warning" variant="soft">
+                  Limited
+                </Badge>
+              )}
+            </span>
+          )}
+        </div>
+        <span className="v2-pos-product-price mono tnum">{fmtPLN(item.price)}</span>
+      </button>
+    );
+  };
 
   // --- Live open checks ---
   const [orders, setOrders] = useState<LiveOrder[]>([]);
@@ -307,15 +347,6 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
             customer notifications, no pre-booked slot.
           </p>
         </div>
-        <div className="v2-page-actions">
-          <Tabs
-            value={channel}
-            onChange={(v) => setChannel(v as FulfillmentType)}
-            tabs={CHANNELS.map((c) => ({ value: c.value, label: c.label, icon: c.icon }))}
-            variant="pill"
-            ariaLabel="Order channel"
-          />
-        </div>
       </header>
 
       <div className="v2-filters">
@@ -359,11 +390,26 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
             <Card padding="none">
               <CardHeader
                 title="Menu"
-                description={`${gridItems.length} item${gridItems.length === 1 ? "" : "s"} in ${
-                  activeCat ? MENU_CATEGORY_LABELS[activeCat] : "—"
-                }`}
+                description={
+                  activeCat === "all"
+                    ? `${channelMenu.length} item${channelMenu.length === 1 ? "" : "s"} · ${
+                        categories.length
+                      } categor${categories.length === 1 ? "y" : "ies"}`
+                    : `${singleItems.length} item${singleItems.length === 1 ? "" : "s"} in ${
+                        MENU_CATEGORY_LABELS[activeCat]
+                      }`
+                }
                 actions={
                   <div className="v2-pos-chips" role="tablist" aria-label="Categories">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeCat === "all"}
+                      onClick={() => setActiveCat("all")}
+                      className={chipCls(activeCat === "all")}
+                    >
+                      All
+                    </button>
                     {categories.map((c) => (
                       <button
                         key={c}
@@ -371,9 +417,7 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
                         role="tab"
                         aria-selected={c === activeCat}
                         onClick={() => setActiveCat(c)}
-                        className={`v2-badge v2-badge-${c === activeCat ? "solid" : "outline"} v2-badge-tone-${
-                          c === activeCat ? "brand" : "neutral"
-                        } v2-pos-chip`}
+                        className={chipCls(c === activeCat)}
                       >
                         {MENU_CATEGORY_LABELS[c]}
                       </button>
@@ -382,38 +426,21 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
                 }
               />
               <CardBody>
-                <div className="v2-pos-grid">
-                  {gridItems.map((item) => {
-                    const role = item.menuRole ? ROLE_LABELS[item.menuRole] : null;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="v2-pos-product"
-                        onClick={() => addItem(item)}
-                      >
-                        <div className="v2-pos-product-top">
-                          <span className="v2-pos-product-name">{item.name}</span>
-                          {(role || item.isLimited) && (
-                            <span className="v2-pos-product-badges">
-                              {role && (
-                                <Badge tone={role.tone} variant="soft">
-                                  {role.label}
-                                </Badge>
-                              )}
-                              {item.isLimited && !role && (
-                                <Badge tone="warning" variant="soft">
-                                  Limited
-                                </Badge>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                        <span className="v2-pos-product-price mono tnum">{fmtPLN(item.price)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {activeCat === "all" ? (
+                  <div className="v2-pos-cat-groups">
+                    {grouped.map(({ category, items }) => (
+                      <section key={category} className="v2-pos-cat-group">
+                        <h3 className="v2-pos-cat-head">
+                          {MENU_CATEGORY_LABELS[category]}
+                          <span className="v2-muted"> · {items.length}</span>
+                        </h3>
+                        <div className="v2-pos-grid">{items.map(renderProduct)}</div>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="v2-pos-grid">{singleItems.map(renderProduct)}</div>
+                )}
               </CardBody>
             </Card>
           )}
@@ -470,6 +497,21 @@ export function AdminPos({ menusByLocation }: { menusByLocation: Record<string, 
 
         {/* RIGHT — order ticket */}
         <div className="v2-pos-ticket">
+          <div className="v2-pos-channel" role="tablist" aria-label="Order channel">
+            {CHANNELS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                role="tab"
+                aria-selected={channel === c.value}
+                className={`v2-pos-channel-btn ${channel === c.value ? "is-active" : ""}`}
+                onClick={() => setChannel(c.value)}
+              >
+                {c.icon}
+                <span>{c.label}</span>
+              </button>
+            ))}
+          </div>
           <Card padding="none">
             <CardHeader
               title="Current order"
