@@ -759,15 +759,18 @@ const promiseLabel = sec => sec<=0 ? "~0 min" : sec<90 ? "~1 min" : "~"+Math.rou
 // Each tab owns its own items + combos + channel. status: open | parked | pay
 let tabSeq = 4;
 let tabs = [
-  { id:"A4F9C2", name:"Marco",          chan:"Takeout",  status:"open", sentKds:false,
+  // Open, not-yet-sent checks start with NO channel — the operator must pick one
+  // (no default). Only the already-pushed "ready to pay" check carries a channel,
+  // since it could not have been sent without one.
+  { id:"A4F9C2", name:"Marco",          chan:null,       status:"open", sentKds:false,
     items:[{id:"margherita",q:2},{id:"diavola",q:1},{id:"espresso",q:1}], combos:[] },
   { id:"W1B7K2", name:"Walk-up",        chan:"Takeout",  status:"pay",  sentKds:true,
     items:[{id:"slice",q:2},{id:"limonata",q:1}], combos:["lunch"] },
-  { id:"D9P3Q7", name:"Delivery · Giulia", chan:"Delivery", status:"open", sentKds:false,
+  { id:"D9P3Q7", name:"Giulia",         chan:null,       status:"open", sentKds:false,
     items:[{id:"quattro",q:1},{id:"carbonara",q:1},{id:"tiramisu",q:1}], combos:["trio"] },
-  { id:"T6D2N8", name:"Dine-in · Anna",    chan:"Dine-in",  status:"open", sentKds:false, table:6, covers:2,
+  { id:"T6D2N8", name:"Anna",           chan:null,       status:"open", sentKds:false,
     items:[{id:"margherita",q:1},{id:"pesto",q:1},{id:"limonata",q:2}], combos:[] },
-  { id:"T9F4M2", name:"Dine-in · Piotr",   chan:"Dine-in",  status:"open", sentKds:false, table:9, covers:3,
+  { id:"T9F4M2", name:"Piotr",          chan:null,       status:"open", sentKds:false,
     items:[{id:"diavola",q:1},{id:"arancini",q:1},{id:"espresso",q:2}], combos:[] },
 ];
 let activeTabId = "A4F9C2";
