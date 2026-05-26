@@ -8667,7 +8667,7 @@ select.pub-input {
 }
 .pos-th-chan-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
 .pos-th-chan-btn:hover { color: var(--pos-text); border-color: var(--pos-text); }
-.pos-th-chan-btn[aria-pressed="true"] { background: var(--pos-accent-soft); border-color: var(--pos-accent); color: var(--pos-accent); }
+.pos-th-chan-btn[aria-pressed="true"] { background: var(--pos-raised); border-color: var(--pos-text); color: var(--pos-text); }
 .pos-th-channel.req .pos-th-chan-btn { border-color: rgba(245,166,35,0.5); }
 .pos-th-chan-req { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--pos-warn); }
 .pos-th-chan-req i { width: 7px; height: 7px; border-radius: 50%; background: var(--pos-warn); flex: 0 0 auto; animation: posSsPulse 1.6s ease-in-out infinite; }
