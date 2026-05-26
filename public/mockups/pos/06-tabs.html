@@ -1107,7 +1107,7 @@ function flash(el){ el.classList.remove("added"); void el.offsetWidth; el.classL
    handful of "best offer" moves (complete a combo, add a missing pairing). Swap
    suggestOffers() for a call to the model when the production script lands — the
    render + apply layer stays the same. */
-const hasCat  = (t,cat) => t.items.some(l=>byId(l.id).cat===cat);
+const hasCat  = (t,cat) => t.items.some(l=>byId(l.id)?.cat===cat);
 const hasItem = (t,id)  => t.items.some(l=>l.id===id);
 function suggestOffers(t){
   if(!t || t.items.length===0) return [];
@@ -1120,7 +1120,7 @@ function suggestOffers(t){
     const have    = c.items.filter(id=>hasItem(t,id));
     const missing = c.items.filter(id=>!hasItem(t,id));
     if(have.length>0 && missing.length>0){
-      const addNames = missing.map(id=>byId(id).n).join(" + ");
+      const addNames = missing.map(id=>byId(id)?.n || id).join(" + ");
       out.push({
         kind:"combo", score:c.off + have.length*120,
         title:`Make it the ${c.n}`,
@@ -1473,6 +1473,7 @@ function tabsOnTable(n,exceptId){
 }
 function openTablePicker(){
   const t=getActive(); if(!t || t.chan!=="Dine-in") return;
+  document.getElementById("tablePicker").dataset.tabId=t.id;   // pin target tab against a mid-edit tab-switch
   document.getElementById("tablePickerTab").textContent="#"+t.id;
   let anyTaken=false;
   document.querySelectorAll("#tableGrid .table-cell").forEach(c=>{
@@ -1487,7 +1488,9 @@ function openTablePicker(){
 }
 function closeTablePicker(){ const e=document.getElementById("tablePicker"); if(e) e.classList.remove("open"); }
 function assignTable(n){
-  const t=getActive(); if(!t) return;
+  const picker=document.getElementById("tablePicker");
+  const t=tabs.find(x=>x.id===(picker&&picker.dataset.tabId));
+  if(!t){ closeTablePicker(); return; }
   t.table = (n==null ? null : n);
   closeTablePicker();
   if(n!=null){
@@ -1505,16 +1508,20 @@ function changeCovers(delta){
 /* ====================== Delivery address (delivery) ====================== */
 function openAddrPicker(){
   const t=getActive(); if(!t || t.chan!=="Delivery") return;
+  const picker=document.getElementById("addrPicker");
+  picker.dataset.tabId=t.id;   // pin the target tab so a tab-switch can't redirect the save
   document.getElementById("addrPickerTab").textContent="#"+t.id;
   const inp=document.getElementById("addrInput");
   inp.value=t.address||"";
-  document.getElementById("addrPicker").classList.add("open");
+  picker.classList.add("open");
   inp.focus();
 }
 function closeAddrPicker(){ const e=document.getElementById("addrPicker"); if(e) e.classList.remove("open"); }
 function clearAddr(){ const inp=document.getElementById("addrInput"); if(inp){ inp.value=""; inp.focus(); } }
 function saveAddr(){
-  const t=getActive(); if(!t) return;
+  const picker=document.getElementById("addrPicker");
+  const t=tabs.find(x=>x.id===(picker&&picker.dataset.tabId));
+  if(!t){ closeAddrPicker(); return; }
   const v=document.getElementById("addrInput").value.trim();
   t.address = v || null;
   closeAddrPicker();
