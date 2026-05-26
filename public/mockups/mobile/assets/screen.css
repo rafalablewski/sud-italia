@@ -22,8 +22,15 @@
   --danger-soft: rgba(239,68,68,0.12);
   --info: #6366f1;
   --info-soft: rgba(99,102,241,0.14);
+  /* Standardised channel colours (shared across POS, KDS and admin): Takeout=blue, Delivery=amber, Dine-in=purple. */
+  --chan-takeout: #3B82F6;
+  --chan-delivery: #F5A623;
+  --chan-dine-in: #8B5CF6;
   font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
 }
+.chan-takeout { color: var(--chan-takeout); font-weight: 600; }
+.chan-delivery { color: var(--chan-delivery); font-weight: 600; }
+.chan-dine-in { color: var(--chan-dine-in); font-weight: 600; }
 *, *::before, *::after { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
