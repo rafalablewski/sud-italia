@@ -426,7 +426,7 @@
   .ts-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em}
   .table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s2);margin-bottom:var(--s3)}
   .table-cell{
-    appearance:none;cursor:pointer;font-family:var(--mono);font-size:15px;font-weight:700;
+    appearance:none;cursor:pointer;font-family:var(--mono);font-size:15px;font-weight:700;position:relative;
     border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
     border-radius:10px;padding:13px 0;transition:all .12s ease;
   }
@@ -435,6 +435,22 @@
   .table-foot{display:flex;gap:var(--s2)}
   .table-foot .ta-btn{flex:1 1 0;appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--dim);font-family:var(--sans);font-size:12.5px;padding:11px;border-radius:10px}
   .table-foot .ta-btn:hover{background:var(--raised);color:var(--text)}
+
+  /* covers stepper (dine-in) */
+  .covers{display:inline-flex;align-items:center;gap:1px;border:1px solid var(--hair-strong);background:var(--raised);border-radius:7px;padding:2px 2px 2px 7px}
+  .covers .cov-ic{display:inline-flex;align-items:center;color:var(--faint)}
+  .covers .cov-ic svg{width:13px;height:13px}
+  .covers .cov-btn{appearance:none;cursor:pointer;width:24px;height:24px;border:0;background:transparent;color:var(--dim);font-size:16px;line-height:1;border-radius:5px}
+  .covers .cov-btn:hover{background:#202832;color:var(--text)}
+  .covers .cov-n{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);min-width:30px;text-align:center}
+
+  /* table conflict — two open dine-in checks on one table */
+  .mini-btn.tablebtn.conflict{color:var(--warn);border-color:var(--warn);background:rgba(245,166,35,0.12)}
+  .tab-table.conflict{color:var(--warn);background:rgba(245,166,35,0.14);border-color:rgba(245,166,35,0.40)}
+  .table-cell.taken{border-color:var(--warn);color:var(--warn)}
+  .table-cell.taken::after{content:"";position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--warn)}
+  .table-hint{font-size:10.5px;color:var(--warn);margin-bottom:var(--s2);display:flex;align-items:center;gap:6px}
+  .table-hint i{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto}
 
   .empty-editor{
     grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -714,8 +730,10 @@ let tabs = [
     items:[{id:"slice",q:2},{id:"limonata",q:1}], combos:["lunch"] },
   { id:"D9P3Q7", name:"Delivery · Giulia", chan:"Delivery", status:"open", sentKds:false,
     items:[{id:"quattro",q:1},{id:"carbonara",q:1},{id:"tiramisu",q:1}], combos:["trio"] },
-  { id:"T6D2N8", name:"Dine-in · Anna",    chan:"Dine-in",  status:"open", sentKds:false, table:6,
+  { id:"T6D2N8", name:"Dine-in · Anna",    chan:"Dine-in",  status:"open", sentKds:false, table:6, covers:2,
     items:[{id:"margherita",q:1},{id:"pesto",q:1},{id:"limonata",q:2}], combos:[] },
+  { id:"T9F4M2", name:"Dine-in · Piotr",   chan:"Dine-in",  status:"open", sentKds:false, table:9, covers:3,
+    items:[{id:"diavola",q:1},{id:"arancini",q:1},{id:"espresso",q:2}], combos:[] },
 ];
 let activeTabId = "A4F9C2";
 let activeCat = "Pizza";
@@ -769,7 +787,8 @@ function removeCombo(id){
 /* ====================== Tab ops ====================== */
 function newTab(){
   tabSeq++;
-  const t={ id:newTabId(), name:"Tab "+tabSeq, chan:channel, status:"open", sentKds:false, items:[], combos:[] };
+  const t={ id:newTabId(), name:"Tab "+tabSeq, chan:channel, status:"open", sentKds:false,
+            table:undefined, covers: channel==="Dine-in"?2:undefined, items:[], combos:[] };
   tabs.push(t);
   activeTabId=t.id;
   render();
@@ -811,7 +830,7 @@ function renderTabs(){
       <div class="tab-top">
         <span class="tab-dot"></span>
         <span class="tab-name">${t.name}</span>
-        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table">T${t.table}</span>`:""}
+        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
         <span class="tab-chan">${CHAN_ICON[t.chan]}</span>
       </div>
       <span class="tab-id tnum">#${t.id}</span>
@@ -964,15 +983,22 @@ function renderTicket(){
     document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
   }
 
-  // table chip — dine-in only
+  // table chip + covers — dine-in only
   const tableBtn=document.getElementById("tableBtn");
-  if(tableBtn){
+  const coversCtl=document.getElementById("coversCtl");
+  if(tableBtn && coversCtl){
     if(t && t.chan==="Dine-in"){
       tableBtn.style.display="inline-flex";
-      tableBtn.classList.toggle("assigned", t.table!=null);
-      document.getElementById("tableLbl").textContent = t.table!=null ? ("Table "+t.table) : "Assign table";
+      const clash = t.table!=null && tabsOnTable(t.table,t.id).length>0;
+      tableBtn.classList.toggle("assigned", t.table!=null && !clash);
+      tableBtn.classList.toggle("conflict", !!clash);
+      document.getElementById("tableLbl").textContent =
+        t.table!=null ? ("Table "+t.table+(clash?" ⚠":"")) : "Assign table";
+      coversCtl.style.display="inline-flex";
+      document.getElementById("coversN").textContent = (t.covers||2);
     } else {
       tableBtn.style.display="none";
+      coversCtl.style.display="none";
     }
   }
 
@@ -1041,6 +1067,12 @@ function buildEditorShell(){
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
             <span id="tableLbl">Assign table</span>
           </button>
+          <div class="covers" id="coversCtl" style="display:none">
+            <span class="cov-ic" title="Covers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <button class="cov-btn" id="covDec" type="button" aria-label="Fewer covers">−</button>
+            <span class="cov-n tnum" id="coversN">2</span>
+            <button class="cov-btn" id="covInc" type="button" aria-label="More covers">+</button>
+          </div>
           <button class="mini-btn park" id="parkBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16V9h3.5a2.5 2.5 0 0 1 0 5H9"/></svg>
             <span id="parkLbl">Park</span>
@@ -1088,6 +1120,7 @@ function buildEditorShell(){
         <div class="overlay center" id="tablePicker">
           <div class="table-sheet">
             <div class="ts-head"><span class="ts-title">Assign table</span><span class="th-id tnum" id="tablePickerTab"></span></div>
+            <div class="table-hint" id="tableHint" style="display:none"><i></i>Amber = in use by another open check</div>
             <div class="table-grid" id="tableGrid"></div>
             <div class="table-foot">
               <button class="ta-btn" id="tableClear" type="button">Clear</button>
@@ -1115,6 +1148,8 @@ function buildEditorShell(){
   document.getElementById("tableBtn").onclick=openTablePicker;
   document.getElementById("tableClear").onclick=()=>assignTable(null);
   document.getElementById("tableCancel").onclick=closeTablePicker;
+  document.getElementById("covDec").onclick=()=>changeCovers(-1);
+  document.getElementById("covInc").onclick=()=>changeCovers(1);
 }
 
 function renderEmptyEditor(){
@@ -1129,10 +1164,23 @@ function renderEmptyEditor(){
 
 /* ====================== Table assignment (dine-in) ====================== */
 const TABLE_COUNT=12;
+// Other ACTIVE (non-parked) dine-in checks sitting on table `n` — a parked tab frees its table.
+function tabsOnTable(n,exceptId){
+  if(n==null) return [];
+  return tabs.filter(t=>t.id!==exceptId && t.chan==="Dine-in" && t.status!=="parked" && t.table===n);
+}
 function openTablePicker(){
   const t=getActive(); if(!t || t.chan!=="Dine-in") return;
   document.getElementById("tablePickerTab").textContent="#"+t.id;
-  document.querySelectorAll("#tableGrid .table-cell").forEach(c=>c.classList.toggle("sel",Number(c.dataset.table)===t.table));
+  let anyTaken=false;
+  document.querySelectorAll("#tableGrid .table-cell").forEach(c=>{
+    const n=Number(c.dataset.table);
+    c.classList.toggle("sel", n===t.table);
+    const taken=tabsOnTable(n,t.id).length>0;
+    c.classList.toggle("taken", taken);
+    if(taken) anyTaken=true;
+  });
+  document.getElementById("tableHint").style.display = anyTaken ? "flex" : "none";
   document.getElementById("tablePicker").classList.add("open");
 }
 function closeTablePicker(){ const e=document.getElementById("tablePicker"); if(e) e.classList.remove("open"); }
@@ -1140,7 +1188,15 @@ function assignTable(n){
   const t=getActive(); if(!t) return;
   t.table = (n==null ? null : n);
   closeTablePicker();
-  if(n!=null) toast("Table "+n+" → #"+t.id);
+  if(n!=null){
+    const clash=tabsOnTable(n,t.id);
+    toast(clash.length ? ("⚠ Table "+n+" also on "+clash.map(x=>"#"+x.id).join(", ")) : ("Table "+n+" → #"+t.id));
+  }
+  render();
+}
+function changeCovers(delta){
+  const t=getActive(); if(!t || t.chan!=="Dine-in") return;
+  t.covers = Math.max(1, (t.covers||2) + delta);
   render();
 }
 
