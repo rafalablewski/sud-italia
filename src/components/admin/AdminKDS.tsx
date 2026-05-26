@@ -7,6 +7,7 @@ import {
   Bell,
   BellOff,
   ChefHat,
+  ChevronLeft,
   Flame,
   MapPin,
   Maximize2,
@@ -16,7 +17,6 @@ import {
   RefreshCw,
   RotateCcw,
   Timer,
-  Truck,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import dynamic from "next/dynamic";
@@ -50,12 +50,11 @@ const MobileKDS = dynamic(
   { ssr: false },
 );
 
-const KDS_MODE_KEY = "sud-kds-mode";
-
 /**
  * Role-aware KDS shell. One live-order engine, three lenses:
- *   • owner   → Fleet command (cross-truck health) by default, with a
- *               switcher down into any truck's floor board.
+ *   • owner   → Fleet command (cross-truck health) by default. Drilling into
+ *               a truck swaps the same window to that truck's floor board, with
+ *               a single "Back to fleet" control to step back out.
  *   • manager → Floor board (single location).
  *   • kitchen/staff → Floor board (the line view they've always had).
  * Mobile keeps the dedicated MobileKDS regardless of role.
@@ -64,7 +63,9 @@ export function AdminKDS() {
   const { isMobile, ready } = useIsMobile();
   const { setLocation } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
-  const [mode, setMode] = useState<"fleet" | "floor">("floor");
+  // Owners always land on the fleet; the only way to a single-location floor
+  // board is drilling into a truck, which flips this to "floor" for that truck.
+  const [mode, setMode] = useState<"fleet" | "floor">("fleet");
 
   useEffect(() => {
     let cancelled = false;
@@ -75,16 +76,6 @@ export function AdminKDS() {
         const r = j?.role as AdminRole | undefined;
         if (!r) return;
         setRole(r);
-        if (r === "owner") {
-          let initial: "fleet" | "floor" = "fleet";
-          try {
-            const saved = localStorage.getItem(KDS_MODE_KEY);
-            if (saved === "fleet" || saved === "floor") initial = saved;
-          } catch {
-            /* storage may be blocked */
-          }
-          setMode(initial);
-        }
       })
       .catch(() => {
         /* non-fatal — falls back to the floor board */
@@ -94,24 +85,15 @@ export function AdminKDS() {
     };
   }, []);
 
-  const chooseMode = useCallback((m: "fleet" | "floor") => {
-    setMode(m);
-    try {
-      localStorage.setItem(KDS_MODE_KEY, m);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
   // Managers + franchisees get the floor-control ops header; kitchen/staff
   // get the chef line strip (station focus + queue depth + quick 86); the
   // pre-resolve null state gets the plain board.
   const managerControls = role === "manager" || role === "franchisee";
   const chef = role === "kitchen" || role === "staff";
 
-  // Only owners get the Atlas fleet lens + the Fleet ↔ Floor switcher. Everyone
-  // else (incl. the pre-resolve null state) gets the floor board: the dedicated
-  // mobile KDS on a phone, the desktop floor board otherwise.
+  // Only owners get the Atlas fleet lens. Everyone else (incl. the pre-resolve
+  // null state) gets the floor board directly: the dedicated mobile KDS on a
+  // phone, the desktop floor board otherwise.
   if (role !== "owner") {
     if (ready && isMobile) {
       return <MobileKDS />;
@@ -119,36 +101,32 @@ export function AdminKDS() {
     return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
 
-  // Owner — Atlas fleet command, with a switch down to the floor board. The
-  // Atlas board reflows to its responsive layout on a phone; its floor view is
-  // the dedicated mobile KDS there and the desktop floor board otherwise.
+  // Owner — Atlas fleet command is the default. Drilling into a truck swaps
+  // this same window down to that truck's floor board (a "Back to fleet"
+  // control steps back out). The Atlas board reflows to its responsive layout
+  // on a phone; its floor view is the dedicated mobile KDS there and the
+  // desktop floor board otherwise.
   const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader />;
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
-        <Button
-          variant={mode === "fleet" ? "primary" : "ghost"}
-          size="sm"
-          leadingIcon={<Truck className="h-3.5 w-3.5" />}
-          onClick={() => chooseMode("fleet")}
-        >
-          Fleet
-        </Button>
-        <Button
-          variant={mode === "floor" ? "primary" : "ghost"}
-          size="sm"
-          leadingIcon={<ChefHat className="h-3.5 w-3.5" />}
-          onClick={() => chooseMode("floor")}
-        >
-          Floor board
-        </Button>
-      </div>
+      {mode === "floor" && (
+        <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />}
+            onClick={() => setMode("fleet")}
+          >
+            Back to fleet
+          </Button>
+        </div>
+      )}
       {mode === "fleet" ? (
         <AdminKdsFleet
           onDrillIn={(slug) => {
             setLocation(slug);
-            chooseMode("floor");
+            setMode("floor");
           }}
         />
       ) : (
