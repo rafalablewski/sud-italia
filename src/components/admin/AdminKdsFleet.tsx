@@ -16,6 +16,7 @@ import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
+import { SegControl, SectionEyebrow } from "./command";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -345,21 +346,12 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
           ))}
         </div>
-        <div className="cmd-seg-group" role="group" aria-label="Lines switcher">
-          {LINES.map((l) => (
-            <button
-              key={l.key}
-              type="button"
-              className="cmd-seg"
-              data-line={l.key}
-              aria-pressed={l.key === line}
-              onClick={() => setLine(l.key)}
-            >
-              <span>{l.title}</span>
-              <span className="cmd-seg-count tabular">{lineCounts[l.key]}</span>
-            </button>
-          ))}
-        </div>
+        <SegControl
+          ariaLabel="Lines switcher"
+          value={line}
+          onChange={setLine}
+          options={LINES.map((l) => ({ value: l.key, label: l.title, count: lineCounts[l.key], dataLine: l.key }))}
+        />
         <div className="cmd-spacer" />
         <button
           type="button"
@@ -499,15 +491,9 @@ function FleetBar({
 
   return (
     <section className="ka-fleetbar" aria-label="Fleet aggregate metrics">
-      <div className="cmd-eyebrow">
-        <span className="cmd-eyebrow-brand">
-          <MapPin className="h-3 w-3" /> Fleet command
-        </span>
-        <span className="cmd-eyebrow-sep" />
-        <span className="cmd-eyebrow-meta">
-          <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
-        </span>
-      </div>
+      <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Fleet command">
+        <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
+      </SectionEyebrow>
       <KdsStatGrid stats={stats} />
       <div className="ka-fb-benchmark">
         <span className="ka-fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>

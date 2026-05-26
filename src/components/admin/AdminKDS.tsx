@@ -40,6 +40,7 @@ import {
   totalPrepSeconds,
 } from "./kds-board";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
+import { SegControl, SectionEyebrow } from "./command";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -457,25 +458,20 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             </button>
           ))}
         </div>
-        <div className="cmd-seg-group" role="group" aria-label="Stage focus">
-          <button type="button" className="cmd-seg" aria-pressed={lane === "all"} onClick={() => setLane("all")}>
-            <span>All</span>
-            <span className="cmd-seg-count tabular">{laneCounts.all}</span>
-          </button>
-          {KDS_COLUMNS.map((col) => (
-            <button
-              key={col.id}
-              type="button"
-              className="cmd-seg"
-              data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
-              aria-pressed={lane === col.id}
-              onClick={() => setLane(col.id)}
-            >
-              <span>{col.label}</span>
-              <span className="cmd-seg-count tabular">{laneCounts[col.id]}</span>
-            </button>
-          ))}
-        </div>
+        <SegControl
+          ariaLabel="Stage focus"
+          value={lane}
+          onChange={setLane}
+          options={[
+            { value: "all" as const, label: "All", count: laneCounts.all },
+            ...KDS_COLUMNS.map((col) => ({
+              value: col.id,
+              label: col.label,
+              count: laneCounts[col.id],
+              dataLine: col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new",
+            })),
+          ]}
+        />
         <div className="cmd-spacer" />
         <button
           type="button"
@@ -685,15 +681,9 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   return (
     <Card padding="compact" className="v2-kds-ops">
       <CardBody>
-        <div className="cmd-eyebrow">
-          <span className="cmd-eyebrow-brand">
-            <MapPin className="h-3 w-3" /> Floor command
-          </span>
-          <span className="cmd-eyebrow-sep" />
-          <span className="cmd-eyebrow-meta">
-            <b>{orders.length}</b> open
-          </span>
-        </div>
+        <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Floor command">
+          <b>{orders.length}</b> open
+        </SectionEyebrow>
         <KdsStatGrid stats={stats} />
 
         <div className="v2-kds-ops-86">

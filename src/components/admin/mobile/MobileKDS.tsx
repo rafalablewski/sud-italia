@@ -9,6 +9,7 @@ import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket } from "@/lib/kds-ticket";
 import { KdsTicketCard } from "../kds/KdsTicketCard";
+import { SegControl } from "../command";
 import { toneForTicket } from "../kds-board";
 import { useAdminLocation } from "../v2/LocationContext";
 import { useToast } from "../v2/ui/Toast";
@@ -224,21 +225,17 @@ export function MobileKDS() {
               </button>
             ))}
           </div>
-          <div className="cmd-seg-group" role="group" aria-label="Stage focus">
-            {LANES.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                className="cmd-seg"
-                data-line={l.id === "ready" ? "ready" : l.id === "preparing" ? "prep" : "new"}
-                aria-pressed={lane === l.id}
-                onClick={() => setLane(l.id)}
-              >
-                <span>{l.label}</span>
-                <span className="cmd-seg-count tabular">{laneCounts.get(l.id) ?? 0}</span>
-              </button>
-            ))}
-          </div>
+          <SegControl
+            ariaLabel="Stage focus"
+            value={lane}
+            onChange={setLane}
+            options={LANES.map((l) => ({
+              value: l.id,
+              label: l.label,
+              count: laneCounts.get(l.id) ?? 0,
+              dataLine: l.id === "ready" ? "ready" : l.id === "preparing" ? "prep" : "new",
+            }))}
+          />
           <div className="cmd-spacer" />
           <button
             type="button"

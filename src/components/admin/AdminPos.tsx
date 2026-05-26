@@ -34,6 +34,7 @@ import {
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
 import type { CartItem } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
+import { SegControl, SectionEyebrow } from "./command";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
@@ -751,36 +752,21 @@ export function AdminPos({
           <span className="cmd-label">Point of Sale · {locName}</span>
         </div>
         <div className="pos-ctl">
-          <div className="cmd-seg-group" role="group" aria-label="Location">
-            {locOptions.map((o) => (
-              <button
-                key={o.slug}
-                type="button"
-                className="cmd-seg"
-                aria-pressed={o.slug === pageLoc}
-                onClick={() => setPageLoc(o.slug)}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
+          <SegControl
+            ariaLabel="Location"
+            value={pageLoc}
+            onChange={setPageLoc}
+            options={locOptions.map((o) => ({ value: o.slug, label: o.label }))}
+          />
         </div>
         <div className="pos-ctl">
-          <div className="cmd-seg-group" role="group" aria-label="Channel">
-            {CHANNELS.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                className="cmd-seg"
-                aria-pressed={!!active && active.channel === c.value}
-                disabled={!active}
-                onClick={() => setChannel(c.value)}
-              >
-                {c.icon}
-                <span>{c.label}</span>
-              </button>
-            ))}
-          </div>
+          <SegControl
+            ariaLabel="Channel"
+            value={active?.channel ?? null}
+            onChange={setChannel}
+            disabled={!active}
+            options={CHANNELS.map((c) => ({ value: c.value, label: c.label, icon: c.icon }))}
+          />
           {deliveryPaused && (
             <span className="pos-chan-paused">
               <span className="pos-cp-dot" /> Delivery intake paused
@@ -814,18 +800,12 @@ export function AdminPos({
 
       {/* Tab rail */}
       <section className="pos-tabrail" aria-label="Open checks">
-        <div className="cmd-eyebrow">
-          <span className="cmd-eyebrow-brand">
-            <MapPin /> Open checks
-          </span>
-          <span className="cmd-eyebrow-sep" />
-          <span className="cmd-eyebrow-meta">
-            <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
-            <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
-            <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
-            <b>{fmtPLN(railSummary.openValue)}</b>
-          </span>
-        </div>
+        <SectionEyebrow icon={<MapPin />} label="Open checks">
+          <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
+          <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
+          <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
+          <b>{fmtPLN(railSummary.openValue)}</b>
+        </SectionEyebrow>
         <div className="pos-tabrail-scroll">
           {tabs.map((t) => {
             const cnt = itemCount(t);
