@@ -444,6 +444,51 @@
   @media (max-width:1100px){
     .editor{grid-template-columns:1fr 340px}
   }
+
+  /* ---- Phones / narrow tablets: stack the editor, compact the chrome ---- */
+  @media (max-width:760px){
+    /* header wraps and sheds non-essential chrome */
+    header{height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3)}
+    .kd-label,.design-tag,.gallery-link,.clock,.ctl-lbl,.spacer{display:none}
+    .brand{min-width:0}
+    .wordmark{font-size:13px;letter-spacing:0.14em}
+    header .ctl{gap:6px}
+    .seg{padding:6px 9px;font-size:11px}
+    .steer-chip>span:last-child,.fsbtn span{display:none}   /* icon-only on phones */
+    .steer-chip,.fsbtn{padding:7px 9px}
+
+    .tabrail{padding:var(--s2) var(--s3)}
+    .tab{width:172px;min-height:66px}
+    .tab-new{width:96px;min-height:66px}
+
+    /* products on top, order ticket below — each pane scrolls independently so the
+       Charge button stays on screen while the menu scrolls above it */
+    .editor{grid-template-columns:1fr;grid-template-rows:minmax(0,1.1fr) minmax(0,1fr)}
+    .ticket{border-top:1px solid var(--hair-strong)}
+    .cats{padding:var(--s2) var(--s3);gap:6px}
+    .grid-scroll{padding:var(--s3)}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
+    .card{min-height:86px;padding:var(--s2) var(--s3)}
+    .combo-strip{padding:var(--s2) var(--s3)}
+    .ticket-head,.lines,.totals{padding-left:var(--s3);padding-right:var(--s3)}
+    .charge-area{padding:0 var(--s3) var(--s3)}
+
+    /* steering strip: let the reason wrap onto its own line */
+    .steer-strip{flex-wrap:wrap;gap:var(--s2) var(--s3);padding:var(--s2) var(--s3)}
+    .ss-reason{white-space:normal;flex-basis:100%;order:3}
+
+    /* tender sheet rises from the bottom of the screen, not the half-height ticket */
+    .overlay{position:fixed}
+
+    footer{height:auto;min-height:32px;padding:var(--s2) var(--s3)}
+    .kbd-hint{display:none}
+  }
+
+  /* ---- Very small phones: force a clean 2-up product grid ---- */
+  @media (max-width:380px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .tab{width:150px}
+  }
 </style>
 </head>
 <body>
@@ -544,14 +589,12 @@ const COMBOS = [
 
 const byId = id => MENU.find(m=>m.id===id);
 
-/* ====================== Pace → POS steering (flag-gated, OFF by default) ======================
-   Live, client-side demo of src/lib/pace-steering.ts. Nothing below runs / renders unless
-   STEER is true. STEER = ?steer=1 in the URL, OR the header "Steer" chip is toggled on.
-   When STEER is false the mockup behaves byte-for-byte as before. */
-let STEER = (()=>{ try{ return new URLSearchParams(location.search).get("steer")==="1"; }catch(_){ return false; } })();
-// The header chip only appears once steering has been engaged via the URL flag, so with no
-// flag the header is byte-for-byte identical to today. Once shown, the chip can toggle on/off.
-const STEER_CHIP_VISIBLE = STEER;
+/* ====================== Pace → POS steering (ON by default) ======================
+   Live, client-side demo of src/lib/pace-steering.ts. Steering is ON by default; the
+   header "Steer" chip toggles it off/on live, and ?steer=0 starts the page with it off. */
+let STEER = (()=>{ try{ return new URLSearchParams(location.search).get("steer")!=="0"; }catch(_){ return true; } })();
+// The Steer chip is always visible so the operator can toggle steering off/on at the till.
+const STEER_CHIP_VISIBLE = true;
 
 // Real Kraków food costs (grosze) — lets the steering rank items by true margin.
 const COST = {margherita:820,quattro:1140,diavola:1010,prosciutto:1240,ortolana:880,pizzaiolo:1660,tartufata:2390,personale:540,slice:280,carbonara:850,arrabbiata:590,pesto:770,bolognese:1090,bruschetta:390,garlic:220,burrata:740,arancini:520,caprese:580,milano:740,espresso:140,limonata:240,aranciata:320,water:110,limonata1l:380,tiramisu:520,cannoli:470,pannacotta:360};
