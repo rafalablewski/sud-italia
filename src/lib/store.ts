@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -1201,7 +1201,10 @@ export async function getOrderByStripePaymentIntent(
   return hit;
 }
 
-export async function createOrder(order: Order): Promise<Order> {
+export async function createOrder(
+  order: Order,
+  opts?: { suppressNotifications?: boolean },
+): Promise<Order> {
   // Audit §4 "Scalability (tech) — 300 orders/hour ceiling". Old shape
   // took a global `orders.json` lock and rewrote the entire orders array
   // on every insert — O(N) writes serialized across all locations *on
@@ -1241,20 +1244,24 @@ export async function createOrder(order: Order): Promise<Order> {
   void fireKdsTickets(order);
   // Outbox: queue side effects (Phase 2 SMS/email/aggregator).
   // dedupeKey is just "placed" so retried createOrder calls converge on
-  // one row rather than creating multiple identical events.
-  await appendOutboxEvent({
-    eventType: "order.placed",
-    entityType: "order",
-    entityId: order.id,
-    dedupeKey: "placed",
-    payload: {
-      orderId: order.id,
-      locationSlug: order.locationSlug,
-      customerPhone: order.customerPhone,
-      customerName: order.customerName,
-      totalAmount: order.totalAmount,
-    },
-  });
+  // one row rather than creating multiple identical events. POS counter
+  // sales pass suppressNotifications — the guest is at the window, so no
+  // "order placed" SMS/email (the KDS ticket + stock decrement still fire).
+  if (!opts?.suppressNotifications) {
+    await appendOutboxEvent({
+      eventType: "order.placed",
+      entityType: "order",
+      entityId: order.id,
+      dedupeKey: "placed",
+      payload: {
+        orderId: order.id,
+        locationSlug: order.locationSlug,
+        customerPhone: order.customerPhone,
+        customerName: order.customerName,
+        totalAmount: order.totalAmount,
+      },
+    });
+  }
   // Recipe-driven stock decrement (audit §3). Fire-and-forget so a
   // stock log hiccup never blocks a paid customer, but failures hit
   // Sentry through the helper's structured logging.
@@ -10340,4 +10347,99 @@ export async function getCacheJson<T>(key: string, fallback: T): Promise<T> {
 
 export async function setCacheJson<T>(key: string, data: T): Promise<void> {
   await writeJSON<T>(key, data);
+}
+
+// --- Floor: tables + reservations (per location) -------------------------
+// JSON-backed list entities (mirrors the supplier / purchase-order pattern):
+// withLock + readJSON/writeJSON, upsert by id. Per-location filtering happens
+// on read so the API can scope to the caller's location.
+
+export async function getTables(locationSlug?: string): Promise<FloorTable[]> {
+  const list = await readJSON<FloorTable[]>("floor-tables.json", []);
+  const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
+  // Stable order: zone, then numeric-aware label.
+  return scoped.sort(
+    (a, b) =>
+      (a.zone ?? "").localeCompare(b.zone ?? "") ||
+      a.number.localeCompare(b.number, undefined, { numeric: true }),
+  );
+}
+
+export async function saveTable(
+  input: Omit<FloorTable, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<FloorTable> {
+  return withLock("floor-tables.json", async () => {
+    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
+    const table: FloorTable = {
+      id: input.id || `tbl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      number: input.number,
+      seats: input.seats,
+      zone: input.zone,
+      status: input.status,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((t) => t.id === table.id);
+    if (i >= 0) list[i] = table;
+    else list.push(table);
+    await writeJSON("floor-tables.json", list);
+    return table;
+  });
+}
+
+export async function deleteTable(id: string): Promise<boolean> {
+  return withLock("floor-tables.json", async () => {
+    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
+    const filtered = list.filter((t) => t.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("floor-tables.json", filtered);
+    return true;
+  });
+}
+
+export async function getReservations(
+  locationSlug?: string,
+  date?: string,
+): Promise<Reservation[]> {
+  const list = await readJSON<Reservation[]>("reservations.json", []);
+  let scoped = locationSlug ? list.filter((r) => r.locationSlug === locationSlug) : list;
+  if (date) scoped = scoped.filter((r) => r.date === date);
+  return scoped.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+}
+
+export async function saveReservation(
+  input: Omit<Reservation, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<Reservation> {
+  return withLock("reservations.json", async () => {
+    const list = await readJSON<Reservation[]>("reservations.json", []);
+    const res: Reservation = {
+      id: input.id || `res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      partySize: input.partySize,
+      date: input.date,
+      time: input.time,
+      durationMin: input.durationMin,
+      tableId: input.tableId,
+      status: input.status,
+      notes: input.notes,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const i = list.findIndex((r) => r.id === res.id);
+    if (i >= 0) list[i] = res;
+    else list.push(res);
+    await writeJSON("reservations.json", list);
+    return res;
+  });
+}
+
+export async function deleteReservation(id: string): Promise<boolean> {
+  return withLock("reservations.json", async () => {
+    const list = await readJSON<Reservation[]>("reservations.json", []);
+    const filtered = list.filter((r) => r.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("reservations.json", filtered);
+    return true;
+  });
 }

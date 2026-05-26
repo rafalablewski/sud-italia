@@ -808,6 +808,24 @@ export default async function CapabilitiesPage() {
       title: "Operations",
       items: [
         {
+          name: "POS — counter order entry",
+          status: "live",
+          href: "/admin/pos",
+          summary:
+            "Staff-facing point of sale at /admin/pos. Category-filtered product grid + order ticket with qty steppers over each truck's real menu (getMenuWithOverrides — prices resolved server-side, never client-supplied). Channel switch (Takeout / Delivery / Dine-in; deliveryOnly SKUs hidden off-delivery). Dine-in orders carry covers (party size) + an assigned floor table from /admin/floor. 'Send to kitchen' POSTs /api/admin/pos/orders, which builds a real Order and calls createOrder — firing the KDS ticket, decrementing stock and landing in the Orders list, but with suppressNotifications (the guest is at the window) and a synthetic same-day 'walkin' slot (counter sales aren't pre-booked time slots). A live open-checks panel polls GET /api/admin/pos/orders. Staff+, per-location.",
+          caveats:
+            "No payment capture yet — 'Mark paid' only stamps paidAt; Stripe-terminal / cash-drawer is a later pass. Walk-ins without a phone create a blank-phone order (no SMS, but still hit the customer rollup). Item modifiers (crust, extra toppings) aren't selectable from the POS yet — base items only.",
+        },
+        {
+          name: "Floor — tables + reservations",
+          status: "live",
+          href: "/admin/floor",
+          summary:
+            "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
+          caveats:
+            "Tables + reservations persist via the JSON store (readJSON/writeJSON) like slots/suppliers — no dedicated Postgres table yet, fine at truck volumes. Reservations are independent of the time-Slots system (they don't reserve a checkout slot). No spatial floor-map / drag layout — tables are a list/grid.",
+        },
+        {
           name: "Inventory + recipes + stock + distributor offerings",
           status: "live",
           href: "/admin/inventory",

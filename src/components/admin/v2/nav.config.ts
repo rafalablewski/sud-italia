@@ -32,6 +32,8 @@ import {
   Users,
   Layers,
   Wallet,
+  Receipt,
+  Armchair,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
@@ -78,6 +80,7 @@ export const NAV_SECTIONS: NavSection[] = [
       // somewhere to land.
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, shortcut: "d" },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList, shortcut: "o", requiredRole: "staff" },
+      { href: "/admin/pos", label: "POS", icon: Receipt, shortcut: "g", requiredRole: "staff" },
       { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
     ],
   },
@@ -88,6 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, shortcut: "m", requiredRole: "manager" },
       { href: "/admin/recipes", label: "Recipes", icon: FlaskConical, requiredRole: "manager" },
       { href: "/admin/slots", label: "Slots", icon: CalendarDays, requiredRole: "manager" },
+      { href: "/admin/floor", label: "Floor", icon: Armchair, requiredRole: "manager" },
     ],
   },
   {
