@@ -115,7 +115,7 @@
   .tabs::-webkit-scrollbar{height:6px}
   .tabs::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:3px}
   .tab{
-    flex:0 0 auto;width:208px;min-height:78px;cursor:pointer;text-align:left;
+    flex:0 0 auto;width:252px;min-height:98px;cursor:pointer;text-align:left;
     background:var(--raised);border:1px solid var(--hair);border-radius:11px;
     padding:var(--s3) var(--s3) var(--s3) calc(var(--s3) + 4px);position:relative;overflow:hidden;
     transition:border-color .16s ease,background .16s ease,transform .1s ease;
@@ -133,13 +133,13 @@
   .tab-dot{width:8px;height:8px;border-radius:50%;background:var(--firing);flex:0 0 auto}
   .tab.parked .tab-dot{background:var(--faint)}
   .tab.pay .tab-dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-  .tab-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}
+  .tab-name{font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}
   .tab-chan{display:inline-flex;color:var(--faint)}
   .tab-chan svg{width:12px;height:12px}
   .tab-id{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:0.03em}
   .tab-foot{display:flex;align-items:baseline;justify-content:space-between;margin-top:auto}
-  .tab-items{font-size:10.5px;color:var(--dim);letter-spacing:0.02em}
-  .tab-total{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)}
+  .tab-items{font-size:11.5px;color:var(--dim);letter-spacing:0.02em}
+  .tab-total{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text)}
   .tab.pay .tab-total{color:var(--accent)}
   .tab-status{
     position:absolute;top:8px;right:9px;font-size:8px;font-weight:700;letter-spacing:0.08em;
@@ -149,9 +149,9 @@
   .tab.parked .tab-status{color:var(--faint)}
 
   .tab-new{
-    flex:0 0 auto;width:120px;min-height:78px;cursor:pointer;
+    flex:0 0 auto;width:140px;min-height:98px;cursor:pointer;
     background:transparent;border:1px dashed var(--hair-strong);border-radius:11px;
-    color:var(--dim);font-family:var(--sans);font-size:12px;font-weight:600;
+    color:var(--dim);font-family:var(--sans);font-size:13px;font-weight:600;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
     transition:color .16s ease,border-color .16s ease,background .16s ease;
   }
@@ -159,7 +159,7 @@
   .tab-new svg{width:22px;height:22px}
 
   /* ====================== Editor region ====================== */
-  .editor{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 400px;gap:1px;background:var(--hair)}
+  .editor{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 800px;gap:1px;background:var(--hair)}
 
   /* LEFT — product grid */
   .products{background:var(--canvas);display:flex;flex-direction:column;min-height:0;min-width:0}
@@ -179,6 +179,13 @@
 
   .grid-scroll{flex:1 1 auto;overflow-y:auto;padding:var(--s4) var(--s5);min-height:0}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:var(--s3);align-content:start}
+  /* "All" view — every category stacked under a heading */
+  .grid.grouped{display:flex;flex-direction:column;gap:var(--s5)}
+  .grid-group{display:flex;flex-direction:column;gap:var(--s3)}
+  .grid-group-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim)}
+  .grid-group-head .cemoji{font-size:14px}
+  .grid-group-head .ggh-n{font-family:var(--mono);font-size:10px;color:var(--faint);background:var(--raised);border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .grid-sub{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:var(--s3);align-content:start}
   .card{
     appearance:none;cursor:pointer;text-align:left;font-family:var(--sans);
     background:var(--raised);border:1px solid var(--hair);border-radius:11px;
@@ -312,6 +319,18 @@
   .th-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
   .th-chan svg{width:12px;height:12px;opacity:.7}
   .th-actions{display:flex;gap:var(--s2)}
+  /* big channel selector inside the order column */
+  .th-channel{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+  .th-chan-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);white-space:nowrap;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px 10px;border-radius:10px;border:1px solid var(--hair-strong);
+    background:var(--raised);color:var(--dim);font-size:13.5px;font-weight:700;letter-spacing:0.01em;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .th-chan-btn svg{width:16px;height:16px;flex:0 0 auto}
+  .th-chan-btn:hover{color:var(--text);border-color:var(--text)}
+  .th-chan-btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
   .mini-btn{
     appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.02em;
     border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
@@ -479,8 +498,11 @@
   ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
   ::-webkit-scrollbar-track{background:transparent}
 
+  @media (max-width:1500px){
+    .editor{grid-template-columns:1fr 620px}
+  }
   @media (max-width:1100px){
-    .editor{grid-template-columns:1fr 340px}
+    .editor{grid-template-columns:1fr 480px}
   }
 
   /* ---- Phones / narrow tablets: let the whole page scroll, stack the editor ---- */
@@ -504,8 +526,8 @@
     .steer-chip,.fsbtn{padding:7px 9px}
 
     .tabrail{padding:var(--s2) var(--s3)}
-    .tab{width:172px;min-height:66px}
-    .tab-new{width:96px;min-height:66px}
+    .tab{width:200px;min-height:82px}
+    .tab-new{width:120px;min-height:82px}
 
     /* editor + its panes flow at natural height; the page scrolls, not the panes */
     .editor{display:flex;flex-direction:column;min-height:0}
@@ -517,6 +539,7 @@
 
     .cats{padding:var(--s2) var(--s3);gap:6px}
     .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
+    .grid-sub{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
     .card{min-height:86px;padding:var(--s2) var(--s3)}
     .combo-strip{padding:var(--s2) var(--s3)}
     .ticket-head,.totals{padding-left:var(--s3);padding-right:var(--s3)}
@@ -536,7 +559,8 @@
   /* ---- Very small phones: force a clean 2-up product grid ---- */
   @media (max-width:380px){
     .grid{grid-template-columns:repeat(2,1fr)}
-    .tab{width:150px}
+    .grid-sub{grid-template-columns:repeat(2,1fr)}
+    .tab{width:172px}
   }
 </style>
 </head>
@@ -736,7 +760,7 @@ let tabs = [
     items:[{id:"diavola",q:1},{id:"arancini",q:1},{id:"espresso",q:2}], combos:[] },
 ];
 let activeTabId = "A4F9C2";
-let activeCat = "Pizza";
+let activeCat = "All";
 
 const CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function newTabId(){
@@ -805,7 +829,11 @@ function sendKds(){
   toast("Sent to KDS — #"+t.id);
   render();
 }
-function setActive(id){ activeTabId=id; render(); }
+function setActive(id){
+  activeTabId=id;
+  const t=getActive(); if(t){ channel=t.chan; buildChanSwitcher(); }
+  render();
+}
 
 /* ====================== Format ====================== */
 function pad(n){return String(n).padStart(2,"0");}
@@ -860,21 +888,23 @@ function renderTabs(){
 /* ====================== Render: products ====================== */
 function renderCats(){
   const wrap=document.getElementById("cats");
-  // combos live in the strip; this is just category chips
+  // combos live in the strip; this is just category chips ("All" first, then each category)
   wrap.innerHTML="";
-  CATS.forEach(cat=>{
+  const mk=(key,label,emoji)=>{
     const b=document.createElement("button");
     b.className="chip";b.type="button";
-    b.setAttribute("aria-pressed",String(cat===activeCat));
+    b.setAttribute("aria-pressed",String(key===activeCat));
     let prom="";
-    if(STEER && steerPlan){
-      const sec=steerPlan.promiseSecByCat[cat]||0;
+    if(key!=="All" && STEER && steerPlan){
+      const sec=steerPlan.promiseSecByCat[key]||0;
       if(sec>0) prom=`<span class="cprom">· ${promiseLabel(sec)}</span>`;
     }
-    b.innerHTML=`<span class="cemoji">${CAT_EMOJI[cat]}</span><span>${cat}</span>${prom}`;
-    b.onclick=()=>{activeCat=cat;renderCats();renderGrid();};
+    b.innerHTML=`<span class="cemoji">${emoji}</span><span>${label}</span>${prom}`;
+    b.onclick=()=>{activeCat=key;renderCats();renderGrid();};
     wrap.appendChild(b);
-  });
+  };
+  mk("All","All","🗂️");
+  CATS.forEach(cat=>mk(cat,cat,CAT_EMOJI[cat]));
 }
 function tagHtml(tags){ return tags.map(t=>`<span class="tag ${t}">${t}</span>`).join(""); }
 function roleHtml(m){
@@ -882,23 +912,18 @@ function roleHtml(m){
   const lbl={hero:"Hero",profit:"Profit",anchor:"Anchor"}[m.role];
   return `<span class="role-badge role-${m.role}">${lbl}${m.lto?'<span class="lto-dot"></span>':""}</span>`;
 }
-function renderGrid(){
-  const grid=document.getElementById("grid");
-  if(!grid) return;
-  const items=MENU.filter(m=>m.cat===activeCat);
+function gridCardHtml(m,isBottleCat){
   const p = STEER ? steerPlan : null;
-  const isBottleCat = !!(p && p.active && p.bottleneck.cat===activeCat);
-  grid.innerHTML=items.map(m=>{
-    let cls="card", overlay="";
-    if(p && p.active){
-      if(isBottleCat && p.throttle.includes(m.id)){
-        cls+=" eased";
-        overlay=`<span class="easetag">▼ ease</span>`;
-      } else if(!isBottleCat && p.makeNow.includes(m.id)){
-        overlay=`<span class="makenow">★ Make now</span>`;
-      }
+  let cls="card", overlay="";
+  if(p && p.active){
+    if(isBottleCat && p.throttle.includes(m.id)){
+      cls+=" eased";
+      overlay=`<span class="easetag">▼ ease</span>`;
+    } else if(!isBottleCat && p.makeNow.includes(m.id)){
+      overlay=`<span class="makenow">★ Make now</span>`;
     }
-    return `
+  }
+  return `
     <button class="${cls}" data-add="${m.id}" type="button">
       <span class="flash"></span>
       ${overlay}
@@ -907,7 +932,29 @@ function renderGrid(){
       ${m.tags.length?`<div class="card-tags">${tagHtml(m.tags)}</div>`:""}
       <span class="card-price tnum">${fmtPLN(m.price)}</span>
     </button>`;
-  }).join("");
+}
+function renderGrid(){
+  const grid=document.getElementById("grid");
+  if(!grid) return;
+  const p = STEER ? steerPlan : null;
+  if(activeCat==="All"){
+    // Grouped view: a labelled section per category, each with its own product grid.
+    grid.classList.add("grouped");
+    grid.innerHTML=CATS.map(cat=>{
+      const items=MENU.filter(m=>m.cat===cat);
+      if(!items.length) return "";
+      const isBottleCat = !!(p && p.active && p.bottleneck.cat===cat);
+      return `<section class="grid-group">
+        <h3 class="grid-group-head"><span class="cemoji">${CAT_EMOJI[cat]}</span>${cat}<span class="ggh-n tnum">${items.length}</span></h3>
+        <div class="grid-sub">${items.map(m=>gridCardHtml(m,isBottleCat)).join("")}</div>
+      </section>`;
+    }).join("");
+  } else {
+    grid.classList.remove("grouped");
+    const items=MENU.filter(m=>m.cat===activeCat);
+    const isBottleCat = !!(p && p.active && p.bottleneck.cat===activeCat);
+    grid.innerHTML=items.map(m=>gridCardHtml(m,isBottleCat)).join("");
+  }
   grid.querySelectorAll("[data-add]").forEach(b=>{
     b.onclick=()=>{ addItem(b.dataset.add); flash(b); };
   });
@@ -1043,6 +1090,30 @@ function renderTicket(){
   document.getElementById("kdsLbl").textContent=(t&&t.sentKds)?"Sent ✓":"Send to KDS";
 }
 
+/* ====================== Render: in-column channel selector ======================
+   Big, always-visible channel switch living in the order column (not just the
+   header). Reflects + sets the ACTIVE tab's channel; keeps the header seg in sync. */
+function renderTicketChannel(){
+  const g=document.getElementById("thChannel");
+  if(!g) return;
+  const t=getActive();
+  g.innerHTML="";
+  CHANS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="th-chan-btn";b.type="button";
+    b.innerHTML=CHAN_ICON[c]+`<span>${c}</span>`;
+    b.setAttribute("aria-pressed",String(!!t && t.chan===c));
+    b.onclick=()=>{
+      channel=c;
+      const at=getActive();
+      if(at){ at.chan=c; if(c==="Dine-in" && at.covers==null) at.covers=2; }
+      buildChanSwitcher();
+      render();
+    };
+    g.appendChild(b);
+  });
+}
+
 /* ====================== Build editor shell once ====================== */
 function buildEditorShell(){
   const ed=document.getElementById("editor");
@@ -1062,6 +1133,7 @@ function buildEditorShell(){
           <span class="th-chan"><span id="thChanIcon"></span><span id="thChanLbl"></span> · <span id="thStatus"></span></span>
           <span class="th-promise" id="thPromise" style="display:none"></span>
         </div>
+        <div class="th-channel" id="thChannel" role="group" aria-label="Channel"></div>
         <div class="th-actions">
           <button class="mini-btn tablebtn" id="tableBtn" type="button" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
@@ -1248,6 +1320,7 @@ function render(){
   renderCats();
   renderGrid();
   renderTicket();
+  renderTicketChannel();
   renderChanSteer();
 }
 
