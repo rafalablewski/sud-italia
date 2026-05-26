@@ -146,14 +146,17 @@
   .tab-name{font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}
   .tab-chan{display:inline-flex;color:var(--faint)}
   .tab-chan svg{width:12px;height:12px}
-  .tab-id{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:0.03em}
+  .tab-id{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:0.03em;flex:0 0 auto}
   .tab-foot{display:flex;align-items:baseline;justify-content:space-between;margin-top:auto}
   .tab-items{font-size:11.5px;color:var(--dim);letter-spacing:0.02em}
   .tab-total{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text)}
   .tab.pay .tab-total{color:var(--accent)}
+  /* Meta row: #id + channel chips on the left, status pushed to the right — keeps
+     the status label out of the top row so it can't overlap the channel icon. */
+  .tab-meta{display:flex;align-items:center;gap:7px;min-height:16px}
   .tab-status{
-    position:absolute;top:8px;right:9px;font-size:8px;font-weight:700;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--faint);
+    margin-left:auto;flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--faint);white-space:nowrap;
   }
   .tab.pay .tab-status{color:var(--accent)}
   .tab.parked .tab-status{color:var(--faint)}
@@ -967,15 +970,17 @@ function renderTabs(){
   tabs.forEach(t=>{
     const cnt=itemCount(t);
     html+=`<button class="tab ${t.status} ${chanClass(t)}${t.id===activeTabId?" active":""}" data-tab="${t.id}" type="button">
-      <span class="tab-status">${STATUS_LABEL[t.status]}</span>
       <div class="tab-top">
         <span class="tab-dot"></span>
         <span class="tab-name">${t.name}</span>
-        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
-        ${t.chan==="Delivery"&&t.address&&t.address.trim()?`<span class="tab-addr" title="${t.address.trim().replace(/"/g,"&quot;")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg></span>`:""}
         <span class="tab-chan">${t.chan?CHAN_ICON[t.chan]:""}</span>
       </div>
-      <span class="tab-id tnum">#${t.id}</span>
+      <div class="tab-meta">
+        <span class="tab-id tnum">#${t.id}</span>
+        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
+        ${t.chan==="Delivery"&&t.address&&t.address.trim()?`<span class="tab-addr" title="${t.address.trim().replace(/"/g,"&quot;")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg></span>`:""}
+        <span class="tab-status">${STATUS_LABEL[t.status]}</span>
+      </div>
       <div class="tab-foot">
         <span class="tab-items tnum">${cnt} item${cnt!==1?"s":""}</span>
         <span class="tab-total tnum">${fmtPLN(grandG(t))}</span>
