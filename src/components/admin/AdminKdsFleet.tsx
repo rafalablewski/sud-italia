@@ -326,18 +326,18 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const board = (
     <div className={`kds-atlas${fullscreen ? " is-fullscreen" : ""}`}>
       {/* ---------------- Header ---------------- */}
-      <header className="ka-head">
-        <div className="ka-brand">
-          <span className="ka-wordmark">SUD ITALIA</span>
-          <span className="ka-kd-label">Fleet command</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">Fleet command</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="ka-filters" role="group" aria-label="Station filter">
+        <div className="cmd-chips" role="group" aria-label="Station filter">
           {STATIONS.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="ka-chip"
+              className="cmd-chip"
               aria-pressed={s.id === station}
               onClick={() => setStation(s.id as MenuCategory | "all")}
             >
@@ -345,25 +345,25 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
           ))}
         </div>
-        <div className="ka-lines" role="group" aria-label="Lines switcher">
+        <div className="cmd-seg-group" role="group" aria-label="Lines switcher">
           {LINES.map((l) => (
             <button
               key={l.key}
               type="button"
-              className="ka-line"
+              className="cmd-seg"
               data-line={l.key}
               aria-pressed={l.key === line}
               onClick={() => setLine(l.key)}
             >
               <span>{l.title}</span>
-              <span className="ka-lcount tabular">{lineCounts[l.key]}</span>
+              <span className="cmd-seg-count tabular">{lineCounts[l.key]}</span>
             </button>
           ))}
         </div>
-        <div className="ka-spacer" />
+        <div className="cmd-spacer" />
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           onClick={fullscreen ? exitFs : enterFs}
           aria-pressed={fullscreen}
           title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen fleet wall"}
@@ -371,7 +371,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{fullscreen ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" onClick={() => void load()} title="Refresh now">
+        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
           <span>Refresh</span>
         </button>
@@ -380,7 +380,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             <span className="ka-subbar-sep" />
             <button
               type="button"
-              className="ka-fsbtn"
+              className="cmd-btn"
               disabled={simBusy}
               onClick={() => void simSpawn(1)}
               title="Add 1 sandbox ticket to every live truck"
@@ -389,7 +389,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
             <button
               type="button"
-              className="ka-fsbtn"
+              className="cmd-btn"
               disabled={simBusy}
               onClick={() => void simSpawn(5)}
               title="Add 5 sandbox tickets to every live truck"
@@ -398,7 +398,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
             <button
               type="button"
-              className="ka-fsbtn"
+              className="cmd-btn"
               disabled={simBusy}
               onClick={() => void simPurge()}
               title="Clear all sandbox tickets across the fleet"
@@ -407,7 +407,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             </button>
           </>
         )}
-        <div className="ka-clock tabular">{clock}</div>
+        <div className="cmd-clock tabular">{clock}</div>
       </header>
 
       {/* ---------------- Fleet command bar ---------------- */}
@@ -499,12 +499,12 @@ function FleetBar({
 
   return (
     <section className="ka-fleetbar" aria-label="Fleet aggregate metrics">
-      <div className="ka-fb-eyebrow">
-        <span className="ka-fb-brandline">
+      <div className="cmd-eyebrow">
+        <span className="cmd-eyebrow-brand">
           <MapPin className="h-3 w-3" /> Fleet command
         </span>
-        <span className="ka-fb-sep" />
-        <span className="ka-fb-trucks">
+        <span className="cmd-eyebrow-sep" />
+        <span className="cmd-eyebrow-meta">
           <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
         </span>
       </div>

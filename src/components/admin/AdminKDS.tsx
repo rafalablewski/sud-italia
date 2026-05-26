@@ -438,18 +438,18 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const page = (
     <div className={`kds-atlas kds-floor-dark${kiosk ? " is-fullscreen" : ""}`}>
       {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
-      <header className="ka-head">
-        <div className="ka-brand">
-          <span className="ka-wordmark">SUD ITALIA</span>
-          <span className="ka-kd-label">{location ? `${location} · floor` : "Floor"}</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="ka-filters" role="group" aria-label="Station filter">
+        <div className="cmd-chips" role="group" aria-label="Station filter">
           {STATION_FILTERS.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="ka-chip"
+              className="cmd-chip"
               aria-pressed={s.id === station}
               onClick={() => setStation(s.id as MenuCategory | "all")}
             >
@@ -457,29 +457,29 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             </button>
           ))}
         </div>
-        <div className="ka-lines" role="group" aria-label="Stage focus">
-          <button type="button" className="ka-line" aria-pressed={lane === "all"} onClick={() => setLane("all")}>
+        <div className="cmd-seg-group" role="group" aria-label="Stage focus">
+          <button type="button" className="cmd-seg" aria-pressed={lane === "all"} onClick={() => setLane("all")}>
             <span>All</span>
-            <span className="ka-lcount tabular">{laneCounts.all}</span>
+            <span className="cmd-seg-count tabular">{laneCounts.all}</span>
           </button>
           {KDS_COLUMNS.map((col) => (
             <button
               key={col.id}
               type="button"
-              className="ka-line"
+              className="cmd-seg"
               data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
               aria-pressed={lane === col.id}
               onClick={() => setLane(col.id)}
             >
               <span>{col.label}</span>
-              <span className="ka-lcount tabular">{laneCounts[col.id]}</span>
+              <span className="cmd-seg-count tabular">{laneCounts[col.id]}</span>
             </button>
           ))}
         </div>
-        <div className="ka-spacer" />
+        <div className="cmd-spacer" />
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           aria-pressed={kiosk}
           onClick={kiosk ? exitKiosk : enterKiosk}
           title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
@@ -487,11 +487,11 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span>{kiosk ? "Exit" : "Fullscreen"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" onClick={refresh} title="Refresh now">
+        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
           <span>Refresh</span>
         </button>
-        <div className="ka-clock tabular">{clock}</div>
+        <div className="cmd-clock tabular">{clock}</div>
       </header>
 
       {/* Board controls — sound / pause (and sandbox sim) live on a thin strip
@@ -499,7 +499,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
       <div className="ka-subbar" role="group" aria-label="Board controls">
         <button
           type="button"
-          className="ka-fsbtn"
+          className="cmd-btn"
           aria-pressed={soundOn}
           onClick={() => setSoundOn((s) => !s)}
           title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
@@ -507,20 +507,20 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
           <span>{soundOn ? "Sound" : "Muted"}</span>
         </button>
-        <button type="button" className="ka-fsbtn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+        <button type="button" className="cmd-btn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
           {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
           <span>{paused ? "Resume" : "Pause"}</span>
         </button>
         {simEnabled && (
           <>
             <span className="ka-subbar-sep" />
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
               Add 1
             </button>
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
               Add 5
             </button>
-            <button type="button" className="ka-fsbtn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
+            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
               Purge
             </button>
           </>
@@ -540,7 +540,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             <button
               key={entry.orderId}
               type="button"
-              className="ka-fsbtn"
+              className="cmd-btn"
               disabled={updatingId === entry.orderId}
               onClick={() => recall(entry.orderId)}
               title={`Recall ${entry.label} to the expo column`}
@@ -685,12 +685,12 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   return (
     <Card padding="compact" className="v2-kds-ops">
       <CardBody>
-        <div className="ka-fb-eyebrow">
-          <span className="ka-fb-brandline">
+        <div className="cmd-eyebrow">
+          <span className="cmd-eyebrow-brand">
             <MapPin className="h-3 w-3" /> Floor command
           </span>
-          <span className="ka-fb-sep" />
-          <span className="ka-fb-trucks">
+          <span className="cmd-eyebrow-sep" />
+          <span className="cmd-eyebrow-meta">
             <b>{orders.length}</b> open
           </span>
         </div>

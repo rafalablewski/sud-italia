@@ -745,18 +745,18 @@ export function AdminPos({
   const page = (
     <div className={`pos-tabs${kiosk ? " is-fullscreen" : ""}`}>
       {/* Header */}
-      <header className="pos-header">
-        <div className="pos-brand">
-          <span className="pos-wordmark">SUD ITALIA</span>
-          <span className="pos-kd-label">Point of Sale · {locName}</span>
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">Point of Sale · {locName}</span>
         </div>
         <div className="pos-ctl">
-          <div className="pos-seg-group" role="group" aria-label="Location">
+          <div className="cmd-seg-group" role="group" aria-label="Location">
             {locOptions.map((o) => (
               <button
                 key={o.slug}
                 type="button"
-                className="pos-seg"
+                className="cmd-seg"
                 aria-pressed={o.slug === pageLoc}
                 onClick={() => setPageLoc(o.slug)}
               >
@@ -766,12 +766,12 @@ export function AdminPos({
           </div>
         </div>
         <div className="pos-ctl">
-          <div className="pos-seg-group" role="group" aria-label="Channel">
+          <div className="cmd-seg-group" role="group" aria-label="Channel">
             {CHANNELS.map((c) => (
               <button
                 key={c.value}
                 type="button"
-                className="pos-seg"
+                className="cmd-seg"
                 aria-pressed={!!active && active.channel === c.value}
                 disabled={!active}
                 onClick={() => setChannel(c.value)}
@@ -787,10 +787,10 @@ export function AdminPos({
             </span>
           )}
         </div>
-        <div className="pos-spacer" />
+        <div className="cmd-spacer" />
         <button
           type="button"
-          className="pos-steer-chip"
+          className="cmd-btn pos-steer-chip"
           aria-pressed={steer}
           onClick={() => setSteer((s) => !s)}
           title="Toggle Pace → POS steering"
@@ -801,7 +801,7 @@ export function AdminPos({
         </button>
         <button
           type="button"
-          className="pos-fsbtn"
+          className="cmd-btn"
           aria-pressed={kiosk}
           onClick={kiosk ? exitKiosk : enterKiosk}
           title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen"}
@@ -809,17 +809,17 @@ export function AdminPos({
           {kiosk ? <Minimize2 /> : <Maximize2 />}
           <span>{kiosk ? "Exit" : "Fullscreen"}</span>
         </button>
-        <div className="pos-clock tnum">{clock}</div>
+        <div className="cmd-clock tnum">{clock}</div>
       </header>
 
       {/* Tab rail */}
       <section className="pos-tabrail" aria-label="Open checks">
-        <div className="pos-tr-eyebrow">
-          <span className="pos-tr-brandline">
+        <div className="cmd-eyebrow">
+          <span className="cmd-eyebrow-brand">
             <MapPin /> Open checks
           </span>
-          <span className="pos-tr-sep" />
-          <span className="pos-tr-summary">
+          <span className="cmd-eyebrow-sep" />
+          <span className="cmd-eyebrow-meta">
             <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
             <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
             <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
@@ -1365,7 +1365,7 @@ function CatChip({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="pos-chip" aria-pressed={isActive} onClick={onClick}>
+    <button type="button" className="cmd-chip" aria-pressed={isActive} onClick={onClick}>
       <span className="pos-cemoji">{emoji}</span>
       <span>{label}</span>
       {promiseSec != null && promiseSec > 0 && (
