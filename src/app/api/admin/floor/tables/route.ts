@@ -10,8 +10,10 @@ import type { TableStatus } from "@/data/types";
 
 const STATUSES: TableStatus[] = ["available", "seated", "reserved", "out-of-service"];
 
+// Reading the table list is staff-level: the POS table picker (staff+) needs
+// it to seat a dine-in check. Mutations (POST/PUT/DELETE) stay manager+.
 export const GET = withAdmin(
-  { roles: ["manager"], locationParam: "location" },
+  { roles: ["staff"], locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
     return NextResponse.json(await getTables(locationSlug ?? undefined));
   },

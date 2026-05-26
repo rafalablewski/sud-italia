@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocations, locations as allLocations } from "@/data/locations";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -10442,4 +10442,150 @@ export async function deleteReservation(id: string): Promise<boolean> {
     await writeJSON("reservations.json", filtered);
     return true;
   });
+}
+
+// --- POS open checks (tabs) ----------------------------------------------
+// Server-backed working state for the "Tabs" POS: several concurrent open
+// checks per till. Same JSON-list pattern as tables/reservations (withLock +
+// readJSON/writeJSON, upsert by id, per-location filter on read). Lines store
+// menu-item ids + quantities only — prices/discounts are resolved server-side
+// at send/charge time, so the till never dictates what an item costs.
+
+const POS_TAB_STATUSES: PosTabStatus[] = ["open", "parked", "pay"];
+const POS_FULFILLMENTS: FulfillmentType[] = ["takeout", "delivery", "dine-in"];
+
+function sanitizePosTabLines(input: unknown): PosTabLine[] {
+  if (!Array.isArray(input)) return [];
+  const lines: PosTabLine[] = [];
+  for (const raw of input) {
+    const id = typeof raw?.menuItemId === "string" ? raw.menuItemId : "";
+    const qty = Math.max(1, Math.min(99, Math.round(Number(raw?.quantity) || 0)));
+    if (!id || qty < 1) continue;
+    const existing = lines.find((l) => l.menuItemId === id);
+    if (existing) existing.quantity = Math.min(99, existing.quantity + qty);
+    else lines.push({ menuItemId: id, quantity: qty });
+  }
+  return lines;
+}
+
+export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
+  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+  const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
+  return scoped.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getPosTab(id: string): Promise<PosTab | undefined> {
+  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+  return list.find((t) => t.id === id);
+}
+
+/**
+ * Upsert an open check. `orderId` is never taken from the caller — it is
+ * minted server-side on send/charge and preserved from the stored record — so
+ * a till can't reassign which Order a tab points at.
+ */
+export async function savePosTab(
+  input: Partial<PosTab> & { locationSlug: string },
+): Promise<PosTab> {
+  return withLock("pos-tabs.json", async () => {
+    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+    const id = input.id || newPosTabId();
+    const existing = list.find((t) => t.id === id);
+    const now = new Date().toISOString();
+    const channel =
+      input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
+    const status =
+      input.status && POS_TAB_STATUSES.includes(input.status)
+        ? input.status
+        : existing?.status ?? "open";
+    const items =
+      input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
+    // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
+    // can never outlive the order it was sent as, even if the client claims it.
+    const itemsChanged =
+      input.items !== undefined &&
+      (!existing ||
+        existing.items.length !== items.length ||
+        existing.items.some(
+          (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
+        ));
+    const tab: PosTab = {
+      id,
+      locationSlug: input.locationSlug,
+      name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
+      channel: input.channel === undefined ? existing?.channel ?? null : channel,
+      status,
+      items,
+      tableId:
+        input.tableId !== undefined
+          ? input.tableId || undefined
+          : existing?.tableId,
+      covers:
+        input.covers !== undefined
+          ? Math.max(1, Math.min(50, Math.round(Number(input.covers) || 2)))
+          : existing?.covers,
+      address:
+        input.address !== undefined
+          ? (input.address || "").toString().trim().slice(0, 400) || undefined
+          : existing?.address,
+      // Editing items forces sentKds false; otherwise honour the input / preserve.
+      sentKds: itemsChanged
+        ? false
+        : input.sentKds !== undefined
+          ? !!input.sentKds
+          : existing?.sentKds ?? false,
+      // orderId is server-owned — never overwritten by the caller.
+      orderId: existing?.orderId,
+      createdAt: existing?.createdAt ?? input.createdAt ?? now,
+      updatedAt: now,
+    };
+    const i = list.findIndex((t) => t.id === id);
+    if (i >= 0) list[i] = tab;
+    else list.push(tab);
+    await writeJSON("pos-tabs.json", list);
+    return tab;
+  });
+}
+
+/** Patch server-owned fields (orderId, sentKds, status) after a send/charge.
+ *  Separate from savePosTab so the order-linking path can't be spoofed by the
+ *  client PUT route. */
+export async function linkPosTabOrder(
+  id: string,
+  patch: { orderId?: string; sentKds?: boolean; status?: PosTabStatus },
+): Promise<PosTab | null> {
+  return withLock("pos-tabs.json", async () => {
+    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+    const i = list.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    const tab = list[i];
+    if (patch.orderId !== undefined) tab.orderId = patch.orderId;
+    if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
+    if (patch.status !== undefined && POS_TAB_STATUSES.includes(patch.status)) {
+      tab.status = patch.status;
+    }
+    tab.updatedAt = new Date().toISOString();
+    list[i] = tab;
+    await writeJSON("pos-tabs.json", list);
+    return tab;
+  });
+}
+
+export async function deletePosTab(id: string): Promise<boolean> {
+  return withLock("pos-tabs.json", async () => {
+    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
+    const filtered = list.filter((t) => t.id !== id);
+    if (filtered.length === list.length) return false;
+    await writeJSON("pos-tabs.json", filtered);
+    return true;
+  });
+}
+
+const POS_TAB_ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function newPosTabId(): string {
+  let s = "";
+  for (let i = 0; i < 6; i++) {
+    s += POS_TAB_ID_CHARS[Math.floor(Math.random() * POS_TAB_ID_CHARS.length)];
+  }
+  return s;
 }
