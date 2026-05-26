@@ -439,8 +439,10 @@
     text-transform:uppercase;
     white-space:nowrap;
   }
-  .chip.del{color:#c89bff;border-color:rgba(200,155,255,.25);background:rgba(200,155,255,.07)}
-  .chip.tak{color:#7fd1ff;border-color:rgba(127,209,255,.22);background:rgba(127,209,255,.06)}
+  /* Standardised channel colours (shared with POS): Takeout=blue, Delivery=amber, Dine-in=purple. */
+  .chip.tak{color:#3B82F6;border-color:rgba(59,130,246,.30);background:rgba(59,130,246,.10)}
+  .chip.del{color:#F5A623;border-color:rgba(245,166,35,.28);background:rgba(245,166,35,.09)}
+  .chip.din{color:#8B5CF6;border-color:rgba(139,92,246,.30);background:rgba(139,92,246,.10)}
 
   .t-timers{
     display:flex;
@@ -862,9 +864,9 @@ function renderPace(){
 
 // ---- Ticket markup ----
 function chipChannel(ch){
-  return ch === "delivery"
-    ? `<span class="chip del">Delivery</span>`
-    : `<span class="chip tak">Takeout</span>`;
+  if(ch === "delivery") return `<span class="chip del">Delivery</span>`;
+  if(ch === "dine-in")  return `<span class="chip din">Dine-in</span>`;
+  return `<span class="chip tak">Takeout</span>`;
 }
 function ticketEl(o, hotkey){
   const tn = tone(o);

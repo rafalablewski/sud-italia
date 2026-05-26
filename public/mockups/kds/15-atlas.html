@@ -299,6 +299,12 @@
   .t-id{font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:0.03em;color:var(--text)}
   .t-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
   .t-chan svg{width:12px;height:12px;opacity:.6}
+  /* Standardised channel colours (shared with POS): Takeout=blue, Delivery=amber, Dine-in=purple.
+     Kept on the channel chip only, so it never reads as an urgency/pace state. */
+  .t-chan.chan-takeout{color:#3B82F6}
+  .t-chan.chan-delivery{color:#F5A623}
+  .t-chan.chan-dine-in{color:#8B5CF6}
+  .t-chan.chan-takeout svg,.t-chan.chan-delivery svg,.t-chan.chan-dine-in svg{opacity:1}
   .t-name{margin-left:auto;font-size:13px;font-weight:500;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
 
   /* dual timer block */
@@ -886,7 +892,7 @@
     return '<article class="ticket '+tn+'" data-id="'+t.id+'">'+
       '<div class="t-r1">'+
         '<span class="t-id">#'+t.id+'</span>'+
-        '<span class="t-chan">'+ICON[t.channel]+(t.channel==="delivery"?"Delivery":"Takeout")+'</span>'+
+        '<span class="t-chan chan-'+t.channel+'">'+ICON[t.channel]+(t.channel==="delivery"?"Delivery":"Takeout")+'</span>'+
         (tn==="risk"?'<span class="risk-pill">'+ICON.risk+'At risk</span>':'')+
         '<span class="t-name">'+t.name+'</span>'+
       '</div>'+

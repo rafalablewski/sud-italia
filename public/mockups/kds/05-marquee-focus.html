@@ -144,6 +144,12 @@
   .hero-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--ink3)}
   .chan{display:inline-flex;align-items:center;gap:5px}
   .chan svg{width:14px;height:14px;opacity:.7}
+  /* Standardised channel colours (shared with POS): Takeout=blue, Delivery=amber, Dine-in=purple.
+     Contained to the channel chip so it never reads as an urgency/pace state. */
+  .chan.chan-takeout{color:#3B82F6}
+  .chan.chan-delivery{color:#F5A623}
+  .chan.chan-dine-in{color:#8B5CF6}
+  .chan.chan-takeout svg,.chan.chan-delivery svg,.chan.chan-dine-in svg{opacity:1}
   .hero-stage-tag{
     font-size:11px;letter-spacing:0.10em;text-transform:uppercase;font-weight:600;color:var(--ink2);
     border:1px solid var(--hair);border-radius:999px;padding:4px 12px;white-space:nowrap;
@@ -612,7 +618,7 @@ function renderHero(o){
         <div class="hero-id">#${o.id}</div>
         <div class="hero-cust">${o.name}</div>
         <div class="hero-meta">
-          <span class="chan">${ICON[o.channel]}${o.channel==="takeout"?"Takeout":"Delivery"}</span>
+          <span class="chan chan-${o.channel}">${ICON[o.channel]}${o.channel==="takeout"?"Takeout":"Delivery"}</span>
           <span class="dot"></span><span>${o.loc}</span>
           <span class="dot"></span><span class="tnum">Slot ${o.slot}</span>
           <span class="hero-stage-tag">${STAGES[o.status]}</span>
