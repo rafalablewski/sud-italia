@@ -518,10 +518,10 @@ function FleetBar({
             const isLeader = t.name === benchmark.leader && data.tiles.length > 1 && benchmark.gap > 0;
             const color =
               t.promiseAccuracy >= promiseTarget
-                ? "var(--ka-ready)"
+                ? "var(--cmd-ready)"
                 : t.promiseAccuracy >= promiseTarget - 5
-                  ? "var(--ka-warn)"
-                  : "var(--ka-late)";
+                  ? "var(--cmd-warn)"
+                  : "var(--cmd-late)";
             return (
               <div className="ka-bm-row" key={t.slug}>
                 <span className="ka-bm-name">
@@ -548,7 +548,7 @@ function FleetBar({
           {benchmark.gap > 0 && benchmark.leader && benchmark.lagger && benchmark.leader !== benchmark.lagger ? (
             <>
               {" — "}
-              <b style={{ color: "var(--ka-ready)" }}>{benchmark.leader}</b> leads {benchmark.lagger} by {benchmark.gap} pts
+              <b style={{ color: "var(--cmd-ready)" }}>{benchmark.leader}</b> leads {benchmark.lagger} by {benchmark.gap} pts
             </>
           ) : (
             <> — all trucks level</>
@@ -604,12 +604,12 @@ function TruckBoard({
   const liveHealth = computeHealth({ late, risk, promiseAcc: tile.promiseAccuracy });
   const healthColor =
     liveHealth.cls === "alert"
-      ? "var(--ka-late)"
+      ? "var(--cmd-late)"
       : liveHealth.cls === "risk"
-        ? "var(--ka-risk)"
+        ? "var(--cmd-risk)"
         : liveHealth.cls === "warn"
-          ? "var(--ka-warn)"
-          : "var(--ka-ready)";
+          ? "var(--cmd-warn)"
+          : "var(--cmd-ready)";
 
   const visible = tile.tickets
     .filter((t) => matchesStation(t) && matchesLine(t))
