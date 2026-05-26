@@ -37,5 +37,8 @@ charge → tender → paid flow per tab.
 `index.html` is the landing for the chosen direction.
 
 > **Note:** like `../kds/`, this is a *served* preview artifact referenced
-> from design reviews. Next step is porting Tabs into
-> `src/components/admin` for an `/admin/pos` surface.
+> from design reviews. **Shipped:** Tabs is now ported into
+> `src/components/admin/AdminPos.tsx` as the live `/admin/pos` surface —
+> wired to the real menu, server-backed open checks
+> (`/api/admin/pos/tabs`), real combo discounts, Pace→POS steering and a
+> send-to-KDS / charge flow. This file stays as the design reference.
