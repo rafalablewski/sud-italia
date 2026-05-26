@@ -403,6 +403,44 @@
   .combo-applied .ca-x{appearance:none;cursor:pointer;border:0;background:transparent;color:var(--accent);font-size:15px;line-height:1;padding:0 2px;opacity:.7}
   .combo-applied .ca-x:hover{opacity:1}
 
+  /* ====================== AI offers (order-aware suggestions) ======================
+     Heuristic stand-in for the eventual model: scores combo + cross-sell offers
+     against the active check and surfaces the top picks. Each pick applies its
+     action straight to the cart — same data flow a real recommendation API uses. */
+  .ai-offers{flex:0 0 auto;padding:var(--s3) var(--s5) 0;background:var(--canvas)}
+  .ai-card{
+    border:1px solid rgba(139,92,246,0.32);background:rgba(139,92,246,0.08);
+    border-radius:11px;padding:var(--s3);
+  }
+  .ai-head{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+  .ai-badge{
+    display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+    font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--risk);background:rgba(139,92,246,0.16);border:1px solid rgba(139,92,246,0.34);
+    border-radius:6px;padding:3px 7px;
+  }
+  .ai-badge svg{width:12px;height:12px}
+  .ai-title{font-size:12px;font-weight:600;color:var(--text);flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ai-hint{font-size:9.5px;letter-spacing:0.04em;text-transform:uppercase;color:var(--faint);flex:0 0 auto}
+  .ai-list{display:flex;flex-direction:column;gap:var(--s2)}
+  .ai-offer{
+    appearance:none;cursor:pointer;font-family:var(--sans);text-align:left;width:100%;
+    display:flex;align-items:center;gap:var(--s3);
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    border-radius:9px;padding:9px 11px;transition:border-color .14s ease,background .14s ease;
+  }
+  .ai-offer:hover{border-color:var(--risk);background:rgba(139,92,246,0.12)}
+  .ai-offer:active{transform:scale(.995)}
+  .ai-of-main{display:flex;flex-direction:column;gap:1px;flex:1 1 auto;min-width:0}
+  .ai-of-title{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ai-of-sub{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ai-of-cta{
+    flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    border-radius:6px;padding:4px 8px;white-space:nowrap;
+    color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3);
+  }
+  .ai-of-cta.combo{color:var(--risk);background:rgba(139,92,246,0.14);border-color:rgba(139,92,246,0.34)}
+
   .totals{flex:0 0 auto;padding:var(--s4) var(--s5);border-top:1px solid var(--hair);background:var(--canvas)}
   .trow{display:flex;align-items:baseline;justify-content:space-between;font-size:12.5px;color:var(--dim);padding:3px 0}
   .trow.discount{color:var(--accent);font-weight:600}
@@ -590,6 +628,7 @@
     .card{min-height:86px;padding:var(--s2) var(--s3)}
     .combo-strip{padding:var(--s2) var(--s3)}
     .ticket-head,.totals{padding-left:var(--s3);padding-right:var(--s3)}
+    .ai-offers{padding-left:var(--s3);padding-right:var(--s3)}
     .charge-area{padding:0 var(--s3) var(--s3)}
 
     /* steering strip: let the reason wrap onto its own line */
@@ -853,6 +892,16 @@ function addCombo(c){
   t.sentKds=false;
   render();
 }
+// Complete a combo from an AI pick: add only the components the check is missing,
+// then register the combo so its discount applies (no double-adding what's there).
+function applyComboSmart(c){
+  const t=getActive();if(!t) return;
+  c.items.forEach(id=>{ if(!t.items.some(l=>l.id===id)) t.items.push({id,q:1}); });
+  if(!t.combos.includes(c.id)) t.combos.push(c.id);
+  if(t.status==="parked") t.status="open";
+  t.sentKds=false;
+  render();
+}
 function removeCombo(id){
   const t=getActive();if(!t) return;
   t.combos=t.combos.filter(c=>c!==id);
@@ -1025,6 +1074,75 @@ function renderComboStrip(){
   });
 }
 function flash(el){ el.classList.remove("added"); void el.offsetWidth; el.classList.add("added"); }
+
+/* ====================== AI offers (order-aware suggestions) ======================
+   Simple heuristic engine that stands in for the real ML/LLM recommender we'll
+   wire later. It looks at the active check + the live combo deals and scores a
+   handful of "best offer" moves (complete a combo, add a missing pairing). Swap
+   suggestOffers() for a call to the model when the production script lands — the
+   render + apply layer stays the same. */
+const hasCat  = (t,cat) => t.items.some(l=>byId(l.id).cat===cat);
+const hasItem = (t,id)  => t.items.some(l=>l.id===id);
+function suggestOffers(t){
+  if(!t || t.items.length===0) return [];
+  const out=[];
+  const hasMain = hasCat(t,"Pizza") || hasCat(t,"Pasta");
+
+  // 1) Combo opportunities — the check already has part of a deal but hasn't
+  //    claimed it. Rank by złoty saved (plus how close it already is).
+  COMBOS.filter(c=>!t.combos.includes(c.id)).forEach(c=>{
+    const have    = c.items.filter(id=>hasItem(t,id));
+    const missing = c.items.filter(id=>!hasItem(t,id));
+    if(have.length>0 && missing.length>0){
+      const addNames = missing.map(id=>byId(id).n).join(" + ");
+      out.push({
+        kind:"combo", score:c.off + have.length*120,
+        title:`Make it the ${c.n}`,
+        sub:`Add ${addNames} — save ${fmtPLN(c.off)}`,
+        cta:`−${fmtPLN(c.off)}`,
+        apply:()=>applyComboSmart(c),
+      });
+    }
+  });
+
+  // 2) Cross-sell pairings — the house rule: a hot main wants a drink, an
+  //    espresso and a dessert. Only suggest what's not already on the check.
+  if(hasMain && !hasCat(t,"Drinks"))
+    out.push({kind:"add", score:240, title:"Add a cold drink", sub:"No drink yet — Limonata Fresca pairs with pizza", cta:"+ Limonata", apply:()=>addItem("limonata")});
+  if(hasMain && !hasItem(t,"espresso"))
+    out.push({kind:"add", score:210, title:"Finish with an espresso", sub:"High-margin close after a hot main", cta:"+ Espresso", apply:()=>addItem("espresso")});
+  if(hasMain && !hasCat(t,"Desserts"))
+    out.push({kind:"add", score:200, title:"Tempt with a dessert", sub:"Tiramisù lifts the average check", cta:"+ Tiramisù", apply:()=>addItem("tiramisu")});
+  if(hasMain && !hasCat(t,"Antipasti"))
+    out.push({kind:"add", score:150, title:"Start with antipasti", sub:"Garlic Bread — quick, high-margin starter", cta:"+ Garlic Bread", apply:()=>addItem("garlic")});
+
+  return out.sort((a,b)=>b.score-a.score).slice(0,3);
+}
+function renderAiOffers(){
+  const box=document.getElementById("aiOffers");
+  if(!box) return;
+  const offers=suggestOffers(getActive());
+  if(offers.length===0){ box.style.display="none"; box.innerHTML=""; return; }
+  box.style.display="block";
+  const items=offers.map((o,i)=>`
+    <button class="ai-offer" data-ai="${i}" type="button">
+      <span class="ai-of-main">
+        <span class="ai-of-title">${o.title}</span>
+        <span class="ai-of-sub">${o.sub}</span>
+      </span>
+      <span class="ai-of-cta ${o.kind}">${o.cta}</span>
+    </button>`).join("");
+  box.innerHTML=`
+    <div class="ai-card">
+      <div class="ai-head">
+        <span class="ai-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8.5 13.2 11l2.8 1-2.8 1L12 15.5 10.8 13 8 12l2.8-1L12 8.5Z"/></svg>AI</span>
+        <span class="ai-title">Best offers for this order</span>
+        <span class="ai-hint">heuristic preview</span>
+      </div>
+      <div class="ai-list">${items}</div>
+    </div>`;
+  box.querySelectorAll("[data-ai]").forEach(b=>b.onclick=()=>offers[Number(b.dataset.ai)].apply());
+}
 
 /* ====================== Render: active ticket ====================== */
 function renderTicket(){
@@ -1224,6 +1342,7 @@ function buildEditorShell(){
       </div>
       <div class="ticket-inner">
         <div class="lines" id="lines"></div>
+        <div class="ai-offers" id="aiOffers" style="display:none"></div>
         <div class="totals">
           <div class="trow"><span>Subtotal</span><span class="tv tnum" id="subtotal">0,00 zł</span></div>
           <div class="trow discount" id="discountRow" style="display:none"><span id="discountLbl">Combo discount</span><span class="tv tnum" id="discount">−0,00 zł</span></div>
@@ -1426,6 +1545,7 @@ function render(){
   renderCats();
   renderGrid();
   renderTicket();
+  renderAiOffers();
   buildChanSwitcher();
   renderTicketChannel();
   renderChanSteer();
