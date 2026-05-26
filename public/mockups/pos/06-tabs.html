@@ -220,6 +220,83 @@
   .combo-pill:hover{background:rgba(61,214,140,0.2)}
   .combo-pill .cp-off{font-family:var(--mono);font-size:11px;font-weight:700}
 
+  /* ====================== Steering (behind ?steer=1) ====================== */
+  /* header toggle chip — mirrors the .seg/.fsbtn visual language */
+  .steer-chip{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:7px;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;white-space:nowrap;
+  }
+  .steer-chip:hover{color:var(--text);border-color:var(--hair-strong)}
+  .steer-chip svg{width:13px;height:13px;display:block}
+  .steer-chip .sc-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+  .steer-chip[aria-pressed="true"]{color:var(--accent);border-color:rgba(61,214,140,0.4);background:var(--accent-soft)}
+  .steer-chip[aria-pressed="true"] .sc-dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* steering strip — sits just above the product grid, matches Atlas cards */
+  .steer-strip{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);
+    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+    border-left:3px solid var(--accent);
+  }
+  .steer-strip.tier-warn{border-left-color:var(--warn)}
+  .steer-strip.tier-risk{border-left-color:var(--risk)}
+  .ss-badge{
+    display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;
+    font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    padding:5px 11px;border-radius:8px;white-space:nowrap;
+    background:var(--accent-soft);color:var(--accent);border:1px solid rgba(61,214,140,0.3);
+  }
+  .steer-strip.tier-warn .ss-badge{background:var(--warn-soft);color:var(--warn);border-color:rgba(245,166,35,0.32)}
+  .steer-strip.tier-risk .ss-badge{background:rgba(139,92,246,0.14);color:var(--risk);border-color:rgba(139,92,246,0.34)}
+  .ss-badge .ss-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto;animation:ssPulse 1.6s ease-in-out infinite}
+  @keyframes ssPulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .ss-util{font-family:var(--mono);font-size:13px;font-weight:700}
+  .ss-reason{font-size:11.5px;color:var(--dim);letter-spacing:0.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+  .ss-reason b{color:var(--text);font-weight:700}
+  .ss-cap{
+    flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--hair);color:var(--dim);white-space:nowrap;
+  }
+  .ss-cap.zero{color:var(--late);border-color:rgba(229,72,77,0.35);background:var(--late-soft)}
+
+  /* category chip promise sub-label */
+  .chip .cprom{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:0.02em;margin-left:2px}
+  .chip[aria-pressed="true"] .cprom{color:var(--dim)}
+
+  /* make-now chip + throttle dim on product cards — anchored bottom-right,
+     clear of the top-row emoji + role badge so nothing overlaps */
+  .card .makenow{
+    position:absolute;bottom:9px;right:10px;font-size:8.5px;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;padding:2px 6px;border-radius:5px;z-index:1;
+    background:var(--accent);color:#06140d;display:inline-flex;align-items:center;gap:3px;line-height:1.5;
+  }
+  .card.eased{opacity:.46}
+  .card.eased:hover{opacity:.72}
+  .card .easetag{
+    position:absolute;bottom:9px;right:10px;font-size:8.5px;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;padding:2px 6px;border-radius:5px;line-height:1.5;z-index:1;
+    background:rgba(139,92,246,0.16);color:var(--risk);border:1px solid rgba(139,92,246,0.3);
+  }
+
+  /* per-tab promise pill in the ticket header */
+  .th-promise{
+    flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:3px 9px;border-radius:7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    background:var(--accent-soft);color:var(--accent);border:1px solid rgba(61,214,140,0.3);
+  }
+  .th-promise.tier-warn{background:var(--warn-soft);color:var(--warn);border-color:rgba(245,166,35,0.32)}
+  .th-promise.tier-risk{background:rgba(139,92,246,0.14);color:var(--risk);border-color:rgba(139,92,246,0.34)}
+  .th-promise svg{width:11px;height:11px}
+
+  /* delivery intake paused note on the channel control */
+  .chan-paused{
+    font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--late);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  }
+  .chan-paused .cp-dot{width:6px;height:6px;border-radius:50%;background:var(--late);flex:0 0 auto}
+
   /* RIGHT — active order ticket */
   .ticket{background:var(--panel);display:flex;flex-direction:column;min-height:0}
   .ticket-head{
@@ -385,6 +462,11 @@
       <div class="seg-group" id="chanGroup" role="group" aria-label="Channel"></div>
     </div>
     <div class="spacer"></div>
+    <button class="steer-chip" id="steerChip" type="button" aria-pressed="false" aria-label="Toggle Pace steering" style="display:none">
+      <span class="sc-dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+      <span>Steer</span>
+    </button>
     <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
       <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
       <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
@@ -461,6 +543,87 @@ const COMBOS = [
 ];
 
 const byId = id => MENU.find(m=>m.id===id);
+
+/* ====================== Pace → POS steering (flag-gated, OFF by default) ======================
+   Live, client-side demo of src/lib/pace-steering.ts. Nothing below runs / renders unless
+   STEER is true. STEER = ?steer=1 in the URL, OR the header "Steer" chip is toggled on.
+   When STEER is false the mockup behaves byte-for-byte as before. */
+let STEER = (()=>{ try{ return new URLSearchParams(location.search).get("steer")==="1"; }catch(_){ return false; } })();
+
+// Real Kraków food costs (grosze) — lets the steering rank items by true margin.
+const COST = {margherita:820,quattro:1140,diavola:1010,prosciutto:1240,ortolana:880,pizzaiolo:1660,tartufata:2390,personale:540,slice:280,carbonara:850,arrabbiata:590,pesto:770,bolognese:1090,bruschetta:390,garlic:220,burrata:740,arancini:520,caprese:580,milano:740,espresso:140,limonata:240,aranciata:320,water:110,limonata1l:380,tiramisu:520,cannoli:470,pannacotta:360};
+// Per-station prep minutes (defines how fast each station clears).
+const PREP_CAT = {Pizza:5,Pasta:7,Antipasti:3,Panini:4,Drinks:1,Desserts:1};
+// Per-item prep overrides (the slow/fast pizzas — so the oven nuance is real).
+const PREP_ITEM = {slice:1,personale:4,pizzaiolo:8,tartufata:9};
+const prepMin = id => PREP_ITEM[id] ?? PREP_CAT[byId(id).cat] ?? 6;
+const marginG = id => byId(id).price - (COST[id] ?? Math.round(byId(id).price*0.3));
+
+const WINDOW_MIN = 15;
+
+/* Port of deriveSteeringPlan() over the LIVE LINE (all tabs whose status !== "parked").
+   Returns the same shape the real plan exposes. Pure — no I/O, no network. */
+function computeSteeringPlan(){
+  const live = tabs.filter(t=>t.status!=="parked");
+
+  // Per-category aggregates across the live line.
+  const cats = {};
+  CATS.forEach(c=>{ cats[c]={demand:0,load:0,prepSum:0,prepN:0}; });
+  live.forEach(t=>{
+    // "load" = units already committed to the line (ready-to-pay or already sent to KDS);
+    // the rest is forecast (still being rung up). demand = load + forecast.
+    const committed = (t.status==="pay" || t.sentKds);
+    t.items.forEach(l=>{
+      const c=byId(l.id).cat; const cell=cats[c];
+      cell.demand+=l.q;
+      if(committed) cell.load+=l.q;
+      cell.prepSum+=prepMin(l.id)*l.q; cell.prepN+=l.q;
+    });
+  });
+
+  // Per-station capacity, util, tier + honest promise.
+  const station={}; const promiseSecByCat={};
+  CATS.forEach(c=>{
+    const cell=cats[c];
+    const avgPrep = cell.prepN>0 ? cell.prepSum/cell.prepN : PREP_CAT[c];
+    const capacity = avgPrep>0 ? WINDOW_MIN/avgPrep : 0;
+    const util = capacity>0 ? cell.demand/capacity : (cell.demand>0?Infinity:0);
+    const tier = util>1.0 ? "risk" : util>=0.8 ? "warn" : "calm";
+    station[c]={demand:cell.demand,load:cell.load,capacity,util,tier};
+    promiseSecByCat[c] = capacity>0 ? Math.round(cell.demand*WINDOW_MIN*60/capacity) : 0;
+  });
+
+  // bottleneck = max-util category among those with demand > 0.
+  let bn=null;
+  CATS.forEach(c=>{
+    if(station[c].demand<=0) return;
+    if(!bn || station[c].util>station[bn].util) bn=c;
+  });
+
+  const base={active:false,promiseSecByCat,makeNow:[],throttle:[],deliveryCap:null,
+              bottleneck:bn?{cat:bn,util:station[bn].util,tier:station[bn].tier}:null,reason:null};
+  if(!bn || station[bn].tier==="calm") return base;
+
+  // make-now: items off the hot station, best margin first, top 6.
+  const makeNow = MENU.filter(m=>m.cat!==bn)
+    .sort((a,b)=>marginG(b.id)-marginG(a.id))
+    .slice(0,6).map(m=>m.id);
+  // throttle: items ON the hot station, worst margin-per-bottleneck-second first, top 3.
+  const mpbs = id => marginG(id)/(prepMin(id)*60);
+  const throttle = MENU.filter(m=>m.cat===bn)
+    .sort((a,b)=>mpbs(a.id)-mpbs(b.id))
+    .slice(0,3).map(m=>m.id);
+
+  const cap = station[bn].capacity;
+  const deliveryCap = Math.max(0, Math.floor(cap - station[bn].load));
+  const pct = Number.isFinite(station[bn].util) ? Math.round(station[bn].util*100) : 999;
+  const reason = `${bn} at ${pct}% — surfacing ${makeNow.length} make-now, easing ${throttle.length}, delivery cap ${deliveryCap}/${WINDOW_MIN} min`;
+
+  return {active:true,promiseSecByCat,makeNow,throttle,deliveryCap,
+          bottleneck:{cat:bn,util:station[bn].util,tier:station[bn].tier},reason};
+}
+let steerPlan=null; // recomputed inside render() when STEER is on
+const promiseLabel = sec => sec<=0 ? "~0 min" : sec<90 ? "~1 min" : "~"+Math.round(sec/60)+" min";
 
 /* ====================== Tab / order state ====================== */
 // Each tab owns its own items + combos + channel. status: open | parked | pay
@@ -602,7 +765,12 @@ function renderCats(){
     const b=document.createElement("button");
     b.className="chip";b.type="button";
     b.setAttribute("aria-pressed",String(cat===activeCat));
-    b.innerHTML=`<span class="cemoji">${CAT_EMOJI[cat]}</span><span>${cat}</span>`;
+    let prom="";
+    if(STEER && steerPlan){
+      const sec=steerPlan.promiseSecByCat[cat]||0;
+      if(sec>0) prom=`<span class="cprom">· ${promiseLabel(sec)}</span>`;
+    }
+    b.innerHTML=`<span class="cemoji">${CAT_EMOJI[cat]}</span><span>${cat}</span>${prom}`;
     b.onclick=()=>{activeCat=cat;renderCats();renderGrid();};
     wrap.appendChild(b);
   });
@@ -617,14 +785,28 @@ function renderGrid(){
   const grid=document.getElementById("grid");
   if(!grid) return;
   const items=MENU.filter(m=>m.cat===activeCat);
-  grid.innerHTML=items.map(m=>`
-    <button class="card" data-add="${m.id}" type="button">
+  const p = STEER ? steerPlan : null;
+  const isBottleCat = !!(p && p.active && p.bottleneck.cat===activeCat);
+  grid.innerHTML=items.map(m=>{
+    let cls="card", overlay="";
+    if(p && p.active){
+      if(isBottleCat && p.throttle.includes(m.id)){
+        cls+=" eased";
+        overlay=`<span class="easetag">▼ ease</span>`;
+      } else if(!isBottleCat && p.makeNow.includes(m.id)){
+        overlay=`<span class="makenow">★ Make now</span>`;
+      }
+    }
+    return `
+    <button class="${cls}" data-add="${m.id}" type="button">
       <span class="flash"></span>
+      ${overlay}
       <div class="card-top"><span class="card-emoji">${CAT_EMOJI[m.cat]}</span>${roleHtml(m)}</div>
       <span class="card-name">${m.n}</span>
       ${m.tags.length?`<div class="card-tags">${tagHtml(m.tags)}</div>`:""}
       <span class="card-price tnum">${fmtPLN(m.price)}</span>
-    </button>`).join("");
+    </button>`;
+  }).join("");
   grid.querySelectorAll("[data-add]").forEach(b=>{
     b.onclick=()=>{ addItem(b.dataset.add); flash(b); };
   });
@@ -700,6 +882,22 @@ function renderTicket(){
     document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
   }
 
+  // per-tab promise (only when STEER on): max station promise across this tab's categories
+  const promEl=document.getElementById("thPromise");
+  if(promEl){
+    if(STEER && steerPlan && t && t.items.length){
+      const catsOnTab=[...new Set(t.items.map(l=>byId(l.id).cat))];
+      let maxSec=0, maxCat=null;
+      catsOnTab.forEach(c=>{ const s=steerPlan.promiseSecByCat[c]||0; if(s>maxSec){maxSec=s;maxCat=c;} });
+      const tier = (steerPlan.active && steerPlan.bottleneck.cat===maxCat) ? steerPlan.bottleneck.tier : "calm";
+      promEl.className="th-promise"+(tier!=="calm"?" tier-"+tier:"");
+      promEl.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>ready ${promiseLabel(maxSec)}`;
+      promEl.style.display="inline-flex";
+    } else {
+      promEl.style.display="none";
+    }
+  }
+
   // totals
   document.getElementById("subtotal").textContent=fmtPLN(sub);
   const dRow=document.getElementById("discountRow");
@@ -732,6 +930,7 @@ function buildEditorShell(){
     <div class="products">
       <div class="combo-strip" id="comboStrip"></div>
       <div class="cats" id="cats" role="group" aria-label="Category filter"></div>
+      <div class="steer-strip" id="steerStrip" style="display:none"></div>
       <div class="grid-scroll"><div class="grid" id="grid"></div></div>
     </div>
     <div class="ticket">
@@ -741,6 +940,7 @@ function buildEditorShell(){
           <span class="th-name" id="thName">—</span>
           <span class="th-id tnum" id="thId"></span>
           <span class="th-chan"><span id="thChanIcon"></span><span id="thChanLbl"></span> · <span id="thStatus"></span></span>
+          <span class="th-promise" id="thPromise" style="display:none"></span>
         </div>
         <div class="th-actions">
           <button class="mini-btn park" id="parkBtn" type="button">
@@ -851,10 +1051,53 @@ function render(){
     buildEditorShell();
     shellBuilt=true;
   }
+  if(STEER) steerPlan=computeSteeringPlan(); else steerPlan=null;
   renderComboStrip();
+  renderSteerStrip();
   renderCats();
   renderGrid();
   renderTicket();
+  if(STEER) renderChanSteer();
+}
+
+/* ====================== Render: steering strip (only when STEER on) ====================== */
+function renderSteerStrip(){
+  const strip=document.getElementById("steerStrip");
+  if(!strip) return;
+  if(!STEER){ strip.style.display="none"; strip.innerHTML=""; return; }
+  strip.style.display="flex";
+  const p=steerPlan;
+  if(p && p.active){
+    const tier=p.bottleneck.tier;
+    const pct=Number.isFinite(p.bottleneck.util)?Math.round(p.bottleneck.util*100):999;
+    strip.className="steer-strip tier-"+tier;
+    const capZero = p.deliveryCap===0;
+    strip.innerHTML=
+      `<span class="ss-badge"><span class="ss-dot"></span>${CAT_EMOJI[p.bottleneck.cat]} ${p.bottleneck.cat} <span class="ss-util">${pct}%</span></span>`+
+      `<span class="ss-reason">${p.reason}</span>`+
+      `<span class="ss-cap${capZero?" zero":""}">cap ${p.deliveryCap}/${WINDOW_MIN}m</span>`;
+  } else {
+    strip.className="steer-strip";
+    strip.innerHTML=
+      `<span class="ss-badge"><span class="ss-dot" style="animation:none"></span>✓ Line clear</span>`+
+      `<span class="ss-reason">All stations within capacity — normal menu, honest promise times live.</span>`;
+  }
+}
+
+/* ====================== Render: channel steering note (only when STEER on) ====================== */
+function renderChanSteer(){
+  const g=document.getElementById("chanGroup");
+  if(!g) return;
+  let note=document.getElementById("chanPaused");
+  const paused = STEER && steerPlan && steerPlan.active && channel==="Delivery" && steerPlan.deliveryCap===0;
+  if(paused){
+    if(!note){
+      note=document.createElement("span");
+      note.id="chanPaused";note.className="chan-paused";
+      note.innerHTML=`<span class="cp-dot"></span>Delivery intake paused`;
+      g.parentNode.insertBefore(note,g.nextSibling);
+    }
+  } else if(note){ note.remove(); }
 }
 
 /* ====================== Location / channel switchers ====================== */
@@ -921,6 +1164,19 @@ document.addEventListener("keydown",(e)=>{
   }
 });
 
+/* ====================== Steering toggle chip ====================== */
+const steerChip=document.getElementById("steerChip");
+function syncSteerChip(){
+  // Chip is always discoverable; pressed state mirrors STEER.
+  steerChip.style.display="inline-flex";
+  steerChip.setAttribute("aria-pressed",String(STEER));
+}
+steerChip.addEventListener("click",()=>{
+  STEER=!STEER;
+  syncSteerChip();
+  render();
+});
+
 /* ====================== Clock ====================== */
 function tick(){ document.getElementById("clock").textContent=fmtClock(new Date()); }
 
@@ -928,6 +1184,7 @@ function tick(){ document.getElementById("clock").textContent=fmtClock(new Date(
 buildLocSwitcher();
 buildChanSwitcher();
 syncFs();
+syncSteerChip();
 render();
 tick();
 setInterval(tick,1000);
