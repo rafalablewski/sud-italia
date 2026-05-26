@@ -8484,6 +8484,12 @@ select.pub-input {
 .pos-chan-paused .pos-cp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos-late); flex: 0 0 auto; }
 .pos-tabs.is-fullscreen .cmd-head { min-height: 50px; }
 .pos-tabs.is-fullscreen .cmd-label, .pos-tabs.is-fullscreen .pos-footer { display: none; }
+/* Fullscreen contracts the top chrome so the editor — and the order column —
+   rise toward the top: drop the steer strip + open-checks eyebrow, tighten the
+   tab rail to a compact switcher row. */
+.pos-tabs.is-fullscreen .cmd-subbar { display: none; }
+.pos-tabs.is-fullscreen .pos-tabrail { padding: 8px 16px; gap: 8px; }
+.pos-tabs.is-fullscreen .pos-tabrail .cmd-eyebrow { display: none; }
 
 /* ---- Tab rail ---- */
 .pos-tabrail {
