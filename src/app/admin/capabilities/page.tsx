@@ -239,6 +239,15 @@ export default async function CapabilitiesPage() {
             "Predictions + the Pace layer compute from live orders without a DB, but promise-accuracy and the throughput sparkline need the kds_tickets history (Postgres) — they read PROMISE_TARGET (90%) and an empty sparkline until tickets have been fired and bumped. Per-ticket predictions assume one server per category (no per-station staffing model yet), so a heavily staffed station may clear faster than predicted.",
         },
         {
+          name: "Pace → POS demand steering (prototype)",
+          status: "live",
+          href: "/api/admin/pace/steering",
+          summary:
+            "src/lib/pace-steering.ts turns the SAME analyzeTruck() Pace signal that paints the KDS bottleneck gauge into an actionable plan for the point of sale — the actuator end of the kitchen control loop. From the live per-station demand-vs-capacity it derives: a capacity-true promise time per station (queue depth ÷ throughput, not a flat number); a make-now set (items off the bottleneck station, ≈ free to make, ranked by contribution margin); a soft-throttle set (the lowest margin-per-bottleneck-second items that DO load the constraint — eased, never hidden); and a delivery intake cap (units the bottleneck can still absorb this 15-min window, so an aggregator dump can't detonate a hot line). Pure + deterministic, engages once the bottleneck leaves 'calm', every plan carries a human 'reason'. Unit-tested against analyzeTruck in src/lib/pace-steering.test.ts (run: npx tsx --test src/lib/pace-steering.test.ts). Served by GET /api/admin/pace/steering (staff+, per-location, real orders only — sims never steer the sell side).",
+          caveats:
+            "Prototype. The decision module + API are wired to real data, but the only POS surface today is the design mockup — there is no /admin/pos page yet — so the live demo runs a client-side port of the same logic on /mockups/pos/06-tabs.html behind a ?steer=1 flag (off by default; the existing POS is untouched without it). The objective is margin-per-bottleneck-second (textbook Theory of Constraints) and is not yet demand-weighted, so it eases a high-volume low-margin hero (e.g. Margherita) before a premium slow item — correct for yield-per-constraint, but a production version should weight by sales velocity. Promise times assume one server per station (same limitation as the Pace engine).",
+        },
+        {
           name: "Allergen surfacing + admin edit",
           status: "live",
           href: "/admin/recipes",
