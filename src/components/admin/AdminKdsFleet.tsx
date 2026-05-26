@@ -17,6 +17,7 @@ import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
 import { SegControl, SectionEyebrow } from "./command";
+import { useFullscreen } from "./command/useFullscreen";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -127,7 +128,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const [now, setNow] = useState(() => Date.now());
   const [station, setStation] = useState<MenuCategory | "all">("all");
   const [line, setLine] = useState<LineKey>("all");
-  const [fullscreen, setFullscreen] = useState(false);
+  const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
   const inFlight = useRef(false);
@@ -210,36 +211,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-
-  // Fullscreen — request native fullscreen, fall back to the immersive class.
-  const enterFs = useCallback(() => {
-    setFullscreen(true);
-    void document.documentElement.requestFullscreen?.().catch(() => {});
-  }, []);
-  const exitFs = useCallback(() => {
-    setFullscreen(false);
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-  }, []);
-  useEffect(() => {
-    const onChange = () => {
-      if (!document.fullscreenElement) setFullscreen(false);
-    };
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
-  useEffect(() => {
-    if (!fullscreen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") exitFs();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [fullscreen, exitFs]);
 
   const advance = useCallback(
     async (t: WireTicket) => {

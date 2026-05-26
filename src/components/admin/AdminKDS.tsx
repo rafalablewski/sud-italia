@@ -41,6 +41,7 @@ import {
 } from "./kds-board";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
 import { SegControl, SectionEyebrow } from "./command";
+import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
@@ -181,44 +182,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Fullscreen kitchen-display (kiosk) mode. Flips the board into an
   // edge-to-edge, dedicated dark high-contrast surface and requests native
   // browser fullscreen so a wall-mounted screen reads cleanly across the line.
-  const [kiosk, setKiosk] = useState(false);
-
-  const enterKiosk = useCallback(() => {
-    setKiosk(true);
-    // Best-effort native fullscreen — the immersive layout stands on its own
-    // if the browser denies it (sandboxed iframe, kiosk policy, etc.).
-    void document.documentElement.requestFullscreen?.().catch(() => {});
-  }, []);
-  const exitKiosk = useCallback(() => {
-    setKiosk(false);
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-  }, []);
-
-  // Keep React state in lock-step with the browser: pressing Esc (or the
-  // browser's own control) leaving native fullscreen drops us out of kiosk.
-  useEffect(() => {
-    const onFsChange = () => {
-      if (!document.fullscreenElement) setKiosk(false);
-    };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, []);
-
-  // Lock body scroll while the kiosk overlay covers the viewport, and let Esc
-  // exit even when native fullscreen was denied (no fullscreenchange to catch).
-  useEffect(() => {
-    if (!kiosk) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") exitKiosk();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [kiosk, exitKiosk]);
+  const { active: kiosk, enter: enterKiosk, exit: exitKiosk } = useFullscreen();
 
   // Live order stream — SSE with REST fallback. Replaces the old 5 s polling
   // loop. We mirror the stream into a local copy so optimistic updates from
