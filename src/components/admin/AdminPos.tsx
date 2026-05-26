@@ -172,6 +172,28 @@ export function AdminPos({
     void loadTabs();
   }, [loadTabs]);
 
+  // Live tab sync — poll the store so checks opened/closed/edited on another
+  // till (or the same operator's other device) appear without a manual refresh.
+  // Skipped while a local edit is mid-debounce so an in-flight check is never
+  // clobbered by a stale server snapshot.
+  useEffect(() => {
+    if (!pageLoc) return;
+    const id = setInterval(async () => {
+      if (persistTimers.current.size > 0) return;
+      try {
+        const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
+        if (!res.ok) return;
+        const data: { tabs?: PosTab[] } = await res.json();
+        const list = Array.isArray(data.tabs) ? data.tabs : [];
+        setTabs(list);
+        setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
+      } catch {
+        /* non-fatal — next tick retries */
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [pageLoc]);
+
   const getActive = useCallback(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
     [tabs, activeTabId],
@@ -509,10 +531,25 @@ export function AdminPos({
 
   // Load tables for the active truck up front (small list) and refresh on every
   // location change — so a table added on the Floor page shows up here, and the
-  // picker never opens against a stale/empty cache.
+  // picker never opens against a stale/empty cache. Then poll so seat / status
+  // changes made on the Floor page surface live without a manual refresh.
   useEffect(() => {
     void fetchTables();
   }, [fetchTables]);
+  useEffect(() => {
+    if (!pageLoc) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(pageLoc)}`);
+        if (!res.ok) return;
+        const data: FloorTable[] = await res.json();
+        if (Array.isArray(data)) setTables(data);
+      } catch {
+        /* non-fatal — next tick retries */
+      }
+    }, 10000);
+    return () => clearInterval(id);
+  }, [pageLoc]);
 
   // --- Overlays ------------------------------------------------------------
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
@@ -536,6 +573,17 @@ export function AdminPos({
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
+  // Lock body scroll while the fullscreen till covers the viewport — otherwise
+  // the page behind keeps its scrollbar, which shows as a pale strip down the
+  // edge of the dark till.
+  useEffect(() => {
+    if (!kiosk) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [kiosk]);
 
   // --- Clock ---------------------------------------------------------------
   const [clock, setClock] = useState("--:--:--");
