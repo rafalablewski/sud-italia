@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia · CRM direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --surface: #141518;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --fg: #ededf0;
+    --fg-muted: #9aa0a8;
+    --fg-dim: #6b7178;
+    --accent: #3DD68C;
+    --danger: #ff5d5d;
+    --warning: #f5b13d;
+    --risk: #8b5cf6;
+    --gold: #e0a458;
+    --radius: 14px;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 56px 28px 88px; }
+
+  header.masthead { margin-bottom: 12px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(28px, 4vw, 44px); line-height: 1.08; margin: 0 0 16px;
+    font-weight: 650; letter-spacing: -0.02em;
+  }
+  h1 .thin { color: var(--fg-muted); font-weight: 400; }
+  .lede { max-width: 760px; color: var(--fg-muted); font-size: 16px; margin: 0; }
+  .lede strong { color: var(--fg); font-weight: 600; }
+
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px;
+    padding-top: 22px; border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--fg-muted);
+  }
+  .meta-row b { color: var(--fg); font-weight: 600; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .dot { display: inline-flex; align-items: center; gap: 7px; }
+  .dot i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .grid {
+    display: grid; gap: 22px; margin-top: 40px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 480px));
+  }
+  .card {
+    display: flex; flex-direction: column; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover {
+    border-color: var(--border-strong); transform: translateY(-3px);
+    box-shadow: 0 18px 40px -20px rgba(0,0,0,0.8);
+  }
+  .band {
+    position: relative; height: 150px; padding: 18px 20px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .band .num {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.06em; opacity: 0.85;
+  }
+  .band .word {
+    font-size: 30px; font-weight: 650; letter-spacing: -0.01em; line-height: 1;
+  }
+  .band .chosen {
+    position: absolute; top: 16px; right: 18px; font-family: var(--mono);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+    color: #06140d; background: var(--accent); padding: 3px 9px; border-radius: 999px;
+  }
+  .band .swatches { display: flex; gap: 6px; }
+  .band .swatches i { width: 24px; height: 6px; border-radius: 3px; display: block; }
+
+  .body { padding: 18px 20px 20px; flex: 1; display: flex; flex-direction: column; }
+  .body h3 { margin: 0 0 5px; font-size: 17px; font-weight: 620; letter-spacing: -0.01em; }
+  .body .theme { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-dim); font-weight: 600; }
+  .body p { margin: 0 0 16px; font-size: 13.5px; color: var(--fg-muted); line-height: 1.55; }
+  .body .open {
+    margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 600;
+    color: #06140d; background: var(--accent); padding: 9px 16px; border-radius: 10px;
+    transition: filter .15s ease;
+  }
+  .card:hover .body .open { filter: brightness(1.06); }
+
+  footer.note {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--border);
+    color: var(--fg-dim); font-size: 12.5px; max-width: 820px;
+  }
+  footer.note code { font-family: var(--mono); color: var(--fg-muted); }
+  footer.note a { color: var(--fg-muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="masthead">
+      <p class="eyebrow">Sud Italia · Customer Relationships</p>
+      <h1>CRM — the chosen direction<br><span class="thin">a customer book that reads as one system: <span style="color:var(--fg)">Regulars</span></span></h1>
+      <p class="lede"><strong>Regulars</strong> is the CRM direction we're taking forward. It reuses the <strong>POS + KDS visual language</strong> — the same Inter + JetBrains Mono type, the Atlas dark canvas, the tone palette and the header/footer chrome — so the till, the line and the customer book all read as one system. The thesis: a food truck lives on its <strong>regulars</strong>, so the screen is a searchable customer book on the left and a deep <strong>relationship profile</strong> on the right — lifetime value, an RFM <strong>health score</strong> that cools toward churn, order history, loyalty tier, contact consent, notes, and an <strong>AI next-best-action</strong> for every customer. Open the live mockup below; it's interactive end to end.</p>
+
+      <div class="meta-row">
+        <span class="legend">
+          <span class="dot"><i style="background:var(--gold)"></i> VIP</span>
+          <span class="dot"><i style="background:var(--accent)"></i> Active</span>
+          <span class="dot"><i style="background:var(--risk)"></i> Repeat</span>
+          <span class="dot"><i style="background:#3B82F6"></i> New</span>
+          <span class="dot"><i style="background:var(--danger)"></i> Lapsed</span>
+        </span>
+        <span>Money: <b>Polish złoty</b></span>
+        <span>Book: <b>12 customers</b> · Kraków + Warszawa · real-shape data</span>
+      </div>
+    </header>
+
+    <div class="grid" id="grid"></div>
+
+    <footer class="note">
+      Served on every deploy at <code>/mockups/crm/</code> (relaxed CSP per <code>next.config.ts</code>). Self-contained HTML — no network, no build step, only Google Fonts. Companion to the POS terminal at <a href="../pos/">/mockups/pos/</a> and the KDS gallery at <a href="../kds/">/mockups/kds/</a>. Next step: port Regulars into <code>src/components/admin</code> for an <code>/admin/crm</code> surface over the real customer rollup.
+    </footer>
+  </div>
+
+  <script>
+    const fonts = {
+      mono: "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Monaco, monospace",
+      sans: "'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    };
+
+    const DESIGN = {
+      file:"regulars.html", n:"CRM", name:"Regulars", theme:"Dark · customer book + relationship profile", font:"sans",
+      bg:"#0A0C10", ink:"#E9EDF2", accent:"#3DD68C", sw:["#E0A458","#3DD68C","#8B5CF6","#3B82F6","#E5484D"],
+      desc:"The relationship lens for a truck that runs on its regulars. A searchable, segmentable customer book on the left; on the right, a full profile — lifetime value, an RFM health score that cools toward churn, order history, loyalty tier, contact consent and an AI next-best-action. Find anyone, know them at a glance, act on the relationship.",
+    };
+
+    const BASE = location.protocol === "file:" ? "" : "/mockups/crm/";
+
+    function render() {
+      const d = DESIGN;
+      const grid = document.getElementById("grid");
+      const a = document.createElement("a");
+      a.className = "card";
+      a.href = BASE + d.file;
+      const swatches = d.sw.map(c => `<i style="background:${c}"></i>`).join("");
+      a.innerHTML = `
+        <div class="band" style="background:${d.bg};color:${d.ink};font-family:${fonts[d.font]}">
+          <span class="num">${d.n}</span>
+          <span class="chosen">Chosen</span>
+          <span class="word" style="color:${d.accent}">${d.name}</span>
+          <span class="swatches">${swatches}</span>
+        </div>
+        <div class="body">
+          <h3>${d.name}</h3>
+          <p class="theme">${d.theme}</p>
+          <p>${d.desc}</p>
+          <span class="open">Open the CRM →</span>
+        </div>`;
+      grid.appendChild(a);
+    }
+    render();
+  </script>
+</body>
+</html>
