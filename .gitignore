@@ -43,3 +43,6 @@ next-env.d.ts
 # local data store
 /.data
 src/components/admin/.next/
+
+# claude code agent worktrees (ephemeral scratch)
+.claude/worktrees/

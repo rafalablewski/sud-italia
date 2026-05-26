@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia POS — Tabs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    /* surfaces — Atlas dark */
+    --canvas:#0A0C10;
+    --panel:#11151B;
+    --raised:#1A2129;
+    --hair:rgba(255,255,255,0.08);
+    --hair-strong:rgba(255,255,255,0.14);
+    /* text */
+    --text:#E9EDF2;
+    --dim:#9098A3;
+    --faint:#5C6571;
+    /* tone palette */
+    --accent:#3DD68C;   /* green — fleet/multi feel */
+    --firing:#3B82F6;
+    --warn:#F5A623;
+    --risk:#8B5CF6;
+    --late:#E5484D;
+    /* soft tints */
+    --accent-soft:rgba(61,214,140,0.13);
+    --firing-soft:rgba(59,130,246,0.14);
+    --warn-soft:rgba(245,166,35,0.13);
+    --late-soft:rgba(229,72,77,0.14);
+    /* 8px grid */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--canvas);color:var(--text);font-family:var(--sans);
+    font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;display:flex;flex-direction:column;overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ====================== Header ====================== */
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);
+    height:56px;padding:0 var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3);min-width:max-content}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);
+    border-left:1px solid var(--hair);padding-left:var(--s3);
+  }
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;white-space:nowrap;
+  }
+
+  .ctl{display:flex;align-items:center;gap:var(--s2)}
+  .ctl-lbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
+  /* segmented controls */
+  .seg-group{display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;overflow:hidden;background:var(--canvas)}
+  .seg{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--sans);font-size:11.5px;letter-spacing:0.01em;color:var(--dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    border-right:1px solid var(--hair);transition:color .16s ease,background .16s ease;
+  }
+  .seg:last-child{border-right:0}
+  .seg:hover{color:var(--text)}
+  .seg[aria-pressed="true"]{background:var(--raised);color:var(--accent);font-weight:600}
+  .seg svg{width:13px;height:13px}
+
+  .spacer{margin-left:auto}
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline-flex}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+  .gallery-link{
+    font-size:11px;color:var(--faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .clock{font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);min-width:78px;text-align:right}
+
+  .is-fullscreen header{height:50px}
+  .is-fullscreen .kd-label,.is-fullscreen .gallery-link,.is-fullscreen .design-tag{display:none}
+  .is-fullscreen footer{display:none}
+
+  /* ====================== Tab rail ====================== */
+  .tabrail{
+    flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--hair);
+    padding:var(--s3) var(--s5);display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .tr-eyebrow{display:flex;align-items:center;gap:var(--s3)}
+  .tr-brandline{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);font-weight:700;white-space:nowrap}
+  .tr-brandline svg{width:13px;height:13px;opacity:.7;flex:0 0 auto}
+  .tr-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .tr-summary{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .tr-summary b{color:var(--text);font-weight:700}
+  .tr-summary .pipe{color:var(--hair-strong);margin:0 6px}
+
+  .tabs{display:flex;gap:var(--s3);overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+  .tabs::-webkit-scrollbar{height:6px}
+  .tabs::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:3px}
+  .tab{
+    flex:0 0 auto;width:252px;min-height:98px;cursor:pointer;text-align:left;
+    background:var(--raised);border:1px solid var(--hair);border-radius:11px;
+    padding:var(--s3) var(--s3) var(--s3) calc(var(--s3) + 4px);position:relative;overflow:hidden;
+    transition:border-color .16s ease,background .16s ease,transform .1s ease;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .tab::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--firing);transition:background .16s ease}
+  .tab.open::before{background:var(--firing)}
+  .tab.parked::before{background:var(--faint)}
+  .tab.pay::before{background:var(--accent)}
+  .tab:hover{border-color:var(--hair-strong)}
+  .tab.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 12px 28px -16px rgba(61,214,140,0.5)}
+  .tab.parked{opacity:.55}
+  .tab.parked.active{opacity:1}
+  .tab-top{display:flex;align-items:center;gap:7px}
+  .tab-dot{width:8px;height:8px;border-radius:50%;background:var(--firing);flex:0 0 auto}
+  .tab.parked .tab-dot{background:var(--faint)}
+  .tab.pay .tab-dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .tab-name{font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}
+  .tab-chan{display:inline-flex;color:var(--faint)}
+  .tab-chan svg{width:12px;height:12px}
+  .tab-id{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:0.03em}
+  .tab-foot{display:flex;align-items:baseline;justify-content:space-between;margin-top:auto}
+  .tab-items{font-size:11.5px;color:var(--dim);letter-spacing:0.02em}
+  .tab-total{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text)}
+  .tab.pay .tab-total{color:var(--accent)}
+  .tab-status{
+    position:absolute;top:8px;right:9px;font-size:8px;font-weight:700;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--faint);
+  }
+  .tab.pay .tab-status{color:var(--accent)}
+  .tab.parked .tab-status{color:var(--faint)}
+
+  .tab-new{
+    flex:0 0 auto;width:140px;min-height:98px;cursor:pointer;
+    background:transparent;border:1px dashed var(--hair-strong);border-radius:11px;
+    color:var(--dim);font-family:var(--sans);font-size:13px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .tab-new:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .tab-new svg{width:22px;height:22px}
+
+  /* ====================== Editor region ====================== */
+  .editor{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 800px;gap:1px;background:var(--hair)}
+
+  /* LEFT — product grid */
+  .products{background:var(--canvas);display:flex;flex-direction:column;min-height:0;min-width:0}
+  .cats{
+    flex:0 0 auto;display:flex;gap:var(--s1);flex-wrap:wrap;padding:var(--s4) var(--s5);
+    background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .chip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.01em;padding:7px 12px;border-radius:7px;
+    cursor:pointer;transition:color .16s ease,border-color .16s ease,background .16s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chip[aria-pressed="true"]{background:var(--raised);border-color:var(--hair-strong);color:var(--text);font-weight:600}
+  .chip .cemoji{font-size:13px}
+
+  .grid-scroll{flex:1 1 auto;overflow-y:auto;padding:var(--s4) var(--s5);min-height:0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:var(--s3);align-content:start}
+  /* "All" view — every category stacked under a heading */
+  .grid.grouped{display:flex;flex-direction:column;gap:var(--s5)}
+  .grid-group{display:flex;flex-direction:column;gap:var(--s3)}
+  .grid-group-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim)}
+  .grid-group-head .cemoji{font-size:14px}
+  .grid-group-head .ggh-n{font-family:var(--mono);font-size:10px;color:var(--faint);background:var(--raised);border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .grid-sub{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:var(--s3);align-content:start}
+  .card{
+    appearance:none;cursor:pointer;text-align:left;font-family:var(--sans);
+    background:var(--raised);border:1px solid var(--hair);border-radius:11px;
+    padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:5px;position:relative;
+    transition:transform .1s ease,border-color .16s ease,background .16s ease;min-height:100px;
+  }
+  .card:hover{transform:translateY(-2px);border-color:var(--hair-strong);background:#202832}
+  .card:active{transform:translateY(0) scale(.98)}
+  .card.added .flash{animation:flash .4s ease}
+  .card .flash{position:absolute;inset:0;border-radius:11px;background:var(--accent);opacity:0;pointer-events:none}
+  @keyframes flash{0%{opacity:.22}100%{opacity:0}}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+  .card-emoji{font-size:18px;line-height:1}
+  .card-name{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.25}
+  .card-price{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:auto}
+  .card-tags{display:flex;gap:4px;flex-wrap:wrap}
+  .tag{font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;padding:1px 5px;border-radius:4px;line-height:1.5}
+  .tag.veg,.tag.vegan{background:var(--accent-soft);color:var(--accent)}
+  .tag.spicy{background:var(--late-soft);color:var(--late)}
+  .tag.gf{background:var(--warn-soft);color:var(--warn)}
+  .role-badge{font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:1px 6px;border-radius:5px;flex:0 0 auto}
+  .role-hero{background:var(--firing);color:#fff}
+  .role-profit{background:var(--accent);color:#06140d}
+  .role-anchor{background:var(--risk);color:#fff}
+  .lto-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--warn);margin-left:4px;vertical-align:middle}
+
+  /* combo strip above grid */
+  .combo-strip{
+    flex:0 0 auto;display:flex;gap:var(--s2);padding:var(--s3) var(--s5);
+    background:var(--panel);border-bottom:1px solid var(--hair);overflow-x:auto;align-items:center;
+  }
+  .combo-strip .cs-lbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);font-weight:700;white-space:nowrap;flex:0 0 auto}
+  .combo-pill{
+    appearance:none;cursor:pointer;font-family:var(--sans);flex:0 0 auto;white-space:nowrap;
+    background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3);border-radius:8px;
+    color:var(--accent);font-size:12px;font-weight:600;padding:6px 11px;
+    display:inline-flex;align-items:center;gap:8px;transition:background .16s ease;
+  }
+  .combo-pill:hover{background:rgba(61,214,140,0.2)}
+  .combo-pill .cp-off{font-family:var(--mono);font-size:11px;font-weight:700}
+
+  /* ====================== Steering (behind ?steer=1) ====================== */
+  /* header toggle chip — mirrors the .seg/.fsbtn visual language */
+  .steer-chip{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:7px;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;white-space:nowrap;
+  }
+  .steer-chip:hover{color:var(--text);border-color:var(--hair-strong)}
+  .steer-chip svg{width:13px;height:13px;display:block}
+  .steer-chip .sc-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+  .steer-chip[aria-pressed="true"]{color:var(--accent);border-color:rgba(61,214,140,0.4);background:var(--accent-soft)}
+  .steer-chip[aria-pressed="true"] .sc-dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* steering strip — sits just above the product grid, matches Atlas cards */
+  .steer-strip{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);
+    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+    border-left:3px solid var(--accent);
+  }
+  .steer-strip.tier-warn{border-left-color:var(--warn)}
+  .steer-strip.tier-risk{border-left-color:var(--risk)}
+  .ss-badge{
+    display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;
+    font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    padding:5px 11px;border-radius:8px;white-space:nowrap;
+    background:var(--accent-soft);color:var(--accent);border:1px solid rgba(61,214,140,0.3);
+  }
+  .steer-strip.tier-warn .ss-badge{background:var(--warn-soft);color:var(--warn);border-color:rgba(245,166,35,0.32)}
+  .steer-strip.tier-risk .ss-badge{background:rgba(139,92,246,0.14);color:var(--risk);border-color:rgba(139,92,246,0.34)}
+  .ss-badge .ss-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto;animation:ssPulse 1.6s ease-in-out infinite}
+  @keyframes ssPulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .ss-util{font-family:var(--mono);font-size:13px;font-weight:700}
+  .ss-reason{font-size:11.5px;color:var(--dim);letter-spacing:0.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+  .ss-reason b{color:var(--text);font-weight:700}
+  .ss-cap{
+    flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--hair);color:var(--dim);white-space:nowrap;
+  }
+  .ss-cap.zero{color:var(--late);border-color:rgba(229,72,77,0.35);background:var(--late-soft)}
+
+  /* category chip promise sub-label */
+  .chip .cprom{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:0.02em;margin-left:2px}
+  .chip[aria-pressed="true"] .cprom{color:var(--dim)}
+
+  /* make-now chip + throttle dim on product cards — anchored bottom-right,
+     clear of the top-row emoji + role badge so nothing overlaps */
+  .card .makenow{
+    position:absolute;bottom:9px;right:10px;font-size:8.5px;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;padding:2px 6px;border-radius:5px;z-index:1;
+    background:var(--accent);color:#06140d;display:inline-flex;align-items:center;gap:3px;line-height:1.5;
+  }
+  .card.eased{opacity:.46}
+  .card.eased:hover{opacity:.72}
+  .card .easetag{
+    position:absolute;bottom:9px;right:10px;font-size:8.5px;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;padding:2px 6px;border-radius:5px;line-height:1.5;z-index:1;
+    background:rgba(139,92,246,0.16);color:var(--risk);border:1px solid rgba(139,92,246,0.3);
+  }
+
+  /* per-tab promise pill in the ticket header */
+  .th-promise{
+    flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.02em;
+    padding:3px 9px;border-radius:7px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    background:var(--accent-soft);color:var(--accent);border:1px solid rgba(61,214,140,0.3);
+  }
+  .th-promise.tier-warn{background:var(--warn-soft);color:var(--warn);border-color:rgba(245,166,35,0.32)}
+  .th-promise.tier-risk{background:rgba(139,92,246,0.14);color:var(--risk);border-color:rgba(139,92,246,0.34)}
+  .th-promise svg{width:11px;height:11px}
+
+  /* delivery intake paused note on the channel control */
+  .chan-paused{
+    font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--late);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  }
+  .chan-paused .cp-dot{width:6px;height:6px;border-radius:50%;background:var(--late);flex:0 0 auto}
+
+  /* RIGHT — active order ticket */
+  .ticket{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+  .ticket-head{
+    flex:0 0 auto;padding:var(--s4) var(--s5);border-bottom:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .th-row1{display:flex;align-items:center;gap:var(--s2)}
+  .th-dot{width:9px;height:9px;border-radius:50%;background:var(--firing);flex:0 0 auto}
+  .th-dot.parked{background:var(--faint)}
+  .th-dot.pay{background:var(--accent)}
+  .th-name{font-size:16px;font-weight:650;color:var(--text);letter-spacing:-0.01em;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .th-id{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:0.03em}
+  .th-chan{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);letter-spacing:0.04em;text-transform:uppercase}
+  .th-chan svg{width:12px;height:12px;opacity:.7}
+  .th-actions{display:flex;gap:var(--s2)}
+  /* big channel selector inside the order column */
+  .th-channel{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+  .th-chan-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);white-space:nowrap;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px 10px;border-radius:10px;border:1px solid var(--hair-strong);
+    background:var(--raised);color:var(--dim);font-size:13.5px;font-weight:700;letter-spacing:0.01em;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .th-chan-btn svg{width:16px;height:16px;flex:0 0 auto}
+  .th-chan-btn:hover{color:var(--text);border-color:var(--text)}
+  .th-chan-btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  /* required state — no channel chosen yet */
+  .th-channel.req .th-chan-btn{border-color:rgba(245,166,35,0.5)}
+  .th-chan-req{display:none;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--warn);letter-spacing:0.02em}
+  .th-chan-req i{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto;animation:ssPulse 1.6s ease-in-out infinite}
+  .mini-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.02em;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
+    border-radius:7px;padding:7px 12px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .mini-btn:hover{color:var(--text);border-color:var(--text)}
+  .mini-btn svg{width:13px;height:13px}
+  .mini-btn.park.is-parked{color:var(--faint);border-color:var(--faint)}
+  .mini-btn.kds:hover{color:var(--firing);border-color:var(--firing)}
+  .mini-btn.kds.sent{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+
+  .lines{flex:1 1 auto;overflow-y:auto;padding:var(--s3) var(--s5);min-height:0;display:flex;flex-direction:column;gap:var(--s2)}
+  .lines::-webkit-scrollbar{width:7px}
+  .lines::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  .empty-ticket{
+    flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--faint);text-align:center;gap:8px;padding:var(--s6);
+  }
+  .empty-ticket .e-emoji{font-size:30px;opacity:.5}
+  .empty-ticket .e-text{font-size:14px;color:var(--dim)}
+  .empty-ticket .e-sub{font-size:12px}
+
+  .line{display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0;border-bottom:1px solid var(--hair)}
+  .line:last-child{border-bottom:0}
+  .line-body{flex:1 1 auto;min-width:0}
+  .line-name{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.2}
+  .line-each{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:2px}
+  .stepper{display:flex;align-items:center;gap:2px;flex:0 0 auto}
+  .step-btn{
+    appearance:none;cursor:pointer;width:27px;height:27px;border-radius:7px;
+    border:1px solid var(--hair);background:var(--raised);color:var(--text);
+    font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .1s ease;
+  }
+  .step-btn:hover{background:#202832;border-color:var(--hair-strong)}
+  .step-btn:active{transform:scale(.92)}
+  .step-q{font-family:var(--mono);font-size:13px;font-weight:700;min-width:24px;text-align:center;color:var(--text)}
+  .line-total{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--text);min-width:62px;text-align:right;flex:0 0 auto}
+
+  .combo-applied{
+    display:flex;align-items:center;gap:8px;padding:var(--s2) var(--s3);
+    background:var(--accent-soft);border:1px solid rgba(61,214,140,0.28);border-radius:9px;margin-top:var(--s2);
+  }
+  .combo-applied .ca-name{font-size:12px;font-weight:600;color:var(--accent);flex:1 1 auto}
+  .combo-applied .ca-off{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--accent)}
+  .combo-applied .ca-x{appearance:none;cursor:pointer;border:0;background:transparent;color:var(--accent);font-size:15px;line-height:1;padding:0 2px;opacity:.7}
+  .combo-applied .ca-x:hover{opacity:1}
+
+  .totals{flex:0 0 auto;padding:var(--s4) var(--s5);border-top:1px solid var(--hair);background:var(--canvas)}
+  .trow{display:flex;align-items:baseline;justify-content:space-between;font-size:12.5px;color:var(--dim);padding:3px 0}
+  .trow.discount{color:var(--accent);font-weight:600}
+  .trow .tv{font-family:var(--mono)}
+  .trow.grand{font-size:16px;color:var(--text);font-weight:700;padding-top:var(--s2);margin-top:var(--s2);border-top:1px solid var(--hair)}
+  .trow.grand .tv{font-size:20px;font-weight:700}
+
+  .charge-area{flex:0 0 auto;padding:0 var(--s5) var(--s5)}
+  .btn{
+    appearance:none;font-family:var(--sans);font-weight:700;letter-spacing:0.01em;
+    border-radius:11px;cursor:pointer;transition:all .14s ease;white-space:nowrap;width:100%;
+    border:1px solid var(--accent);background:var(--accent);color:#06140d;
+    font-size:16px;padding:15px 22px;display:flex;align-items:center;justify-content:center;gap:9px;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:scale(.99)}
+  .btn:disabled{background:var(--raised);border-color:var(--hair);color:var(--faint);cursor:not-allowed;filter:none}
+  .btn svg{width:17px;height:17px}
+
+  /* tender + paid overlay (within ticket column) */
+  .ticket-inner{position:relative;flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+  .overlay{position:absolute;inset:0;background:rgba(10,12,16,0.7);backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center;z-index:5}
+  .overlay.open{display:flex}
+  .tender-sheet{
+    width:100%;background:var(--panel);border-top:1px solid var(--hair-strong);
+    border-radius:14px 14px 0 0;padding:var(--s5);box-shadow:0 -20px 50px -22px rgba(0,0,0,0.7);
+    animation:slideUp .22s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .tender-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--s4)}
+  .tender-head .te-title{font-size:13px;letter-spacing:0.04em;font-weight:700;color:var(--text)}
+  .tender-head .te-amt{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)}
+  .tender-opts{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-bottom:var(--s3)}
+  .tender-opt{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:600;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    border-radius:12px;padding:17px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .14s ease;
+  }
+  .tender-opt:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  .tender-opt:active{transform:scale(.97)}
+  .tender-opt svg{width:25px;height:25px}
+  .tender-cancel{appearance:none;cursor:pointer;width:100%;border:1px solid var(--hair);background:transparent;color:var(--dim);font-family:var(--sans);font-size:12.5px;padding:11px;border-radius:10px}
+  .tender-cancel:hover{background:var(--raised)}
+
+  .toast{
+    position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(10px);
+    background:var(--raised);border:1px solid var(--accent);color:var(--accent);
+    font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:10px;
+    box-shadow:0 16px 40px -18px rgba(0,0,0,0.8);opacity:0;pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;display:inline-flex;align-items:center;gap:8px;z-index:6;
+  }
+  .toast svg{width:15px;height:15px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* table assignment (dine-in) */
+  .mini-btn.tablebtn.assigned{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .tab-table{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.30);border-radius:5px;padding:1px 5px;flex:0 0 auto}
+  .overlay.center{align-items:center}
+  .table-sheet{
+    width:min(360px,calc(100% - 28px));background:var(--panel);border:1px solid var(--hair-strong);
+    border-radius:14px;padding:var(--s5);box-shadow:0 20px 60px -20px rgba(0,0,0,0.75);animation:slideUp .2s ease;
+  }
+  .ts-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--s4)}
+  .ts-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em}
+  .table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s2);margin-bottom:var(--s3)}
+  .table-cell{
+    appearance:none;cursor:pointer;font-family:var(--mono);font-size:15px;font-weight:700;position:relative;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    border-radius:10px;padding:13px 0;transition:all .12s ease;
+  }
+  .table-cell:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  .table-cell.sel{background:var(--accent);border-color:var(--accent);color:#06140d}
+  .table-foot{display:flex;gap:var(--s2)}
+  .table-foot .ta-btn{flex:1 1 0;appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--dim);font-family:var(--sans);font-size:12.5px;padding:11px;border-radius:10px}
+  .table-foot .ta-btn:hover{background:var(--raised);color:var(--text)}
+
+  /* covers stepper (dine-in) */
+  .covers{display:inline-flex;align-items:center;gap:1px;border:1px solid var(--hair-strong);background:var(--raised);border-radius:7px;padding:2px 2px 2px 7px}
+  .covers .cov-ic{display:inline-flex;align-items:center;color:var(--faint)}
+  .covers .cov-ic svg{width:13px;height:13px}
+  .covers .cov-btn{appearance:none;cursor:pointer;width:24px;height:24px;border:0;background:transparent;color:var(--dim);font-size:16px;line-height:1;border-radius:5px}
+  .covers .cov-btn:hover{background:#202832;color:var(--text)}
+  .covers .cov-n{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);min-width:30px;text-align:center}
+
+  /* table conflict — two open dine-in checks on one table */
+  .mini-btn.tablebtn.conflict{color:var(--warn);border-color:var(--warn);background:rgba(245,166,35,0.12)}
+  .tab-table.conflict{color:var(--warn);background:rgba(245,166,35,0.14);border-color:rgba(245,166,35,0.40)}
+  .table-cell.taken{border-color:var(--warn);color:var(--warn)}
+  .table-cell.taken::after{content:"";position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--warn)}
+  .table-hint{font-size:10.5px;color:var(--warn);margin-bottom:var(--s2);display:flex;align-items:center;gap:6px}
+  .table-hint i{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto}
+
+  .empty-editor{
+    grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:var(--s3);color:var(--faint);background:var(--canvas);text-align:center;padding:var(--s7);
+  }
+  .empty-editor .ee-emoji{font-size:40px;opacity:.5}
+  .empty-editor .ee-text{font-size:15px;color:var(--dim)}
+  .empty-editor .ee-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;
+    border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);
+    border-radius:9px;padding:10px 18px;margin-top:var(--s2);
+  }
+
+  /* footer */
+  footer{
+    flex:0 0 auto;height:38px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--s5);padding:0 var(--s5);font-size:11px;color:var(--faint);
+  }
+  .legend{display:flex;gap:var(--s4);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .legend i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--dim);margin:0 1px}
+
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  @media (max-width:1500px){
+    .editor{grid-template-columns:1fr 620px}
+  }
+  @media (max-width:1100px){
+    .editor{grid-template-columns:1fr 480px}
+  }
+
+  /* ---- Phones / narrow tablets: let the whole page scroll, stack the editor ---- */
+  @media (max-width:760px){
+    /* Abandon the fixed-height app shell on phones — the desktop model pins
+       body{overflow:hidden} and scrolls inner panes, which traps scrolling on
+       mobile. Here the document scrolls naturally and the header stays pinned. */
+    html,body{height:auto;min-height:100%}
+    body{overflow:visible}
+    /* Kill the sideways black gutter: clip any stray horizontal overflow, and let
+       the open-checks summary + ticket action buttons wrap instead of forcing the
+       document wider than the viewport. */
+    html{overflow-x:hidden}
+    .tr-eyebrow{flex-wrap:wrap}
+    .tr-summary{white-space:normal}
+    .th-actions{flex-wrap:wrap}
+
+    header{
+      position:sticky;top:0;z-index:30;
+      height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3);
+    }
+    .kd-label,.design-tag,.gallery-link,.clock,.ctl-lbl,.spacer{display:none}
+    .brand{min-width:0}
+    .wordmark{font-size:13px;letter-spacing:0.14em}
+    header .ctl{gap:6px}
+    .seg{padding:6px 9px;font-size:11px}
+    .steer-chip>span:last-child,.fsbtn span{display:none}   /* icon-only on phones */
+    .steer-chip,.fsbtn{padding:7px 9px}
+
+    .tabrail{padding:var(--s2) var(--s3)}
+    .tab{width:200px;min-height:82px}
+    .tab-new{width:120px;min-height:82px}
+
+    /* editor + its panes flow at natural height; the page scrolls, not the panes */
+    .editor{display:flex;flex-direction:column;min-height:0}
+    .products,.ticket{min-height:0}
+    .ticket{border-top:1px solid var(--hair-strong)}
+    .grid-scroll{overflow:visible;flex:0 0 auto;padding:var(--s3)}
+    .ticket-inner{overflow:visible;flex:0 0 auto;min-height:0}
+    .lines{overflow:visible;flex:0 0 auto;min-height:0;max-height:none}
+
+    .cats{padding:var(--s2) var(--s3);gap:6px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
+    .grid-sub{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2)}
+    .card{min-height:86px;padding:var(--s2) var(--s3)}
+    .combo-strip{padding:var(--s2) var(--s3)}
+    .ticket-head,.totals{padding-left:var(--s3);padding-right:var(--s3)}
+    .charge-area{padding:0 var(--s3) var(--s3)}
+
+    /* steering strip: let the reason wrap onto its own line */
+    .steer-strip{flex-wrap:wrap;gap:var(--s2) var(--s3);padding:var(--s2) var(--s3)}
+    .ss-reason{white-space:normal;flex-basis:100%;order:3}
+
+    /* tender sheet rises from the bottom of the whole screen */
+    .overlay{position:fixed}
+
+    footer{height:auto;min-height:32px;padding:var(--s2) var(--s3)}
+    .kbd-hint{display:none}
+  }
+
+  /* ---- Very small phones: force a clean 2-up product grid ---- */
+  @media (max-width:380px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .grid-sub{grid-template-columns:repeat(2,1fr)}
+    .tab{width:172px}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Point of Sale</span>
+    </div>
+    <span class="design-tag">06 · Tabs</span>
+    <div class="ctl">
+      <span class="ctl-lbl">Loc</span>
+      <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-lbl">Channel</span>
+      <div class="seg-group" id="chanGroup" role="group" aria-label="Channel"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="steer-chip" id="steerChip" type="button" aria-pressed="false" aria-label="Toggle Pace steering" style="display:none">
+      <span class="sc-dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+      <span>Steer</span>
+    </button>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <section class="tabrail" aria-label="Open checks">
+    <div class="tr-eyebrow">
+      <span class="tr-brandline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        Open checks
+      </span>
+      <span class="tr-sep"></span>
+      <span class="tr-summary" id="railSummary"></span>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </section>
+
+  <div class="editor" id="editor"></div>
+
+  <footer>
+    <div class="legend">
+      <span><i style="background:var(--firing)"></i>Open</span>
+      <span><i style="background:var(--faint)"></i>Parked</span>
+      <span><i style="background:var(--accent)"></i>Ready to pay</span>
+    </div>
+    <div class="kbd-hint"><span class="kbd">N</span> new tab · <span class="kbd">1</span>–<span class="kbd">9</span> switch · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> cancel</div>
+  </footer>
+
+<script>
+"use strict";
+
+/* ====================== Sample data ====================== */
+let LOC = "Kraków";
+const fmtPLN = g => (g/100).toFixed(2).replace(".",",")+" zł";
+const CATS = ["Pizza","Pasta","Antipasti","Panini","Drinks","Desserts"];
+const CAT_EMOJI = {Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drinks:"☕",Desserts:"🍰"};
+const MENU = [
+  {id:"margherita", n:"Margherita",              cat:"Pizza",     price:2790, tags:["veg"],         role:"hero"},
+  {id:"quattro",    n:"Quattro Formaggi",        cat:"Pizza",     price:3390, tags:["veg"],         role:"profit"},
+  {id:"diavola",    n:"Diavola",                 cat:"Pizza",     price:3290, tags:["spicy"]},
+  {id:"prosciutto", n:"Prosciutto e Rucola",     cat:"Pizza",     price:3590, tags:[]},
+  {id:"ortolana",   n:"Ortolana",                cat:"Pizza",     price:3090, tags:["veg"]},
+  {id:"pizzaiolo",  n:"Pizza del Pizzaiolo",     cat:"Pizza",     price:4990, tags:["veg"],         role:"anchor", lto:true},
+  {id:"tartufata",  n:"Tartufata Reale",         cat:"Pizza",     price:7990, tags:[],              role:"anchor", lto:true},
+  {id:"personale",  n:'Margherita Personale 8"', cat:"Pizza",     price:1890, tags:["veg"]},
+  {id:"slice",      n:"Slice (Margherita)",      cat:"Pizza",     price:1190, tags:["veg"]},
+  {id:"carbonara",  n:"Spaghetti Carbonara",     cat:"Pasta",     price:2895, tags:[]},
+  {id:"arrabbiata", n:"Penne Arrabbiata",        cat:"Pasta",     price:2390, tags:["vegan","spicy"]},
+  {id:"pesto",      n:"Linguine al Pesto",       cat:"Pasta",     price:2695, tags:["veg"],         role:"profit"},
+  {id:"bolognese",  n:"Tagliatelle Bolognese",   cat:"Pasta",     price:2995, tags:[]},
+  {id:"bruschetta", n:"Bruschetta Classica",     cat:"Antipasti", price:1590, tags:["vegan"]},
+  {id:"garlic",     n:"Garlic Bread",            cat:"Antipasti", price:990,  tags:["veg"],         role:"profit"},
+  {id:"burrata",    n:"Burrata con Pomodorini",  cat:"Antipasti", price:2195, tags:["veg","gf"]},
+  {id:"arancini",   n:"Arancini (3 pcs)",        cat:"Antipasti", price:1790, tags:[]},
+  {id:"caprese",    n:"Panino Caprese",          cat:"Panini",    price:1990, tags:["veg"]},
+  {id:"milano",     n:"Panino Milano",           cat:"Panini",    price:2290, tags:[]},
+  {id:"espresso",   n:"Espresso",                cat:"Drinks",    price:990,  tags:["vegan","gf"],  role:"profit"},
+  {id:"limonata",   n:"Limonata Fresca",         cat:"Drinks",    price:1190, tags:["vegan","gf"]},
+  {id:"aranciata",  n:"Aranciata S.Pellegrino",  cat:"Drinks",    price:990,  tags:["vegan","gf"]},
+  {id:"water",      n:"Acqua Minerale",          cat:"Drinks",    price:590,  tags:["vegan","gf"]},
+  {id:"limonata1l", n:"Limonata 1L",             cat:"Drinks",    price:1990, tags:["vegan","gf"]},
+  {id:"tiramisu",   n:"Tiramisù",                cat:"Desserts",  price:1800, tags:["veg"]},
+  {id:"cannoli",    n:"Cannoli Siciliani (2)",   cat:"Desserts",  price:1600, tags:["veg"]},
+  {id:"pannacotta", n:"Panna Cotta",             cat:"Desserts",  price:1500, tags:["veg","gf"],    role:"profit"},
+];
+const COMBOS = [
+  {id:"lunch",  n:"Lunch Combo",    desc:"Any pizza + any drink",       off:300, items:["margherita","limonata"]},
+  {id:"trio",   n:"Pizzaiolo Trio", desc:"Pizza + espresso + tiramisù", off:400, items:["pizzaiolo","espresso","tiramisu"]},
+  {id:"family", n:"Family Pack",    desc:"2 pizzas + Limonata 1L",      off:800, items:["margherita","diavola","limonata1l"]},
+];
+
+const byId = id => MENU.find(m=>m.id===id);
+
+/* ====================== Pace → POS steering (ON by default) ======================
+   Live, client-side demo of src/lib/pace-steering.ts. Steering is ON by default; the
+   header "Steer" chip toggles it off/on live, and ?steer=0 starts the page with it off. */
+let STEER = (()=>{ try{ return new URLSearchParams(location.search).get("steer")!=="0"; }catch(_){ return true; } })();
+// The Steer chip is always visible so the operator can toggle steering off/on at the till.
+const STEER_CHIP_VISIBLE = true;
+
+// Real Kraków food costs (grosze) — lets the steering rank items by true margin.
+const COST = {margherita:820,quattro:1140,diavola:1010,prosciutto:1240,ortolana:880,pizzaiolo:1660,tartufata:2390,personale:540,slice:280,carbonara:850,arrabbiata:590,pesto:770,bolognese:1090,bruschetta:390,garlic:220,burrata:740,arancini:520,caprese:580,milano:740,espresso:140,limonata:240,aranciata:320,water:110,limonata1l:380,tiramisu:520,cannoli:470,pannacotta:360};
+// Per-station prep minutes (defines how fast each station clears).
+const PREP_CAT = {Pizza:5,Pasta:7,Antipasti:3,Panini:4,Drinks:1,Desserts:1};
+// Per-item prep overrides (the slow/fast pizzas — so the oven nuance is real).
+const PREP_ITEM = {slice:1,personale:4,pizzaiolo:8,tartufata:9};
+const prepMin = id => PREP_ITEM[id] ?? PREP_CAT[byId(id).cat] ?? 6;
+const marginG = id => byId(id).price - (COST[id] ?? Math.round(byId(id).price*0.3));
+
+const WINDOW_MIN = 15;
+
+/* Port of deriveSteeringPlan() over the LIVE LINE (all tabs whose status !== "parked").
+   Returns the same shape the real plan exposes. Pure — no I/O, no network. */
+function computeSteeringPlan(){
+  const live = tabs.filter(t=>t.status!=="parked");
+
+  // Per-category aggregates across the live line.
+  const cats = {};
+  CATS.forEach(c=>{ cats[c]={demand:0,load:0,prepSum:0,prepN:0}; });
+  live.forEach(t=>{
+    // "load" = units already committed to the line (ready-to-pay or already sent to KDS);
+    // the rest is forecast (still being rung up). demand = load + forecast.
+    const committed = (t.status==="pay" || t.sentKds);
+    t.items.forEach(l=>{
+      const c=byId(l.id).cat; const cell=cats[c];
+      cell.demand+=l.q;
+      if(committed) cell.load+=l.q;
+      cell.prepSum+=prepMin(l.id)*l.q; cell.prepN+=l.q;
+    });
+  });
+
+  // Per-station capacity, util, tier + honest promise.
+  const station={}; const promiseSecByCat={};
+  CATS.forEach(c=>{
+    const cell=cats[c];
+    const avgPrep = cell.prepN>0 ? cell.prepSum/cell.prepN : PREP_CAT[c];
+    const capacity = avgPrep>0 ? WINDOW_MIN/avgPrep : 0;
+    const util = capacity>0 ? cell.demand/capacity : (cell.demand>0?Infinity:0);
+    const tier = util>1.0 ? "risk" : util>=0.8 ? "warn" : "calm";
+    station[c]={demand:cell.demand,load:cell.load,capacity,util,tier};
+    promiseSecByCat[c] = capacity>0 ? Math.round(cell.demand*WINDOW_MIN*60/capacity) : 0;
+  });
+
+  // bottleneck = max-util category among those with demand > 0.
+  let bn=null;
+  CATS.forEach(c=>{
+    if(station[c].demand<=0) return;
+    if(!bn || station[c].util>station[bn].util) bn=c;
+  });
+
+  const base={active:false,promiseSecByCat,makeNow:[],throttle:[],deliveryCap:null,
+              bottleneck:bn?{cat:bn,util:station[bn].util,tier:station[bn].tier}:null,reason:null};
+  if(!bn || station[bn].tier==="calm") return base;
+
+  // make-now: items off the hot station, best margin first, top 6.
+  const makeNow = MENU.filter(m=>m.cat!==bn)
+    .sort((a,b)=>marginG(b.id)-marginG(a.id))
+    .slice(0,6).map(m=>m.id);
+  // throttle: items ON the hot station, worst margin-per-bottleneck-second first, top 3.
+  const mpbs = id => marginG(id)/(prepMin(id)*60);
+  const throttle = MENU.filter(m=>m.cat===bn)
+    .sort((a,b)=>mpbs(a.id)-mpbs(b.id))
+    .slice(0,3).map(m=>m.id);
+
+  const cap = station[bn].capacity;
+  const deliveryCap = Math.max(0, Math.floor(cap - station[bn].load));
+  const pct = Number.isFinite(station[bn].util) ? Math.round(station[bn].util*100) : 999;
+  const reason = `${bn} at ${pct}% — surfacing ${makeNow.length} make-now, easing ${throttle.length}, delivery cap ${deliveryCap}/${WINDOW_MIN} min`;
+
+  return {active:true,promiseSecByCat,makeNow,throttle,deliveryCap,
+          bottleneck:{cat:bn,util:station[bn].util,tier:station[bn].tier},reason};
+}
+let steerPlan=null; // recomputed inside render() when STEER is on
+const promiseLabel = sec => sec<=0 ? "~0 min" : sec<90 ? "~1 min" : "~"+Math.round(sec/60)+" min";
+
+/* ====================== Tab / order state ====================== */
+// Each tab owns its own items + combos + channel. status: open | parked | pay
+let tabSeq = 4;
+let tabs = [
+  // Open, not-yet-sent checks start with NO channel — the operator must pick one
+  // (no default). Only the already-pushed "ready to pay" check carries a channel,
+  // since it could not have been sent without one.
+  { id:"A4F9C2", name:"Marco",          chan:null,       status:"open", sentKds:false,
+    items:[{id:"margherita",q:2},{id:"diavola",q:1},{id:"espresso",q:1}], combos:[] },
+  { id:"W1B7K2", name:"Walk-up",        chan:"Takeout",  status:"pay",  sentKds:true,
+    items:[{id:"slice",q:2},{id:"limonata",q:1}], combos:["lunch"] },
+  { id:"D9P3Q7", name:"Giulia",         chan:null,       status:"open", sentKds:false,
+    items:[{id:"quattro",q:1},{id:"carbonara",q:1},{id:"tiramisu",q:1}], combos:["trio"] },
+  { id:"T6D2N8", name:"Anna",           chan:null,       status:"open", sentKds:false,
+    items:[{id:"margherita",q:1},{id:"pesto",q:1},{id:"limonata",q:2}], combos:[] },
+  { id:"T9F4M2", name:"Piotr",          chan:null,       status:"open", sentKds:false,
+    items:[{id:"diavola",q:1},{id:"arancini",q:1},{id:"espresso",q:2}], combos:[] },
+];
+let activeTabId = "A4F9C2";
+let activeCat = "All";
+
+const CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function newTabId(){
+  let s="";for(let i=0;i<6;i++) s+=CHARS[Math.floor(Math.random()*CHARS.length)];return s;
+}
+function getActive(){ return tabs.find(t=>t.id===activeTabId)||null; }
+
+/* ====================== Totals (per tab) ====================== */
+function subtotalG(t){ return t.items.reduce((s,l)=>s+byId(l.id).price*l.q,0); }
+function discountG(t){ return t.combos.reduce((s,id)=>s+(COMBOS.find(c=>c.id===id)?.off||0),0); }
+function grandG(t){ return Math.max(0, subtotalG(t)-discountG(t)); }
+function itemCount(t){ return t.items.reduce((s,l)=>s+l.q,0); }
+
+/* ====================== Cart ops on active tab ====================== */
+function addItem(id){
+  const t=getActive();if(!t) return;
+  const line=t.items.find(l=>l.id===id);
+  if(line) line.q++; else t.items.push({id,q:1});
+  if(t.status==="parked") t.status="open";
+  t.sentKds=false;
+  render();
+}
+function changeQty(id,delta){
+  const t=getActive();if(!t) return;
+  const line=t.items.find(l=>l.id===id);if(!line) return;
+  line.q+=delta;
+  if(line.q<=0) t.items=t.items.filter(l=>l.id!==id);
+  t.sentKds=false;
+  render();
+}
+function addCombo(c){
+  const t=getActive();if(!t) return;
+  c.items.forEach(id=>{
+    const line=t.items.find(l=>l.id===id);
+    if(line) line.q++; else t.items.push({id,q:1});
+  });
+  if(!t.combos.includes(c.id)) t.combos.push(c.id);
+  if(t.status==="parked") t.status="open";
+  t.sentKds=false;
+  render();
+}
+function removeCombo(id){
+  const t=getActive();if(!t) return;
+  t.combos=t.combos.filter(c=>c!==id);
+  render();
+}
+
+/* ====================== Tab ops ====================== */
+function newTab(){
+  tabSeq++;
+  // No default channel — the operator MUST pick Takeout/Delivery/Dine-in before
+  // the order can be sent to the KDS or charged. chan stays null until chosen.
+  const t={ id:newTabId(), name:"Tab "+tabSeq, chan:null, status:"open", sentKds:false,
+            table:undefined, covers:undefined, items:[], combos:[] };
+  tabs.push(t);
+  activeTabId=t.id;
+  render();
+}
+function togglePark(){
+  const t=getActive();if(!t) return;
+  t.status = t.status==="parked" ? "open" : "parked";
+  render();
+}
+function sendKds(){
+  const t=getActive();if(!t || t.items.length===0) return;
+  if(!t.chan){ toast("⚠ Pick a channel first"); render(); return; }
+  t.sentKds=true;
+  if(t.status==="open") t.status="pay";
+  toast("Sent to KDS — #"+t.id);
+  render();
+}
+function setActive(id){ activeTabId=id; render(); }
+
+/* ====================== Format ====================== */
+function pad(n){return String(n).padStart(2,"0");}
+function fmtClock(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+
+const STATUS_LABEL={open:"Open",parked:"Parked",pay:"Ready · Pay"};
+
+const CHAN_ICON={
+  Takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
+  Delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  "Dine-in":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>',
+};
+
+/* ====================== Render: tab rail ====================== */
+function renderTabs(){
+  const wrap=document.getElementById("tabs");
+  let html="";
+  tabs.forEach(t=>{
+    const cnt=itemCount(t);
+    html+=`<button class="tab ${t.status}${t.id===activeTabId?" active":""}" data-tab="${t.id}" type="button">
+      <span class="tab-status">${STATUS_LABEL[t.status]}</span>
+      <div class="tab-top">
+        <span class="tab-dot"></span>
+        <span class="tab-name">${t.name}</span>
+        ${t.chan==="Dine-in"&&t.table!=null?`<span class="tab-table${tabsOnTable(t.table,t.id).length?" conflict":""}">T${t.table}${t.covers?" · "+t.covers:""}${tabsOnTable(t.table,t.id).length?" ⚠":""}</span>`:""}
+        <span class="tab-chan">${t.chan?CHAN_ICON[t.chan]:""}</span>
+      </div>
+      <span class="tab-id tnum">#${t.id}</span>
+      <div class="tab-foot">
+        <span class="tab-items tnum">${cnt} item${cnt!==1?"s":""}</span>
+        <span class="tab-total tnum">${fmtPLN(grandG(t))}</span>
+      </div>
+    </button>`;
+  });
+  html+=`<button class="tab-new" id="newTabBtn" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    New tab
+  </button>`;
+  wrap.innerHTML=html;
+  wrap.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>setActive(b.dataset.tab));
+  document.getElementById("newTabBtn").onclick=newTab;
+
+  // rail summary
+  const open=tabs.filter(t=>t.status!=="parked").length;
+  const parked=tabs.filter(t=>t.status==="parked").length;
+  const pay=tabs.filter(t=>t.status==="pay").length;
+  const openTotal=tabs.reduce((s,t)=>s+grandG(t),0);
+  document.getElementById("railSummary").innerHTML=
+    `<b>${tabs.length}</b> tabs<span class="pipe">·</span><b>${pay}</b> ready to pay<span class="pipe">·</span><b>${parked}</b> parked<span class="pipe">·</span>open value <b>${fmtPLN(openTotal)}</b>`;
+}
+
+/* ====================== Render: products ====================== */
+function renderCats(){
+  const wrap=document.getElementById("cats");
+  // combos live in the strip; this is just category chips ("All" first, then each category)
+  wrap.innerHTML="";
+  const mk=(key,label,emoji)=>{
+    const b=document.createElement("button");
+    b.className="chip";b.type="button";
+    b.setAttribute("aria-pressed",String(key===activeCat));
+    let prom="";
+    if(key!=="All" && STEER && steerPlan){
+      const sec=steerPlan.promiseSecByCat[key]||0;
+      if(sec>0) prom=`<span class="cprom">· ${promiseLabel(sec)}</span>`;
+    }
+    b.innerHTML=`<span class="cemoji">${emoji}</span><span>${label}</span>${prom}`;
+    b.onclick=()=>{activeCat=key;renderCats();renderGrid();};
+    wrap.appendChild(b);
+  };
+  mk("All","All","🗂️");
+  CATS.forEach(cat=>mk(cat,cat,CAT_EMOJI[cat]));
+}
+function tagHtml(tags){ return tags.map(t=>`<span class="tag ${t}">${t}</span>`).join(""); }
+function roleHtml(m){
+  if(!m.role) return "";
+  const lbl={hero:"Hero",profit:"Profit",anchor:"Anchor"}[m.role];
+  return `<span class="role-badge role-${m.role}">${lbl}${m.lto?'<span class="lto-dot"></span>':""}</span>`;
+}
+function gridCardHtml(m,isBottleCat){
+  const p = STEER ? steerPlan : null;
+  let cls="card", overlay="";
+  if(p && p.active){
+    if(isBottleCat && p.throttle.includes(m.id)){
+      cls+=" eased";
+      overlay=`<span class="easetag">▼ ease</span>`;
+    } else if(!isBottleCat && p.makeNow.includes(m.id)){
+      overlay=`<span class="makenow">★ Make now</span>`;
+    }
+  }
+  return `
+    <button class="${cls}" data-add="${m.id}" type="button">
+      <span class="flash"></span>
+      ${overlay}
+      <div class="card-top"><span class="card-emoji">${CAT_EMOJI[m.cat]}</span>${roleHtml(m)}</div>
+      <span class="card-name">${m.n}</span>
+      ${m.tags.length?`<div class="card-tags">${tagHtml(m.tags)}</div>`:""}
+      <span class="card-price tnum">${fmtPLN(m.price)}</span>
+    </button>`;
+}
+function renderGrid(){
+  const grid=document.getElementById("grid");
+  if(!grid) return;
+  const p = STEER ? steerPlan : null;
+  if(activeCat==="All"){
+    // Grouped view: a labelled section per category, each with its own product grid.
+    grid.classList.add("grouped");
+    grid.innerHTML=CATS.map(cat=>{
+      const items=MENU.filter(m=>m.cat===cat);
+      if(!items.length) return "";
+      const isBottleCat = !!(p && p.active && p.bottleneck.cat===cat);
+      return `<section class="grid-group">
+        <h3 class="grid-group-head"><span class="cemoji">${CAT_EMOJI[cat]}</span>${cat}<span class="ggh-n tnum">${items.length}</span></h3>
+        <div class="grid-sub">${items.map(m=>gridCardHtml(m,isBottleCat)).join("")}</div>
+      </section>`;
+    }).join("");
+  } else {
+    grid.classList.remove("grouped");
+    const items=MENU.filter(m=>m.cat===activeCat);
+    const isBottleCat = !!(p && p.active && p.bottleneck.cat===activeCat);
+    grid.innerHTML=items.map(m=>gridCardHtml(m,isBottleCat)).join("");
+  }
+  grid.querySelectorAll("[data-add]").forEach(b=>{
+    b.onclick=()=>{ addItem(b.dataset.add); flash(b); };
+  });
+}
+function renderComboStrip(){
+  const strip=document.getElementById("comboStrip");
+  if(!strip) return;
+  let html=`<span class="cs-lbl">Combos</span>`;
+  COMBOS.forEach(c=>{
+    html+=`<button class="combo-pill" data-combo="${c.id}" type="button">
+      <span>${c.n}</span><span class="cp-off tnum">−${fmtPLN(c.off)}</span>
+    </button>`;
+  });
+  strip.innerHTML=html;
+  strip.querySelectorAll("[data-combo]").forEach(b=>{
+    b.onclick=()=>addCombo(COMBOS.find(c=>c.id===b.dataset.combo));
+  });
+}
+function flash(el){ el.classList.remove("added"); void el.offsetWidth; el.classList.add("added"); }
+
+/* ====================== Render: active ticket ====================== */
+function renderTicket(){
+  const t=getActive();
+  const lines=document.getElementById("lines");
+  if(!lines) return;
+
+  if(!t || t.items.length===0){
+    lines.innerHTML=`<div class="empty-ticket">
+      <span class="e-emoji">🧾</span>
+      <span class="e-text">${t?("Tab "+t.name+" is empty"):"No tab selected"}</span>
+      <span class="e-sub">Tap a product or combo to add it to this check.</span>
+    </div>`;
+  } else {
+    let html="";
+    t.items.forEach(l=>{
+      const m=byId(l.id);
+      html+=`<div class="line" data-id="${m.id}">
+        <div class="line-body">
+          <div class="line-name">${m.n}</div>
+          <div class="line-each tnum">${fmtPLN(m.price)} each</div>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" data-dec="${m.id}" type="button" aria-label="Decrease">−</button>
+          <span class="step-q tnum">${l.q}</span>
+          <button class="step-btn" data-inc="${m.id}" type="button" aria-label="Increase">+</button>
+        </div>
+        <span class="line-total tnum">${fmtPLN(m.price*l.q)}</span>
+      </div>`;
+    });
+    t.combos.forEach(id=>{
+      const c=COMBOS.find(x=>x.id===id);
+      html+=`<div class="combo-applied">
+        <span class="ca-name">✓ ${c.n}</span>
+        <span class="ca-off tnum">−${fmtPLN(c.off)}</span>
+        <button class="ca-x" data-rmcombo="${c.id}" type="button" aria-label="Remove combo">×</button>
+      </div>`;
+    });
+    lines.innerHTML=html;
+    lines.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>changeQty(b.dataset.inc,1));
+    lines.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>changeQty(b.dataset.dec,-1));
+    lines.querySelectorAll("[data-rmcombo]").forEach(b=>b.onclick=()=>removeCombo(b.dataset.rmcombo));
+  }
+
+  // header
+  const dot=document.getElementById("thDot");
+  const sub=t?subtotalG(t):0, disc=t?discountG(t):0, grand=t?grandG(t):0;
+  if(dot){
+    dot.className="th-dot "+(t?t.status:"");
+    document.getElementById("thName").textContent=t?t.name:"—";
+    document.getElementById("thId").textContent=t?("#"+t.id):"";
+    document.getElementById("thChanLbl").textContent=(t&&t.chan)?t.chan:"No channel";
+    document.getElementById("thChanIcon").innerHTML=(t&&t.chan)?CHAN_ICON[t.chan]:"";
+    document.getElementById("thStatus").textContent=t?STATUS_LABEL[t.status]:"";
+  }
+
+  // table chip + covers — dine-in only
+  const tableBtn=document.getElementById("tableBtn");
+  const coversCtl=document.getElementById("coversCtl");
+  if(tableBtn && coversCtl){
+    if(t && t.chan==="Dine-in"){
+      tableBtn.style.display="inline-flex";
+      const clash = t.table!=null && tabsOnTable(t.table,t.id).length>0;
+      tableBtn.classList.toggle("assigned", t.table!=null && !clash);
+      tableBtn.classList.toggle("conflict", !!clash);
+      document.getElementById("tableLbl").textContent =
+        t.table!=null ? ("Table "+t.table+(clash?" ⚠":"")) : "Assign table";
+      coversCtl.style.display="inline-flex";
+      document.getElementById("coversN").textContent = (t.covers||2);
+    } else {
+      tableBtn.style.display="none";
+      coversCtl.style.display="none";
+    }
+  }
+
+  // per-tab promise (only when STEER on): max station promise across this tab's categories
+  const promEl=document.getElementById("thPromise");
+  if(promEl){
+    if(STEER && steerPlan && t && t.items.length){
+      const catsOnTab=[...new Set(t.items.map(l=>byId(l.id).cat))];
+      let maxSec=0, maxCat=null;
+      catsOnTab.forEach(c=>{ const s=steerPlan.promiseSecByCat[c]||0; if(s>maxSec){maxSec=s;maxCat=c;} });
+      const tier = (steerPlan.active && steerPlan.bottleneck.cat===maxCat) ? steerPlan.bottleneck.tier : "calm";
+      promEl.className="th-promise"+(tier!=="calm"?" tier-"+tier:"");
+      promEl.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>ready ${promiseLabel(maxSec)}`;
+      promEl.style.display="inline-flex";
+    } else {
+      promEl.style.display="none";
+    }
+  }
+
+  // totals
+  document.getElementById("subtotal").textContent=fmtPLN(sub);
+  const dRow=document.getElementById("discountRow");
+  if(disc>0){
+    dRow.style.display="flex";
+    document.getElementById("discount").textContent="−"+fmtPLN(disc);
+    const names=t.combos.map(id=>COMBOS.find(c=>c.id===id).n).join(" · ");
+    document.getElementById("discountLbl").textContent="Combo discount · "+names;
+  } else { dRow.style.display="none"; }
+  document.getElementById("grand").textContent=fmtPLN(grand);
+
+  // charge button
+  const charge=document.getElementById("chargeBtn");
+  charge.disabled=!t||t.items.length===0||!t.chan;
+  document.getElementById("chargeLbl").textContent=
+    (t && t.items.length>0 && !t.chan) ? "Select a channel" : "Charge "+fmtPLN(grand);
+
+  // park + kds button states
+  const parkBtn=document.getElementById("parkBtn");
+  parkBtn.classList.toggle("is-parked", !!t && t.status==="parked");
+  document.getElementById("parkLbl").textContent=(t&&t.status==="parked")?"Resume":"Park";
+  const kdsBtn=document.getElementById("kdsBtn");
+  kdsBtn.classList.toggle("sent", !!t && t.sentKds);
+  document.getElementById("kdsLbl").textContent=(t&&t.sentKds)?"Sent ✓":"Send to KDS";
+}
+
+/* ====================== Render: in-column channel selector ======================
+   Big, always-visible channel switch living in the order column (not just the
+   header). Reflects + sets the ACTIVE tab's channel; keeps the header seg in sync. */
+function renderTicketChannel(){
+  const g=document.getElementById("thChannel");
+  if(!g) return;
+  const t=getActive();
+  g.innerHTML="";
+  CHANS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="th-chan-btn";b.type="button";
+    b.innerHTML=CHAN_ICON[c]+`<span>${c}</span>`;
+    b.setAttribute("aria-pressed",String(!!t && t.chan===c));
+    b.onclick=()=>setChannel(c);
+    g.appendChild(b);
+  });
+  // Required cue: until a channel is chosen, flag the selector + show the hint.
+  const needsChannel = !!t && !t.chan;
+  g.classList.toggle("req", needsChannel);
+  const hint=document.getElementById("thChanReq");
+  if(hint) hint.style.display = needsChannel ? "flex" : "none";
+}
+
+/* ====================== Build editor shell once ====================== */
+function buildEditorShell(){
+  const ed=document.getElementById("editor");
+  ed.innerHTML=`
+    <div class="products">
+      <div class="combo-strip" id="comboStrip"></div>
+      <div class="cats" id="cats" role="group" aria-label="Category filter"></div>
+      <div class="steer-strip" id="steerStrip" style="display:none"></div>
+      <div class="grid-scroll"><div class="grid" id="grid"></div></div>
+    </div>
+    <div class="ticket">
+      <div class="ticket-head">
+        <div class="th-row1">
+          <span class="th-dot" id="thDot"></span>
+          <span class="th-name" id="thName">—</span>
+          <span class="th-id tnum" id="thId"></span>
+          <span class="th-chan"><span id="thChanIcon"></span><span id="thChanLbl"></span> · <span id="thStatus"></span></span>
+          <span class="th-promise" id="thPromise" style="display:none"></span>
+        </div>
+        <div class="th-channel" id="thChannel" role="group" aria-label="Channel"></div>
+        <span class="th-chan-req" id="thChanReq" style="display:none"><i></i>Choose a channel to send or charge this order</span>
+        <div class="th-actions">
+          <button class="mini-btn tablebtn" id="tableBtn" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>
+            <span id="tableLbl">Assign table</span>
+          </button>
+          <div class="covers" id="coversCtl" style="display:none">
+            <span class="cov-ic" title="Covers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <button class="cov-btn" id="covDec" type="button" aria-label="Fewer covers">−</button>
+            <span class="cov-n tnum" id="coversN">2</span>
+            <button class="cov-btn" id="covInc" type="button" aria-label="More covers">+</button>
+          </div>
+          <button class="mini-btn park" id="parkBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16V9h3.5a2.5 2.5 0 0 1 0 5H9"/></svg>
+            <span id="parkLbl">Park</span>
+          </button>
+          <button class="mini-btn kds" id="kdsBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+            <span id="kdsLbl">Send to KDS</span>
+          </button>
+        </div>
+      </div>
+      <div class="ticket-inner">
+        <div class="lines" id="lines"></div>
+        <div class="totals">
+          <div class="trow"><span>Subtotal</span><span class="tv tnum" id="subtotal">0,00 zł</span></div>
+          <div class="trow discount" id="discountRow" style="display:none"><span id="discountLbl">Combo discount</span><span class="tv tnum" id="discount">−0,00 zł</span></div>
+          <div class="trow grand"><span>Total</span><span class="tv tnum" id="grand">0,00 zł</span></div>
+        </div>
+        <div class="charge-area">
+          <button class="btn" id="chargeBtn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <span id="chargeLbl">Charge 0,00 zł</span>
+          </button>
+        </div>
+
+        <div class="overlay" id="tender">
+          <div class="tender-sheet">
+            <div class="tender-head">
+              <span class="te-title">Take payment</span>
+              <span class="te-amt tnum" id="tenderAmt">0,00 zł</span>
+            </div>
+            <div class="tender-opts">
+              <button class="tender-opt" data-method="Cash" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>
+                Cash
+              </button>
+              <button class="tender-opt" data-method="Card" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                Card
+              </button>
+            </div>
+            <button class="tender-cancel" id="tenderCancel" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <div class="overlay center" id="tablePicker">
+          <div class="table-sheet">
+            <div class="ts-head"><span class="ts-title">Assign table</span><span class="th-id tnum" id="tablePickerTab"></span></div>
+            <div class="table-hint" id="tableHint" style="display:none"><i></i>Amber = in use by another open check</div>
+            <div class="table-grid" id="tableGrid"></div>
+            <div class="table-foot">
+              <button class="ta-btn" id="tableClear" type="button">Clear</button>
+              <button class="ta-btn" id="tableCancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>`;
+
+  // wire static controls
+  document.getElementById("parkBtn").onclick=togglePark;
+  document.getElementById("kdsBtn").onclick=sendKds;
+  document.getElementById("chargeBtn").onclick=openTender;
+  document.getElementById("tenderCancel").onclick=closeTender;
+  document.querySelectorAll(".tender-opt").forEach(b=>b.onclick=()=>pay(b.dataset.method));
+
+  // table picker (dine-in)
+  const tg=document.getElementById("tableGrid");
+  let tgh=""; for(let i=1;i<=TABLE_COUNT;i++) tgh+=`<button class="table-cell" data-table="${i}" type="button">${i}</button>`;
+  tg.innerHTML=tgh;
+  tg.querySelectorAll(".table-cell").forEach(b=>b.onclick=()=>assignTable(Number(b.dataset.table)));
+  document.getElementById("tableBtn").onclick=openTablePicker;
+  document.getElementById("tableClear").onclick=()=>assignTable(null);
+  document.getElementById("tableCancel").onclick=closeTablePicker;
+  document.getElementById("covDec").onclick=()=>changeCovers(-1);
+  document.getElementById("covInc").onclick=()=>changeCovers(1);
+}
+
+function renderEmptyEditor(){
+  const ed=document.getElementById("editor");
+  ed.innerHTML=`<div class="empty-editor">
+    <span class="ee-emoji">🍕</span>
+    <span class="ee-text">No open checks — the window is clear.</span>
+    <button class="ee-btn" id="emptyNewBtn" type="button">+ Start a new tab</button>
+  </div>`;
+  document.getElementById("emptyNewBtn").onclick=newTab;
+}
+
+/* ====================== Table assignment (dine-in) ====================== */
+const TABLE_COUNT=12;
+// Other ACTIVE (non-parked) dine-in checks sitting on table `n` — a parked tab frees its table.
+function tabsOnTable(n,exceptId){
+  if(n==null) return [];
+  return tabs.filter(t=>t.id!==exceptId && t.chan==="Dine-in" && t.status!=="parked" && t.table===n);
+}
+function openTablePicker(){
+  const t=getActive(); if(!t || t.chan!=="Dine-in") return;
+  document.getElementById("tablePickerTab").textContent="#"+t.id;
+  let anyTaken=false;
+  document.querySelectorAll("#tableGrid .table-cell").forEach(c=>{
+    const n=Number(c.dataset.table);
+    c.classList.toggle("sel", n===t.table);
+    const taken=tabsOnTable(n,t.id).length>0;
+    c.classList.toggle("taken", taken);
+    if(taken) anyTaken=true;
+  });
+  document.getElementById("tableHint").style.display = anyTaken ? "flex" : "none";
+  document.getElementById("tablePicker").classList.add("open");
+}
+function closeTablePicker(){ const e=document.getElementById("tablePicker"); if(e) e.classList.remove("open"); }
+function assignTable(n){
+  const t=getActive(); if(!t) return;
+  t.table = (n==null ? null : n);
+  closeTablePicker();
+  if(n!=null){
+    const clash=tabsOnTable(n,t.id);
+    toast(clash.length ? ("⚠ Table "+n+" also on "+clash.map(x=>"#"+x.id).join(", ")) : ("Table "+n+" → #"+t.id));
+  }
+  render();
+}
+function changeCovers(delta){
+  const t=getActive(); if(!t || t.chan!=="Dine-in") return;
+  t.covers = Math.max(1, (t.covers||2) + delta);
+  render();
+}
+
+/* ====================== Charge / tender / pay ====================== */
+function openTender(){
+  const t=getActive();if(!t||t.items.length===0) return;
+  if(!t.chan){ toast("⚠ Pick a channel first"); return; }
+  document.getElementById("tenderAmt").textContent=fmtPLN(grandG(t));
+  document.getElementById("tender").classList.add("open");
+}
+function closeTender(){ const e=document.getElementById("tender"); if(e) e.classList.remove("open"); }
+function pay(method){
+  const t=getActive();if(!t) return;
+  const paidId=t.id, amt=grandG(t);
+  closeTender();
+  // remove the paid tab, switch to another
+  tabs=tabs.filter(x=>x.id!==t.id);
+  activeTabId = tabs.length ? tabs[0].id : null;
+  toast("Paid ✓ #"+paidId+" · "+method+" · "+fmtPLN(amt));
+  render();
+}
+
+/* ====================== Toast ====================== */
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById("toast");
+  if(!el) return;
+  el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${msg}`;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* ====================== Master render ====================== */
+let shellBuilt=false;
+function render(){
+  renderTabs();
+  if(tabs.length===0){
+    shellBuilt=false;
+    renderEmptyEditor();
+    return;
+  }
+  if(!shellBuilt){
+    buildEditorShell();
+    shellBuilt=true;
+  }
+  if(STEER) steerPlan=computeSteeringPlan(); else steerPlan=null;
+  renderComboStrip();
+  renderSteerStrip();
+  renderCats();
+  renderGrid();
+  renderTicket();
+  buildChanSwitcher();
+  renderTicketChannel();
+  renderChanSteer();
+}
+
+/* ====================== Render: steering strip (only when STEER on) ====================== */
+function renderSteerStrip(){
+  const strip=document.getElementById("steerStrip");
+  if(!strip) return;
+  if(!STEER){ strip.style.display="none"; strip.innerHTML=""; return; }
+  strip.style.display="flex";
+  const p=steerPlan;
+  if(p && p.active){
+    const tier=p.bottleneck.tier;
+    const pct=Number.isFinite(p.bottleneck.util)?Math.round(p.bottleneck.util*100):999;
+    strip.className="steer-strip tier-"+tier;
+    const capZero = p.deliveryCap===0;
+    strip.innerHTML=
+      `<span class="ss-badge"><span class="ss-dot"></span>${CAT_EMOJI[p.bottleneck.cat]} ${p.bottleneck.cat} <span class="ss-util">${pct}%</span></span>`+
+      `<span class="ss-reason">${p.reason}</span>`+
+      `<span class="ss-cap${capZero?" zero":""}">cap ${p.deliveryCap}/${WINDOW_MIN}m</span>`;
+  } else {
+    strip.className="steer-strip";
+    strip.innerHTML=
+      `<span class="ss-badge"><span class="ss-dot" style="animation:none"></span>✓ Line clear</span>`+
+      `<span class="ss-reason">All stations within capacity — normal menu, honest promise times live.</span>`;
+  }
+}
+
+/* ====================== Render: channel steering note (only when STEER on) ====================== */
+function renderChanSteer(){
+  const g=document.getElementById("chanGroup");
+  if(!g) return;
+  let note=document.getElementById("chanPaused");
+  const t=getActive();
+  const paused = STEER && steerPlan && steerPlan.active && t && t.chan==="Delivery" && steerPlan.deliveryCap===0;
+  if(paused){
+    if(!note){
+      note=document.createElement("span");
+      note.id="chanPaused";note.className="chan-paused";
+      note.innerHTML=`<span class="cp-dot"></span>Delivery intake paused`;
+      g.parentNode.insertBefore(note,g.nextSibling);
+    }
+  } else if(note){ note.remove(); }
+}
+
+/* ====================== Location / channel switchers ====================== */
+const LOCS=["Kraków","Warszawa"];
+const CHANS=["Takeout","Delivery","Dine-in"];
+function buildLocSwitcher(){
+  const g=document.getElementById("locGroup");g.innerHTML="";
+  LOCS.forEach(l=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=l;
+    b.setAttribute("aria-pressed",String(l===LOC));
+    b.onclick=()=>{LOC=l;buildLocSwitcher();};
+    g.appendChild(b);
+  });
+}
+// Single source of truth for the active tab's channel — both the header seg and
+// the big in-column selector call this. No global default; a tab has no channel
+// until one is chosen here.
+function setChannel(c){
+  const t=getActive(); if(!t) return;
+  t.chan=c;
+  if(c==="Dine-in" && t.covers==null) t.covers=2;
+  render();
+}
+function buildChanSwitcher(){
+  const g=document.getElementById("chanGroup");if(!g) return;
+  g.innerHTML="";
+  const t=getActive();
+  CHANS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";
+    b.innerHTML=CHAN_ICON[c]+`<span>${c}</span>`;
+    b.setAttribute("aria-pressed",String(!!t && t.chan===c));
+    b.onclick=()=>setChannel(c);
+    g.appendChild(b);
+  });
+}
+
+/* ====================== Fullscreen ====================== */
+const fsbtn=document.getElementById("fsbtn");
+function syncFs(){
+  const on=!!document.fullscreenElement;
+  document.documentElement.classList.toggle("is-fullscreen",on);
+  fsbtn.setAttribute("aria-pressed",String(on));
+}
+function fallbackToggle(){
+  const on=!document.documentElement.classList.contains("is-fullscreen");
+  document.documentElement.classList.toggle("is-fullscreen",on);
+  fsbtn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  if(document.fullscreenElement){
+    if(document.exitFullscreen) document.exitFullscreen().catch(fallbackToggle); else fallbackToggle();
+  } else {
+    const req=document.documentElement.requestFullscreen;
+    if(req) req.call(document.documentElement).catch(fallbackToggle); else fallbackToggle();
+  }
+}
+fsbtn.addEventListener("click",toggleFs);
+document.addEventListener("fullscreenchange",syncFs);
+
+/* ====================== Keyboard ====================== */
+document.addEventListener("keydown",(e)=>{
+  if(e.key.toLowerCase()==="n"){ newTab(); return; }
+  if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
+  if(e.key==="Escape"){ closeTender(); closeTablePicker(); return; }
+  if(/^[1-9]$/.test(e.key)){
+    const idx=parseInt(e.key,10)-1;
+    if(tabs[idx]) setActive(tabs[idx].id);
+  }
+});
+
+/* ====================== Steering toggle chip ====================== */
+const steerChip=document.getElementById("steerChip");
+function syncSteerChip(){
+  // Chip is hidden entirely unless steering was engaged via ?steer=1 — keeps the
+  // default (no-flag) header byte-for-byte unchanged. Pressed state mirrors STEER.
+  steerChip.style.display = STEER_CHIP_VISIBLE ? "inline-flex" : "none";
+  steerChip.setAttribute("aria-pressed",String(STEER));
+}
+steerChip.addEventListener("click",()=>{
+  STEER=!STEER;
+  syncSteerChip();
+  render();
+});
+
+/* ====================== Clock ====================== */
+function tick(){ document.getElementById("clock").textContent=fmtClock(new Date()); }
+
+/* ====================== Boot ====================== */
+buildLocSwitcher();
+buildChanSwitcher();
+syncFs();
+syncSteerChip();
+render();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

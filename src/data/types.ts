@@ -491,6 +491,9 @@ export interface Order {
    *  fulfillmentType === "dine-in"; the slot doubles as the table booking
    *  time and the cart is the pre-chosen food. */
   partySize?: number;
+  /** Assigned floor table (FloorTable.id) for dine-in orders, set from the
+   *  POS or the Floor page. Pairs with partySize (covers). */
+  tableId?: string;
   specialInstructions?: string;
   slotId: string;
   slotDate: string;
@@ -533,6 +536,47 @@ export interface Order {
    *  reports or CRM, and never trigger stock decrement, customer rollups, or
    *  customer comms. Purged when the simulation toggle is turned off. */
   simulated?: boolean;
+}
+
+// --- Floor: physical tables + reservations (per location) ---
+
+export type TableStatus = "available" | "seated" | "reserved" | "out-of-service";
+
+/** A physical table on a location's floor. `number` is the operator-facing
+ *  label (free-form so it can be "12", "Bar 3", "Patio A"). */
+export interface FloorTable {
+  id: string;
+  locationSlug: string;
+  number: string;
+  seats: number;
+  zone?: string;
+  status: TableStatus;
+  createdAt: string;
+}
+
+export type ReservationStatus =
+  | "booked"
+  | "seated"
+  | "completed"
+  | "cancelled"
+  | "no-show";
+
+/** A dine-in booking. Held against a table for a time window
+ *  (`time` + `durationMin`); two active bookings on the same table whose
+ *  windows overlap are a conflict (see reservationsOverlap). */
+export interface Reservation {
+  id: string;
+  locationSlug: string;
+  customerName: string;
+  customerPhone?: string;
+  partySize: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  durationMin: number;
+  tableId?: string;
+  status: ReservationStatus;
+  notes?: string;
+  createdAt: string;
 }
 
 // --- Inventory (per-location stock for an ingredient) ---

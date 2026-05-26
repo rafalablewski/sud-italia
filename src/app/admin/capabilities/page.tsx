@@ -239,6 +239,15 @@ export default async function CapabilitiesPage() {
             "Predictions + the Pace layer compute from live orders without a DB, but promise-accuracy and the throughput sparkline need the kds_tickets history (Postgres) — they read PROMISE_TARGET (90%) and an empty sparkline until tickets have been fired and bumped. Per-ticket predictions assume one server per category (no per-station staffing model yet), so a heavily staffed station may clear faster than predicted.",
         },
         {
+          name: "Pace → POS demand steering (prototype)",
+          status: "live",
+          href: "/api/admin/pace/steering",
+          summary:
+            "src/lib/pace-steering.ts turns the SAME analyzeTruck() Pace signal that paints the KDS bottleneck gauge into an actionable plan for the point of sale — the actuator end of the kitchen control loop. From the live per-station demand-vs-capacity it derives: a capacity-true promise time per station (queue depth ÷ throughput, not a flat number); a make-now set (items off the bottleneck station, ≈ free to make, ranked by contribution margin); a soft-throttle set (the lowest margin-per-bottleneck-second items that DO load the constraint — eased, never hidden); and a delivery intake cap (units the bottleneck can still absorb this 15-min window, so an aggregator dump can't detonate a hot line). Pure + deterministic, engages once the bottleneck leaves 'calm', every plan carries a human 'reason'. Unit-tested against analyzeTruck in src/lib/pace-steering.test.ts (run: npx tsx --test src/lib/pace-steering.test.ts). Served by GET /api/admin/pace/steering (staff+, per-location, real orders only — sims never steer the sell side).",
+          caveats:
+            "Prototype. The decision module + API are wired to real data, but the only POS surface today is the design mockup — there is no /admin/pos page yet — so the live demo runs a client-side port of the same logic on /mockups/pos/06-tabs.html behind a ?steer=1 flag (off by default; the existing POS is untouched without it). The objective is margin-per-bottleneck-second (textbook Theory of Constraints) and is not yet demand-weighted, so it eases a high-volume low-margin hero (e.g. Margherita) before a premium slow item — correct for yield-per-constraint, but a production version should weight by sales velocity. Promise times assume one server per station (same limitation as the Pace engine).",
+        },
+        {
           name: "Allergen surfacing + admin edit",
           status: "live",
           href: "/admin/recipes",
@@ -798,6 +807,24 @@ export default async function CapabilitiesPage() {
       id: "operations",
       title: "Operations",
       items: [
+        {
+          name: "POS — counter order entry",
+          status: "live",
+          href: "/admin/pos",
+          summary:
+            "Staff-facing point of sale at /admin/pos. Category-filtered product grid + order ticket with qty steppers over each truck's real menu (getMenuWithOverrides — prices resolved server-side, never client-supplied). Channel switch (Takeout / Delivery / Dine-in; deliveryOnly SKUs hidden off-delivery). Dine-in orders carry covers (party size) + an assigned floor table from /admin/floor. 'Send to kitchen' POSTs /api/admin/pos/orders, which builds a real Order and calls createOrder — firing the KDS ticket, decrementing stock and landing in the Orders list, but with suppressNotifications (the guest is at the window) and a synthetic same-day 'walkin' slot (counter sales aren't pre-booked time slots). A live open-checks panel polls GET /api/admin/pos/orders. Staff+, per-location.",
+          caveats:
+            "No payment capture yet — 'Mark paid' only stamps paidAt; Stripe-terminal / cash-drawer is a later pass. Walk-ins without a phone create a blank-phone order (no SMS, but still hit the customer rollup). Item modifiers (crust, extra toppings) aren't selectable from the POS yet — base items only.",
+        },
+        {
+          name: "Floor — tables + reservations",
+          status: "live",
+          href: "/admin/floor",
+          summary:
+            "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
+          caveats:
+            "Tables + reservations persist via the JSON store (readJSON/writeJSON) like slots/suppliers — no dedicated Postgres table yet, fine at truck volumes. Reservations are independent of the time-Slots system (they don't reserve a checkout slot). No spatial floor-map / drag layout — tables are a list/grid.",
+        },
         {
           name: "Inventory + recipes + stock + distributor offerings",
           status: "live",
