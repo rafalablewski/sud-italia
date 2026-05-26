@@ -8061,11 +8061,13 @@ select.pub-input {
 
 /* ============================================================================
    KDS · Atlas fleet command (owner lens)
-   Dark "fleet command" surface ported from /mockups/kds/15-atlas.html. All
-   class + var names are ka-/--ka- scoped so nothing leaks into the rest of the
-   admin. Wired to live data in AdminKdsFleet.tsx + /api/admin/kds/fleet.
+   Dark "fleet command" surface ported from /mockups/kds/15-atlas.html. Class
+   names stay ka- scoped so nothing leaks into the rest of the admin; the
+   --ka-* palette is hoisted to :root as the single source of truth so the
+   floor board and the POS till (via the --pos-* aliases below) retheme with
+   it. Wired to live data in AdminKdsFleet.tsx + /api/admin/kds/fleet.
    ========================================================================== */
-.kds-atlas {
+:root {
   --ka-canvas: #0A0C10;
   --ka-panel: #11151B;
   --ka-raised: #1A2129;
@@ -8084,7 +8086,10 @@ select.pub-input {
   --ka-warn-soft: rgba(245, 166, 35, 0.13);
   --ka-late-soft: rgba(229, 72, 77, 0.14);
   --ka-ready-soft: rgba(61, 214, 140, 0.13);
+  --ka-firing-soft: rgba(59, 130, 246, 0.14);
+}
 
+.kds-atlas {
   display: flex;
   flex-direction: column;
   min-height: 70vh;
@@ -8399,23 +8404,25 @@ select.pub-input {
    ============================ */
 .pos-tabs {
   color-scheme: dark;
-  --pos-canvas: #0a0c10;
-  --pos-panel: #11151b;
-  --pos-raised: #1a2129;
-  --pos-hair: rgba(255, 255, 255, 0.08);
-  --pos-hair-strong: rgba(255, 255, 255, 0.14);
-  --pos-text: #e9edf2;
-  --pos-dim: #9098a3;
-  --pos-faint: #5c6571;
-  --pos-accent: #3dd68c;
-  --pos-firing: #3b82f6;
-  --pos-warn: #f5a623;
-  --pos-risk: #8b5cf6;
-  --pos-late: #e5484d;
-  --pos-accent-soft: rgba(61, 214, 140, 0.13);
-  --pos-firing-soft: rgba(59, 130, 246, 0.14);
-  --pos-warn-soft: rgba(245, 166, 35, 0.13);
-  --pos-late-soft: rgba(229, 72, 77, 0.14);
+  /* Aliased onto the shared KDS palette (:root --ka-*) so POS + KDS stay in
+     lockstep — POS's accent is the KDS "ready" green. */
+  --pos-canvas: var(--ka-canvas);
+  --pos-panel: var(--ka-panel);
+  --pos-raised: var(--ka-raised);
+  --pos-hair: var(--ka-hair);
+  --pos-hair-strong: var(--ka-hair-strong);
+  --pos-text: var(--ka-text);
+  --pos-dim: var(--ka-dim);
+  --pos-faint: var(--ka-faint);
+  --pos-accent: var(--ka-ready);
+  --pos-firing: var(--ka-firing);
+  --pos-warn: var(--ka-warn);
+  --pos-risk: var(--ka-risk);
+  --pos-late: var(--ka-late);
+  --pos-accent-soft: var(--ka-ready-soft);
+  --pos-firing-soft: var(--ka-firing-soft);
+  --pos-warn-soft: var(--ka-warn-soft);
+  --pos-late-soft: var(--ka-late-soft);
   --pos-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, monospace;
   background: var(--pos-canvas);
   color: var(--pos-text);
@@ -8442,8 +8449,8 @@ select.pub-input {
 /* ---- Header ---- */
 .pos-header {
   flex: 0 0 auto; display: flex; align-items: center; gap: 16px;
-  height: 56px; padding: 0 24px; background: var(--pos-panel);
-  border-bottom: 1px solid var(--pos-hair);
+  min-height: 56px; padding: 8px 20px; background: var(--pos-panel);
+  border-bottom: 1px solid var(--pos-hair); flex-wrap: wrap;
 }
 .pos-brand { display: flex; align-items: baseline; gap: 12px; min-width: max-content; }
 .pos-wordmark { font-weight: 700; font-size: 14px; letter-spacing: 0.22em; }
@@ -8452,7 +8459,6 @@ select.pub-input {
   border-left: 1px solid var(--pos-hair); padding-left: 12px;
 }
 .pos-ctl { display: flex; align-items: center; gap: 8px; }
-.pos-ctl-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pos-faint); }
 .pos-seg-group {
   display: flex; align-items: stretch; border: 1px solid var(--pos-hair);
   border-radius: 7px; overflow: hidden; background: var(--pos-canvas);
@@ -8466,7 +8472,7 @@ select.pub-input {
 .pos-seg:last-child { border-right: 0; }
 .pos-seg:hover:not(:disabled) { color: var(--pos-text); }
 .pos-seg:disabled { opacity: .5; cursor: not-allowed; }
-.pos-seg[aria-pressed="true"] { background: var(--pos-raised); color: var(--pos-accent); font-weight: 600; }
+.pos-seg[aria-pressed="true"] { background: var(--pos-raised); color: var(--pos-text); font-weight: 600; }
 .pos-seg svg { width: 13px; height: 13px; }
 .pos-spacer { margin-left: auto; }
 .pos-fsbtn, .pos-steer-chip {
@@ -8480,7 +8486,7 @@ select.pub-input {
 .pos-steer-chip .pos-sc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pos-faint); flex: 0 0 auto; }
 .pos-steer-chip[aria-pressed="true"] { color: var(--pos-accent); border-color: rgba(61, 214, 140, 0.4); background: var(--pos-accent-soft); }
 .pos-steer-chip[aria-pressed="true"] .pos-sc-dot { background: var(--pos-accent); box-shadow: 0 0 0 3px var(--pos-accent-soft); }
-.pos-clock { font-family: var(--pos-mono); font-size: 14px; letter-spacing: 0.04em; min-width: 78px; text-align: right; }
+.pos-clock { font-size: 14px; letter-spacing: 0.04em; min-width: 78px; text-align: right; }
 .pos-chan-paused {
   font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--pos-late); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
@@ -8781,6 +8787,6 @@ select.pub-input {
   .pos-grid-scroll, .pos-ticket-inner, .pos-lines { overflow: visible; flex: 0 0 auto; min-height: 0; }
   .pos-overlay { position: fixed; }
   .pos-header { flex-wrap: wrap; height: auto; gap: 8px; padding: 8px 12px; }
-  .pos-kd-label, .pos-clock, .pos-ctl-lbl { display: none; }
+  .pos-kd-label, .pos-clock { display: none; }
   .pos-footer { display: none; }
 }

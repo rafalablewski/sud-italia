@@ -751,7 +751,6 @@ export function AdminPos({
           <span className="pos-kd-label">Point of Sale · {locName}</span>
         </div>
         <div className="pos-ctl">
-          <span className="pos-ctl-lbl">Loc</span>
           <div className="pos-seg-group" role="group" aria-label="Location">
             {locOptions.map((o) => (
               <button
@@ -767,7 +766,6 @@ export function AdminPos({
           </div>
         </div>
         <div className="pos-ctl">
-          <span className="pos-ctl-lbl">Channel</span>
           <div className="pos-seg-group" role="group" aria-label="Channel">
             {CHANNELS.map((c) => (
               <button
