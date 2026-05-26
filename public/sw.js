@@ -22,7 +22,7 @@
  * caches are pruned on activate.
  */
 
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 
@@ -34,20 +34,6 @@ const STATIC_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
-
-/** Admin shell paths that should be served cache-first so a cold-start
- *  on a flaky network still paints the operator UI. The page-data
- *  itself (RSC payload) still hits the network when online. */
-const ADMIN_SHELL_PATHS = [
-  /^\/admin$/,
-  /^\/admin\/orders$/,
-  /^\/admin\/kds$/,
-  /^\/admin\/inventory$/,
-];
-
-function isAdminShell(url) {
-  return ADMIN_SHELL_PATHS.some((re) => re.test(url.pathname));
-}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -111,30 +97,31 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML / shell — cache-first.
+  // HTML / shell.
   if (req.destination === "document") {
-    // Admin shell: serve cached shell instantly when available; the page
-    // hydrates from network once data fetches resolve. Fallback to the
-    // generic / cached shell if the specific route was never cached.
-    if (isAdminShell(url)) {
+    // Admin surfaces: NETWORK-FIRST. A cached old page must never shadow a
+    // fresh deploy (cache-first here served a stale /admin/pos after the POS
+    // rewrite shipped). We still cache each ok response and fall back to it
+    // when offline, so the operator board opens with no signal.
+    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
       event.respondWith(
-        caches.match(req).then(
-          (cached) =>
-            cached ||
-            fetch(req)
-              .then((res) => {
-                if (res.ok) {
-                  caches
-                    .open(STATIC_CACHE)
-                    .then((cache) => cache.put(req, res.clone()));
-                }
-                return res;
-              })
-              .catch(() => caches.match("/admin") || caches.match("/")),
-        ),
+        fetch(req)
+          .then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(STATIC_CACHE).then((cache) => cache.put(req, copy));
+            }
+            return res;
+          })
+          .catch(() =>
+            caches
+              .match(req)
+              .then((cached) => cached || caches.match("/admin") || caches.match("/")),
+          ),
       );
       return;
     }
+    // Customer site documents — cache-first with network fallback.
     event.respondWith(
       caches.match(req).then(
         (cached) =>
