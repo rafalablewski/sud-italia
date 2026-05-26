@@ -4650,6 +4650,143 @@ html { scroll-behavior: smooth; }
 }
 
 /* ============================
+   ADMIN v2 — POS (counter order entry)
+   ============================ */
+
+.v2-pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 980px) { .v2-pos-layout { grid-template-columns: 1fr; } }
+
+.v2-pos-products { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.v2-pos-ticket { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 981px) { .v2-pos-ticket { position: sticky; top: 12px; } }
+
+.v2-pos-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.v2-pos-chip { cursor: pointer; border: 1px solid transparent; }
+
+.v2-pos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.v2-pos-product {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 84px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast);
+}
+.v2-pos-product:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.v2-pos-product:active { transform: scale(0.98); }
+.v2-pos-product-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.v2-pos-product-name { font-size: var(--text-sm); font-weight: 600; color: var(--fg); line-height: 1.25; }
+.v2-pos-product-badges { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.v2-pos-product-price { font-size: var(--text-sm); color: var(--fg-muted); margin-top: auto; }
+
+.v2-pos-lines { display: flex; flex-direction: column; }
+.v2-pos-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.v2-pos-line:last-child { border-bottom: 0; }
+.v2-pos-line-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.v2-pos-line-name { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+.v2-pos-line-each { font-size: var(--text-xs); }
+.v2-pos-line-total { font-size: var(--text-sm); font-weight: 700; color: var(--fg); min-width: 60px; text-align: right; flex: 0 0 auto; }
+
+.v2-pos-stepper { display: inline-flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.v2-pos-stepper-inline {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: 2px;
+}
+.v2-pos-qty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 30px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--fg);
+  text-align: center;
+}
+
+.v2-pos-warn {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in oklab, var(--warning) 35%, transparent);
+  color: var(--warning);
+  font-size: var(--text-xs);
+}
+
+.v2-pos-totals { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.v2-pos-total-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--text-sm); }
+.v2-pos-total-grand {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--fg);
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.v2-pos-checks { display: flex; flex-direction: column; gap: 6px; }
+.v2-pos-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.v2-pos-check-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v2-pos-check-name { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+.v2-pos-check-meta { font-size: var(--text-xs); }
+.v2-pos-check-side { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+.v2-pos-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.v2-pos-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+.v2-pos-table:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.v2-pos-table.is-selected { border-color: var(--brand); background: var(--brand-soft); }
+.v2-pos-table-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.v2-pos-table-num { font-size: var(--text-md); font-weight: 700; color: var(--fg); }
+.v2-pos-table-meta { font-size: var(--text-xs); }
+
+/* ============================
    ADMIN v2 — CRM (customers + notes)
    ============================ */
 
