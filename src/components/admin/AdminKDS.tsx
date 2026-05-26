@@ -201,8 +201,23 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Optimistic-advance overrides keyed by order id. While an advance/recall PUT
+  // is in flight, the SSE stream can still carry the pre-change status; we
+  // re-apply the operator's intent on top of each frame so the board never
+  // rubber-bands back to the old lane. Cleared the moment the request resolves —
+  // after that the store is authoritative and frames are already fresh.
+  const pendingRef = useRef<Map<string, OrderStatus>>(new Map());
+
   useEffect(() => {
-    setOrders(streamedOrders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
+    const pending = pendingRef.current;
+    const merged: Order[] = [];
+    for (const o of streamedOrders) {
+      const target = pending.get(o.id);
+      const status = target ?? o.status;
+      if (!ACTIVE_STATUSES.includes(status)) continue;
+      merged.push(target ? { ...o, status } : o);
+    }
+    setOrders(merged);
     setLoading(false);
   }, [streamedOrders]);
   // Cooks bump tickets by mistake constantly. We keep the last 5 bumps in
@@ -343,11 +358,26 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     const next = nextStatus(o.status);
     if (!next) return;
     const label = `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`;
+    // Snapshot so a failed PUT can put the exact ticket back rather than relying
+    // on a refresh that might be slow/offline (which would leave the line
+    // staring at a vanished order).
+    const original = orders.find((x) => x.id === o.id);
+    const rollback = () => {
+      if (next === "completed") setBumpHistory((arr) => arr.filter((e) => e.orderId !== o.id));
+      if (original) {
+        setOrders((arr) =>
+          arr.some((x) => x.id === original.id)
+            ? arr.map((x) => (x.id === original.id ? original : x))
+            : [...arr, original],
+        );
+      }
+    };
     setUpdatingId(o.id);
+    pendingRef.current.set(o.id, next);
     // Optimistic — move the ticket the instant the cook taps so the board never
     // stalls on the network round-trip (the old await-first path cost ~2 s a
-    // bump). The PUT persists in the background and the next SSE frame
-    // reconciles; a failure reverts by refreshing from the server.
+    // bump). The override above keeps stale SSE frames from snapping it back
+    // mid-flight; the PUT persists in the background and a failure rolls back.
     if (next === "completed") {
       setBumpHistory((arr) =>
         [{ orderId: o.id, label, bumpedAt: Date.now() }, ...arr.filter((e) => e.orderId !== o.id)].slice(0, 5),
@@ -365,15 +395,16 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
       if (res.ok) {
         if (next === "completed") toast.success("Order bumped", label);
       } else {
-        if (next === "completed") setBumpHistory((arr) => arr.filter((e) => e.orderId !== o.id));
-        toast.error("Could not advance", "Refreshing the queue.");
+        rollback();
+        toast.error("Could not advance", "Put the ticket back — try again.");
         refresh();
       }
     } catch {
-      if (next === "completed") setBumpHistory((arr) => arr.filter((e) => e.orderId !== o.id));
-      toast.error("Could not advance", "Network error. Refreshing.");
+      rollback();
+      toast.error("Could not advance", "Network error — ticket restored.");
       refresh();
     } finally {
+      pendingRef.current.delete(o.id);
       setUpdatingId(null);
     }
   };
@@ -386,6 +417,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
   const recall = async (orderId: string) => {
     setUpdatingId(orderId);
+    // Hold the ticket on the expo column even if a pre-recall SSE frame (still
+    // showing it completed) lands while the request is in flight.
+    pendingRef.current.set(orderId, "ready");
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/recall`, {
         method: "POST",
@@ -410,6 +444,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     } catch {
       toast.error("Could not recall", "Network error. Try again.");
     } finally {
+      pendingRef.current.delete(orderId);
       setUpdatingId(null);
     }
   };
