@@ -276,9 +276,12 @@ export function AdminPos({
             channel: tab.channel,
             status: tab.status,
             items: tab.items,
-            tableId: tab.tableId,
+            // Send an explicit null when a table/address is cleared — undefined
+            // is dropped by JSON.stringify, which made the server keep the old
+            // value and the 5 s poll snap it back on screen.
+            tableId: tab.tableId ?? null,
             covers: tab.covers,
-            address: tab.address,
+            address: tab.address ?? null,
             sentKds: tab.sentKds,
           }),
         }).catch(() => {});

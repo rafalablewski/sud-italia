@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { Badge } from "./v2/ui";
@@ -122,6 +123,8 @@ export interface KdsBoardProps {
   nowMs: number;
   updatingId: string | null;
   onAdvance: (t: KdsTicket) => void;
+  /** Optional control rendered in the Ready · Expo column header (the recall). */
+  expoRecall?: ReactNode;
 }
 
 export interface KdsLaneProps {
@@ -165,7 +168,7 @@ export function KdsLane({ tickets, stationFilter, nowMs, updatingId, onAdvance }
  * a pre-grouped column map, using the shared KdsTicketCard so the floor board
  * keeps its lane workflow while the cards match the Atlas fleet board exactly.
  */
-export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance }: KdsBoardProps) {
+export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance, expoRecall }: KdsBoardProps) {
   return (
     <div className="v2-kds-board">
       {KDS_COLUMNS.map((col) => {
@@ -176,7 +179,10 @@ export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance 
               <Badge tone={col.tone} variant="solid">
                 {col.label}
               </Badge>
-              <span className="v2-kds-col-count">{tickets.length}</span>
+              <span className="v2-kds-col-head-right">
+                <span className="v2-kds-col-count">{tickets.length}</span>
+                {col.id === "ready" && expoRecall}
+              </span>
             </div>
             <div className="v2-kds-col-body">
               {tickets.length === 0 ? (

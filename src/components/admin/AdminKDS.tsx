@@ -40,7 +40,7 @@ import {
   totalPrepSeconds,
 } from "./kds-board";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
-import { SegControl, SectionEyebrow } from "./command";
+import { SectionEyebrow } from "./command";
 import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
@@ -86,6 +86,16 @@ export function AdminKDS() {
       cancelled = true;
     };
   }, []);
+
+  // Drilling into a single truck's floor board is a dedicated kitchen-screen
+  // view, so hide the admin sidebar and let the board run full-width. The
+  // fleet/landing view keeps the nav; stepping back to fleet (or leaving the
+  // page) drops the class via cleanup.
+  useEffect(() => {
+    if (role !== "owner" || mode !== "floor") return;
+    document.body.classList.add("kds-immersive");
+    return () => document.body.classList.remove("kds-immersive");
+  }, [role, mode]);
 
   // Managers + franchisees get the floor-control ops header; kitchen/staff
   // get the chef line strip (station focus + queue depth + quick 86); the
@@ -191,8 +201,23 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Optimistic-advance overrides keyed by order id. While an advance/recall PUT
+  // is in flight, the SSE stream can still carry the pre-change status; we
+  // re-apply the operator's intent on top of each frame so the board never
+  // rubber-bands back to the old lane. Cleared the moment the request resolves —
+  // after that the store is authoritative and frames are already fresh.
+  const pendingRef = useRef<Map<string, OrderStatus>>(new Map());
+
   useEffect(() => {
-    setOrders(streamedOrders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
+    const pending = pendingRef.current;
+    const merged: Order[] = [];
+    for (const o of streamedOrders) {
+      const target = pending.get(o.id);
+      const status = target ?? o.status;
+      if (!ACTIVE_STATUSES.includes(status)) continue;
+      merged.push(target ? { ...o, status } : o);
+    }
+    setOrders(merged);
     setLoading(false);
   }, [streamedOrders]);
   // Cooks bump tickets by mistake constantly. We keep the last 5 bumps in
@@ -332,7 +357,35 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const advance = async (o: { id: string; status: OrderStatus; customerName?: string }) => {
     const next = nextStatus(o.status);
     if (!next) return;
+    const label = `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`;
+    // Snapshot so a failed PUT can put the exact ticket back rather than relying
+    // on a refresh that might be slow/offline (which would leave the line
+    // staring at a vanished order).
+    const original = orders.find((x) => x.id === o.id);
+    const rollback = () => {
+      if (next === "completed") setBumpHistory((arr) => arr.filter((e) => e.orderId !== o.id));
+      if (original) {
+        setOrders((arr) =>
+          arr.some((x) => x.id === original.id)
+            ? arr.map((x) => (x.id === original.id ? original : x))
+            : [...arr, original],
+        );
+      }
+    };
     setUpdatingId(o.id);
+    pendingRef.current.set(o.id, next);
+    // Optimistic — move the ticket the instant the cook taps so the board never
+    // stalls on the network round-trip (the old await-first path cost ~2 s a
+    // bump). The override above keeps stale SSE frames from snapping it back
+    // mid-flight; the PUT persists in the background and a failure rolls back.
+    if (next === "completed") {
+      setBumpHistory((arr) =>
+        [{ orderId: o.id, label, bumpedAt: Date.now() }, ...arr.filter((e) => e.orderId !== o.id)].slice(0, 5),
+      );
+      setOrders((arr) => arr.filter((x) => x.id !== o.id));
+    } else {
+      setOrders((arr) => arr.map((x) => (x.id === o.id ? { ...x, status: next } : x)));
+    }
     try {
       const res = await fetch("/api/admin/orders", {
         method: "PUT",
@@ -340,26 +393,18 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
         body: JSON.stringify({ orderId: o.id, status: next }),
       });
       if (res.ok) {
-        if (next === "completed") {
-          toast.success("Order bumped", `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`);
-          setBumpHistory((arr) =>
-            [
-              {
-                orderId: o.id,
-                label: `${o.customerName || "Guest"} · ${o.id.slice(-6).toUpperCase()}`,
-                bumpedAt: Date.now(),
-              },
-              ...arr.filter((e) => e.orderId !== o.id),
-            ].slice(0, 5),
-          );
-          setOrders((arr) => arr.filter((x) => x.id !== o.id));
-        } else {
-          setOrders((arr) => arr.map((x) => (x.id === o.id ? { ...x, status: next } : x)));
-        }
+        if (next === "completed") toast.success("Order bumped", label);
       } else {
-        toast.error("Could not advance", "Try refreshing the queue.");
+        rollback();
+        toast.error("Could not advance", "Put the ticket back — try again.");
+        refresh();
       }
+    } catch {
+      rollback();
+      toast.error("Could not advance", "Network error — ticket restored.");
+      refresh();
     } finally {
+      pendingRef.current.delete(o.id);
       setUpdatingId(null);
     }
   };
@@ -372,6 +417,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
   const recall = async (orderId: string) => {
     setUpdatingId(orderId);
+    // Hold the ticket on the expo column even if a pre-recall SSE frame (still
+    // showing it completed) lands while the request is in flight.
+    pendingRef.current.set(orderId, "ready");
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/recall`, {
         method: "POST",
@@ -396,6 +444,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
     } catch {
       toast.error("Could not recall", "Network error. Try again.");
     } finally {
+      pendingRef.current.delete(orderId);
       setUpdatingId(null);
     }
   };
@@ -422,20 +471,6 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             </button>
           ))}
         </div>
-        <SegControl
-          ariaLabel="Stage focus"
-          value={lane}
-          onChange={setLane}
-          options={[
-            { value: "all" as const, label: "All", count: laneCounts.all },
-            ...KDS_COLUMNS.map((col) => ({
-              value: col.id,
-              label: col.label,
-              count: laneCounts[col.id],
-              dataLine: col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new",
-            })),
-          ]}
-        />
         <div className="cmd-spacer" />
         <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
@@ -491,25 +526,33 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
       {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
 
-      {!kiosk && bumpHistory.length > 0 && (
-        <div className="ka-recall" role="region" aria-label="Recently bumped">
-          <span className="ka-recall-lab">
-            <RotateCcw className="h-3.5 w-3.5" /> Just bumped:
-          </span>
-          {bumpHistory.map((entry) => (
-            <button
-              key={entry.orderId}
-              type="button"
-              className="cmd-btn"
-              disabled={updatingId === entry.orderId}
-              onClick={() => recall(entry.orderId)}
-              title={`Recall ${entry.label} to the expo column`}
-            >
-              {entry.label} · Recall
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Stage switcher — big, easily-tapped buttons sitting right above the
+          ticket cards (below floor command / 86'd) so the line can flip
+          between All / New / In progress / Ready · Expo at a glance. */}
+      <div className="kds-stage-switch" role="group" aria-label="Stage focus">
+        <button
+          type="button"
+          className="kds-stage-btn"
+          aria-pressed={lane === "all"}
+          onClick={() => setLane("all")}
+        >
+          <span className="kds-stage-label">All</span>
+          <span className="kds-stage-count tabular">{laneCounts.all}</span>
+        </button>
+        {KDS_COLUMNS.map((col) => (
+          <button
+            key={col.id}
+            type="button"
+            className="kds-stage-btn"
+            data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
+            aria-pressed={lane === col.id}
+            onClick={() => setLane(col.id)}
+          >
+            <span className="kds-stage-label">{col.label}</span>
+            <span className="kds-stage-count tabular">{laneCounts[col.id]}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="ka-floor-body">
         {loading ? (
@@ -523,6 +566,20 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
             nowMs={now}
             updatingId={updatingId}
             onAdvance={advance}
+            expoRecall={
+              bumpHistory.length > 0 ? (
+                <button
+                  type="button"
+                  className="ka-expo-recall"
+                  disabled={updatingId === bumpHistory[0].orderId}
+                  onClick={() => recall(bumpHistory[0].orderId)}
+                  title={`Recall ${bumpHistory[0].label} to the expo column`}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Recall</span>
+                </button>
+              ) : null
+            }
           />
         ) : (
           <KdsLane
