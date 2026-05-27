@@ -15,7 +15,6 @@ import {
   Clock,
   CreditCard,
   ExternalLink,
-  FlaskConical,
   MapPin,
   Maximize2,
   Minimize2,
@@ -732,9 +731,7 @@ function AdminWhatsAppDesktop() {
           {simEnabled && (
             <>
               <span className="wa-stat-sep" />
-              <span className="wa-sim-tag">
-                <FlaskConical /> Sandbox
-              </span>
+              <span className="wa-sim-tag">Sandbox</span>
               <button
                 type="button"
                 className="cmd-btn"
