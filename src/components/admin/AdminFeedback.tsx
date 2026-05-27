@@ -515,7 +515,7 @@ function AdminFeedbackDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading feedback…</div>
+        <div className="v2-page-loading">Loading Feedback…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

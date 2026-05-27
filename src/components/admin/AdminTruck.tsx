@@ -342,7 +342,7 @@ function AdminTruckDesktop() {
       </section>
 
       {loading ? (
-        <div className="v2-page-loading">Loading truck data…</div>
+        <div className="v2-page-loading">Loading Truck ops…</div>
       ) : tab === "events" ? (
         <>
           <div className="v2-filters">

@@ -686,6 +686,7 @@ function AdminWhatsAppDesktop() {
 
   const page = (
     <div className={`wa-console${kiosk ? " is-fullscreen" : ""}`}>
+      {loading && <div className="v2-page-loading">Loading WhatsApp…</div>}
       {/* Header */}
       <header className="cmd-head">
         <div className="cmd-brand">

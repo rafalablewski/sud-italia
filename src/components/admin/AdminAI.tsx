@@ -350,7 +350,7 @@ function AdminAIDesktop() {
       </header>
 
       {loading ? (
-        <div className="v2-page-loading">Computing insights…</div>
+        <div className="v2-page-loading">Loading Insights…</div>
       ) : tab === "forecast" ? (
         <>
           <section className="v2-kpi-grid">

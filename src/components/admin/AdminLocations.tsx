@@ -224,7 +224,7 @@ function AdminLocationsDesktop() {
       </header>
 
       {loading ? (
-        <div className="v2-page-loading">Loading benchmark…</div>
+        <div className="v2-page-loading">Loading Multi-location…</div>
       ) : comparison.length === 0 ? (
         <Card>
           <CardBody>

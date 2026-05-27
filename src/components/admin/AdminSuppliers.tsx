@@ -186,7 +186,7 @@ function AdminSuppliersDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading…</div>
+        <div className="v2-page-loading">Loading Suppliers…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

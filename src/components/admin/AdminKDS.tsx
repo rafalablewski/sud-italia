@@ -509,7 +509,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
 
       <div className="ka-floor-body">
         {loading ? (
-          <div className="ka-loading">Loading queue…</div>
+          <div className="v2-page-loading">Loading Kitchen Display…</div>
         ) : orders.length === 0 ? (
           <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
         ) : lane === "all" ? (

@@ -228,7 +228,7 @@ function AdminExpansionDesktop() {
             <h1 className="v2-page-title">Expansion</h1>
           </div>
         </header>
-        <div className="v2-page-loading">Loading…</div>
+        <div className="v2-page-loading">Loading Expansion…</div>
       </div>
     );
   }

@@ -336,7 +336,7 @@ function AdminSlotsDesktop() {
       </section>
 
       {loading ? (
-        <div className="v2-page-loading">Loading slots…</div>
+        <div className="v2-page-loading">Loading Slots…</div>
       ) : slots.length === 0 ? (
         <Card>
           <CardBody>

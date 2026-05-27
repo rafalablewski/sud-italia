@@ -292,13 +292,7 @@ export function AdminMenuEngineering() {
         </CardBody>
       </Card>
 
-      {loading && (
-        <Card>
-          <CardBody>
-            <div className="v2-muted" style={{ padding: 24, textAlign: "center" }}>Loading menu engineering…</div>
-          </CardBody>
-        </Card>
-      )}
+      {loading && <div className="v2-page-loading">Loading Menu engineering…</div>}
 
       {!loading && error && (
         <Card>

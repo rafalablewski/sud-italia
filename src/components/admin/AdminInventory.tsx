@@ -466,7 +466,7 @@ function AdminInventoryDesktop() {
 
       <div className="v2-grid-2-1">
         {loading ? (
-          <div className="v2-page-loading">Loading inventory…</div>
+          <div className="v2-page-loading">Loading Stock…</div>
         ) : filtered.length === 0 ? (
           <Card>
             <CardBody>

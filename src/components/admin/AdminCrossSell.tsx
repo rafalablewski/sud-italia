@@ -46,7 +46,7 @@ export function AdminCrossSell() {
   if (loading) {
     return (
       <div className="v2-page">
-        <div className="v2-page-loading">Loading cross-sell settings…</div>
+        <div className="v2-page-loading">Loading Cross-sell…</div>
       </div>
     );
   }
