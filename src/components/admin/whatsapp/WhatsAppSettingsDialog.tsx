@@ -1,0 +1,367 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { Button, Dialog, Input, Select, Switch, Textarea } from "../v2/ui";
+import { useToast } from "../v2/ui/Toast";
+
+/**
+ * Advanced WhatsApp channel configuration. This is the hub for everything that
+ * shapes the bot's behaviour — channel state, customer-facing messages,
+ * conversation lifecycle, the AI concierge, and keyword auto-replies. Every
+ * control is wired end-to-end (see store WaSettings + the webhook / turn loop);
+ * nothing here is cosmetic.
+ */
+
+interface AutoReply {
+  keyword: string;
+  reply: string;
+}
+
+interface WaSettings {
+  enabled: boolean;
+  welcomeMessage: string;
+  optOutPhrases: string[];
+  defaultLocation: "krakow" | "warszawa" | null;
+  dailyMessageCap: number;
+  reopenTemplate: string;
+  autoArchiveMinutes: number;
+  aiEnabled: boolean;
+  aiInstructions: string;
+  awayMessage: string;
+  autoReplies: AutoReply[];
+}
+
+export function WhatsAppSettingsDialog({
+  open,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const [draft, setDraft] = useState<WaSettings | null>(null);
+  const [optOutText, setOptOutText] = useState("");
+  const [capText, setCapText] = useState("60");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp/settings");
+      if (res.ok) {
+        const s = (await res.json()) as WaSettings;
+        setDraft(s);
+        setOptOutText(s.optOutPhrases.join(", "));
+        setCapText(String(s.dailyMessageCap));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) void load();
+  }, [open, load]);
+
+  // Persist a partial change immediately — used for the on/off switches so a
+  // toggle is saved the moment it flips (no separate Save needed), per the
+  // platform's "toggle = saved" rule.
+  const patchNow = useCallback(
+    async (updates: Partial<WaSettings>) => {
+      const res = await fetch("/api/admin/whatsapp/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        setDraft((await res.json()) as WaSettings);
+        onSaved();
+        return true;
+      }
+      const data = await res.json().catch(() => ({}));
+      toast.error("Could not save", data?.error || "Try again.");
+      return false;
+    },
+    [toast, onSaved],
+  );
+
+  const toggleEnabled = async () => {
+    if (!draft) return;
+    const ok = await patchNow({ enabled: !draft.enabled });
+    if (ok) toast.success(`Channel ${draft.enabled ? "disabled" : "enabled"}`);
+  };
+  const toggleAi = async () => {
+    if (!draft) return;
+    const ok = await patchNow({ aiEnabled: !draft.aiEnabled });
+    if (ok) toast.success(`AI concierge ${draft.aiEnabled ? "disabled" : "enabled"}`);
+  };
+
+  const set = <K extends keyof WaSettings>(key: K, value: WaSettings[K]) =>
+    setDraft((d) => (d ? { ...d, [key]: value } : d));
+
+  const setReply = (i: number, patch: Partial<AutoReply>) =>
+    setDraft((d) =>
+      d ? { ...d, autoReplies: d.autoReplies.map((r, j) => (j === i ? { ...r, ...patch } : r)) } : d,
+    );
+  const addReply = () =>
+    setDraft((d) => (d ? { ...d, autoReplies: [...d.autoReplies, { keyword: "", reply: "" }] } : d));
+  const removeReply = (i: number) =>
+    setDraft((d) => (d ? { ...d, autoReplies: d.autoReplies.filter((_, j) => j !== i) } : d));
+
+  const save = async () => {
+    if (!draft) return;
+    setSaving(true);
+    try {
+      const optOutPhrases = optOutText
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      const dailyMessageCap = Math.max(1, Math.min(10000, Number.parseInt(capText, 10) || 60));
+      const autoArchiveMinutes = Math.max(0, Math.min(1440, Math.round(draft.autoArchiveMinutes) || 0));
+      const autoReplies = draft.autoReplies
+        .map((r) => ({ keyword: r.keyword.trim(), reply: r.reply.trim() }))
+        .filter((r) => r.keyword && r.reply);
+      const res = await fetch("/api/admin/whatsapp/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          welcomeMessage: draft.welcomeMessage,
+          optOutPhrases,
+          defaultLocation: draft.defaultLocation,
+          dailyMessageCap,
+          reopenTemplate: draft.reopenTemplate,
+          autoArchiveMinutes,
+          aiInstructions: draft.aiInstructions,
+          awayMessage: draft.awayMessage,
+          autoReplies,
+        }),
+      });
+      if (res.ok) {
+        setDraft((await res.json()) as WaSettings);
+        toast.success("WhatsApp settings saved");
+        onSaved();
+        onClose();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Could not save", data?.error || "Try again.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="WhatsApp configuration"
+      description="Channel state, messages, conversation lifecycle, the AI concierge and keyword auto-replies. Switches save immediately; everything else saves with the button below."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={save} disabled={!draft || saving}>
+            {saving ? "Saving…" : "Save settings"}
+          </Button>
+        </>
+      }
+    >
+      {loading || !draft ? (
+        <p className="admin-text-secondary text-sm">Loading…</p>
+      ) : (
+        <div className="wa-cfg">
+          {/* Channel */}
+          <Section title="Channel" desc="Master switch for WhatsApp ordering. The signed webhook keeps verifying even when off; the bot just replies that ordering is paused.">
+            <div className="wa-cfg-switch">
+              <Switch checked={draft.enabled} onChange={toggleEnabled} label="Channel enabled" />
+              <span className="admin-text text-sm">{draft.enabled ? "Live — taking orders" : "Off — ordering paused"}</span>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3 mt-3">
+              <Field label="Default location (fallback)">
+                <Select
+                  value={draft.defaultLocation ?? ""}
+                  onChange={(e) =>
+                    set(
+                      "defaultLocation",
+                      (e.target.value || null) as WaSettings["defaultLocation"],
+                    )
+                  }
+                  options={[
+                    { value: "", label: "Ask the customer" },
+                    { value: "krakow", label: "Kraków" },
+                    { value: "warszawa", label: "Warszawa" },
+                  ]}
+                />
+              </Field>
+              <Field label="Daily inbound cap / phone">
+                <Input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={capText}
+                  onChange={(e) => setCapText(e.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
+
+          {/* Messages */}
+          <Section title="Messages" desc="Customer-facing copy the channel sends directly (outside the AI).">
+            <Field label="Welcome message (first inbound)">
+              <Textarea
+                value={draft.welcomeMessage}
+                onChange={(e) => set("welcomeMessage", e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Cześć! Tu Sud Italia 🍕 Napisz, na co masz ochotę…"
+              />
+            </Field>
+            <div className="grid md:grid-cols-2 gap-3 mt-3">
+              <Field label="Opt-out keywords (comma-separated)">
+                <Input
+                  value={optOutText}
+                  onChange={(e) => setOptOutText(e.target.value)}
+                  placeholder="STOP, NIE, UNSUBSCRIBE"
+                />
+              </Field>
+              <Field label="Re-open template (Meta-approved)">
+                <Input
+                  value={draft.reopenTemplate}
+                  onChange={(e) => set("reopenTemplate", e.target.value)}
+                  placeholder="sud_italia_order_update"
+                />
+              </Field>
+            </div>
+          </Section>
+
+          {/* Conversation lifecycle */}
+          <Section title="Conversation lifecycle" desc="Keeps the operator inbox tidy. Archiving is console-side only — the customer's cart still lives for the full 90-minute session, so a new message brings the chat straight back to the inbox.">
+            <Field label="Auto-archive after inactivity (minutes)">
+              <Input
+                type="number"
+                min={0}
+                max={1440}
+                value={String(draft.autoArchiveMinutes)}
+                onChange={(e) => set("autoArchiveMinutes", Number.parseInt(e.target.value, 10) || 0)}
+              />
+              <p className="admin-text-secondary text-xs mt-1">
+                A conversation with no new message for this long moves to the Archived filter. 0 = never archive.
+              </p>
+            </Field>
+          </Section>
+
+          {/* AI concierge */}
+          <Section title="AI concierge" desc="The LLM that walks customers from “what's good?” to a paid order.">
+            <div className="wa-cfg-switch">
+              <Switch checked={draft.aiEnabled} onChange={toggleAi} label="AI concierge enabled" />
+              <span className="admin-text text-sm">
+                {draft.aiEnabled ? "On — the bot takes orders" : "Off — sends the away message instead"}
+              </span>
+            </div>
+            <Field label="Extra AI instructions (persona, policies, promos)" className="mt-3">
+              <Textarea
+                value={draft.aiInstructions}
+                onChange={(e) => set("aiInstructions", e.target.value)}
+                rows={4}
+                maxLength={4000}
+                placeholder="e.g. Mention the autumn truffle special when someone orders pizza. Keep replies under 2 lines. Address regulars by first name."
+              />
+              <p className="admin-text-secondary text-xs mt-1">
+                Appended to the base prompt. The hard ordering rules (real prices, confirmed slot before pay) always take priority.
+              </p>
+            </Field>
+            <Field label="Away message (sent when AI is off)" className="mt-3">
+              <Textarea
+                value={draft.awayMessage}
+                onChange={(e) => set("awayMessage", e.target.value)}
+                rows={2}
+                maxLength={1000}
+                placeholder="Dziękujemy! Nasz asystent jest teraz offline — zamów online: https://sudita.lia 🍕"
+              />
+            </Field>
+          </Section>
+
+          {/* Auto-replies */}
+          <Section title="Auto-replies (scripts)" desc="Instant canned replies that run before the AI. The first keyword found in an incoming message wins and ends the turn — handy for FAQs like hours or address.">
+            <div className="wa-cfg-replies">
+              {draft.autoReplies.length === 0 && (
+                <p className="admin-text-secondary text-sm">No auto-replies yet. Add one below.</p>
+              )}
+              {draft.autoReplies.map((r, i) => (
+                <div key={i} className="wa-cfg-reply">
+                  <Input
+                    value={r.keyword}
+                    onChange={(e) => setReply(i, { keyword: e.target.value })}
+                    placeholder="keyword (e.g. godziny)"
+                  />
+                  <Input
+                    value={r.reply}
+                    onChange={(e) => setReply(i, { reply: e.target.value })}
+                    placeholder="reply to send"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeReply(i)}
+                    leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                    aria-label="Remove auto-reply"
+                  />
+                </div>
+              ))}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={addReply}
+                leadingIcon={<Plus className="h-3.5 w-3.5" />}
+                disabled={draft.autoReplies.length >= 30}
+              >
+                Add auto-reply
+              </Button>
+            </div>
+          </Section>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+function Section({
+  title,
+  desc,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="wa-cfg-sec">
+      <h3 className="wa-cfg-sec-title">{title}</h3>
+      {desc && <p className="wa-cfg-sec-desc">{desc}</p>}
+      <div className="wa-cfg-sec-body">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`block ${className ?? ""}`}>
+      <span className="admin-text text-xs uppercase tracking-wide block mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}

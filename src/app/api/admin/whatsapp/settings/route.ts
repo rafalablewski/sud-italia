@@ -34,6 +34,28 @@ export const PATCH = withAdmin({ roles: ["manager", "owner"] }, async (req, _ctx
   if (typeof body.reopenTemplate === "string") {
     updates.reopenTemplate = body.reopenTemplate.trim().slice(0, 100);
   }
+  if (Number.isInteger(body.autoArchiveMinutes)) {
+    updates.autoArchiveMinutes = Math.max(0, Math.min(1440, Number(body.autoArchiveMinutes)));
+  }
+  if (typeof body.aiEnabled === "boolean") updates.aiEnabled = body.aiEnabled;
+  if (typeof body.aiInstructions === "string") {
+    updates.aiInstructions = body.aiInstructions.slice(0, 4000);
+  }
+  if (typeof body.awayMessage === "string") {
+    updates.awayMessage = body.awayMessage.slice(0, 1000);
+  }
+  if (Array.isArray(body.autoReplies)) {
+    updates.autoReplies = body.autoReplies
+      .filter(
+        (r): r is { keyword: string; reply: string } =>
+          !!r &&
+          typeof (r as { keyword?: unknown }).keyword === "string" &&
+          typeof (r as { reply?: unknown }).reply === "string",
+      )
+      .map((r) => ({ keyword: r.keyword.trim().slice(0, 80), reply: r.reply.trim().slice(0, 1000) }))
+      .filter((r) => r.keyword && r.reply)
+      .slice(0, 30);
+  }
 
   const before = await getWaSettings();
   const next = await updateWaSettings(updates);

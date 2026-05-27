@@ -8971,6 +8971,17 @@ select.pub-input {
 /* fullscreen trims the brand label so the panes rise toward the top */
 .wa-console.is-fullscreen .cmd-label { display: none; }
 
+/* ---- Advanced settings dialog (sectioned config hub) ---- */
+.wa-cfg { display: flex; flex-direction: column; gap: 4px; }
+.wa-cfg-sec { padding: 16px 0; border-top: 1px solid var(--border); }
+.wa-cfg-sec:first-child { border-top: 0; padding-top: 4px; }
+.wa-cfg-sec-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--admin-text, inherit); }
+.wa-cfg-sec-desc { font-size: 12px; line-height: 1.45; color: var(--text-muted, #6b7280); margin-top: 3px; }
+.wa-cfg-sec-body { margin-top: 12px; }
+.wa-cfg-switch { display: inline-flex; align-items: center; gap: 10px; }
+.wa-cfg-replies { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.wa-cfg-reply { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; width: 100%; }
+
 @media (max-width: 1180px) {
   .wa-editor { grid-template-columns: 300px 1fr; }
   .wa-context { display: none; }

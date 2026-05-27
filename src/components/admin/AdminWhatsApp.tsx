@@ -34,24 +34,15 @@ const MobileWhatsApp = dynamic(
   () => import("./mobile/MobileWhatsApp").then((m) => m.MobileWhatsApp),
   { ssr: false },
 );
-import {
-  Button,
-  Dialog,
-  Input,
-  Select,
-  Textarea,
-} from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
+import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
 
 // ---- types --------------------------------------------------------------
 
 interface WaSettings {
   enabled: boolean;
-  welcomeMessage: string;
-  optOutPhrases: string[];
-  defaultLocation: "krakow" | "warszawa" | null;
-  dailyMessageCap: number;
   reopenTemplate: string;
+  autoArchiveMinutes: number;
 }
 
 interface WaSessionRow {
@@ -148,7 +139,7 @@ interface MetricsResponse {
   historicConversations: number;
 }
 
-type ConvFilter = "all" | "live" | "awaiting" | "idle";
+type ConvFilter = "inbox" | "live" | "awaiting" | "archived";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -293,7 +284,7 @@ function AdminWhatsAppDesktop() {
   const [loading, setLoading] = useState(true);
 
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ConvFilter>("all");
+  const [filter, setFilter] = useState<ConvFilter>("inbox");
   const [query, setQuery] = useState("");
 
   // Thread (selected conversation transcript)
@@ -303,12 +294,8 @@ function AdminWhatsAppDesktop() {
   const [sending, setSending] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
 
-  // Settings overlay drafts
+  // Settings overlay (advanced config lives in WhatsAppSettingsDialog)
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [welcomeDraft, setWelcomeDraft] = useState("");
-  const [optOutDraft, setOptOutDraft] = useState("");
-  const [reopenDraft, setReopenDraft] = useState("");
-  const [capDraft, setCapDraft] = useState("60");
 
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
@@ -334,12 +321,7 @@ function AdminWhatsAppDesktop() {
         fetch("/api/admin/whatsapp/metrics"),
       ]);
       if (sRes.ok) {
-        const s = (await sRes.json()) as WaSettings;
-        setSettings(s);
-        setWelcomeDraft(s.welcomeMessage);
-        setOptOutDraft(s.optOutPhrases.join(", "));
-        setReopenDraft(s.reopenTemplate);
-        setCapDraft(String(s.dailyMessageCap));
+        setSettings((await sRes.json()) as WaSettings);
       }
       if (cRes.ok) {
         const list = (await cRes.json()) as WaSessionRow[];
@@ -373,31 +355,52 @@ function AdminWhatsAppDesktop() {
     [sessions, heads],
   );
 
+  // Auto-archive (operator-console only): a conversation idle longer than the
+  // configured window drops out of the active inbox into Archived. Recomputed
+  // on every poll (10s) so it tracks the clock; a new message un-archives it
+  // because lastAt refreshes. 0 minutes disables it.
+  const archiveMs = (settings?.autoArchiveMinutes ?? 0) * 60_000;
+  const isArchived = useCallback(
+    (c: ConversationRow) =>
+      archiveMs > 0 && Date.now() - Date.parse(c.lastAt) > archiveMs,
+    [archiveMs],
+  );
+
   const counts = useMemo(() => {
+    let inbox = 0;
     let live = 0;
     let awaiting = 0;
-    let idle = 0;
+    let archived = 0;
     for (const c of conversations) {
+      if (isArchived(c)) {
+        archived++;
+        continue;
+      }
+      inbox++;
       if (c.hasActiveSession) live++;
-      else idle++;
       if (c.pendingPaymentUrl) awaiting++;
     }
-    return { all: conversations.length, live, awaiting, idle };
-  }, [conversations]);
+    return { inbox, live, awaiting, archived };
+  }, [conversations, isArchived]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return conversations.filter((c) => {
-      if (filter === "live" && !c.hasActiveSession) return false;
-      if (filter === "awaiting" && !c.pendingPaymentUrl) return false;
-      if (filter === "idle" && c.hasActiveSession) return false;
+      const archived = isArchived(c);
+      if (filter === "archived") {
+        if (!archived) return false;
+      } else {
+        if (archived) return false;
+        if (filter === "live" && !c.hasActiveSession) return false;
+        if (filter === "awaiting" && !c.pendingPaymentUrl) return false;
+      }
       if (q) {
         const hay = `${c.phone} ${c.customerName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [conversations, filter, query]);
+  }, [conversations, filter, query, isArchived]);
 
   // Keep a valid selection: auto-select the first row once loaded, and clear a
   // selection that filtered out so the thread pane never points at nothing.
@@ -476,33 +479,6 @@ function AdminWhatsAppDesktop() {
     if (!settings) return;
     const ok = await patch({ enabled: !settings.enabled });
     if (ok) toast.success(`WhatsApp ${settings.enabled ? "disabled" : "enabled"}`);
-  };
-
-  const saveTextSettings = async () => {
-    const optOutPhrases = optOutDraft
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    const dailyMessageCap = Math.max(
-      1,
-      Math.min(10000, Number.parseInt(capDraft, 10) || 60),
-    );
-    const ok = await patch({
-      welcomeMessage: welcomeDraft,
-      optOutPhrases,
-      reopenTemplate: reopenDraft,
-      dailyMessageCap,
-    });
-    if (ok) {
-      toast.success("WhatsApp settings saved");
-      setSettingsOpen(false);
-    }
-  };
-
-  const setDefaultLocation = async (val: string) => {
-    const next = val === "krakow" || val === "warszawa" ? (val as "krakow" | "warszawa") : null;
-    const ok = await patch({ defaultLocation: next });
-    if (ok) toast.success("Default location updated");
   };
 
   const resetSession = async (phone: string) => {
@@ -647,10 +623,10 @@ function AdminWhatsAppDesktop() {
   const windowOpen = selected ? withinWindow(selected.lastAt) : false;
 
   const FILTERS: { value: ConvFilter; label: string; count: number }[] = [
-    { value: "all", label: "All", count: counts.all },
+    { value: "inbox", label: "Inbox", count: counts.inbox },
     { value: "live", label: "Live", count: counts.live },
     { value: "awaiting", label: "Awaiting pay", count: counts.awaiting },
-    { value: "idle", label: "Idle", count: counts.idle },
+    { value: "archived", label: "Archived", count: counts.archived },
   ];
 
   const page = (
@@ -975,97 +951,11 @@ function AdminWhatsAppDesktop() {
         </aside>
       </div>
 
-      {/* Settings — standard admin Dialog (portaled to body, rule #4). */}
-      <Dialog
+      <WhatsAppSettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        size="md"
-        title="WhatsApp channel settings"
-        description="The webhook keeps verifying signatures even when the channel is off; the bot just replies that ordering is paused."
-        footer={
-          <>
-            <Button
-              variant={settings?.enabled ? "danger" : "primary"}
-              onClick={toggleEnabled}
-              disabled={!settings}
-            >
-              {settings?.enabled ? "Disable channel" : "Enable channel"}
-            </Button>
-            <Button variant="secondary" onClick={() => setSettingsOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={saveTextSettings}>
-              Save settings
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-              Welcome message (sent on first inbound)
-            </label>
-            <Textarea
-              value={welcomeDraft}
-              onChange={(e) => setWelcomeDraft(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Cześć! Tu Sud Italia 🍕 Napisz, na co masz ochotę…"
-            />
-          </div>
-          <div className="grid md:grid-cols-3 gap-3">
-            <div>
-              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                Opt-out keywords (comma-separated)
-              </label>
-              <Input
-                value={optOutDraft}
-                onChange={(e) => setOptOutDraft(e.target.value)}
-                placeholder="STOP, NIE, UNSUBSCRIBE"
-              />
-            </div>
-            <div>
-              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                Default location (fallback)
-              </label>
-              <Select
-                value={settings?.defaultLocation ?? ""}
-                onChange={(e) => setDefaultLocation(e.target.value)}
-                options={[
-                  { value: "", label: "Ask the customer" },
-                  { value: "krakow", label: "Kraków" },
-                  { value: "warszawa", label: "Warszawa" },
-                ]}
-              />
-            </div>
-            <div>
-              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                Daily inbound cap / phone
-              </label>
-              <Input
-                type="number"
-                min={1}
-                max={10000}
-                value={capDraft}
-                onChange={(e) => setCapDraft(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-              Approved Meta template for re-opening the 24h window
-            </label>
-            <Input
-              value={reopenDraft}
-              onChange={(e) => setReopenDraft(e.target.value)}
-              placeholder="sud_italia_order_update"
-            />
-            <p className="text-xs admin-text-secondary mt-1">
-              Used by the Template button in a thread when the customer is outside the 24-hour messaging window.
-            </p>
-          </div>
-        </div>
-      </Dialog>
+        onSaved={() => void loadAll(true)}
+      />
     </div>
   );
 

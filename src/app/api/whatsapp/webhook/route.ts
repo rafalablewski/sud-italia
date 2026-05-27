@@ -156,6 +156,24 @@ async function processOne(message: {
     return;
   }
 
+  // Keyword auto-replies run BEFORE the LLM: the first reply whose keyword is
+  // contained (case-insensitive) in the inbound text wins, sends its canned
+  // reply, and ends the turn without spending a model call. Empty list (the
+  // default) is a no-op, so the LLM flow below is unchanged.
+  if (message.kind === "text" && settings.autoReplies?.length) {
+    const haystack = message.value.toLowerCase();
+    const hit = settings.autoReplies.find(
+      (r) => r.keyword && haystack.includes(r.keyword.toLowerCase()),
+    );
+    if (hit) {
+      const provider = getWhatsAppProvider();
+      await provider.sendText(phone, hit.reply);
+      incrCounter("whatsapp.autoreply.sent");
+      logger.info("whatsapp.autoreply.sent", { phone, keyword: hit.keyword, layer: "whatsapp.webhook" });
+      return;
+    }
+  }
+
   // First-touch welcome: when this is the customer's very first message
   // (no active session yet) deliver the welcome blurb before handing
   // off to the LLM. Keeps cold-start UX warm even when the model is

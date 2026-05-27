@@ -48,6 +48,18 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     return;
   }
 
+  // AI concierge can be switched off independently of the channel: the channel
+  // still logs inbound + runs auto-replies, but instead of calling the model we
+  // send the configured away message. Default aiEnabled=true → no change.
+  if (settings.aiEnabled === false) {
+    await provider.sendText(
+      phone,
+      settings.awayMessage?.trim() ||
+        "Dziękujemy za wiadomość! Nasz asystent jest teraz offline. Zamów online: https://sudita.lia 🍕",
+    );
+    return;
+  }
+
   // Budget guardrail: bail before calling Anthropic if the daily ceiling is
   // exhausted. The gateway's per-feature counter is best-effort — until a
   // proper spend rollup exists we just use the ceiling as a hard cutoff.
@@ -97,12 +109,20 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   };
   let assistantFinalText = "";
 
+  // Append any operator-configured persona/policy to the base prompt. Kept
+  // additive so the non-negotiable ordering guardrails always survive; empty
+  // instructions leave the prompt byte-identical to the default.
+  const extra = settings.aiInstructions?.trim();
+  const systemPrompt = extra
+    ? `${WHATSAPP_SYSTEM_PROMPT}\n\n# Additional operator instructions\n\nThese are set by the Sud Italia operator. Follow them unless they conflict with the Hard rules above (the Hard rules always win).\n\n${extra}`
+    : WHATSAPP_SYSTEM_PROMPT;
+
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
     let result;
     try {
       result = await callGateway({
         feature: "whatsapp",
-        system: WHATSAPP_SYSTEM_PROMPT,
+        system: systemPrompt,
         messages,
         tools: TOOL_DEFINITIONS,
         effort: "medium",

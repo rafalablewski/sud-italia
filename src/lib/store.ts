@@ -8571,6 +8571,26 @@ export interface WaSettings {
   /** Approved Meta utility template name used to re-open the 24h window
    *  for abandoned-cart nudges. Empty string disables that reminder. */
   reopenTemplate: string;
+  /** Operator-console auto-archive: a conversation with no new message for
+   *  this many minutes drops out of the active inbox into the Archived view.
+   *  Console-side only — does NOT shorten the bot's 90-min session TTL, so a
+   *  customer's cart survives even after the operator's view archives it.
+   *  0 disables auto-archive. */
+  autoArchiveMinutes: number;
+  /** Master switch for the LLM concierge. When false the channel still
+   *  receives + logs messages and honours auto-replies, but instead of calling
+   *  the model it sends `awayMessage`. */
+  aiEnabled: boolean;
+  /** Extra operator instructions appended to the bot's base system prompt
+   *  (persona, policies, promos). Empty string leaves the base prompt as-is. */
+  aiInstructions: string;
+  /** Sent when the AI concierge is disabled (aiEnabled=false). Empty string
+   *  falls back to a built-in "ordering paused" message. */
+  awayMessage: string;
+  /** Keyword → canned reply auto-responses, evaluated BEFORE the LLM. The
+   *  first whose keyword is contained (case-insensitive) in an inbound text
+   *  wins: the reply is sent and the turn ends without calling the model. */
+  autoReplies: { keyword: string; reply: string }[];
 }
 
 const DEFAULT_WA_SETTINGS: WaSettings = {
@@ -8581,6 +8601,11 @@ const DEFAULT_WA_SETTINGS: WaSettings = {
   defaultLocation: null,
   dailyMessageCap: 60,
   reopenTemplate: "",
+  autoArchiveMinutes: 5,
+  aiEnabled: true,
+  aiInstructions: "",
+  awayMessage: "",
+  autoReplies: [],
 };
 
 export async function getWaSettings(): Promise<WaSettings> {
