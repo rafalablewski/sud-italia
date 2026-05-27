@@ -12,10 +12,11 @@
     --canvas:#0a0a0c; --panel:#141318; --raised:#1f1d25; --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
     --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b;
     --warn:#e0a93f; --late:#e5484d; --ready:#4ea882;
-    background: var(--canvas); height:100vh; overflow:hidden;
+    background: var(--canvas); min-height:100vh;
   }
-  .kds-wrap { height:100vh; display:flex; flex-direction:column; padding:14px 18px; gap:12px; }
-  .kds-top { display:flex; align-items:center; gap:14px; flex:none; }
+  .kds-wrap { min-height:100vh; display:flex; flex-direction:column; padding:14px 18px; gap:12px; }
+  /* the whole board scrolls as one; the controls + ops stay pinned on top */
+  .kds-top { display:flex; align-items:center; gap:14px; flex:none; position:sticky; top:0; z-index:10; background:var(--canvas); padding:14px 18px 12px; margin:-14px -18px 0; }
   .kds-id { display:flex; align-items:center; gap:11px; }
   .kds-id .brand-mark { width:28px; height:28px; }
   .kds-id .nm { font-family:var(--display); font-size:17px; font-weight:600; }
@@ -46,15 +47,15 @@
   .btn86 { height:30px; padding:0 13px; border-radius:7px; border:1px solid var(--hair-2); background:var(--panel); color:var(--dim); font:600 12.5px var(--ui); cursor:pointer; }
   .btn86:hover { color:var(--t); border-color:var(--t); }
 
-  .board { flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; min-height:0; }
-  .col { display:flex; flex-direction:column; min-height:0; }
+  .board { flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
+  .col { display:flex; flex-direction:column; }
   .col-head { display:flex; align-items:center; gap:10px; padding:0 2px 10px; }
   .col-head .lbl { font:600 12px var(--ui); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
   .col-head .cnt { font:600 12px var(--mono); color:var(--faint); }
   .col-head .rule { flex:1; height:1px; background:var(--hair); }
   .col.active .col-head .lbl { color:var(--t); }
   .col.active .col-head .rule { background:rgba(203,180,138,.35); }
-  .col-body { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:11px; padding:1px; }
+  .col-body { display:flex; flex-direction:column; gap:11px; padding:1px; }
 
   /* ticket: neutral by default; left accent + timer escalate with SLA */
   .tk { flex:none; background:var(--panel); border:1px solid var(--hair); border-left:3px solid transparent; border-radius:10px; overflow:hidden; }
