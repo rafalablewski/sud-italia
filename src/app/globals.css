@@ -8519,7 +8519,7 @@ select.pub-input {
 }
 .pos-chan-paused .pos-cp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos-late); flex: 0 0 auto; }
 .pos-tabs.is-fullscreen .cmd-head { min-height: 50px; }
-.pos-tabs.is-fullscreen .cmd-label, .pos-tabs.is-fullscreen .pos-footer { display: none; }
+.pos-tabs.is-fullscreen .pos-footer { display: none; }
 /* Fullscreen contracts the top chrome so the editor — and the order column —
    rise toward the top: drop the steer strip + open-checks eyebrow, tighten the
    tab rail to a compact switcher row. */
@@ -9457,9 +9457,6 @@ select.pub-input {
 .wa-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--wa-faint); text-align: center; padding: 40px; }
 .wa-empty-emoji { font-size: 34px; opacity: .5; }
 .wa-empty-text { font-size: 13px; color: var(--wa-dim); }
-
-/* fullscreen trims the brand label so the panes rise toward the top */
-.wa-console.is-fullscreen .cmd-label { display: none; }
 
 /* ---- Advanced settings dialog (sectioned config hub) ---- */
 .wa-cfg { display: flex; flex-direction: column; gap: 4px; }
