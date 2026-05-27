@@ -114,6 +114,36 @@
   .charge { padding: 0 14px 14px; } .charge .btn { width: 100%; justify-content: center; }
   .kbd-hint { padding: 9px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--fg-subtle); display: flex; gap: 14px; }
   .kbd-hint kbd { font-family: var(--mono); background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+
+  /* ───────── finish layer: material · light · signature ─────────
+     Motif: a brand left-bar marks the ACTIVE/selected thing; a platinum
+     hairline marks the PREMIUM/focal thing. Used with discipline. */
+  .main {
+    background:
+      radial-gradient(120% 70% at 88% -8%, rgba(166,45,73,.06), transparent 58%),
+      radial-gradient(80% 55% at 2% -4%, rgba(203,180,138,.035), transparent 52%);
+  }
+  /* honest depth — a whisper of top-light on raised surfaces */
+  .tab, .prod, .fulfil-block { box-shadow: inset 0 1px 0 rgba(255,255,255,.045); }
+  .prod { transition: border-color var(--fast) var(--ease), transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+  .prod:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 26px rgba(0,0,0,.34); }
+  .swatch { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -14px 22px rgba(0,0,0,.22); }
+  /* the live ticket is the focal column — elevate it + platinum crown hairline */
+  .ticket { position: relative; box-shadow: -18px 0 44px rgba(0,0,0,.26); }
+  .ticket::before { content:""; position:absolute; top:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, var(--platinum-soft) 22%, rgba(203,180,138,.4) 50%, var(--platinum-soft) 78%, transparent); }
+  /* active = brand left-bar (matches the nav motif) */
+  .cat.on { box-shadow: inset 2px 0 0 var(--brand); }
+  .tab.on { box-shadow: inset 0 2px 0 var(--brand), inset 0 1px 0 1px transparent; }
+  /* premium = platinum hairline */
+  .promise-badge { box-shadow: inset 0 0 0 1px var(--platinum-soft); }
+  /* hero CTA — soft brand glow + top-light, the one thing that pops */
+  .charge .btn { background: linear-gradient(180deg, var(--brand-bright), var(--brand)); border: 0;
+    box-shadow: 0 8px 26px rgba(166,45,73,.34), inset 0 1px 0 rgba(255,255,255,.16); letter-spacing: .01em; }
+  .charge .btn:hover { background: linear-gradient(180deg, #d04b69, var(--brand-bright)); box-shadow: 0 10px 30px rgba(166,45,73,.42), inset 0 1px 0 rgba(255,255,255,.18); }
+  /* refined focus ring (signature) */
+  .prod:focus-visible, .tab:focus-visible, .btn:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--platinum), 0 0 0 4px var(--platinum-soft); }
+  svg.i { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
 </style>
 </head>
 <body>
@@ -140,7 +170,7 @@
         <span class="badge warning" title="Live pace steering on"><span class="d"></span>Steering</span>
         <div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
         <span class="mono subtle" style="font-size:13px">20:14:07</span>
-        <button class="btn ghost icon" title="Fullscreen">⤢</button>
+        <button class="btn ghost icon" title="Fullscreen"><svg class="i" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
       </div>
     </div>
 
@@ -162,7 +192,7 @@
           </div>
           <div class="tab delivery">
             <div class="r1"><span class="nm">Nowak</span><span class="st open">Open</span></div>
-            <div class="r2"><span class="warn">⚠ delivery paused</span><span class="tot">118 zł</span></div>
+            <div class="r2"><span class="warn"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> delivery paused</span><span class="tot">118 zł</span></div>
           </div>
           <div class="tab dinein">
             <div class="r1"><span class="nm">Table 3</span><span class="st parked">Parked</span></div>
@@ -190,7 +220,7 @@
           </div>
           <div class="menu-head"><h2>Pizze</h2><span class="subtle" style="font-size:12px">wood-fired · ~14m right now</span></div>
           <div class="menu-grid">
-            <button class="prod"><div class="corner"><span class="role hero">Hero</span></div><div class="swatch"></div><h3>Margherita</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">42 zł</span></div><span class="pace-tag ease">▼ ease — oven busy</span></button>
+            <button class="prod"><div class="corner"><span class="role hero">Hero</span></div><div class="swatch"></div><h3>Margherita</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">42 zł</span></div><span class="pace-tag ease"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 9l6 6 6-6"/></svg> ease — oven busy</span></button>
             <button class="prod"><div class="corner"><span class="lto" title="Limited-time"></span><span class="role profit">Profit</span></div><div class="swatch"></div><h3>Diavola</h3><div class="row"><span class="badge danger">Piccante</span><span class="price">52 zł</span></div></button>
             <button class="prod"><div class="corner"><span class="role anchor">Signature</span></div><div class="swatch"></div><h3>Bufala DOP</h3><div class="row"><span class="badge platinum">Signature</span><span class="price">58 zł</span></div></button>
             <button class="prod"><div class="swatch"></div><h3>Marinara</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">38 zł</span></div></button>
