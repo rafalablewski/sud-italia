@@ -14,8 +14,8 @@
   --color-italia-dark: #1A1A1A;
   --color-italia-gray: #6B7280;
   --color-italia-light-gray: #F3F4F6;
-  --font-heading: Georgia, "Times New Roman", serif;
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.4s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;
@@ -40,6 +40,12 @@
 *:focus-visible {
   outline: 2px solid var(--color-italia-red);
   outline-offset: 2px;
+}
+
+/* Admin surfaces use the theme-aware steel focus ring rather than the public
+   brand red, so keyboard focus matches the v2 token system in both themes. */
+[data-admin-theme] *:focus-visible {
+  outline-color: var(--focus-ring, var(--border-focus));
 }
 
 /* Accessibility: respect reduced motion preference */
@@ -209,84 +215,102 @@ html { scroll-behavior: smooth; }
 :root:not([data-admin-theme]),
 [data-admin-theme="dark"] {
   color-scheme: dark;
-  --bg: #0a0d14;
-  --surface-1: #11151f;
-  --surface-2: #161b27;
-  --surface-3: #1d2330;
-  --surface-hover: #20283a;
+  /* Warm-neutral charcoal. Replaces the old cold blue-black so the burgundy
+     accent and platinum highlights read as warm/expensive, not clinical. */
+  --bg: #0c0b0e;
+  --surface-1: #141318;
+  --surface-2: #1b1920;
+  --surface-3: #232028;
+  --surface-hover: #2a2731;
   --border: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(255, 255, 255, 0.12);
-  --border-focus: #6366f1;
+  --border-focus: #8fa9c9;
 
-  --fg: #f5f7fa;
-  --fg-muted: #b6bfcd;
-  --fg-subtle: #7d8696;
-  --fg-disabled: #4a5260;
+  --fg: #f3f1ec;
+  --fg-muted: #b5aea6;
+  --fg-subtle: #847c74;
+  --fg-disabled: #4c4750;
 
-  --brand: #c8102e;
+  /* Signature accent — deep burgundy / oxblood. Matures the old Italia red
+     into fine-dining territory and separates "brand" from "danger" red. */
+  --brand: #a62d49;
   --brand-fg: #ffffff;
-  --brand-soft: rgba(200, 16, 46, 0.12);
-  --brand-soft-strong: rgba(200, 16, 46, 0.22);
+  --brand-soft: rgba(166, 45, 73, 0.14);
+  --brand-soft-strong: rgba(166, 45, 73, 0.26);
 
-  --success: #10b981;
+  /* Metallic highlight — warm platinum / champagne. Used sparingly for
+     premium flourishes (owner-tier surfaces, wordmark, key numerals). */
+  --platinum: #cbb48a;
+  --platinum-fg: #1a1714;
+  --platinum-soft: rgba(203, 180, 138, 0.14);
+  --platinum-soft-strong: rgba(203, 180, 138, 0.24);
+
+  --success: #2fa875;
   --success-fg: #ffffff;
-  --success-soft: rgba(16, 185, 129, 0.12);
-  --warning: #f59e0b;
-  --warning-fg: #1a1a1a;
-  --warning-soft: rgba(245, 158, 11, 0.14);
-  --danger: #ef4444;
+  --success-soft: rgba(47, 168, 117, 0.14);
+  --warning: #d9a441;
+  --warning-fg: #1a1714;
+  --warning-soft: rgba(217, 164, 65, 0.16);
+  --danger: #e2504b;
   --danger-fg: #ffffff;
-  --danger-soft: rgba(239, 68, 68, 0.12);
-  --info: #6366f1;
+  --danger-soft: rgba(226, 80, 75, 0.14);
+  --info: #6e92c0;
   --info-fg: #ffffff;
-  --info-soft: rgba(99, 102, 241, 0.14);
+  --info-soft: rgba(110, 146, 192, 0.16);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 0 24px rgba(99, 102, 241, 0.15);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.34);
+  --shadow-glow: 0 0 0 1px rgba(143, 169, 201, 0.4), 0 0 24px rgba(143, 169, 201, 0.14);
 }
 
 [data-admin-theme="light"] {
   color-scheme: light;
-  --bg: #f7f8fa;
+  /* Warm paper, not clinical white — the light-mode counterpart to the dark
+     warm-charcoal. */
+  --bg: #faf7f2;
   --surface-1: #ffffff;
-  --surface-2: #f9fafb;
-  --surface-3: #f1f3f7;
-  --surface-hover: #eef0f5;
-  --border: rgba(15, 23, 42, 0.07);
-  --border-strong: rgba(15, 23, 42, 0.14);
-  --border-focus: #6366f1;
+  --surface-2: #f8f5ef;
+  --surface-3: #f1ece3;
+  --surface-hover: #ece6db;
+  --border: rgba(40, 28, 24, 0.08);
+  --border-strong: rgba(40, 28, 24, 0.15);
+  --border-focus: #4a6b92;
 
-  --fg: #0f172a;
-  --fg-muted: #475569;
-  --fg-subtle: #6b7480;
-  --fg-disabled: #a3acba;
+  --fg: #1c1815;
+  --fg-muted: #5a524a;
+  --fg-subtle: #877e74;
+  --fg-disabled: #aba298;
 
-  --brand: #c8102e;
+  --brand: #97283f;
   --brand-fg: #ffffff;
-  --brand-soft: rgba(200, 16, 46, 0.08);
-  --brand-soft-strong: rgba(200, 16, 46, 0.16);
+  --brand-soft: rgba(151, 40, 63, 0.09);
+  --brand-soft-strong: rgba(151, 40, 63, 0.16);
 
-  --success: #059669;
+  --platinum: #9c7e4e;
+  --platinum-fg: #ffffff;
+  --platinum-soft: rgba(156, 126, 78, 0.12);
+  --platinum-soft-strong: rgba(156, 126, 78, 0.20);
+
+  --success: #1f855e;
   --success-fg: #ffffff;
-  --success-soft: rgba(5, 150, 105, 0.10);
-  --warning: #d97706;
+  --success-soft: rgba(31, 133, 94, 0.10);
+  --warning: #b6791c;
   --warning-fg: #ffffff;
-  --warning-soft: rgba(217, 119, 6, 0.10);
-  --danger: #dc2626;
+  --warning-soft: rgba(182, 121, 28, 0.12);
+  --danger: #cb3b36;
   --danger-fg: #ffffff;
-  --danger-soft: rgba(220, 38, 38, 0.10);
-  --info: #4f46e5;
+  --danger-soft: rgba(203, 59, 54, 0.10);
+  --info: #3f6493;
   --info-fg: #ffffff;
-  --info-soft: rgba(79, 70, 229, 0.10);
+  --info-soft: rgba(63, 100, 147, 0.10);
 
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12), 0 4px 8px rgba(15, 23, 42, 0.06);
-  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 0 24px rgba(99, 102, 241, 0.10);
+  --shadow-xs: 0 1px 2px rgba(40, 28, 24, 0.05);
+  --shadow-sm: 0 1px 3px rgba(40, 28, 24, 0.08), 0 1px 2px rgba(40, 28, 24, 0.04);
+  --shadow-md: 0 4px 12px rgba(40, 28, 24, 0.08), 0 2px 4px rgba(40, 28, 24, 0.04);
+  --shadow-lg: 0 12px 32px rgba(40, 28, 24, 0.12), 0 4px 8px rgba(40, 28, 24, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(63, 100, 147, 0.35), 0 0 24px rgba(63, 100, 147, 0.10);
 }
 
 [data-admin-theme] {
@@ -303,7 +327,8 @@ html { scroll-behavior: smooth; }
   --duration-slow: 320ms;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ui: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
 
   --text-2xs: 0.6875rem;  /* 11px */
@@ -428,7 +453,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--brand);
+  background: linear-gradient(155deg, color-mix(in oklab, var(--brand) 86%, white), var(--brand));
   color: var(--brand-fg);
   display: inline-flex;
   align-items: center;
@@ -436,10 +461,17 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.04em;
-  box-shadow: var(--shadow-sm);
+  /* Platinum hairline ring — a small metallic "jewel" detail. */
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--platinum-soft-strong);
 }
-.v2-brand-name { display: flex; flex-direction: column; line-height: 1.1; }
-.v2-brand-name-line { font-weight: 600; font-size: var(--text-base); color: var(--fg); }
+.v2-brand-name { display: flex; flex-direction: column; line-height: 1.05; }
+.v2-brand-name-line {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  letter-spacing: 0.005em;
+  color: var(--fg);
+}
 .v2-brand-name-sub { font-size: var(--text-2xs); color: var(--fg-subtle); letter-spacing: 0.05em; text-transform: uppercase; }
 
 .v2-sidebar-collapse {
@@ -2655,39 +2687,44 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   color-scheme: dark;
   /* Atlas (--cmd-*) palette so the shared KdsTicketCard renders identically to
      the fleet board (the card CSS is scoped to both .kds-atlas and this class). */
-  --cmd-canvas: #0a0c10;
-  --cmd-panel: #11151b;
-  --cmd-raised: #1a2129;
+  /* Warm-neutral command surface — same family as the suite's --bg/--surface
+     tokens so Fleet ↔ Floor ↔ admin read as one product. Status hues stay
+     distinct + high-contrast: operational clarity outranks brand expression. */
+  --cmd-canvas: #0a0a0c;
+  --cmd-panel: #141318;
+  --cmd-raised: #222028;
   --cmd-hair: rgba(255, 255, 255, 0.08);
   --cmd-hair-strong: rgba(255, 255, 255, 0.14);
-  --cmd-text: #e9edf2;
-  --cmd-dim: #9098a3;
-  --cmd-faint: #5c6571;
-  --cmd-queued: #5b6573;
-  --cmd-firing: #3b82f6;
-  --cmd-warn: #f5a623;
-  --cmd-risk: #8b5cf6;
+  --cmd-text: #f1efe9;
+  --cmd-dim: #9a938b;
+  --cmd-faint: #6a635c;
+  --cmd-queued: #6a655f;
+  --cmd-firing: #4d90e8;
+  --cmd-warn: #e0a93f;
+  --cmd-risk: #9a72e0;
   --cmd-late: #e5484d;
   --cmd-ready: #3dd68c;
-  --cmd-risk-soft: rgba(139, 92, 246, 0.16);
-  --cmd-warn-soft: rgba(245, 166, 35, 0.13);
+  --cmd-risk-soft: rgba(154, 114, 224, 0.16);
+  --cmd-warn-soft: rgba(224, 169, 63, 0.14);
   --cmd-late-soft: rgba(229, 72, 77, 0.14);
   --cmd-ready-soft: rgba(61, 214, 140, 0.13);
-  --bg: #0a0c10;
-  --kds-bg: #0a0c10;
-  --surface-1: #1a2129;
-  --surface-2: #11151b;
-  --surface-3: #232c36;
-  --surface-hover: #232c36;
-  --fg: #e9edf2;
-  --fg-muted: #9098a3;
-  --fg-subtle: #5c6571;
+  /* Platinum chrome accent for the command header / active rail. */
+  --cmd-platinum: #cbb48a;
+  --bg: #0a0a0c;
+  --kds-bg: #0a0a0c;
+  --surface-1: #222028;
+  --surface-2: #141318;
+  --surface-3: #2a2731;
+  --surface-hover: #2a2731;
+  --fg: #f1efe9;
+  --fg-muted: #9a938b;
+  --fg-subtle: #6a635c;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --warning: #f5a623;
-  --warning-soft: rgba(245, 166, 35, 0.13);
-  --info: #3b82f6;
-  --info-soft: rgba(59, 130, 246, 0.14);
+  --warning: #e0a93f;
+  --warning-soft: rgba(224, 169, 63, 0.14);
+  --info: #4d90e8;
+  --info-soft: rgba(77, 144, 232, 0.14);
   --success: #3dd68c;
   --success-soft: rgba(61, 214, 140, 0.13);
   --danger: #e5484d;
@@ -2735,14 +2772,16 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-kds-kiosk > .v2-page-header { align-items: center; }
 
 .kds-os {
-  --kds-bg: #06080d;
-  --surface-1: #141a25;
-  --surface-2: #0b0f17;
-  --surface-3: #1e2738;
-  --surface-hover: #243049;
+  /* Warm near-black wall surface; text/status stay at full brightness because
+     a hot, bright kitchen line needs maximum glanceability over subtlety. */
+  --kds-bg: #070608;
+  --surface-1: #1a1820;
+  --surface-2: #0f0e12;
+  --surface-3: #262430;
+  --surface-hover: #2e2b38;
   --fg: #ffffff;
-  --fg-muted: #c9d3e1;
-  --fg-subtle: #8893a6;
+  --fg-muted: #d2cdc4;
+  --fg-subtle: #938c82;
   --border: rgba(255, 255, 255, 0.10);
   --border-strong: rgba(255, 255, 255, 0.20);
   --warning: #fbbf24;
@@ -5546,11 +5585,12 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   /* 5-color semantic palette — RGB triplets matching the v2 token hexes
      so rgba(var(--admin-*), a) overlays line up with --brand / --success
      / --info / --warning / --danger. */
-  --admin-accent: 200, 16, 46;      /* Italia red — primary actions */
-  --admin-success: 16, 185, 129;    /* Emerald — confirm, save, active */
-  --admin-info: 99, 102, 241;       /* Indigo — secondary actions, info */
-  --admin-warning: 245, 158, 11;    /* Amber — pending, draft */
-  --admin-danger: 239, 68, 68;      /* Red — destructive, errors */
+  --admin-accent: 166, 45, 73;      /* Burgundy — primary actions */
+  --admin-success: 47, 168, 117;    /* Emerald — confirm, save, active */
+  --admin-info: 110, 146, 192;      /* Steel blue — secondary actions, info */
+  --admin-warning: 217, 164, 65;    /* Amber/gold — pending, draft */
+  --admin-danger: 226, 80, 75;      /* Red — destructive, errors */
+  --admin-platinum: 203, 180, 138;  /* Champagne — premium highlights */
 
   /* Text hierarchy reads from the v2 foreground tokens (theme-aware) */
   --text-primary: var(--fg);
@@ -5869,8 +5909,8 @@ select.pub-input {
 /* Semantic accent text */
 .admin-red { color: #ef4444; }
 .admin-green { color: #34d399; }
-.admin-link { color: #818cf8; }
-.admin-link:hover { color: #a5b4fc; }
+.admin-link { color: #92acd4; }
+.admin-link:hover { color: #b3c7e6; }
 
 /* Gradient-text (deprecated, kept for compat) */
 .gradient-text { color: var(--text-primary); }
@@ -5878,7 +5918,7 @@ select.pub-input {
 /* --- Status badges (semantic colors, 4.5:1+ contrast) --- */
 
 .badge-pending   { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
-.badge-confirmed { background: rgba(var(--admin-info), 0.10); color: #818cf8; }
+.badge-confirmed { background: rgba(var(--admin-info), 0.10); color: #92acd4; }
 .badge-preparing { background: rgba(251, 146, 60, 0.10); color: #c2824a; }
 .badge-ready     { background: rgba(var(--admin-success), 0.10); color: #34d399; }
 .badge-completed { background: rgba(203, 213, 225, 0.06); color: #94a3b8; }
@@ -5889,7 +5929,7 @@ select.pub-input {
 .badge-success { background: rgba(var(--admin-success), 0.10); color: #34d399; }
 .badge-warning { background: rgba(var(--admin-warning), 0.10); color: #ca8a04; }
 .badge-danger  { background: rgba(var(--admin-danger), 0.10); color: #f87171; }
-.badge-info    { background: rgba(var(--admin-info), 0.10); color: #818cf8; }
+.badge-info    { background: rgba(var(--admin-info), 0.10); color: #92acd4; }
 
 /* --- Alert banners --- */
 .alert-success {
@@ -5915,7 +5955,7 @@ select.pub-input {
 .alert-info {
   background: rgba(var(--admin-info), 0.10);
   border: 1px solid rgba(var(--admin-info), 0.2);
-  color: #818cf8;
+  color: #92acd4;
   border-radius: 0.5rem;
   padding: var(--space-3);
   font-size: 0.8125rem;
