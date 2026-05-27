@@ -17,6 +17,10 @@
   .stage button { height:30px; padding:0 15px; border:0; background:transparent; color:var(--dim); font:600 13px var(--ui); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:8px; letter-spacing:-.005em; }
   .stage button.on { background:var(--raised); color:var(--t); }
   .stage .n { font:600 11px var(--mono); color:var(--faint); }
+  .ctrl { width:34px; height:34px; border-radius:7px; border:1px solid var(--hair); background:var(--panel); color:var(--dim); display:grid; place-items:center; cursor:pointer; transition:color .12s,border-color .12s; }
+  .ctrl:hover { color:var(--t); border-color:var(--hair-2); }
+  .ctrl.on { color:var(--t); border-color:var(--hair-2); background:var(--raised); }
+  .ctrl .icn { width:16px; height:16px; }
 
   /* chef line strip: station focus + queue depth + 86 */
   .chefstrip { display:flex; align-items:center; gap:18px; flex:none; background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:13px 16px; }
@@ -66,6 +70,8 @@
       <button>Ready <span class="n">1</span></button>
     </div>
     <div class="clock">20:14</div>
+    <div class="ctrl on" title="Sound on"><svg class="icn" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></div>
+    <div class="ctrl" title="Fullscreen station"><svg class="icn" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></div>
   </div>
 
   <div class="chefstrip">
