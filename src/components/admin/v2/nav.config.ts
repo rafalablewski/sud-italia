@@ -34,6 +34,8 @@ import {
   Wallet,
   Receipt,
   Armchair,
+  Bot,
+  Contact,
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
@@ -80,8 +82,20 @@ export const NAV_SECTIONS: NavSection[] = [
       // somewhere to land.
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, shortcut: "d" },
       { href: "/admin/orders", label: "Orders", icon: ClipboardList, shortcut: "o", requiredRole: "staff" },
+    ],
+  },
+  {
+    // The proprietary operating systems the truck actually runs on, grouped
+    // so the till, the line, the customer book, the agent layer and the
+    // WhatsApp channel all read as one "Core" platform.
+    id: "core",
+    label: "Core",
+    items: [
       { href: "/admin/pos", label: "POS", icon: Receipt, shortcut: "g", requiredRole: "staff" },
       { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
+      { href: "/admin/crm", label: "CRM", icon: Contact, requiredRole: "staff" },
+      { href: "/admin/concierge", label: "Concierge", icon: Bot, requiredRole: "manager" },
+      { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare, requiredRole: "manager" },
     ],
   },
   {
@@ -123,7 +137,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/loyalty", label: "Loyalty", icon: Heart, shortcut: "l", requiredRole: "staff" },
       { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
-      { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare, requiredRole: "manager" },
     ],
   },
   {

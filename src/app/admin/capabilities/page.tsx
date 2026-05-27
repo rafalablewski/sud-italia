@@ -176,6 +176,31 @@ export default async function CapabilitiesPage() {
       ],
     },
     {
+      id: "core-systems",
+      title: "Core systems (CRM & Agent Commerce)",
+      items: [
+        {
+          name: "CRM — Regulars customer book",
+          status: "live",
+          href: "/admin/crm",
+          summary:
+            "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
+          caveats:
+            "Relationship-health score and next-best-action are heuristics computed from RFM + reliability, not an ML churn model. No-shows are derived from cancelled orders.",
+        },
+        {
+          name: "Concierge — agent commerce (MCP + WhatsApp)",
+          status: "live",
+          href: "/admin/concierge",
+          summary:
+            "One capability layer exposed to AI assistants over a public read endpoint and to guests over WhatsApp. Operator toggles per-capability exposure (toggle = saved) for get_menu / check_availability / get_allergens / locate_truck (served live from the real menu at /api/agent/<capability>) plus the conversational place_order / create_payment that run through the WhatsApp bot + Stripe checkout. Inspector shows the live JSON + an EU-14 allergen matrix from the real menu.",
+          envVars: ["WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY"],
+          caveats:
+            "No standalone MCP transport server yet — capabilities are served over the public HTTP read endpoint and consumed by the existing WhatsApp ordering bot. WhatsApp env vars unblock the live channel; without them the bot runs in demo mode.",
+        },
+      ],
+    },
+    {
       id: "kds",
       title: "Kitchen Display (KDS v2)",
       items: [
