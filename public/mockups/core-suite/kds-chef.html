@@ -12,7 +12,11 @@
   .wrap { height:100vh; display:flex; flex-direction:column; padding:14px 18px; gap:12px; }
   .top { display:flex; align-items:center; gap:14px; flex:none; }
   .id { display:flex; align-items:center; gap:11px; } .id .nm { font-family:var(--display); font-size:17px; font-weight:600; } .id .loc { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
-  .clock { margin-left:auto; font:600 19px var(--mono); padding:5px 13px; border-radius:8px; background:var(--panel); border:1px solid var(--hair); color:var(--t); }
+  .clock { font:600 19px var(--mono); padding:5px 13px; border-radius:8px; background:var(--panel); border:1px solid var(--hair); color:var(--t); }
+  .stage { margin:0 auto; display:flex; gap:3px; background:var(--panel); border:1px solid var(--hair); border-radius:8px; padding:3px; }
+  .stage button { height:30px; padding:0 15px; border:0; background:transparent; color:var(--dim); font:600 13px var(--ui); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:8px; letter-spacing:-.005em; }
+  .stage button.on { background:var(--raised); color:var(--t); }
+  .stage .n { font:600 11px var(--mono); color:var(--faint); }
 
   /* chef line strip: station focus + queue depth + 86 */
   .chefstrip { display:flex; align-items:center; gap:18px; flex:none; background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:13px 16px; }
@@ -55,6 +59,12 @@
       <a href="/mockups/core-suite/kds.html"><span>Floor</span></a>
       <span class="on">Chef</span>
     </div>
+    <div class="stage">
+      <button class="on">All <span class="n">5</span></button>
+      <button>New <span class="n">2</span></button>
+      <button>Firing <span class="n">2</span></button>
+      <button>Ready <span class="n">1</span></button>
+    </div>
     <div class="clock">20:14</div>
   </div>
 
@@ -95,6 +105,11 @@
       <div class="ct-h"><span class="ct-id">#4824</span><span class="ct-type">Takeaway</span><span class="ct-timer">0:41</span></div>
       <div class="ct-it"><span class="ct-q">2×</span><div class="ct-nm">Margherita</div></div>
       <div class="ct-f"><button class="bump">Start prep</button></div>
+    </div>
+    <div class="ct">
+      <div class="ct-h"><span class="ct-id">#4816</span><span class="ct-type">Dine-in T3</span><span class="ct-timer" style="color:var(--ready);font-size:14px;font-family:var(--ui);font-weight:600;letter-spacing:.02em;text-transform:uppercase">plated</span></div>
+      <div class="ct-it"><span class="ct-q">2×</span><div class="ct-nm">Margherita</div></div>
+      <div class="ct-f"><button class="bump">Bump · Done</button></div>
     </div>
   </div>
 
