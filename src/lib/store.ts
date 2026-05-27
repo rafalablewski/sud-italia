@@ -792,6 +792,36 @@ export async function getCustomers(): Promise<CustomerRollup[]> {
   }
 }
 
+/**
+ * Persist a customer's marketing-consent flags (CRM consent toggles). The
+ * rollup row is otherwise rebuilt by recomputeCustomerRollup, which never
+ * touches the optout columns — so a direct upsert here owns consent without
+ * being clobbered by the next order. Phone is canonicalized to E.164 so the
+ * write lands on the same row the rollup maintains.
+ */
+export async function setCustomerConsent(
+  rawPhone: string,
+  consent: { smsOptout?: boolean; emailOptout?: boolean },
+): Promise<CustomerRollup | null> {
+  const db = getDb();
+  if (!db) return null;
+  const phone = normalizePlPhoneE164(rawPhone) ?? rawPhone;
+  try {
+    await ensureCustomersTable();
+    const set: Partial<typeof customersTable.$inferInsert> = { updatedAt: new Date() };
+    if (typeof consent.smsOptout === "boolean") set.smsOptout = consent.smsOptout;
+    if (typeof consent.emailOptout === "boolean") set.emailOptout = consent.emailOptout;
+    await db
+      .insert(customersTable)
+      .values({ phone, ...set })
+      .onConflictDoUpdate({ target: customersTable.phone, set });
+    return await getCustomer(phone);
+  } catch (err) {
+    logger.warn("setCustomerConsent failed", { phone, layer: "store.customers" }, err);
+    return null;
+  }
+}
+
 async function dualWriteOrderItems(order: Order): Promise<void> {
   const db = getDb();
   if (!db) return;
@@ -2972,6 +3002,72 @@ export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): 
     const hydrated = hydrateLoyalty(current);
     const merged: LoyaltySettings = { ...hydrated, ...updates };
     await writeJSON("loyalty-settings.json", merged);
+    return merged;
+  });
+}
+
+// --- Concierge: agent-commerce capability exposure -----------------------
+//
+// The Concierge surface (/admin/concierge) exposes one capability layer to AI
+// assistants over MCP and to guests over WhatsApp. Each capability has an
+// operator-controlled exposure toggle — flipping it off removes the capability
+// from the public agent endpoint (/api/agent/[capability]) immediately. The
+// read capabilities are backed by the same live data the customer site + the
+// WhatsApp ordering bot already serve, so this is exposure config, not data.
+
+export const CONCIERGE_CAPABILITY_IDS = [
+  "get_menu",
+  "check_availability",
+  "get_allergens",
+  "place_order",
+  "create_payment",
+  "locate_truck",
+] as const;
+
+export type ConciergeCapabilityId = (typeof CONCIERGE_CAPABILITY_IDS)[number];
+
+export interface ConciergeSettings {
+  /** Per-capability exposure. Absent = on (capabilities ship enabled). */
+  exposure: Record<ConciergeCapabilityId, boolean>;
+}
+
+const DEFAULT_CONCIERGE_SETTINGS: ConciergeSettings = {
+  exposure: {
+    get_menu: true,
+    check_availability: true,
+    get_allergens: true,
+    place_order: true,
+    create_payment: true,
+    locate_truck: true,
+  },
+};
+
+function hydrateConcierge(saved: Partial<ConciergeSettings>): ConciergeSettings {
+  const exposure = { ...DEFAULT_CONCIERGE_SETTINGS.exposure };
+  if (saved.exposure) {
+    for (const id of CONCIERGE_CAPABILITY_IDS) {
+      if (typeof saved.exposure[id] === "boolean") exposure[id] = saved.exposure[id];
+    }
+  }
+  return { exposure };
+}
+
+export async function getConciergeSettings(): Promise<ConciergeSettings> {
+  const saved = await readJSON<Partial<ConciergeSettings>>("concierge-settings.json", {});
+  return hydrateConcierge(saved);
+}
+
+export async function updateConciergeSettings(
+  updates: { exposure?: Partial<Record<ConciergeCapabilityId, boolean>> },
+): Promise<ConciergeSettings> {
+  return withLock("concierge-settings.json", async () => {
+    const current = hydrateConcierge(
+      await readJSON<Partial<ConciergeSettings>>("concierge-settings.json", {}),
+    );
+    const merged: ConciergeSettings = {
+      exposure: { ...current.exposure, ...(updates.exposure ?? {}) },
+    };
+    await writeJSON("concierge-settings.json", merged);
     return merged;
   });
 }
