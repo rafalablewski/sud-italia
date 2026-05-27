@@ -263,6 +263,15 @@ export default async function CapabilitiesPage() {
             "Off by default — flip it on at /admin/settings (owner). Add (spawn) API rejected when the toggle is off (purge always allowed for cleanup); the endpoint is kitchen+ so the controls work for whoever is at the pass. Add 5 is the per-tap max (count clamped 1–5); keep tapping to build a bigger rush up to the 40-active cap. Sims drive the orders-based board but do NOT fire per-station kds_tickets rows (that table has no cascade on order delete, so firing them would orphan rows on purge), so bump-time P95 stays '—' during a pure-sim demo.",
         },
         {
+          name: "WhatsApp chat simulator",
+          status: "live",
+          href: "/admin/whatsapp",
+          summary:
+            "Demo / training tool with no separate page (mirrors the KDS order simulator): flip whatsappSimulatorEnabled in /admin/settings (owner-only toggle) and the WhatsApp console shows a 'Sandbox' tag plus manual Add 1 / Add 5 / Purge controls on the stats/filter strip. There is NO auto-spawn — the operator adds a controlled batch, then reads/replies to each chat with the normal thread composer. Each spawn (POST /api/admin/whatsapp-simulator, action: spawn, count clamped 1–5) builds a synthetic-but-real conversation ONLY from a real truck menu via getMenuWithOverrides() (no made-up products), at a random funnel stage (browsing / cart / fulfillment+slot / awaiting payment), and writes it through saveSimulatedWaConversation() — a real WaSession (simulated:true) + a real transcript — so the console renders it exactly like a live chat. Sandbox chats use a reserved +48999XXXXXX phone range, carry a '(sim)' customer name and a purple 'sim' badge in the list + 'sandbox' badge in the thread head, and never send a real WhatsApp message (the simulator writes straight to the store, bypassing the Meta provider). Spawned phones are tracked in a whatsapp-sim-phones.json registry so Purge (action: purge) clears every sandbox session + transcript in one shot. Spread across active trucks for variety unless scoped to one location.",
+          caveats:
+            "Off by default — flip it on at /admin/settings (owner). Spawn API rejected when the toggle is off (purge always allowed for cleanup); the endpoint is manager+ so the controls work for whoever is at the console. Registry self-caps at 30 active sandbox conversations — purge before adding more. Sandbox sessions are real store rows, so while live they DO appear in the WhatsApp channel metrics strip (active sessions / awaiting-pay counts) — that's intended for the demo; they create no real Order, so the orders/conversion/revenue metrics stay clean. Turning the toggle off purges every sandbox conversation.",
+        },
+        {
           name: "Role-aware KDS — owner / manager / chef lenses",
           status: "live",
           href: "/admin/kds",

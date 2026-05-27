@@ -8821,6 +8821,8 @@ select.pub-input {
   --wa-info-soft: var(--cmd-firing-soft);
   --wa-warn: var(--cmd-warn);
   --wa-warn-soft: var(--cmd-warn-soft);
+  --wa-risk: var(--cmd-risk);
+  --wa-risk-soft: var(--cmd-risk-soft);
   --wa-late: var(--cmd-late);
   --wa-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, monospace;
   background: var(--wa-canvas);
@@ -8859,6 +8861,8 @@ select.pub-input {
 .wa-filters { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .wa-chip-count { font-family: var(--wa-mono); font-size: 10px; color: var(--wa-faint); margin-left: 5px; }
 .cmd-chip[aria-pressed="true"] .wa-chip-count { color: var(--wa-dim); }
+.wa-sim-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--wa-risk); white-space: nowrap; }
+.wa-sim-tag svg { width: 12px; height: 12px; }
 
 /* 3-pane body */
 .wa-editor {
@@ -8897,6 +8901,7 @@ select.pub-input {
 .wa-conv.active .wa-chip-mini { background: var(--wa-canvas); }
 .wa-chip-mini.loc { color: var(--wa-info); background: var(--wa-info-soft); border-color: rgba(59,130,246,0.3); }
 .wa-chip-mini.pay { color: var(--wa-warn); background: var(--wa-warn-soft); border-color: rgba(245,166,35,0.3); }
+.wa-chip-mini.sim { color: var(--wa-risk); background: var(--wa-risk-soft); border-color: rgba(139,92,246,0.35); }
 
 /* ---- CENTER: chat thread ---- */
 .wa-thread { background: var(--wa-canvas); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
@@ -8908,6 +8913,7 @@ select.pub-input {
 .wa-th-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--wa-hair); color: var(--wa-faint); background: var(--wa-raised); }
 .wa-th-badge svg { width: 10px; height: 10px; }
 .wa-th-badge.loc { color: var(--wa-info); background: var(--wa-info-soft); border-color: rgba(59,130,246,0.3); }
+.wa-th-badge.sim { color: var(--wa-risk); background: var(--wa-risk-soft); border-color: rgba(139,92,246,0.35); }
 .wa-th-badge.window.open { color: var(--wa-accent); background: var(--wa-accent-soft); border-color: rgba(61,214,140,0.3); }
 .wa-msgs { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
 .wa-bubble-row { display: flex; }

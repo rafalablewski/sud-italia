@@ -15,6 +15,7 @@ import {
   Clock,
   CreditCard,
   ExternalLink,
+  FlaskConical,
   MapPin,
   Maximize2,
   Minimize2,
@@ -28,6 +29,7 @@ import {
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
+import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
 const MobileWhatsApp = dynamic(
   () => import("./mobile/MobileWhatsApp").then((m) => m.MobileWhatsApp),
@@ -64,6 +66,7 @@ interface WaSessionRow {
   pendingOrderId: string | null;
   pendingPaymentUrl: string | null;
   lastTurnAt: string;
+  simulated: boolean;
 }
 
 interface TranscriptHead {
@@ -90,6 +93,8 @@ interface ConversationRow {
   lastBody: string;
   /** True when an active session row contributes to this conversation. */
   hasActiveSession: boolean;
+  /** True for sandbox conversations staged by the chat simulator. */
+  simulated: boolean;
 }
 
 type WaMessageDirection = "in" | "out";
@@ -228,6 +233,7 @@ function mergeConversations(
       messageCount: h.messageCount,
       lastBody: h.lastBody,
       hasActiveSession: false,
+      simulated: false,
     });
   }
   for (const s of sessions) {
@@ -248,8 +254,10 @@ function mergeConversations(
           messageCount: 0,
           lastBody: "",
           hasActiveSession: true,
+          simulated: s.simulated,
         };
     merged.hasActiveSession = true;
+    merged.simulated = s.simulated || merged.simulated;
     merged.customerName = s.customerName ?? merged.customerName;
     merged.locationSlug = s.locationSlug ?? merged.locationSlug;
     merged.cartCount = s.cartCount || merged.cartCount;
@@ -306,6 +314,14 @@ function AdminWhatsAppDesktop() {
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
   const [clock, setClock] = useState("--:--:--");
+
+  // Chat simulator (owner toggle in Settings → Add / Purge controls).
+  const {
+    enabled: simEnabled,
+    busy: simBusy,
+    addConversations,
+    purgeAll,
+  } = useWhatsappSimulator();
 
   // ---- data loaders -----------------------------------------------------
 
@@ -713,6 +729,38 @@ function AdminWhatsAppDesktop() {
             <RotateCw />
             <span>Refresh</span>
           </button>
+          {simEnabled && (
+            <>
+              <span className="wa-stat-sep" />
+              <span className="wa-sim-tag">
+                <FlaskConical /> Sandbox
+              </span>
+              <button
+                type="button"
+                className="cmd-btn"
+                disabled={simBusy}
+                onClick={() => void addConversations(1).then(() => loadAll(true))}
+              >
+                Add 1
+              </button>
+              <button
+                type="button"
+                className="cmd-btn"
+                disabled={simBusy}
+                onClick={() => void addConversations(5).then(() => loadAll(true))}
+              >
+                Add 5
+              </button>
+              <button
+                type="button"
+                className="cmd-btn"
+                disabled={simBusy}
+                onClick={() => void purgeAll().then(() => loadAll(true))}
+              >
+                Purge
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -767,6 +815,7 @@ function AdminWhatsAppDesktop() {
                 <span className={`wa-th-dot${selected.hasActiveSession ? " live" : ""}`} />
                 <span className="wa-th-id tnum">{selected.phone}</span>
                 {selected.customerName && <span className="wa-th-name">{selected.customerName}</span>}
+                {selected.simulated && <span className="wa-th-badge sim">sandbox</span>}
                 {selected.locationSlug && (
                   <span className="wa-th-badge loc">{selected.locationSlug}</span>
                 )}
@@ -1054,6 +1103,7 @@ function ConvItem({
       {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}
       <div className="wa-conv-snip">{conv.lastBody || "—"}</div>
       <div className="wa-conv-tags">
+        {conv.simulated && <span className="wa-chip-mini sim">sim</span>}
         {conv.locationSlug && <span className="wa-chip-mini loc">{conv.locationSlug}</span>}
         {conv.cartCount > 0 && (
           <span className="wa-chip-mini">{conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}</span>

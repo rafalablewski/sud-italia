@@ -21,6 +21,7 @@ export const GET = withAdmin({ roles: ["staff", "kitchen", "manager", "owner"] }
       pendingOrderId: s.pendingOrderId,
       pendingPaymentUrl: s.pendingPaymentUrl,
       lastTurnAt: s.lastTurnAt,
+      simulated: !!s.simulated,
     })),
   );
 });

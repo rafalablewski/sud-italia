@@ -2688,6 +2688,11 @@ export interface AppSettings {
    *  false the tab is hidden and the simulator API rejects spawn/advance
    *  (purge still works, so disabling can clear leftover sims). */
   kdsSimulatorEnabled?: boolean;
+  /** Master toggle for the WhatsApp chat simulator. When true the WhatsApp
+   *  console shows Add 1 / Add 5 / Purge controls that stage sandbox
+   *  conversations (built only from the real menu); when false the controls
+   *  are hidden and the simulator API rejects spawn (purge still works). */
+  whatsappSimulatorEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -8434,6 +8439,9 @@ export interface WaSession {
   abandonedNotified?: boolean;
   /** Stripe Payment Intent for the pending order (set when confirm_and_pay returns). */
   pendingPaymentIntentId?: string;
+  /** Sandbox flag — set by the WhatsApp chat simulator. Marks the conversation
+   *  as a demo so the console can badge it; never set by the live bot. */
+  simulated?: boolean;
 }
 
 const WA_SESSION_TTL_MS = 90 * 60 * 1000; // 90 minutes — drops dormant sessions on read.
@@ -8906,6 +8914,54 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     await writeJSON("whatsapp-transcripts.json", all);
     return true;
   });
+}
+
+// --- WhatsApp chat simulator (admin-gated demo / training tool) ----------
+//
+// Mirrors the KDS order simulator: an owner toggle (whatsappSimulatorEnabled)
+// surfaces Add / Purge controls in the WhatsApp console. Each spawn writes a
+// real session + transcript (built from the real menu by the API route) so the
+// console renders them exactly like a live chat, but the phone is recorded in a
+// registry so Purge can find and remove every sandbox conversation in one shot.
+// Sessions carry simulated:true so the console can badge them.
+
+const WA_SIM_REGISTRY_KEY = "whatsapp-sim-phones.json";
+
+/** Persist one sandbox conversation (session + transcript) and register its
+ *  phone so it can be purged later. */
+export async function saveSimulatedWaConversation(
+  session: WaSession,
+  messages: WaMessage[],
+): Promise<void> {
+  await setWaSession({ ...session, simulated: true });
+  for (const msg of messages) {
+    await appendWaMessage(session.phone, msg);
+  }
+  await withLock(WA_SIM_REGISTRY_KEY, async () => {
+    const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+    const canonical = normalizePlPhoneE164(session.phone) ?? session.phone;
+    if (!phones.includes(canonical)) phones.push(canonical);
+    await writeJSON(WA_SIM_REGISTRY_KEY, phones);
+  });
+}
+
+/** Phones of every registered sandbox conversation (drives the active cap). */
+export async function listSimulatedWaPhones(): Promise<string[]> {
+  return readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+}
+
+/** Remove every registered sandbox conversation — clears the session and the
+ *  transcript for each phone, then empties the registry. Returns the count. */
+export async function deleteSimulatedWaConversations(): Promise<number> {
+  const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+  let removed = 0;
+  for (const phone of phones) {
+    await clearWaSession(phone);
+    await deleteWaTranscript(phone);
+    removed++;
+  }
+  await writeJSON(WA_SIM_REGISTRY_KEY, []);
+  return removed;
 }
 
 // --- Business costs (operating expense ledger) ---------------------------
