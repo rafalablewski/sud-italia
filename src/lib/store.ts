@@ -8442,6 +8442,9 @@ export interface WaSession {
   /** Sandbox flag — set by the WhatsApp chat simulator. Marks the conversation
    *  as a demo so the console can badge it; never set by the live bot. */
   simulated?: boolean;
+  /** Active scripted flow, if the customer is mid-sequence. The runner sends
+   *  step `step` on the next inbound and advances; cleared when the flow ends. */
+  activeFlow?: { flowId: string; step: number };
 }
 
 const WA_SESSION_TTL_MS = 90 * 60 * 1000; // 90 minutes — drops dormant sessions on read.
@@ -8602,6 +8605,10 @@ export interface WaSettings {
    *  template to customers who built a cart but didn't pay, once each, after
    *  `delayHours` and before the recovery window closes. Needs reopenTemplate. */
   abandonedCart: { enabled: boolean; delayHours: number };
+  /** Scripted multi-step flows. A customer message containing `trigger` starts
+   *  the flow; each subsequent reply advances one step. Deterministic — runs
+   *  ahead of the LLM, independent of the AI toggle. */
+  flows: { id: string; name: string; trigger: string; enabled: boolean; steps: { prompt: string }[] }[];
 }
 
 const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
@@ -8625,6 +8632,7 @@ const DEFAULT_WA_SETTINGS: WaSettings = {
   autoReplies: [],
   businessHours: { enabled: false, days: DEFAULT_BUSINESS_DAYS },
   abandonedCart: { enabled: false, delayHours: 2 },
+  flows: [],
 };
 
 export async function getWaSettings(): Promise<WaSettings> {

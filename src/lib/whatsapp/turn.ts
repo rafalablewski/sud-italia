@@ -14,6 +14,7 @@ import {
   type WaSession,
 } from "@/lib/store";
 import { WHATSAPP_SYSTEM_PROMPT } from "@/lib/whatsapp/prompt";
+import { runWaFlow } from "@/lib/whatsapp/flows";
 import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "@/lib/whatsapp/tools";
 import type { InboundMessage } from "@/lib/whatsapp/inbound";
 import { logger } from "@/lib/logger";
@@ -86,6 +87,15 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
 
   const session = await loadOrCreateWaSession(phone);
   if (!session) return;
+
+  // Scripted flows are deterministic and take precedence over the LLM. If a
+  // flow handles this inbound, persist the advanced step and stop here.
+  const inboundText = message.kind === "text" ? message.value : "";
+  if (await runWaFlow({ session, settings, inboundText, provider, phone })) {
+    if (message.id) void provider.markRead(message.id);
+    await setWaSession(session);
+    return;
+  }
 
   // Snapshot which funnel stages this conversation had already reached, so we
   // can emit just the new transitions once the tools have run this turn.

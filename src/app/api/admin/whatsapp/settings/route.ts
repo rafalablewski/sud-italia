@@ -78,6 +78,33 @@ export const PATCH = withAdmin({ roles: ["manager", "owner"] }, async (req, _ctx
       : 2;
     updates.abandonedCart = { enabled: ac.enabled === true, delayHours };
   }
+  if (Array.isArray(body.flows)) {
+    updates.flows = body.flows
+      .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")
+      .map((f) => {
+        const steps = Array.isArray(f.steps)
+          ? f.steps
+              .map((s) =>
+                s && typeof (s as { prompt?: unknown }).prompt === "string"
+                  ? { prompt: ((s as { prompt: string }).prompt).slice(0, 1000) }
+                  : null,
+              )
+              .filter((s): s is { prompt: string } => !!s && !!s.prompt.trim())
+              .slice(0, 10)
+          : [];
+        return {
+          id: typeof f.id === "string" && f.id ? f.id : `flow_${Math.random().toString(36).slice(2, 9)}`,
+          name: typeof f.name === "string" ? f.name.slice(0, 80) : "Flow",
+          trigger: typeof f.trigger === "string" ? f.trigger.trim().slice(0, 80) : "",
+          enabled: f.enabled === true,
+          steps,
+        };
+      })
+      // A flow with no trigger or no steps can never run — drop it so stored
+      // config stays clean (the editor filters the same way).
+      .filter((f) => f.trigger && f.steps.length > 0)
+      .slice(0, 20);
+  }
 
   const before = await getWaSettings();
   const next = await updateWaSettings(updates);

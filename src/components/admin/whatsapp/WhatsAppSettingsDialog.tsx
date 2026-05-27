@@ -44,6 +44,15 @@ interface WaSettings {
   autoReplies: AutoReply[];
   businessHours: BusinessHours;
   abandonedCart: { enabled: boolean; delayHours: number };
+  flows: WaFlow[];
+}
+
+interface WaFlow {
+  id: string;
+  name: string;
+  trigger: string;
+  enabled: boolean;
+  steps: { prompt: string }[];
 }
 
 export function WhatsAppSettingsDialog({
@@ -123,6 +132,60 @@ export function WhatsAppSettingsDialog({
   const setDelayHours = (h: number) =>
     setDraft((d) => (d ? { ...d, abandonedCart: { ...d.abandonedCart, delayHours: h } } : d));
 
+  const editFlow = (i: number, patch: Partial<WaFlow>) =>
+    setDraft((d) => (d ? { ...d, flows: d.flows.map((f, j) => (j === i ? { ...f, ...patch } : f)) } : d));
+  const addFlow = () =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            flows: [
+              ...d.flows,
+              {
+                id: `flow_${Math.random().toString(36).slice(2, 9)}`,
+                name: "New flow",
+                trigger: "",
+                enabled: true,
+                steps: [{ prompt: "" }],
+              },
+            ],
+          }
+        : d,
+    );
+  const removeFlow = (i: number) =>
+    setDraft((d) => (d ? { ...d, flows: d.flows.filter((_, j) => j !== i) } : d));
+  const editStep = (fi: number, si: number, prompt: string) =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            flows: d.flows.map((f, j) =>
+              j === fi ? { ...f, steps: f.steps.map((s, k) => (k === si ? { prompt } : s)) } : f,
+            ),
+          }
+        : d,
+    );
+  const addStep = (fi: number) =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            flows: d.flows.map((f, j) => (j === fi ? { ...f, steps: [...f.steps, { prompt: "" }] } : f)),
+          }
+        : d,
+    );
+  const removeStep = (fi: number, si: number) =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            flows: d.flows.map((f, j) =>
+              j === fi ? { ...f, steps: f.steps.filter((_, k) => k !== si) } : f,
+            ),
+          }
+        : d,
+    );
+
   const set = <K extends keyof WaSettings>(key: K, value: WaSettings[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
 
@@ -178,6 +241,14 @@ export function WhatsAppSettingsDialog({
           autoReplies,
           businessHours: draft.businessHours,
           abandonedCart: draft.abandonedCart,
+          flows: draft.flows
+            .map((f) => ({
+              ...f,
+              name: f.name.trim() || "Flow",
+              trigger: f.trigger.trim(),
+              steps: f.steps.filter((s) => s.prompt.trim()),
+            }))
+            .filter((f) => f.trigger && f.steps.length > 0),
         }),
       });
       if (res.ok) {
@@ -438,6 +509,83 @@ export function WhatsAppSettingsDialog({
                 Only carts idle at least this long (and under 4 days old) are nudged — once each.
               </p>
             </Field>
+          </Section>
+
+          {/* Scripted flows */}
+          <Section title="Scripted flows" desc="Deterministic guided sequences. When a customer message contains the trigger word, the bot sends step 1; each reply advances to the next step. Runs ahead of the AI — great for feedback or info sequences.">
+            <div className="wa-cfg-flows">
+              {draft.flows.length === 0 && (
+                <p className="admin-text-secondary text-sm">No flows yet. Add one below.</p>
+              )}
+              {draft.flows.map((flow, fi) => (
+                <div key={flow.id} className="wa-cfg-flow">
+                  <div className="wa-cfg-flow-head">
+                    <Switch
+                      checked={flow.enabled}
+                      onChange={(v) => editFlow(fi, { enabled: v })}
+                      label="Flow enabled"
+                    />
+                    <Input
+                      value={flow.name}
+                      onChange={(e) => editFlow(fi, { name: e.target.value })}
+                      placeholder="Flow name"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFlow(fi)}
+                      leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      aria-label="Remove flow"
+                    />
+                  </div>
+                  <Field label="Trigger keyword" className="mt-2">
+                    <Input
+                      value={flow.trigger}
+                      onChange={(e) => editFlow(fi, { trigger: e.target.value })}
+                      placeholder="e.g. opinia"
+                    />
+                  </Field>
+                  <div className="wa-cfg-steps">
+                    {flow.steps.map((s, si) => (
+                      <div key={si} className="wa-cfg-step">
+                        <span className="wa-cfg-step-n">{si + 1}</span>
+                        <Input
+                          value={s.prompt}
+                          onChange={(e) => editStep(fi, si, e.target.value)}
+                          placeholder={`Step ${si + 1} message`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeStep(fi, si)}
+                          leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                          aria-label="Remove step"
+                          disabled={flow.steps.length <= 1}
+                        />
+                      </div>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addStep(fi)}
+                      leadingIcon={<Plus className="h-3.5 w-3.5" />}
+                      disabled={flow.steps.length >= 10}
+                    >
+                      Add step
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={addFlow}
+                leadingIcon={<Plus className="h-3.5 w-3.5" />}
+                disabled={draft.flows.length >= 20}
+              >
+                Add flow
+              </Button>
+            </div>
           </Section>
         </div>
       )}
