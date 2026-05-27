@@ -433,8 +433,12 @@ const CONVO={
 let convoLog=[], curNode=null;
 
 /* ====================== State ====================== */
+// Deep-link support: the CRM "Open in WhatsApp" anchor lands here with
+// ?channel=whatsapp&phone=… so we open straight onto the guest's thread.
+const PARAMS=(()=>{ try{ return new URLSearchParams(location.search); }catch(_){ return new URLSearchParams(); } })();
 let LOC="Kraków";
-let VIEW="mcp"; // mcp | whatsapp
+let VIEW=PARAMS.get("channel")==="whatsapp" ? "whatsapp" : "mcp"; // mcp | whatsapp
+const WA_PHONE=PARAMS.get("phone")||null;
 let selectedCap="get_allergens";
 
 /* ====================== JSON syntax highlight ====================== */
@@ -573,7 +577,7 @@ function renderWhatsApp(){
     <div class="wa">
       <div class="wa-head">
         <span class="wa-av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg></span>
-        <span class="wa-id"><span class="wa-name">Sud Italia · Kraków</span><span class="wa-status"><i></i>online · WhatsApp Business</span></span>
+        <span class="wa-id"><span class="wa-name">${WA_PHONE?"Guest · "+WA_PHONE:"Sud Italia · Kraków"}</span><span class="wa-status"><i></i>${WA_PHONE?"thread opened from CRM · demo":"online · WhatsApp Business"}</span></span>
         <span class="wa-tag">AI agent</span>
       </div>
       <div class="wa-body" id="waBody">${msgs}</div>

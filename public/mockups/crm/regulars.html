@@ -446,6 +446,30 @@
   .nm-text b{color:var(--gold)}
   .nm-invite{appearance:none;cursor:pointer;align-self:flex-start;font-family:var(--sans);font-size:13px;font-weight:700;color:#06140d;background:var(--gold);border:0;border-radius:9px;padding:9px 16px}
   .nm-invite:hover{filter:brightness(1.07)}
+  .lc-top{flex-wrap:wrap}
+  .lc-value{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--gold)}
+  .lc-rewards{display:flex;flex-direction:column;gap:6px;margin-top:var(--s1)}
+  .lc-reward{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+  .lc-reward svg{width:14px;height:14px;flex:0 0 auto;color:var(--faint)}
+  .lc-reward b{color:var(--text);font-weight:600}
+  .lc-reward.claim{color:var(--accent)} .lc-reward.claim svg{color:var(--accent)}
+  .lc-reward.next svg{color:var(--gold)}
+
+  /* WhatsApp conversation brief */
+  .wa-thread{display:flex;flex-direction:column;gap:6px;background:#0c1317;border:1px solid var(--hair);border-radius:11px;padding:var(--s3)}
+  .wt-msg{display:flex;align-items:flex-end;gap:7px;max-width:100%}
+  .wt-msg.agent{flex-direction:row-reverse}
+  .wt-bub{max-width:78%;font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:10px;color:#e9edf2}
+  .wt-msg.guest .wt-bub{background:#202c33;border-top-left-radius:3px}
+  .wt-msg.agent .wt-bub{background:#005c4b;border-top-right-radius:3px}
+  .wt-ago{font-family:var(--mono);font-size:9px;color:var(--faint);flex:0 0 auto}
+  .wa-empty{font-size:12px;color:var(--faint);font-style:italic}
+  .wt-count{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .wa-anchor{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;text-decoration:none;
+    font-size:12.5px;font-weight:600;color:var(--wa);background:var(--wa-soft);border:1px solid rgba(37,211,102,0.4);
+    border-radius:9px;padding:8px 13px;transition:filter .14s ease}
+  .wa-anchor:hover{filter:brightness(1.12)}
+  .wa-anchor svg{width:15px;height:15px;flex:0 0 auto}
 
   /* guest identity — the passive-identity graph */
   .id-conf{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.04em;border:1px solid;border-radius:6px;padding:2px 8px}
@@ -918,6 +942,25 @@ const INTAKE=[
   {min:34, ch:"Delivery", cust:"+48 663 047 552", isNew:false, order:[{n:"Penne Arrabbiata",q:1}],                         total:2390, note:"Web · saved address, Wola"},
 ];
 
+/* ====================== WhatsApp threads (per guest) ======================
+   Brief, previewed in the CRM profile; the "Open in WhatsApp" anchor hands off
+   to the WhatsApp tab in the agent-commerce surface for the full history. */
+const CHATS={
+  "+48 608 391 740":[ // Tomasz
+    {who:"guest",t:"poproszę diavolę na wynos, odbiór za 20 min",ago:"2m"},
+    {who:"agent",t:"Got it — 1× Diavola, ready ~12 min at Rynek Główny. 32,90 zł 🍕",ago:"2m"}],
+  "+48 698 117 905":[ // Jakub
+    {who:"agent",t:"Your Tartufata is on the pass — driver leaving in 5 🛵",ago:"18m"},
+    {who:"guest",t:"perfect, dzięki!",ago:"16m"}],
+  "+48 887 412 663":[ // Katarzyna
+    {who:"guest",t:"hi! do you deliver to Wola? first time ordering",ago:"13m"},
+    {who:"agent",t:"We do — ~30 min to Wola 🛵 Our bestseller is the Pizza del Pizzaiolo, want one?",ago:"13m"},
+    {who:"guest",t:"yes please, one of those",ago:"12m"}],
+  "+48 512 880 114":[ // Rafał
+    {who:"guest",t:"the usual + espresso, takeout",ago:"11m"},
+    {who:"agent",t:"On it — Diavola + Espresso, 41,80 zł, ready ~12 min ☕",ago:"11m"}],
+};
+
 /* ====================== UI state ====================== */
 let CH="all"; // channel filter
 let LOC="All";
@@ -1162,24 +1205,52 @@ function renderDetail(){
   const R=52, CIRC=2*Math.PI*R, arc=(h/100*CIRC).toFixed(1);
   const fct=(lbl,v)=>`<div class="factor"><span class="fc-lbl">${lbl}<b class="tnum">${v}</b></span><span class="fc-track"><i style="width:${v}%;background:${barColor(v)}"></i></span></div>`;
 
-  // loyalty card (member: tier + progress · contact: invite)
+  // loyalty brief (member: tier + value + progress + rewards · contact: invite)
   const tierMin={Bronzo:0,Argento:500,Oro:1500}[t];
   const tierMax={Bronzo:500,Argento:1500,Oro:null}[t];
+  const REWARDS=[{pts:200,name:"Free espresso"},{pts:500,name:"Free dolce"},{pts:1000,name:"Free pizza"},{pts:2000,name:"VIP tasting night"}];
+  const giftSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18"/><path d="M12 8S10 3 7.5 3 5 6 8 8m4 0s2-5 4.5-5S19 6 16 8"/></svg>';
   let loyaltyHtml;
   if(c.member){
     const prog=tierMax==null?100:Math.round((c.points-tierMin)/(tierMax-tierMin)*100);
     const toNext=tierMax==null?0:tierMax-c.points;
+    const claim=[...REWARDS].reverse().find(r=>c.points>=r.pts);
+    const next=REWARDS.find(r=>c.points<r.pts);
     loyaltyHtml=`<div class="loyalty-card">
-      <div class="lc-top"><span class="tier-pill tier-${t}">${t}</span><span class="lc-pts tnum">${c.points.toLocaleString("pl-PL")} pts</span></div>
+      <div class="lc-top">
+        <span class="tier-pill tier-${t}">${t}</span>
+        <span class="lc-pts tnum">${c.points.toLocaleString("pl-PL")} pts</span>
+        <span class="lc-value tnum">≈ ${fmtPLN(c.points*10)} in rewards</span>
+      </div>
       ${tierMax==null
         ? '<div class="lc-note">Top tier — Oro. Keep the perks flowing.</div>'
         : `<div class="lc-prog"><span class="lc-track"><i style="width:${prog}%"></i></span><span class="lc-next tnum">${toNext.toLocaleString("pl-PL")} pts to ${t==="Bronzo"?"Argento":"Oro"}</span></div>`}
+      <div class="lc-rewards">
+        ${claim?`<div class="lc-reward claim">${giftSvg}<span>Claimable now — <b>${claim.name}</b></span></div>`:""}
+        ${next?`<div class="lc-reward next">${giftSvg}<span>Next — <b>${next.name}</b> at ${next.pts} pts · ${(next.pts-c.points).toLocaleString("pl-PL")} to go</span></div>`:`<div class="lc-reward">All rewards unlocked 🎉</div>`}
+      </div>
     </div>`;
   } else {
     loyaltyHtml=`<div class="loyalty-card nonmember">
       <div class="nm-text">Not enrolled — first captured via <b>${c.source}</b>. We hold their contact data, but they aren't earning points yet.</div>
       <button class="nm-invite" data-act="invite" type="button">Invite to loyalty →</button>
     </div>`;
+  }
+
+  // WhatsApp conversation brief — a preview + an anchor that hands off to the
+  // WhatsApp tab (the agent-commerce surface) for the full thread.
+  const thread=CHATS[c.id]||null;
+  const waHref="../agent/concierge.html?channel=whatsapp&phone="+encodeURIComponent(c.id);
+  const waIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>';
+  let convoHtml;
+  if(thread){
+    convoHtml=`<div class="wa-thread">
+        ${thread.slice(-3).map(m=>`<div class="wt-msg ${m.who}"><span class="wt-bub">${escapeHtml(m.t)}</span><span class="wt-ago tnum">${m.ago}</span></div>`).join("")}
+      </div>
+      <a class="wa-anchor" href="${waHref}">${waIcon}Open full thread in WhatsApp →</a>`;
+  } else {
+    convoHtml=`<div class="wa-empty">No WhatsApp thread yet — message this guest to start one.</div>
+      <a class="wa-anchor" href="${waHref}">${waIcon}Message on WhatsApp →</a>`;
   }
 
   el.innerHTML=`
@@ -1325,6 +1396,11 @@ function renderDetail(){
           Email marketing
         </button>
       </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Conversation ${thread?'<span class="sh-n">WhatsApp</span>':""}<span class="sh-sep"></span>${thread?`<span class="wt-count tnum">${thread.length} msg${thread.length===1?"":"s"}</span>`:""}</div>
+      ${convoHtml}
     </div>
 
     <div class="sec">
