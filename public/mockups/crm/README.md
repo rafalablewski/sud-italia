@@ -60,15 +60,30 @@ right column is the **relationship profile** for the selected customer:
   (confirm-pickup for repeat no-shows, win-back, **collect email**, birthday
   offer, **invite-to-loyalty**, welcome, VIP early-access, upsell), applied with
   one tap — the same violet AI card the POS uses for order offers.
+- **Guest identity (passive)** — the truck's hard problem is that walk-ups don't
+  "sign up", so every profile is a **merged guest** assembled from whatever
+  signals a touchpoint leaves: phone, **WhatsApp/voice** (from the pre-order
+  agent), a **recognised payment card** (card-present matched across visits), a
+  **web device**, an email. An **identity-confidence** meter scores how sure we
+  are it's one real person, and a **possible-duplicate** card offers a one-tap
+  **merge**. No form, no password — identity is resolved from how they reach us.
 - **Lifetime stats**, **contact & data** (phone, email or collect, capture
   source, channel, consent toggles — toggle = saved), **loyalty** (member tier
   + progress, or a contact's invite card), **favourites**, **order history** and
   **notes**.
 
+The header **View** toggle (`Book ↔ Agent intake`, or press `V`) swaps the left
+column for a live **agent-intake stream**: each WhatsApp/voice pre-order the
+agent takes, with the captured phone, the order, and whether it **recognised**
+an existing guest or **auto-created** a new one — the wedge that captures
+identity at the window without a sign-up flow and threads every order into the
+guest graph. Clicking any capture opens that guest's profile.
+
 It runs end to end over a 12-customer sample book (8 members + 4 contacts)
-across Kraków + Warszawa in złoty: search, filter, sort, select (mouse or
-`↑`/`↓`/`j`/`k`), award points, invite a contact to loyalty, flag an email to
-collect, toggle consent, add notes, and fire the next-best-action — all live.
+across Kraków + Warszawa in złoty: search, filter, sort, switch Book ↔ Agent
+intake, select (mouse or `↑`/`↓`/`j`/`k`), award points, invite a contact to
+loyalty, flag an email to collect, merge a duplicate identity, toggle consent,
+add notes, and fire the next-best-action — all live.
 
 ## Browsing
 

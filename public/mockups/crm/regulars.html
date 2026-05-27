@@ -447,6 +447,66 @@
   .nm-invite{appearance:none;cursor:pointer;align-self:flex-start;font-family:var(--sans);font-size:13px;font-weight:700;color:#06140d;background:var(--gold);border:0;border-radius:9px;padding:9px 16px}
   .nm-invite:hover{filter:brightness(1.07)}
 
+  /* guest identity — the passive-identity graph */
+  .id-conf{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.04em;border:1px solid;border-radius:6px;padding:2px 8px}
+  .id-lead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+  .id-merge{font-size:13px;color:var(--text)}
+  .id-merge b{font-family:var(--mono)}
+  .id-nosignup{font-size:11px;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.28);border-radius:6px;padding:2px 8px;letter-spacing:0.01em}
+  .id-bar{height:5px;border-radius:3px;background:var(--hair);overflow:hidden}
+  .id-bar i{display:block;height:100%;border-radius:3px;transition:width .4s ease}
+  .id-graph{display:flex;flex-direction:column}
+  .id-sig{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair)}
+  .id-sig:last-child{border-bottom:0}
+  .id-ic{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--hair);color:var(--dim)}
+  .id-ic svg{width:15px;height:15px}
+  .id-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .id-k{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .id-v{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .id-v.mono{font-family:var(--mono);font-size:11.5px}
+  .id-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .id-src{font-size:10.5px;color:var(--dim)}
+  .id-tag{font-size:8.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .id-tag.passive{color:var(--risk);background:var(--risk-soft);border-color:rgba(139,92,246,0.34)}
+  .id-tag.verified{color:var(--accent);background:var(--accent-soft);border-color:rgba(61,214,140,0.3)}
+  .id-dupe{display:flex;align-items:flex-start;gap:10px;margin-top:var(--s2);padding:var(--s3);border:1px solid rgba(245,166,35,0.34);background:var(--warn-soft);border-radius:10px}
+  .id-dupe>svg{width:18px;height:18px;color:var(--warn);flex:0 0 auto;margin-top:1px}
+  .id-dupe-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .id-dupe-top{font-size:12px;font-weight:700;color:var(--warn)}
+  .id-dupe-note{font-size:11.5px;color:var(--text);line-height:1.45}
+  .id-shared{color:var(--faint)}
+  .id-merge-btn{flex:0 0 auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:700;color:var(--warn);background:transparent;border:1px solid var(--warn);border-radius:8px;padding:6px 13px}
+  .id-merge-btn:hover{background:rgba(245,166,35,0.16)}
+
+  /* agent-intake stream (left column, View = Agent intake) */
+  .intake-summary{display:none;align-items:center;gap:7px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:1 1 auto}
+  .intake-summary b{color:var(--text)}
+  .intake-summary .is-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:0 0 auto;box-shadow:0 0 0 3px var(--accent-soft)}
+  .intake-summary .is-pipe{color:var(--hair-strong);margin:0 3px}
+  .intake{
+    appearance:none;text-align:left;cursor:pointer;font-family:var(--sans);width:100%;
+    background:var(--raised);border:1px solid var(--hair);border-radius:11px;padding:var(--s3);
+    display:flex;gap:var(--s3);align-items:flex-start;transition:border-color .16s ease,transform .1s ease;
+  }
+  .intake:hover{border-color:var(--hair-strong);transform:translateY(-1px)}
+  .intake.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 12px 28px -16px rgba(61,214,140,0.4)}
+  .ik-ch{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#202832;border:1px solid var(--hair-strong)}
+  .ik-ch svg{width:16px;height:16px}
+  .ik-ch.ik-wa{color:var(--accent)} .ik-ch.ik-voice{color:var(--firing)}
+  .ik-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .ik-row1{display:flex;align-items:center;gap:7px}
+  .ik-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ik-badge{flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border-radius:5px;padding:1px 6px}
+  .ik-badge.is-new{color:var(--firing);background:var(--firing-soft);border:1px solid rgba(59,130,246,0.34)}
+  .ik-badge.is-known{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3)}
+  .ik-snip{font-size:12px;color:var(--dim);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ik-order{display:flex;align-items:baseline;gap:8px;margin-top:1px}
+  .ik-items{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ik-total{flex:0 0 auto;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text)}
+  .ik-meta{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .ik-phone{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .ik-ago{font-family:var(--mono);font-size:10px;color:var(--dim)}
+
   /* empty detail */
   .detail-empty{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--faint);text-align:center;padding:var(--s7)}
   .detail-empty .de-emoji{font-size:42px;opacity:.5}
@@ -513,6 +573,10 @@
       <span class="ctl-lbl">Loc</span>
       <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
     </div>
+    <div class="ctl">
+      <span class="ctl-lbl">View</span>
+      <div class="seg-group" id="viewGroup" role="group" aria-label="View"></div>
+    </div>
     <div class="spacer"></div>
     <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
       <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
@@ -539,6 +603,7 @@
         <button class="clr" id="searchClear" type="button" aria-label="Clear search">×</button>
       </label>
       <div class="segchips" id="segchips" role="group" aria-label="Segment filter"></div>
+      <div class="intake-summary" id="intakeSummary" style="display:none"></div>
       <div class="sort-ctl">
         <span class="ctl-lbl">Sort</span>
         <div class="seg-group" id="sortGroup" role="group" aria-label="Sort by"></div>
@@ -562,7 +627,7 @@
       <span><i style="background:var(--firing)"></i>New</span>
       <span><i style="background:var(--late)"></i>Lapsed</span>
     </div>
-    <div class="kbd-hint"><span class="kbd">/</span> search · <span class="kbd">↑</span><span class="kbd">↓</span> move · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> clear</div>
+    <div class="kbd-hint"><span class="kbd">/</span> search · <span class="kbd">↑</span><span class="kbd">↓</span> move · <span class="kbd">V</span> view · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> clear</div>
   </footer>
 
   <div class="toast" id="toast"></div>
@@ -676,14 +741,14 @@ let CUSTOMERS = [
     notes:[], sms:false, mail:true },
 
   { id:"+48 608 391 740", name:"Tomasz Lewandowski", email:"", loc:"Kraków", chan:"Takeout",
-    joinedDays:40, lastDays:11, orders:3, spent:9100, points:0, member:false, source:"Phone order", noShows:1, bday:"04-17", seg:"active", vip:false,
+    joinedDays:40, lastDays:11, orders:3, spent:9100, points:0, member:false, source:"WhatsApp agent", noShows:1, bday:"04-17", seg:"active", vip:false,
     favs:[{n:"Slice (Margherita)",cat:"Pizza",q:3}],
     recent:[{d:11,total:2380,chan:"Takeout",loc:"Kraków",items:[{n:"Slice (Margherita)",q:2}]},
             {d:25,total:3490,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1}]}],
     notes:[], sms:true, mail:false },
 
   { id:"+48 721 005 318", name:"Ola Dąbrowska", email:"ola.dabrowska@gmail.com", loc:"Warszawa", chan:"Delivery",
-    joinedDays:14, lastDays:8, orders:2, spent:6400, points:90, member:true, source:"Loyalty signup", noShows:0, bday:"10-05", seg:"new", vip:false,
+    joinedDays:14, lastDays:8, orders:2, spent:6400, points:90, member:true, source:"Voice agent", noShows:0, bday:"10-05", seg:"new", vip:false,
     favs:[{n:"Margherita",cat:"Pizza",q:2}],
     recent:[{d:8,total:3290,chan:"Delivery",loc:"Warszawa",items:[{n:"Margherita",q:1}]},
             {d:13,total:3110,chan:"Delivery",loc:"Warszawa",items:[{n:"Ortolana",q:1}]}],
@@ -759,13 +824,72 @@ function completeness(c){
 
 // Capture source — how this person first entered the book (loyalty is just one).
 const SOURCE_ICON={
+  "WhatsApp agent":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>',
+  "Voice agent":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>',
   "Loyalty signup":'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>',
   "Email receipt":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
   "Phone order":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>',
   "Dine-in":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>',
 };
 
+/* ====================== Passive identity — the guest graph ======================
+   The truck's hard problem is identity: walk-ups don't "sign up". Every profile
+   is therefore a *merged guest* — assembled from whatever signals a touchpoint
+   leaves (phone, WhatsApp, a recognised payment card, a web device, an email),
+   with no sign-up flow. deriveSignals() reconstructs that graph from what we
+   already hold; identityConfidence() scores how sure we are it's one real person. */
+const SIGNAL_META={
+  phone:{label:"Phone",      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>'},
+  whatsapp:{label:"WhatsApp", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>'},
+  voice:{label:"Voice line", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>'},
+  email:{label:"Email",      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>'},
+  card:{label:"Payment card",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>'},
+  device:{label:"Web device",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>'},
+};
+function last4(seed){ let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))>>>0; return String(h%10000).padStart(4,"0"); }
+function deriveSignals(c){
+  const sig=[], isWA=c.source==="WhatsApp agent", isVoice=c.source==="Voice agent";
+  sig.push({type:"phone", val:c.id, src:c.source, first:c.joinedDays, tag:"Primary key"});
+  if(isWA)    sig.push({type:"whatsapp", val:c.id, src:"WhatsApp agent", first:c.joinedDays, tag:"Verified"});
+  if(isVoice) sig.push({type:"voice",    val:c.id, src:"Voice agent",    first:c.joinedDays, tag:"Verified"});
+  if(c.email) sig.push({type:"email", val:c.email, src:c.source==="Email receipt"?"Email receipt":"Given at order", first:c.joinedDays, tag:c.mail?"Opted in":""});
+  if((c.chan==="Dine-in"||c.chan==="Takeout") && c.orders>=3){
+    const visits=Math.min(c.orders, c.orders>15?4:c.orders>6?3:2);
+    sig.push({type:"card", val:"•• "+last4(c.id), src:"Payment match", first:Math.round(c.joinedDays*0.7), visits, tag:"Passive"});
+  }
+  if(c.chan==="Delivery") sig.push({type:"device", val:"dev_"+last4(c.id+"d").slice(0,3)+"…", src:"Web checkout", first:Math.round(c.joinedDays*0.85), tag:"Passive"});
+  return sig;
+}
+const W_SIG={phone:34,whatsapp:18,voice:18,email:16,card:24,device:12};
+function identityConfidence(sig){
+  let s=0; sig.forEach(x=>{ s+=W_SIG[x.type]||10; if(x.type==="card"&&x.visits>1) s+=Math.min(14,(x.visits-1)*6); });
+  return Math.min(100,s);
+}
+// A few showcase cases the derivation can't infer (a likely duplicate to merge).
+const IDENTITY_EXTRA={
+  "+48 504 661 238":{ dupe:{phone:"+48 730 118 962", shared:["Web device","Card •• "+last4("+48 504 661 238")], note:"A second number shares this guest's web device and card hash — probably the same person on a work phone."} },
+};
+
+/* ====================== Agent intake — capture without a sign-up ======================
+   The WhatsApp / voice pre-order agent is the wedge: it takes the order AND
+   resolves identity by phone, then threads everything into the guest graph.
+   Recognised regulars are matched silently; first-timers get an auto-created
+   guest — no form, no password, no "join our loyalty" wall. */
+const INTAKE=[
+  {min:2,  ch:"WhatsApp", cust:"+48 608 391 740", isNew:false, order:[{n:"Diavola",q:1}],                                  total:3490, snip:"„poproszę diavolę na wynos, odbiór za 20 min”"},
+  {min:7,  ch:"Voice",    cust:"+48 601 224 730", isNew:false, order:[{n:"Margherita",q:2},{n:"Espresso",q:2}],            total:6890, snip:"„the usual please — table for two at six”"},
+  {min:13, ch:"WhatsApp", cust:"+48 887 412 663", isNew:true,  order:[{n:"Pizza del Pizzaiolo",q:1}],                       total:4790, snip:"„hi! do you deliver to Wola? first time ordering”"},
+  {min:18, ch:"WhatsApp", cust:"+48 698 117 905", isNew:false, order:[{n:"Tartufata Reale",q:1}],                          total:7990, snip:"„same as last time, to the office 🙏”"},
+  {min:26, ch:"Voice",    cust:"+48 721 005 318", isNew:true,  order:[{n:"Margherita",q:1}],                               total:3290, snip:"„first time — what do you recommend?”"},
+  {min:34, ch:"WhatsApp", cust:"+48 692 540 871", isNew:false, order:[{n:"Linguine al Pesto",q:1},{n:"Panna Cotta",q:1}],  total:4195, snip:"„pesto + panna cotta, pickup at 7”"},
+];
+const INTAKE_ICON={
+  WhatsApp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>',
+  Voice:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>',
+};
+
 /* ====================== UI state ====================== */
+let VIEW="book"; // book | intake
 let LOC="All";
 let SEG="all";
 let SORT="ltv";
@@ -858,7 +982,11 @@ function renderSegchips(){
 }
 
 /* ====================== Render: customer list ====================== */
+const custOf=id=>CUSTOMERS.find(c=>c.id===id)||null;
+function visibleIntake(){ return INTAKE.filter(i=>{ const c=custOf(i.cust); return c && inLoc(c); }); }
+
 function renderList(){
+  if(VIEW==="intake"){ renderIntake(); return; }
   const list=visibleCustomers();
   const wrap=document.getElementById("list");
   document.getElementById("listCount").innerHTML=`<b>${list.length}</b> ${list.length===1?"customer":"customers"}`;
@@ -900,6 +1028,52 @@ function renderList(){
     </button>`;
   }).join("");
   wrap.querySelectorAll(".cust").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
+}
+
+/* ====================== Render: agent intake stream ====================== */
+function renderIntake(){
+  const items=visibleIntake();
+  const wrap=document.getElementById("list");
+  document.getElementById("listCount").innerHTML=`<b>${items.length}</b> agent ${items.length===1?"capture":"captures"}`;
+  document.getElementById("listSort").textContent="last 60 min";
+
+  const summary=document.getElementById("intakeSummary");
+  const newN=items.filter(i=>i.isNew).length, knownN=items.length-newN;
+  summary.innerHTML=`<span class="is-dot"></span><b>${items.length}</b> captured by agent<span class="is-pipe">·</span><b>${newN}</b> new guests<span class="is-pipe">·</span><b>${knownN}</b> recognised<span class="is-pipe">·</span>no sign-up`;
+
+  if(items.length===0){
+    wrap.innerHTML=`<div class="list-empty"><span class="le-emoji">🤖</span><span>No agent captures here.</span></div>`;
+    return;
+  }
+  wrap.innerHTML=items.map(i=>{
+    const c=custOf(i.cust); const name=c?c.name:"Unknown";
+    const its=i.order.map(o=>(o.q>1?o.q+"× ":"")+o.n).join(", ");
+    return `<button class="intake${i.cust===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(i.cust)}">
+      <span class="ik-ch ik-${i.ch==="WhatsApp"?"wa":"voice"}" title="${i.ch}">${INTAKE_ICON[i.ch]}</span>
+      <span class="ik-main">
+        <span class="ik-row1">
+          <span class="ik-name">${i.isNew?"New guest":name}</span>
+          <span class="ik-badge ${i.isNew?"is-new":"is-known"}">${i.isNew?"Auto-created":"Recognised"}</span>
+        </span>
+        <span class="ik-snip">${i.snip}</span>
+        <span class="ik-order"><span class="ik-items">${its}</span><span class="ik-total tnum">${fmtPLN(i.total)}</span></span>
+      </span>
+      <span class="ik-meta"><span class="ik-phone tnum">${i.cust}</span><span class="ik-ago tnum">${i.min}m</span></span>
+    </button>`;
+  }).join("");
+  wrap.querySelectorAll(".intake").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
+}
+
+// Toggle the book/intake chrome (which controls show) and re-render the list.
+function setView(v){
+  VIEW=v;
+  const intake=v==="intake";
+  document.getElementById("segchips").style.display=intake?"none":"flex";
+  document.querySelector(".sort-ctl").style.display=intake?"none":"flex";
+  document.getElementById("searchWrap").style.display=intake?"none":"inline-flex";
+  document.getElementById("intakeSummary").style.display=intake?"flex":"none";
+  buildViewSwitcher();
+  renderList();
 }
 
 /* ====================== AI next-best-action ====================== */
@@ -958,6 +1132,8 @@ function renderDetail(){
   const nba=nextBestAction(c);
   const earlier=Math.max(0,c.orders-c.recent.length);
   const ns=c.noShows||0, comp=completeness(c), flags=healthFlags(c);
+  const signals=deriveSignals(c), idConf=identityConfidence(signals), dupe=(IDENTITY_EXTRA[c.id]||{}).dupe||null;
+  const idTone=idConf>=80?"var(--accent)":idConf>=55?"var(--warn)":"var(--late)";
   const R=52, CIRC=2*Math.PI*R, arc=(h/100*CIRC).toFixed(1);
   const fct=(lbl,v)=>`<div class="factor"><span class="fc-lbl">${lbl}<b class="tnum">${v}</b></span><span class="fc-track"><i style="width:${v}%;background:${barColor(v)}"></i></span></div>`;
 
@@ -1127,6 +1303,30 @@ function renderDetail(){
     </div>
 
     <div class="sec">
+      <div class="sec-head">Guest identity <span class="sh-n">passive</span><span class="sh-sep"></span><span class="id-conf" style="color:${idTone};border-color:${idTone}">${idConf}% confident</span></div>
+      <div class="id-lead">
+        <span class="id-merge">1 guest · merged from <b class="tnum">${signals.length}</b> signal${signals.length===1?"":"s"}</span>
+        <span class="id-nosignup">no sign-up — identity resolved from how they reach us</span>
+      </div>
+      <div class="id-bar"><i style="width:${idConf}%;background:${idTone}"></i></div>
+      <div class="id-graph">
+        ${signals.map(s=>{
+          const meta=SIGNAL_META[s.type]||{label:s.type,icon:""};
+          return `<div class="id-sig">
+            <span class="id-ic">${meta.icon}</span>
+            <span class="id-body"><span class="id-k">${meta.label}${s.type==="card"&&s.visits>1?` · seen ${s.visits}×`:""}</span><span class="id-v mono">${s.val}</span></span>
+            <span class="id-side"><span class="id-src">${s.src}</span>${s.tag?`<span class="id-tag${s.tag==="Passive"?" passive":s.tag==="Verified"?" verified":""}">${s.tag}</span>`:""}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      ${dupe?`<div class="id-dupe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><rect x="8" y="8" width="12" height="12" rx="2"/></svg>
+        <span class="id-dupe-body"><span class="id-dupe-top">Possible duplicate · <span class="mono">${dupe.phone}</span></span><span class="id-dupe-note">${dupe.note} <span class="id-shared">Shared: ${dupe.shared.join(" · ")}</span></span></span>
+        <button class="id-merge-btn" data-act="merge" type="button">Merge</button>
+      </div>`:""}
+    </div>
+
+    <div class="sec">
       <div class="sec-head">Loyalty <span class="sh-sep"></span></div>
       ${loyaltyHtml}
     </div>
@@ -1188,6 +1388,7 @@ function doAction(act,c){
   else if(act==="collect"){ toast("Flagged to collect email at "+fn+"'s next order"); }
   else if(act==="points"){ if(!c.member) return toast("⚠ "+fn+" isn't a loyalty member — invite them first"); c.points+=50; toast("+50 points → "+fn+" · "+c.points.toLocaleString("pl-PL")+" total"); renderAll(); }
   else if(act==="invite"){ inviteLoyalty(c); }
+  else if(act==="merge"){ toast("Merged → one guest for "+fn+" · histories + identifiers combined"); }
   else if(act==="note"){ const ni=document.getElementById("noteInput"); if(ni){ ni.focus(); ni.scrollIntoView({behavior:"smooth",block:"center"}); } }
 }
 // Convert a captured contact into a loyalty member — seeds a welcome balance.
@@ -1242,6 +1443,17 @@ function buildSortSwitcher(){
     b.className="seg";b.type="button";b.textContent=s.label;
     b.setAttribute("aria-pressed",String(s.key===SORT));
     b.onclick=()=>{ SORT=s.key; buildSortSwitcher(); renderList(); };
+    g.appendChild(b);
+  });
+}
+const VIEWS=[{key:"book",label:"Book"},{key:"intake",label:"Agent intake"}];
+function buildViewSwitcher(){
+  const g=document.getElementById("viewGroup");g.innerHTML="";
+  VIEWS.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=v.label;
+    b.setAttribute("aria-pressed",String(v.key===VIEW));
+    b.onclick=()=>setView(v.key);
     g.appendChild(b);
   });
 }
@@ -1303,14 +1515,15 @@ document.addEventListener("keydown",e=>{
   if(typing) return;
   if(e.key==="/"){ e.preventDefault(); searchInput.focus(); return; }
   if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
+  if(e.key.toLowerCase()==="v"){ setView(VIEW==="book"?"intake":"book"); return; }
   if(e.key==="ArrowDown"||e.key==="ArrowUp"||e.key.toLowerCase()==="j"||e.key.toLowerCase()==="k"){
-    const vis=visibleCustomers();
-    if(!vis.length) return;
-    const i=vis.findIndex(c=>c.id===selectedId);
+    const ids=(VIEW==="intake"?visibleIntake().map(i=>i.cust):visibleCustomers().map(c=>c.id));
+    if(!ids.length) return;
+    const i=ids.indexOf(selectedId);
     const dir=(e.key==="ArrowDown"||e.key.toLowerCase()==="j")?1:-1;
-    const ni=Math.max(0,Math.min(vis.length-1,(i<0?0:i)+dir));
-    selectCustomer(vis[ni].id);
-    const node=document.querySelector(".cust.active");
+    const ni=Math.max(0,Math.min(ids.length-1,(i<0?0:i)+dir));
+    selectCustomer(ids[ni]);
+    const node=document.querySelector(".cust.active,.intake.active");
     if(node) node.scrollIntoView({block:"nearest"});
     e.preventDefault();
   }
@@ -1322,6 +1535,7 @@ function tick(){ document.getElementById("clock").textContent=fmtClock(new Date(
 /* ====================== Boot ====================== */
 buildLocSwitcher();
 buildSortSwitcher();
+buildViewSwitcher();
 syncFs();
 renderAll();
 tick();
