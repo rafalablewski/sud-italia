@@ -40,20 +40,17 @@ optional — while making the gaps visible and workable.
 ### Layout
 
 **Regulars** is built on the idea that a food truck lives on its repeat
-customers. The left column is **one unified view** — there is no separate
-"agent intake" mode; live captures and the book share a single column.
-**Channel is a first-class, colour-coded dimension**: a dedicated filter row
-(All / Dine-in / Takeout / Delivery / WhatsApp / Voice / Web), channel chips on
-every guest row and profile, and a colour per channel carried everywhere. At
-the top sits a **Live captures** feed — recent orders landing from every
-channel (the WhatsApp/voice agent resolving identity by phone, a recognised
-card at the window, a web order on a saved device), each tagged with its
-channel and whether it **recognised** a guest or **auto-created** one. Below it
-the **customer book** — searchable by name, phone or email, filterable by
-lifecycle (VIP / Active / Repeat / New / Lapsed), **data facets** (Members /
-Contacts / No email / No-shows) **and channel**, sortable by lifetime value,
-recency, orders, points or name, with a KPI strip across the top. Both the
-captures and the book respond to the channel filter. The right column is the
+customers. The left column is **one book, split in two groups**: **Agentic
+customers** (anyone who orders through an ordering agent — WhatsApp / Voice /
+Web) and **Customers** (handled by staff at the table, window or door). No
+separate "intake" mode. **Channel is a first-class, colour-coded dimension**: a
+dedicated filter row (All / Dine-in / Takeout / Delivery / WhatsApp / Voice /
+Web) plus a **Period** filter (All / 24h / 7d / 30d), with channel chips on
+every guest row and profile and a colour per channel carried everywhere. The
+book is searchable by name, phone or email, filterable by lifecycle (VIP /
+Active / Repeat / New / Lapsed), **data facets** (Members / Contacts / No email
+/ No-shows), **channel** and **time**, sortable by lifetime value, recency,
+orders, points or name, with a KPI strip across the top. The right column is the
 **relationship profile** for the selected customer:
 
 - **Relationship health (the centrepiece)** — a redesigned radial **gauge**
@@ -77,17 +74,23 @@ captures and the book respond to the channel filter. The right column is the
   **web device**, an email. An **identity-confidence** meter scores how sure we
   are it's one real person, and a **possible-duplicate** card offers a one-tap
   **merge**. No form, no password — identity is resolved from how they reach us.
+- **Conversation** — a preview of the recent **WhatsApp thread** (or a prompt
+  when there's none) with an **Open in WhatsApp** anchor that hands off to the
+  WhatsApp tab in the agent-commerce surface (`/mockups/agent/`), opening
+  straight onto that guest's thread.
+- **Loyalty brief** — tier, points balance, **reward value**, progress to the
+  next tier, and the **claimable-now** + next rewards from the ladder (or a
+  contact's invite card).
 - **Lifetime stats**, **contact & data** (phone, email or collect, capture
   source, **the channels the guest uses** as colour chips, consent toggles —
-  toggle = saved), **loyalty** (member tier + progress, or a contact's invite
-  card), **favourites**, **order history** and **notes**.
+  toggle = saved), **favourites**, **order history** and **notes**.
 
-It runs end to end over a 12-customer sample book (8 members + 4 contacts)
-across Kraków + Warszawa in złoty: search, filter by lifecycle / data facet /
-**channel**, sort, click a live capture or a guest to open the profile, select
-(mouse or `↑`/`↓`/`j`/`k`), award points, invite a contact to
-loyalty, flag an email to collect, merge a duplicate identity, toggle consent,
-add notes, and fire the next-best-action — all live.
+It runs end to end over a 12-customer sample book (8 members + 4 contacts;
+8 agentic + 4 staff-channel) across Kraków + Warszawa in złoty: search, filter
+by lifecycle / data facet / **channel** / **time**, sort, select a guest (mouse
+or `↑`/`↓`/`j`/`k`), open their WhatsApp thread, award points, invite a contact
+to loyalty, flag an email to collect, merge a duplicate identity, toggle
+consent, add notes, and fire the next-best-action — all live.
 
 ## Browsing
 
