@@ -292,6 +292,13 @@ function AdminWhatsAppDesktop() {
   const [loading, setLoading] = useState(true);
 
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  // Mirror the selection in a ref so async thread loads can tell whether their
+  // result is still for the conversation currently on screen (guards against a
+  // slow fetch for a previous phone resolving after the user switched).
+  const selectedPhoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedPhoneRef.current = selectedPhone;
+  }, [selectedPhone]);
   const [filter, setFilter] = useState<ConvFilter>("inbox");
   const [query, setQuery] = useState("");
 
@@ -450,14 +457,21 @@ function AdminWhatsAppDesktop() {
       const res = await fetch(
         `/api/admin/whatsapp/transcripts/${encodeURIComponent(phone)}`,
       );
+      // Ignore the result if the operator has since switched conversations —
+      // a stale response must not overwrite the thread now on screen.
+      if (phone !== selectedPhoneRef.current) return;
       if (res.ok) {
         const data = (await res.json()) as { messages: WaMessage[] };
-        setThread(Array.isArray(data.messages) ? data.messages : []);
+        if (phone === selectedPhoneRef.current) {
+          setThread(Array.isArray(data.messages) ? data.messages : []);
+        }
       } else {
         setThread([]);
       }
+    } catch (err) {
+      console.error("Failed to load WhatsApp thread", err);
     } finally {
-      if (!silent) setThreadLoading(false);
+      if (phone === selectedPhoneRef.current && !silent) setThreadLoading(false);
     }
   }, []);
 
