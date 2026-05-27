@@ -7,7 +7,6 @@ import {
   Bell,
   BellOff,
   ChefHat,
-  ChevronLeft,
   Flame,
   MapPin,
   Maximize2,
@@ -55,8 +54,7 @@ const MobileKDS = dynamic(
 /**
  * Role-aware KDS shell. One live-order engine, three lenses:
  *   • owner   → Fleet command (cross-truck health) by default. Drilling into
- *               a truck swaps the same window to that truck's floor board, with
- *               a single "Back to fleet" control to step back out.
+ *               a truck swaps the same window to that truck's floor board.
  *   • manager → Floor board (single location).
  *   • kitchen/staff → Floor board (the line view they've always had).
  * Mobile keeps the dedicated MobileKDS regardless of role.
@@ -114,26 +112,13 @@ export function AdminKDS() {
   }
 
   // Owner — Atlas fleet command is the default. Drilling into a truck swaps
-  // this same window down to that truck's floor board (a "Back to fleet"
-  // control steps back out). The Atlas board reflows to its responsive layout
-  // on a phone; its floor view is the dedicated mobile KDS there and the
-  // desktop floor board otherwise.
+  // this same window down to that truck's floor board. The Atlas board reflows
+  // to its responsive layout on a phone; its floor view is the dedicated mobile
+  // KDS there and the desktop floor board otherwise.
   const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader />;
 
   return (
     <div>
-      {mode === "floor" && (
-        <div style={{ display: "flex", gap: 8, padding: "16px 20px 0" }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={<ChevronLeft className="h-3.5 w-3.5" />}
-            onClick={() => setMode("fleet")}
-          >
-            Back to fleet
-          </Button>
-        </div>
-      )}
       {mode === "fleet" ? (
         <AdminKdsFleet
           onDrillIn={(slug) => {
@@ -148,8 +133,6 @@ export function AdminKDS() {
   );
 }
 
-const KDS_STATION_KEY = "sud-kds-station";
-
 function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?: boolean; chefStrip?: boolean }) {
   const { location } = useAdminLocation();
   const toast = useToast();
@@ -158,27 +141,10 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   // Purge all controls (in the simulation banner) for staging a training rush.
   const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
 
-  const [station, setStation] = useState<MenuCategory | "all">("all");
+  // The KDS shows every station; the per-station filter chips were retired, so
+  // the board (and the shared ticket cards) always render the full ticket.
+  const station: MenuCategory | "all" = "all";
 
-  // Remember the cook's station across reloads — a line cook works one
-  // station all shift and shouldn't re-pick it every refresh.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KDS_STATION_KEY);
-      if (saved && STATION_FILTERS.some((s) => s.id === saved)) {
-        setStation(saved as MenuCategory | "all");
-      }
-    } catch {
-      /* storage may be blocked */
-    }
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(KDS_STATION_KEY, station);
-    } catch {
-      /* non-fatal */
-    }
-  }, [station]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -457,19 +423,6 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           <span className="cmd-wordmark">SUD ITALIA</span>
           <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
-        </div>
-        <div className="cmd-chips" role="group" aria-label="Station filter">
-          {STATION_FILTERS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="cmd-chip"
-              aria-pressed={s.id === station}
-              onClick={() => setStation(s.id as MenuCategory | "all")}
-            >
-              {s.label}
-            </button>
-          ))}
         </div>
         <div className="cmd-spacer" />
         <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
@@ -845,14 +798,8 @@ function KdsChefStrip({
             <ChefHat className="h-4 w-4" />
             <span>{stationLabel}</span>
           </span>
-          {station === "all" ? (
-            <span className="v2-kds-ops-86-empty">Pick your station above to focus your queue.</span>
-          ) : (
-            <>
-              <OpsStat icon={<Flame className="h-4 w-4" />} value={String(focused.length)} label="In your queue" />
-              <OpsStat icon={<Timer className="h-4 w-4" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
-            </>
-          )}
+          <OpsStat icon={<Flame className="h-4 w-4" />} value={String(focused.length)} label="In queue" />
+          <OpsStat icon={<Timer className="h-4 w-4" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
           <div className="v2-kds-ops-86-pick">
             <Select
               aria-label="86 an item you've run out of"

@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, BellOff, CloudOff, PauseCircle, PlayCircle } from "lucide-react";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
-import type { Order, OrderStatus, MenuCategory } from "@/data/types";
-import { MENU_CATEGORY_LABELS } from "@/data/types";
+import type { Order, OrderStatus } from "@/data/types";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket } from "@/lib/kds-ticket";
 import { KdsTicketCard } from "../kds/KdsTicketCard";
@@ -22,16 +21,6 @@ const LANES: { id: OrderStatus; label: string; tone: "warning" | "info" | "succe
   { id: "confirmed", label: "New", tone: "warning" },
   { id: "preparing", label: "In progress", tone: "info" },
   { id: "ready", label: "Ready", tone: "success" },
-];
-
-const STATIONS: { id: MenuCategory | "all"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "pizza", label: MENU_CATEGORY_LABELS.pizza },
-  { id: "pasta", label: MENU_CATEGORY_LABELS.pasta },
-  { id: "antipasti", label: MENU_CATEGORY_LABELS.antipasti },
-  { id: "panini", label: MENU_CATEGORY_LABELS.panini },
-  { id: "drinks", label: MENU_CATEGORY_LABELS.drinks },
-  { id: "desserts", label: MENU_CATEGORY_LABELS.desserts },
 ];
 
 function nextStatus(s: OrderStatus): OrderStatus | null {
@@ -61,7 +50,6 @@ export function MobileKDS() {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [lane, setLane] = useState<OrderStatus>("confirmed");
-  const [station, setStation] = useState<MenuCategory | "all">("all");
   const [now, setNow] = useState(() => Date.now());
   const lastIdsRef = useRef<Set<string>>(new Set());
   const overdueAnnouncedRef = useRef<Set<string>>(new Set());
@@ -152,12 +140,8 @@ export function MobileKDS() {
     return orders
       .filter((o) => LANES.some((l) => l.id === o.status))
       .filter((o) => o.status === lane)
-      .filter((o) => {
-        if (station === "all") return true;
-        return o.items.some((it) => it.menuItem.category === station);
-      })
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  }, [orders, lane, station]);
+  }, [orders, lane]);
 
   // Shared KDS tickets for the visible lane, built off the predictive engine
   // (the same analyzeTruck the Atlas fleet board runs) so the cards + tones
@@ -204,26 +188,13 @@ export function MobileKDS() {
   return (
     <PullToRefresh onRefresh={() => refresh()} disabled={paused}>
       {/* Atlas chrome — the mobile floor board matches the fleet board exactly:
-          same dark panel, station chips and lane switcher, only the lanes differ. */}
+          same dark panel and lane switcher, only the lanes differ. */}
       <div className="kds-atlas kds-floor-dark">
         <header className="cmd-head">
           <div className="cmd-brand">
             <span className="cmd-wordmark">SUD ITALIA</span>
             <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
             {simEnabled && <span className="ka-sandbox">Sandbox</span>}
-          </div>
-          <div className="cmd-chips" role="group" aria-label="Station filter">
-            {STATIONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className="cmd-chip"
-                aria-pressed={station === s.id}
-                onClick={() => setStation(s.id)}
-              >
-                {s.label}
-              </button>
-            ))}
           </div>
           <SegControl
             ariaLabel="Stage focus"
@@ -294,7 +265,7 @@ export function MobileKDS() {
                   t={t}
                   now={now}
                   tone={toneForTicket(t, now)}
-                  station={station}
+                  station="all"
                   advancing={busy === t.id}
                   onAdvance={advance}
                 />
