@@ -180,10 +180,11 @@ real fonts, refined charts). These are the **structural** next moves. Each is
 written to be implemented against a live preview (`npm run dev`).
 
 > High-fidelity HTML mockups of POS, KDS, and the unified Guest Engagement hub
-> live at `public/mockups/core-suite/` — browse on any deploy at
-> **`/mockups/core-suite/`** (locally `npm run dev` → same path), starting from
-> `index.html`. They use the real tokens/fonts and are the agreed visual target
-> for the React implementation.
+> live at `public/mockups/core-suite/`. Open
+> **`/mockups/core-suite/index.html`** on any deploy (locally `npm run dev` →
+> same path). All asset + cross-page links are absolute (`/mockups/core-suite/…`)
+> so they survive Next's trailing-slash redirect. They use the real
+> tokens/fonts and are the agreed visual target for the React implementation.
 
 ### 7.1 KDS — *shipped (re-tone)*
 
