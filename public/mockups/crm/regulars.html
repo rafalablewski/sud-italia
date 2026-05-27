@@ -456,7 +456,41 @@
   .lc-reward.next svg{color:var(--gold)}
 
   /* WhatsApp conversation brief */
-  .wa-thread{display:flex;flex-direction:column;gap:6px;background:#0c1317;border:1px solid var(--hair);border-radius:11px;padding:var(--s3)}
+  /* conversation history list */
+  .convo-list{display:flex;flex-direction:column;gap:var(--s2)}
+  .convo-item{display:flex;align-items:center;gap:10px;background:var(--raised);border:1px solid var(--hair);border-radius:10px;padding:10px 12px}
+  .ci-ch{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid}
+  .ci-ch svg{width:14px;height:14px}
+  .ci-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .ci-top{display:flex;align-items:center;gap:8px;font-size:9.5px;letter-spacing:0.04em}
+  .ci-chan{font-weight:700;text-transform:uppercase}
+  .ci-date{color:var(--faint)}
+  .ci-n{margin-left:auto;font-family:var(--mono);color:var(--faint)}
+  .ci-summary{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ci-actions{flex:0 0 auto;display:flex;align-items:center;gap:6px}
+  .ci-btn{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--dim);
+    background:transparent;border:1px solid var(--hair-strong);border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
+  .ci-btn:hover{color:var(--text);border-color:var(--text)}
+  .ci-btn.wa{color:var(--wa);border-color:rgba(37,211,102,0.4);background:var(--wa-soft)}
+  .ci-btn.wa:hover{filter:brightness(1.12);color:var(--wa)}
+  .ci-btn svg{width:14px;height:14px;flex:0 0 auto}
+
+  /* conversation preview popup */
+  .modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:var(--s4)}
+  .modal.open{display:flex}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px)}
+  .modal-sheet{position:relative;width:min(460px,100%);max-height:82vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--hair-strong);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,0.8)}
+  .modal-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:var(--s3) var(--s4);border-bottom:1px solid var(--hair)}
+  .mh-ic{flex:0 0 auto;display:inline-flex;color:var(--wa)}
+  .mh-ic svg{width:18px;height:18px}
+  .mh-title{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .modal-x{appearance:none;cursor:pointer;flex:0 0 auto;border:0;background:transparent;color:var(--dim);font-size:22px;line-height:1;padding:0 4px}
+  .modal-x:hover{color:var(--text)}
+  .modal-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding:var(--s4);background:#0c1317;display:flex;flex-direction:column;gap:6px}
+  .modal-foot{flex:0 0 auto;padding:var(--s3) var(--s4);border-top:1px solid var(--hair);display:flex}
+
+  /* shared chat-bubble styles (preview popup) */
   .wt-msg{display:flex;align-items:flex-end;gap:7px;max-width:100%}
   .wt-msg.agent{flex-direction:row-reverse}
   .wt-bub{max-width:78%;font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:10px;color:#e9edf2}
@@ -661,6 +695,21 @@
   </footer>
 
   <div class="toast" id="toast"></div>
+
+  <div class="modal" id="convoModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="Conversation preview">
+      <div class="modal-head">
+        <span class="mh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg></span>
+        <span class="mh-title" id="convoModalTitle">Conversation</span>
+        <button class="modal-x" data-close type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="convoModalBody"></div>
+      <div class="modal-foot">
+        <a class="wa-anchor" id="convoModalWa" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>Open full thread in WhatsApp →</a>
+      </div>
+    </div>
+  </div>
 
 <script>
 "use strict";
@@ -916,23 +965,45 @@ const IDENTITY_EXTRA={
    window or door. This splits the book into Agentic customers vs Customers. */
 const AGENTIC=["WhatsApp","Voice","Web"];
 
-/* ====================== WhatsApp threads (per guest) ======================
-   Brief, previewed in the CRM profile; the "Open in WhatsApp" anchor hands off
-   to the WhatsApp tab in the agent-commerce surface for the full history. */
+/* ====================== Conversation history (per guest) ======================
+   A guest's past chats, newest first — shown stacked in the CRM profile, each
+   previewable in a popup. The "Open in WhatsApp" button hands off to the
+   WhatsApp tab in the agent-commerce surface for the live thread. */
 const CHATS={
   "+48 608 391 740":[ // Tomasz
-    {who:"guest",t:"poproszę diavolę na wynos, odbiór za 20 min",ago:"2m"},
-    {who:"agent",t:"Got it — 1× Diavola, ready ~12 min at Rynek Główny. 32,90 zł 🍕",ago:"2m"}],
+    {channel:"WhatsApp", date:"Today", ago:"2m", msgs:[
+      {who:"guest",t:"poproszę diavolę na wynos, odbiór za 20 min",time:"12:18"},
+      {who:"agent",t:"Got it — 1× Diavola, ready ~12 min at Rynek Główny. 32,90 zł 🍕",time:"12:18"},
+      {who:"guest",t:"dzięki!",time:"12:19"}]},
+    {channel:"WhatsApp", date:"May 16", ago:"9d", msgs:[
+      {who:"guest",t:"hej, otwarte dziś?",time:"18:40"},
+      {who:"agent",t:"Tak! Do 22:00 na Rynku Głównym 🍕",time:"18:41"},
+      {who:"guest",t:"super, biorę margheritę na wynos",time:"18:42"}]}],
   "+48 698 117 905":[ // Jakub
-    {who:"agent",t:"Your Tartufata is on the pass — driver leaving in 5 🛵",ago:"18m"},
-    {who:"guest",t:"perfect, dzięki!",ago:"16m"}],
+    {channel:"WhatsApp", date:"Today", ago:"18m", msgs:[
+      {who:"guest",t:"same as last time, to the office 🙏",time:"11:58"},
+      {who:"agent",t:"Tartufata to ul. Wielopole 5 — driver leaving in 5 🛵",time:"11:59"},
+      {who:"guest",t:"perfect, dzięki!",time:"12:01"}]},
+    {channel:"WhatsApp", date:"Apr 30", ago:"3w", msgs:[
+      {who:"guest",t:"do you do gluten-free bases?",time:"19:22"},
+      {who:"agent",t:"We do — +5 zł, flagged to the kitchen. Want the Quattro on GF?",time:"19:23"}]}],
   "+48 887 412 663":[ // Katarzyna
-    {who:"guest",t:"hi! do you deliver to Wola? first time ordering",ago:"13m"},
-    {who:"agent",t:"We do — ~30 min to Wola 🛵 Our bestseller is the Pizza del Pizzaiolo, want one?",ago:"13m"},
-    {who:"guest",t:"yes please, one of those",ago:"12m"}],
+    {channel:"WhatsApp", date:"Today", ago:"13m", msgs:[
+      {who:"guest",t:"hi! do you deliver to Wola? first time ordering",time:"12:05"},
+      {who:"agent",t:"We do — ~30 min to Wola 🛵 Our bestseller is the Pizza del Pizzaiolo, want one?",time:"12:05"},
+      {who:"guest",t:"yes please, one of those",time:"12:06"}]}],
   "+48 512 880 114":[ // Rafał
-    {who:"guest",t:"the usual + espresso, takeout",ago:"11m"},
-    {who:"agent",t:"On it — Diavola + Espresso, 41,80 zł, ready ~12 min ☕",ago:"11m"}],
+    {channel:"WhatsApp", date:"Today", ago:"11m", msgs:[
+      {who:"guest",t:"the usual + espresso, takeout",time:"12:09"},
+      {who:"agent",t:"On it — Diavola + Espresso, 41,80 zł, ready ~12 min ☕",time:"12:09"}]},
+    {channel:"WhatsApp", date:"May 20", ago:"5d", msgs:[
+      {who:"guest",t:"can I get a Family Pack for tonight?",time:"17:30"},
+      {who:"agent",t:"Sure — 2 pizzas + Limonata 1L, −8 zł combo. For 19:00 pickup?",time:"17:31"},
+      {who:"guest",t:"yes 19:00 👍",time:"17:31"}]}],
+  "+48 601 224 730":[ // Anna — voice agent call log
+    {channel:"Voice", date:"Today", ago:"7m", msgs:[
+      {who:"guest",t:"the usual please — table for two at six",time:"12:11"},
+      {who:"agent",t:"Booked — table 4, 18:00, 2 covers. See you then, Anna!",time:"12:11"}]}],
 };
 
 /* ====================== UI state ====================== */
@@ -1045,6 +1116,39 @@ function renderChanChips(){
   document.getElementById("chanchips").innerHTML=html;
   document.querySelectorAll("#chanchips .chanchip").forEach(b=>b.onclick=()=>{ CH=b.dataset.ch; afterFilterChange(); });
 }
+
+/* ====================== Conversation history + preview popup ====================== */
+const WA_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>';
+const waLink=c=>"../agent/concierge.html?channel=whatsapp&phone="+encodeURIComponent(c.id);
+function convoHistoryHtml(c){
+  const convos=CHATS[c.id]||[], href=waLink(c);
+  if(!convos.length) return `<div class="wa-empty">No conversations yet — message this guest to start one.</div>
+      <a class="wa-anchor" href="${href}">${WA_ICON}Message on WhatsApp →</a>`;
+  return `<div class="convo-list">${convos.map((cv,idx)=>{
+    const m=CHANNEL_META[cv.channel]||{color:"var(--faint)",soft:"transparent",icon:""}, last=cv.msgs[cv.msgs.length-1];
+    return `<div class="convo-item">
+      <span class="ci-ch" style="color:${m.color};border-color:${m.color}55;background:${m.soft}" title="${cv.channel}">${m.icon}</span>
+      <span class="ci-body">
+        <span class="ci-top"><span class="ci-chan" style="color:${m.color}">${cv.channel}</span><span class="ci-date">${cv.date} · ${cv.ago}</span><span class="ci-n tnum">${cv.msgs.length} msgs</span></span>
+        <span class="ci-summary">${escapeHtml((last.who==="agent"?"You: ":"")+last.t)}</span>
+      </span>
+      <span class="ci-actions">
+        <button class="ci-btn" type="button" data-preview="${encodeURIComponent(c.id)}|${idx}">Preview</button>
+        <a class="ci-btn wa" href="${href}" title="Open full thread in WhatsApp">${WA_ICON}<span>Open</span></a>
+      </span>
+    </div>`;
+  }).join("")}</div>`;
+}
+function openConvoPopup(custId, idx){
+  const c=CUSTOMERS.find(x=>x.id===custId); if(!c) return;
+  const cv=(CHATS[custId]||[])[idx]; if(!cv) return;
+  document.getElementById("convoModalTitle").textContent=c.name+" · "+cv.channel+" · "+cv.date;
+  document.getElementById("convoModalBody").innerHTML=cv.msgs.map(mm=>
+    `<div class="wt-msg ${mm.who}"><span class="wt-bub">${escapeHtml(mm.t)}</span><span class="wt-ago tnum">${mm.time||""}</span></div>`).join("");
+  document.getElementById("convoModalWa").href=waLink(c);
+  const md=document.getElementById("convoModal"); md.classList.add("open"); md.setAttribute("aria-hidden","false");
+}
+function closeConvoPopup(){ const md=document.getElementById("convoModal"); md.classList.remove("open"); md.setAttribute("aria-hidden","true"); }
 
 /* ====================== Render: list (Agentic customers + Customers) ====================== */
 // channel chips on a row / in the profile — every channel a guest uses, colour-coded
@@ -1200,19 +1304,7 @@ function renderDetail(){
 
   // WhatsApp conversation brief — a preview + an anchor that hands off to the
   // WhatsApp tab (the agent-commerce surface) for the full thread.
-  const thread=CHATS[c.id]||null;
-  const waHref="../agent/concierge.html?channel=whatsapp&phone="+encodeURIComponent(c.id);
-  const waIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>';
-  let convoHtml;
-  if(thread){
-    convoHtml=`<div class="wa-thread">
-        ${thread.slice(-3).map(m=>`<div class="wt-msg ${m.who}"><span class="wt-bub">${escapeHtml(m.t)}</span><span class="wt-ago tnum">${m.ago}</span></div>`).join("")}
-      </div>
-      <a class="wa-anchor" href="${waHref}">${waIcon}Open full thread in WhatsApp →</a>`;
-  } else {
-    convoHtml=`<div class="wa-empty">No WhatsApp thread yet — message this guest to start one.</div>
-      <a class="wa-anchor" href="${waHref}">${waIcon}Message on WhatsApp →</a>`;
-  }
+  const convoCount=(CHATS[c.id]||[]).length;
 
   el.innerHTML=`
   <div class="detail-scroll">
@@ -1360,8 +1452,8 @@ function renderDetail(){
     </div>
 
     <div class="sec">
-      <div class="sec-head">Conversation ${thread?'<span class="sh-n">WhatsApp</span>':""}<span class="sh-sep"></span>${thread?`<span class="wt-count tnum">${thread.length} msg${thread.length===1?"":"s"}</span>`:""}</div>
-      ${convoHtml}
+      <div class="sec-head">Conversation history ${convoCount?'<span class="sh-n">WhatsApp</span>':""}<span class="sh-sep"></span>${convoCount?`<span class="wt-count tnum">${convoCount} conversation${convoCount===1?"":"s"}</span>`:""}</div>
+      ${convoHistoryHtml(c)}
     </div>
 
     <div class="sec">
@@ -1435,6 +1527,7 @@ function renderDetail(){
   document.getElementById("nbaBtn").onclick=nba.action;
   el.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>doAction(b.dataset.act,c));
   el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>toggleConsent(b.dataset.toggle,c));
+  el.querySelectorAll("[data-preview]").forEach(b=>b.onclick=()=>{ const [id,idx]=b.dataset.preview.split("|"); openConvoPopup(decodeURIComponent(id),Number(idx)); });
   const ni=document.getElementById("noteInput");
   document.getElementById("noteSave").onclick=()=>addNote(c);
   ni.addEventListener("keydown",e=>{ if(e.key==="Enter") addNote(c); });
@@ -1565,11 +1658,15 @@ function toggleFs(){
 fsbtn.addEventListener("click",toggleFs);
 document.addEventListener("fullscreenchange",syncFs);
 
+/* ====================== Conversation popup wiring ====================== */
+document.querySelectorAll("#convoModal [data-close]").forEach(b=>b.onclick=closeConvoPopup);
+
 /* ====================== Keyboard ====================== */
 document.addEventListener("keydown",e=>{
   const el=e.target;
   const typing = el && (el.tagName==="INPUT"||el.tagName==="TEXTAREA"||el.isContentEditable);
   if(e.key==="Escape"){
+    if(document.getElementById("convoModal").classList.contains("open")){ closeConvoPopup(); return; }
     if(QUERY){ QUERY="";searchInput.value="";searchWrap.classList.remove("has-q");afterFilterChange(); }
     if(typing) el.blur();
     return;

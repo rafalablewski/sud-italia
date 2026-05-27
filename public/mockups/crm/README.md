@@ -74,10 +74,10 @@ orders, points or name, with a KPI strip across the top. The right column is the
   **web device**, an email. An **identity-confidence** meter scores how sure we
   are it's one real person, and a **possible-duplicate** card offers a one-tap
   **merge**. No form, no password — identity is resolved from how they reach us.
-- **Conversation** — a preview of the recent **WhatsApp thread** (or a prompt
-  when there's none) with an **Open in WhatsApp** anchor that hands off to the
-  WhatsApp tab in the agent-commerce surface (`/mockups/agent/`), opening
-  straight onto that guest's thread.
+- **Conversation history** — the guest's past chats stacked newest-first, each
+  with two actions: **Preview** (opens the thread in a popup, read in place) and
+  **Open** (hands off to the WhatsApp tab in the agent-commerce surface,
+  `/mockups/agent/`, opening straight onto that guest's thread).
 - **Loyalty brief** — tier, points balance, **reward value**, progress to the
   next tier, and the **claimable-now** + next rewards from the ladder (or a
   contact's invite card).
