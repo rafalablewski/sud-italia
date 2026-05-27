@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Broadcast — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="/mockups/core-suite/system.css">
+</head>
+<body style="height:100vh;overflow:hidden">
+<div class="overlay">
+  <div class="dialog" style="width:min(560px,100%)">
+    <div class="dialog-h">
+      <div class="brand-mark" style="width:26px;height:26px">SI</div>
+      <h2>Broadcast</h2>
+      <a class="x" href="/mockups/core-suite/guest.html">✕</a>
+    </div>
+    <div class="dialog-b">
+      <div class="field">
+        <label>Audience</label>
+        <select class="input">
+          <option>VIP · ≥200 zł &amp; ≥6 orders — 84</option>
+          <option>All opted-in — 2,252</option>
+          <option>Active · last 60d — 910</option>
+          <option>Lapsed · 90d+ — 605</option>
+          <option>New · last 14d — 221</option>
+        </select>
+        <div class="help">Always excludes opt-outs and phone-less guests · snapshot capped at 5,000</div>
+      </div>
+      <div class="field">
+        <label>Meta template</label>
+        <input class="input" value="spring_truffle_launch">
+        <div class="help">Approved WhatsApp template — required to message outside the 24h window</div>
+      </div>
+      <div class="card card-pad" style="background:var(--surface-2);display:flex;align-items:center;gap:12px">
+        <div style="font-family:var(--display);font-size:28px;font-weight:500">84</div>
+        <div style="font-size:12.5px;color:var(--fg-muted)">VIP guests will receive <b>spring_truffle_launch</b>. Sent in batches of 25; a daily cron finishes any interrupted run.</div>
+      </div>
+
+      <div class="eyebrow" style="margin:20px 0 10px">Recent campaigns</div>
+      <div class="card card-pad" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px"><b style="font-size:13px">spring_truffle_launch</b><span class="badge info" style="margin-left:auto"><span class="d"></span>Sending</span></div>
+        <div class="subtle" style="font-size:11.5px;margin:7px 0">VIP · 52 / 84 sent · 1 failed</div>
+        <div class="meter"><i style="width:62%"></i></div>
+        <button class="btn ghost" style="margin-top:10px">Resume</button>
+      </div>
+      <div class="card card-pad">
+        <div style="display:flex;align-items:center;gap:8px"><b style="font-size:13px">easter_brunch</b><span class="badge success" style="margin-left:auto">Done</span></div>
+        <div class="subtle" style="font-size:11.5px;margin-top:7px">Active 60d · 910 / 910 sent · 0 failed</div>
+      </div>
+    </div>
+    <div class="dialog-f">
+      <a class="btn ghost" href="/mockups/core-suite/guest.html">Cancel</a>
+      <button class="btn primary">Send to 84 guests</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
