@@ -51,6 +51,10 @@
   .menu-head { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px 10px; }
   .menu-head h2 { font-family: var(--display); font-weight: 500; font-size: 20px; }
   .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; padding: 2px 18px 18px; overflow-y: auto; align-content: start; }
+  .menu-sec { grid-column: 1/-1; display: flex; align-items: center; gap: 10px; margin: 14px 0 2px; font: 600 11px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-subtle); }
+  .menu-sec:first-child { margin-top: 0; }
+  .menu-sec .promise { font: 600 10px var(--mono); color: var(--fg-subtle); letter-spacing: 0; }
+  .menu-sec .ln { flex: 1; height: 1px; background: var(--border); }
   .prod { text-align: left; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; cursor: pointer; transition: border-color var(--fast), transform var(--fast); position: relative; }
   .prod:hover { border-color: var(--border-strong); transform: translateY(-1px); }
   .prod .swatch { height: 64px; border-radius: var(--r-md); margin-bottom: 11px; background: #26242e; border: 1px solid var(--border-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
@@ -198,7 +202,8 @@
       <div class="pos-body">
         <!-- category rail with capacity-true promise times -->
         <nav class="cat-rail">
-          <div class="cat on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg><span>Pizze</span><span class="promise">~14m</span></div>
+          <div class="cat on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>All</span><span class="promise">32</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg><span>Pizze</span><span class="promise">~14m</span></div>
           <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4v16M9 4v16M5 12h4"/></svg><span>Paste</span><span class="promise">~9m</span></div>
           <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10a8 8 0 0 1 16 0z"/><path d="M3 10h18"/></svg><span>Antipasti</span><span class="promise">~5m</span></div>
           <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10l-1 5a4 4 0 0 1-8 0z"/><path d="M12 13v5M8 21h8"/></svg><span>Bevande</span><span class="promise">~1m</span></div>
@@ -211,14 +216,25 @@
             <span class="dot"></span><b>Oven</b> at 86% — nearing capacity. Pushing <b>pasta &amp; antipasti</b>; easing pizza.
             <span class="cap">Delivery cap 2 / 20m</span>
           </div>
-          <div class="menu-head"><h2>Pizze</h2><span class="subtle" style="font-size:12px">wood-fired · ~14m right now</span></div>
+          <div class="menu-head"><h2>All</h2><span class="subtle" style="font-size:12px">every category · 32 items</span></div>
           <div class="menu-grid">
+            <div class="menu-sec">Pizze <span class="promise">~14m</span><span class="ln"></span></div>
             <button class="prod"><div class="corner"><span class="role hero">Hero</span></div><div class="swatch"></div><h3>Margherita</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">42 zł</span></div><span class="pace-tag ease"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 9l6 6 6-6"/></svg> ease — oven busy</span></button>
             <button class="prod"><div class="corner"><span class="lto" title="Limited-time"></span><span class="role profit">Profit</span></div><div class="swatch"></div><h3>Diavola</h3><div class="row"><span class="badge danger">Piccante</span><span class="price">52 zł</span></div></button>
             <button class="prod"><div class="corner"><span class="role anchor">Signature</span></div><div class="swatch"></div><h3>Bufala DOP</h3><div class="row"><span class="badge platinum">Signature</span><span class="price">58 zł</span></div></button>
             <button class="prod"><div class="swatch"></div><h3>Marinara</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">38 zł</span></div></button>
             <button class="prod"><div class="swatch"></div><h3>Capricciosa</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">56 zł</span></div></button>
             <button class="prod"><div class="corner"><span class="role profit">Profit</span></div><div class="swatch"></div><h3>’Nduja &amp; Honey</h3><div class="row"><span class="badge platinum">Signature</span><span class="price">59 zł</span></div></button>
+
+            <div class="menu-sec">Antipasti <span class="promise">~5m</span><span class="ln"></span></div>
+            <button class="prod"><div class="swatch"></div><h3>Bruschetta</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">24 zł</span></div></button>
+            <button class="prod"><div class="corner"><span class="role anchor">Signature</span></div><div class="swatch"></div><h3>Burrata Pugliese</h3><div class="row"><span class="badge platinum">Signature</span><span class="price">34 zł</span></div></button>
+            <button class="prod"><div class="swatch"></div><h3>Olive Ascolane</h3><div class="row"><span class="badge neutral">Classica</span><span class="price">22 zł</span></div></button>
+
+            <div class="menu-sec">Bevande <span class="promise">~1m</span><span class="ln"></span></div>
+            <button class="prod"><div class="swatch"></div><h3>San Pellegrino 50cl</h3><div class="row"><span class="badge neutral">Drink</span><span class="price">12 zł</span></div></button>
+            <button class="prod"><div class="corner"><span class="role profit">Profit</span></div><div class="swatch"></div><h3>Espresso</h3><div class="row"><span class="badge neutral">Caffè</span><span class="price">9 zł</span></div></button>
+            <button class="prod"><div class="swatch"></div><h3>Aperol Spritz</h3><div class="row"><span class="badge warning">Aperitivo</span><span class="price">28 zł</span></div></button>
           </div>
         </div>
 
