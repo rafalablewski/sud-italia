@@ -297,7 +297,7 @@ export function useSellingSettings() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadSettings = (async () => {
+    const loadSettings = async () => {
       try {
         const r = await fetch("/api/admin/upsell");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -308,12 +308,12 @@ export function useSellingSettings() {
           setLoadError(err instanceof Error ? err.message : "Failed to load settings");
         }
       }
-    })();
+    };
 
     // Live menus load independently of settings: a menu-fetch failure for one
     // location just falls back to that location's seed catalogue (the picker
     // still works) rather than blocking edits or wiping production settings.
-    const loadMenus = (async () => {
+    const loadMenus = async () => {
       const entries = await Promise.all(
         LOCATIONS.map(async (l) => {
           try {
@@ -332,9 +332,9 @@ export function useSellingSettings() {
         if (entry) next[entry[0]] = entry[1];
       }
       setLiveMenus(next);
-    })();
+    };
 
-    Promise.allSettled([loadSettings, loadMenus]).then(() => {
+    Promise.allSettled([loadSettings(), loadMenus()]).then(() => {
       if (!cancelled) setLoading(false);
     });
 
