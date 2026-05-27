@@ -357,13 +357,19 @@ function RecipesPanel() {
       const [menuLists, r, i] = await Promise.all([
         Promise.all(
           activeLocations.map((l) =>
-            fetch(`/api/admin/menu?location=${l.slug}`).then((res) =>
-              res.ok ? res.json() : [],
-            ),
+            fetch(`/api/admin/menu?location=${l.slug}`)
+              .then((res) => (res.ok ? res.json() : []))
+              // Degrade gracefully: one location's menu failing shouldn't
+              // blank the whole board — the others still render.
+              .catch(() => []),
           ),
         ),
-        fetch(`/api/admin/recipes`).then((res) => (res.ok ? res.json() : [])),
-        fetch(`/api/admin/ingredients`).then((res) => (res.ok ? res.json() : [])),
+        fetch(`/api/admin/recipes`)
+          .then((res) => (res.ok ? res.json() : []))
+          .catch(() => []),
+        fetch(`/api/admin/ingredients`)
+          .then((res) => (res.ok ? res.json() : []))
+          .catch(() => []),
       ]);
       const byLoc: Record<string, MenuItemData[]> = {};
       activeLocations.forEach((l, idx) => {
@@ -1097,6 +1103,11 @@ function RecipeEditor({ menuItem, recipe, ingredients, offers, onClose, onSaved,
       }
 
       onSaved();
+    } catch {
+      // Network reject on any of the save calls above (recipe POST or the
+      // per-location product writes). Without this the rejection is
+      // unhandled and the operator gets no feedback.
+      toast.error("Save failed", "A network error occurred. Try again.");
     } finally {
       setBusy(false);
     }

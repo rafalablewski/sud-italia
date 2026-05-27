@@ -90,13 +90,19 @@ export function MobileRecipes() {
     const [menuLists, r, i] = await Promise.all([
       Promise.all(
         ACTIVE_LOCATIONS.map((l) =>
-          fetch(`/api/admin/menu?location=${encodeURIComponent(l.slug)}`).then((res) =>
-            res.ok ? res.json() : [],
-          ),
+          fetch(`/api/admin/menu?location=${encodeURIComponent(l.slug)}`)
+            .then((res) => (res.ok ? res.json() : []))
+            // Degrade gracefully: one location's menu failing shouldn't
+            // blank the whole list — the others still render.
+            .catch(() => []),
         ),
       ),
-      fetch("/api/admin/recipes").then((res) => (res.ok ? res.json() : [])),
-      fetch("/api/admin/ingredients").then((res) => (res.ok ? res.json() : [])),
+      fetch("/api/admin/recipes")
+        .then((res) => (res.ok ? res.json() : []))
+        .catch(() => []),
+      fetch("/api/admin/ingredients")
+        .then((res) => (res.ok ? res.json() : []))
+        .catch(() => []),
     ]);
     const byLoc: Record<string, MenuItemRow[]> = {};
     ACTIVE_LOCATIONS.forEach((l, idx) => {
