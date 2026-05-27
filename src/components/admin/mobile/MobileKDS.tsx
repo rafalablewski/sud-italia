@@ -46,7 +46,7 @@ function remainingSec(order: Order): number | null {
 export function MobileKDS() {
   const { location } = useAdminLocation();
   const toast = useToast();
-  const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
+  const { enabled: simEnabled } = useKdsSimulator(location);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [lane, setLane] = useState<OrderStatus>("confirmed");
@@ -226,19 +226,6 @@ export function MobileKDS() {
           >
             {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
           </button>
-          {simEnabled && (
-            <>
-              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
-                Add 1
-              </button>
-              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
-                Add 5
-              </button>
-              <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
-                Purge
-              </button>
-            </>
-          )}
         </header>
 
         {(!offline.online || offline.pending > 0) && (

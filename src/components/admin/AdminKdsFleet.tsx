@@ -109,7 +109,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const [now, setNow] = useState(() => Date.now());
   const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
-  const [simBusy, setSimBusy] = useState(false);
   const inFlight = useRef(false);
 
   const load = useCallback(async () => {
@@ -134,54 +133,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     void load();
     const t = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(t);
-  }, [load]);
-
-  // Sandbox controls, fleet edition. The floor board stages a rush on one
-  // truck; from the fleet wall the owner stages it across the whole fleet, so
-  // Add spawns the marked SIMULATION tickets into every live truck at once and
-  // Purge clears them everywhere. No-ops cleanly when no trucks are live.
-  const simSpawn = useCallback(
-    async (count: number) => {
-      const tiles = data?.tiles ?? [];
-      if (tiles.length === 0) return;
-      setSimBusy(true);
-      try {
-        const results = await Promise.all(
-          tiles.map((t) =>
-            fetch(`/api/admin/kds-simulator?location=${encodeURIComponent(t.slug)}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "spawn", count }),
-            }).then((r) => r.ok),
-          ),
-        );
-        if (results.some((ok) => !ok)) {
-          toast.error("Couldn't add sandbox tickets", "Check the simulator is enabled in Settings.");
-        }
-      } catch {
-        toast.error("Couldn't add sandbox tickets", "Network error — try again.");
-      } finally {
-        setSimBusy(false);
-        void load();
-      }
-    },
-    [data, load, toast],
-  );
-
-  const simPurge = useCallback(async () => {
-    setSimBusy(true);
-    try {
-      await fetch("/api/admin/kds-simulator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "purge" }),
-      });
-    } catch {
-      /* non-fatal — the next poll reconciles */
-    } finally {
-      setSimBusy(false);
-      void load();
-    }
   }, [load]);
 
   // 1 s tick drives live timers + tone thresholds (the predictive tier shifts
@@ -268,21 +219,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
         </button>
         <div className="cmd-clock tabular">{clock}</div>
       </header>
-
-      {/* Sandbox controls live on a strip under the shared header (not in it). */}
-      {simEnabled && (
-        <div className="cmd-subbar" role="group" aria-label="Sandbox controls">
-          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(1)} title="Add 1 sandbox ticket to every live truck">
-            Add 1
-          </button>
-          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simSpawn(5)} title="Add 5 sandbox tickets to every live truck">
-            Add 5
-          </button>
-          <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void simPurge()} title="Clear all sandbox tickets across the fleet">
-            Purge
-          </button>
-        </div>
-      )}
 
       {/* ---------------- Fleet command bar ---------------- */}
       {data && (

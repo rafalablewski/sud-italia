@@ -322,13 +322,9 @@ function AdminWhatsAppDesktop() {
   const [kiosk, setKiosk] = useState(false);
   const [clock, setClock] = useState("--:--:--");
 
-  // Chat simulator (owner toggle in Settings → Add / Purge controls).
-  const {
-    enabled: simEnabled,
-    busy: simBusy,
-    addConversations,
-    purgeAll,
-  } = useWhatsappSimulator();
+  // Chat simulator (owner toggle in Settings). When on, the console flags
+  // itself with a Sandbox tag next to the wordmark.
+  const { enabled: simEnabled } = useWhatsappSimulator();
 
   // ---- data loaders -----------------------------------------------------
 
@@ -691,6 +687,7 @@ function AdminWhatsAppDesktop() {
         <div className="cmd-brand">
           <span className="cmd-wordmark">SUD ITALIA</span>
           <span className="cmd-label">WhatsApp Console</span>
+          {simEnabled && <span className="wa-sim-tag">Sandbox</span>}
         </div>
         <button
           type="button"
@@ -777,36 +774,6 @@ function AdminWhatsAppDesktop() {
             <RotateCw />
             <span>Refresh</span>
           </button>
-          {simEnabled && (
-            <>
-              <span className="wa-stat-sep" />
-              <span className="wa-sim-tag">Sandbox</span>
-              <button
-                type="button"
-                className="cmd-btn"
-                disabled={simBusy}
-                onClick={() => void addConversations(1).then(() => loadAll(true))}
-              >
-                Add 1
-              </button>
-              <button
-                type="button"
-                className="cmd-btn"
-                disabled={simBusy}
-                onClick={() => void addConversations(5).then(() => loadAll(true))}
-              >
-                Add 5
-              </button>
-              <button
-                type="button"
-                className="cmd-btn"
-                disabled={simBusy}
-                onClick={() => void purgeAll().then(() => loadAll(true))}
-              >
-                Purge
-              </button>
-            </>
-          )}
         </div>
       </div>
 

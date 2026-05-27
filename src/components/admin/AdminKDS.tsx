@@ -137,9 +137,9 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
   const { location } = useAdminLocation();
   const toast = useToast();
 
-  // When the owner-only toggle is on, the board shows manual Add 1 / Add 5 /
-  // Purge all controls (in the simulation banner) for staging a training rush.
-  const { enabled: simEnabled, busy: simBusy, addOrders, purgeAll } = useKdsSimulator(location);
+  // When the owner-only simulator toggle is on, the board streams marked
+  // SIMULATION tickets and flags itself with a Sandbox tag next to the wordmark.
+  const { enabled: simEnabled } = useKdsSimulator(location);
 
   // The KDS shows every station; the per-station filter chips were retired, so
   // the board (and the shared ticket cards) always render the full ticket.
@@ -442,8 +442,8 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
         <div className="cmd-clock tabular">{clock}</div>
       </header>
 
-      {/* Board controls — sound / pause (and sandbox sim) live on a thin strip
-          under the header so the header keeps just refresh, fullscreen + clock. */}
+      {/* Board controls — sound / pause live on a thin strip under the header
+          so the header keeps just refresh, fullscreen + clock. */}
       <div className="cmd-subbar" role="group" aria-label="Board controls">
         <button
           type="button"
@@ -459,20 +459,6 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
           {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
           <span>{paused ? "Resume" : "Pause"}</span>
         </button>
-        {simEnabled && (
-          <>
-            <span className="cmd-subbar-sep" />
-            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(1).then(() => refresh())}>
-              Add 1
-            </button>
-            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void addOrders(5).then(() => refresh())}>
-              Add 5
-            </button>
-            <button type="button" className="cmd-btn" disabled={simBusy} onClick={() => void purgeAll().then(() => refresh())}>
-              Purge
-            </button>
-          </>
-        )}
       </div>
 
       {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
