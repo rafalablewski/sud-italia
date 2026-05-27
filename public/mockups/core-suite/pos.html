@@ -87,8 +87,17 @@
   .covers .n { font: 600 14px var(--mono); min-width: 16px; text-align: center; }
 
   .lines { flex: 1; overflow-y: auto; padding: 6px 8px; }
-  .line { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; padding: 9px 8px; border-radius: var(--r-md); }
+  .line { display: grid; grid-template-columns: 12px auto 1fr auto; gap: 10px; padding: 9px 8px; border-radius: var(--r-md); cursor: grab; }
   .line:hover { background: var(--surface-2); }
+  .line:active { cursor: grabbing; }
+  .line.dragging { opacity: .4; }
+  .line::before { content: ""; align-self: center; width: 8px; height: 13px; background-image: radial-gradient(var(--fg-subtle) 1px, transparent 1px); background-size: 4px 4px; opacity: .35; }
+  /* order-level kitchen timing + drag-to-recourse */
+  .course-mode { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .course-mode .cm-lbl { color: var(--fg-subtle); }
+  .course-mode .seg { margin-left: auto; }
+  .course-mode .seg button { height: 26px; font-size: 12px; }
+  .course.drop { outline: 1px dashed var(--platinum); outline-offset: -3px; background: var(--platinum-soft); border-radius: var(--r-md); }
   .qstep { display: flex; align-items: center; gap: 4px; }
   .qstep button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg-muted); font-size: 13px; cursor: pointer; }
   .qstep .q { font: 600 13px var(--mono); min-width: 18px; text-align: center; }
@@ -264,6 +273,11 @@
             <div class="covers"><span class="subtle" style="font-size:11px">Covers</span><button class="stp">−</button><span class="n">2</span><button class="stp">+</button></div>
           </div>
 
+          <div class="course-mode">
+            <span class="cm-lbl">Kitchen timing</span>
+            <div class="seg"><button class="on">Coursed</button><button>All together</button></div>
+          </div>
+
           <div class="lines">
             <div class="course">
               <div class="course-h"><span class="course-nm">1 · Starters</span><span class="course-st sent"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>Fired 19:44</span></div>
@@ -311,5 +325,21 @@
     </div>
   </div>
 </div>
+<script>
+  // Drag a line item between courses (Starters / Mains / Dessert / Drinks).
+  (function () {
+    var dragged = null;
+    document.querySelectorAll('.lines .line').forEach(function (l) {
+      l.setAttribute('draggable', 'true');
+      l.addEventListener('dragstart', function (e) { dragged = l; l.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+      l.addEventListener('dragend', function () { l.classList.remove('dragging'); dragged = null; });
+    });
+    document.querySelectorAll('.lines .course').forEach(function (c) {
+      c.addEventListener('dragover', function (e) { e.preventDefault(); c.classList.add('drop'); });
+      c.addEventListener('dragleave', function (e) { if (!c.contains(e.relatedTarget)) c.classList.remove('drop'); });
+      c.addEventListener('drop', function (e) { e.preventDefault(); c.classList.remove('drop'); if (dragged) c.appendChild(dragged); });
+    });
+  })();
+</script>
 </body>
 </html>
