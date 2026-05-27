@@ -473,6 +473,7 @@ function TruckBoard({
     if (d !== 0) return d;
     const sa = a.promisedReadyAtMs ?? Infinity;
     const sb = b.promisedReadyAtMs ?? Infinity;
+    if (sa === sb) return 0;
     return sa - sb;
   });
 
