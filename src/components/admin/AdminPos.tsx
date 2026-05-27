@@ -810,20 +810,6 @@ export function AdminPos({
             options={locOptions.map((o) => ({ value: o.slug, label: o.label }))}
           />
         </div>
-        <div className="pos-ctl">
-          <SegControl
-            ariaLabel="Channel"
-            value={active?.channel ?? null}
-            onChange={setChannel}
-            disabled={!active}
-            options={CHANNELS.map((c) => ({ value: c.value, label: c.label, icon: c.icon }))}
-          />
-          {deliveryPaused && (
-            <span className="pos-chan-paused">
-              <span className="pos-cp-dot" /> Delivery intake paused
-            </span>
-          )}
-        </div>
         <div className="cmd-spacer" />
         <button
           type="button"
@@ -1053,18 +1039,25 @@ export function AdminPos({
                     </>
                   )}
                   {active.channel === "delivery" && (
-                    <button
-                      type="button"
-                      className={`pos-detail-btn${active.address ? " assigned" : ""}`}
-                      title={active.address || ""}
-                      onClick={() => {
-                        setAddrDraft(active.address || "");
-                        setAddrOpen(true);
-                      }}
-                    >
-                      <MapPin />
-                      <span>{active.address || "Add delivery address"}</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className={`pos-detail-btn${active.address ? " assigned" : ""}`}
+                        title={active.address || ""}
+                        onClick={() => {
+                          setAddrDraft(active.address || "");
+                          setAddrOpen(true);
+                        }}
+                      >
+                        <MapPin />
+                        <span>{active.address || "Add delivery address"}</span>
+                      </button>
+                      {deliveryPaused && (
+                        <span className="pos-chan-paused">
+                          <span className="pos-cp-dot" /> Delivery intake paused
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               )}

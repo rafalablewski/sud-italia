@@ -361,9 +361,18 @@ html { scroll-behavior: smooth; }
 
 /* Immersive KDS — drilling into a single truck's floor board drops the nav
    sidebar so the kitchen screen runs edge-to-edge. Toggled by AdminKDS adding
-   `kds-immersive` to <body> while a truck floor board is open. */
+   `kds-immersive` to <body> while a truck floor board is open. The board has
+   its own header, so the admin topbar is dropped too; the content fills the
+   viewport and page scroll is locked (the board scrolls internally) so no
+   stray scrollbar shows on the right. */
 body.kds-immersive .v2-shell { grid-template-columns: 1fr; }
 body.kds-immersive .v2-shell > .v2-sidebar { display: none; }
+body.kds-immersive .v2-topbar { display: none; }
+body.kds-immersive .v2-content { min-height: 100vh; }
+body.kds-immersive { overflow: hidden; }
+/* Edge-to-edge like the fullscreen fleet wall — drop the panel's margin, border
+   and radius so the drilled-in board fills the viewport with no top gap. */
+body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 100vh; }
 
 /* --- Sidebar --- */
 .v2-sidebar {

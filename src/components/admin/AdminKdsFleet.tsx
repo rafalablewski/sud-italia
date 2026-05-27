@@ -16,7 +16,7 @@ import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
 import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
-import { SegControl, SectionEyebrow } from "./command";
+import { SectionEyebrow } from "./command";
 import { useFullscreen } from "./command/useFullscreen";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
@@ -65,25 +65,6 @@ interface FleetPayload {
 
 const POLL_MS = 6000;
 
-type LineKey = "all" | "new" | "prep" | "ready" | "expo";
-const LINES: { key: LineKey; title: string }[] = [
-  { key: "all", title: "All" },
-  { key: "new", title: "New" },
-  { key: "prep", title: "In progress" },
-  { key: "ready", title: "Ready" },
-  { key: "expo", title: "Expo" },
-];
-
-const STATIONS: { id: MenuCategory | "all"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "pizza", label: "Pizza" },
-  { id: "pasta", label: "Pasta" },
-  { id: "antipasti", label: "Antipasti" },
-  { id: "panini", label: "Panini" },
-  { id: "drinks", label: "Drinks" },
-  { id: "desserts", label: "Desserts" },
-];
-
 const NEXT_STATUS: Record<string, OrderStatus | null> = { confirmed: "preparing", preparing: "ready", ready: "completed" };
 
 /* ============================ Format helpers ============================ */
@@ -126,8 +107,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [station, setStation] = useState<MenuCategory | "all">("all");
-  const [line, setLine] = useState<LineKey>("all");
   const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
@@ -261,38 +240,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
     [now],
   );
 
-  const matchesStation = useCallback(
-    (t: WireTicket) => station === "all" || t.items.some((i) => i.category === station),
-    [station],
-  );
-  const matchesLine = useCallback(
-    (t: WireTicket) => {
-      if (line === "all") return true;
-      if (line === "new") return t.status === "confirmed";
-      if (line === "prep") return t.status === "preparing";
-      return t.status === "ready"; // ready + expo
-    },
-    [line],
-  );
-
-  const lineCounts = useMemo(() => {
-    const counts: Record<LineKey, number> = { all: 0, new: 0, prep: 0, ready: 0, expo: 0 };
-    if (!data) return counts;
-    for (const tile of data.tiles) {
-      for (const t of tile.tickets) {
-        if (!matchesStation(t)) continue;
-        counts.all++;
-        if (t.status === "confirmed") counts.new++;
-        else if (t.status === "preparing") counts.prep++;
-        else if (t.status === "ready") {
-          counts.ready++;
-          counts.expo++;
-        }
-      }
-    }
-    return counts;
-  }, [data, matchesStation]);
-
   const clock = useMemo(() => fmtWallClock(now), [now]);
 
   const board = (
@@ -304,25 +251,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           <span className="cmd-label">Fleet command</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
-        <div className="cmd-chips" role="group" aria-label="Station filter">
-          {STATIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="cmd-chip"
-              aria-pressed={s.id === station}
-              onClick={() => setStation(s.id as MenuCategory | "all")}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-        <SegControl
-          ariaLabel="Lines switcher"
-          value={line}
-          onChange={setLine}
-          options={LINES.map((l) => ({ value: l.key, label: l.title, count: lineCounts[l.key], dataLine: l.key }))}
-        />
         <div className="cmd-spacer" />
         <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
@@ -360,7 +288,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
       {data && (
         <FleetBar
           data={data}
-          liveCounts={lineCounts}
           now={now}
           toneOf={toneOf}
         />
@@ -383,10 +310,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
               tile={tile}
               now={now}
               paceWindowMin={data.paceWindowMin}
-              station={station}
               toneOf={toneOf}
-              matchesStation={matchesStation}
-              matchesLine={matchesLine}
               advancingId={advancingId}
               onAdvance={advance}
               onDrillIn={onDrillIn}
@@ -408,7 +332,6 @@ function FleetBar({
   toneOf,
 }: {
   data: FleetPayload;
-  liveCounts: Record<LineKey, number>;
   now: number;
   toneOf: (t: WireTicket) => TicketTone;
 }) {
@@ -507,10 +430,7 @@ function TruckBoard({
   tile,
   now,
   paceWindowMin,
-  station,
   toneOf,
-  matchesStation,
-  matchesLine,
   advancingId,
   onAdvance,
   onDrillIn,
@@ -518,10 +438,7 @@ function TruckBoard({
   tile: WireTile;
   now: number;
   paceWindowMin: number;
-  station: MenuCategory | "all";
   toneOf: (t: WireTicket) => TicketTone;
-  matchesStation: (t: WireTicket) => boolean;
-  matchesLine: (t: WireTicket) => boolean;
   advancingId: string | null;
   onAdvance: (t: WireTicket) => void;
   onDrillIn?: (slug: string) => void;
@@ -551,15 +468,14 @@ function TruckBoard({
           ? "var(--cmd-warn)"
           : "var(--cmd-ready)";
 
-  const visible = tile.tickets
-    .filter((t) => matchesStation(t) && matchesLine(t))
-    .sort((a, b) => {
-      const d = TONE_ORDER[toneOf(a)] - TONE_ORDER[toneOf(b)];
-      if (d !== 0) return d;
-      const sa = a.promisedReadyAtMs ?? Infinity;
-      const sb = b.promisedReadyAtMs ?? Infinity;
-      return sa - sb;
-    });
+  const visible = [...tile.tickets].sort((a, b) => {
+    const d = TONE_ORDER[toneOf(a)] - TONE_ORDER[toneOf(b)];
+    if (d !== 0) return d;
+    const sa = a.promisedReadyAtMs ?? Infinity;
+    const sb = b.promisedReadyAtMs ?? Infinity;
+    if (sa === sb) return 0;
+    return sa - sb;
+  });
 
   // Pace geometry — shared scale so every bar is comparable; mark at 100%.
   const maxUtil = Math.max(1.5, ...tile.stations.map((s) => (Number.isFinite(s.pct) ? s.pct / 100 : 1.5)));
@@ -695,7 +611,7 @@ function TruckBoard({
               t={t}
               now={now}
               tone={toneOf(t)}
-              station={station}
+              station="all"
               advancing={advancingId === t.id}
               onAdvance={onAdvance}
             />
