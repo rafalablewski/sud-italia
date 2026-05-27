@@ -33,6 +33,8 @@
     --risk-soft:rgba(139,92,246,0.14);
     --late-soft:rgba(229,72,77,0.14);
     --gold-soft:rgba(224,164,88,0.14);
+    --wa:#25D366; --wa-soft:rgba(37,211,102,0.14);     /* WhatsApp channel */
+    --cyan:#22B8CD; --cyan-soft:rgba(34,184,205,0.14); /* Web channel */
     /* 8px grid */
     --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
     --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
@@ -192,8 +194,6 @@
   .c-row1{display:flex;align-items:center;gap:7px}
   .c-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .c-vip{flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);background:var(--gold-soft);border:1px solid rgba(224,164,88,0.32);border-radius:5px;padding:1px 6px}
-  .c-chan{flex:0 0 auto;color:var(--faint);display:inline-flex}
-  .c-chan svg{width:13px;height:13px}
   .c-sub{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);min-width:0}
   .c-phone{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:0.02em;white-space:nowrap}
   .c-dot{width:3px;height:3px;border-radius:50%;background:var(--faint);flex:0 0 auto}
@@ -478,28 +478,51 @@
   .id-merge-btn{flex:0 0 auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:700;color:var(--warn);background:transparent;border:1px solid var(--warn);border-radius:8px;padding:6px 13px}
   .id-merge-btn:hover{background:rgba(245,166,35,0.16)}
 
-  /* agent-intake stream (left column, View = Agent intake) */
-  .intake-summary{display:none;align-items:center;gap:7px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:1 1 auto}
-  .intake-summary b{color:var(--text)}
-  .intake-summary .is-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:0 0 auto;box-shadow:0 0 0 3px var(--accent-soft)}
-  .intake-summary .is-pipe{color:var(--hair-strong);margin:0 3px}
-  .intake{
-    appearance:none;text-align:left;cursor:pointer;font-family:var(--sans);width:100%;
+  /* channel filter row */
+  .cb-channels{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;padding-top:var(--s1)}
+  .cb-chlbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:0 0 auto}
+  .chanchips{display:flex;gap:var(--s1);flex-wrap:wrap}
+  .chanchip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--dim);background:transparent;
+    border:1px solid var(--hair);border-radius:7px;padding:6px 10px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+    transition:color .16s ease,border-color .16s ease,background .16s ease}
+  .chanchip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chanchip i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .chanchip .cc-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--faint);background:var(--hair);border-radius:4px;padding:1px 5px;min-width:18px;text-align:center}
+  .chanchip.on{color:var(--cc,var(--text));border-color:var(--cc,var(--hair-strong));background:rgba(255,255,255,0.04);font-weight:600}
+  .chanchip.on .cc-n{background:var(--hair-strong);color:var(--text)}
+
+  /* per-guest channel chips (row + profile) */
+  .c-chans{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+  .ch-chip{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;border:1px solid;flex:0 0 auto}
+  .ch-chip svg{width:12px;height:12px}
+
+  /* unified feed: section heads + live captures + book */
+  .feed-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:var(--s3) var(--s1) var(--s2);
+    font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);font-weight:700;position:sticky;top:0;background:var(--canvas);z-index:1}
+  .feed-head.book-head{margin-top:var(--s3);border-top:1px solid var(--hair)}
+  .fh-live{display:inline-flex;align-items:center;gap:7px;color:var(--accent)}
+  .fh-live i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);animation:livePulse 1.8s ease-in-out infinite}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .fh-sub{font-size:9.5px;letter-spacing:0.04em;color:var(--faint);text-transform:none}
+  .feed,.book{display:flex;flex-direction:column;gap:var(--s2)}
+  .feed-empty{font-size:11.5px;color:var(--faint);font-style:italic;padding:var(--s2) var(--s1) var(--s3)}
+
+  .intake{appearance:none;text-align:left;cursor:pointer;font-family:var(--sans);width:100%;
     background:var(--raised);border:1px solid var(--hair);border-radius:11px;padding:var(--s3);
-    display:flex;gap:var(--s3);align-items:flex-start;transition:border-color .16s ease,transform .1s ease;
-  }
+    display:flex;gap:var(--s3);align-items:flex-start;transition:border-color .16s ease,transform .1s ease}
   .intake:hover{border-color:var(--hair-strong);transform:translateY(-1px)}
   .intake.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 12px 28px -16px rgba(61,214,140,0.4)}
-  .ik-ch{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#202832;border:1px solid var(--hair-strong)}
+  .ik-ch{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:1px solid}
   .ik-ch svg{width:16px;height:16px}
-  .ik-ch.ik-wa{color:var(--accent)} .ik-ch.ik-voice{color:var(--firing)}
   .ik-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
   .ik-row1{display:flex;align-items:center;gap:7px}
-  .ik-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ik-badge{flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border-radius:5px;padding:1px 6px}
+  .ik-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .ik-chan{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
+  .ik-badge{flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border-radius:5px;padding:1px 6px;margin-left:auto}
   .ik-badge.is-new{color:var(--firing);background:var(--firing-soft);border:1px solid rgba(59,130,246,0.34)}
   .ik-badge.is-known{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3)}
   .ik-snip{font-size:12px;color:var(--dim);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ik-note{font-size:11px;color:var(--faint);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ik-order{display:flex;align-items:baseline;gap:8px;margin-top:1px}
   .ik-items{flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ik-total{flex:0 0 auto;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text)}
@@ -573,10 +596,6 @@
       <span class="ctl-lbl">Loc</span>
       <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
     </div>
-    <div class="ctl">
-      <span class="ctl-lbl">View</span>
-      <div class="seg-group" id="viewGroup" role="group" aria-label="View"></div>
-    </div>
     <div class="spacer"></div>
     <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
       <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
@@ -603,11 +622,14 @@
         <button class="clr" id="searchClear" type="button" aria-label="Clear search">×</button>
       </label>
       <div class="segchips" id="segchips" role="group" aria-label="Segment filter"></div>
-      <div class="intake-summary" id="intakeSummary" style="display:none"></div>
       <div class="sort-ctl">
         <span class="ctl-lbl">Sort</span>
         <div class="seg-group" id="sortGroup" role="group" aria-label="Sort by"></div>
       </div>
+    </div>
+    <div class="cb-channels">
+      <span class="cb-chlbl">Channel</span>
+      <div class="chanchips" id="chanchips" role="group" aria-label="Channel filter"></div>
     </div>
   </section>
 
@@ -627,7 +649,7 @@
       <span><i style="background:var(--firing)"></i>New</span>
       <span><i style="background:var(--late)"></i>Lapsed</span>
     </div>
-    <div class="kbd-hint"><span class="kbd">/</span> search · <span class="kbd">↑</span><span class="kbd">↓</span> move · <span class="kbd">V</span> view · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> clear</div>
+    <div class="kbd-hint"><span class="kbd">/</span> search · <span class="kbd">↑</span><span class="kbd">↓</span> move · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> clear</div>
   </footer>
 
   <div class="toast" id="toast"></div>
@@ -662,11 +684,21 @@ function daysToBirthday(mmdd){
   return Math.round((next-NOW)/86400000);
 }
 
-const CHAN_ICON={
-  Takeout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>',
-  Delivery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
-  "Dine-in":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>',
+/* ====================== Channels — one taxonomy, clearly distinguished ======================
+   A guest reaches us through several channels: at the table (Dine-in), the window
+   (Takeout), to an address (Delivery), or via an ordering agent (WhatsApp / Voice /
+   Web). Each has its own colour + icon so the book, the channel filter, the live
+   captures and the profile all read channel at a glance. */
+const CHANNEL_META={
+  "Dine-in": {color:"var(--risk)",  soft:"var(--risk-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>'},
+  "Takeout": {color:"var(--firing)",soft:"var(--firing-soft)",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>'},
+  "Delivery":{color:"var(--warn)",  soft:"var(--warn-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>'},
+  "WhatsApp":{color:"var(--wa)",    soft:"var(--wa-soft)",    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>'},
+  "Voice":   {color:"var(--gold)",  soft:"var(--gold-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>'},
+  "Web":     {color:"var(--cyan)",  soft:"var(--cyan-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></svg>'},
 };
+const CHANNEL_ORDER=["Dine-in","Takeout","Delivery","WhatsApp","Voice","Web"];
+const CHAN_ICON=Object.fromEntries(Object.entries(CHANNEL_META).map(([k,v])=>[k,v.icon]));
 const CHAN_CLASS={Takeout:"takeout",Delivery:"delivery","Dine-in":"dinein"};
 const ITEM_EMOJI={Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drinks:"☕",Desserts:"🍰"};
 
@@ -674,7 +706,7 @@ const ITEM_EMOJI={Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drink
    Self-contained demo data — same role the POS menu + KDS dataset play.
    spent is grosze (1 zł = 100). lastDays / joinedDays are days before NOW. */
 let CUSTOMERS = [
-  { id:"+48 512 880 114", name:"Rafał Ablewski", email:"rafal@suditalia.pl", loc:"Kraków", chan:"Takeout",
+  { id:"+48 512 880 114", name:"Rafał Ablewski", email:"rafal@suditalia.pl", loc:"Kraków", chan:"Takeout", channels:["Takeout","WhatsApp"],
     joinedDays:540, lastDays:1, orders:41, spent:158900, points:2310, member:true, source:"Loyalty signup", noShows:0, bday:"09-12", seg:"repeat", vip:true,
     favs:[{n:"Margherita",cat:"Pizza",q:22},{n:"Espresso",cat:"Drinks",q:38}],
     recent:[{d:1,total:4180,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1},{n:"Espresso",q:1}]},
@@ -682,7 +714,7 @@ let CUSTOMERS = [
             {d:9,total:2780,chan:"Takeout",loc:"Kraków",items:[{n:"Margherita",q:1}]}],
     notes:[{by:"System",d:540,text:"Owner account — internal."}], sms:true, mail:true },
 
-  { id:"+48 601 224 730", name:"Anna Kowalska", email:"anna.kowalska@gmail.com", loc:"Kraków", chan:"Dine-in",
+  { id:"+48 601 224 730", name:"Anna Kowalska", email:"anna.kowalska@gmail.com", loc:"Kraków", chan:"Dine-in", channels:["Dine-in","Voice"],
     joinedDays:410, lastDays:3, orders:34, spent:124500, points:1860, member:true, source:"Loyalty signup", noShows:0, bday:"06-04", seg:"repeat", vip:true,
     favs:[{n:"Margherita",cat:"Pizza",q:19},{n:"Tiramisù",cat:"Desserts",q:14},{n:"Espresso",cat:"Drinks",q:21}],
     recent:[{d:3,total:6890,chan:"Dine-in",loc:"Kraków",items:[{n:"Margherita",q:2},{n:"Tiramisù",q:1},{n:"Espresso",q:2}]},
@@ -690,7 +722,7 @@ let CUSTOMERS = [
             {d:20,total:4290,chan:"Dine-in",loc:"Kraków",items:[{n:"Margherita",q:1},{n:"Tiramisù",q:1}]}],
     notes:[{by:"Marco",d:88,text:"Regular — prefers table 4, extra basil on the Margherita."}], sms:true, mail:true },
 
-  { id:"+48 698 117 905", name:"Jakub Wójcik", email:"jwojcik@outlook.com", loc:"Kraków", chan:"Delivery",
+  { id:"+48 698 117 905", name:"Jakub Wójcik", email:"jwojcik@outlook.com", loc:"Kraków", chan:"Delivery", channels:["Delivery","WhatsApp"],
     joinedDays:300, lastDays:2, orders:28, spent:96200, points:1540, member:true, source:"Loyalty signup", noShows:0, bday:"03-19", seg:"repeat", vip:true,
     favs:[{n:"Tartufata Reale",cat:"Pizza",q:9},{n:"Burrata con Pomodorini",cat:"Antipasti",q:11}],
     recent:[{d:2,total:10180,chan:"Delivery",loc:"Kraków",items:[{n:"Tartufata Reale",q:1},{n:"Burrata con Pomodorini",q:1}]},
@@ -698,7 +730,7 @@ let CUSTOMERS = [
             {d:15,total:5980,chan:"Delivery",loc:"Kraków",items:[{n:"Quattro Formaggi",q:1},{n:"Garlic Bread",q:1},{n:"Aranciata S.Pellegrino",q:1}]}],
     notes:[{by:"Marco",d:40,text:"High roller, always tips the driver — offer LTOs early."}], sms:true, mail:true },
 
-  { id:"+48 504 661 238", name:"Giulia Romano", email:"giulia.romano@gmail.com", loc:"Warszawa", chan:"Delivery",
+  { id:"+48 504 661 238", name:"Giulia Romano", email:"giulia.romano@gmail.com", loc:"Warszawa", chan:"Delivery", channels:["Delivery","Web"],
     joinedDays:260, lastDays:9, orders:21, spent:78300, points:1120, member:true, source:"Email receipt", noShows:1, bday:"08-27", seg:"repeat", vip:false,
     favs:[{n:"Quattro Formaggi",cat:"Pizza",q:12},{n:"Spaghetti Carbonara",cat:"Pasta",q:8}],
     recent:[{d:9,total:6285,chan:"Delivery",loc:"Warszawa",items:[{n:"Quattro Formaggi",q:1},{n:"Spaghetti Carbonara",q:1}]},
@@ -706,55 +738,55 @@ let CUSTOMERS = [
             {d:27,total:3990,chan:"Delivery",loc:"Warszawa",items:[{n:"Diavola",q:1}]}],
     notes:[{by:"Sofia",d:65,text:"⚠ Nut allergy — flag every order, no pesto cross-contact."}], sms:true, mail:true },
 
-  { id:"+48 692 540 871", name:"Zofia Kamińska", email:"zofia.k@gmail.com", loc:"Warszawa", chan:"Dine-in",
+  { id:"+48 692 540 871", name:"Zofia Kamińska", email:"zofia.k@gmail.com", loc:"Warszawa", chan:"Dine-in", channels:["Dine-in"],
     joinedDays:190, lastDays:5, orders:16, spent:61200, points:980, member:true, source:"Dine-in", noShows:0, bday:"12-02", seg:"active", vip:false,
     favs:[{n:"Linguine al Pesto",cat:"Pasta",q:9},{n:"Panna Cotta",cat:"Desserts",q:7}],
     recent:[{d:5,total:4195,chan:"Dine-in",loc:"Warszawa",items:[{n:"Linguine al Pesto",q:1},{n:"Panna Cotta",q:1}]},
             {d:16,total:3885,chan:"Dine-in",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1},{n:"Espresso",q:1}]}],
     notes:[], sms:true, mail:true },
 
-  { id:"+48 530 902 416", name:"Marco Bianchi", email:"marco.bianchi@gmail.com", loc:"Kraków", chan:"Dine-in",
+  { id:"+48 530 902 416", name:"Marco Bianchi", email:"marco.bianchi@gmail.com", loc:"Kraków", chan:"Dine-in", channels:["Dine-in","Takeout"],
     joinedDays:330, lastDays:47, orders:19, spent:71400, points:0, member:false, source:"Email receipt", noShows:1, bday:"01-30", seg:"lapsed", vip:false,
     favs:[{n:"Prosciutto e Rucola",cat:"Pizza",q:10},{n:"Tiramisù",cat:"Desserts",q:8}],
     recent:[{d:47,total:5290,chan:"Dine-in",loc:"Kraków",items:[{n:"Prosciutto e Rucola",q:1},{n:"Tiramisù",q:1}]},
             {d:71,total:4180,chan:"Dine-in",loc:"Kraków",items:[{n:"Prosciutto e Rucola",q:1},{n:"Espresso",q:1}]}],
     notes:[{by:"Marco",d:50,text:"Was a weekly regular — hasn't been in over a month."}], sms:true, mail:false },
 
-  { id:"+48 575 318 209", name:"Piotr Nowak", email:"", loc:"Kraków", chan:"Takeout",
+  { id:"+48 575 318 209", name:"Piotr Nowak", email:"", loc:"Kraków", chan:"Takeout", channels:["Takeout","Voice"],
     joinedDays:120, lastDays:6, orders:12, spent:38900, points:540, member:true, source:"Phone order", noShows:0, bday:"11-22", seg:"active", vip:false,
     favs:[{n:"Diavola",cat:"Pizza",q:8},{n:"Aranciata S.Pellegrino",cat:"Drinks",q:6}],
     recent:[{d:6,total:4280,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1},{n:"Aranciata S.Pellegrino",q:1}]},
             {d:17,total:3290,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1}]}],
     notes:[], sms:true, mail:false },
 
-  { id:"+48 663 047 552", name:"Magda Zielińska", email:"magda.z@wp.pl", loc:"Warszawa", chan:"Takeout",
+  { id:"+48 663 047 552", name:"Magda Zielińska", email:"magda.z@wp.pl", loc:"Warszawa", chan:"Takeout", channels:["Takeout","Delivery"],
     joinedDays:210, lastDays:58, orders:8, spent:24600, points:360, member:true, source:"Loyalty signup", noShows:2, bday:"02-14", seg:"lapsed", vip:false,
     favs:[{n:"Penne Arrabbiata",cat:"Pasta",q:6}],
     recent:[{d:58,total:2390,chan:"Takeout",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1}]},
             {d:84,total:3380,chan:"Takeout",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1},{n:"Limonata Fresca",q:1}]}],
     notes:[], sms:true, mail:false },
 
-  { id:"+48 519 728 660", name:"Bartek Mazur", email:"b.mazur@gmail.com", loc:"Kraków", chan:"Takeout",
+  { id:"+48 519 728 660", name:"Bartek Mazur", email:"b.mazur@gmail.com", loc:"Kraków", chan:"Takeout", channels:["Takeout"],
     joinedDays:160, lastDays:73, orders:5, spent:16800, points:0, member:false, source:"Email receipt", noShows:1, bday:"07-08", seg:"lapsed", vip:false,
     favs:[{n:"Margherita",cat:"Pizza",q:4}],
     recent:[{d:73,total:3380,chan:"Takeout",loc:"Kraków",items:[{n:"Margherita",q:1},{n:"Limonata Fresca",q:1}]}],
     notes:[], sms:false, mail:true },
 
-  { id:"+48 608 391 740", name:"Tomasz Lewandowski", email:"", loc:"Kraków", chan:"Takeout",
+  { id:"+48 608 391 740", name:"Tomasz Lewandowski", email:"", loc:"Kraków", chan:"Takeout", channels:["WhatsApp","Takeout"],
     joinedDays:40, lastDays:11, orders:3, spent:9100, points:0, member:false, source:"WhatsApp agent", noShows:1, bday:"04-17", seg:"active", vip:false,
     favs:[{n:"Slice (Margherita)",cat:"Pizza",q:3}],
     recent:[{d:11,total:2380,chan:"Takeout",loc:"Kraków",items:[{n:"Slice (Margherita)",q:2}]},
             {d:25,total:3490,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1}]}],
     notes:[], sms:true, mail:false },
 
-  { id:"+48 721 005 318", name:"Ola Dąbrowska", email:"ola.dabrowska@gmail.com", loc:"Warszawa", chan:"Delivery",
+  { id:"+48 721 005 318", name:"Ola Dąbrowska", email:"ola.dabrowska@gmail.com", loc:"Warszawa", chan:"Delivery", channels:["Voice","Delivery"],
     joinedDays:14, lastDays:8, orders:2, spent:6400, points:90, member:true, source:"Voice agent", noShows:0, bday:"10-05", seg:"new", vip:false,
     favs:[{n:"Margherita",cat:"Pizza",q:2}],
     recent:[{d:8,total:3290,chan:"Delivery",loc:"Warszawa",items:[{n:"Margherita",q:1}]},
             {d:13,total:3110,chan:"Delivery",loc:"Warszawa",items:[{n:"Ortolana",q:1}]}],
     notes:[], sms:true, mail:true },
 
-  { id:"+48 887 412 663", name:"Katarzyna Wiśniewska", email:"k.wisniewska@gmail.com", loc:"Warszawa", chan:"Dine-in",
+  { id:"+48 887 412 663", name:"Katarzyna Wiśniewska", email:"k.wisniewska@gmail.com", loc:"Warszawa", chan:"Dine-in", channels:["WhatsApp","Dine-in"],
     joinedDays:4, lastDays:4, orders:1, spent:4790, points:0, member:false, source:"Email receipt", noShows:0, bday:"05-30", seg:"new", vip:false,
     favs:[{n:"Pizza del Pizzaiolo",cat:"Pizza",q:1}],
     recent:[{d:4,total:4790,chan:"Dine-in",loc:"Warszawa",items:[{n:"Pizza del Pizzaiolo",q:1}]}],
@@ -870,26 +902,24 @@ const IDENTITY_EXTRA={
   "+48 504 661 238":{ dupe:{phone:"+48 730 118 962", shared:["Web device","Card •• "+last4("+48 504 661 238")], note:"A second number shares this guest's web device and card hash — probably the same person on a work phone."} },
 };
 
-/* ====================== Agent intake — capture without a sign-up ======================
-   The WhatsApp / voice pre-order agent is the wedge: it takes the order AND
-   resolves identity by phone, then threads everything into the guest graph.
-   Recognised regulars are matched silently; first-timers get an auto-created
-   guest — no form, no password, no "join our loyalty" wall. */
+/* ====================== Live captures — every channel, one feed ======================
+   Folded into the book (no separate "intake" mode). Each capture is an order
+   landing from a channel — the WhatsApp/voice agent resolving identity by phone,
+   a recognised card at the window, a web order on a saved device. Recognised
+   regulars match silently; first-timers get an auto-created guest, no sign-up. */
 const INTAKE=[
   {min:2,  ch:"WhatsApp", cust:"+48 608 391 740", isNew:false, order:[{n:"Diavola",q:1}],                                  total:3490, snip:"„poproszę diavolę na wynos, odbiór za 20 min”"},
+  {min:5,  ch:"Web",      cust:"+48 504 661 238", isNew:false, order:[{n:"Quattro Formaggi",q:1},{n:"Spaghetti Carbonara",q:1}], total:6285, note:"Web checkout · device recognised"},
   {min:7,  ch:"Voice",    cust:"+48 601 224 730", isNew:false, order:[{n:"Margherita",q:2},{n:"Espresso",q:2}],            total:6890, snip:"„the usual please — table for two at six”"},
+  {min:11, ch:"Takeout",  cust:"+48 512 880 114", isNew:false, order:[{n:"Diavola",q:1},{n:"Espresso",q:1}],               total:4180, note:"Walk-up · card •• recognised at the window"},
   {min:13, ch:"WhatsApp", cust:"+48 887 412 663", isNew:true,  order:[{n:"Pizza del Pizzaiolo",q:1}],                       total:4790, snip:"„hi! do you deliver to Wola? first time ordering”"},
   {min:18, ch:"WhatsApp", cust:"+48 698 117 905", isNew:false, order:[{n:"Tartufata Reale",q:1}],                          total:7990, snip:"„same as last time, to the office 🙏”"},
   {min:26, ch:"Voice",    cust:"+48 721 005 318", isNew:true,  order:[{n:"Margherita",q:1}],                               total:3290, snip:"„first time — what do you recommend?”"},
-  {min:34, ch:"WhatsApp", cust:"+48 692 540 871", isNew:false, order:[{n:"Linguine al Pesto",q:1},{n:"Panna Cotta",q:1}],  total:4195, snip:"„pesto + panna cotta, pickup at 7”"},
+  {min:34, ch:"Delivery", cust:"+48 663 047 552", isNew:false, order:[{n:"Penne Arrabbiata",q:1}],                         total:2390, note:"Web · saved address, Wola"},
 ];
-const INTAKE_ICON={
-  WhatsApp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>',
-  Voice:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>',
-};
 
 /* ====================== UI state ====================== */
-let VIEW="book"; // book | intake
+let CH="all"; // channel filter
 let LOC="All";
 let SEG="all";
 let SORT="ltv";
@@ -929,13 +959,15 @@ function inSeg(c,seg){
   }
 }
 function inLoc(c){ return LOC==="All" ? true : c.loc===LOC; }
+function chansOf(c){ return c.channels && c.channels.length ? c.channels : [c.chan]; }
+function inChannel(c){ return CH==="all" ? true : chansOf(c).includes(CH); }
 function matchQuery(c){
   if(!QUERY) return true;
   const q=QUERY.toLowerCase();
   return c.name.toLowerCase().includes(q) || c.id.replace(/\s/g,"").includes(q.replace(/\s/g,"")) || (c.email||"").toLowerCase().includes(q);
 }
 function visibleCustomers(){
-  let list=CUSTOMERS.filter(c=>inLoc(c)&&inSeg(c,SEG)&&matchQuery(c));
+  let list=CUSTOMERS.filter(c=>inLoc(c)&&inSeg(c,SEG)&&inChannel(c)&&matchQuery(c));
   const cmp={
     ltv:(a,b)=>b.spent-a.spent,
     recent:(a,b)=>a.lastDays-b.lastDays,
@@ -981,99 +1013,92 @@ function renderSegchips(){
   document.querySelectorAll("#segchips .segchip").forEach(b=>b.onclick=()=>{ SEG=b.dataset.seg; afterFilterChange(); });
 }
 
-/* ====================== Render: customer list ====================== */
+/* ====================== Render: channel filter chips ====================== */
+function renderChanChips(){
+  const pool=CUSTOMERS.filter(inLoc);
+  const mk=(key,label,n,active,m)=>`<button class="chanchip${active?" on":""}" type="button" data-ch="${key}" aria-pressed="${active}"${m?` style="--cc:${m.color}"`:""}>
+    ${m?`<i style="background:${m.color}"></i>`:""}<span>${label}</span><span class="cc-n tnum">${n}</span></button>`;
+  let html=mk("all","All",pool.length,CH==="all",null);
+  CHANNEL_ORDER.forEach(k=>{ const n=pool.filter(c=>chansOf(c).includes(k)).length; html+=mk(k,k,n,CH===k,CHANNEL_META[k]); });
+  document.getElementById("chanchips").innerHTML=html;
+  document.querySelectorAll("#chanchips .chanchip").forEach(b=>b.onclick=()=>{ CH=b.dataset.ch; afterFilterChange(); });
+}
+
+/* ====================== Render: unified list (live captures + book) ====================== */
 const custOf=id=>CUSTOMERS.find(c=>c.id===id)||null;
-function visibleIntake(){ return INTAKE.filter(i=>{ const c=custOf(i.cust); return c && inLoc(c); }); }
+function visibleCaptures(){ return INTAKE.filter(i=>{ const c=custOf(i.cust); return c && inLoc(c) && (CH==="all"||i.ch===CH); }); }
+
+// channel chips on a row / in the profile — every channel a guest uses, colour-coded
+function chanChipsHtml(c){
+  return chansOf(c).map(ch=>{ const m=CHANNEL_META[ch]||{color:"var(--faint)",soft:"transparent",icon:""};
+    return `<span class="ch-chip" style="color:${m.color};border-color:${m.color}55;background:${m.soft}" title="${ch}">${m.icon}</span>`; }).join("");
+}
+function captureHtml(i){
+  const c=custOf(i.cust); const name=c?c.name:"Unknown"; const m=CHANNEL_META[i.ch]||{color:"var(--faint)",icon:""};
+  const its=i.order.map(o=>(o.q>1?o.q+"× ":"")+o.n).join(", ");
+  const detail=i.snip?`<span class="ik-snip">${i.snip}</span>`:`<span class="ik-note">${i.note||""}</span>`;
+  return `<button class="intake${i.cust===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(i.cust)}">
+    <span class="ik-ch" style="color:${m.color};border-color:${m.color}55;background:${m.soft}" title="${i.ch}">${m.icon}</span>
+    <span class="ik-main">
+      <span class="ik-row1">
+        <span class="ik-name">${i.isNew?"New guest":name}</span>
+        <span class="ik-chan" style="color:${m.color}">${i.ch}</span>
+        <span class="ik-badge ${i.isNew?"is-new":"is-known"}">${i.isNew?"Auto-created":"Recognised"}</span>
+      </span>
+      ${detail}
+      <span class="ik-order"><span class="ik-items">${its}</span><span class="ik-total tnum">${fmtPLN(i.total)}</span></span>
+    </span>
+    <span class="ik-meta"><span class="ik-phone tnum">${i.cust}</span><span class="ik-ago tnum">${i.min}m</span></span>
+  </button>`;
+}
+function custRowHtml(c){
+  const t=tierOf(c), h=health(c), seg=c.vip?"vip":c.seg;
+  const cold=c.lastDays>45, ns=c.noShows||0;
+  return `<button class="cust seg-${seg}${c.id===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(c.id)}">
+    <span class="avatar">${initials(c.name)}</span>
+    <span class="c-main">
+      <span class="c-row1">
+        <span class="c-name">${c.name}</span>
+        ${c.vip?'<span class="c-vip">VIP</span>':''}
+        ${ns>0?`<span class="c-warn" title="${ns} order${ns>1?"s":""} placed and never collected">⚠ ${ns}</span>`:''}
+        <span class="c-chans">${chanChipsHtml(c)}</span>
+      </span>
+      <span class="c-sub">
+        <span class="c-phone">${c.id}</span>
+        <span class="c-dot"></span>
+        <span class="c-seen${cold?" cold":""}">${seenLabel(c.lastDays)}</span>
+        <span class="c-dot"></span>
+        <span class="tnum">${c.orders} ord</span>
+        ${!c.email?'<span class="c-dot"></span><span class="c-noem">no email</span>':''}
+      </span>
+    </span>
+    <span class="c-fig">
+      <span class="c-ltv tnum">${fmtPLN0(c.spent)}</span>
+      ${c.member
+        ? `<span class="c-pts tnum"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>${c.points.toLocaleString("pl-PL")}</span>
+           <span class="tier-pill tier-${t}">${t}</span>`
+        : `<span class="c-contact" title="Captured via ${c.source} — not a loyalty member">Contact</span>`}
+    </span>
+    <span class="c-health"><i style="width:${h}%;background:${healthColor(h)}"></i></span>
+  </button>`;
+}
 
 function renderList(){
-  if(VIEW==="intake"){ renderIntake(); return; }
-  const list=visibleCustomers();
+  const caps=visibleCaptures(), list=visibleCustomers();
   const wrap=document.getElementById("list");
+  const chLabel = CH==="all" ? "All channels" : CH;
   document.getElementById("listCount").innerHTML=`<b>${list.length}</b> ${list.length===1?"customer":"customers"}`;
-  document.getElementById("listSort").textContent="by "+(SORTS.find(s=>s.key===SORT).label);
+  document.getElementById("listSort").textContent=chLabel+" · by "+(SORTS.find(s=>s.key===SORT).label);
 
-  if(list.length===0){
-    wrap.innerHTML=`<div class="list-empty"><span class="le-emoji">🔍</span><span>No customers match.</span></div>`;
-    return;
-  }
-  wrap.innerHTML=list.map(c=>{
-    const t=tierOf(c), h=health(c), seg=c.vip?"vip":c.seg;
-    const cold=c.lastDays>45, ns=c.noShows||0;
-    return `<button class="cust seg-${seg}${c.id===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(c.id)}">
-      <span class="avatar">${initials(c.name)}</span>
-      <span class="c-main">
-        <span class="c-row1">
-          <span class="c-name">${c.name}</span>
-          ${c.vip?'<span class="c-vip">VIP</span>':''}
-          ${ns>0?`<span class="c-warn" title="${ns} order${ns>1?"s":""} placed and never collected">⚠ ${ns}</span>`:''}
-          <span class="c-chan" title="${c.chan}">${CHAN_ICON[c.chan]}</span>
-        </span>
-        <span class="c-sub">
-          <span class="c-phone">${c.id}</span>
-          <span class="c-dot"></span>
-          <span class="c-seen${cold?" cold":""}">${seenLabel(c.lastDays)}</span>
-          <span class="c-dot"></span>
-          <span class="tnum">${c.orders} ord</span>
-          ${!c.email?'<span class="c-dot"></span><span class="c-noem">no email</span>':''}
-        </span>
-      </span>
-      <span class="c-fig">
-        <span class="c-ltv tnum">${fmtPLN0(c.spent)}</span>
-        ${c.member
-          ? `<span class="c-pts tnum"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>${c.points.toLocaleString("pl-PL")}</span>
-             <span class="tier-pill tier-${t}">${t}</span>`
-          : `<span class="c-contact" title="Captured via ${c.source} — not a loyalty member">Contact</span>`}
-      </span>
-      <span class="c-health"><i style="width:${h}%;background:${healthColor(h)}"></i></span>
-    </button>`;
-  }).join("");
-  wrap.querySelectorAll(".cust").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
-}
-
-/* ====================== Render: agent intake stream ====================== */
-function renderIntake(){
-  const items=visibleIntake();
-  const wrap=document.getElementById("list");
-  document.getElementById("listCount").innerHTML=`<b>${items.length}</b> agent ${items.length===1?"capture":"captures"}`;
-  document.getElementById("listSort").textContent="last 60 min";
-
-  const summary=document.getElementById("intakeSummary");
-  const newN=items.filter(i=>i.isNew).length, knownN=items.length-newN;
-  summary.innerHTML=`<span class="is-dot"></span><b>${items.length}</b> captured by agent<span class="is-pipe">·</span><b>${newN}</b> new guests<span class="is-pipe">·</span><b>${knownN}</b> recognised<span class="is-pipe">·</span>no sign-up`;
-
-  if(items.length===0){
-    wrap.innerHTML=`<div class="list-empty"><span class="le-emoji">🤖</span><span>No agent captures here.</span></div>`;
-    return;
-  }
-  wrap.innerHTML=items.map(i=>{
-    const c=custOf(i.cust); const name=c?c.name:"Unknown";
-    const its=i.order.map(o=>(o.q>1?o.q+"× ":"")+o.n).join(", ");
-    return `<button class="intake${i.cust===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(i.cust)}">
-      <span class="ik-ch ik-${i.ch==="WhatsApp"?"wa":"voice"}" title="${i.ch}">${INTAKE_ICON[i.ch]}</span>
-      <span class="ik-main">
-        <span class="ik-row1">
-          <span class="ik-name">${i.isNew?"New guest":name}</span>
-          <span class="ik-badge ${i.isNew?"is-new":"is-known"}">${i.isNew?"Auto-created":"Recognised"}</span>
-        </span>
-        <span class="ik-snip">${i.snip}</span>
-        <span class="ik-order"><span class="ik-items">${its}</span><span class="ik-total tnum">${fmtPLN(i.total)}</span></span>
-      </span>
-      <span class="ik-meta"><span class="ik-phone tnum">${i.cust}</span><span class="ik-ago tnum">${i.min}m</span></span>
-    </button>`;
-  }).join("");
-  wrap.querySelectorAll(".intake").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
-}
-
-// Toggle the book/intake chrome (which controls show) and re-render the list.
-function setView(v){
-  VIEW=v;
-  const intake=v==="intake";
-  document.getElementById("segchips").style.display=intake?"none":"flex";
-  document.querySelector(".sort-ctl").style.display=intake?"none":"flex";
-  document.getElementById("searchWrap").style.display=intake?"none":"inline-flex";
-  document.getElementById("intakeSummary").style.display=intake?"flex":"none";
-  buildViewSwitcher();
-  renderList();
+  const newN=caps.filter(i=>i.isNew).length;
+  let html=`<div class="feed-head"><span class="fh-live"><i></i>Live captures</span><span class="fh-sub">${caps.length} in last hour${newN?` · ${newN} new`:""}</span></div>`;
+  html+= caps.length ? `<div class="feed">${caps.map(captureHtml).join("")}</div>`
+                     : `<div class="feed-empty">No ${CH==="all"?"":CH+" "}captures in the last hour.</div>`;
+  html+=`<div class="feed-head book-head"><span class="fh-book">Customers</span><span class="fh-sub">${list.length} · ${chLabel}</span></div>`;
+  html+= list.length ? `<div class="book">${list.map(custRowHtml).join("")}</div>`
+                     : `<div class="feed-empty">No customers match.</div>`;
+  wrap.innerHTML=html;
+  wrap.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
 }
 
 /* ====================== AI next-best-action ====================== */
@@ -1173,7 +1198,7 @@ function renderDetail(){
           <div class="prof-meta">
             <span class="pm mono">${c.id}</span>
             <span class="pipe"></span>
-            <span class="pm">${CHAN_ICON[c.chan]} ${c.chan}</span>
+            <span class="pm"><span class="c-chans">${chanChipsHtml(c)}</span> ${chansOf(c).join(" · ")}</span>
             <span class="pipe"></span>
             <span class="pm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>${c.loc}</span>
             ${c.email?`<span class="pipe"></span><span class="pm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>${c.email}</span>`:`<span class="pipe"></span><span class="pm" style="color:var(--warn)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>no email on file</span>`}
@@ -1284,8 +1309,8 @@ function renderDetail(){
           <span class="dr-k">Captured via</span><span class="dr-v">${c.source}</span>
         </div>
         <div class="data-row">
-          <span class="dr-ic">${CHAN_ICON[c.chan]}</span>
-          <span class="dr-k">Channel</span><span class="dr-v">${c.chan}</span>
+          <span class="dr-ic">${(CHANNEL_META[chansOf(c)[0]]||{}).icon||""}</span>
+          <span class="dr-k">Channels</span><span class="dr-v" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="c-chans">${chanChipsHtml(c)}</span> ${chansOf(c).join(" · ")}</span>
         </div>
       </div>
       <div class="consent">
@@ -1416,13 +1441,14 @@ function addNote(c){
 function selectCustomer(id){ selectedId=id; renderList(); renderDetail(); }
 function afterFilterChange(){
   renderSegchips();
+  renderChanChips();
   renderList();
   // keep a valid selection within the filtered set
   const vis=visibleCustomers();
   if(vis.length && !vis.some(c=>c.id===selectedId)) selectedId=vis[0].id;
   renderDetail();
 }
-function renderAll(){ renderKpis(); renderSegchips(); renderList(); renderDetail(); }
+function renderAll(){ renderKpis(); renderSegchips(); renderChanChips(); renderList(); renderDetail(); }
 
 /* ====================== Header switchers ====================== */
 const LOCS=["All","Kraków","Warszawa"];
@@ -1443,17 +1469,6 @@ function buildSortSwitcher(){
     b.className="seg";b.type="button";b.textContent=s.label;
     b.setAttribute("aria-pressed",String(s.key===SORT));
     b.onclick=()=>{ SORT=s.key; buildSortSwitcher(); renderList(); };
-    g.appendChild(b);
-  });
-}
-const VIEWS=[{key:"book",label:"Book"},{key:"intake",label:"Agent intake"}];
-function buildViewSwitcher(){
-  const g=document.getElementById("viewGroup");g.innerHTML="";
-  VIEWS.forEach(v=>{
-    const b=document.createElement("button");
-    b.className="seg";b.type="button";b.textContent=v.label;
-    b.setAttribute("aria-pressed",String(v.key===VIEW));
-    b.onclick=()=>setView(v.key);
     g.appendChild(b);
   });
 }
@@ -1515,9 +1530,8 @@ document.addEventListener("keydown",e=>{
   if(typing) return;
   if(e.key==="/"){ e.preventDefault(); searchInput.focus(); return; }
   if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
-  if(e.key.toLowerCase()==="v"){ setView(VIEW==="book"?"intake":"book"); return; }
   if(e.key==="ArrowDown"||e.key==="ArrowUp"||e.key.toLowerCase()==="j"||e.key.toLowerCase()==="k"){
-    const ids=(VIEW==="intake"?visibleIntake().map(i=>i.cust):visibleCustomers().map(c=>c.id));
+    const ids=visibleCustomers().map(c=>c.id);
     if(!ids.length) return;
     const i=ids.indexOf(selectedId);
     const dir=(e.key==="ArrowDown"||e.key.toLowerCase()==="j")?1:-1;
@@ -1535,7 +1549,6 @@ function tick(){ document.getElementById("clock").textContent=fmtClock(new Date(
 /* ====================== Boot ====================== */
 buildLocSwitcher();
 buildSortSwitcher();
-buildViewSwitcher();
 syncFs();
 renderAll();
 tick();

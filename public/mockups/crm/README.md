@@ -40,11 +40,21 @@ optional — while making the gaps visible and workable.
 ### Layout
 
 **Regulars** is built on the idea that a food truck lives on its repeat
-customers. The left column is a **customer book** — searchable by name, phone
-or email, filterable by lifecycle (VIP / Active / Repeat / New / Lapsed) **and
-data facets** (Members / Contacts / No email / No-shows), sortable by lifetime
-value, recency, orders, points or name, with a KPI strip across the top. The
-right column is the **relationship profile** for the selected customer:
+customers. The left column is **one unified view** — there is no separate
+"agent intake" mode; live captures and the book share a single column.
+**Channel is a first-class, colour-coded dimension**: a dedicated filter row
+(All / Dine-in / Takeout / Delivery / WhatsApp / Voice / Web), channel chips on
+every guest row and profile, and a colour per channel carried everywhere. At
+the top sits a **Live captures** feed — recent orders landing from every
+channel (the WhatsApp/voice agent resolving identity by phone, a recognised
+card at the window, a web order on a saved device), each tagged with its
+channel and whether it **recognised** a guest or **auto-created** one. Below it
+the **customer book** — searchable by name, phone or email, filterable by
+lifecycle (VIP / Active / Repeat / New / Lapsed), **data facets** (Members /
+Contacts / No email / No-shows) **and channel**, sortable by lifetime value,
+recency, orders, points or name, with a KPI strip across the top. Both the
+captures and the book respond to the channel filter. The right column is the
+**relationship profile** for the selected customer:
 
 - **Relationship health (the centrepiece)** — a redesigned radial **gauge**
   scoring the relationship 0–100, blended from **recency · frequency · monetary
@@ -68,20 +78,14 @@ right column is the **relationship profile** for the selected customer:
   are it's one real person, and a **possible-duplicate** card offers a one-tap
   **merge**. No form, no password — identity is resolved from how they reach us.
 - **Lifetime stats**, **contact & data** (phone, email or collect, capture
-  source, channel, consent toggles — toggle = saved), **loyalty** (member tier
-  + progress, or a contact's invite card), **favourites**, **order history** and
-  **notes**.
-
-The header **View** toggle (`Book ↔ Agent intake`, or press `V`) swaps the left
-column for a live **agent-intake stream**: each WhatsApp/voice pre-order the
-agent takes, with the captured phone, the order, and whether it **recognised**
-an existing guest or **auto-created** a new one — the wedge that captures
-identity at the window without a sign-up flow and threads every order into the
-guest graph. Clicking any capture opens that guest's profile.
+  source, **the channels the guest uses** as colour chips, consent toggles —
+  toggle = saved), **loyalty** (member tier + progress, or a contact's invite
+  card), **favourites**, **order history** and **notes**.
 
 It runs end to end over a 12-customer sample book (8 members + 4 contacts)
-across Kraków + Warszawa in złoty: search, filter, sort, switch Book ↔ Agent
-intake, select (mouse or `↑`/`↓`/`j`/`k`), award points, invite a contact to
+across Kraków + Warszawa in złoty: search, filter by lifecycle / data facet /
+**channel**, sort, click a live capture or a guest to open the profile, select
+(mouse or `↑`/`↓`/`j`/`k`), award points, invite a contact to
 loyalty, flag an email to collect, merge a duplicate identity, toggle consent,
 add notes, and fire the next-best-action — all live.
 
