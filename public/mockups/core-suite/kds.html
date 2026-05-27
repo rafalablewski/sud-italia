@@ -8,7 +8,7 @@
 <style>
   body.kds {
     --canvas:#0a0a0c; --panel:#141318; --raised:#222028; --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
-    --t:#f4f2ee; --dim:#9a938b; --faint:#6a635c;
+    --t:#f4f2ee; --dim:#b6afa6; --faint:#918880;
     --queued:#6a655f; --firing:#4d90e8; --warn:#e0a93f; --late:#e5484d; --ready:#3dd68c; --risk:#9a72e0;
     background:var(--canvas); height:100vh; overflow:hidden;
   }
@@ -91,8 +91,11 @@
 <div class="kds-wrap">
   <div class="kds-top">
     <div class="kds-id"><div class="brand-mark">SI</div><div><div class="nm">Kitchen</div><div class="loc">Kraków · Line 1</div></div></div>
-    <a class="backfleet" href="/mockups/core-suite/kds-fleet.html">← Fleet</a>
-    <a class="backfleet" href="/mockups/core-suite/kds-chef.html">Chef line →</a>
+    <div class="viewswitch">
+      <a href="/mockups/core-suite/kds-fleet.html"><span>Fleet</span></a>
+      <span class="on">Floor</span>
+      <a href="/mockups/core-suite/kds-chef.html"><span>Chef</span></a>
+    </div>
     <div class="stage">
       <button>All <span class="n">11</span></button>
       <button class="on">New <span class="n">3</span></button>

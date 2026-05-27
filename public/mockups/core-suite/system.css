@@ -9,17 +9,17 @@
 :root {
   /* surfaces — warm-neutral charcoal */
   --bg: #0c0b0e;
-  --surface-1: #141318;
-  --surface-2: #1b1920;
-  --surface-3: #232028;
-  --surface-hover: #2a2731;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.12);
+  --surface-1: #17161c;
+  --surface-2: #1d1b23;
+  --surface-3: #262430;
+  --surface-hover: #2f2c39;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
 
   /* text — warm off-white */
-  --fg: #f3f1ec;
-  --fg-muted: #b5aea6;
-  --fg-subtle: #847c74;
+  --fg: #f5f3ee;
+  --fg-muted: #c0b9b0;
+  --fg-subtle: #978e85;
 
   /* signature accent + metallic */
   --brand: #a62d49;
@@ -302,6 +302,18 @@ body {
 
 /* recall tray / floating panel */
 .tray { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px 14px; }
+
+/* role / view switcher (KDS Fleet·Floor·Chef and similar). Uses the command
+   palette vars when present (body.kds), else falls back to the surface tokens. */
+.viewswitch { display: inline-flex; gap: 3px; background: var(--panel, var(--surface-2)); border: 1px solid var(--hair, var(--border)); border-radius: var(--r-md); padding: 3px; }
+.viewswitch a { text-decoration: none; }
+.viewswitch a > span, .viewswitch > span {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 14px; border-radius: 6px;
+  color: var(--dim, var(--fg-muted)); font: 600 12.5px var(--ui); white-space: nowrap;
+}
+.viewswitch a:hover > span { color: var(--t, var(--fg)); background: var(--raised, var(--surface-hover)); }
+.viewswitch .on { color: var(--t, var(--fg)); background: var(--raised, var(--surface-3)); box-shadow: var(--sh-xs); }
+.viewswitch .ico { width: 14px; height: 14px; opacity: .85; }
 
 /* modal dialog (settings / broadcast / funnel) */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: saturate(120%) blur(4px); display: grid; place-items: center; padding: 28px; }
