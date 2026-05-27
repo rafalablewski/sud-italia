@@ -853,7 +853,7 @@ let CUSTOMERS = [
 /* ====================== Derived fields ====================== */
 function tierOf(c){ return c.points>=1500?"Oro":c.points>=500?"Argento":"Bronzo"; }
 function aov(c){ return c.orders>0 ? Math.round(c.spent/c.orders) : 0; }
-function initials(name){ return name.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase(); }
+function initials(name){ return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase(); }
 
 // Reliability — share of placed orders the customer actually collected.
 // no-shows (placed but never picked up) drag it down and feed the health score.
@@ -1533,7 +1533,7 @@ function renderDetail(){
   ni.addEventListener("keydown",e=>{ if(e.key==="Enter") addNote(c); });
 }
 
-function escapeHtml(s){ return s.replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+function escapeHtml(s){ return String(s ?? "").replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
 
 /* ====================== Actions ====================== */
 function doAction(act,c){
@@ -1563,6 +1563,7 @@ function addNote(c){
   const v=ni.value.trim();
   if(!v) return;
   c.notes.unshift({by:"You",d:0,text:v});
+  ni.value="";
   toast("Note saved → "+c.name.split(" ")[0]);
   renderDetail();
 }
