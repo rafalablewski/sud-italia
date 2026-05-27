@@ -234,7 +234,7 @@ ${labels.sign}`;
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f4;margin:0;padding:24px;color:#222;">
   <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5;">
     <tr><td style="padding:24px 24px 0;">
-      <h1 style="font-size:18px;margin:0 0 4px;color:#c8102e;">Sud Italia</h1>
+      <h1 style="font-size:18px;margin:0 0 4px;color:#9A2742;">Sud Italia</h1>
       <p style="margin:0 0 20px;color:#666;font-size:13px;">${escapeHtml(p.locationName)}</p>
       <p style="margin:0 0 12px;">${escapeHtml(labels.hi)}</p>
       <p style="margin:0 0 16px;">${escapeHtml(labels.thanks)}</p>
@@ -260,7 +260,7 @@ ${labels.sign}`;
     ${
       p.referralUrl
         ? `<tr><td style="padding:20px 24px;">
-            <a href="${escapeHtml(p.referralUrl)}" style="display:inline-block;background:#c8102e;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:500;">
+            <a href="${escapeHtml(p.referralUrl)}" style="display:inline-block;background:#9A2742;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:500;">
               ${escapeHtml(labels.referralCta)}
             </a>
           </td></tr>`
