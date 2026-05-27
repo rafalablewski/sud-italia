@@ -7,10 +7,18 @@ exist to explain *why* decisions were made and *what* the next step is.
 
 ```
 docs/
-├── README.md         ← you are here
-├── mobile/           ← mobile admin redesign — strategy → audit → next
-└── audits/           ← dated, scoped audits of specific surfaces
+├── README.md          ← you are here
+├── design-system.md   ← suite-wide visual + interaction language (tokens, type, modules)
+├── mobile/            ← mobile admin redesign — strategy → audit → next
+└── audits/            ← dated, scoped audits of specific surfaces
 ```
+
+## `design-system.md`
+
+The shared design language for the whole operating system (POS, KDS, CRM,
+Concierge, WhatsApp, admin, storefront): philosophy, color/type/material
+tokens, component contracts, the module density spectrum, per-module redesign
+specs, and the not-yet-shipped backlog. Start here before any visual work.
 
 ## `mobile/`
 
