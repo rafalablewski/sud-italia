@@ -11,15 +11,15 @@ export const THEME_ATTR = "data-admin-theme";
 
 const dark = {
   bg: "#0c0b0e",
-  surface1: "#141318",
-  surface2: "#1b1920",
-  surface3: "#232028",
-  surfaceHover: "#2a2731",
-  border: "rgba(255, 255, 255, 0.06)",
-  borderStrong: "rgba(255, 255, 255, 0.12)",
-  fg: "#f3f1ec",
-  fgMuted: "#b5aea6",
-  fgSubtle: "#847c74",
+  surface1: "#17161c",
+  surface2: "#1d1b23",
+  surface3: "#262430",
+  surfaceHover: "#2f2c39",
+  border: "rgba(255, 255, 255, 0.10)",
+  borderStrong: "rgba(255, 255, 255, 0.16)",
+  fg: "#f5f3ee",
+  fgMuted: "#c0b9b0",
+  fgSubtle: "#978e85",
   brand: "#a62d49",
   platinum: "#cbb48a",
   success: "#2fa875",
@@ -28,8 +28,8 @@ const dark = {
   info: "#6e92c0",
   // chart palette — burgundy-led, harmonized + ordered for legibility on dark
   chart: ["#a62d49", "#cbb48a", "#6e92c0", "#2fa875", "#c77f4a", "#8e6fb0", "#d98aa0", "#7fa86b"],
-  grid: "rgba(255, 255, 255, 0.06)",
-  axis: "#847c74",
+  grid: "rgba(255, 255, 255, 0.08)",
+  axis: "#978e85",
 } as const;
 
 const light = {

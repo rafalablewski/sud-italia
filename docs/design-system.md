@@ -48,14 +48,14 @@ near-identical reds.
 | Role | Token | Value |
 |---|---|---|
 | Page background | `--bg` | `#0c0b0e` (warm-neutral charcoal) |
-| Sidebar / modal | `--surface-1` | `#141318` |
-| Input / inset | `--surface-2` | `#1b1920` |
-| Active / raised | `--surface-3` | `#232028` |
-| Hover | `--surface-hover` | `#2a2731` |
-| Hairline | `--border` | `rgba(255,255,255,.06)` |
-| Text | `--fg` | `#f3f1ec` (warm off-white) |
-| Text muted | `--fg-muted` | `#b5aea6` |
-| Text subtle | `--fg-subtle` | `#847c74` |
+| Sidebar / modal | `--surface-1` | `#17161c` |
+| Input / inset | `--surface-2` | `#1d1b23` |
+| Active / raised | `--surface-3` | `#262430` |
+| Hover | `--surface-hover` | `#2f2c39` |
+| Hairline | `--border` | `rgba(255,255,255,.10)` |
+| Text | `--fg` | `#f5f3ee` (warm off-white) |
+| Text muted | `--fg-muted` | `#c0b9b0` |
+| Text subtle | `--fg-subtle` | `#978e85` |
 | **Brand** | `--brand` | **`#a62d49`** |
 | **Platinum** | `--platinum` | **`#cbb48a`** |
 | Focus / info | `--border-focus` / `--info` | `#8fa9c9` / `#6e92c0` |

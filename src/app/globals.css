@@ -218,17 +218,17 @@ html { scroll-behavior: smooth; }
   /* Warm-neutral charcoal. Replaces the old cold blue-black so the burgundy
      accent and platinum highlights read as warm/expensive, not clinical. */
   --bg: #0c0b0e;
-  --surface-1: #141318;
-  --surface-2: #1b1920;
-  --surface-3: #232028;
-  --surface-hover: #2a2731;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.12);
+  --surface-1: #17161c;
+  --surface-2: #1d1b23;
+  --surface-3: #262430;
+  --surface-hover: #2f2c39;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
   --border-focus: #8fa9c9;
 
-  --fg: #f3f1ec;
-  --fg-muted: #b5aea6;
-  --fg-subtle: #847c74;
+  --fg: #f5f3ee;
+  --fg-muted: #c0b9b0;
+  --fg-subtle: #978e85;
   --fg-disabled: #4c4750;
 
   /* Signature accent — deep burgundy / oxblood. Matures the old Italia red
@@ -1105,7 +1105,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   color: var(--fg);
   display: flex;
   flex-direction: column;
@@ -1185,7 +1185,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-btn-lg { padding: 9px 18px; font-size: var(--text-md); min-height: 42px; }
 
 .v2-btn-primary {
-  background: var(--brand);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 86%, white 14%), var(--brand));
   color: var(--brand-fg);
   border-color: color-mix(in oklab, var(--brand) 92%, black 8%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-xs);
@@ -2696,8 +2696,8 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   --cmd-hair: rgba(255, 255, 255, 0.08);
   --cmd-hair-strong: rgba(255, 255, 255, 0.14);
   --cmd-text: #f1efe9;
-  --cmd-dim: #9a938b;
-  --cmd-faint: #6a635c;
+  --cmd-dim: #b6afa6;
+  --cmd-faint: #918880;
   --cmd-queued: #6a655f;
   --cmd-firing: #4d90e8;
   --cmd-warn: #e0a93f;
@@ -2717,8 +2717,8 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   --surface-3: #2a2731;
   --surface-hover: #2a2731;
   --fg: #f1efe9;
-  --fg-muted: #9a938b;
-  --fg-subtle: #6a635c;
+  --fg-muted: #b6afa6;
+  --fg-subtle: #918880;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --warning: #e0a93f;
@@ -5615,6 +5615,16 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 
 .admin-bg > * { position: relative; z-index: 1; }
 
+/* Finish: a faint warm vignette on the page canvas (dark only) — burgundy
+   glow top-right, platinum top-left. Subtle material, not decoration. */
+:root:not([data-admin-theme]) .admin-bg,
+[data-admin-theme="dark"] .admin-bg {
+  background:
+    radial-gradient(120% 60% at 90% -6%, rgba(166, 45, 73, 0.05), transparent 55%),
+    radial-gradient(70% 45% at 0% -2%, rgba(203, 180, 138, 0.028), transparent 50%),
+    var(--admin-bg);
+}
+
 /* --- Unified type scale (admin scope) ---
  *  Every admin page reads from the same `--text-*` tokens defined on
  *  [data-admin-theme] so the visual size of "small print" / "body" / "page
@@ -5682,7 +5692,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color 0.15s ease;
 }
 
@@ -8175,25 +8185,25 @@ select.pub-input {
    it. Wired to live data in AdminKdsFleet.tsx + /api/admin/kds/fleet.
    ========================================================================== */
 :root {
-  --cmd-canvas: #0A0C10;
-  --cmd-panel: #11151B;
-  --cmd-raised: #1A2129;
+  --cmd-canvas: #0a0a0c;
+  --cmd-panel: #141318;
+  --cmd-raised: #222028;
   --cmd-hair: rgba(255, 255, 255, 0.08);
-  --cmd-hair-strong: rgba(255, 255, 255, 0.14);
-  --cmd-text: #E9EDF2;
-  --cmd-dim: #9098A3;
-  --cmd-faint: #5C6571;
-  --cmd-queued: #5B6573;
-  --cmd-firing: #3B82F6;
-  --cmd-warn: #F5A623;
-  --cmd-risk: #8B5CF6;
-  --cmd-late: #E5484D;
-  --cmd-ready: #3DD68C;
-  --cmd-risk-soft: rgba(139, 92, 246, 0.16);
-  --cmd-warn-soft: rgba(245, 166, 35, 0.13);
+  --cmd-hair-strong: rgba(255, 255, 255, 0.16);
+  --cmd-text: #f1efe9;
+  --cmd-dim: #b6afa6;
+  --cmd-faint: #918880;
+  --cmd-queued: #6a655f;
+  --cmd-firing: #4d90e8;
+  --cmd-warn: #e0a93f;
+  --cmd-risk: #9a72e0;
+  --cmd-late: #e5484d;
+  --cmd-ready: #3dd68c;
+  --cmd-risk-soft: rgba(154, 114, 224, 0.16);
+  --cmd-warn-soft: rgba(224, 169, 63, 0.14);
   --cmd-late-soft: rgba(229, 72, 77, 0.14);
   --cmd-ready-soft: rgba(61, 214, 140, 0.13);
-  --cmd-firing-soft: rgba(59, 130, 246, 0.14);
+  --cmd-firing-soft: rgba(77, 144, 232, 0.14);
 }
 
 /* ============================================================================
