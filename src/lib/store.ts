@@ -2688,6 +2688,11 @@ export interface AppSettings {
    *  false the tab is hidden and the simulator API rejects spawn/advance
    *  (purge still works, so disabling can clear leftover sims). */
   kdsSimulatorEnabled?: boolean;
+  /** Master toggle for the WhatsApp chat simulator. When true the WhatsApp
+   *  console shows Add 1 / Add 5 / Purge controls that stage sandbox
+   *  conversations (built only from the real menu); when false the controls
+   *  are hidden and the simulator API rejects spawn (purge still works). */
+  whatsappSimulatorEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -8434,6 +8439,12 @@ export interface WaSession {
   abandonedNotified?: boolean;
   /** Stripe Payment Intent for the pending order (set when confirm_and_pay returns). */
   pendingPaymentIntentId?: string;
+  /** Sandbox flag — set by the WhatsApp chat simulator. Marks the conversation
+   *  as a demo so the console can badge it; never set by the live bot. */
+  simulated?: boolean;
+  /** Active scripted flow, if the customer is mid-sequence. The runner sends
+   *  step `step` on the next inbound and advances; cleared when the flow ends. */
+  activeFlow?: { flowId: string; step: number };
 }
 
 const WA_SESSION_TTL_MS = 90 * 60 * 1000; // 90 minutes — drops dormant sessions on read.
@@ -8563,7 +8574,48 @@ export interface WaSettings {
   /** Approved Meta utility template name used to re-open the 24h window
    *  for abandoned-cart nudges. Empty string disables that reminder. */
   reopenTemplate: string;
+  /** Operator-console auto-archive: a conversation with no new message for
+   *  this many minutes drops out of the active inbox into the Archived view.
+   *  Console-side only — does NOT shorten the bot's 90-min session TTL, so a
+   *  customer's cart survives even after the operator's view archives it.
+   *  0 disables auto-archive. */
+  autoArchiveMinutes: number;
+  /** Master switch for the LLM concierge. When false the channel still
+   *  receives + logs messages and honours auto-replies, but instead of calling
+   *  the model it sends `awayMessage`. */
+  aiEnabled: boolean;
+  /** Extra operator instructions appended to the bot's base system prompt
+   *  (persona, policies, promos). Empty string leaves the base prompt as-is. */
+  aiInstructions: string;
+  /** Sent when the AI concierge is disabled (aiEnabled=false). Empty string
+   *  falls back to a built-in "ordering paused" message. */
+  awayMessage: string;
+  /** Keyword → canned reply auto-responses, evaluated BEFORE the LLM. The
+   *  first whose keyword is contained (case-insensitive) in an inbound text
+   *  wins: the reply is sent and the turn ends without calling the model. */
+  autoReplies: { keyword: string; reply: string }[];
+  /** Opening hours (Europe/Warsaw). When enabled, messages received outside
+   *  the day's open→close window get the away message instead of the bot.
+   *  `days` is indexed 0=Sunday … 6=Saturday. */
+  businessHours: {
+    enabled: boolean;
+    days: { open: string; close: string; closed: boolean }[];
+  };
+  /** Abandoned-cart recovery: when enabled, the daily cron sends the re-open
+   *  template to customers who built a cart but didn't pay, once each, after
+   *  `delayHours` and before the recovery window closes. Needs reopenTemplate. */
+  abandonedCart: { enabled: boolean; delayHours: number };
+  /** Scripted multi-step flows. A customer message containing `trigger` starts
+   *  the flow; each subsequent reply advances one step. Deterministic — runs
+   *  ahead of the LLM, independent of the AI toggle. */
+  flows: { id: string; name: string; trigger: string; enabled: boolean; steps: { prompt: string }[] }[];
 }
+
+const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
+  open: "11:00",
+  close: "22:00",
+  closed: false,
+}));
 
 const DEFAULT_WA_SETTINGS: WaSettings = {
   enabled: true,
@@ -8573,6 +8625,14 @@ const DEFAULT_WA_SETTINGS: WaSettings = {
   defaultLocation: null,
   dailyMessageCap: 60,
   reopenTemplate: "",
+  autoArchiveMinutes: 5,
+  aiEnabled: true,
+  aiInstructions: "",
+  awayMessage: "",
+  autoReplies: [],
+  businessHours: { enabled: false, days: DEFAULT_BUSINESS_DAYS },
+  abandonedCart: { enabled: false, delayHours: 2 },
+  flows: [],
 };
 
 export async function getWaSettings(): Promise<WaSettings> {
@@ -8905,6 +8965,311 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     delete all[phone];
     await writeJSON("whatsapp-transcripts.json", all);
     return true;
+  });
+}
+
+// --- WhatsApp chat simulator (admin-gated demo / training tool) ----------
+//
+// Mirrors the KDS order simulator: an owner toggle (whatsappSimulatorEnabled)
+// surfaces Add / Purge controls in the WhatsApp console. Each spawn writes a
+// real session + transcript (built from the real menu by the API route) so the
+// console renders them exactly like a live chat, but the phone is recorded in a
+// registry so Purge can find and remove every sandbox conversation in one shot.
+// Sessions carry simulated:true so the console can badge them.
+
+const WA_SIM_REGISTRY_KEY = "whatsapp-sim-phones.json";
+
+/** Persist one sandbox conversation (session + transcript) and register its
+ *  phone so it can be purged later. */
+export async function saveSimulatedWaConversation(
+  session: WaSession,
+  messages: WaMessage[],
+): Promise<void> {
+  await setWaSession({ ...session, simulated: true });
+  for (const msg of messages) {
+    await appendWaMessage(session.phone, msg);
+  }
+  await withLock(WA_SIM_REGISTRY_KEY, async () => {
+    const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+    const canonical = normalizePlPhoneE164(session.phone) ?? session.phone;
+    if (!phones.includes(canonical)) phones.push(canonical);
+    await writeJSON(WA_SIM_REGISTRY_KEY, phones);
+  });
+}
+
+/** Phones of every registered sandbox conversation (drives the active cap). */
+export async function listSimulatedWaPhones(): Promise<string[]> {
+  return readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+}
+
+/** Remove every registered sandbox conversation — clears the session and the
+ *  transcript for each phone, then empties the registry. Returns the count. */
+export async function deleteSimulatedWaConversations(): Promise<number> {
+  const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
+  let removed = 0;
+  for (const phone of phones) {
+    await clearWaSession(phone);
+    await deleteWaTranscript(phone);
+    removed++;
+  }
+  await writeJSON(WA_SIM_REGISTRY_KEY, []);
+  return removed;
+}
+
+// --- WhatsApp conversation flags (operator console: archive / pin) -------
+//
+// Operator-side organisational state, independent of the bot session. A
+// manually-archived phone drops to the Archived view even if recent; a pinned
+// phone never auto-archives. A new inbound message clears the manual-archive
+// flag (the webhook calls setWaArchived(phone, false)) so a reply pulls the
+// chat back to the inbox. Stored as two phone registries.
+
+const WA_ARCHIVED_KEY = "whatsapp-archived-phones.json";
+const WA_PINNED_KEY = "whatsapp-pinned-phones.json";
+
+export async function getWaConversationFlags(): Promise<{ archived: string[]; pinned: string[] }> {
+  const [archived, pinned] = await Promise.all([
+    readJSON<string[]>(WA_ARCHIVED_KEY, []),
+    readJSON<string[]>(WA_PINNED_KEY, []),
+  ]);
+  return {
+    archived: Array.isArray(archived) ? archived : [],
+    pinned: Array.isArray(pinned) ? pinned : [],
+  };
+}
+
+async function setPhoneFlag(key: string, rawPhone: string, on: boolean): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(key, async () => {
+    const list = await readJSON<string[]>(key, []);
+    const has = list.includes(phone);
+    if (on && !has) {
+      await writeJSON(key, [...list, phone]);
+    } else if (!on && has) {
+      await writeJSON(key, list.filter((p) => p !== phone));
+    }
+  });
+}
+
+/** Manually archive (or restore) a conversation in the operator console. */
+export async function setWaArchived(rawPhone: string, archived: boolean): Promise<void> {
+  await setPhoneFlag(WA_ARCHIVED_KEY, rawPhone, archived);
+  // Pinning and archiving are mutually exclusive — archiving unpins.
+  if (archived) await setPhoneFlag(WA_PINNED_KEY, rawPhone, false);
+}
+
+/** Pin (or unpin) a conversation so it never auto-archives. */
+export async function setWaPinned(rawPhone: string, pinned: boolean): Promise<void> {
+  await setPhoneFlag(WA_PINNED_KEY, rawPhone, pinned);
+  // Pinning clears any manual archive so the chat returns to the inbox.
+  if (pinned) await setPhoneFlag(WA_ARCHIVED_KEY, rawPhone, false);
+}
+
+// --- WhatsApp conversion funnel (event instrumentation) ------------------
+//
+// Lightweight append-only log of the furthest stage each conversation reaches,
+// so the console can show a real drop-off funnel over a window. Events are
+// emitted from the bot pipeline (turn loop diff + webhook first-touch) and the
+// Stripe webhook (paid). Aggregation is cumulative per phone — reaching a later
+// stage implies the earlier ones — so a missed intermediate event never breaks
+// the funnel. Simulated chats bypass the live pipeline, so they never appear.
+
+export type WaFunnelStage =
+  | "started"
+  | "location"
+  | "cart"
+  | "fulfillment"
+  | "slot"
+  | "payment"
+  | "paid";
+
+export interface WaFunnelEvent {
+  stage: WaFunnelStage;
+  phone: string;
+  locationSlug: string | null;
+  at: string;
+}
+
+const WA_FUNNEL_KEY = "whatsapp-funnel.json";
+const WA_FUNNEL_MAX = 10_000;
+
+export async function appendWaFunnelEvent(event: WaFunnelEvent): Promise<void> {
+  await withLock(WA_FUNNEL_KEY, async () => {
+    const list = await readJSON<WaFunnelEvent[]>(WA_FUNNEL_KEY, []);
+    list.push(event);
+    if (list.length > WA_FUNNEL_MAX) list.splice(0, list.length - WA_FUNNEL_MAX);
+    await writeJSON(WA_FUNNEL_KEY, list);
+  });
+  incrCounter(`whatsapp.funnel.${event.stage}`);
+}
+
+export async function getWaFunnelEvents(sinceMs?: number): Promise<WaFunnelEvent[]> {
+  const list = await readJSON<WaFunnelEvent[]>(WA_FUNNEL_KEY, []);
+  if (!Array.isArray(list)) return [];
+  if (!sinceMs) return list;
+  return list.filter((e) => {
+    const t = Date.parse(e.at);
+    return Number.isFinite(t) && t >= sinceMs;
+  });
+}
+
+// --- WhatsApp abandoned-cart recovery ------------------------------------
+//
+// A cart a customer built but didn't pay for, persisted beyond the 90-min bot
+// session so the daily cron can re-engage them with the Meta re-open template.
+// Upserted from the turn loop whenever a turn ends with items in the cart;
+// cleared when the order is paid (Stripe webhook) or the chat is escalated.
+// Each record is nudged at most once (notifiedAt), so customers are never
+// spammed.
+
+export interface WaAbandonedCart {
+  phone: string;
+  locationSlug: string | null;
+  itemCount: number;
+  subtotalGrosze: number;
+  /** Refreshed every turn the cart is non-empty — "abandoned since". */
+  lastCartAt: string;
+  createdAt: string;
+  notifiedAt: string | null;
+}
+
+const WA_ABANDONED_KEY = "whatsapp-abandoned-carts.json";
+
+export async function upsertWaAbandonedCart(input: {
+  phone: string;
+  locationSlug: string | null;
+  itemCount: number;
+  subtotalGrosze: number;
+}): Promise<void> {
+  const phone = normalizePlPhoneE164(input.phone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    const now = new Date().toISOString();
+    const existing = all[phone];
+    all[phone] = {
+      phone,
+      locationSlug: input.locationSlug,
+      itemCount: input.itemCount,
+      subtotalGrosze: input.subtotalGrosze,
+      lastCartAt: now,
+      createdAt: existing?.createdAt ?? now,
+      notifiedAt: existing?.notifiedAt ?? null,
+    };
+    await writeJSON(WA_ABANDONED_KEY, all);
+  });
+}
+
+export async function clearWaAbandonedCart(rawPhone: string): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    if (all[phone]) {
+      delete all[phone];
+      await writeJSON(WA_ABANDONED_KEY, all);
+    }
+  });
+}
+
+export async function markWaAbandonedCartNotified(rawPhone: string): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    if (all[phone]) {
+      all[phone] = { ...all[phone], notifiedAt: new Date().toISOString() };
+      await writeJSON(WA_ABANDONED_KEY, all);
+    }
+  });
+}
+
+export async function listWaAbandonedCarts(): Promise<WaAbandonedCart[]> {
+  const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+  return Object.values(all);
+}
+
+// --- WhatsApp broadcast campaigns ----------------------------------------
+//
+// A one-off template blast to an opted-in customer segment. The audience phone
+// list is snapshotted at create time; sends run in client-driven batches (with
+// a daily cron backstop), advancing `cursor` and counting sends so progress
+// survives a page reload and a half-finished campaign can always be resumed.
+
+export type WaCampaignStatus = "sending" | "done" | "cancelled";
+
+export interface WaCampaign {
+  id: string;
+  template: string;
+  languageCode: string;
+  audienceKey: string;
+  audienceLabel: string;
+  phones: string[];
+  cursor: number;
+  sentCount: number;
+  failedCount: number;
+  status: WaCampaignStatus;
+  createdAt: string;
+  createdBy: string;
+  completedAt: string | null;
+}
+
+const WA_CAMPAIGNS_KEY = "whatsapp-campaigns.json";
+const WA_CAMPAIGNS_MAX = 50;
+
+export async function createWaCampaign(input: {
+  template: string;
+  languageCode: string;
+  audienceKey: string;
+  audienceLabel: string;
+  phones: string[];
+  createdBy: string;
+}): Promise<WaCampaign> {
+  const campaign: WaCampaign = {
+    id: `wac_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    template: input.template,
+    languageCode: input.languageCode,
+    audienceKey: input.audienceKey,
+    audienceLabel: input.audienceLabel,
+    phones: input.phones,
+    cursor: 0,
+    sentCount: 0,
+    failedCount: 0,
+    status: input.phones.length === 0 ? "done" : "sending",
+    createdAt: new Date().toISOString(),
+    createdBy: input.createdBy,
+    completedAt: input.phones.length === 0 ? new Date().toISOString() : null,
+  };
+  await withLock(WA_CAMPAIGNS_KEY, async () => {
+    const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+    list.unshift(campaign);
+    await writeJSON(WA_CAMPAIGNS_KEY, list.slice(0, WA_CAMPAIGNS_MAX));
+  });
+  return campaign;
+}
+
+export async function listWaCampaigns(): Promise<WaCampaign[]> {
+  const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+  return Array.isArray(list) ? list : [];
+}
+
+export async function getWaCampaign(id: string): Promise<WaCampaign | null> {
+  const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+  return list.find((c) => c.id === id) ?? null;
+}
+
+export async function updateWaCampaign(
+  id: string,
+  patch: Partial<Pick<WaCampaign, "cursor" | "sentCount" | "failedCount" | "status" | "completedAt">>,
+): Promise<WaCampaign | null> {
+  return withLock(WA_CAMPAIGNS_KEY, async () => {
+    const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+    const i = list.findIndex((c) => c.id === id);
+    if (i < 0) return null;
+    list[i] = { ...list[i], ...patch };
+    await writeJSON(WA_CAMPAIGNS_KEY, list);
+    return list[i];
   });
 }
 

@@ -3,12 +3,18 @@ import { callGateway, fenceUserContent, gatewayConfigured } from "@/lib/ai/gatew
 import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
+  appendWaFunnelEvent,
+  clearWaAbandonedCart,
   clearWaSession,
   getWaSettings,
   loadOrCreateWaSession,
   setWaSession,
+  upsertWaAbandonedCart,
+  type WaFunnelStage,
+  type WaSession,
 } from "@/lib/store";
 import { WHATSAPP_SYSTEM_PROMPT } from "@/lib/whatsapp/prompt";
+import { runWaFlow } from "@/lib/whatsapp/flows";
 import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "@/lib/whatsapp/tools";
 import type { InboundMessage } from "@/lib/whatsapp/inbound";
 import { logger } from "@/lib/logger";
@@ -48,6 +54,18 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     return;
   }
 
+  // AI concierge can be switched off independently of the channel: the channel
+  // still logs inbound + runs auto-replies, but instead of calling the model we
+  // send the configured away message. Default aiEnabled=true → no change.
+  if (settings.aiEnabled === false) {
+    await provider.sendText(
+      phone,
+      settings.awayMessage?.trim() ||
+        "Dziękujemy za wiadomość! Nasz asystent jest teraz offline. Zamów online: https://sudita.lia 🍕",
+    );
+    return;
+  }
+
   // Budget guardrail: bail before calling Anthropic if the daily ceiling is
   // exhausted. The gateway's per-feature counter is best-effort — until a
   // proper spend rollup exists we just use the ceiling as a hard cutoff.
@@ -69,6 +87,19 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
 
   const session = await loadOrCreateWaSession(phone);
   if (!session) return;
+
+  // Scripted flows are deterministic and take precedence over the LLM. If a
+  // flow handles this inbound, persist the advanced step and stop here.
+  const inboundText = message.kind === "text" ? message.value : "";
+  if (await runWaFlow({ session, settings, inboundText, provider, phone })) {
+    if (message.id) void provider.markRead(message.id);
+    await setWaSession(session);
+    return;
+  }
+
+  // Snapshot which funnel stages this conversation had already reached, so we
+  // can emit just the new transitions once the tools have run this turn.
+  const funnelBefore = stageFlags(session);
 
   const userText = describeInbound(message);
   const fenced = fenceUserContent("whatsapp_customer_message", userText);
@@ -97,12 +128,20 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   };
   let assistantFinalText = "";
 
+  // Append any operator-configured persona/policy to the base prompt. Kept
+  // additive so the non-negotiable ordering guardrails always survive; empty
+  // instructions leave the prompt byte-identical to the default.
+  const extra = settings.aiInstructions?.trim();
+  const systemPrompt = extra
+    ? `${WHATSAPP_SYSTEM_PROMPT}\n\n# Additional operator instructions\n\nThese are set by the Sud Italia operator. Follow them unless they conflict with the Hard rules above (the Hard rules always win).\n\n${extra}`
+    : WHATSAPP_SYSTEM_PROMPT;
+
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
     let result;
     try {
       result = await callGateway({
         feature: "whatsapp",
-        system: WHATSAPP_SYSTEM_PROMPT,
+        system: systemPrompt,
         messages,
         tools: TOOL_DEFINITIONS,
         effort: "medium",
@@ -168,6 +207,12 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     session.llmMessageHistory = [...session.llmMessageHistory, assistantTurn].slice(-MAX_HISTORY);
   }
 
+  // Emit funnel events for any stage this turn newly reached.
+  void emitFunnelTransitions(phone, session, funnelBefore).catch(() => {});
+
+  // Track / clear the abandoned-cart record for re-engagement.
+  void syncAbandonedCart(phone, session, ctx.clearOnExit.value).catch(() => {});
+
   // Single persist at the end of the turn (or single delete on escalation).
   await persistSessionOnExit(ctx);
 
@@ -187,6 +232,69 @@ async function persistSessionOnExit(ctx: ToolContext): Promise<void> {
     return;
   }
   await setWaSession(ctx.session);
+}
+
+/**
+ * Keep the abandoned-cart record in sync with the session. A non-empty cart
+ * (re)records it; an escalation or an emptied cart with no pay link in flight
+ * clears it. When a pay link is out but the cart is empty (post confirm_and_pay)
+ * we keep the record so payment-abandonment is recoverable too — only a paid
+ * order (Stripe webhook) or escalation clears it then.
+ */
+async function syncAbandonedCart(
+  phone: string,
+  session: WaSession,
+  escalated: boolean,
+): Promise<void> {
+  if (escalated) {
+    await clearWaAbandonedCart(phone);
+    return;
+  }
+  if (session.cartItems.length > 0) {
+    const subtotalGrosze = session.cartItems.reduce(
+      (s, c) => s + c.menuItem.price * c.quantity,
+      0,
+    );
+    await upsertWaAbandonedCart({
+      phone,
+      locationSlug: session.locationSlug,
+      itemCount: session.cartItems.length,
+      subtotalGrosze,
+    });
+  } else if (!session.pendingPaymentUrl) {
+    await clearWaAbandonedCart(phone);
+  }
+}
+
+/** The funnel stages reachable from session state (paid is emitted elsewhere). */
+function stageFlags(s: WaSession): Record<Exclude<WaFunnelStage, "started" | "paid">, boolean> {
+  return {
+    location: !!s.locationSlug,
+    cart: s.cartItems.length > 0,
+    fulfillment: !!s.fulfillmentType,
+    slot: !!s.slotId,
+    payment: !!s.pendingPaymentUrl,
+  };
+}
+
+/** Emit a funnel event for each stage that flipped false→true this turn. */
+async function emitFunnelTransitions(
+  phone: string,
+  session: WaSession,
+  before: ReturnType<typeof stageFlags>,
+): Promise<void> {
+  const after = stageFlags(session);
+  const stages = Object.keys(after) as (keyof typeof after)[];
+  for (const stage of stages) {
+    if (after[stage] && !before[stage]) {
+      await appendWaFunnelEvent({
+        stage,
+        phone,
+        locationSlug: session.locationSlug,
+        at: new Date().toISOString(),
+      });
+    }
+  }
 }
 
 /**
