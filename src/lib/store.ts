@@ -9053,6 +9053,54 @@ export async function setWaPinned(rawPhone: string, pinned: boolean): Promise<vo
   if (pinned) await setPhoneFlag(WA_ARCHIVED_KEY, rawPhone, false);
 }
 
+// --- WhatsApp conversion funnel (event instrumentation) ------------------
+//
+// Lightweight append-only log of the furthest stage each conversation reaches,
+// so the console can show a real drop-off funnel over a window. Events are
+// emitted from the bot pipeline (turn loop diff + webhook first-touch) and the
+// Stripe webhook (paid). Aggregation is cumulative per phone — reaching a later
+// stage implies the earlier ones — so a missed intermediate event never breaks
+// the funnel. Simulated chats bypass the live pipeline, so they never appear.
+
+export type WaFunnelStage =
+  | "started"
+  | "location"
+  | "cart"
+  | "fulfillment"
+  | "slot"
+  | "payment"
+  | "paid";
+
+export interface WaFunnelEvent {
+  stage: WaFunnelStage;
+  phone: string;
+  locationSlug: string | null;
+  at: string;
+}
+
+const WA_FUNNEL_KEY = "whatsapp-funnel.json";
+const WA_FUNNEL_MAX = 10_000;
+
+export async function appendWaFunnelEvent(event: WaFunnelEvent): Promise<void> {
+  await withLock(WA_FUNNEL_KEY, async () => {
+    const list = await readJSON<WaFunnelEvent[]>(WA_FUNNEL_KEY, []);
+    list.push(event);
+    if (list.length > WA_FUNNEL_MAX) list.splice(0, list.length - WA_FUNNEL_MAX);
+    await writeJSON(WA_FUNNEL_KEY, list);
+  });
+  incrCounter(`whatsapp.funnel.${event.stage}`);
+}
+
+export async function getWaFunnelEvents(sinceMs?: number): Promise<WaFunnelEvent[]> {
+  const list = await readJSON<WaFunnelEvent[]>(WA_FUNNEL_KEY, []);
+  if (!Array.isArray(list)) return [];
+  if (!sinceMs) return list;
+  return list.filter((e) => {
+    const t = Date.parse(e.at);
+    return Number.isFinite(t) && t >= sinceMs;
+  });
+}
+
 // --- Business costs (operating expense ledger) ---------------------------
 
 const BUSINESS_COSTS_KEY = "business-costs.json";

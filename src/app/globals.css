@@ -8990,6 +8990,25 @@ select.pub-input {
 .wa-cfg-hour-sep { text-align: center; color: var(--text-muted, #6b7280); }
 .wa-cfg-hour-closed { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted, #6b7280); white-space: nowrap; }
 
+/* ---- Conversion funnel analytics dialog ---- */
+.wa-funnel-an { display: flex; flex-direction: column; gap: 14px; }
+.wa-fa-windows { display: flex; gap: 6px; }
+.wa-fa-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.wa-fa-tile { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.wa-fa-tile.accent { border-color: color-mix(in oklab, var(--success, #16a34a) 45%, transparent); }
+.wa-fa-tile-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted, #6b7280); }
+.wa-fa-tile-value { font-size: 22px; font-weight: 700; }
+.wa-fa-tile.accent .wa-fa-tile-value { color: var(--success, #16a34a); }
+.wa-fa-bars { display: flex; flex-direction: column; gap: 12px; }
+.wa-fa-row { display: flex; flex-direction: column; gap: 5px; }
+.wa-fa-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wa-fa-label { font-size: 13px; font-weight: 600; }
+.wa-fa-count { font-size: 13px; font-weight: 700; }
+.wa-fa-of { font-weight: 500; color: var(--text-muted, #6b7280); }
+.wa-fa-track { height: 10px; border-radius: 999px; background: var(--surface-2, rgba(0,0,0,0.06)); overflow: hidden; }
+.wa-fa-fill { height: 100%; border-radius: 999px; background: var(--success-soft, #16a34a); min-width: 2px; transition: width .25s; }
+.wa-fa-drop { font-size: 11px; color: var(--text-muted, #6b7280); }
+
 @media (max-width: 1180px) {
   .wa-editor { grid-template-columns: 300px 1fr; }
   .wa-context { display: none; }

@@ -3,10 +3,13 @@ import { callGateway, fenceUserContent, gatewayConfigured } from "@/lib/ai/gatew
 import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
+  appendWaFunnelEvent,
   clearWaSession,
   getWaSettings,
   loadOrCreateWaSession,
   setWaSession,
+  type WaFunnelStage,
+  type WaSession,
 } from "@/lib/store";
 import { WHATSAPP_SYSTEM_PROMPT } from "@/lib/whatsapp/prompt";
 import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "@/lib/whatsapp/tools";
@@ -81,6 +84,10 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
 
   const session = await loadOrCreateWaSession(phone);
   if (!session) return;
+
+  // Snapshot which funnel stages this conversation had already reached, so we
+  // can emit just the new transitions once the tools have run this turn.
+  const funnelBefore = stageFlags(session);
 
   const userText = describeInbound(message);
   const fenced = fenceUserContent("whatsapp_customer_message", userText);
@@ -188,6 +195,9 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     session.llmMessageHistory = [...session.llmMessageHistory, assistantTurn].slice(-MAX_HISTORY);
   }
 
+  // Emit funnel events for any stage this turn newly reached.
+  void emitFunnelTransitions(phone, session, funnelBefore).catch(() => {});
+
   // Single persist at the end of the turn (or single delete on escalation).
   await persistSessionOnExit(ctx);
 
@@ -207,6 +217,37 @@ async function persistSessionOnExit(ctx: ToolContext): Promise<void> {
     return;
   }
   await setWaSession(ctx.session);
+}
+
+/** The funnel stages reachable from session state (paid is emitted elsewhere). */
+function stageFlags(s: WaSession): Record<Exclude<WaFunnelStage, "started" | "paid">, boolean> {
+  return {
+    location: !!s.locationSlug,
+    cart: s.cartItems.length > 0,
+    fulfillment: !!s.fulfillmentType,
+    slot: !!s.slotId,
+    payment: !!s.pendingPaymentUrl,
+  };
+}
+
+/** Emit a funnel event for each stage that flipped false→true this turn. */
+async function emitFunnelTransitions(
+  phone: string,
+  session: WaSession,
+  before: ReturnType<typeof stageFlags>,
+): Promise<void> {
+  const after = stageFlags(session);
+  const stages = Object.keys(after) as (keyof typeof after)[];
+  for (const stage of stages) {
+    if (after[stage] && !before[stage]) {
+      await appendWaFunnelEvent({
+        stage,
+        phone,
+        locationSlug: session.locationSlug,
+        at: new Date().toISOString(),
+      });
+    }
+  }
 }
 
 /**

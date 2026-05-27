@@ -12,6 +12,7 @@ import {
   Archive,
   ArchiveRestore,
   ArrowDownToLine,
+  BarChart3,
   CheckCircle2,
   Circle,
   Clock,
@@ -40,6 +41,7 @@ const MobileWhatsApp = dynamic(
 );
 import { formatPrice } from "@/lib/utils";
 import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
+import { WhatsAppFunnelDialog } from "./whatsapp/WhatsAppFunnelDialog";
 
 // ---- types --------------------------------------------------------------
 
@@ -304,6 +306,7 @@ function AdminWhatsAppDesktop() {
 
   // Settings overlay (advanced config lives in WhatsAppSettingsDialog)
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [funnelOpen, setFunnelOpen] = useState(false);
 
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
@@ -687,6 +690,15 @@ function AdminWhatsAppDesktop() {
         <button
           type="button"
           className="cmd-btn"
+          onClick={() => setFunnelOpen(true)}
+          title="Conversion funnel"
+        >
+          <BarChart3 />
+          <span>Funnel</span>
+        </button>
+        <button
+          type="button"
+          className="cmd-btn"
           onClick={() => setSettingsOpen(true)}
           title="Channel settings"
         >
@@ -1008,6 +1020,7 @@ function AdminWhatsAppDesktop() {
         onClose={() => setSettingsOpen(false)}
         onSaved={() => void loadAll(true)}
       />
+      <WhatsAppFunnelDialog open={funnelOpen} onClose={() => setFunnelOpen(false)} />
     </div>
   );
 

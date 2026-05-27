@@ -7,6 +7,7 @@ import { extractInboundMessages, type MetaWebhookPayload } from "@/lib/whatsapp/
 import { handleInboundTurn } from "@/lib/whatsapp/turn";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
+  appendWaFunnelEvent,
   appendWaMessage,
   getCustomer,
   getWaSession,
@@ -203,6 +204,13 @@ async function processOne(message: {
   if (!sessionBefore || sessionBefore.llmMessageHistory.length === 0) {
     const provider = getWhatsAppProvider();
     await provider.sendText(phone, settings.welcomeMessage);
+    // Top of the conversion funnel — a brand-new conversation started.
+    void appendWaFunnelEvent({
+      stage: "started",
+      phone,
+      locationSlug: sessionBefore?.locationSlug ?? settings.defaultLocation ?? null,
+      at: new Date().toISOString(),
+    }).catch(() => {});
   }
 
   await handleInboundTurn({ message: { ...message, from: phone }, phone });
