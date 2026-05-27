@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia Agent Commerce — Concierge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    /* surfaces — Atlas dark (shared with POS + KDS + CRM) */
+    --canvas:#0A0C10; --panel:#11151B; --raised:#1A2129;
+    --hair:rgba(255,255,255,0.08); --hair-strong:rgba(255,255,255,0.14);
+    --text:#E9EDF2; --dim:#9098A3; --faint:#5C6571;
+    /* tone palette */
+    --accent:#3DD68C; --firing:#3B82F6; --warn:#F5A623; --risk:#8B5CF6; --late:#E5484D; --gold:#E0A458;
+    --accent-soft:rgba(61,214,140,0.13); --firing-soft:rgba(59,130,246,0.14);
+    --warn-soft:rgba(245,166,35,0.13); --risk-soft:rgba(139,92,246,0.14);
+    --late-soft:rgba(229,72,77,0.14); --gold-soft:rgba(224,164,88,0.14);
+    --wa:#25D366; --wa-soft:rgba(37,211,102,0.13);
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--canvas);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.4;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;overflow:hidden}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ====================== Header (shared chrome) ====================== */
+  header{flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);height:56px;padding:0 var(--s5);
+    background:var(--panel);border-bottom:1px solid var(--hair)}
+  .brand{display:flex;align-items:baseline;gap:var(--s3);min-width:max-content}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);
+    border-left:1px solid var(--hair);padding-left:var(--s3)}
+  .design-tag{font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;white-space:nowrap}
+  .ctl{display:flex;align-items:center;gap:var(--s2)}
+  .ctl-lbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
+  .seg-group{display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;overflow:hidden;background:var(--canvas)}
+  .seg{appearance:none;border:0;background:transparent;cursor:pointer;font-family:var(--sans);font-size:11.5px;
+    letter-spacing:0.01em;color:var(--dim);padding:6px 11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    border-right:1px solid var(--hair);transition:color .16s ease,background .16s ease}
+  .seg:last-child{border-right:0}
+  .seg:hover{color:var(--text)}
+  .seg[aria-pressed="true"]{background:var(--raised);color:var(--risk);font-weight:600}
+  .seg svg{width:13px;height:13px}
+  .spacer{margin-left:auto}
+  .fsbtn{appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--dim);
+    font-family:var(--sans);font-size:11px;letter-spacing:0.02em;padding:6px 10px;border-radius:6px;
+    display:inline-flex;align-items:center;gap:6px;transition:color .16s ease,border-color .16s ease;white-space:nowrap}
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline-flex}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+  .gallery-link{font-size:11px;color:var(--faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:color .16s ease,border-color .16s ease;white-space:nowrap}
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .clock{font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);min-width:78px;text-align:right}
+  .is-fullscreen header{height:50px}
+  .is-fullscreen .kd-label,.is-fullscreen .gallery-link,.is-fullscreen .design-tag{display:none}
+  .is-fullscreen footer{display:none}
+
+  /* ====================== Channel bar ====================== */
+  .chbar{flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--hair);padding:var(--s3) var(--s5);
+    display:flex;align-items:center;gap:var(--s3)}
+  .ch-brandline{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--dim);font-weight:700;white-space:nowrap}
+  .ch-brandline svg{width:13px;height:13px;opacity:.75;flex:0 0 auto;color:var(--risk)}
+  .ch-thesis{font-size:11.5px;color:var(--faint);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ch-thesis b{color:var(--dim);font-weight:600}
+  .ch-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .ch-stat{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .ch-stat b{color:var(--text);font-weight:700;font-family:var(--mono)}
+  .ch-stat .pipe{color:var(--hair-strong);margin:0 6px}
+
+  /* ====================== Workspace ====================== */
+  .workspace{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:392px 1fr;gap:1px;background:var(--hair)}
+
+  /* LEFT — capability surface */
+  .caps-col{background:var(--canvas);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+  .panel-head{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:var(--s4) var(--s5) var(--s3);
+    font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);font-weight:700}
+  .panel-head .ph-n{font-family:var(--mono);font-size:10px;color:var(--faint);background:var(--raised);
+    border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .panel-head .ph-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .caps{display:flex;flex-direction:column;gap:var(--s2);padding:0 var(--s4) var(--s4)}
+  .cap{appearance:none;text-align:left;cursor:pointer;font-family:var(--sans);width:100%;background:var(--raised);
+    border:1px solid var(--hair);border-radius:11px;padding:var(--s3);display:flex;gap:var(--s3);align-items:flex-start;
+    transition:border-color .16s ease,background .16s ease}
+  .cap:hover{border-color:var(--hair-strong)}
+  .cap.sel{border-color:var(--risk);box-shadow:0 0 0 1px var(--risk)}
+  .cap.off{opacity:.5}
+  .cap-ic{flex:0 0 auto;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    background:var(--risk-soft);color:var(--risk);border:1px solid rgba(139,92,246,0.3)}
+  .cap-ic svg{width:16px;height:16px}
+  .cap-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .cap-top{display:flex;align-items:center;gap:7px}
+  .cap-name{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cap-kind{flex:0 0 auto;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+  .cap-kind.tool{color:var(--risk);background:var(--risk-soft);border:1px solid rgba(139,92,246,0.34)}
+  .cap-kind.resource{color:var(--firing);background:var(--firing-soft);border:1px solid rgba(59,130,246,0.34)}
+  .cap-desc{font-size:11.5px;color:var(--dim);line-height:1.4}
+  .cap-foot{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .cap-calls{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  /* toggle */
+  .tg{position:relative;width:30px;height:17px;border-radius:999px;background:var(--hair-strong);flex:0 0 auto;
+    cursor:pointer;border:0;padding:0;transition:background .18s ease;margin-left:auto}
+  .tg::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--faint);
+    transition:transform .18s ease,background .18s ease}
+  .tg[aria-pressed="true"]{background:var(--risk-soft)}
+  .tg[aria-pressed="true"]::after{transform:translateX(13px);background:var(--risk)}
+
+  .agents{display:flex;flex-direction:column;gap:var(--s2);padding:0 var(--s4) var(--s5)}
+  .agent{display:flex;align-items:center;gap:var(--s3);background:var(--raised);border:1px solid var(--hair);
+    border-radius:10px;padding:10px var(--s3)}
+  .ag-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .ag-dot.live{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .ag-dot.pending{background:var(--faint)}
+  .ag-body{flex:1 1 auto;min-width:0}
+  .ag-name{font-size:13px;font-weight:600;color:var(--text)}
+  .ag-last{font-family:var(--mono);font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ag-ago{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  .ag-pending{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);
+    border:1px solid var(--hair);border-radius:5px;padding:2px 6px}
+
+  /* RIGHT — pane (MCP inspector OR WhatsApp) */
+  .pane{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .pane-scroll{flex:1 1 auto;overflow-y:auto;min-height:0;display:flex;flex-direction:column}
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* MCP inspector */
+  .insp-head{flex:0 0 auto;padding:var(--s5) var(--s5) var(--s4);border-bottom:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:var(--s2)}
+  .insp-title-row{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+  .insp-title{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
+  .insp-endpoint{font-family:var(--mono);font-size:11.5px;color:var(--faint);display:flex;align-items:center;gap:7px}
+  .insp-endpoint .ep-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .insp-endpoint.off .ep-dot{background:var(--faint);box-shadow:none}
+  .insp-desc{font-size:12.5px;color:var(--dim);line-height:1.5}
+  .sec{padding:var(--s5);border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:var(--s3)}
+  .sec:last-child{border-bottom:0}
+  .sec-head{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim)}
+  .sec-head .sh-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  .sec-head .sh-tag{font-family:var(--mono);font-size:9px;color:var(--risk);background:var(--risk-soft);border:1px solid rgba(139,92,246,0.34);border-radius:5px;padding:1px 6px;letter-spacing:0.04em;text-transform:none}
+
+  .codeblock{background:var(--canvas);border:1px solid var(--hair);border-radius:11px;padding:var(--s4);overflow-x:auto}
+  .codeblock pre{font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre;color:var(--dim)}
+  .j-key{color:var(--firing)} .j-str{color:var(--accent)} .j-num{color:var(--gold)} .j-bool{color:var(--risk)} .j-null{color:var(--faint)}
+
+  /* allergen matrix */
+  .matrix{width:100%;border-collapse:collapse;font-size:12px}
+  .matrix th,.matrix td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--hair)}
+  .matrix th{font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .matrix thead th{position:sticky;top:0;background:var(--panel)}
+  .matrix td.item,.matrix th.item{text-align:left;color:var(--text);font-weight:600;white-space:nowrap}
+  .matrix .al-yes{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--late)}
+  .matrix .al-no{color:var(--faint)}
+  .matrix .di{font-size:9px;font-weight:700;letter-spacing:0.04em;border-radius:4px;padding:1px 5px}
+  .di.veg{color:var(--accent);background:var(--accent-soft)} .di.vegan{color:var(--accent);background:var(--accent-soft)}
+  .di.gf{color:var(--warn);background:var(--warn-soft)} .di.spicy{color:var(--late);background:var(--late-soft)}
+  .matrix tr.soldout td.item{color:var(--faint);text-decoration:line-through}
+  .matrix-note{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:7px}
+  .matrix-note .mn-dot{width:9px;height:9px;border-radius:50%;background:var(--late);flex:0 0 auto}
+
+  /* request log */
+  .log{display:flex;flex-direction:column}
+  .logrow{display:flex;align-items:center;gap:var(--s3);padding:9px 0;border-bottom:1px solid var(--hair)}
+  .logrow:last-child{border-bottom:0}
+  .lg-agent{flex:0 0 88px;font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+  .lg-agent i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .lg-call{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-call b{color:var(--risk);font-weight:700}
+  .lg-call .arrow{color:var(--faint);margin:0 5px}
+  .lg-call .res{color:var(--accent)}
+  .lg-ago{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--faint)}
+
+  /* ====================== WhatsApp pane ====================== */
+  .wa{display:flex;flex-direction:column;min-height:0;height:100%;background:#0c1317}
+  .wa-head{flex:0 0 auto;display:flex;align-items:center;gap:var(--s3);padding:10px var(--s5);
+    background:#1f2c33;border-bottom:1px solid rgba(0,0,0,0.4)}
+  .wa-av{flex:0 0 auto;width:38px;height:38px;border-radius:50%;background:var(--wa-soft);border:1px solid rgba(37,211,102,0.4);
+    display:flex;align-items:center;justify-content:center;color:var(--wa)}
+  .wa-av svg{width:20px;height:20px}
+  .wa-id{flex:1 1 auto;min-width:0}
+  .wa-name{font-size:14px;font-weight:600;color:#e9edf2}
+  .wa-status{font-size:11px;color:var(--wa);display:flex;align-items:center;gap:6px}
+  .wa-status i{width:6px;height:6px;border-radius:50%;background:var(--wa)}
+  .wa-tag{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--risk);
+    background:var(--risk-soft);border:1px solid rgba(139,92,246,0.34);border-radius:6px;padding:3px 8px}
+  .wa-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s3)}
+  .bubble{max-width:80%;border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.5;position:relative;word-wrap:break-word}
+  .bubble.bot{align-self:flex-start;background:#202c33;color:#e9edf2;border-top-left-radius:3px}
+  .bubble.me{align-self:flex-end;background:#005c4b;color:#e9edf2;border-top-right-radius:3px}
+  .bubble .b-time{font-size:9.5px;color:rgba(233,237,242,0.45);margin-left:8px;float:right;margin-top:4px}
+  .toolchips{align-self:flex-start;max-width:88%;display:flex;flex-direction:column;gap:5px;margin:-2px 0 2px}
+  .toolchip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;
+    color:var(--risk);background:var(--risk-soft);border:1px solid rgba(139,92,246,0.3);border-radius:7px;padding:4px 9px}
+  .toolchip svg{width:12px;height:12px;flex:0 0 auto}
+  .toolchip b{color:var(--text);font-weight:700}
+  .toolchip .tc-arrow{color:var(--faint)}
+  .toolchip .tc-res{color:var(--accent)}
+  .wa-pay{align-self:flex-start;max-width:80%;background:#202c33;border:1px solid var(--wa);border-radius:12px;
+    padding:11px 13px;display:flex;align-items:center;gap:10px;border-top-left-radius:3px}
+  .wa-pay svg{width:20px;height:20px;color:var(--wa);flex:0 0 auto}
+  .wa-pay .pay-body{flex:1 1 auto;min-width:0}
+  .wa-pay .pay-t{font-size:12.5px;font-weight:600;color:#e9edf2}
+  .wa-pay .pay-link{font-family:var(--mono);font-size:11px;color:var(--wa);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wa-replies{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:var(--s2);padding:var(--s3) var(--s5);background:#0c1317;
+    border-top:1px solid rgba(255,255,255,0.06)}
+  .wa-reply{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--wa);
+    background:transparent;border:1px solid rgba(37,211,102,0.45);border-radius:999px;padding:8px 14px;transition:background .14s ease}
+  .wa-reply:hover{background:var(--wa-soft)}
+  .wa-reply.restart{color:var(--dim);border-color:var(--hair-strong)}
+  .wa-reply.restart:hover{background:var(--raised)}
+  .wa-caption{flex:0 0 auto;font-size:11px;color:var(--faint);line-height:1.45;padding:0 var(--s5) var(--s3);background:#0c1317}
+  .wa-caption b{color:var(--risk)}
+
+  /* toast (shared) */
+  .toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(10px);background:var(--raised);
+    border:1px solid var(--risk);color:var(--risk);font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:10px;
+    box-shadow:0 16px 40px -18px rgba(0,0,0,0.8);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;
+    display:inline-flex;align-items:center;gap:8px;z-index:60}
+  .toast svg{width:15px;height:15px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* footer (shared chrome) */
+  footer{flex:0 0 auto;height:38px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--s5);padding:0 var(--s5);font-size:11px;color:var(--faint)}
+  .legend{display:flex;gap:var(--s4);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .legend i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--dim);margin:0 1px}
+
+  @media (max-width:1100px){ .workspace{grid-template-columns:340px 1fr} }
+  @media (max-width:760px){
+    html,body{height:auto;min-height:100%}
+    body{overflow:visible} html{overflow-x:hidden}
+    header{position:sticky;top:0;z-index:30;height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3)}
+    .kd-label,.design-tag,.gallery-link,.clock,.ctl-lbl,.spacer{display:none}
+    .brand{min-width:0}.wordmark{font-size:13px;letter-spacing:0.14em}.fsbtn span{display:none}.fsbtn{padding:7px 9px}
+    .chbar{flex-wrap:wrap;padding:var(--s2) var(--s3)} .ch-thesis{white-space:normal}
+    .workspace{display:flex;flex-direction:column}
+    .caps-col{overflow:visible} .pane{border-top:1px solid var(--hair-strong)}
+    .pane-scroll{overflow:visible} .wa{height:auto} .wa-body{overflow:visible}
+    footer{height:auto;min-height:32px;padding:var(--s2) var(--s3)} .kbd-hint{display:none}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Agent Commerce</span>
+    </div>
+    <span class="design-tag">Agent · Concierge</span>
+    <div class="ctl">
+      <span class="ctl-lbl">Loc</span>
+      <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-lbl">Channel</span>
+      <div class="seg-group" id="viewGroup" role="group" aria-label="Channel"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <section class="chbar" aria-label="Agent channel">
+    <span class="ch-brandline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8.5 13.2 11l2.8 1-2.8 1L12 15.5 10.8 13 8 12l2.8-1L12 8.5Z"/></svg>
+      Agent channel
+    </span>
+    <span class="ch-thesis">One capability layer — exposed to AI assistants over <b>MCP</b> and to guests over <b>WhatsApp</b>. Menu · availability · allergens · ordering · payments.</span>
+    <span class="ch-sep"></span>
+    <span class="ch-stat" id="chStat"></span>
+  </section>
+
+  <div class="workspace">
+    <section class="caps-col" aria-label="Capabilities">
+      <div class="panel-head">Capabilities <span class="ph-n" id="capN">—</span><span class="ph-sep"></span></div>
+      <div class="caps" id="caps"></div>
+      <div class="panel-head">Connected agents <span class="ph-sep"></span></div>
+      <div class="agents" id="agents"></div>
+    </section>
+    <section class="pane" id="pane" aria-label="Channel detail"></section>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><i style="background:var(--risk)"></i>Tool</span>
+      <span><i style="background:var(--firing)"></i>Resource</span>
+      <span><i style="background:var(--accent)"></i>Live</span>
+      <span><i style="background:var(--late)"></i>Contains allergen</span>
+    </div>
+    <div class="kbd-hint"><span class="kbd">C</span> channel · <span class="kbd">F</span> fullscreen</div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ====================== Format ====================== */
+const fmtPLN = g => (g/100).toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2})+" zł";
+const pad=n=>String(n).padStart(2,"0");
+const fmtClock=d=>pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+
+/* ====================== Shared menu + allergens (real Kraków shape, in złoty) ======================
+   Allergen keys + dietary tags mirror src/data/types.ts (Allergen union, MenuItem.tags).
+   This same data is what every channel — MCP tools and the WhatsApp agent — reads. */
+const ALLERGEN={gluten:{en:"Gluten",emoji:"🌾"},dairy:{en:"Dairy",emoji:"🥛"},eggs:{en:"Eggs",emoji:"🥚"},nuts:{en:"Tree nuts",emoji:"🥜"}};
+const ALLERGEN_COLS=["gluten","dairy","eggs","nuts"];
+const MENU=[
+  {id:"margherita", n:"Margherita",            cat:"Pizza",     price:2790, allergens:["gluten","dairy"],       tags:["vegetarian"],        avail:true,  prep:5},
+  {id:"marinara",   n:"Marinara",              cat:"Pizza",     price:2490, allergens:["gluten"],               tags:["vegan"],             avail:true,  prep:5},
+  {id:"diavola",    n:"Diavola",               cat:"Pizza",     price:3290, allergens:["gluten","dairy"],       tags:["spicy"],             avail:true,  prep:5},
+  {id:"quattro",    n:"Quattro Formaggi",      cat:"Pizza",     price:3390, allergens:["gluten","dairy"],       tags:["vegetarian"],        avail:true,  prep:6},
+  {id:"ortolana",   n:"Ortolana",              cat:"Pizza",     price:3090, allergens:["gluten"],               tags:["vegan"],             avail:true,  prep:6},
+  {id:"prosciutto", n:"Prosciutto e Rucola",   cat:"Pizza",     price:3590, allergens:["gluten","dairy"],       tags:[],                    avail:true,  prep:6},
+  {id:"tartufata",  n:"Tartufata Reale",       cat:"Pizza",     price:7990, allergens:["gluten","dairy"],       tags:[],                    avail:false, prep:9},
+  {id:"carbonara",  n:"Spaghetti Carbonara",   cat:"Pasta",     price:2895, allergens:["gluten","dairy","eggs"],tags:[],                    avail:true,  prep:7},
+  {id:"arrabbiata", n:"Penne Arrabbiata",      cat:"Pasta",     price:2390, allergens:["gluten"],               tags:["vegan","spicy"],     avail:true,  prep:7},
+  {id:"pesto",      n:"Linguine al Pesto",     cat:"Pasta",     price:2695, allergens:["gluten","dairy","nuts"],tags:["vegetarian"],        avail:true,  prep:7},
+  {id:"burrata",    n:"Burrata con Pomodorini",cat:"Antipasti", price:2195, allergens:["dairy"],                tags:["vegetarian","gluten-free"], avail:true, prep:3},
+  {id:"bruschetta", n:"Bruschetta Classica",   cat:"Antipasti", price:1590, allergens:["gluten"],               tags:["vegan"],             avail:true,  prep:3},
+  {id:"espresso",   n:"Espresso",              cat:"Drinks",    price:990,  allergens:[],                       tags:["vegan","gluten-free"],avail:true, prep:1},
+  {id:"limonata",   n:"Limonata Fresca",       cat:"Drinks",    price:1190, allergens:[],                       tags:["vegan","gluten-free"],avail:true, prep:1},
+  {id:"tiramisu",   n:"Tiramisù",              cat:"Desserts",  price:1800, allergens:["gluten","dairy","eggs"],tags:["vegetarian"],        avail:true,  prep:1},
+  {id:"pannacotta", n:"Panna Cotta",           cat:"Desserts",  price:1500, allergens:["dairy"],                tags:["vegetarian","gluten-free"], avail:true, prep:1},
+];
+const byId=id=>MENU.find(m=>m.id===id);
+
+/* ====================== MCP capabilities ====================== */
+let CAPS=[
+  {id:"get_menu",          kind:"resource", desc:"Full menu with prices, categories and dietary tags.",              on:true,  calls:128},
+  {id:"check_availability",kind:"tool",     desc:"Live availability + prep time per item and location.",             on:true,  calls:74},
+  {id:"get_allergens",     kind:"tool",     desc:"EU-14 allergen + dietary breakdown for any item.",                 on:true,  calls:53},
+  {id:"place_order",       kind:"tool",     desc:"Create a takeout / delivery order. Returns order id + ETA.",       on:true,  calls:39},
+  {id:"create_payment",    kind:"tool",     desc:"Issue a Stripe payment link / take payment for an order.",         on:true,  calls:31},
+  {id:"locate_truck",      kind:"tool",     desc:"Where the truck is now + today's schedule per city.",              on:false, calls:0},
+];
+const CAP_ICON={
+  get_menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  check_availability:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  get_allergens:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  place_order:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  create_payment:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+  locate_truck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>',
+};
+const capById=id=>CAPS.find(c=>c.id===id);
+
+// "What the agent sees" — structured output samples per capability.
+function capSample(id){
+  const loc=LOC;
+  if(id==="get_menu") return {location:loc,currency:"PLN",updated:"2026-05-27T11:50:00Z",
+    items:MENU.slice(0,3).map(m=>({id:m.id,name:m.n,category:m.cat,price_grosze:m.price,dietary:m.tags})).concat([{"…":(MENU.length-3)+" more items"}])};
+  if(id==="check_availability") return {location:loc,as_of:"2026-05-27T12:18:04Z",
+    items:[{id:"margherita",available:true,prep_minutes:5},{id:"pesto",available:true,prep_minutes:7},{id:"tartufata",available:false,reason:"sold_out"}]};
+  if(id==="get_allergens") return {item:"pesto",name:"Linguine al Pesto",allergens:["gluten","dairy","nuts"],
+    dietary:["vegetarian"],may_contain:["traces of egg"],eu14_compliant:true};
+  if(id==="place_order") return {order_id:"KRK-4821",location:loc,channel:"takeout",
+    items:[{id:"margherita",qty:2}],total_grosze:5580,eta_minutes:12,status:"awaiting_payment"};
+  if(id==="create_payment") return {order_id:"KRK-4821",amount_grosze:5580,currency:"PLN",provider:"stripe",
+    payment_url:"https://pay.suditalia.pl/krk-4821",expires_in_s:900};
+  if(id==="locate_truck") return {city:loc,now_at:{pitch:"Rynek Główny",until:"14:00"},next:{pitch:"Kazimierz",from:"17:00"}};
+  return {};
+}
+
+/* ====================== Connected agents + request log ====================== */
+const AGENTS=[
+  {name:"ChatGPT",   status:"live",    last:"get_allergens(pesto)",          ago:"2m",  color:"#10A37F"},
+  {name:"Claude",    status:"live",    last:"place_order(2× margherita)",    ago:"6m",  color:"#D97757"},
+  {name:"Perplexity",status:"live",    last:"get_menu(diet=vegan)",          ago:"11m", color:"#20B8CD"},
+  {name:"Gemini",    status:"pending", last:"—",                             ago:"",    color:"#9098A3"},
+];
+const LOG=[
+  {min:1, agent:"ChatGPT",   color:"#10A37F", cap:"get_allergens",      arg:"pesto",               res:"gluten · dairy · nuts"},
+  {min:3, agent:"Claude",    color:"#D97757", cap:"check_availability", arg:"tartufata",           res:"sold out"},
+  {min:5, agent:"Perplexity",color:"#20B8CD", cap:"get_menu",           arg:"diet=vegan",          res:"4 items"},
+  {min:8, agent:"ChatGPT",   color:"#10A37F", cap:"place_order",        arg:"2× margherita · takeout", res:"#KRK-4821 · ETA 12m"},
+  {min:9, agent:"ChatGPT",   color:"#10A37F", cap:"create_payment",     arg:"#KRK-4821",           res:"link · 55,80 zł"},
+];
+
+/* ====================== WhatsApp conversation (branching script) ======================
+   The same capabilities, in a human channel. Each agent turn can carry tool calls,
+   making it explicit that WhatsApp and the AI assistants share one capability layer. */
+const CONVO={
+  start:{ bot:[{t:"Ciao! 👋 Sud Italia Kraków here. I can show the menu, check what's available, flag allergens, take your order and send a payment link — all in this chat. What are you after?"}],
+    replies:[{t:"What vegan options do you have?",to:"vegan"},{t:"Is the pesto pasta nut-free?",to:"allergen"},{t:"2 Margheritas for takeout",to:"order"}] },
+  vegan:{ bot:[
+      {tools:[{name:"get_menu",arg:"diet=vegan",res:"4 items"}]},
+      {t:"Our vegan picks today 🌱 — 🍕 Marinara 24,90 · 🍕 Ortolana 30,90 · 🍝 Penne Arrabbiata 23,90 · 🥖 Bruschetta 15,90. All dairy-free."}],
+    replies:[{t:"Is the pesto nut-free?",to:"allergen"},{t:"Add an Ortolana, takeout",to:"order_orto"}] },
+  allergen:{ bot:[
+      {tools:[{name:"get_allergens",arg:"pesto",res:"gluten · dairy · nuts"}]},
+      {t:"⚠️ Heads up — Linguine al Pesto contains tree nuts (pine nuts), plus gluten and dairy. Not nut-free. If you need nut-free + vegan, the Penne Arrabbiata is a safe swap. 🌿"}],
+    replies:[{t:"Ok, Penne Arrabbiata then",to:"order_penne"},{t:"Actually, 2 Margheritas takeout",to:"order"}] },
+  order:{ bot:[
+      {tools:[{name:"check_availability",arg:"margherita @ Kraków",res:"available · ~12 min"}]},
+      {t:"Got it — 2× Margherita (27,90 each) for takeout, 55,80 zł, ready in ~12 min at the Rynek Główny pitch. Want a drink with that?"}],
+    replies:[{t:"Add 2 espresso",to:"order_espresso"},{t:"No, just pay",to:"pay"}] },
+  order_orto:{ bot:[{tools:[{name:"check_availability",arg:"ortolana @ Kraków",res:"available · ~6 min"}]},
+      {t:"Added — 1× Ortolana (30,90) for takeout. Anything else, or shall I take payment?"}],
+    replies:[{t:"That's all, pay",to:"pay"}] },
+  order_penne:{ bot:[{tools:[{name:"check_availability",arg:"arrabbiata @ Kraków",res:"available · ~7 min"}]},
+      {t:"Nice — 1× Penne Arrabbiata (23,90), vegan + nut-free. Ready to pay?"}],
+    replies:[{t:"Yes, pay",to:"pay"}] },
+  order_espresso:{ bot:[{t:"Added 2× Espresso (9,90 each). New total 75,60 zł. ☕"}],
+    replies:[{t:"Pay now",to:"pay"}] },
+  pay:{ bot:[
+      {tools:[{name:"place_order",arg:"takeout · Kraków",res:"#KRK-4821 · ETA 12m"},{name:"create_payment",arg:"#KRK-4821",res:"Stripe link"}]},
+      {t:"Order #KRK-4821 is in 🎟️ — secure payment here:",pay:{label:"Pay 55,80 zł · Stripe",link:"pay.suditalia.pl/krk-4821"}}],
+    replies:[{t:"(tap to pay ✓)",to:"paid"}] },
+  paid:{ bot:[
+      {t:"Paid — dziękujemy! 🍕 Firing now, ready in ~12 min at Rynek Główny."},
+      {t:"I've saved your number to your guest profile, so next time just message “the usual”. Buon appetito! 👋"}],
+    replies:[{t:"Start over",to:"start"}] },
+};
+let convoLog=[], curNode=null;
+
+/* ====================== State ====================== */
+let LOC="Kraków";
+let VIEW="mcp"; // mcp | whatsapp
+let selectedCap="get_allergens";
+
+/* ====================== JSON syntax highlight ====================== */
+function syntaxJson(obj){
+  const json=JSON.stringify(obj,null,2).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?)/g, m=>{
+    let cls="j-num";
+    if(/^"/.test(m)) cls=/:$/.test(m)?"j-key":"j-str";
+    else if(/true|false/.test(m)) cls="j-bool";
+    else if(/null/.test(m)) cls="j-null";
+    return `<span class="${cls}">${m}</span>`;
+  });
+}
+
+/* ====================== Left: capabilities + agents ====================== */
+function renderCaps(){
+  const wrap=document.getElementById("caps");
+  const live=CAPS.filter(c=>c.on).length;
+  document.getElementById("capN").textContent=live+"/"+CAPS.length+" live";
+  const totalCalls=CAPS.reduce((s,c)=>s+c.calls,0);
+  document.getElementById("chStat").innerHTML=
+    `<b>${CAPS.length}</b> capabilities<span class="pipe">·</span><b>${live}</b> live<span class="pipe">·</span><b>${totalCalls}</b> agent calls today`;
+  wrap.innerHTML=CAPS.map(c=>`
+    <button class="cap${c.id===selectedCap?" sel":""}${c.on?"":" off"}" type="button" data-cap="${c.id}">
+      <span class="cap-ic">${CAP_ICON[c.id]}</span>
+      <span class="cap-body">
+        <span class="cap-top">
+          <span class="cap-name">${c.id}</span>
+          <span class="cap-kind ${c.kind}">${c.kind}</span>
+        </span>
+        <span class="cap-desc">${c.desc}</span>
+        <span class="cap-foot"><span class="cap-calls tnum">${c.calls} calls</span></span>
+      </span>
+      <button class="tg" type="button" data-toggle="${c.id}" aria-pressed="${c.on}" aria-label="Toggle ${c.id}"></button>
+    </button>`).join("");
+  wrap.querySelectorAll("[data-cap]").forEach(b=>b.onclick=()=>{ selectedCap=b.dataset.cap; renderCaps(); if(VIEW==="mcp") renderPane(); });
+  wrap.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); toggleCap(b.dataset.toggle); });
+}
+function toggleCap(id){
+  const c=capById(id); c.on=!c.on;
+  toast((c.on?"Exposed":"Hidden")+" — "+id+" "+(c.on?"is live to agents":"removed from the agent channel"));
+  renderCaps();
+  if(VIEW==="mcp") renderPane();
+}
+function renderAgents(){
+  document.getElementById("agents").innerHTML=AGENTS.map(a=>`
+    <div class="agent">
+      <span class="ag-dot ${a.status}" style="${a.status==='live'?`background:${a.color};box-shadow:0 0 0 3px ${a.color}22`:''}"></span>
+      <span class="ag-body">
+        <span class="ag-name">${a.name}</span>
+        <span class="ag-last">${a.last}</span>
+      </span>
+      ${a.status==="live"?`<span class="ag-ago tnum">${a.ago}</span>`:`<span class="ag-pending">Pending</span>`}
+    </div>`).join("");
+}
+
+/* ====================== Right: MCP inspector ====================== */
+function renderInspector(){
+  const c=capById(selectedCap);
+  const enabled=c.on;
+  const dietTag=t=>{const m={vegetarian:["veg","V"],vegan:["vegan","Ve"],"gluten-free":["gf","GF"],spicy:["spicy","🌶"]};return m[t];};
+  let matrixHtml="";
+  if(selectedCap==="get_allergens"){
+    const head=`<tr><th class="item">Item</th>${ALLERGEN_COLS.map(a=>`<th title="${ALLERGEN[a].en}">${ALLERGEN[a].emoji}</th>`).join("")}<th>Diet</th></tr>`;
+    const rows=MENU.map(m=>{
+      const cells=ALLERGEN_COLS.map(a=>`<td>${m.allergens.includes(a)?'<span class="al-yes" title="Contains '+ALLERGEN[a].en+'"></span>':'<span class="al-no">·</span>'}</td>`).join("");
+      const diet=m.tags.map(t=>{const d=dietTag(t);return d?`<span class="di ${d[0]}">${d[1]}</span>`:"";}).join(" ");
+      return `<tr class="${m.avail?"":"soldout"}"><td class="item">${m.n}</td>${cells}<td>${diet||"—"}</td></tr>`;
+    }).join("");
+    matrixHtml=`
+      <div class="sec">
+        <div class="sec-head">Allergen matrix <span class="sh-tag">EU-14</span><span class="sh-sep"></span></div>
+        <div class="codeblock" style="padding:0">
+          <table class="matrix"><thead>${head}</thead><tbody>${rows}</tbody></table>
+        </div>
+        <div class="matrix-note"><span class="mn-dot"></span>Filled = declared allergen. The agent never guesses — it reads this matrix, so every allergen answer is auditable.</div>
+      </div>`;
+  }
+  document.getElementById("pane").innerHTML=`
+    <div class="pane-scroll">
+      <div class="insp-head">
+        <div class="insp-title-row">
+          <span class="insp-title">${c.id}</span>
+          <span class="cap-kind ${c.kind}">${c.kind}</span>
+        </div>
+        <span class="insp-endpoint ${enabled?"":"off"}"><span class="ep-dot"></span>mcp://suditalia/${LOC.toLowerCase()}/${c.id}${enabled?"":" · disabled"}</span>
+        <span class="insp-desc">${c.desc}</span>
+      </div>
+      <div class="sec">
+        <div class="sec-head">What the agent sees <span class="sh-tag">JSON</span><span class="sh-sep"></span></div>
+        <div class="codeblock"><pre>${syntaxJson(capSample(c.id))}</pre></div>
+      </div>
+      ${matrixHtml}
+      <div class="sec">
+        <div class="sec-head">Recent agent calls <span class="sh-sep"></span></div>
+        <div class="log">
+          ${LOG.map(l=>`<div class="logrow">
+            <span class="lg-agent"><i style="background:${l.color}"></i>${l.agent}</span>
+            <span class="lg-call"><b>${l.cap}</b>(${l.arg})<span class="arrow">→</span><span class="res">${l.res}</span></span>
+            <span class="lg-ago tnum">${l.min}m</span>
+          </div>`).join("")}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ====================== Right: WhatsApp ====================== */
+function appendNode(key){
+  const node=CONVO[key]; if(!node) return;
+  node.bot.forEach(m=>convoLog.push({who:"bot",t:m.t,tools:m.tools,pay:m.pay}));
+  curNode=key;
+}
+function advance(reply){
+  convoLog.push({who:"me",t:reply.t});
+  appendNode(reply.to);
+  renderPane();
+  const body=document.getElementById("waBody");
+  if(body) body.scrollTop=body.scrollHeight;
+}
+function resetConvo(){ convoLog=[]; curNode=null; appendNode("start"); }
+function renderWhatsApp(){
+  if(curNode===null) appendNode("start");
+  const node=CONVO[curNode];
+  const msgs=convoLog.map(m=>{
+    if(m.who==="me") return `<div class="bubble me">${m.t}</div>`;
+    let chips="";
+    if(m.tools&&m.tools.length) chips=`<div class="toolchips">${m.tools.map(tc=>
+      `<span class="toolchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1-2.7H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 5 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1H10a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg><b>${tc.name}</b>(${tc.arg})<span class="tc-arrow">→</span><span class="tc-res">${tc.res}</span></span>`).join("")}</div>`;
+    let pay="";
+    if(m.pay) pay=`<div class="wa-pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="pay-body"><span class="pay-t">${m.pay.label}</span><span class="pay-link">${m.pay.link}</span></span></div>`;
+    const bub=m.t?`<div class="bubble bot">${m.t}</div>`:"";
+    return chips+bub+pay;
+  }).join("");
+  const replies=(node?node.replies:[]).map(r=>`<button class="wa-reply${r.to==="start"?" restart":""}" type="button" data-to="${r.to}" data-t="${r.t.replace(/"/g,"&quot;")}">${r.t}</button>`).join("");
+  document.getElementById("pane").innerHTML=`
+    <div class="wa">
+      <div class="wa-head">
+        <span class="wa-av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg></span>
+        <span class="wa-id"><span class="wa-name">Sud Italia · Kraków</span><span class="wa-status"><i></i>online · WhatsApp Business</span></span>
+        <span class="wa-tag">AI agent</span>
+      </div>
+      <div class="wa-body" id="waBody">${msgs}</div>
+      <div class="wa-caption">Same capability layer — the agent calls <b>get_menu</b>, <b>get_allergens</b>, <b>check_availability</b>, <b>place_order</b> &amp; <b>create_payment</b> behind the scenes (the violet chips). No app, no sign-up.</div>
+      <div class="wa-replies">${replies}</div>
+    </div>`;
+  const body=document.getElementById("waBody"); if(body) body.scrollTop=body.scrollHeight;
+  document.querySelectorAll(".wa-reply").forEach(b=>b.onclick=()=>advance({t:b.dataset.t,to:b.dataset.to}));
+}
+
+/* ====================== Pane router ====================== */
+function renderPane(){ if(VIEW==="mcp") renderInspector(); else renderWhatsApp(); }
+function renderAll(){ renderCaps(); renderAgents(); renderPane(); }
+
+/* ====================== Switchers ====================== */
+const LOCS=["Kraków","Warszawa"];
+function buildLocSwitcher(){
+  const g=document.getElementById("locGroup");g.innerHTML="";
+  LOCS.forEach(l=>{ const b=document.createElement("button");b.className="seg";b.type="button";b.textContent=l;
+    b.setAttribute("aria-pressed",String(l===LOC));
+    b.onclick=()=>{ LOC=l; buildLocSwitcher(); if(VIEW==="mcp") renderInspector(); }; g.appendChild(b); });
+}
+const VIEWS=[{key:"mcp",label:"MCP server"},{key:"whatsapp",label:"WhatsApp"}];
+function buildViewSwitcher(){
+  const g=document.getElementById("viewGroup");g.innerHTML="";
+  VIEWS.forEach(v=>{ const b=document.createElement("button");b.className="seg";b.type="button";b.textContent=v.label;
+    b.setAttribute("aria-pressed",String(v.key===VIEW));
+    b.onclick=()=>setView(v.key); g.appendChild(b); });
+}
+function setView(v){ VIEW=v; buildViewSwitcher(); renderPane(); }
+
+/* ====================== Toast ====================== */
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${msg}`;
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* ====================== Fullscreen ====================== */
+const fsbtn=document.getElementById("fsbtn");
+function syncFs(){ const on=!!document.fullscreenElement; document.documentElement.classList.toggle("is-fullscreen",on); fsbtn.setAttribute("aria-pressed",String(on)); }
+function fallbackToggle(){ const on=!document.documentElement.classList.contains("is-fullscreen"); document.documentElement.classList.toggle("is-fullscreen",on); fsbtn.setAttribute("aria-pressed",String(on)); }
+function toggleFs(){
+  if(document.fullscreenElement){ if(document.exitFullscreen) document.exitFullscreen().catch(fallbackToggle); else fallbackToggle(); }
+  else { const req=document.documentElement.requestFullscreen; if(req) req.call(document.documentElement).catch(fallbackToggle); else fallbackToggle(); }
+}
+fsbtn.addEventListener("click",toggleFs);
+document.addEventListener("fullscreenchange",syncFs);
+
+/* ====================== Keyboard ====================== */
+document.addEventListener("keydown",e=>{
+  const el=e.target;
+  if(el && (el.tagName==="INPUT"||el.tagName==="TEXTAREA"||el.isContentEditable)) return;
+  if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
+  if(e.key.toLowerCase()==="c"){ setView(VIEW==="mcp"?"whatsapp":"mcp"); return; }
+});
+
+/* ====================== Clock ====================== */
+function tick(){ document.getElementById("clock").textContent=fmtClock(new Date()); }
+
+/* ====================== Boot ====================== */
+buildLocSwitcher();
+buildViewSwitcher();
+resetConvo();
+syncFs();
+renderAll();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
