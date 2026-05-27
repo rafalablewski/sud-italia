@@ -115,7 +115,7 @@ export function AdminKDS() {
   // this same window down to that truck's floor board. The Atlas board reflows
   // to its responsive layout on a phone; its floor view is the dedicated mobile
   // KDS there and the desktop floor board otherwise.
-  const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader />;
+  const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader fleetContext />;
 
   return (
     <div>
@@ -133,9 +133,30 @@ export function AdminKDS() {
   );
 }
 
-function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?: boolean; chefStrip?: boolean }) {
-  const { location } = useAdminLocation();
+function AdminKDSDesktop({
+  opsHeader = false,
+  chefStrip = false,
+  fleetContext = false,
+}: {
+  opsHeader?: boolean;
+  chefStrip?: boolean;
+  /** True when an owner reached this board by drilling in from the fleet wall —
+   *  the header keeps the "Fleet command" identity, scoped to the location. */
+  fleetContext?: boolean;
+}) {
+  const { location, activeLocations } = useAdminLocation();
   const toast = useToast();
+
+  // Proper-cased location name for the header (slug → city), so the drilled-in
+  // board reads "Fleet command · Kraków" rather than the raw "krakow" slug.
+  const locName = activeLocations.find((l) => l.slug === location)?.city || location;
+  const brandLabel = fleetContext
+    ? locName
+      ? `Fleet command · ${locName}`
+      : "Fleet command"
+    : locName
+      ? `${locName} · floor`
+      : "Floor";
 
   // When the owner-only simulator toggle is on, the board streams marked
   // SIMULATION tickets and flags itself with a Sandbox tag next to the wordmark.
@@ -421,7 +442,7 @@ function AdminKDSDesktop({ opsHeader = false, chefStrip = false }: { opsHeader?:
       <header className="cmd-head">
         <div className="cmd-brand">
           <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">{location ? `${location} · floor` : "Floor"}</span>
+          <span className="cmd-label">{brandLabel}</span>
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
         <div className="cmd-spacer" />
