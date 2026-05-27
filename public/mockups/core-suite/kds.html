@@ -3,88 +3,125 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KDS — Sud Italia Core Suite</title>
+<title>KDS · Floor — Sud Italia Core Suite</title>
 <link rel="stylesheet" href="/mockups/core-suite/system.css">
 <style>
-  /* KDS command palette — always-dark, warm, high-contrast. Brand yields to
-     operational status color; type is large sans/mono, never serif. */
   body.kds {
-    --canvas: #0a0a0c; --panel: #141318; --raised: #222028;
-    --hair: rgba(255,255,255,.08); --hair-2: rgba(255,255,255,.14);
-    --t: #f4f2ee; --dim: #9a938b; --faint: #6a635c;
-    --queued: #6a655f; --firing: #4d90e8; --warn: #e0a93f; --late: #e5484d; --ready: #3dd68c;
-    background: var(--canvas); height: 100vh; overflow: hidden;
+    --canvas:#0a0a0c; --panel:#141318; --raised:#222028; --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
+    --t:#f4f2ee; --dim:#9a938b; --faint:#6a635c;
+    --queued:#6a655f; --firing:#4d90e8; --warn:#e0a93f; --late:#e5484d; --ready:#3dd68c; --risk:#9a72e0;
+    background:var(--canvas); height:100vh; overflow:hidden;
   }
-  .kds-wrap { height: 100vh; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
+  .kds-wrap { height:100vh; display:flex; flex-direction:column; padding:12px 16px; gap:10px; }
+  .kds-top { display:flex; align-items:center; gap:14px; flex:none; }
+  .kds-id { display:flex; align-items:center; gap:11px; }
+  .kds-id .brand-mark { width:28px; height:28px; }
+  .kds-id .nm { font-family:var(--display); font-size:17px; font-weight:600; }
+  .kds-id .loc { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+  .backfleet { font-size:12px; color:var(--firing); text-decoration:none; display:flex; align-items:center; gap:5px; }
+  .stage { margin:0 auto; display:flex; gap:8px; background:var(--panel); border:1px solid var(--hair); border-radius:var(--r-md); padding:4px; }
+  .stage button { height:32px; padding:0 16px; border:0; background:transparent; color:var(--dim); font:600 13.5px var(--ui); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:7px; }
+  .stage button.on { background:var(--raised); color:var(--t); }
+  .stage .n { font:600 11px var(--mono); color:var(--faint); }
+  .clock { font:700 20px var(--mono); padding:5px 13px; border-radius:var(--r-pill); background:var(--panel); border:1px solid var(--hair-2); }
+  .ctrl { width:36px; height:36px; border-radius:var(--r-md); border:1px solid var(--hair); background:var(--panel); color:var(--dim); display:grid; place-items:center; cursor:pointer; }
+  .ctrl.on { color:var(--firing); border-color:var(--firing); }
 
-  .kds-top { display: flex; align-items: center; gap: 18px; flex: none; }
-  .kds-id { display: flex; align-items: center; gap: 11px; }
-  .kds-id .brand-mark { width: 28px; height: 28px; }
-  .kds-id .nm { font-family: var(--display); font-size: 17px; font-weight: 600; }
-  .kds-id .loc { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
-  .stage { margin: 0 auto; display: flex; gap: 8px; background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 4px; }
-  .stage button { height: 34px; padding: 0 18px; border: 0; background: transparent; color: var(--dim); font: 600 14px var(--ui); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  .stage button.on { background: var(--raised); color: var(--t); }
-  .stage .n { font: 600 12px var(--mono); color: var(--faint); }
-  .clock { font: 700 22px var(--mono); letter-spacing: .03em; padding: 5px 14px; border-radius: var(--r-pill); background: var(--panel); border: 1px solid var(--hair-2); }
-  .kds-top .ctrl { width: 38px; height: 38px; border-radius: var(--r-md); border: 1px solid var(--hair); background: var(--panel); color: var(--dim); display: grid; place-items: center; cursor: pointer; }
+  /* manager ops header: SLA roll-up + 86 management */
+  .ops { display:flex; align-items:center; gap:10px; flex:none; }
+  .ops-stats { display:flex; gap:8px; }
+  .ostat { background:var(--panel); border:1px solid var(--hair); border-radius:var(--r-md); padding:7px 13px; min-width:78px; }
+  .ostat .l { font-size:10px; color:var(--faint); letter-spacing:.04em; }
+  .ostat .v { font:600 16px var(--mono); margin-top:2px; }
+  .ostat.alert { border-color:rgba(229,72,77,.35); } .ostat.alert .v { color:var(--late); }
+  .ostat.warn .v { color:var(--warn); } .ostat.good .v { color:var(--ready); }
+  .eighty-six { margin-left:auto; display:flex; align-items:center; gap:9px; }
+  .eighty-six .lbl { font:600 10px var(--ui); letter-spacing:.08em; text-transform:uppercase; color:var(--faint); }
+  .restore { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:var(--r-pill); background:var(--late-soft,rgba(229,72,77,.14)); color:var(--late); border:1px solid rgba(229,72,77,.3); font:600 12px var(--ui); cursor:pointer; }
+  .restore .x { color:var(--ready); }
+  .btn86 { height:30px; padding:0 13px; border-radius:var(--r-md); border:1px solid var(--hair-2); background:var(--panel); color:var(--dim); font:600 12.5px var(--ui); cursor:pointer; }
 
-  .board { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; min-height: 0; }
-  .col { display: flex; flex-direction: column; min-height: 0; }
-  .col-head { display: flex; align-items: center; gap: 10px; padding: 0 4px 10px; }
-  .col-head .lbl { font: 700 13px var(--ui); letter-spacing: .12em; text-transform: uppercase; }
-  .col-head .cnt { font: 600 13px var(--mono); color: var(--faint); }
-  .col-head .rule { flex: 1; height: 1px; background: var(--hair); }
-  .col.active .col-head .rule { background: linear-gradient(90deg, var(--platinum), transparent); }
-  .col-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 2px; }
+  .board { flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; min-height:0; }
+  .col { display:flex; flex-direction:column; min-height:0; }
+  .col-head { display:flex; align-items:center; gap:10px; padding:0 4px 9px; }
+  .col-head .lbl { font:700 13px var(--ui); letter-spacing:.12em; text-transform:uppercase; }
+  .col-head .cnt { font:600 13px var(--mono); color:var(--faint); }
+  .col-head .rule { flex:1; height:1px; background:var(--hair); }
+  .col.active .col-head .rule { background:linear-gradient(90deg,var(--platinum),transparent); }
+  .col-body { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:2px; }
 
-  .tk { background: var(--panel); border: 1px solid var(--hair); border-left: 3px solid var(--queued); border-radius: var(--r-lg); overflow: hidden; }
-  .tk.firing { border-left-color: var(--firing); }
-  .tk.warn { border-left-color: var(--warn); }
-  .tk.late { border-left-color: var(--late); box-shadow: 0 0 0 1px var(--late), 0 0 22px rgba(229,72,77,.18); }
-  .tk.ready { border-left-color: var(--ready); }
-  .tk-h { display: flex; align-items: center; gap: 10px; padding: 13px 15px 9px; }
-  .tk-id { font: 700 19px var(--ui); letter-spacing: -.01em; }
-  .tk-type { font: 600 11px var(--ui); letter-spacing: .04em; padding: 3px 8px; border-radius: var(--r-pill); background: var(--raised); color: var(--dim); }
-  .tk-timer { margin-left: auto; font: 700 26px var(--mono); font-variant-numeric: tabular-nums; color: var(--dim); letter-spacing: .02em; }
-  .tk.warn .tk-timer { color: var(--warn); }
-  .tk.late .tk-timer { color: var(--late); }
-  .tk-items { padding: 4px 15px 8px; }
-  .tk-it { display: flex; gap: 12px; padding: 7px 0; border-top: 1px solid var(--hair); }
-  .tk-it:first-child { border-top: 0; }
-  .tk-q { font: 700 17px var(--mono); min-width: 30px; color: var(--t); }
-  .tk-nm { font: 500 17px var(--ui); }
-  .tk-mod { font: 500 13.5px var(--ui); color: var(--warn); margin-top: 2px; }
-  .tk-note { font: 600 13px var(--ui); color: var(--late); margin-top: 2px; text-transform: uppercase; letter-spacing: .03em; }
-  .tk-f { display: flex; align-items: center; gap: 12px; padding: 10px 15px 13px; }
-  .sla { flex: 1; height: 5px; border-radius: 99px; background: var(--raised); overflow: hidden; }
-  .sla i { display: block; height: 100%; border-radius: 99px; }
-  .bump { height: 46px; padding: 0 22px; border: 0; border-radius: var(--r-md); font: 700 14px var(--ui); letter-spacing: .03em; cursor: pointer; background: var(--raised); color: var(--t); border: 1px solid var(--hair-2); }
-  .bump.go { background: var(--ready); color: #06140d; border-color: transparent; }
-  .bump.fire { background: var(--firing); color: #04101f; border-color: transparent; }
-  .legend { flex: none; display: flex; gap: 18px; align-items: center; padding: 2px 4px; font: 600 11px var(--ui); color: var(--faint); letter-spacing: .04em; }
-  .legend b { color: var(--dim); font-weight: 600; }
-  .legend .k { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .sw { width: 9px; height: 9px; border-radius: 3px; }
+  .tk { background:var(--panel); border:1px solid var(--hair); border-left:3px solid var(--queued); border-radius:var(--r-lg); overflow:hidden; }
+  .tk.firing { border-left-color:var(--firing); } .tk.warn { border-left-color:var(--warn); }
+  .tk.risk { border-left-color:var(--risk); } .tk.late { border-left-color:var(--late); box-shadow:0 0 0 1px var(--late),0 0 22px rgba(229,72,77,.18); }
+  .tk.ready { border-left-color:var(--ready); }
+  .tk-h { display:flex; align-items:center; gap:9px; padding:12px 14px 8px; }
+  .tk-id { font:700 18px var(--ui); }
+  .tk-type { font:600 11px var(--ui); padding:3px 8px; border-radius:var(--r-pill); background:var(--raised); color:var(--dim); }
+  .tk-risk { font:600 9.5px var(--ui); letter-spacing:.04em; text-transform:uppercase; color:var(--risk); border:1px solid var(--risk); border-radius:99px; padding:1px 6px; }
+  .tk-timer { margin-left:auto; font:700 24px var(--mono); color:var(--dim); }
+  .tk.warn .tk-timer { color:var(--warn); } .tk.late .tk-timer { color:var(--late); } .tk.risk .tk-timer { color:var(--risk); }
+  .tk-pred { padding:0 14px 6px; font:500 11.5px var(--ui); color:var(--faint); }
+  .tk-pred.over { color:var(--warn); }
+  .tk-items { padding:2px 14px 6px; }
+  .tk-grp { font:700 9.5px var(--ui); letter-spacing:.1em; text-transform:uppercase; color:var(--faint); margin:6px 0 3px; }
+  .tk-it { display:flex; gap:11px; padding:5px 0; }
+  .tk-q { font:700 16px var(--mono); min-width:28px; color:var(--t); }
+  .tk-nm { font:500 16px var(--ui); }
+  .tk-mod { font:500 13px var(--ui); color:var(--warn); margin-top:1px; }
+  .tk-alrg { margin:2px 14px 6px; padding:6px 10px; border-radius:var(--r-sm); background:rgba(229,72,77,.12); color:var(--late); font:600 12px var(--ui); display:flex; gap:7px; align-items:center; }
+  .tk-notes { margin:0 14px 8px; padding:7px 10px; border-radius:var(--r-sm); background:var(--raised); font-size:12.5px; color:var(--dim); }
+  .tk-notes b { color:var(--t); }
+  .tk-f { display:flex; align-items:center; gap:12px; padding:9px 14px 12px; }
+  .sla { flex:1; height:5px; border-radius:99px; background:var(--raised); overflow:hidden; }
+  .sla i { display:block; height:100%; border-radius:99px; }
+  .bump { height:44px; padding:0 20px; border:0; border-radius:var(--r-md); font:700 14px var(--ui); letter-spacing:.03em; cursor:pointer; background:var(--raised); color:var(--t); border:1px solid var(--hair-2); }
+  .bump.go { background:var(--ready); color:#06140d; border-color:transparent; } .bump.fire { background:var(--firing); color:#04101f; border-color:transparent; }
+
+  /* recall tray */
+  .footrow { flex:none; display:flex; align-items:center; gap:16px; }
+  .recall { display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--hair); border-radius:var(--r-pill); padding:5px 7px 5px 13px; }
+  .recall .lbl { font:600 10px var(--ui); letter-spacing:.08em; text-transform:uppercase; color:var(--faint); }
+  .recall .chip { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:var(--r-pill); background:var(--raised); color:var(--dim); font:600 12px var(--mono); cursor:pointer; }
+  .recall .chip:hover { color:var(--t); }
+  .legend { margin-left:auto; display:flex; gap:16px; align-items:center; font:600 11px var(--ui); color:var(--faint); letter-spacing:.04em; }
+  .legend .k { display:inline-flex; align-items:center; gap:6px; } .legend .sw { width:9px; height:9px; border-radius:3px; }
 </style>
 </head>
 <body class="kds">
 <div class="kds-wrap">
-  <!-- header -->
   <div class="kds-top">
-    <div class="kds-id">
-      <div class="brand-mark">SI</div>
-      <div><div class="nm">Kitchen</div><div class="loc">Kraków · Line 1</div></div>
-    </div>
+    <div class="kds-id"><div class="brand-mark">SI</div><div><div class="nm">Kitchen</div><div class="loc">Kraków · Line 1</div></div></div>
+    <a class="backfleet" href="/mockups/core-suite/kds-fleet.html">← Fleet</a>
     <div class="stage">
       <button>All <span class="n">11</span></button>
       <button class="on">New <span class="n">3</span></button>
       <button>Firing <span class="n">5</span></button>
       <button>Ready <span class="n">3</span></button>
     </div>
-    <div class="clock">19:58</div>
-    <div class="ctrl" title="Sound">♪</div>
-    <div class="ctrl" title="Exit fullscreen">⤢</div>
+    <div class="clock">20:14</div>
+    <div class="ctrl" title="Refresh">↻</div>
+    <div class="ctrl on" title="Sound on">♪</div>
+    <div class="ctrl" title="Pause">⏸</div>
+    <div class="ctrl" title="Fullscreen kiosk">⤢</div>
+  </div>
+
+  <!-- manager ops header -->
+  <div class="ops">
+    <div class="ops-stats">
+      <div class="ostat"><div class="l">Open</div><div class="v">11</div></div>
+      <div class="ostat alert"><div class="l">Late</div><div class="v">1</div></div>
+      <div class="ostat warn"><div class="l">Due &lt;3m</div><div class="v">2</div></div>
+      <div class="ostat"><div class="l">Oldest</div><div class="v">14:32</div></div>
+      <div class="ostat"><div class="l">Avg age</div><div class="v">6:10</div></div>
+      <div class="ostat good"><div class="l">Done/hr</div><div class="v">48</div></div>
+      <div class="ostat"><div class="l">On shift</div><div class="v">5</div></div>
+    </div>
+    <div class="eighty-six">
+      <span class="lbl">86'd</span>
+      <button class="restore">Tartufo pizza <span class="x">↺ restore</span></button>
+      <button class="restore">Burrata <span class="x">↺ restore</span></button>
+      <button class="btn86">86 an item…</button>
+    </div>
   </div>
 
   <!-- board -->
@@ -95,48 +132,41 @@
       <div class="col-body">
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4823</span><span class="tk-type">Dine-in · T9</span><span class="tk-timer">0:18</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Marinara</div></div></div>
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Capricciosa</div></div></div>
-          </div>
+          <div class="tk-pred">Predicted ready in ~9 min</div>
+          <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Marinara</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Capricciosa</div></div></div>
           <div class="tk-f"><div class="sla"><i style="width:6%;background:var(--queued)"></i></div><button class="bump fire">Start</button></div>
         </div>
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4824</span><span class="tk-type">Takeaway</span><span class="tk-timer">0:41</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">2×</span><div><div class="tk-nm">Margherita</div></div></div>
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Bufala DOP</div><div class="tk-note">⚠ dairy-light · light cheese</div></div></div>
-          </div>
+          <div class="tk-pred">Predicted ready in ~7 min</div>
+          <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Bufala DOP</div><div class="tk-mod">light cheese</div></div></div></div>
+          <div class="tk-alrg">⚠ Allergens: milk · gluten</div>
           <div class="tk-f"><div class="sla"><i style="width:12%;background:var(--queued)"></i></div><button class="bump fire">Start</button></div>
         </div>
       </div>
     </div>
 
-    <!-- FIRING (active lane → platinum rule) -->
+    <!-- FIRING -->
     <div class="col active">
       <div class="col-head"><span class="lbl" style="color:var(--firing)">Firing</span><span class="cnt">5</span><span class="rule"></span></div>
       <div class="col-body">
         <div class="tk late">
           <div class="tk-h"><span class="tk-id">#4818</span><span class="tk-type">Delivery</span><span class="tk-timer">14:32</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja · well-fired</div></div></div>
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">’Nduja & Honey</div></div></div>
-          </div>
+          <div class="tk-pred over">Model: ~4 min to ready · over promise</div>
+          <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja · well-fired</div></div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">’Nduja &amp; Honey</div></div></div>
+          <div class="tk-notes"><b>Driver note:</b> leave at reception, call on arrival</div>
           <div class="tk-f"><div class="sla"><i style="width:100%;background:var(--late)"></i></div><button class="bump go">Ready</button></div>
         </div>
-        <div class="tk warn">
-          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">9:07</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">2×</span><div><div class="tk-nm">Margherita</div></div></div>
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja</div></div></div>
-          </div>
-          <div class="tk-f"><div class="sla"><i style="width:74%;background:var(--warn)"></i></div><button class="bump go">Ready</button></div>
+        <div class="tk risk">
+          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-risk">At risk</span><span class="tk-timer">9:07</span></div>
+          <div class="tk-pred over">Model: predicted to miss by ~2 min</div>
+          <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja</div></div></div></div>
+          <div class="tk-f"><div class="sla"><i style="width:82%;background:var(--risk)"></i></div><button class="bump go">Ready</button></div>
         </div>
         <div class="tk firing">
           <div class="tk-h"><span class="tk-id">#4821</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">3:55</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Bufala DOP</div></div></div>
-          </div>
+          <div class="tk-pred">Predicted ready in ~6 min</div>
+          <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Bufala DOP</div></div></div>
           <div class="tk-f"><div class="sla"><i style="width:38%;background:var(--firing)"></i></div><button class="bump go">Ready</button></div>
         </div>
       </div>
@@ -147,33 +177,37 @@
       <div class="col-head"><span class="lbl" style="color:var(--ready)">Ready · Pass</span><span class="cnt">3</span><span class="rule"></span></div>
       <div class="col-body">
         <div class="tk ready">
-          <div class="tk-h"><span class="tk-id">#4816</span><span class="tk-type">Dine-in · T3</span><span class="tk-timer" style="color:var(--ready)">done</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">2×</span><div><div class="tk-nm">Margherita</div></div></div>
-          </div>
-          <div class="tk-f"><div class="sla"><i style="width:100%;background:var(--ready)"></i></div><button class="bump">Recall</button></div>
+          <div class="tk-h"><span class="tk-id">#4816</span><span class="tk-type">Dine-in · T3</span><span class="tk-timer" style="color:var(--ready)">plated</span></div>
+          <div class="tk-pred">Plated · ready for expo</div>
+          <div class="tk-items"><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div></div>
+          <div class="tk-f"><div class="sla"><i style="width:100%;background:var(--ready)"></i></div><button class="bump">Bump · Done</button></div>
         </div>
         <div class="tk ready">
-          <div class="tk-h"><span class="tk-id">#4817</span><span class="tk-type">Takeaway</span><span class="tk-timer" style="color:var(--ready)">done</span></div>
-          <div class="tk-items">
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Capricciosa</div></div></div>
-            <div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">San Pellegrino</div></div></div>
-          </div>
-          <div class="tk-f"><div class="sla"><i style="width:100%;background:var(--ready)"></i></div><button class="bump">Recall</button></div>
+          <div class="tk-h"><span class="tk-id">#4817</span><span class="tk-type">Takeaway</span><span class="tk-timer" style="color:var(--ready)">plated</span></div>
+          <div class="tk-items"><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Capricciosa</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">San Pellegrino</div></div></div>
+          <div class="tk-f"><div class="sla"><i style="width:100%;background:var(--ready)"></i></div><button class="bump">Bump · Done</button></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- glanceable hotkey legend (always visible) -->
-  <div class="legend">
-    <span class="k"><b>Bump bar</b></span>
-    <span class="k"><span class="sw" style="background:var(--queued)"></span>Queued</span>
-    <span class="k"><span class="sw" style="background:var(--firing)"></span>Firing</span>
-    <span class="k"><span class="sw" style="background:var(--warn)"></span>Approaching SLA</span>
-    <span class="k"><span class="sw" style="background:var(--late)"></span>Late</span>
-    <span class="k"><span class="sw" style="background:var(--ready)"></span>Ready</span>
-    <span style="margin-left:auto">Keys <b>1–9</b> bump · <b>R</b> recall · <b>F</b> fullscreen</span>
+  <!-- recall tray + legend -->
+  <div class="footrow">
+    <div class="recall">
+      <span class="lbl">Recall</span>
+      <span class="chip">↩ #4814</span>
+      <span class="chip">↩ #4811</span>
+      <span class="chip">↩ #4809</span>
+    </div>
+    <div class="legend">
+      <span class="k"><span class="sw" style="background:var(--queued)"></span>Queued</span>
+      <span class="k"><span class="sw" style="background:var(--firing)"></span>Firing</span>
+      <span class="k"><span class="sw" style="background:var(--warn)"></span>SLA soon</span>
+      <span class="k"><span class="sw" style="background:var(--risk)"></span>At risk</span>
+      <span class="k"><span class="sw" style="background:var(--late)"></span>Late</span>
+      <span class="k"><span class="sw" style="background:var(--ready)"></span>Ready</span>
+      <span style="color:var(--dim)">Keys <b>1–9</b> bump · <b>0</b> 10th · <b>F</b> kiosk</span>
+    </div>
   </div>
 </div>
 </body>
