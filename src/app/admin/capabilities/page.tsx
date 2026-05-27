@@ -405,7 +405,7 @@ export default async function CapabilitiesPage() {
           ],
           href: "/admin/whatsapp",
           summary:
-            "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. Toggle + opt-out controls live at /admin/whatsapp.",
+            "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. The /admin/whatsapp operator console is a KDS/POS-style command surface (3-pane inbox: live conversation list · chat thread with operator reply + re-open template · context panel showing cart/order/funnel), with channel toggle and opt-out controls behind the Settings overlay and a fullscreen kiosk mode.",
         },
       ],
     },

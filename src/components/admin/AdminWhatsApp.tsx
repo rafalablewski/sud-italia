@@ -7,17 +7,23 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
-  ArrowDown,
+  ArrowDownToLine,
   CheckCircle2,
-  CircleDollarSign,
-  FileText,
-  MessageCircle,
-  MessageSquare,
+  Circle,
+  Clock,
+  CreditCard,
+  ExternalLink,
+  MapPin,
+  Maximize2,
+  Minimize2,
   RotateCw,
+  Search,
   Send,
-  ShieldAlert,
-  Users,
+  Settings as SettingsIcon,
+  ShoppingCart,
+  Truck,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
@@ -28,19 +34,11 @@ const MobileWhatsApp = dynamic(
   { ssr: false },
 );
 import {
-  Badge,
   Button,
-  Card,
-  CardBody,
-  CardHeader,
   Dialog,
-  EmptyState,
   Input,
   Select,
-  Table,
-  Tabs,
   Textarea,
-  type Column,
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
 
@@ -85,6 +83,7 @@ interface ConversationRow {
   cartCount: number;
   cartSubtotalGrosze: number;
   fulfillmentType: "takeout" | "delivery" | null;
+  slotId: string | null;
   pendingOrderId: string | null;
   pendingPaymentUrl: string | null;
   messageCount: number;
@@ -145,16 +144,20 @@ interface MetricsResponse {
   historicConversations: number;
 }
 
+type ConvFilter = "all" | "live" | "awaiting" | "idle";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // ---- helpers ------------------------------------------------------------
 
 function fmtAgo(iso: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return iso || "—";
   const seconds = Math.floor((Date.now() - t) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return `${Math.floor(seconds / 86400)}d`;
 }
 
 function fmtFull(iso: string): string {
@@ -167,6 +170,42 @@ function fmtFull(iso: string): string {
 
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
+}
+
+function withinWindow(iso: string): boolean {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) && Date.now() - t < DAY_MS;
+}
+
+function actorLabel(m: WaMessage): string {
+  return m.actor === "customer"
+    ? "Customer"
+    : m.actor === "operator"
+      ? "You"
+      : m.actor === "system"
+        ? "System"
+        : "Bot";
+}
+
+function kindLabel(m: WaMessage): string {
+  switch (m.kind) {
+    case "cta_url":
+      return `CTA → ${typeof m.meta?.url === "string" ? m.meta.url : "link"}`;
+    case "template":
+      return `template: ${typeof m.meta?.templateName === "string" ? m.meta.templateName : "?"}`;
+    case "list":
+      return "interactive list";
+    case "buttons":
+      return "buttons";
+    case "selection":
+      return "tap";
+    case "location":
+      return "location";
+    case "unsupported":
+      return "unsupported";
+    default:
+      return "";
+  }
 }
 
 function mergeConversations(
@@ -183,6 +222,7 @@ function mergeConversations(
       cartCount: 0,
       cartSubtotalGrosze: 0,
       fulfillmentType: null,
+      slotId: null,
       pendingOrderId: null,
       pendingPaymentUrl: null,
       messageCount: h.messageCount,
@@ -202,6 +242,7 @@ function mergeConversations(
           cartCount: s.cartCount,
           cartSubtotalGrosze: s.cartSubtotalGrosze,
           fulfillmentType: s.fulfillmentType,
+          slotId: s.slotId,
           pendingOrderId: s.pendingOrderId,
           pendingPaymentUrl: s.pendingPaymentUrl,
           messageCount: 0,
@@ -214,6 +255,7 @@ function mergeConversations(
     merged.cartCount = s.cartCount || merged.cartCount;
     merged.cartSubtotalGrosze = s.cartSubtotalGrosze || merged.cartSubtotalGrosze;
     merged.fulfillmentType = s.fulfillmentType ?? merged.fulfillmentType;
+    merged.slotId = s.slotId ?? merged.slotId;
     merged.pendingOrderId = s.pendingOrderId ?? merged.pendingOrderId;
     merged.pendingPaymentUrl = s.pendingPaymentUrl ?? merged.pendingPaymentUrl;
     merged.lastAt = s.lastTurnAt > merged.lastAt ? s.lastTurnAt : merged.lastAt;
@@ -236,20 +278,39 @@ export function AdminWhatsApp() {
 
 function AdminWhatsAppDesktop() {
   const toast = useToast();
-  const [tab, setTab] = useState<"conversations" | "settings">("conversations");
+
   const [settings, setSettings] = useState<WaSettings | null>(null);
   const [sessions, setSessions] = useState<WaSessionRow[]>([]);
   const [heads, setHeads] = useState<TranscriptHead[]>([]);
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ConvFilter>("all");
+  const [query, setQuery] = useState("");
+
+  // Thread (selected conversation transcript)
+  const [thread, setThread] = useState<WaMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const msgsRef = useRef<HTMLDivElement>(null);
+
+  // Settings overlay drafts
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [welcomeDraft, setWelcomeDraft] = useState("");
   const [optOutDraft, setOptOutDraft] = useState("");
   const [reopenDraft, setReopenDraft] = useState("");
   const [capDraft, setCapDraft] = useState("60");
-  const [loading, setLoading] = useState(true);
-  const [openPhone, setOpenPhone] = useState<string | null>(null);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  // Fullscreen kiosk
+  const [kiosk, setKiosk] = useState(false);
+  const [clock, setClock] = useState("--:--:--");
+
+  // ---- data loaders -----------------------------------------------------
+
+  const loadAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [sRes, cRes, hRes, mRes] = await Promise.all([
         fetch("/api/admin/whatsapp/settings"),
@@ -277,7 +338,7 @@ function AdminWhatsAppDesktop() {
         setMetrics((await mRes.json()) as MetricsResponse);
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -285,10 +346,98 @@ function AdminWhatsAppDesktop() {
     loadAll();
   }, [loadAll]);
 
+  // Live sync — refresh sessions + heads on a steady cadence (cheap), metrics
+  // less often (it re-reads orders). Mirrors the POS till's polling model.
+  useEffect(() => {
+    const lists = setInterval(() => void loadAll(true), 10_000);
+    return () => clearInterval(lists);
+  }, [loadAll]);
+
   const conversations = useMemo(
     () => mergeConversations(sessions, heads),
     [sessions, heads],
   );
+
+  const counts = useMemo(() => {
+    let live = 0;
+    let awaiting = 0;
+    let idle = 0;
+    for (const c of conversations) {
+      if (c.hasActiveSession) live++;
+      else idle++;
+      if (c.pendingPaymentUrl) awaiting++;
+    }
+    return { all: conversations.length, live, awaiting, idle };
+  }, [conversations]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return conversations.filter((c) => {
+      if (filter === "live" && !c.hasActiveSession) return false;
+      if (filter === "awaiting" && !c.pendingPaymentUrl) return false;
+      if (filter === "idle" && c.hasActiveSession) return false;
+      if (q) {
+        const hay = `${c.phone} ${c.customerName ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [conversations, filter, query]);
+
+  // Keep a valid selection: auto-select the first row once loaded, and clear a
+  // selection that filtered out so the thread pane never points at nothing.
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedPhone(null);
+      return;
+    }
+    setSelectedPhone((cur) =>
+      cur && filtered.some((c) => c.phone === cur) ? cur : filtered[0].phone,
+    );
+  }, [filtered]);
+
+  const selected = useMemo(
+    () => conversations.find((c) => c.phone === selectedPhone) ?? null,
+    [conversations, selectedPhone],
+  );
+
+  // ---- thread -----------------------------------------------------------
+
+  const loadThread = useCallback(async (phone: string, silent = false) => {
+    if (!silent) setThreadLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/whatsapp/transcripts/${encodeURIComponent(phone)}`,
+      );
+      if (res.ok) {
+        const data = (await res.json()) as { messages: WaMessage[] };
+        setThread(Array.isArray(data.messages) ? data.messages : []);
+      } else {
+        setThread([]);
+      }
+    } finally {
+      if (!silent) setThreadLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPhone) {
+      setThread([]);
+      return;
+    }
+    setReply("");
+    void loadThread(selectedPhone);
+    const id = setInterval(() => void loadThread(selectedPhone, true), 6_000);
+    return () => clearInterval(id);
+  }, [selectedPhone, loadThread]);
+
+  useEffect(() => {
+    if (msgsRef.current) {
+      msgsRef.current.scrollTop = msgsRef.current.scrollHeight;
+    }
+  }, [thread]);
+
+  // ---- mutations --------------------------------------------------------
 
   const patch = useCallback(
     async (updates: Partial<WaSettings>) => {
@@ -298,8 +447,7 @@ function AdminWhatsAppDesktop() {
         body: JSON.stringify(updates),
       });
       if (res.ok) {
-        const next = (await res.json()) as WaSettings;
-        setSettings(next);
+        setSettings((await res.json()) as WaSettings);
         return true;
       }
       const data = await res.json().catch(() => ({}));
@@ -330,7 +478,10 @@ function AdminWhatsAppDesktop() {
       reopenTemplate: reopenDraft,
       dailyMessageCap,
     });
-    if (ok) toast.success("WhatsApp settings saved");
+    if (ok) {
+      toast.success("WhatsApp settings saved");
+      setSettingsOpen(false);
+    }
   };
 
   const setDefaultLocation = async (val: string) => {
@@ -353,435 +504,12 @@ function AdminWhatsAppDesktop() {
     }
   };
 
-  const conversationCols = useMemo<Column<ConversationRow>[]>(
-    () => [
-      {
-        key: "phone",
-        header: "Phone",
-        cell: (row) => (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs admin-text">{row.phone}</span>
-            {row.hasActiveSession && <Badge tone="success">live</Badge>}
-          </div>
-        ),
-      },
-      {
-        key: "customer",
-        header: "Customer",
-        cell: (row) => row.customerName || <span className="admin-text-secondary">—</span>,
-      },
-      {
-        key: "location",
-        header: "Location",
-        cell: (row) =>
-          row.locationSlug ? (
-            <Badge tone="info">{row.locationSlug}</Badge>
-          ) : (
-            <span className="admin-text-secondary">—</span>
-          ),
-      },
-      {
-        key: "cart",
-        header: "Cart",
-        cell: (row) =>
-          row.cartCount > 0 ? (
-            <span>
-              {row.cartCount} item(s) · {formatPrice(row.cartSubtotalGrosze)}
-            </span>
-          ) : (
-            <span className="admin-text-secondary">—</span>
-          ),
-      },
-      {
-        key: "pending",
-        header: "Pending order",
-        cell: (row) =>
-          row.pendingOrderId ? (
-            <span className="font-mono text-xs">{row.pendingOrderId}</span>
-          ) : (
-            <span className="admin-text-secondary">—</span>
-          ),
-      },
-      {
-        key: "messages",
-        header: "Messages",
-        cell: (row) => <span className="text-xs">{row.messageCount || "—"}</span>,
-      },
-      {
-        key: "lastAt",
-        header: "Last activity",
-        cell: (row) => <span className="text-xs" title={fmtFull(row.lastAt)}>{fmtAgo(row.lastAt)}</span>,
-        sortValue: (row) => row.lastAt,
-      },
-      {
-        key: "actions",
-        header: "",
-        cell: (row) => (
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setOpenPhone(row.phone)}
-              leadingIcon={<MessageCircle className="h-3.5 w-3.5" />}
-            >
-              Open
-            </Button>
-            {row.hasActiveSession && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => resetSession(row.phone)}
-                title="Reset session"
-                leadingIcon={<RotateCw className="h-3.5 w-3.5" />}
-              >
-                Reset
-              </Button>
-            )}
-          </div>
-        ),
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  const m7 = metrics?.windows.last7d;
-  const m30 = metrics?.windows.last30d;
-  const mLife = metrics?.windows.lifetime;
-  const af = metrics?.activeSessions;
-
-  return (
-    <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">WhatsApp ordering</h1>
-          <p className="v2-page-subtitle">
-            Customers message the WhatsApp Business number; the bot walks them through the order and sends a Stripe Pay link in chat.
-          </p>
-        </div>
-        <Button
-          onClick={loadAll}
-          variant="ghost"
-          size="sm"
-          leadingIcon={<RotateCw className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </header>
-
-      {/* Metrics */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="admin-text font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Channel metrics
-            </h2>
-            <span className="text-xs admin-text-secondary">
-              {metrics ? `Updated ${fmtAgo(metrics.generatedAt)}` : "—"}
-            </span>
-          </div>
-        </CardHeader>
-        <CardBody>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricTile
-              icon={<CircleDollarSign className="h-4 w-4" />}
-              label="Orders · 7d"
-              value={m7 ? `${m7.orders.paid}` : "—"}
-              hint={m7 ? `${formatPrice(m7.orders.revenueGrosze)} revenue · ${m7.orders.cancelled} cancelled` : ""}
-            />
-            <MetricTile
-              icon={<CheckCircle2 className="h-4 w-4" />}
-              label="Conversion · 7d"
-              value={m7 ? pct(m7.conversionRate) : "—"}
-              hint={m7 ? `${m7.activity.uniquePhones} unique phones` : ""}
-            />
-            <MetricTile
-              icon={<Users className="h-4 w-4" />}
-              label="Active sessions"
-              value={af ? `${af.totalSessions}` : "—"}
-              hint={af ? `${af.awaitingPayment} awaiting payment` : ""}
-            />
-            <MetricTile
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Orders · lifetime"
-              value={mLife ? `${mLife.orders.paid}` : "—"}
-              hint={mLife ? `${formatPrice(mLife.orders.revenueGrosze)} · avg ${formatPrice(mLife.orders.averageGrosze)}` : ""}
-            />
-          </div>
-          {af && af.totalSessions > 0 && (
-            <div className="mt-4">
-              <div className="text-xs admin-text-secondary mb-1">
-                Active funnel (current sessions)
-              </div>
-              <FunnelBar
-                stages={[
-                  { label: "Location set", value: af.locationSet },
-                  { label: "Has cart", value: af.cartHasItems },
-                  { label: "Fulfillment", value: af.fulfillmentSet },
-                  { label: "Slot picked", value: af.slotPicked },
-                  { label: "Awaiting pay", value: af.awaitingPayment },
-                ]}
-                total={af.totalSessions}
-              />
-            </div>
-          )}
-          {m30 && (
-            <div className="mt-3 text-xs admin-text-secondary">
-              30-day rollup: {m30.orders.paid} paid · {m30.orders.cancelled} cancelled · {formatPrice(m30.orders.revenueGrosze)} revenue
-            </div>
-          )}
-        </CardBody>
-      </Card>
-
-      <Tabs<"conversations" | "settings">
-        tabs={[
-          { value: "conversations", label: "Conversations" },
-          { value: "settings", label: "Settings" },
-        ]}
-        value={tab}
-        onChange={(v) => setTab(v)}
-      />
-
-      {tab === "conversations" && (
-        <Card>
-          <CardHeader>
-            <h2 className="admin-text font-semibold">Conversations</h2>
-            <p className="admin-text-secondary text-xs">
-              Active sessions (within 90 min) plus historic transcripts. Open one to see the full chat and reply.
-            </p>
-          </CardHeader>
-          <CardBody>
-            {loading ? (
-              <p className="admin-text-secondary text-sm">Loading…</p>
-            ) : conversations.length === 0 ? (
-              <EmptyState
-                icon={MessageSquare}
-                title="No conversations yet"
-                description="When a customer messages the WhatsApp number they appear here, with the full chat history."
-              />
-            ) : (
-              <Table
-                columns={conversationCols}
-                rows={conversations}
-                rowKey={(r) => r.phone}
-                density="compact"
-                defaultSort={{ key: "lastAt", dir: "desc" }}
-              />
-            )}
-          </CardBody>
-        </Card>
-      )}
-
-      {tab === "settings" && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="admin-text font-semibold flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" /> Channel
-              </h2>
-              <Button
-                size="sm"
-                variant={settings?.enabled ? "danger" : "primary"}
-                onClick={toggleEnabled}
-                disabled={!settings}
-              >
-                {settings?.enabled ? "Disable" : "Enable"}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <div>
-              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                Welcome message (sent on first inbound)
-              </label>
-              <Textarea
-                value={welcomeDraft}
-                onChange={(e) => setWelcomeDraft(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Cześć! Tu Sud Italia 🍕 Napisz, na co masz ochotę…"
-              />
-            </div>
-            <div className="grid md:grid-cols-3 gap-3">
-              <div>
-                <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                  Opt-out keywords (comma-separated)
-                </label>
-                <Input
-                  value={optOutDraft}
-                  onChange={(e) => setOptOutDraft(e.target.value)}
-                  placeholder="STOP, NIE, UNSUBSCRIBE"
-                />
-              </div>
-              <div>
-                <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                  Default location (fallback)
-                </label>
-                <Select
-                  value={settings?.defaultLocation ?? ""}
-                  onChange={(e) => setDefaultLocation(e.target.value)}
-                  options={[
-                    { value: "", label: "Ask the customer" },
-                    { value: "krakow", label: "Kraków" },
-                    { value: "warszawa", label: "Warszawa" },
-                  ]}
-                />
-              </div>
-              <div>
-                <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                  Daily inbound cap / phone
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10000}
-                  value={capDraft}
-                  onChange={(e) => setCapDraft(e.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-                Approved Meta template for re-opening the 24h window
-              </label>
-              <Input
-                value={reopenDraft}
-                onChange={(e) => setReopenDraft(e.target.value)}
-                placeholder="sud_italia_order_update"
-              />
-              <p className="text-xs admin-text-secondary mt-1">
-                Used by the Send Template action in Conversations when the customer is outside the 24-hour messaging window.
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={saveTextSettings} size="sm">
-                Save text settings
-              </Button>
-            </div>
-            {!settings?.enabled && (
-              <div className="text-xs admin-text-secondary flex items-center gap-2">
-                <ShieldAlert className="h-3 w-3" /> The webhook still verifies signatures while disabled; the bot just replies that ordering is off.
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      )}
-
-      <ConversationDialog
-        phone={openPhone}
-        templateName={settings?.reopenTemplate ?? ""}
-        onClose={() => {
-          setOpenPhone(null);
-          // Reload the heads after closing so any operator message we sent
-          // refreshes the row's last-activity stamp.
-          loadAll();
-        }}
-      />
-    </div>
-  );
-}
-
-// ---- subcomponents ------------------------------------------------------
-
-function MetricTile({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
-      <div className="flex items-center gap-2 admin-text-secondary text-xs">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="admin-text font-semibold text-lg mt-1">{value}</div>
-      {hint && <div className="admin-text-secondary text-xs mt-0.5">{hint}</div>}
-    </div>
-  );
-}
-
-function FunnelBar({ stages, total }: { stages: { label: string; value: number }[]; total: number }) {
-  if (total === 0) return null;
-  return (
-    <div className="space-y-1">
-      {stages.map((s) => {
-        const w = Math.max(0, Math.min(100, Math.round((s.value / total) * 100)));
-        return (
-          <div key={s.label} className="flex items-center gap-2 text-xs">
-            <span className="admin-text-secondary w-28 shrink-0">{s.label}</span>
-            <div className="flex-1 h-2 rounded bg-[var(--surface-2)] overflow-hidden">
-              <div className="h-full bg-[var(--success-soft)]" style={{ width: `${w}%` }} />
-            </div>
-            <span className="admin-text w-12 text-right tabular-nums">
-              {s.value}
-              <span className="admin-text-secondary"> / {total}</span>
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ConversationDialog({
-  phone,
-  templateName,
-  onClose,
-}: {
-  phone: string | null;
-  templateName: string;
-  onClose: () => void;
-}) {
-  const toast = useToast();
-  const [messages, setMessages] = useState<WaMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [reply, setReply] = useState("");
-  const [sending, setSending] = useState(false);
-  const transcriptRef = useRef<HTMLDivElement>(null);
-
-  const load = useCallback(async () => {
-    if (!phone) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/whatsapp/transcripts/${encodeURIComponent(phone)}`);
-      if (res.ok) {
-        const data = (await res.json()) as { messages: WaMessage[] };
-        setMessages(Array.isArray(data.messages) ? data.messages : []);
-      } else {
-        setMessages([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [phone]);
-
-  useEffect(() => {
-    if (phone) {
-      setReply("");
-      load();
-    } else {
-      setMessages([]);
-    }
-  }, [phone, load]);
-
-  useEffect(() => {
-    if (transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   const send = async () => {
-    if (!phone || !reply.trim()) return;
+    if (!selectedPhone || !reply.trim()) return;
     setSending(true);
     try {
       const res = await fetch(
-        `/api/admin/whatsapp/sessions/${encodeURIComponent(phone)}/message`,
+        `/api/admin/whatsapp/sessions/${encodeURIComponent(selectedPhone)}/message`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -791,7 +519,8 @@ function ConversationDialog({
       if (res.ok) {
         toast.success("Message sent");
         setReply("");
-        await load();
+        await loadThread(selectedPhone, true);
+        await loadAll(true);
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error("Could not send", data?.error || "Customer may be outside the 24h window.");
@@ -802,11 +531,11 @@ function ConversationDialog({
   };
 
   const sendTemplate = async () => {
-    if (!phone) return;
+    if (!selectedPhone) return;
     setSending(true);
     try {
       const res = await fetch(
-        `/api/admin/whatsapp/sessions/${encodeURIComponent(phone)}/template`,
+        `/api/admin/whatsapp/sessions/${encodeURIComponent(selectedPhone)}/template`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -814,8 +543,8 @@ function ConversationDialog({
         },
       );
       if (res.ok) {
-        toast.success(`Template "${templateName}" sent`);
-        await load();
+        toast.success(`Template "${settings?.reopenTemplate}" sent`);
+        await loadThread(selectedPhone, true);
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error("Could not send template", data?.error || "Check the configured template name.");
@@ -825,122 +554,550 @@ function ConversationDialog({
     }
   };
 
-  return (
-    <Dialog
-      open={!!phone}
-      onClose={onClose}
-      title={phone ? `Conversation · ${phone}` : ""}
-      size="lg"
-    >
-      <div className="space-y-3">
-        <div
-          ref={transcriptRef}
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 max-h-[420px] overflow-y-auto space-y-2"
-        >
-          {loading ? (
-            <p className="admin-text-secondary text-sm">Loading transcript…</p>
-          ) : messages.length === 0 ? (
-            <p className="admin-text-secondary text-sm">No messages yet.</p>
-          ) : (
-            messages.map((m, i) => <MessageBubble key={i} message={m} />)
-          )}
+  // ---- fullscreen + clock ----------------------------------------------
+
+  const enterKiosk = useCallback(() => {
+    setKiosk(true);
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  }, []);
+  const exitKiosk = useCallback(() => {
+    setKiosk(false);
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+  }, []);
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setKiosk(false);
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+  useEffect(() => {
+    if (!kiosk) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [kiosk]);
+
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      const p = (n: number) => String(n).padStart(2, "0");
+      setClock(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ---- keyboard ---------------------------------------------------------
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (settingsOpen) setSettingsOpen(false);
+        else if (kiosk) exitKiosk();
+        return;
+      }
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "f") {
+        e.preventDefault();
+        if (kiosk) exitKiosk();
+        else enterKiosk();
+        return;
+      }
+      if (k === "j" || k === "k" || e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (filtered.length === 0) return;
+        e.preventDefault();
+        const dir = k === "j" || e.key === "ArrowDown" ? 1 : -1;
+        const idx = filtered.findIndex((c) => c.phone === selectedPhone);
+        const next = Math.max(0, Math.min(filtered.length - 1, (idx < 0 ? 0 : idx) + dir));
+        setSelectedPhone(filtered[next].phone);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filtered, selectedPhone, kiosk, enterKiosk, exitKiosk, settingsOpen]);
+
+  // ---- derived ----------------------------------------------------------
+
+  const m7 = metrics?.windows.last7d;
+  const af = metrics?.activeSessions;
+  const mLife = metrics?.windows.lifetime;
+  const templateName = settings?.reopenTemplate ?? "";
+  const windowOpen = selected ? withinWindow(selected.lastAt) : false;
+
+  const FILTERS: { value: ConvFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: counts.all },
+    { value: "live", label: "Live", count: counts.live },
+    { value: "awaiting", label: "Awaiting pay", count: counts.awaiting },
+    { value: "idle", label: "Idle", count: counts.idle },
+  ];
+
+  const page = (
+    <div className={`wa-console${kiosk ? " is-fullscreen" : ""}`}>
+      {/* Header */}
+      <header className="cmd-head">
+        <div className="cmd-brand">
+          <span className="cmd-wordmark">SUD ITALIA</span>
+          <span className="cmd-label">WhatsApp Console</span>
         </div>
-        <div>
-          <label className="admin-text text-xs uppercase tracking-wide block mb-1">
-            Reply as operator (only works inside the 24h messaging window)
-          </label>
-          <Textarea
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            rows={3}
-            maxLength={1024}
-            placeholder="Type your reply…"
-          />
-          <div className="flex justify-between items-center mt-2 gap-2 flex-wrap">
-            <div className="text-xs admin-text-secondary">
-              {templateName ? (
-                <>
-                  Outside the 24h window? Send the approved template{" "}
-                  <code className="font-mono">{templateName}</code>.
-                </>
-              ) : (
-                "No re-open template configured. Set one in Settings to recover lapsed conversations."
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={sendTemplate}
-                disabled={!templateName || sending}
-                variant="secondary"
-                size="sm"
-                leadingIcon={<ArrowDown className="h-3.5 w-3.5" />}
-              >
-                Send template
-              </Button>
-              <Button
-                onClick={send}
-                disabled={!reply.trim() || sending}
-                size="sm"
-                leadingIcon={<Send className="h-3.5 w-3.5" />}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
+        <button
+          type="button"
+          className="cmd-btn wa-power"
+          aria-pressed={!!settings?.enabled}
+          onClick={toggleEnabled}
+          disabled={!settings}
+          title={settings?.enabled ? "Channel live — click to disable" : "Channel off — click to enable"}
+        >
+          <span className={`wa-power-dot${settings?.enabled ? " on" : ""}`} />
+          {settings?.enabled ? "Live" : "Off"}
+        </button>
+        <div className="cmd-spacer" />
+        <button
+          type="button"
+          className="cmd-btn"
+          onClick={() => setSettingsOpen(true)}
+          title="Channel settings"
+        >
+          <SettingsIcon />
+          <span>Settings</span>
+        </button>
+        <button
+          type="button"
+          className="cmd-btn"
+          aria-pressed={kiosk}
+          onClick={kiosk ? exitKiosk : enterKiosk}
+          title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen (F)"}
+        >
+          {kiosk ? <Minimize2 /> : <Maximize2 />}
+          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
+        </button>
+        <div className="cmd-clock tnum">{clock}</div>
+      </header>
+
+      {/* Stats + filters strip */}
+      <div className="cmd-subbar wa-stats" role="group" aria-label="Channel metrics and filters">
+        <span className="wa-stat">Orders 7d <b className="tnum">{m7 ? m7.orders.paid : "—"}</b></span>
+        <span className="wa-stat-sep" />
+        <span className="wa-stat">Conv 7d <b className="tnum">{m7 ? pct(m7.conversionRate) : "—"}</b></span>
+        <span className="wa-stat-sep" />
+        <span className="wa-stat">Active <b className="tnum">{af ? af.totalSessions : "—"}</b></span>
+        <span className="wa-stat-sep" />
+        <span className="wa-stat">Awaiting pay <b className="tnum">{af ? af.awaitingPayment : "—"}</b></span>
+        <span className="wa-stat-sep" />
+        <span className="wa-stat">Lifetime <b className="tnum">{mLife ? mLife.orders.paid : "—"}</b></span>
+        <div className="wa-filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              className="cmd-chip"
+              aria-pressed={filter === f.value}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              <span className="wa-chip-count tnum">{f.count}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className="cmd-btn"
+            onClick={() => void loadAll()}
+            title="Refresh"
+          >
+            <RotateCw />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
-    </Dialog>
+
+      {/* 3-pane editor */}
+      <div className="wa-editor">
+        {/* LEFT — conversation list */}
+        <aside className="wa-list" aria-label="Conversations">
+          <div className="wa-list-search">
+            <div className="wa-search-box">
+              <Search />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search phone or name…"
+                spellCheck={false}
+                aria-label="Search conversations"
+              />
+            </div>
+          </div>
+          <div className="wa-list-scroll">
+            {loading ? (
+              <div className="wa-list-msg">Loading conversations…</div>
+            ) : filtered.length === 0 ? (
+              <div className="wa-list-msg">
+                {conversations.length === 0
+                  ? "No conversations yet. Inbound WhatsApp messages appear here."
+                  : "No conversations match this filter."}
+              </div>
+            ) : (
+              filtered.map((c) => (
+                <ConvItem
+                  key={c.phone}
+                  conv={c}
+                  active={c.phone === selectedPhone}
+                  onSelect={() => setSelectedPhone(c.phone)}
+                />
+              ))
+            )}
+          </div>
+        </aside>
+
+        {/* CENTER — chat thread */}
+        <section className="wa-thread" aria-label="Conversation thread">
+          {!selected ? (
+            <div className="wa-empty">
+              <span className="wa-empty-emoji">💬</span>
+              <span className="wa-empty-text">Select a conversation to read and reply.</span>
+            </div>
+          ) : (
+            <>
+              <div className="wa-thread-head">
+                <span className={`wa-th-dot${selected.hasActiveSession ? " live" : ""}`} />
+                <span className="wa-th-id tnum">{selected.phone}</span>
+                {selected.customerName && <span className="wa-th-name">{selected.customerName}</span>}
+                {selected.locationSlug && (
+                  <span className="wa-th-badge loc">{selected.locationSlug}</span>
+                )}
+                <span className={`wa-th-badge window${windowOpen ? " open" : ""}`}>
+                  <Clock /> {windowOpen ? "24h open" : "window closed"}
+                </span>
+              </div>
+
+              <div className="wa-msgs" ref={msgsRef}>
+                {threadLoading && thread.length === 0 ? (
+                  <div className="wa-list-msg">Loading transcript…</div>
+                ) : thread.length === 0 ? (
+                  <div className="wa-list-msg">No messages yet.</div>
+                ) : (
+                  thread.map((m, i) => <ThreadBubble key={i} message={m} />)
+                )}
+              </div>
+
+              <div className="wa-composer">
+                <textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  rows={2}
+                  maxLength={1024}
+                  placeholder={
+                    windowOpen
+                      ? "Type a reply…"
+                      : "Window closed — send the re-open template, then reply."
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      void send();
+                    }
+                  }}
+                />
+                <div className="wa-composer-row">
+                  <span className="wa-composer-hint">
+                    {templateName ? (
+                      <>
+                        Re-open template: <code>{templateName}</code>
+                      </>
+                    ) : (
+                      "No re-open template set (Settings)."
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="wa-tmpl-btn"
+                    onClick={() => void sendTemplate()}
+                    disabled={!templateName || sending}
+                  >
+                    <ArrowDownToLine />
+                    <span>Template</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="wa-send-btn"
+                    onClick={() => void send()}
+                    disabled={!reply.trim() || sending}
+                  >
+                    <Send />
+                    <span>Send</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* RIGHT — context + actions */}
+        <aside className="wa-context" aria-label="Conversation context">
+          {!selected ? (
+            <div className="wa-empty">
+              <span className="wa-empty-text">No conversation selected.</span>
+            </div>
+          ) : (
+            <>
+              <div className="wa-ctx-sec">
+                <div className="wa-ctx-eyebrow">Customer</div>
+                <div className="wa-ctx-row">
+                  <span className="k">Name</span>
+                  <span className="v">{selected.customerName || "—"}</span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k">Phone</span>
+                  <span className="v">{selected.phone}</span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k">Last activity</span>
+                  <span className="v" title={fmtFull(selected.lastAt)}>{fmtAgo(selected.lastAt)} ago</span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k">Messages</span>
+                  <span className="v">{selected.messageCount || "—"}</span>
+                </div>
+              </div>
+
+              <div className="wa-ctx-sec">
+                <div className="wa-ctx-eyebrow">Order in progress</div>
+                <div className="wa-ctx-row">
+                  <span className="k"><MapPin /> Location</span>
+                  <span className="v">{selected.locationSlug || "—"}</span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k"><ShoppingCart /> Cart</span>
+                  <span className="v">
+                    {selected.cartCount > 0
+                      ? `${selected.cartCount} · ${formatPrice(selected.cartSubtotalGrosze)}`
+                      : "empty"}
+                  </span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k"><Truck /> Fulfillment</span>
+                  <span className="v">{selected.fulfillmentType || "—"}</span>
+                </div>
+                <div className="wa-ctx-row">
+                  <span className="k"><CreditCard /> Pending</span>
+                  <span className="v">{selected.pendingOrderId || "—"}</span>
+                </div>
+                {selected.pendingPaymentUrl && (
+                  <a
+                    className="wa-ctx-link"
+                    href={selected.pendingPaymentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink /> Open Stripe pay link
+                  </a>
+                )}
+              </div>
+
+              {selected.hasActiveSession && (
+                <div className="wa-ctx-sec">
+                  <div className="wa-ctx-eyebrow">Funnel</div>
+                  <div className="wa-funnel">
+                    <FunnelStep label="Location set" done={!!selected.locationSlug} />
+                    <FunnelStep label="Has cart" done={selected.cartCount > 0} />
+                    <FunnelStep label="Fulfillment" done={!!selected.fulfillmentType} />
+                    <FunnelStep label="Slot picked" done={!!selected.slotId} />
+                    <FunnelStep label="Awaiting payment" done={!!selected.pendingPaymentUrl} />
+                  </div>
+                </div>
+              )}
+
+              <div className="wa-ctx-actions">
+                {selected.hasActiveSession && (
+                  <button
+                    type="button"
+                    className="wa-act-btn"
+                    onClick={() => void resetSession(selected.phone)}
+                  >
+                    <RotateCw />
+                    <span>Reset session</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
+
+      {/* Settings — standard admin Dialog (portaled to body, rule #4). */}
+      <Dialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        size="md"
+        title="WhatsApp channel settings"
+        description="The webhook keeps verifying signatures even when the channel is off; the bot just replies that ordering is paused."
+        footer={
+          <>
+            <Button
+              variant={settings?.enabled ? "danger" : "primary"}
+              onClick={toggleEnabled}
+              disabled={!settings}
+            >
+              {settings?.enabled ? "Disable channel" : "Enable channel"}
+            </Button>
+            <Button variant="secondary" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={saveTextSettings}>
+              Save settings
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="admin-text text-xs uppercase tracking-wide block mb-1">
+              Welcome message (sent on first inbound)
+            </label>
+            <Textarea
+              value={welcomeDraft}
+              onChange={(e) => setWelcomeDraft(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Cześć! Tu Sud Italia 🍕 Napisz, na co masz ochotę…"
+            />
+          </div>
+          <div className="grid md:grid-cols-3 gap-3">
+            <div>
+              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
+                Opt-out keywords (comma-separated)
+              </label>
+              <Input
+                value={optOutDraft}
+                onChange={(e) => setOptOutDraft(e.target.value)}
+                placeholder="STOP, NIE, UNSUBSCRIBE"
+              />
+            </div>
+            <div>
+              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
+                Default location (fallback)
+              </label>
+              <Select
+                value={settings?.defaultLocation ?? ""}
+                onChange={(e) => setDefaultLocation(e.target.value)}
+                options={[
+                  { value: "", label: "Ask the customer" },
+                  { value: "krakow", label: "Kraków" },
+                  { value: "warszawa", label: "Warszawa" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="admin-text text-xs uppercase tracking-wide block mb-1">
+                Daily inbound cap / phone
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={10000}
+                value={capDraft}
+                onChange={(e) => setCapDraft(e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="admin-text text-xs uppercase tracking-wide block mb-1">
+              Approved Meta template for re-opening the 24h window
+            </label>
+            <Input
+              value={reopenDraft}
+              onChange={(e) => setReopenDraft(e.target.value)}
+              placeholder="sud_italia_order_update"
+            />
+            <p className="text-xs admin-text-secondary mt-1">
+              Used by the Template button in a thread when the customer is outside the 24-hour messaging window.
+            </p>
+          </div>
+        </div>
+      </Dialog>
+    </div>
+  );
+
+  // Kiosk renders through a portal to document.body so the edge-to-edge console
+  // escapes the admin shell's stacking context (CLAUDE.md rule #4); the subtree
+  // stays mounted, so polling, the thread feed and timers keep running.
+  return kiosk ? createPortal(page, document.body) : page;
+}
+
+// ---- subcomponents ------------------------------------------------------
+
+function ConvItem({
+  conv,
+  active,
+  onSelect,
+}: {
+  conv: ConversationRow;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`wa-conv${active ? " active" : ""}${conv.hasActiveSession ? " live" : ""}`}
+      onClick={onSelect}
+    >
+      <div className="wa-conv-top">
+        <span className="wa-conv-dot" />
+        <span className="wa-conv-name">{conv.customerName || conv.phone}</span>
+        <span className="wa-conv-ago tnum">{fmtAgo(conv.lastAt)}</span>
+      </div>
+      {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}
+      <div className="wa-conv-snip">{conv.lastBody || "—"}</div>
+      <div className="wa-conv-tags">
+        {conv.locationSlug && <span className="wa-chip-mini loc">{conv.locationSlug}</span>}
+        {conv.cartCount > 0 && (
+          <span className="wa-chip-mini">{conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}</span>
+        )}
+        {conv.pendingPaymentUrl && <span className="wa-chip-mini pay">awaiting pay</span>}
+      </div>
+    </button>
   );
 }
 
-function MessageBubble({ message }: { message: WaMessage }) {
-  const isOutbound = message.direction === "out";
-  const actorLabel = message.actor === "customer"
-    ? "Customer"
-    : message.actor === "operator"
-      ? "You"
-      : message.actor === "system"
-        ? "System"
-        : "Bot";
-  const tone =
+function ThreadBubble({ message }: { message: WaMessage }) {
+  const isOut = message.direction === "out";
+  const variant =
     message.actor === "operator"
-      ? "bg-[var(--success-soft)] border-[color-mix(in_oklab,var(--success)_35%,transparent)]"
-      : isOutbound
-        ? "bg-[var(--info-soft)] border-[color-mix(in_oklab,var(--info)_35%,transparent)]"
-        : "bg-[var(--surface-3)] border-[var(--border-strong)]";
-  const kindLabel =
-    message.kind === "cta_url"
-      ? `(CTA → ${typeof message.meta?.url === "string" ? message.meta.url : "link"})`
-      : message.kind === "template"
-        ? `(template: ${typeof message.meta?.templateName === "string" ? message.meta.templateName : "?"})`
-        : message.kind === "list"
-          ? "(interactive list)"
-          : message.kind === "buttons"
-            ? "(buttons)"
-            : message.kind === "selection"
-              ? "(tap)"
-              : message.kind === "location"
-                ? "(location)"
-                : message.kind === "unsupported"
-                  ? "(unsupported)"
-                  : "";
-
+      ? "operator"
+      : message.actor === "system"
+        ? "system"
+        : isOut
+          ? "out"
+          : "in";
+  const kind = kindLabel(message);
   return (
-    <div
-      className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}
-    >
-      <div className={`max-w-[80%] rounded-lg border px-3 py-2 ${tone}`}>
-        <div className="flex items-center gap-2 text-[10px] admin-text-secondary uppercase tracking-wide mb-1">
-          <span>{actorLabel}</span>
-          {kindLabel && <span>{kindLabel}</span>}
-          <span className="ml-auto" title={fmtFull(message.at)}>
+    <div className={`wa-bubble-row ${isOut ? "out" : "in"}`}>
+      <div className={`wa-bubble ${variant}`}>
+        <div className="wa-bubble-meta">
+          <span>{actorLabel(message)}</span>
+          {kind && <span className="wa-bubble-kind">{kind}</span>}
+          <span className="wa-bubble-time tnum" title={fmtFull(message.at)}>
             {fmtAgo(message.at)}
           </span>
         </div>
-        <div className="admin-text whitespace-pre-wrap text-sm break-words">
-          {message.body || <span className="admin-text-secondary italic">(empty)</span>}
+        <div className="wa-bubble-body">
+          {message.body || <span className="wa-bubble-empty">(empty)</span>}
         </div>
       </div>
+    </div>
+  );
+}
+
+function FunnelStep({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div className={`wa-funnel-step${done ? " done" : ""}`}>
+      {done ? <CheckCircle2 /> : <Circle />}
+      <span>{label}</span>
     </div>
   );
 }
