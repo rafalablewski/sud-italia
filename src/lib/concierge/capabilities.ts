@@ -80,13 +80,25 @@ function dietary(item: MenuItem): string[] {
   return item.tags ?? [];
 }
 
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Location.hours uses coarse day ranges ("Mon-Thu", "Fri-Sat", "Sun"). A plain
+// substring check misses the interior days of a range (e.g. "Mon-Thu" doesn't
+// contain "Tue"), so parse the range and test inclusion, with weekday-wrap.
+function dayInRange(dayRange: string, targetDay: string): boolean {
+  const parts = dayRange.split("-").map((p) => p.trim());
+  const target = DAY_NAMES.indexOf(targetDay);
+  if (target === -1) return false;
+  if (parts.length === 1) return parts[0] === targetDay;
+  const start = DAY_NAMES.indexOf(parts[0]);
+  const end = DAY_NAMES.indexOf(parts[1]);
+  if (start === -1 || end === -1) return false;
+  return start <= end ? target >= start && target <= end : target >= start || target <= end;
+}
+
 function todayHours(loc: Awaited<ReturnType<typeof getActiveLocationsAsync>>[number]): string | null {
-  const dow = new Date().getDay(); // 0 Sun .. 6 Sat
-  // Location.hours is a coarse day-range list ("Mon-Thu" etc.) — return the
-  // first entry whose range covers today, else the first entry.
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const name = days[dow];
-  const match = (loc.hours ?? []).find((h) => h.day.includes(name)) ?? loc.hours?.[0];
+  const name = DAY_NAMES[new Date().getDay()];
+  const match = (loc.hours ?? []).find((h) => dayInRange(h.day, name)) ?? loc.hours?.[0];
   return match ? `${match.open}–${match.close}` : null;
 }
 

@@ -106,7 +106,11 @@ export const GET = withAdmin(
       getCustomerNotes(),
     ]);
 
-    const memberMap = new Map(members.map((m) => [m.phone, m]));
+    // Keyed by canonical E.164 so the lookup matches the normalized phones we
+    // bucket orders under below — members with legacy formatting still link.
+    const memberMap = new Map(
+      members.map((m) => [normalizePlPhoneE164(m.phone) ?? m.phone, m]),
+    );
 
     const manualByPhone = new Map<string, number>();
     for (const a of adjustments) {

@@ -12,20 +12,31 @@ import { AdminConcierge } from "@/components/admin/AdminConcierge";
 export default async function AdminConciergePage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
-  const settings = await getConciergeSettings();
   const slugs = ["krakow", "warszawa"] as const;
+
+  // Fan the per-location capability samples + allergen matrices out concurrently
+  // rather than awaiting them in a nested waterfall.
+  const [settings, locationEntries] = await Promise.all([
+    getConciergeSettings(),
+    Promise.all(
+      slugs.map(async (slug) => {
+        const [sampleEntries, matrix] = await Promise.all([
+          Promise.all(
+            CONCIERGE_CAPABILITY_IDS.map(
+              async (id) => [id, await buildCapabilityResponse(id, slug, { sample: true })] as const,
+            ),
+          ),
+          buildAllergenMatrix(slug),
+        ]);
+        return [slug, { samples: Object.fromEntries(sampleEntries), matrix }] as const;
+      }),
+    ),
+  ]);
 
   const byLocation: Record<
     string,
     { samples: Record<string, unknown>; matrix: Awaited<ReturnType<typeof buildAllergenMatrix>> }
-  > = {};
-  for (const slug of slugs) {
-    const samples: Record<string, unknown> = {};
-    for (const id of CONCIERGE_CAPABILITY_IDS) {
-      samples[id] = await buildCapabilityResponse(id, slug, { sample: true });
-    }
-    byLocation[slug] = { samples, matrix: await buildAllergenMatrix(slug) };
-  }
+  > = Object.fromEntries(locationEntries);
 
   const waConfigured = !!(
     process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() && process.env.WHATSAPP_ACCESS_TOKEN?.trim()

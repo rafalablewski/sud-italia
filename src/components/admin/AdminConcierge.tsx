@@ -211,44 +211,39 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
             {meta.map((c) => {
               const on = exposure[c.id] ?? true;
               return (
-                <button
+                <div
                   key={c.id}
-                  type="button"
                   className={`cncrg-cap${c.id === selected ? " sel" : ""}${on ? "" : " off"}`}
-                  onClick={() => setSelected(c.id)}
                 >
-                  <span className="cncrg-cap-ic">{CAP_ICON[c.id]}</span>
-                  <span className="cncrg-cap-body">
-                    <span className="cncrg-cap-top">
-                      <span className="cncrg-cap-name">{c.label}</span>
-                      <span className={`cncrg-cap-kind ${c.kind}`}>{c.kind}</span>
-                    </span>
-                    <span className="cncrg-cap-desc">{c.desc}</span>
-                    <span className="cncrg-cap-foot">
-                      <span className="cncrg-cap-transport">
-                        {c.transport === "public" ? "public read endpoint" : "WhatsApp + checkout"}
+                  <button
+                    type="button"
+                    className="cncrg-cap-hit"
+                    aria-pressed={c.id === selected}
+                    onClick={() => setSelected(c.id)}
+                  >
+                    <span className="cncrg-cap-ic">{CAP_ICON[c.id]}</span>
+                    <span className="cncrg-cap-body">
+                      <span className="cncrg-cap-top">
+                        <span className="cncrg-cap-name">{c.label}</span>
+                        <span className={`cncrg-cap-kind ${c.kind}`}>{c.kind}</span>
+                      </span>
+                      <span className="cncrg-cap-desc">{c.desc}</span>
+                      <span className="cncrg-cap-foot">
+                        <span className="cncrg-cap-transport">
+                          {c.transport === "public" ? "public read endpoint" : "WhatsApp + checkout"}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                  <span
+                  </button>
+                  <button
+                    type="button"
                     role="switch"
                     aria-checked={on}
                     aria-label={`Toggle ${c.id}`}
-                    tabIndex={0}
                     className="cncrg-tg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void toggle(c.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void toggle(c.id);
-                      }
-                    }}
+                    onClick={() => void toggle(c.id)}
                   />
-                </button>
+                </div>
               );
             })}
           </div>

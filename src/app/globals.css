@@ -9182,10 +9182,11 @@ select.pub-input {
 .cncrg-ph-n { font-size: 10px; color: var(--cmd-faint); background: var(--cmd-raised); border: 1px solid var(--cmd-hair); border-radius: 5px; padding: 1px 6px; }
 .cncrg-ph-sep { flex: 1 1 auto; height: 1px; background: var(--cmd-hair); }
 .cncrg-caps { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
-.cncrg-cap { appearance: none; text-align: left; cursor: pointer; font: inherit; width: 100%; background: var(--cmd-raised); border: 1px solid var(--cmd-hair); border-radius: 11px; padding: 12px; display: flex; gap: 12px; align-items: flex-start; transition: border-color .16s, background .16s; }
+.cncrg-cap { background: var(--cmd-raised); border: 1px solid var(--cmd-hair); border-radius: 11px; padding: 12px; display: flex; gap: 12px; align-items: flex-start; transition: border-color .16s, background .16s; }
 .cncrg-cap:hover { border-color: var(--cmd-hair-strong); }
 .cncrg-cap.sel { border-color: var(--cmd-risk); box-shadow: 0 0 0 1px var(--cmd-risk); }
 .cncrg-cap.off { opacity: .5; }
+.cncrg-cap-hit { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; align-items: flex-start; appearance: none; text-align: left; cursor: pointer; font: inherit; color: inherit; background: transparent; border: 0; padding: 0; margin: 0; }
 .cncrg-cap-ic { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--cmd-risk-soft); color: var(--cmd-risk); border: 1px solid rgba(139,92,246,0.3); }
 .cncrg-cap-ic svg { width: 16px; height: 16px; }
 .cncrg-cap-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
