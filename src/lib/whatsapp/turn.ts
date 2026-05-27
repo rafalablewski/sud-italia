@@ -4,10 +4,12 @@ import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
   appendWaFunnelEvent,
+  clearWaAbandonedCart,
   clearWaSession,
   getWaSettings,
   loadOrCreateWaSession,
   setWaSession,
+  upsertWaAbandonedCart,
   type WaFunnelStage,
   type WaSession,
 } from "@/lib/store";
@@ -198,6 +200,9 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   // Emit funnel events for any stage this turn newly reached.
   void emitFunnelTransitions(phone, session, funnelBefore).catch(() => {});
 
+  // Track / clear the abandoned-cart record for re-engagement.
+  void syncAbandonedCart(phone, session, ctx.clearOnExit.value).catch(() => {});
+
   // Single persist at the end of the turn (or single delete on escalation).
   await persistSessionOnExit(ctx);
 
@@ -217,6 +222,38 @@ async function persistSessionOnExit(ctx: ToolContext): Promise<void> {
     return;
   }
   await setWaSession(ctx.session);
+}
+
+/**
+ * Keep the abandoned-cart record in sync with the session. A non-empty cart
+ * (re)records it; an escalation or an emptied cart with no pay link in flight
+ * clears it. When a pay link is out but the cart is empty (post confirm_and_pay)
+ * we keep the record so payment-abandonment is recoverable too — only a paid
+ * order (Stripe webhook) or escalation clears it then.
+ */
+async function syncAbandonedCart(
+  phone: string,
+  session: WaSession,
+  escalated: boolean,
+): Promise<void> {
+  if (escalated) {
+    await clearWaAbandonedCart(phone);
+    return;
+  }
+  if (session.cartItems.length > 0) {
+    const subtotalGrosze = session.cartItems.reduce(
+      (s, c) => s + c.menuItem.price * c.quantity,
+      0,
+    );
+    await upsertWaAbandonedCart({
+      phone,
+      locationSlug: session.locationSlug,
+      itemCount: session.cartItems.length,
+      subtotalGrosze,
+    });
+  } else if (!session.pendingPaymentUrl) {
+    await clearWaAbandonedCart(phone);
+  }
 }
 
 /** The funnel stages reachable from session state (paid is emitted elsewhere). */

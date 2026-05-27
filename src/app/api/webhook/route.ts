@@ -80,13 +80,15 @@ export async function POST(req: NextRequest) {
           await clearWaSession(customerPhone);
           void (async () => {
             try {
-              const { appendWaFunnelEvent } = await import("@/lib/store");
+              const { appendWaFunnelEvent, clearWaAbandonedCart } = await import("@/lib/store");
               await appendWaFunnelEvent({
                 stage: "paid",
                 phone: customerPhone,
                 locationSlug: null,
                 at: new Date().toISOString(),
               });
+              // Converted — drop any abandoned-cart record so no nudge fires.
+              await clearWaAbandonedCart(customerPhone);
             } catch {
               /* funnel telemetry is best-effort */
             }

@@ -71,6 +71,13 @@ export const PATCH = withAdmin({ roles: ["manager", "owner"] }, async (req, _ctx
     });
     updates.businessHours = { enabled: bh.enabled === true, days };
   }
+  if (body.abandonedCart && typeof body.abandonedCart === "object") {
+    const ac = body.abandonedCart as { enabled?: unknown; delayHours?: unknown };
+    const delayHours = Number.isFinite(Number(ac.delayHours))
+      ? Math.max(0, Math.min(168, Number(ac.delayHours)))
+      : 2;
+    updates.abandonedCart = { enabled: ac.enabled === true, delayHours };
+  }
 
   const before = await getWaSettings();
   const next = await updateWaSettings(updates);

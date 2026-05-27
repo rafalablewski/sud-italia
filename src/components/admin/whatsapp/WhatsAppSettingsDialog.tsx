@@ -43,6 +43,7 @@ interface WaSettings {
   awayMessage: string;
   autoReplies: AutoReply[];
   businessHours: BusinessHours;
+  abandonedCart: { enabled: boolean; delayHours: number };
 }
 
 export function WhatsAppSettingsDialog({
@@ -112,6 +113,15 @@ export function WhatsAppSettingsDialog({
     const ok = await patchNow({ aiEnabled: !draft.aiEnabled });
     if (ok) toast.success(`AI concierge ${draft.aiEnabled ? "disabled" : "enabled"}`);
   };
+  const toggleAbandoned = async () => {
+    if (!draft) return;
+    const ok = await patchNow({
+      abandonedCart: { ...draft.abandonedCart, enabled: !draft.abandonedCart.enabled },
+    });
+    if (ok) toast.success(`Abandoned-cart recovery ${draft.abandonedCart.enabled ? "off" : "on"}`);
+  };
+  const setDelayHours = (h: number) =>
+    setDraft((d) => (d ? { ...d, abandonedCart: { ...d.abandonedCart, delayHours: h } } : d));
 
   const set = <K extends keyof WaSettings>(key: K, value: WaSettings[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
@@ -167,6 +177,7 @@ export function WhatsAppSettingsDialog({
           awayMessage: draft.awayMessage,
           autoReplies,
           businessHours: draft.businessHours,
+          abandonedCart: draft.abandonedCart,
         }),
       });
       if (res.ok) {
@@ -397,6 +408,36 @@ export function WhatsAppSettingsDialog({
                 Add auto-reply
               </Button>
             </div>
+          </Section>
+
+          {/* Abandoned-cart recovery */}
+          <Section title="Abandoned-cart recovery" desc="When a customer builds a cart but doesn't pay, the daily job sends them the Meta re-open template once to win the order back. Needs a re-open template configured under Messages.">
+            <div className="wa-cfg-switch">
+              <Switch
+                checked={draft.abandonedCart.enabled}
+                onChange={toggleAbandoned}
+                label="Abandoned-cart recovery enabled"
+              />
+              <span className="admin-text text-sm">
+                {draft.abandonedCart.enabled
+                  ? draft.reopenTemplate.trim()
+                    ? "On — re-engages unpaid carts daily"
+                    : "On, but set a re-open template under Messages first"
+                  : "Off"}
+              </span>
+            </div>
+            <Field label="Wait before re-engaging (hours)" className="mt-3">
+              <Input
+                type="number"
+                min={0}
+                max={168}
+                value={String(draft.abandonedCart.delayHours)}
+                onChange={(e) => setDelayHours(Number.parseInt(e.target.value, 10) || 0)}
+              />
+              <p className="admin-text-secondary text-xs mt-1">
+                Only carts idle at least this long (and under 4 days old) are nudged — once each.
+              </p>
+            </Field>
           </Section>
         </div>
       )}

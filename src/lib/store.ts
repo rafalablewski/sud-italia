@@ -8598,6 +8598,10 @@ export interface WaSettings {
     enabled: boolean;
     days: { open: string; close: string; closed: boolean }[];
   };
+  /** Abandoned-cart recovery: when enabled, the daily cron sends the re-open
+   *  template to customers who built a cart but didn't pay, once each, after
+   *  `delayHours` and before the recovery window closes. Needs reopenTemplate. */
+  abandonedCart: { enabled: boolean; delayHours: number };
 }
 
 const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
@@ -8620,6 +8624,7 @@ const DEFAULT_WA_SETTINGS: WaSettings = {
   awayMessage: "",
   autoReplies: [],
   businessHours: { enabled: false, days: DEFAULT_BUSINESS_DAYS },
+  abandonedCart: { enabled: false, delayHours: 2 },
 };
 
 export async function getWaSettings(): Promise<WaSettings> {
@@ -9099,6 +9104,82 @@ export async function getWaFunnelEvents(sinceMs?: number): Promise<WaFunnelEvent
     const t = Date.parse(e.at);
     return Number.isFinite(t) && t >= sinceMs;
   });
+}
+
+// --- WhatsApp abandoned-cart recovery ------------------------------------
+//
+// A cart a customer built but didn't pay for, persisted beyond the 90-min bot
+// session so the daily cron can re-engage them with the Meta re-open template.
+// Upserted from the turn loop whenever a turn ends with items in the cart;
+// cleared when the order is paid (Stripe webhook) or the chat is escalated.
+// Each record is nudged at most once (notifiedAt), so customers are never
+// spammed.
+
+export interface WaAbandonedCart {
+  phone: string;
+  locationSlug: string | null;
+  itemCount: number;
+  subtotalGrosze: number;
+  /** Refreshed every turn the cart is non-empty — "abandoned since". */
+  lastCartAt: string;
+  createdAt: string;
+  notifiedAt: string | null;
+}
+
+const WA_ABANDONED_KEY = "whatsapp-abandoned-carts.json";
+
+export async function upsertWaAbandonedCart(input: {
+  phone: string;
+  locationSlug: string | null;
+  itemCount: number;
+  subtotalGrosze: number;
+}): Promise<void> {
+  const phone = normalizePlPhoneE164(input.phone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    const now = new Date().toISOString();
+    const existing = all[phone];
+    all[phone] = {
+      phone,
+      locationSlug: input.locationSlug,
+      itemCount: input.itemCount,
+      subtotalGrosze: input.subtotalGrosze,
+      lastCartAt: now,
+      createdAt: existing?.createdAt ?? now,
+      notifiedAt: existing?.notifiedAt ?? null,
+    };
+    await writeJSON(WA_ABANDONED_KEY, all);
+  });
+}
+
+export async function clearWaAbandonedCart(rawPhone: string): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    if (all[phone]) {
+      delete all[phone];
+      await writeJSON(WA_ABANDONED_KEY, all);
+    }
+  });
+}
+
+export async function markWaAbandonedCartNotified(rawPhone: string): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(WA_ABANDONED_KEY, async () => {
+    const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+    if (all[phone]) {
+      all[phone] = { ...all[phone], notifiedAt: new Date().toISOString() };
+      await writeJSON(WA_ABANDONED_KEY, all);
+    }
+  });
+}
+
+export async function listWaAbandonedCarts(): Promise<WaAbandonedCart[]> {
+  const all = await readJSON<Record<string, WaAbandonedCart>>(WA_ABANDONED_KEY, {});
+  return Object.values(all);
 }
 
 // --- Business costs (operating expense ledger) ---------------------------
