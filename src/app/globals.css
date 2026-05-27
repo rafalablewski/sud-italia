@@ -9009,6 +9009,18 @@ select.pub-input {
 .wa-fa-fill { height: 100%; border-radius: 999px; background: var(--success-soft, #16a34a); min-width: 2px; transition: width .25s; }
 .wa-fa-drop { font-size: 11px; color: var(--text-muted, #6b7280); }
 
+/* ---- Broadcast campaigns dialog ---- */
+.wa-bc { display: flex; flex-direction: column; gap: 18px; }
+.wa-bc-compose { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.wa-bc-list { display: flex; flex-direction: column; gap: 10px; }
+.wa-bc-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.wa-bc-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wa-bc-tmpl { font-weight: 600; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
+.wa-bc-status { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: var(--surface-2, rgba(0,0,0,0.06)); color: var(--text-muted, #6b7280); }
+.wa-bc-status.sending { color: var(--cmd-warn, #b45309); background: var(--cmd-warn-soft, rgba(245,166,35,0.13)); }
+.wa-bc-status.done { color: var(--success, #16a34a); background: var(--success-soft, rgba(22,163,74,0.12)); }
+.wa-bc-meta { font-size: 12px; color: var(--text-muted, #6b7280); }
+
 @media (max-width: 1180px) {
   .wa-editor { grid-template-columns: 300px 1fr; }
   .wa-context { display: none; }

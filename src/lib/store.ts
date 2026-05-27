@@ -9182,6 +9182,89 @@ export async function listWaAbandonedCarts(): Promise<WaAbandonedCart[]> {
   return Object.values(all);
 }
 
+// --- WhatsApp broadcast campaigns ----------------------------------------
+//
+// A one-off template blast to an opted-in customer segment. The audience phone
+// list is snapshotted at create time; sends run in client-driven batches (with
+// a daily cron backstop), advancing `cursor` and counting sends so progress
+// survives a page reload and a half-finished campaign can always be resumed.
+
+export type WaCampaignStatus = "sending" | "done" | "cancelled";
+
+export interface WaCampaign {
+  id: string;
+  template: string;
+  languageCode: string;
+  audienceKey: string;
+  audienceLabel: string;
+  phones: string[];
+  cursor: number;
+  sentCount: number;
+  failedCount: number;
+  status: WaCampaignStatus;
+  createdAt: string;
+  createdBy: string;
+  completedAt: string | null;
+}
+
+const WA_CAMPAIGNS_KEY = "whatsapp-campaigns.json";
+const WA_CAMPAIGNS_MAX = 50;
+
+export async function createWaCampaign(input: {
+  template: string;
+  languageCode: string;
+  audienceKey: string;
+  audienceLabel: string;
+  phones: string[];
+  createdBy: string;
+}): Promise<WaCampaign> {
+  const campaign: WaCampaign = {
+    id: `wac_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    template: input.template,
+    languageCode: input.languageCode,
+    audienceKey: input.audienceKey,
+    audienceLabel: input.audienceLabel,
+    phones: input.phones,
+    cursor: 0,
+    sentCount: 0,
+    failedCount: 0,
+    status: input.phones.length === 0 ? "done" : "sending",
+    createdAt: new Date().toISOString(),
+    createdBy: input.createdBy,
+    completedAt: input.phones.length === 0 ? new Date().toISOString() : null,
+  };
+  await withLock(WA_CAMPAIGNS_KEY, async () => {
+    const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+    list.unshift(campaign);
+    await writeJSON(WA_CAMPAIGNS_KEY, list.slice(0, WA_CAMPAIGNS_MAX));
+  });
+  return campaign;
+}
+
+export async function listWaCampaigns(): Promise<WaCampaign[]> {
+  const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+  return Array.isArray(list) ? list : [];
+}
+
+export async function getWaCampaign(id: string): Promise<WaCampaign | null> {
+  const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+  return list.find((c) => c.id === id) ?? null;
+}
+
+export async function updateWaCampaign(
+  id: string,
+  patch: Partial<Pick<WaCampaign, "cursor" | "sentCount" | "failedCount" | "status" | "completedAt">>,
+): Promise<WaCampaign | null> {
+  return withLock(WA_CAMPAIGNS_KEY, async () => {
+    const list = await readJSON<WaCampaign[]>(WA_CAMPAIGNS_KEY, []);
+    const i = list.findIndex((c) => c.id === id);
+    if (i < 0) return null;
+    list[i] = { ...list[i], ...patch };
+    await writeJSON(WA_CAMPAIGNS_KEY, list);
+    return list[i];
+  });
+}
+
 // --- Business costs (operating expense ledger) ---------------------------
 
 const BUSINESS_COSTS_KEY = "business-costs.json";

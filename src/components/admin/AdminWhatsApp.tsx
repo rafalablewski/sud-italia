@@ -20,6 +20,7 @@ import {
   ExternalLink,
   MapPin,
   Maximize2,
+  Megaphone,
   Minimize2,
   Pin,
   PinOff,
@@ -42,6 +43,7 @@ const MobileWhatsApp = dynamic(
 import { formatPrice } from "@/lib/utils";
 import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
 import { WhatsAppFunnelDialog } from "./whatsapp/WhatsAppFunnelDialog";
+import { WhatsAppBroadcastDialog } from "./whatsapp/WhatsAppBroadcastDialog";
 
 // ---- types --------------------------------------------------------------
 
@@ -307,6 +309,7 @@ function AdminWhatsAppDesktop() {
   // Settings overlay (advanced config lives in WhatsAppSettingsDialog)
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [funnelOpen, setFunnelOpen] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
@@ -690,6 +693,15 @@ function AdminWhatsAppDesktop() {
         <button
           type="button"
           className="cmd-btn"
+          onClick={() => setBroadcastOpen(true)}
+          title="Broadcast campaign"
+        >
+          <Megaphone />
+          <span>Broadcast</span>
+        </button>
+        <button
+          type="button"
+          className="cmd-btn"
           onClick={() => setFunnelOpen(true)}
           title="Conversion funnel"
         >
@@ -1021,6 +1033,7 @@ function AdminWhatsAppDesktop() {
         onSaved={() => void loadAll(true)}
       />
       <WhatsAppFunnelDialog open={funnelOpen} onClose={() => setFunnelOpen(false)} />
+      <WhatsAppBroadcastDialog open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
     </div>
   );
 
