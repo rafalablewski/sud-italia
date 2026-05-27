@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sud Italia CRM — Regulars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    /* surfaces — Atlas dark (shared with POS + KDS) */
+    --canvas:#0A0C10;
+    --panel:#11151B;
+    --raised:#1A2129;
+    --hair:rgba(255,255,255,0.08);
+    --hair-strong:rgba(255,255,255,0.14);
+    /* text */
+    --text:#E9EDF2;
+    --dim:#9098A3;
+    --faint:#5C6571;
+    /* tone palette */
+    --accent:#3DD68C;   /* green — fleet/relationship feel */
+    --firing:#3B82F6;
+    --warn:#F5A623;
+    --risk:#8B5CF6;
+    --late:#E5484D;
+    --gold:#E0A458;     /* VIP / Oro tier */
+    /* soft tints */
+    --accent-soft:rgba(61,214,140,0.13);
+    --firing-soft:rgba(59,130,246,0.14);
+    --warn-soft:rgba(245,166,35,0.13);
+    --risk-soft:rgba(139,92,246,0.14);
+    --late-soft:rgba(229,72,77,0.14);
+    --gold-soft:rgba(224,164,88,0.14);
+    --wa:#25D366; --wa-soft:rgba(37,211,102,0.14);     /* WhatsApp channel */
+    --cyan:#22B8CD; --cyan-soft:rgba(34,184,205,0.14); /* Web channel */
+    /* 8px grid */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Monaco,"Cascadia Code",monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--canvas);color:var(--text);font-family:var(--sans);
+    font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;display:flex;flex-direction:column;overflow:hidden;
+  }
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* ====================== Header (shared chrome) ====================== */
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--s4);
+    height:56px;padding:0 var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex;align-items:baseline;gap:var(--s3);min-width:max-content}
+  .wordmark{font-weight:700;font-size:14px;letter-spacing:0.22em;color:var(--text)}
+  .kd-label{
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);
+    border-left:1px solid var(--hair);padding-left:var(--s3);
+  }
+  .design-tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.06em;color:var(--dim);
+    padding:3px 8px;border:1px solid var(--hair);border-radius:5px;white-space:nowrap;
+  }
+
+  .ctl{display:flex;align-items:center;gap:var(--s2)}
+  .ctl-lbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint)}
+  .seg-group{display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:7px;overflow:hidden;background:var(--canvas)}
+  .seg{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--sans);font-size:11.5px;letter-spacing:0.01em;color:var(--dim);
+    padding:6px 11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    border-right:1px solid var(--hair);transition:color .16s ease,background .16s ease;
+  }
+  .seg:last-child{border-right:0}
+  .seg:hover{color:var(--text)}
+  .seg[aria-pressed="true"]{background:var(--raised);color:var(--accent);font-weight:600}
+  .seg svg{width:13px;height:13px}
+
+  .spacer{margin-left:auto}
+  .fsbtn{
+    appearance:none;cursor:pointer;border:1px solid var(--hair);background:transparent;
+    color:var(--dim);font-family:var(--sans);font-size:11px;letter-spacing:0.02em;
+    padding:6px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .fsbtn:hover{color:var(--text);border-color:var(--hair-strong)}
+  .fsbtn svg{width:13px;height:13px;display:block}
+  .fsbtn .fs-on{display:none}
+  .is-fullscreen .fsbtn .fs-on{display:inline-flex}
+  .is-fullscreen .fsbtn .fs-off{display:none}
+  .gallery-link{
+    font-size:11px;color:var(--faint);text-decoration:none;border:1px solid var(--hair);
+    padding:5px 9px;border-radius:6px;transition:color .16s ease,border-color .16s ease;white-space:nowrap;
+  }
+  .gallery-link:hover{color:var(--text);border-color:var(--hair-strong)}
+  .clock{font-family:var(--mono);font-size:14px;letter-spacing:0.04em;color:var(--text);min-width:78px;text-align:right}
+
+  .is-fullscreen header{height:50px}
+  .is-fullscreen .kd-label,.is-fullscreen .gallery-link,.is-fullscreen .design-tag{display:none}
+  .is-fullscreen footer{display:none}
+
+  /* ====================== CRM bar (book + filters) ====================== */
+  .crmbar{
+    flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--hair);
+    padding:var(--s3) var(--s5);display:flex;flex-direction:column;gap:var(--s3);
+  }
+  .cb-eyebrow{display:flex;align-items:center;gap:var(--s3)}
+  .cb-brandline{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);font-weight:700;white-space:nowrap}
+  .cb-brandline svg{width:13px;height:13px;opacity:.7;flex:0 0 auto}
+  .cb-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+  /* KPI strip — mirrors the KDS pace metrics */
+  .kpis{display:flex;gap:var(--s2);flex-wrap:wrap}
+  .kpi{
+    display:inline-flex;flex-direction:column;gap:1px;padding:5px 11px;border-radius:8px;
+    background:var(--raised);border:1px solid var(--hair);white-space:nowrap;
+  }
+  .kpi .k-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);line-height:1.1}
+  .kpi .k-lbl{font-size:9px;letter-spacing:0.10em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .kpi.alert .k-val{color:var(--late)}
+  .kpi.good .k-val{color:var(--accent)}
+
+  .cb-controls{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+  .search{
+    display:inline-flex;align-items:center;gap:8px;flex:1 1 280px;min-width:200px;max-width:420px;
+    background:var(--canvas);border:1px solid var(--hair);border-radius:8px;padding:0 11px;height:34px;
+    transition:border-color .16s ease;
+  }
+  .search:focus-within{border-color:var(--accent)}
+  .search svg{width:15px;height:15px;color:var(--faint);flex:0 0 auto}
+  .search input{
+    appearance:none;border:0;background:transparent;color:var(--text);font-family:var(--sans);
+    font-size:13px;width:100%;outline:none;
+  }
+  .search input::placeholder{color:var(--faint)}
+  .search .clr{appearance:none;border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;display:none}
+  .search.has-q .clr{display:block}
+  .search .clr:hover{color:var(--text)}
+
+  .segchips{display:flex;gap:var(--s1);flex-wrap:wrap}
+  .segchip{
+    appearance:none;background:transparent;border:1px solid var(--hair);color:var(--dim);
+    font-family:var(--sans);font-size:12px;letter-spacing:0.01em;padding:6px 11px;border-radius:7px;
+    cursor:pointer;transition:color .16s ease,border-color .16s ease,background .16s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .segchip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .segchip[aria-pressed="true"]{background:var(--raised);border-color:var(--hair-strong);color:var(--text);font-weight:600}
+  .segchip i{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--faint)}
+  .segchip .sc-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--faint);background:var(--hair);border-radius:4px;padding:1px 5px;min-width:18px;text-align:center}
+  .segchip[aria-pressed="true"] .sc-n{background:var(--hair-strong);color:var(--text)}
+  .segchip.s-vip i{background:var(--gold)} .segchip.s-vip[aria-pressed="true"]{color:var(--gold)}
+  .segchip.s-active i{background:var(--accent)} .segchip.s-active[aria-pressed="true"]{color:var(--accent)}
+  .segchip.s-repeat i{background:var(--risk)} .segchip.s-repeat[aria-pressed="true"]{color:var(--risk)}
+  .segchip.s-new i{background:var(--firing)} .segchip.s-new[aria-pressed="true"]{color:var(--firing)}
+  .segchip.s-lapsed i{background:var(--late)} .segchip.s-lapsed[aria-pressed="true"]{color:var(--late)}
+
+  .sort-ctl{display:flex;align-items:center;gap:var(--s2);margin-left:auto}
+
+  /* ====================== Workspace (list | detail) ====================== */
+  .workspace{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:452px 1fr;gap:1px;background:var(--hair)}
+
+  /* LEFT — customer list */
+  .list-col{background:var(--canvas);display:flex;flex-direction:column;min-height:0;min-width:0}
+  .list-head{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    padding:var(--s3) var(--s5);background:var(--panel);border-bottom:1px solid var(--hair);
+    font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);font-weight:700;
+  }
+  .list-head b{color:var(--text)}
+  .list-scroll{flex:1 1 auto;overflow-y:auto;padding:var(--s3) var(--s4);min-height:0;display:flex;flex-direction:column;gap:var(--s2)}
+  .cust{
+    appearance:none;text-align:left;cursor:pointer;font-family:var(--sans);width:100%;
+    background:var(--raised);border:1px solid var(--hair);border-radius:11px;
+    padding:var(--s3);position:relative;overflow:hidden;display:flex;gap:var(--s3);align-items:center;
+    transition:border-color .16s ease,background .16s ease,transform .1s ease;
+  }
+  .cust::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--faint);transition:background .16s ease}
+  .cust.seg-vip::before{background:var(--gold)}
+  .cust.seg-active::before{background:var(--accent)}
+  .cust.seg-repeat::before{background:var(--risk)}
+  .cust.seg-new::before{background:var(--firing)}
+  .cust.seg-lapsed::before{background:var(--late)}
+  .cust:hover{border-color:var(--hair-strong);transform:translateY(-1px)}
+  .cust.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 12px 28px -16px rgba(61,214,140,0.4)}
+  .avatar{
+    flex:0 0 auto;width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:var(--text);background:#202832;border:1px solid var(--hair-strong);letter-spacing:0.02em;
+  }
+  .cust.seg-vip .avatar{color:var(--gold);border-color:rgba(224,164,88,0.45);background:var(--gold-soft)}
+  .c-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .c-row1{display:flex;align-items:center;gap:7px}
+  .c-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .c-vip{flex:0 0 auto;font-size:8.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);background:var(--gold-soft);border:1px solid rgba(224,164,88,0.32);border-radius:5px;padding:1px 6px}
+  .c-sub{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);min-width:0}
+  .c-phone{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:0.02em;white-space:nowrap}
+  .c-dot{width:3px;height:3px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+  .c-seen{white-space:nowrap}
+  .c-seen.cold{color:var(--late)}
+  .c-fig{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .c-ltv{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);line-height:1}
+  .c-pts{font-family:var(--mono);font-size:10px;color:var(--faint);display:inline-flex;align-items:center;gap:4px}
+  .c-pts svg{width:10px;height:10px;color:var(--gold);opacity:.9}
+  .tier-pill{font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+  .tier-Oro{color:var(--gold);background:var(--gold-soft)}
+  .tier-Argento{color:#C6CDD6;background:rgba(198,205,214,0.10)}
+  .tier-Bronzo{color:#C08457;background:rgba(192,132,87,0.12)}
+
+  /* health pip on the row */
+  .c-health{position:absolute;right:var(--s3);bottom:var(--s3);width:42px;height:3px;border-radius:2px;background:var(--hair);overflow:hidden}
+  .c-health i{display:block;height:100%;border-radius:2px}
+
+  .list-empty{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--faint);text-align:center;padding:var(--s6)}
+  .list-empty .le-emoji{font-size:30px;opacity:.5}
+
+  /* RIGHT — customer detail */
+  .detail{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .detail-scroll{flex:1 1 auto;overflow-y:auto;min-height:0;display:flex;flex-direction:column}
+  .list-scroll::-webkit-scrollbar,.detail-scroll::-webkit-scrollbar{width:7px}
+  .list-scroll::-webkit-scrollbar-thumb,.detail-scroll::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+
+  /* profile header */
+  .prof{flex:0 0 auto;padding:var(--s5);border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:var(--s4)}
+  .prof-top{display:flex;align-items:center;gap:var(--s4)}
+  .prof-av{
+    flex:0 0 auto;width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:700;color:var(--text);background:#202832;border:1px solid var(--hair-strong);
+  }
+  .prof.is-vip .prof-av{color:var(--gold);border-color:rgba(224,164,88,0.45);background:var(--gold-soft)}
+  .prof-id{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .prof-name-row{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+  .prof-name{font-size:21px;font-weight:650;letter-spacing:-0.01em;color:var(--text)}
+  .badge{font-size:9.5px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .badge.seg-vip{color:var(--gold);background:var(--gold-soft);border:1px solid rgba(224,164,88,0.34)}
+  .badge.seg-active{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3)}
+  .badge.seg-repeat{color:var(--risk);background:var(--risk-soft);border:1px solid rgba(139,92,246,0.34)}
+  .badge.seg-new{color:var(--firing);background:var(--firing-soft);border:1px solid rgba(59,130,246,0.34)}
+  .badge.seg-lapsed{color:var(--late);background:var(--late-soft);border:1px solid rgba(229,72,77,0.34)}
+  .prof-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+  .prof-meta .pm{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .prof-meta .pm svg{width:13px;height:13px;color:var(--faint);flex:0 0 auto}
+  .prof-meta .pm.mono{font-family:var(--mono);font-size:11.5px;letter-spacing:0.02em}
+  .prof-meta .pipe{width:3px;height:3px;border-radius:50%;background:var(--faint)}
+
+  /* action row */
+  .actions{display:flex;gap:var(--s2);flex-wrap:wrap}
+  .act-btn{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0.01em;
+    border:1px solid var(--hair-strong);background:var(--raised);color:var(--dim);
+    border-radius:9px;padding:9px 13px;display:inline-flex;align-items:center;gap:7px;
+    transition:color .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .act-btn:hover{color:var(--text);border-color:var(--text)}
+  .act-btn svg{width:15px;height:15px;flex:0 0 auto}
+  .act-btn.primary{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .act-btn.primary:hover{filter:brightness(1.1)}
+
+  /* section scaffolding */
+  .sec{padding:var(--s5);border-bottom:1px solid var(--hair);display:flex;flex-direction:column;gap:var(--s3)}
+  .sec:last-child{border-bottom:0}
+  .sec-head{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dim)}
+  .sec-head .sh-n{font-family:var(--mono);font-size:10px;color:var(--faint);background:var(--raised);border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .sec-head .sh-sep{flex:1 1 auto;height:1px;background:var(--hair)}
+
+  /* stat tiles */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--s2)}
+  .stat{background:var(--raised);border:1px solid var(--hair);border-radius:10px;padding:var(--s3);display:flex;flex-direction:column;gap:3px}
+  .stat .s-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);line-height:1}
+  .stat .s-lbl{font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .stat .s-sub{font-size:10.5px;color:var(--dim)}
+  .stat.pts .s-val{color:var(--gold)}
+
+  /* relationship health — radial gauge + factor meters + flags (the centrepiece) */
+  .health-badge{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border:1px solid;border-radius:6px;padding:2px 8px}
+  .health-card{display:flex;gap:var(--s5);align-items:center;background:var(--raised);border:1px solid var(--hair);border-radius:12px;padding:var(--s4)}
+  .health-left{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .gauge{position:relative;width:128px;height:128px}
+  .gauge-svg{width:128px;height:128px;transform:rotate(-90deg)}
+  .gauge-track{fill:none;stroke:var(--hair);stroke-width:11}
+  .gauge-fill{fill:none;stroke-width:11;stroke-linecap:round;transition:stroke-dasharray .5s ease}
+  .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge-num{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1}
+  .gauge-max{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:2px}
+  .gauge-tier{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+  .health-right{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:var(--s3)}
+  .diag{font-size:13px;color:var(--text);line-height:1.5;margin:0}
+  .factors{display:flex;flex-direction:column;gap:7px}
+  .factor{display:flex;flex-direction:column;gap:4px}
+  .fc-lbl{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .fc-lbl b{font-family:var(--mono);color:var(--dim);font-weight:700}
+  .fc-track{height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+  .fc-track i{display:block;height:100%;border-radius:3px;transition:width .4s ease}
+  .flags{display:flex;flex-wrap:wrap;gap:6px}
+  .flag{font-size:10px;font-weight:700;letter-spacing:0.03em;border-radius:6px;padding:3px 8px;border:1px solid}
+  .flag.bad{color:var(--late);background:var(--late-soft);border-color:rgba(229,72,77,0.34)}
+  .flag.warn{color:var(--warn);background:var(--warn-soft);border-color:rgba(245,166,35,0.34)}
+  .flag.gold{color:var(--gold);background:var(--gold-soft);border-color:rgba(224,164,88,0.34)}
+  .flag.info{color:var(--firing);background:var(--firing-soft);border-color:rgba(59,130,246,0.34)}
+  .flag.ok{color:var(--accent);background:var(--accent-soft);border-color:rgba(61,214,140,0.3)}
+
+  /* no-show warning banner */
+  .noshow-banner{display:flex;align-items:center;gap:10px;background:var(--late-soft);border:1px solid rgba(229,72,77,0.34);border-radius:10px;padding:10px 13px;color:var(--late)}
+  .noshow-banner svg{width:20px;height:20px;flex:0 0 auto}
+  .noshow-banner .nb-text{font-size:12px;color:var(--text);line-height:1.45}
+  .noshow-banner .nb-text b{color:var(--late);font-weight:700}
+  .stat.warnstat .s-val{color:var(--late)}
+
+  @media (max-width:560px){
+    .health-card{flex-direction:column;align-items:stretch}
+    .health-left{flex-direction:row;justify-content:center;gap:var(--s4)}
+  }
+
+  /* favourites */
+  .favs{display:flex;gap:var(--s2);flex-wrap:wrap}
+  .fav{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text);background:var(--raised);border:1px solid var(--hair);border-radius:999px;padding:5px 11px}
+  .fav .fv-emoji{font-size:13px}
+  .fav .fv-n{font-family:var(--mono);font-size:10px;color:var(--faint)}
+
+  /* order history */
+  .hist{display:flex;flex-direction:column;gap:var(--s2)}
+  .horder{display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0;border-bottom:1px solid var(--hair)}
+  .horder:last-child{border-bottom:0}
+  .ho-chan{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--hair);color:var(--dim)}
+  .ho-chan svg{width:14px;height:14px}
+  .ho-chan.takeout{color:var(--firing)} .ho-chan.delivery{color:var(--warn)} .ho-chan.dinein{color:var(--risk)}
+  .ho-body{flex:1 1 auto;min-width:0}
+  .ho-items{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ho-meta{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:0.02em;margin-top:1px}
+  .ho-total{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);flex:0 0 auto}
+  .hist-more{font-size:11.5px;color:var(--faint);text-align:center;padding-top:var(--s1)}
+
+  /* notes */
+  .notes{display:flex;flex-direction:column;gap:var(--s2)}
+  .note{background:var(--raised);border:1px solid var(--hair);border-radius:9px;padding:var(--s3)}
+  .note-head{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:10px;letter-spacing:0.04em;color:var(--faint);text-transform:uppercase;font-weight:700}
+  .note-head b{color:var(--dim)}
+  .note-body{font-size:12.5px;color:var(--text);line-height:1.5}
+  .note-empty{font-size:12px;color:var(--faint);font-style:italic;padding:var(--s2) 0}
+  .note-add{display:flex;gap:var(--s2);margin-top:var(--s1)}
+  .note-input{
+    flex:1 1 auto;background:var(--canvas);border:1px solid var(--hair);border-radius:9px;color:var(--text);
+    font-family:var(--sans);font-size:12.5px;padding:9px 12px;outline:none;transition:border-color .16s ease;
+  }
+  .note-input:focus{border-color:var(--accent)}
+  .note-input::placeholder{color:var(--faint)}
+  .note-save{
+    appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
+    border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:0 16px;white-space:nowrap;
+  }
+  .note-save:hover{filter:brightness(1.1)}
+
+  /* consent toggles */
+  .consent{display:flex;gap:var(--s2);flex-wrap:wrap}
+  .toggle{
+    appearance:none;cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;gap:9px;
+    background:var(--raised);border:1px solid var(--hair);border-radius:10px;padding:8px 12px;
+    color:var(--dim);font-size:12px;font-weight:600;transition:color .16s ease,border-color .16s ease;
+  }
+  .toggle:hover{border-color:var(--hair-strong);color:var(--text)}
+  .toggle .sw{position:relative;width:30px;height:17px;border-radius:999px;background:var(--hair-strong);flex:0 0 auto;transition:background .18s ease}
+  .toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--faint);transition:transform .18s ease,background .18s ease}
+  .toggle[aria-pressed="true"]{color:var(--accent);border-color:rgba(61,214,140,0.35)}
+  .toggle[aria-pressed="true"] .sw{background:var(--accent-soft)}
+  .toggle[aria-pressed="true"] .sw::after{transform:translateX(13px);background:var(--accent)}
+  .toggle svg{width:14px;height:14px;flex:0 0 auto}
+
+  /* AI next-best-action (shared violet card from POS) */
+  .ai-card{border:1px solid rgba(139,92,246,0.32);background:rgba(139,92,246,0.08);border-radius:11px;padding:var(--s3)}
+  .ai-head{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+  .ai-badge{
+    display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--risk);background:rgba(139,92,246,0.16);border:1px solid rgba(139,92,246,0.34);
+    border-radius:6px;padding:3px 7px;
+  }
+  .ai-badge svg{width:12px;height:12px}
+  .ai-title{font-size:12px;font-weight:600;color:var(--text);flex:1 1 auto;min-width:0}
+  .ai-risk{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:0.02em;flex:0 0 auto;padding:2px 7px;border-radius:6px}
+  .ai-risk.low{color:var(--accent);background:var(--accent-soft)}
+  .ai-risk.mid{color:var(--warn);background:var(--warn-soft)}
+  .ai-risk.high{color:var(--late);background:var(--late-soft)}
+  .ai-offer{
+    appearance:none;cursor:pointer;font-family:var(--sans);text-align:left;width:100%;
+    display:flex;align-items:center;gap:var(--s3);border:1px solid var(--hair-strong);background:var(--raised);color:var(--text);
+    border-radius:9px;padding:10px 12px;transition:border-color .14s ease,background .14s ease;
+  }
+  .ai-offer:hover{border-color:var(--risk);background:rgba(139,92,246,0.12)}
+  .ai-of-main{display:flex;flex-direction:column;gap:1px;flex:1 1 auto;min-width:0}
+  .ai-of-title{font-size:12.5px;font-weight:600;color:var(--text)}
+  .ai-of-sub{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ai-of-cta{flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--risk);background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.34);border-radius:6px;padding:5px 9px;white-space:nowrap}
+
+  /* segment chip separator + data-facet chips */
+  .segsep{width:1px;align-self:stretch;background:var(--hair-strong);margin:2px 3px}
+  .segchip.s-members i{background:var(--accent)} .segchip.s-members[aria-pressed="true"]{color:var(--accent)}
+  .segchip.s-contacts i{background:var(--faint)}
+  .segchip.s-noemail i{background:var(--warn)} .segchip.s-noemail[aria-pressed="true"]{color:var(--warn)}
+  .segchip.s-noshow i{background:var(--late)} .segchip.s-noshow[aria-pressed="true"]{color:var(--late)}
+
+  /* list-row flags */
+  .c-warn{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:0.03em;color:var(--late);background:var(--late-soft);border:1px solid rgba(229,72,77,0.34);border-radius:5px;padding:1px 5px}
+  .c-noem{color:var(--warn);font-weight:600}
+  .c-contact{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--dim);background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:5px;padding:2px 6px}
+
+  /* member / contact profile badges */
+  .badge.member{color:var(--gold);background:var(--gold-soft);border:1px solid rgba(224,164,88,0.34)}
+  .badge.member svg{width:11px;height:11px}
+  .badge.contact{color:var(--dim);background:rgba(255,255,255,0.05);border:1px solid var(--hair)}
+
+  /* contextual action-button variants */
+  .act-btn.warnbtn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+  .act-btn.goldbtn{color:var(--gold);border-color:rgba(224,164,88,0.5);background:var(--gold-soft)}
+
+  /* contact & data */
+  .comp-pill{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.04em;border-radius:6px;padding:2px 8px}
+  .comp-pill.full{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.3)}
+  .comp-pill.partial{color:var(--warn);background:var(--warn-soft);border:1px solid rgba(245,166,35,0.32)}
+  .comp-bar{height:5px;border-radius:3px;background:var(--hair);overflow:hidden}
+  .comp-bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+  .data-grid{display:flex;flex-direction:column}
+  .data-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair)}
+  .data-row:last-child{border-bottom:0}
+  .dr-ic{flex:0 0 auto;width:18px;height:18px;color:var(--faint);display:inline-flex;align-items:center}
+  .dr-ic svg{width:16px;height:16px}
+  .dr-k{flex:0 0 92px;font-size:10.5px;letter-spacing:0.04em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .dr-v{flex:1 1 auto;min-width:0;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dr-v.mono{font-family:var(--mono);font-size:12px}
+  .dr-v.dr-missing{color:var(--warn);font-style:italic}
+  .dr-ok{flex:0 0 auto;font-size:9.5px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent)}
+  .data-row.missing .dr-ic{color:var(--warn)}
+  .collect-btn{appearance:none;cursor:pointer;font-family:var(--sans);font-size:11.5px;font-weight:700;color:var(--warn);background:var(--warn-soft);border:1px solid rgba(245,166,35,0.4);border-radius:7px;padding:5px 11px;white-space:nowrap}
+  .collect-btn:hover{filter:brightness(1.1)}
+
+  /* loyalty card */
+  .loyalty-card{background:var(--raised);border:1px solid var(--hair);border-radius:11px;padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+  .lc-top{display:flex;align-items:center;justify-content:space-between}
+  .lc-pts{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--gold)}
+  .lc-prog{display:flex;align-items:center;gap:10px}
+  .lc-track{flex:1 1 auto;height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+  .lc-track i{display:block;height:100%;border-radius:3px;background:var(--gold)}
+  .lc-next{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+  .lc-note{font-size:12px;color:var(--dim)}
+  .loyalty-card.nonmember{border-color:rgba(224,164,88,0.28);background:var(--gold-soft)}
+  .nm-text{font-size:12.5px;color:var(--text);line-height:1.5}
+  .nm-text b{color:var(--gold)}
+  .nm-invite{appearance:none;cursor:pointer;align-self:flex-start;font-family:var(--sans);font-size:13px;font-weight:700;color:#06140d;background:var(--gold);border:0;border-radius:9px;padding:9px 16px}
+  .nm-invite:hover{filter:brightness(1.07)}
+  .lc-top{flex-wrap:wrap}
+  .lc-value{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--gold)}
+  .lc-rewards{display:flex;flex-direction:column;gap:6px;margin-top:var(--s1)}
+  .lc-reward{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+  .lc-reward svg{width:14px;height:14px;flex:0 0 auto;color:var(--faint)}
+  .lc-reward b{color:var(--text);font-weight:600}
+  .lc-reward.claim{color:var(--accent)} .lc-reward.claim svg{color:var(--accent)}
+  .lc-reward.next svg{color:var(--gold)}
+
+  /* WhatsApp conversation brief */
+  /* conversation history list */
+  .convo-list{display:flex;flex-direction:column;gap:var(--s2)}
+  .convo-item{display:flex;align-items:center;gap:10px;background:var(--raised);border:1px solid var(--hair);border-radius:10px;padding:10px 12px}
+  .ci-ch{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid}
+  .ci-ch svg{width:14px;height:14px}
+  .ci-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .ci-top{display:flex;align-items:center;gap:8px;font-size:9.5px;letter-spacing:0.04em}
+  .ci-chan{font-weight:700;text-transform:uppercase}
+  .ci-date{color:var(--faint)}
+  .ci-n{margin-left:auto;font-family:var(--mono);color:var(--faint)}
+  .ci-summary{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ci-actions{flex:0 0 auto;display:flex;align-items:center;gap:6px}
+  .ci-btn{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--dim);
+    background:transparent;border:1px solid var(--hair-strong);border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
+  .ci-btn:hover{color:var(--text);border-color:var(--text)}
+  .ci-btn.wa{color:var(--wa);border-color:rgba(37,211,102,0.4);background:var(--wa-soft)}
+  .ci-btn.wa:hover{filter:brightness(1.12);color:var(--wa)}
+  .ci-btn svg{width:14px;height:14px;flex:0 0 auto}
+
+  /* conversation preview popup */
+  .modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:var(--s4)}
+  .modal.open{display:flex}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px)}
+  .modal-sheet{position:relative;width:min(460px,100%);max-height:82vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--hair-strong);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,0.8)}
+  .modal-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:var(--s3) var(--s4);border-bottom:1px solid var(--hair)}
+  .mh-ic{flex:0 0 auto;display:inline-flex;color:var(--wa)}
+  .mh-ic svg{width:18px;height:18px}
+  .mh-title{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .modal-x{appearance:none;cursor:pointer;flex:0 0 auto;border:0;background:transparent;color:var(--dim);font-size:22px;line-height:1;padding:0 4px}
+  .modal-x:hover{color:var(--text)}
+  .modal-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding:var(--s4);background:#0c1317;display:flex;flex-direction:column;gap:6px}
+  .modal-foot{flex:0 0 auto;padding:var(--s3) var(--s4);border-top:1px solid var(--hair);display:flex}
+
+  /* shared chat-bubble styles (preview popup) */
+  .wt-msg{display:flex;align-items:flex-end;gap:7px;max-width:100%}
+  .wt-msg.agent{flex-direction:row-reverse}
+  .wt-bub{max-width:78%;font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:10px;color:#e9edf2}
+  .wt-msg.guest .wt-bub{background:#202c33;border-top-left-radius:3px}
+  .wt-msg.agent .wt-bub{background:#005c4b;border-top-right-radius:3px}
+  .wt-ago{font-family:var(--mono);font-size:9px;color:var(--faint);flex:0 0 auto}
+  .wa-empty{font-size:12px;color:var(--faint);font-style:italic}
+  .wt-count{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .wa-anchor{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;text-decoration:none;
+    font-size:12.5px;font-weight:600;color:var(--wa);background:var(--wa-soft);border:1px solid rgba(37,211,102,0.4);
+    border-radius:9px;padding:8px 13px;transition:filter .14s ease}
+  .wa-anchor:hover{filter:brightness(1.12)}
+  .wa-anchor svg{width:15px;height:15px;flex:0 0 auto}
+
+  /* guest identity — the passive-identity graph */
+  .id-conf{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.04em;border:1px solid;border-radius:6px;padding:2px 8px}
+  .id-lead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+  .id-merge{font-size:13px;color:var(--text)}
+  .id-merge b{font-family:var(--mono)}
+  .id-nosignup{font-size:11px;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(61,214,140,0.28);border-radius:6px;padding:2px 8px;letter-spacing:0.01em}
+  .id-bar{height:5px;border-radius:3px;background:var(--hair);overflow:hidden}
+  .id-bar i{display:block;height:100%;border-radius:3px;transition:width .4s ease}
+  .id-graph{display:flex;flex-direction:column}
+  .id-sig{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair)}
+  .id-sig:last-child{border-bottom:0}
+  .id-ic{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--hair);color:var(--dim)}
+  .id-ic svg{width:15px;height:15px}
+  .id-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .id-k{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .id-v{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .id-v.mono{font-family:var(--mono);font-size:11.5px}
+  .id-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .id-src{font-size:10.5px;color:var(--dim)}
+  .id-tag{font-size:8.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);background:rgba(255,255,255,0.05);border:1px solid var(--hair);border-radius:5px;padding:1px 6px}
+  .id-tag.passive{color:var(--risk);background:var(--risk-soft);border-color:rgba(139,92,246,0.34)}
+  .id-tag.verified{color:var(--accent);background:var(--accent-soft);border-color:rgba(61,214,140,0.3)}
+  .id-dupe{display:flex;align-items:flex-start;gap:10px;margin-top:var(--s2);padding:var(--s3);border:1px solid rgba(245,166,35,0.34);background:var(--warn-soft);border-radius:10px}
+  .id-dupe>svg{width:18px;height:18px;color:var(--warn);flex:0 0 auto;margin-top:1px}
+  .id-dupe-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .id-dupe-top{font-size:12px;font-weight:700;color:var(--warn)}
+  .id-dupe-note{font-size:11.5px;color:var(--text);line-height:1.45}
+  .id-shared{color:var(--faint)}
+  .id-merge-btn{flex:0 0 auto;appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:700;color:var(--warn);background:transparent;border:1px solid var(--warn);border-radius:8px;padding:6px 13px}
+  .id-merge-btn:hover{background:rgba(245,166,35,0.16)}
+
+  /* channel filter row */
+  .cb-channels{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;padding-top:var(--s1)}
+  .cb-chlbl{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:0 0 auto}
+  .cb-sep2{width:1px;align-self:stretch;background:var(--hair);margin:0 var(--s1)}
+  .chanchips{display:flex;gap:var(--s1);flex-wrap:wrap}
+  .chanchip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--dim);background:transparent;
+    border:1px solid var(--hair);border-radius:7px;padding:6px 10px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+    transition:color .16s ease,border-color .16s ease,background .16s ease}
+  .chanchip:hover{border-color:var(--hair-strong);color:var(--text)}
+  .chanchip i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .chanchip .cc-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--faint);background:var(--hair);border-radius:4px;padding:1px 5px;min-width:18px;text-align:center}
+  .chanchip.on{color:var(--cc,var(--text));border-color:var(--cc,var(--hair-strong));background:rgba(255,255,255,0.04);font-weight:600}
+  .chanchip.on .cc-n{background:var(--hair-strong);color:var(--text)}
+
+  /* per-guest channel chips (row + profile) */
+  .c-chans{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+  .ch-chip{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;border:1px solid;flex:0 0 auto}
+  .ch-chip svg{width:12px;height:12px}
+
+  /* list groups: Agentic customers + Customers */
+  .grp{display:flex;flex-direction:column}
+  .grp.agentic-grp{margin-bottom:var(--s2)}
+  .feed-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:var(--s3) var(--s1) var(--s2);
+    font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);font-weight:700;position:sticky;top:0;background:var(--canvas);z-index:1}
+  .fh-grp{display:inline-flex;align-items:center;gap:8px}
+  .fh-ic{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;
+    background:var(--raised);border:1px solid var(--hair);color:var(--dim)}
+  .fh-ic svg{width:14px;height:14px}
+  .fh-ic.agentic{color:var(--risk);background:var(--risk-soft);border-color:rgba(139,92,246,0.34)}
+  .fh-sub{font-family:var(--mono);font-size:11px;color:var(--faint);text-transform:none}
+  .book{display:flex;flex-direction:column;gap:var(--s2)}
+  .feed-empty{font-size:11.5px;color:var(--faint);font-style:italic;padding:var(--s2) var(--s1) var(--s3)}
+
+  /* empty detail */
+  .detail-empty{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--faint);text-align:center;padding:var(--s7)}
+  .detail-empty .de-emoji{font-size:42px;opacity:.5}
+  .detail-empty .de-text{font-size:15px;color:var(--dim)}
+
+  /* toast (shared) */
+  .toast{
+    position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(10px);
+    background:var(--raised);border:1px solid var(--accent);color:var(--accent);
+    font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:10px;
+    box-shadow:0 16px 40px -18px rgba(0,0,0,0.8);opacity:0;pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;display:inline-flex;align-items:center;gap:8px;z-index:60;
+  }
+  .toast svg{width:15px;height:15px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* footer (shared chrome) */
+  footer{
+    flex:0 0 auto;height:38px;border-top:1px solid var(--hair);background:var(--panel);
+    display:flex;align-items:center;gap:var(--s5);padding:0 var(--s5);font-size:11px;color:var(--faint);
+  }
+  .legend{display:flex;gap:var(--s4);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .legend i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .kbd-hint{margin-left:auto;font-family:var(--mono);letter-spacing:0.04em}
+  .kbd{display:inline-block;padding:1px 5px;border:1px solid var(--hair);border-radius:3px;color:var(--dim);margin:0 1px}
+
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--hair-strong);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  @media (max-width:1280px){ .workspace{grid-template-columns:400px 1fr} }
+  @media (max-width:1040px){ .workspace{grid-template-columns:340px 1fr} }
+
+  /* phones — document scrolls, columns stack */
+  @media (max-width:760px){
+    html,body{height:auto;min-height:100%}
+    body{overflow:visible}
+    html{overflow-x:hidden}
+    header{position:sticky;top:0;z-index:30;height:auto;min-height:52px;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3)}
+    .kd-label,.design-tag,.gallery-link,.clock,.ctl-lbl,.spacer{display:none}
+    .brand{min-width:0}.wordmark{font-size:13px;letter-spacing:0.14em}
+    .fsbtn span{display:none}.fsbtn{padding:7px 9px}
+    .crmbar{padding:var(--s2) var(--s3)}
+    .sort-ctl{margin-left:0}
+    .workspace{display:flex;flex-direction:column;min-height:0}
+    .list-col,.detail{min-height:0}
+    .list-scroll{overflow:visible;flex:0 0 auto;max-height:none}
+    .detail{border-top:1px solid var(--hair-strong)}
+    .detail-scroll{overflow:visible;flex:0 0 auto}
+    footer{height:auto;min-height:32px;padding:var(--s2) var(--s3)}
+    .kbd-hint{display:none}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="wordmark">SUD ITALIA</span>
+      <span class="kd-label">Customer Relationships</span>
+    </div>
+    <span class="design-tag">CRM · Regulars</span>
+    <div class="ctl">
+      <span class="ctl-lbl">Loc</span>
+      <div class="seg-group" id="locGroup" role="group" aria-label="Location"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="fsbtn" id="fsbtn" type="button" aria-pressed="false" aria-label="Toggle fullscreen">
+      <svg class="fs-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+      <svg class="fs-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      <span class="fs-off">Fullscreen</span><span class="fs-on">Exit</span>
+    </button>
+    <a class="gallery-link" href="index.html">&larr; Gallery</a>
+    <div class="clock tnum" id="clock">--:--:--</div>
+  </header>
+
+  <section class="crmbar" aria-label="Customer book">
+    <div class="cb-eyebrow">
+      <span class="cb-brandline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Customer book
+      </span>
+      <span class="cb-sep"></span>
+      <div class="kpis" id="kpis"></div>
+    </div>
+    <div class="cb-controls">
+      <label class="search" id="searchWrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Search name, phone or email…" autocomplete="off" spellcheck="false">
+        <button class="clr" id="searchClear" type="button" aria-label="Clear search">×</button>
+      </label>
+      <div class="segchips" id="segchips" role="group" aria-label="Segment filter"></div>
+      <div class="sort-ctl">
+        <span class="ctl-lbl">Sort</span>
+        <div class="seg-group" id="sortGroup" role="group" aria-label="Sort by"></div>
+      </div>
+    </div>
+    <div class="cb-channels">
+      <span class="cb-chlbl">Channel</span>
+      <div class="chanchips" id="chanchips" role="group" aria-label="Channel filter"></div>
+      <span class="cb-sep2"></span>
+      <span class="cb-chlbl">Period</span>
+      <div class="seg-group" id="timeGroup" role="group" aria-label="Time filter"></div>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <section class="list-col" aria-label="Customers">
+      <div class="list-head"><span id="listCount">—</span><span id="listSort"></span></div>
+      <div class="list-scroll" id="list"></div>
+    </section>
+    <section class="detail" id="detail" aria-label="Customer detail"></section>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>VIP</span>
+      <span><i style="background:var(--accent)"></i>Active</span>
+      <span><i style="background:var(--risk)"></i>Repeat</span>
+      <span><i style="background:var(--firing)"></i>New</span>
+      <span><i style="background:var(--late)"></i>Lapsed</span>
+    </div>
+    <div class="kbd-hint"><span class="kbd">/</span> search · <span class="kbd">↑</span><span class="kbd">↓</span> move · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> clear</div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal" id="convoModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="Conversation preview">
+      <div class="modal-head">
+        <span class="mh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg></span>
+        <span class="mh-title" id="convoModalTitle">Conversation</span>
+        <button class="modal-x" data-close type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="convoModalBody"></div>
+      <div class="modal-foot">
+        <a class="wa-anchor" id="convoModalWa" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>Open full thread in WhatsApp →</a>
+      </div>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+/* ====================== Format helpers ====================== */
+const fmtPLN = g => (g/100).toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2})+" zł";
+const fmtPLN0 = g => Math.round(g/100).toLocaleString("pl-PL")+" zł";
+const pad = n => String(n).padStart(2,"0");
+const fmtClock = d => pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+
+// "today" anchors the demo so recency reads consistently on any deploy.
+const NOW = new Date(2026,4,26); // 2026-05-26
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function dateFromDaysAgo(days){ const d=new Date(NOW); d.setDate(d.getDate()-days); return d; }
+function fmtDate(d){ return MONTHS[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
+function seenLabel(days){
+  if(days<=0) return "today";
+  if(days===1) return "yesterday";
+  if(days<30) return days+"d ago";
+  const m=Math.round(days/30); return m+" mo ago";
+}
+function joinedLabel(days){ const d=dateFromDaysAgo(days); return MONTHS[d.getMonth()]+" "+d.getFullYear(); }
+// Days until next occurrence of a MM-DD birthday.
+function daysToBirthday(mmdd){
+  if(!mmdd) return null;
+  const [m,day]=mmdd.split("-").map(Number);
+  let next=new Date(NOW.getFullYear(),m-1,day);
+  if(next < NOW) next=new Date(NOW.getFullYear()+1,m-1,day);
+  return Math.round((next-NOW)/86400000);
+}
+
+/* ====================== Channels — one taxonomy, clearly distinguished ======================
+   A guest reaches us through several channels: at the table (Dine-in), the window
+   (Takeout), to an address (Delivery), or via an ordering agent (WhatsApp / Voice /
+   Web). Each has its own colour + icon so the book, the channel filter, the live
+   captures and the profile all read channel at a glance. */
+const CHANNEL_META={
+  "Dine-in": {color:"var(--risk)",  soft:"var(--risk-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>'},
+  "Takeout": {color:"var(--firing)",soft:"var(--firing-soft)",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12l-1 4H7L6 2Z"/><path d="M5 6h14l-1.2 14.5a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5L5 6Z"/></svg>'},
+  "Delivery":{color:"var(--warn)",  soft:"var(--warn-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v11H1z"/><path d="M14 7h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>'},
+  "WhatsApp":{color:"var(--wa)",    soft:"var(--wa-soft)",    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>'},
+  "Voice":   {color:"var(--gold)",  soft:"var(--gold-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>'},
+  "Web":     {color:"var(--cyan)",  soft:"var(--cyan-soft)",  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></svg>'},
+};
+const CHANNEL_ORDER=["Dine-in","Takeout","Delivery","WhatsApp","Voice","Web"];
+const CHAN_ICON=Object.fromEntries(Object.entries(CHANNEL_META).map(([k,v])=>[k,v.icon]));
+const CHAN_CLASS={Takeout:"takeout",Delivery:"delivery","Dine-in":"dinein"};
+const ITEM_EMOJI={Pizza:"🍕",Pasta:"🍝",Antipasti:"🥖",Panini:"🥪",Drinks:"☕",Desserts:"🍰"};
+
+/* ====================== Sample customer book ======================
+   Self-contained demo data — same role the POS menu + KDS dataset play.
+   spent is grosze (1 zł = 100). lastDays / joinedDays are days before NOW. */
+let CUSTOMERS = [
+  { id:"+48 512 880 114", name:"Rafał Ablewski", email:"rafal@suditalia.pl", loc:"Kraków", chan:"Takeout", channels:["Takeout","WhatsApp"],
+    joinedDays:540, lastDays:1, orders:41, spent:158900, points:2310, member:true, source:"Loyalty signup", noShows:0, bday:"09-12", seg:"repeat", vip:true,
+    favs:[{n:"Margherita",cat:"Pizza",q:22},{n:"Espresso",cat:"Drinks",q:38}],
+    recent:[{d:1,total:4180,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1},{n:"Espresso",q:1}]},
+            {d:4,total:3970,chan:"Takeout",loc:"Kraków",items:[{n:"Margherita",q:1},{n:"Limonata Fresca",q:1}]},
+            {d:9,total:2780,chan:"Takeout",loc:"Kraków",items:[{n:"Margherita",q:1}]}],
+    notes:[{by:"System",d:540,text:"Owner account — internal."}], sms:true, mail:true },
+
+  { id:"+48 601 224 730", name:"Anna Kowalska", email:"anna.kowalska@gmail.com", loc:"Kraków", chan:"Dine-in", channels:["Dine-in","Voice"],
+    joinedDays:410, lastDays:3, orders:34, spent:124500, points:1860, member:true, source:"Loyalty signup", noShows:0, bday:"06-04", seg:"repeat", vip:true,
+    favs:[{n:"Margherita",cat:"Pizza",q:19},{n:"Tiramisù",cat:"Desserts",q:14},{n:"Espresso",cat:"Drinks",q:21}],
+    recent:[{d:3,total:6890,chan:"Dine-in",loc:"Kraków",items:[{n:"Margherita",q:2},{n:"Tiramisù",q:1},{n:"Espresso",q:2}]},
+            {d:12,total:5390,chan:"Dine-in",loc:"Kraków",items:[{n:"Quattro Formaggi",q:1},{n:"Burrata con Pomodorini",q:1}]},
+            {d:20,total:4290,chan:"Dine-in",loc:"Kraków",items:[{n:"Margherita",q:1},{n:"Tiramisù",q:1}]}],
+    notes:[{by:"Marco",d:88,text:"Regular — prefers table 4, extra basil on the Margherita."}], sms:true, mail:true },
+
+  { id:"+48 698 117 905", name:"Jakub Wójcik", email:"jwojcik@outlook.com", loc:"Kraków", chan:"Delivery", channels:["Delivery","WhatsApp"],
+    joinedDays:300, lastDays:2, orders:28, spent:96200, points:1540, member:true, source:"Loyalty signup", noShows:0, bday:"03-19", seg:"repeat", vip:true,
+    favs:[{n:"Tartufata Reale",cat:"Pizza",q:9},{n:"Burrata con Pomodorini",cat:"Antipasti",q:11}],
+    recent:[{d:2,total:10180,chan:"Delivery",loc:"Kraków",items:[{n:"Tartufata Reale",q:1},{n:"Burrata con Pomodorini",q:1}]},
+            {d:8,total:7990,chan:"Delivery",loc:"Kraków",items:[{n:"Tartufata Reale",q:1}]},
+            {d:15,total:5980,chan:"Delivery",loc:"Kraków",items:[{n:"Quattro Formaggi",q:1},{n:"Garlic Bread",q:1},{n:"Aranciata S.Pellegrino",q:1}]}],
+    notes:[{by:"Marco",d:40,text:"High roller, always tips the driver — offer LTOs early."}], sms:true, mail:true },
+
+  { id:"+48 504 661 238", name:"Giulia Romano", email:"giulia.romano@gmail.com", loc:"Warszawa", chan:"Delivery", channels:["Delivery","Web"],
+    joinedDays:260, lastDays:9, orders:21, spent:78300, points:1120, member:true, source:"Email receipt", noShows:1, bday:"08-27", seg:"repeat", vip:false,
+    favs:[{n:"Quattro Formaggi",cat:"Pizza",q:12},{n:"Spaghetti Carbonara",cat:"Pasta",q:8}],
+    recent:[{d:9,total:6285,chan:"Delivery",loc:"Warszawa",items:[{n:"Quattro Formaggi",q:1},{n:"Spaghetti Carbonara",q:1}]},
+            {d:18,total:4690,chan:"Delivery",loc:"Warszawa",items:[{n:"Quattro Formaggi",q:1},{n:"Limonata Fresca",q:1}]},
+            {d:27,total:3990,chan:"Delivery",loc:"Warszawa",items:[{n:"Diavola",q:1}]}],
+    notes:[{by:"Sofia",d:65,text:"⚠ Nut allergy — flag every order, no pesto cross-contact."}], sms:true, mail:true },
+
+  { id:"+48 692 540 871", name:"Zofia Kamińska", email:"zofia.k@gmail.com", loc:"Warszawa", chan:"Dine-in", channels:["Dine-in"],
+    joinedDays:190, lastDays:5, orders:16, spent:61200, points:980, member:true, source:"Dine-in", noShows:0, bday:"12-02", seg:"active", vip:false,
+    favs:[{n:"Linguine al Pesto",cat:"Pasta",q:9},{n:"Panna Cotta",cat:"Desserts",q:7}],
+    recent:[{d:5,total:4195,chan:"Dine-in",loc:"Warszawa",items:[{n:"Linguine al Pesto",q:1},{n:"Panna Cotta",q:1}]},
+            {d:16,total:3885,chan:"Dine-in",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1},{n:"Espresso",q:1}]}],
+    notes:[], sms:true, mail:true },
+
+  { id:"+48 530 902 416", name:"Marco Bianchi", email:"marco.bianchi@gmail.com", loc:"Kraków", chan:"Dine-in", channels:["Dine-in","Takeout"],
+    joinedDays:330, lastDays:47, orders:19, spent:71400, points:0, member:false, source:"Email receipt", noShows:1, bday:"01-30", seg:"lapsed", vip:false,
+    favs:[{n:"Prosciutto e Rucola",cat:"Pizza",q:10},{n:"Tiramisù",cat:"Desserts",q:8}],
+    recent:[{d:47,total:5290,chan:"Dine-in",loc:"Kraków",items:[{n:"Prosciutto e Rucola",q:1},{n:"Tiramisù",q:1}]},
+            {d:71,total:4180,chan:"Dine-in",loc:"Kraków",items:[{n:"Prosciutto e Rucola",q:1},{n:"Espresso",q:1}]}],
+    notes:[{by:"Marco",d:50,text:"Was a weekly regular — hasn't been in over a month."}], sms:true, mail:false },
+
+  { id:"+48 575 318 209", name:"Piotr Nowak", email:"", loc:"Kraków", chan:"Takeout", channels:["Takeout","Voice"],
+    joinedDays:120, lastDays:6, orders:12, spent:38900, points:540, member:true, source:"Phone order", noShows:0, bday:"11-22", seg:"active", vip:false,
+    favs:[{n:"Diavola",cat:"Pizza",q:8},{n:"Aranciata S.Pellegrino",cat:"Drinks",q:6}],
+    recent:[{d:6,total:4280,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1},{n:"Aranciata S.Pellegrino",q:1}]},
+            {d:17,total:3290,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1}]}],
+    notes:[], sms:true, mail:false },
+
+  { id:"+48 663 047 552", name:"Magda Zielińska", email:"magda.z@wp.pl", loc:"Warszawa", chan:"Takeout", channels:["Takeout","Delivery"],
+    joinedDays:210, lastDays:58, orders:8, spent:24600, points:360, member:true, source:"Loyalty signup", noShows:2, bday:"02-14", seg:"lapsed", vip:false,
+    favs:[{n:"Penne Arrabbiata",cat:"Pasta",q:6}],
+    recent:[{d:58,total:2390,chan:"Takeout",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1}]},
+            {d:84,total:3380,chan:"Takeout",loc:"Warszawa",items:[{n:"Penne Arrabbiata",q:1},{n:"Limonata Fresca",q:1}]}],
+    notes:[], sms:true, mail:false },
+
+  { id:"+48 519 728 660", name:"Bartek Mazur", email:"b.mazur@gmail.com", loc:"Kraków", chan:"Takeout", channels:["Takeout"],
+    joinedDays:160, lastDays:73, orders:5, spent:16800, points:0, member:false, source:"Email receipt", noShows:1, bday:"07-08", seg:"lapsed", vip:false,
+    favs:[{n:"Margherita",cat:"Pizza",q:4}],
+    recent:[{d:73,total:3380,chan:"Takeout",loc:"Kraków",items:[{n:"Margherita",q:1},{n:"Limonata Fresca",q:1}]}],
+    notes:[], sms:false, mail:true },
+
+  { id:"+48 608 391 740", name:"Tomasz Lewandowski", email:"", loc:"Kraków", chan:"Takeout", channels:["WhatsApp","Takeout"],
+    joinedDays:40, lastDays:11, orders:3, spent:9100, points:0, member:false, source:"WhatsApp agent", noShows:1, bday:"04-17", seg:"active", vip:false,
+    favs:[{n:"Slice (Margherita)",cat:"Pizza",q:3}],
+    recent:[{d:11,total:2380,chan:"Takeout",loc:"Kraków",items:[{n:"Slice (Margherita)",q:2}]},
+            {d:25,total:3490,chan:"Takeout",loc:"Kraków",items:[{n:"Diavola",q:1}]}],
+    notes:[], sms:true, mail:false },
+
+  { id:"+48 721 005 318", name:"Ola Dąbrowska", email:"ola.dabrowska@gmail.com", loc:"Warszawa", chan:"Delivery", channels:["Voice","Delivery"],
+    joinedDays:14, lastDays:8, orders:2, spent:6400, points:90, member:true, source:"Voice agent", noShows:0, bday:"10-05", seg:"new", vip:false,
+    favs:[{n:"Margherita",cat:"Pizza",q:2}],
+    recent:[{d:8,total:3290,chan:"Delivery",loc:"Warszawa",items:[{n:"Margherita",q:1}]},
+            {d:13,total:3110,chan:"Delivery",loc:"Warszawa",items:[{n:"Ortolana",q:1}]}],
+    notes:[], sms:true, mail:true },
+
+  { id:"+48 887 412 663", name:"Katarzyna Wiśniewska", email:"k.wisniewska@gmail.com", loc:"Warszawa", chan:"Dine-in", channels:["WhatsApp","Dine-in"],
+    joinedDays:4, lastDays:4, orders:1, spent:4790, points:0, member:false, source:"Email receipt", noShows:0, bday:"05-30", seg:"new", vip:false,
+    favs:[{n:"Pizza del Pizzaiolo",cat:"Pizza",q:1}],
+    recent:[{d:4,total:4790,chan:"Dine-in",loc:"Warszawa",items:[{n:"Pizza del Pizzaiolo",q:1}]}],
+    notes:[], sms:true, mail:true },
+];
+
+/* ====================== Derived fields ====================== */
+function tierOf(c){ return c.points>=1500?"Oro":c.points>=500?"Argento":"Bronzo"; }
+function aov(c){ return c.orders>0 ? Math.round(c.spent/c.orders) : 0; }
+function initials(name){ return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase(); }
+
+// Reliability — share of placed orders the customer actually collected.
+// no-shows (placed but never picked up) drag it down and feed the health score.
+function reliability(c){ const placed=c.orders+(c.noShows||0); return placed>0 ? Math.round(c.orders/placed*100) : 100; }
+
+// R-F-M + Reliability component scores (0-100). Reliability joins recency /
+// frequency / monetary so a customer who keeps ghosting orders shows a falling
+// relationship health, not just a quiet one.
+function rfm(c){
+  const r = c.lastDays<=7?100 : c.lastDays<=14?86 : c.lastDays<=30?66 : c.lastDays<=45?46 : c.lastDays<=75?26 : 9;
+  const f = Math.min(100, c.orders*9);
+  const m = Math.min(100, Math.round(c.spent/1600)); // ~1600 zł caps the bar
+  const rel = reliability(c);
+  return {r,f,m,rel};
+}
+function health(c){ const {r,f,m,rel}=rfm(c); return Math.max(0,Math.round(0.38*r + 0.22*f + 0.15*m + 0.25*rel)); }
+function healthTier(h){
+  if(h>=70) return {key:"loyal", label:"Loyal", color:"var(--accent)"};
+  if(h>=50) return {key:"steady", label:"Steady", color:"var(--accent)"};
+  if(h>=34) return {key:"cooling", label:"Cooling", color:"var(--warn)"};
+  if(h>=18) return {key:"at-risk", label:"At risk", color:"var(--risk)"};
+  return {key:"churned", label:"Churned", color:"var(--late)"};
+}
+function healthColor(h){ return healthTier(h).color; }
+function barColor(v){ return v>=67?"var(--accent)":v>=34?"var(--warn)":"var(--late)"; }
+
+// One-line read on what's driving the relationship — reliability first, since a
+// no-show pattern is the loudest churn signal we have.
+function healthDiagnosis(c){
+  const {rel}=rfm(c), ht=healthTier(health(c)), ns=c.noShows||0;
+  if(ns>=2) return "Reliability is the drag — repeated no-shows. Confirm the next order before firing it.";
+  if(c.seg==="lapsed") return "Slipping away — last seen "+seenLabel(c.lastDays)+". Win them back before they're gone.";
+  if(ns>0) return "Mostly dependable, but a no-show on file — watch the next pickup.";
+  if(ht.key==="loyal") return "Strong relationship — recent, frequent and dependable.";
+  if(c.seg==="new") return "Brand new — nail the second order to lock in the habit.";
+  return "Steady — room to grow frequency and check size.";
+}
+// Risk / opportunity chips for the health card.
+function healthFlags(c){
+  const out=[], ns=c.noShows||0, bd=daysToBirthday(c.bday);
+  if(ns>0) out.push({t:ns+" no-show"+(ns>1?"s":""), cls:"bad"});
+  if(c.seg==="lapsed") out.push({t:"Lapsed "+c.lastDays+"d", cls:"bad"});
+  if(!c.email) out.push({t:"No email", cls:"warn"});
+  if(bd!=null&&bd<=14) out.push({t:"Birthday "+bd+"d", cls:"gold"});
+  if(c.vip) out.push({t:"VIP", cls:"gold"});
+  if(!c.member) out.push({t:"Not enrolled", cls:"info"});
+  if(out.length===0) out.push({t:"No flags — healthy", cls:"ok"});
+  return out;
+}
+
+// Contact-data completeness — name + phone are always on file; email and a
+// marketing consent are the gaps we work to collect. "we must collect them."
+function completeness(c){
+  const checks=[{k:"Name",ok:!!c.name},{k:"Phone",ok:!!c.id},{k:"Email",ok:!!c.email},{k:"Consent",ok:!!(c.sms||c.mail)}];
+  return {have:checks.filter(x=>x.ok).length, total:checks.length, missing:checks.filter(x=>!x.ok).map(x=>x.k)};
+}
+
+// Capture source — how this person first entered the book (loyalty is just one).
+const SOURCE_ICON={
+  "WhatsApp agent":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>',
+  "Voice agent":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>',
+  "Loyalty signup":'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>',
+  "Email receipt":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  "Phone order":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>',
+  "Dine-in":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7a3 3 0 0 0 6 0V3"/><path d="M6 3v18"/><path d="M17 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>',
+};
+
+/* ====================== Passive identity — the guest graph ======================
+   The truck's hard problem is identity: walk-ups don't "sign up". Every profile
+   is therefore a *merged guest* — assembled from whatever signals a touchpoint
+   leaves (phone, WhatsApp, a recognised payment card, a web device, an email),
+   with no sign-up flow. deriveSignals() reconstructs that graph from what we
+   already hold; identityConfidence() scores how sure we are it's one real person. */
+const SIGNAL_META={
+  phone:{label:"Phone",      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>'},
+  whatsapp:{label:"WhatsApp", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>'},
+  voice:{label:"Voice line", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>'},
+  email:{label:"Email",      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>'},
+  card:{label:"Payment card",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>'},
+  device:{label:"Web device",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>'},
+};
+function last4(seed){ let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))>>>0; return String(h%10000).padStart(4,"0"); }
+function deriveSignals(c){
+  const sig=[], isWA=c.source==="WhatsApp agent", isVoice=c.source==="Voice agent";
+  sig.push({type:"phone", val:c.id, src:c.source, first:c.joinedDays, tag:"Primary key"});
+  if(isWA)    sig.push({type:"whatsapp", val:c.id, src:"WhatsApp agent", first:c.joinedDays, tag:"Verified"});
+  if(isVoice) sig.push({type:"voice",    val:c.id, src:"Voice agent",    first:c.joinedDays, tag:"Verified"});
+  if(c.email) sig.push({type:"email", val:c.email, src:c.source==="Email receipt"?"Email receipt":"Given at order", first:c.joinedDays, tag:c.mail?"Opted in":""});
+  if((c.chan==="Dine-in"||c.chan==="Takeout") && c.orders>=3){
+    const visits=Math.min(c.orders, c.orders>15?4:c.orders>6?3:2);
+    sig.push({type:"card", val:"•• "+last4(c.id), src:"Payment match", first:Math.round(c.joinedDays*0.7), visits, tag:"Passive"});
+  }
+  if(c.chan==="Delivery") sig.push({type:"device", val:"dev_"+last4(c.id+"d").slice(0,3)+"…", src:"Web checkout", first:Math.round(c.joinedDays*0.85), tag:"Passive"});
+  return sig;
+}
+const W_SIG={phone:34,whatsapp:18,voice:18,email:16,card:24,device:12};
+function identityConfidence(sig){
+  let s=0; sig.forEach(x=>{ s+=W_SIG[x.type]||10; if(x.type==="card"&&x.visits>1) s+=Math.min(14,(x.visits-1)*6); });
+  return Math.min(100,s);
+}
+// A few showcase cases the derivation can't infer (a likely duplicate to merge).
+const IDENTITY_EXTRA={
+  "+48 504 661 238":{ dupe:{phone:"+48 730 118 962", shared:["Web device","Card •• "+last4("+48 504 661 238")], note:"A second number shares this guest's web device and card hash — probably the same person on a work phone."} },
+};
+
+/* ====================== Agentic channels ======================
+   A guest is "agentic" when at least one of their channels is handled by an
+   ordering agent (WhatsApp / Voice / Web) rather than staff at the table,
+   window or door. This splits the book into Agentic customers vs Customers. */
+const AGENTIC=["WhatsApp","Voice","Web"];
+
+/* ====================== Conversation history (per guest) ======================
+   A guest's past chats, newest first — shown stacked in the CRM profile, each
+   previewable in a popup. The "Open in WhatsApp" button hands off to the
+   WhatsApp tab in the agent-commerce surface for the live thread. */
+const CHATS={
+  "+48 608 391 740":[ // Tomasz
+    {channel:"WhatsApp", date:"Today", ago:"2m", msgs:[
+      {who:"guest",t:"poproszę diavolę na wynos, odbiór za 20 min",time:"12:18"},
+      {who:"agent",t:"Got it — 1× Diavola, ready ~12 min at Rynek Główny. 32,90 zł 🍕",time:"12:18"},
+      {who:"guest",t:"dzięki!",time:"12:19"}]},
+    {channel:"WhatsApp", date:"May 16", ago:"9d", msgs:[
+      {who:"guest",t:"hej, otwarte dziś?",time:"18:40"},
+      {who:"agent",t:"Tak! Do 22:00 na Rynku Głównym 🍕",time:"18:41"},
+      {who:"guest",t:"super, biorę margheritę na wynos",time:"18:42"}]}],
+  "+48 698 117 905":[ // Jakub
+    {channel:"WhatsApp", date:"Today", ago:"18m", msgs:[
+      {who:"guest",t:"same as last time, to the office 🙏",time:"11:58"},
+      {who:"agent",t:"Tartufata to ul. Wielopole 5 — driver leaving in 5 🛵",time:"11:59"},
+      {who:"guest",t:"perfect, dzięki!",time:"12:01"}]},
+    {channel:"WhatsApp", date:"Apr 30", ago:"3w", msgs:[
+      {who:"guest",t:"do you do gluten-free bases?",time:"19:22"},
+      {who:"agent",t:"We do — +5 zł, flagged to the kitchen. Want the Quattro on GF?",time:"19:23"}]}],
+  "+48 887 412 663":[ // Katarzyna
+    {channel:"WhatsApp", date:"Today", ago:"13m", msgs:[
+      {who:"guest",t:"hi! do you deliver to Wola? first time ordering",time:"12:05"},
+      {who:"agent",t:"We do — ~30 min to Wola 🛵 Our bestseller is the Pizza del Pizzaiolo, want one?",time:"12:05"},
+      {who:"guest",t:"yes please, one of those",time:"12:06"}]}],
+  "+48 512 880 114":[ // Rafał
+    {channel:"WhatsApp", date:"Today", ago:"11m", msgs:[
+      {who:"guest",t:"the usual + espresso, takeout",time:"12:09"},
+      {who:"agent",t:"On it — Diavola + Espresso, 41,80 zł, ready ~12 min ☕",time:"12:09"}]},
+    {channel:"WhatsApp", date:"May 20", ago:"5d", msgs:[
+      {who:"guest",t:"can I get a Family Pack for tonight?",time:"17:30"},
+      {who:"agent",t:"Sure — 2 pizzas + Limonata 1L, −8 zł combo. For 19:00 pickup?",time:"17:31"},
+      {who:"guest",t:"yes 19:00 👍",time:"17:31"}]}],
+  "+48 601 224 730":[ // Anna — voice agent call log
+    {channel:"Voice", date:"Today", ago:"7m", msgs:[
+      {who:"guest",t:"the usual please — table for two at six",time:"12:11"},
+      {who:"agent",t:"Booked — table 4, 18:00, 2 covers. See you then, Anna!",time:"12:11"}]}],
+};
+
+/* ====================== UI state ====================== */
+let CH="all";   // channel filter
+let TIME="all"; // time / recency filter
+let LOC="All";
+let SEG="all";
+let SORT="ltv";
+let QUERY="";
+let selectedId = CUSTOMERS[0].id;
+
+const TIMES=[{key:"all",label:"All",days:Infinity},{key:"1",label:"24h",days:1},{key:"7",label:"7d",days:7},{key:"30",label:"30d",days:30}];
+
+const SEGS=[
+  {key:"all",   label:"All",     cls:""},
+  {key:"vip",   label:"VIP",     cls:"s-vip"},
+  {key:"active",label:"Active",  cls:"s-active"},
+  {key:"repeat",label:"Repeat",  cls:"s-repeat"},
+  {key:"new",   label:"New",     cls:"s-new"},
+  {key:"lapsed",label:"Lapsed",  cls:"s-lapsed"},
+  {sep:true},
+  {key:"members", label:"Members",  cls:"s-members"},
+  {key:"contacts",label:"Contacts", cls:"s-contacts"},
+  {key:"noemail", label:"No email", cls:"s-noemail"},
+  {key:"noshow",  label:"No-shows", cls:"s-noshow"},
+];
+const SORTS=[
+  {key:"ltv",   label:"Value"},
+  {key:"recent",label:"Recent"},
+  {key:"orders",label:"Orders"},
+  {key:"points",label:"Points"},
+  {key:"name",  label:"A–Z"},
+];
+
+function inSeg(c,seg){
+  switch(seg){
+    case "all":      return true;
+    case "vip":      return c.vip;
+    case "members":  return c.member;
+    case "contacts": return !c.member;
+    case "noemail":  return !c.email;
+    case "noshow":   return (c.noShows||0)>0;
+    default:         return c.seg===seg; // lifecycle: new/active/repeat/lapsed
+  }
+}
+function inLoc(c){ return LOC==="All" ? true : c.loc===LOC; }
+function chansOf(c){ return c.channels && c.channels.length ? c.channels : [c.chan]; }
+function inChannel(c){ return CH==="all" ? true : chansOf(c).includes(CH); }
+function isAgentic(c){ return chansOf(c).some(ch=>AGENTIC.includes(ch)); }
+function inTime(c){ const d=(TIMES.find(t=>t.key===TIME)||{}).days; return d==null||d===Infinity ? true : c.lastDays<=d; }
+function matchQuery(c){
+  if(!QUERY) return true;
+  const q=QUERY.toLowerCase();
+  return c.name.toLowerCase().includes(q) || c.id.replace(/\s/g,"").includes(q.replace(/\s/g,"")) || (c.email||"").toLowerCase().includes(q);
+}
+function visibleCustomers(){
+  let list=CUSTOMERS.filter(c=>inLoc(c)&&inSeg(c,SEG)&&inChannel(c)&&inTime(c)&&matchQuery(c));
+  const cmp={
+    ltv:(a,b)=>b.spent-a.spent,
+    recent:(a,b)=>a.lastDays-b.lastDays,
+    orders:(a,b)=>b.orders-a.orders,
+    points:(a,b)=>b.points-a.points,
+    name:(a,b)=>a.name.localeCompare(b.name),
+  }[SORT];
+  return list.sort(cmp);
+}
+function getSelected(){ return CUSTOMERS.find(c=>c.id===selectedId)||null; }
+
+/* ====================== Render: KPI strip ====================== */
+function renderKpis(){
+  const pool=CUSTOMERS.filter(inLoc);
+  const total=pool.length;
+  const members=pool.filter(c=>c.member).length;
+  const contacts=total-members;
+  const noEmail=pool.filter(c=>!c.email).length;
+  const noShows=pool.reduce((s,c)=>s+(c.noShows||0),0);
+  const ltv=pool.reduce((s,c)=>s+c.spent,0);
+  const k=[
+    {v:total, l:"Customers"},
+    {v:members, l:"Members", cls:"good"},
+    {v:contacts, l:"Contacts"},
+    {v:noEmail, l:"No email", cls:noEmail>0?"alert":""},
+    {v:noShows, l:"No-shows", cls:noShows>0?"alert":""},
+    {v:fmtPLN0(ltv), l:"Total LTV"},
+  ];
+  document.getElementById("kpis").innerHTML = k.map(x=>
+    `<div class="kpi ${x.cls||""}"><span class="k-val tnum">${x.v}</span><span class="k-lbl">${x.l}</span></div>`).join("");
+}
+
+/* ====================== Render: segment chips ====================== */
+function renderSegchips(){
+  const pool=CUSTOMERS.filter(inLoc);
+  document.getElementById("segchips").innerHTML=SEGS.map(s=>{
+    if(s.sep) return '<span class="segsep" aria-hidden="true"></span>';
+    const n=pool.filter(c=>inSeg(c,s.key)).length;
+    return `<button class="segchip ${s.cls}" type="button" data-seg="${s.key}" aria-pressed="${s.key===SEG}">
+       ${s.key!=="all"?'<i></i>':''}<span>${s.label}</span><span class="sc-n tnum">${n}</span>
+     </button>`;
+  }).join("");
+  document.querySelectorAll("#segchips .segchip").forEach(b=>b.onclick=()=>{ SEG=b.dataset.seg; afterFilterChange(); });
+}
+
+/* ====================== Render: channel filter chips ====================== */
+function renderChanChips(){
+  const pool=CUSTOMERS.filter(inLoc);
+  const mk=(key,label,n,active,m)=>`<button class="chanchip${active?" on":""}" type="button" data-ch="${key}" aria-pressed="${active}"${m?` style="--cc:${m.color}"`:""}>
+    ${m?`<i style="background:${m.color}"></i>`:""}<span>${label}</span><span class="cc-n tnum">${n}</span></button>`;
+  let html=mk("all","All",pool.length,CH==="all",null);
+  CHANNEL_ORDER.forEach(k=>{ const n=pool.filter(c=>chansOf(c).includes(k)).length; html+=mk(k,k,n,CH===k,CHANNEL_META[k]); });
+  document.getElementById("chanchips").innerHTML=html;
+  document.querySelectorAll("#chanchips .chanchip").forEach(b=>b.onclick=()=>{ CH=b.dataset.ch; afterFilterChange(); });
+}
+
+/* ====================== Conversation history + preview popup ====================== */
+const WA_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>';
+const waLink=c=>"../agent/concierge.html?channel=whatsapp&phone="+encodeURIComponent(c.id);
+function convoHistoryHtml(c){
+  const convos=CHATS[c.id]||[], href=waLink(c);
+  if(!convos.length) return `<div class="wa-empty">No conversations yet — message this guest to start one.</div>
+      <a class="wa-anchor" href="${href}">${WA_ICON}Message on WhatsApp →</a>`;
+  return `<div class="convo-list">${convos.map((cv,idx)=>{
+    const m=CHANNEL_META[cv.channel]||{color:"var(--faint)",soft:"transparent",icon:""}, last=cv.msgs[cv.msgs.length-1];
+    return `<div class="convo-item">
+      <span class="ci-ch" style="color:${m.color};border-color:${m.color}55;background:${m.soft}" title="${cv.channel}">${m.icon}</span>
+      <span class="ci-body">
+        <span class="ci-top"><span class="ci-chan" style="color:${m.color}">${cv.channel}</span><span class="ci-date">${cv.date} · ${cv.ago}</span><span class="ci-n tnum">${cv.msgs.length} msgs</span></span>
+        <span class="ci-summary">${escapeHtml((last.who==="agent"?"You: ":"")+last.t)}</span>
+      </span>
+      <span class="ci-actions">
+        <button class="ci-btn" type="button" data-preview="${encodeURIComponent(c.id)}|${idx}">Preview</button>
+        <a class="ci-btn wa" href="${href}" title="Open full thread in WhatsApp">${WA_ICON}<span>Open</span></a>
+      </span>
+    </div>`;
+  }).join("")}</div>`;
+}
+function openConvoPopup(custId, idx){
+  const c=CUSTOMERS.find(x=>x.id===custId); if(!c) return;
+  const cv=(CHATS[custId]||[])[idx]; if(!cv) return;
+  document.getElementById("convoModalTitle").textContent=c.name+" · "+cv.channel+" · "+cv.date;
+  document.getElementById("convoModalBody").innerHTML=cv.msgs.map(mm=>
+    `<div class="wt-msg ${mm.who}"><span class="wt-bub">${escapeHtml(mm.t)}</span><span class="wt-ago tnum">${mm.time||""}</span></div>`).join("");
+  document.getElementById("convoModalWa").href=waLink(c);
+  const md=document.getElementById("convoModal"); md.classList.add("open"); md.setAttribute("aria-hidden","false");
+}
+function closeConvoPopup(){ const md=document.getElementById("convoModal"); md.classList.remove("open"); md.setAttribute("aria-hidden","true"); }
+
+/* ====================== Render: list (Agentic customers + Customers) ====================== */
+// channel chips on a row / in the profile — every channel a guest uses, colour-coded
+function chanChipsHtml(c){
+  return chansOf(c).map(ch=>{ const m=CHANNEL_META[ch]||{color:"var(--faint)",soft:"transparent",icon:""};
+    return `<span class="ch-chip" style="color:${m.color};border-color:${m.color}55;background:${m.soft}" title="${ch}">${m.icon}</span>`; }).join("");
+}
+function custRowHtml(c){
+  const t=tierOf(c), h=health(c), seg=c.vip?"vip":c.seg;
+  const cold=c.lastDays>45, ns=c.noShows||0;
+  return `<button class="cust seg-${seg}${c.id===selectedId?" active":""}" type="button" data-id="${encodeURIComponent(c.id)}">
+    <span class="avatar">${initials(c.name)}</span>
+    <span class="c-main">
+      <span class="c-row1">
+        <span class="c-name">${c.name}</span>
+        ${c.vip?'<span class="c-vip">VIP</span>':''}
+        ${ns>0?`<span class="c-warn" title="${ns} order${ns>1?"s":""} placed and never collected">⚠ ${ns}</span>`:''}
+        <span class="c-chans">${chanChipsHtml(c)}</span>
+      </span>
+      <span class="c-sub">
+        <span class="c-phone">${c.id}</span>
+        <span class="c-dot"></span>
+        <span class="c-seen${cold?" cold":""}">${seenLabel(c.lastDays)}</span>
+        <span class="c-dot"></span>
+        <span class="tnum">${c.orders} ord</span>
+        ${!c.email?'<span class="c-dot"></span><span class="c-noem">no email</span>':''}
+      </span>
+    </span>
+    <span class="c-fig">
+      <span class="c-ltv tnum">${fmtPLN0(c.spent)}</span>
+      ${c.member
+        ? `<span class="c-pts tnum"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>${c.points.toLocaleString("pl-PL")}</span>
+           <span class="tier-pill tier-${t}">${t}</span>`
+        : `<span class="c-contact" title="Captured via ${c.source} — not a loyalty member">Contact</span>`}
+    </span>
+    <span class="c-health"><i style="width:${h}%;background:${healthColor(h)}"></i></span>
+  </button>`;
+}
+
+function renderList(){
+  const list=visibleCustomers();
+  const agentic=list.filter(isAgentic), regular=list.filter(c=>!isAgentic(c));
+  const wrap=document.getElementById("list");
+  const chLabel = CH==="all" ? "All channels" : CH;
+  const tLabel = (TIMES.find(t=>t.key===TIME)||{}).label;
+  document.getElementById("listCount").innerHTML=`<b>${list.length}</b> ${list.length===1?"customer":"customers"}`;
+  document.getElementById("listSort").textContent=chLabel+" · "+tLabel+" · by "+(SORTS.find(s=>s.key===SORT).label);
+
+  const section=(label,icon,rows,emptyMsg)=>
+    `<div class="feed-head"><span class="fh-grp">${icon}${label}</span><span class="fh-sub">${rows.length}</span></div>`+
+    (rows.length ? `<div class="book">${rows.map(custRowHtml).join("")}</div>` : `<div class="feed-empty">${emptyMsg}</div>`);
+
+  const botIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="2"/><path d="M12 8V5M9 3h6"/><path d="M9 13h.01M15 13h.01"/></svg>';
+  const usersIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+  let html=`<div class="grp agentic-grp">${section("Agentic customers",`<span class="fh-ic agentic">${botIcon}</span>`,agentic,"No agentic customers match.")}</div>`;
+  html+=`<div class="grp">${section("Customers",`<span class="fh-ic">${usersIcon}</span>`,regular,"No customers match.")}</div>`;
+  wrap.innerHTML=html;
+  wrap.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>selectCustomer(decodeURIComponent(b.dataset.id)));
+}
+
+/* ====================== AI next-best-action ====================== */
+function nextBestAction(c){
+  const h=health(c), risk=100-h;
+  const bday=daysToBirthday(c.bday), ns=c.noShows||0, fn=c.name.split(" ")[0];
+  let title, sub, cta, action;
+  if(ns>=2){
+    title="Reliability — confirm before firing";
+    sub=`${ns} orders placed and never collected. Send a confirm-pickup text on the next order.`;
+    cta="Send SMS"; action=()=>toast("Pickup-confirm flow armed → "+fn);
+  } else if(c.seg==="lapsed"){
+    title="Win-back — send a comeback code";
+    sub=`Last seen ${seenLabel(c.lastDays)}. ${c.sms?"SMS":"Email"} −15% off the next order.`;
+    cta=c.sms?"Send SMS":"Email"; action=()=>toast("Win-back queued → "+fn);
+  } else if(!c.email){
+    title="Collect an email — close the data gap";
+    sub="No email on file. Capture it at the next order for receipts + offers.";
+    cta="Flag to collect"; action=()=>{ toast("Flagged to collect email → "+fn); };
+  } else if(bday!=null && bday<=14){
+    title="Birthday offer — free dolce";
+    sub=`Birthday in ${bday} day${bday===1?"":"s"}. Comp a Tiramisù on the next visit.`;
+    cta="Schedule"; action=()=>toast("Birthday offer scheduled → "+fn);
+  } else if(!c.member){
+    title="Invite to loyalty — convert this contact";
+    sub=`A regular we never enrolled (via ${c.source}). One tap turns them into a member.`;
+    cta="Invite"; action=()=>inviteLoyalty(c);
+  } else if(c.seg==="new"){
+    title="Welcome — nudge the 2nd order";
+    sub="Double points on order #2 to lock in the habit.";
+    cta="Send SMS"; action=()=>toast("Welcome offer sent → "+fn);
+  } else if(c.vip){
+    title="VIP — early access to the LTO";
+    sub="Offer the Tartufata Reale before it hits the public menu.";
+    cta="Invite"; action=()=>toast("VIP invite sent → "+fn);
+  } else {
+    title="Grow the check — pair a dessert";
+    sub="High-margin Tiramisù pairs with their usual main.";
+    cta="Send SMS"; action=()=>toast("Upsell nudge sent → "+fn);
+  }
+  const cls = risk>=60?"high":risk>=35?"mid":"low";
+  return {title,sub,cta,action,risk,cls};
+}
+
+/* ====================== Render: detail ====================== */
+function renderDetail(){
+  const c=getSelected();
+  const el=document.getElementById("detail");
+  if(!c){
+    el.innerHTML=`<div class="detail-empty"><span class="de-emoji">🍕</span><span class="de-text">Select a customer to see their profile.</span></div>`;
+    return;
+  }
+  const t=tierOf(c), h=health(c), ht=healthTier(h), {r,f,m,rel}=rfm(c), seg=c.vip?"vip":c.seg;
+  const segLabel={vip:"VIP",active:"Active",repeat:"Repeat",new:"New",lapsed:"Lapsed"};
+  const bday=daysToBirthday(c.bday);
+  const nba=nextBestAction(c);
+  const earlier=Math.max(0,c.orders-c.recent.length);
+  const ns=c.noShows||0, comp=completeness(c), flags=healthFlags(c);
+  const signals=deriveSignals(c), idConf=identityConfidence(signals), dupe=(IDENTITY_EXTRA[c.id]||{}).dupe||null;
+  const idTone=idConf>=80?"var(--accent)":idConf>=55?"var(--warn)":"var(--late)";
+  const R=52, CIRC=2*Math.PI*R, arc=(h/100*CIRC).toFixed(1);
+  const fct=(lbl,v)=>`<div class="factor"><span class="fc-lbl">${lbl}<b class="tnum">${v}</b></span><span class="fc-track"><i style="width:${v}%;background:${barColor(v)}"></i></span></div>`;
+
+  // loyalty brief (member: tier + value + progress + rewards · contact: invite)
+  const tierMin={Bronzo:0,Argento:500,Oro:1500}[t];
+  const tierMax={Bronzo:500,Argento:1500,Oro:null}[t];
+  const REWARDS=[{pts:200,name:"Free espresso"},{pts:500,name:"Free dolce"},{pts:1000,name:"Free pizza"},{pts:2000,name:"VIP tasting night"}];
+  const giftSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18"/><path d="M12 8S10 3 7.5 3 5 6 8 8m4 0s2-5 4.5-5S19 6 16 8"/></svg>';
+  let loyaltyHtml;
+  if(c.member){
+    const prog=tierMax==null?100:Math.round((c.points-tierMin)/(tierMax-tierMin)*100);
+    const toNext=tierMax==null?0:tierMax-c.points;
+    const claim=[...REWARDS].reverse().find(r=>c.points>=r.pts);
+    const next=REWARDS.find(r=>c.points<r.pts);
+    loyaltyHtml=`<div class="loyalty-card">
+      <div class="lc-top">
+        <span class="tier-pill tier-${t}">${t}</span>
+        <span class="lc-pts tnum">${c.points.toLocaleString("pl-PL")} pts</span>
+        <span class="lc-value tnum">≈ ${fmtPLN(c.points*10)} in rewards</span>
+      </div>
+      ${tierMax==null
+        ? '<div class="lc-note">Top tier — Oro. Keep the perks flowing.</div>'
+        : `<div class="lc-prog"><span class="lc-track"><i style="width:${prog}%"></i></span><span class="lc-next tnum">${toNext.toLocaleString("pl-PL")} pts to ${t==="Bronzo"?"Argento":"Oro"}</span></div>`}
+      <div class="lc-rewards">
+        ${claim?`<div class="lc-reward claim">${giftSvg}<span>Claimable now — <b>${claim.name}</b></span></div>`:""}
+        ${next?`<div class="lc-reward next">${giftSvg}<span>Next — <b>${next.name}</b> at ${next.pts} pts · ${(next.pts-c.points).toLocaleString("pl-PL")} to go</span></div>`:`<div class="lc-reward">All rewards unlocked 🎉</div>`}
+      </div>
+    </div>`;
+  } else {
+    loyaltyHtml=`<div class="loyalty-card nonmember">
+      <div class="nm-text">Not enrolled — first captured via <b>${c.source}</b>. We hold their contact data, but they aren't earning points yet.</div>
+      <button class="nm-invite" data-act="invite" type="button">Invite to loyalty →</button>
+    </div>`;
+  }
+
+  // WhatsApp conversation brief — a preview + an anchor that hands off to the
+  // WhatsApp tab (the agent-commerce surface) for the full thread.
+  const convoCount=(CHATS[c.id]||[]).length;
+
+  el.innerHTML=`
+  <div class="detail-scroll">
+    <div class="prof${c.vip?" is-vip":""}">
+      <div class="prof-top">
+        <span class="prof-av">${initials(c.name)}</span>
+        <div class="prof-id">
+          <div class="prof-name-row">
+            <span class="prof-name">${c.name}</span>
+            <span class="badge seg-${seg}">${seg==="vip"?'★ VIP':segLabel[c.seg]}</span>
+            ${c.member
+              ? `<span class="badge member"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>Member · ${t}</span>`
+              : `<span class="badge contact">Contact · not enrolled</span>`}
+          </div>
+          <div class="prof-meta">
+            <span class="pm mono">${c.id}</span>
+            <span class="pipe"></span>
+            <span class="pm"><span class="c-chans">${chanChipsHtml(c)}</span> ${chansOf(c).join(" · ")}</span>
+            <span class="pipe"></span>
+            <span class="pm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>${c.loc}</span>
+            ${c.email?`<span class="pipe"></span><span class="pm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>${c.email}</span>`:`<span class="pipe"></span><span class="pm" style="color:var(--warn)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>no email on file</span>`}
+            <span class="pipe"></span>
+            <span class="pm">Since ${joinedLabel(c.joinedDays)}</span>
+            ${bday!=null&&bday<=30?`<span class="pipe"></span><span class="pm" style="color:var(--gold)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16v5H4v-5"/><path d="M2 16h20l-2-5H4l-2 5Z"/><path d="M12 11V7"/><path d="M8 7V4"/><path d="M16 7V4"/></svg>Birthday in ${bday}d</span>`:""}
+          </div>
+        </div>
+      </div>
+      ${ns>0?`<div class="noshow-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span class="nb-text"><b>${ns} no-show${ns>1?"s":""}</b> — order${ns>1?"s":""} placed and never picked up. Reliability ${reliability(c)}% — confirm the next order before firing it.</span>
+      </div>`:""}
+      <div class="actions">
+        <button class="act-btn primary" data-act="sms" type="button" ${c.sms?"":'disabled style="opacity:.5"'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>
+          ${c.sms?"Text":"SMS off"}
+        </button>
+        ${c.email
+          ? `<button class="act-btn" data-act="email" type="button" ${c.mail?"":'disabled style="opacity:.5"'}>
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Email
+             </button>`
+          : `<button class="act-btn warnbtn" data-act="collect" type="button">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Collect email
+             </button>`}
+        ${c.member
+          ? `<button class="act-btn" data-act="points" type="button">
+               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>+50 points
+             </button>`
+          : `<button class="act-btn goldbtn" data-act="invite" type="button">
+               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.2 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.5 1.5-6.7L2.4 9.3l6.8-.6L12 2z"/></svg>Invite to loyalty
+             </button>`}
+        <button class="act-btn" data-act="note" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+          Add note
+        </button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Relationship health <span class="sh-sep"></span><span class="health-badge" style="color:${ht.color};border-color:${ht.color}">${ht.label}</span></div>
+      <div class="health-card">
+        <div class="health-left">
+          <div class="gauge">
+            <svg class="gauge-svg" viewBox="0 0 128 128">
+              <circle class="gauge-track" cx="64" cy="64" r="${R}"/>
+              <circle class="gauge-fill" cx="64" cy="64" r="${R}" style="stroke:${ht.color};stroke-dasharray:${arc} ${CIRC.toFixed(1)}"/>
+            </svg>
+            <div class="gauge-center"><span class="gauge-num tnum" style="color:${ht.color}">${h}</span><span class="gauge-max">/100</span></div>
+          </div>
+          <span class="gauge-tier" style="color:${ht.color}">${ht.label}</span>
+        </div>
+        <div class="health-right">
+          <p class="diag">${healthDiagnosis(c)}</p>
+          <div class="factors">
+            ${fct("Recency",r)}
+            ${fct("Frequency",f)}
+            ${fct("Monetary",m)}
+            ${fct("Reliability",rel)}
+          </div>
+          <div class="flags">${flags.map(fl=>`<span class="flag ${fl.cls}">${fl.t}</span>`).join("")}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Next best action <span class="sh-sep"></span></div>
+      <div class="ai-card">
+        <div class="ai-head">
+          <span class="ai-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8.5 13.2 11l2.8 1-2.8 1L12 15.5 10.8 13 8 12l2.8-1L12 8.5Z"/></svg>AI</span>
+          <span class="ai-title">Recommended for ${c.name.split(" ")[0]}</span>
+          <span class="ai-risk ${nba.cls}">churn ${nba.risk}%</span>
+        </div>
+        <button class="ai-offer" id="nbaBtn" type="button">
+          <span class="ai-of-main"><span class="ai-of-title">${nba.title}</span><span class="ai-of-sub">${nba.sub}</span></span>
+          <span class="ai-of-cta">${nba.cta}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Lifetime <span class="sh-sep"></span></div>
+      <div class="stats">
+        <div class="stat"><span class="s-val tnum">${fmtPLN0(c.spent)}</span><span class="s-lbl">Lifetime value</span></div>
+        <div class="stat"><span class="s-val tnum">${c.orders}</span><span class="s-lbl">Orders</span></div>
+        <div class="stat"><span class="s-val tnum">${fmtPLN(aov(c))}</span><span class="s-lbl">Avg order</span></div>
+        <div class="stat${ns>0?" warnstat":""}"><span class="s-val tnum">${ns}</span><span class="s-lbl">No-shows</span><span class="s-sub">${reliability(c)}% reliable</span></div>
+        <div class="stat"><span class="s-val tnum">${seenLabel(c.lastDays)}</span><span class="s-lbl">Last order</span><span class="s-sub">${fmtDate(dateFromDaysAgo(c.lastDays))}</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Contact &amp; data <span class="sh-sep"></span><span class="comp-pill ${comp.have<comp.total?"partial":"full"}">${comp.have}/${comp.total} on file</span></div>
+      <div class="comp-bar"><i style="width:${Math.round(comp.have/comp.total*100)}%"></i></div>
+      <div class="data-grid">
+        <div class="data-row">
+          <span class="dr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg></span>
+          <span class="dr-k">Phone</span><span class="dr-v mono">${c.id}</span><span class="dr-ok">on file</span>
+        </div>
+        <div class="data-row${c.email?"":" missing"}">
+          <span class="dr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+          <span class="dr-k">Email</span>
+          ${c.email?`<span class="dr-v">${c.email}</span><span class="dr-ok">on file</span>`
+                   :`<span class="dr-v dr-missing">Not collected yet</span><button class="collect-btn" data-act="collect" type="button">Collect</button>`}
+        </div>
+        <div class="data-row">
+          <span class="dr-ic">${SOURCE_ICON[c.source]||""}</span>
+          <span class="dr-k">Captured via</span><span class="dr-v">${c.source}</span>
+        </div>
+        <div class="data-row">
+          <span class="dr-ic">${(CHANNEL_META[chansOf(c)[0]]||{}).icon||""}</span>
+          <span class="dr-k">Channels</span><span class="dr-v" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="c-chans">${chanChipsHtml(c)}</span> ${chansOf(c).join(" · ")}</span>
+        </div>
+      </div>
+      <div class="consent">
+        <button class="toggle" data-toggle="sms" type="button" aria-pressed="${c.sms}">
+          <span class="sw"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>
+          SMS marketing
+        </button>
+        <button class="toggle" data-toggle="mail" type="button" aria-pressed="${c.mail}" ${c.email?"":'disabled style="opacity:.45"'}>
+          <span class="sw"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          Email marketing
+        </button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Conversation history ${convoCount?'<span class="sh-n">WhatsApp</span>':""}<span class="sh-sep"></span>${convoCount?`<span class="wt-count tnum">${convoCount} conversation${convoCount===1?"":"s"}</span>`:""}</div>
+      ${convoHistoryHtml(c)}
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Guest identity <span class="sh-n">passive</span><span class="sh-sep"></span><span class="id-conf" style="color:${idTone};border-color:${idTone}">${idConf}% confident</span></div>
+      <div class="id-lead">
+        <span class="id-merge">1 guest · merged from <b class="tnum">${signals.length}</b> signal${signals.length===1?"":"s"}</span>
+        <span class="id-nosignup">no sign-up — identity resolved from how they reach us</span>
+      </div>
+      <div class="id-bar"><i style="width:${idConf}%;background:${idTone}"></i></div>
+      <div class="id-graph">
+        ${signals.map(s=>{
+          const meta=SIGNAL_META[s.type]||{label:s.type,icon:""};
+          return `<div class="id-sig">
+            <span class="id-ic">${meta.icon}</span>
+            <span class="id-body"><span class="id-k">${meta.label}${s.type==="card"&&s.visits>1?` · seen ${s.visits}×`:""}</span><span class="id-v mono">${s.val}</span></span>
+            <span class="id-side"><span class="id-src">${s.src}</span>${s.tag?`<span class="id-tag${s.tag==="Passive"?" passive":s.tag==="Verified"?" verified":""}">${s.tag}</span>`:""}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      ${dupe?`<div class="id-dupe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><rect x="8" y="8" width="12" height="12" rx="2"/></svg>
+        <span class="id-dupe-body"><span class="id-dupe-top">Possible duplicate · <span class="mono">${dupe.phone}</span></span><span class="id-dupe-note">${dupe.note} <span class="id-shared">Shared: ${dupe.shared.join(" · ")}</span></span></span>
+        <button class="id-merge-btn" data-act="merge" type="button">Merge</button>
+      </div>`:""}
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Loyalty <span class="sh-sep"></span></div>
+      ${loyaltyHtml}
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Favourites <span class="sh-sep"></span></div>
+      <div class="favs">
+        ${c.favs.map(fv=>`<span class="fav"><span class="fv-emoji">${ITEM_EMOJI[fv.cat]||"🍽️"}</span>${fv.n}<span class="fv-n tnum">×${fv.q}</span></span>`).join("")}
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Order history <span class="sh-n tnum">${c.orders}</span><span class="sh-sep"></span></div>
+      <div class="hist">
+        ${c.recent.map(o=>{
+          const its=o.items.map(i=>(i.q>1?i.q+"× ":"")+i.n).join(", ");
+          return `<div class="horder">
+            <span class="ho-chan ${CHAN_CLASS[o.chan]}" title="${o.chan}">${CHAN_ICON[o.chan]}</span>
+            <span class="ho-body"><span class="ho-items">${its}</span><span class="ho-meta">${fmtDate(dateFromDaysAgo(o.d))} · ${o.chan} · ${o.loc}</span></span>
+            <span class="ho-total tnum">${fmtPLN(o.total)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      ${earlier>0?`<div class="hist-more">+ ${earlier} earlier order${earlier===1?"":"s"} · ${fmtPLN0(c.spent)} lifetime</div>`:""}
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">Notes <span class="sh-n tnum">${c.notes.length}</span><span class="sh-sep"></span></div>
+      <div class="notes">
+        ${c.notes.length? c.notes.map(n=>`<div class="note">
+            <div class="note-head"><b>${n.by}</b> · ${seenLabel(n.d)}</div>
+            <div class="note-body">${escapeHtml(n.text)}</div>
+          </div>`).join("")
+          : '<div class="note-empty">No notes yet — add context the next operator should know.</div>'}
+      </div>
+      <div class="note-add">
+        <input class="note-input" id="noteInput" type="text" placeholder="Add a note about ${c.name.split(" ")[0]}…" autocomplete="off">
+        <button class="note-save" id="noteSave" type="button">Save</button>
+      </div>
+    </div>
+  </div>`;
+
+  // wire detail controls
+  document.getElementById("nbaBtn").onclick=nba.action;
+  el.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>doAction(b.dataset.act,c));
+  el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>toggleConsent(b.dataset.toggle,c));
+  el.querySelectorAll("[data-preview]").forEach(b=>b.onclick=()=>{ const [id,idx]=b.dataset.preview.split("|"); openConvoPopup(decodeURIComponent(id),Number(idx)); });
+  const ni=document.getElementById("noteInput");
+  document.getElementById("noteSave").onclick=()=>addNote(c);
+  ni.addEventListener("keydown",e=>{ if(e.key==="Enter") addNote(c); });
+}
+
+function escapeHtml(s){ return String(s ?? "").replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+
+/* ====================== Actions ====================== */
+function doAction(act,c){
+  const fn=c.name.split(" ")[0];
+  if(act==="sms"){ if(!c.sms) return toast("⚠ SMS marketing is off for "+fn); toast("✉ Texting "+fn+" · "+c.id); }
+  else if(act==="email"){ if(!(c.mail&&c.email)) return toast("⚠ No email consent on file"); toast("✉ Email to "+c.email); }
+  else if(act==="collect"){ toast("Flagged to collect email at "+fn+"'s next order"); }
+  else if(act==="points"){ if(!c.member) return toast("⚠ "+fn+" isn't a loyalty member — invite them first"); c.points+=50; toast("+50 points → "+fn+" · "+c.points.toLocaleString("pl-PL")+" total"); renderAll(); }
+  else if(act==="invite"){ inviteLoyalty(c); }
+  else if(act==="merge"){ toast("Merged → one guest for "+fn+" · histories + identifiers combined"); }
+  else if(act==="note"){ const ni=document.getElementById("noteInput"); if(ni){ ni.focus(); ni.scrollIntoView({behavior:"smooth",block:"center"}); } }
+}
+// Convert a captured contact into a loyalty member — seeds a welcome balance.
+function inviteLoyalty(c){
+  if(c.member){ toast(c.name.split(" ")[0]+" is already a member"); return; }
+  c.member=true; c.points=50;
+  toast("Enrolled in loyalty → "+c.name.split(" ")[0]+" · 50 welcome pts");
+  renderAll();
+}
+function toggleConsent(kind,c){
+  c[kind]=!c[kind];
+  toast((kind==="sms"?"SMS":"Email")+" marketing "+(c[kind]?"opted in":"opted out")+" — saved");
+  renderDetail();
+}
+function addNote(c){
+  const ni=document.getElementById("noteInput");
+  const v=ni.value.trim();
+  if(!v) return;
+  c.notes.unshift({by:"You",d:0,text:v});
+  ni.value="";
+  toast("Note saved → "+c.name.split(" ")[0]);
+  renderDetail();
+}
+
+/* ====================== Selection / filter plumbing ====================== */
+function selectCustomer(id){ selectedId=id; renderList(); renderDetail(); }
+function afterFilterChange(){
+  renderSegchips();
+  renderChanChips();
+  renderList();
+  // keep a valid selection within the filtered set
+  const vis=visibleCustomers();
+  if(vis.length && !vis.some(c=>c.id===selectedId)) selectedId=vis[0].id;
+  renderDetail();
+}
+function renderAll(){ renderKpis(); renderSegchips(); renderChanChips(); renderList(); renderDetail(); }
+
+/* ====================== Header switchers ====================== */
+const LOCS=["All","Kraków","Warszawa"];
+function buildLocSwitcher(){
+  const g=document.getElementById("locGroup");g.innerHTML="";
+  LOCS.forEach(l=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=l;
+    b.setAttribute("aria-pressed",String(l===LOC));
+    b.onclick=()=>{ LOC=l; buildLocSwitcher(); renderKpis(); afterFilterChange(); };
+    g.appendChild(b);
+  });
+}
+function buildSortSwitcher(){
+  const g=document.getElementById("sortGroup");g.innerHTML="";
+  SORTS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=s.label;
+    b.setAttribute("aria-pressed",String(s.key===SORT));
+    b.onclick=()=>{ SORT=s.key; buildSortSwitcher(); renderList(); };
+    g.appendChild(b);
+  });
+}
+function buildTimeSwitcher(){
+  const g=document.getElementById("timeGroup");g.innerHTML="";
+  TIMES.forEach(tm=>{
+    const b=document.createElement("button");
+    b.className="seg";b.type="button";b.textContent=tm.label;
+    b.setAttribute("aria-pressed",String(tm.key===TIME));
+    b.onclick=()=>{ TIME=tm.key; buildTimeSwitcher(); afterFilterChange(); };
+    g.appendChild(b);
+  });
+}
+
+/* ====================== Search ====================== */
+const searchInput=document.getElementById("search");
+const searchWrap=document.getElementById("searchWrap");
+searchInput.addEventListener("input",()=>{
+  QUERY=searchInput.value;
+  searchWrap.classList.toggle("has-q",!!QUERY);
+  afterFilterChange();
+});
+document.getElementById("searchClear").onclick=()=>{
+  QUERY="";searchInput.value="";searchWrap.classList.remove("has-q");searchInput.focus();afterFilterChange();
+};
+
+/* ====================== Toast ====================== */
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${msg}`;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* ====================== Fullscreen ====================== */
+const fsbtn=document.getElementById("fsbtn");
+function syncFs(){
+  const on=!!document.fullscreenElement;
+  document.documentElement.classList.toggle("is-fullscreen",on);
+  fsbtn.setAttribute("aria-pressed",String(on));
+}
+function fallbackToggle(){
+  const on=!document.documentElement.classList.contains("is-fullscreen");
+  document.documentElement.classList.toggle("is-fullscreen",on);
+  fsbtn.setAttribute("aria-pressed",String(on));
+}
+function toggleFs(){
+  if(document.fullscreenElement){
+    if(document.exitFullscreen) document.exitFullscreen().catch(fallbackToggle); else fallbackToggle();
+  } else {
+    const req=document.documentElement.requestFullscreen;
+    if(req) req.call(document.documentElement).catch(fallbackToggle); else fallbackToggle();
+  }
+}
+fsbtn.addEventListener("click",toggleFs);
+document.addEventListener("fullscreenchange",syncFs);
+
+/* ====================== Conversation popup wiring ====================== */
+document.querySelectorAll("#convoModal [data-close]").forEach(b=>b.onclick=closeConvoPopup);
+
+/* ====================== Keyboard ====================== */
+document.addEventListener("keydown",e=>{
+  const el=e.target;
+  const typing = el && (el.tagName==="INPUT"||el.tagName==="TEXTAREA"||el.isContentEditable);
+  if(e.key==="Escape"){
+    if(document.getElementById("convoModal").classList.contains("open")){ closeConvoPopup(); return; }
+    if(QUERY){ QUERY="";searchInput.value="";searchWrap.classList.remove("has-q");afterFilterChange(); }
+    if(typing) el.blur();
+    return;
+  }
+  if(typing) return;
+  if(e.key==="/"){ e.preventDefault(); searchInput.focus(); return; }
+  if(e.key.toLowerCase()==="f"){ toggleFs(); return; }
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"||e.key.toLowerCase()==="j"||e.key.toLowerCase()==="k"){
+    const ids=visibleCustomers().map(c=>c.id);
+    if(!ids.length) return;
+    const i=ids.indexOf(selectedId);
+    const dir=(e.key==="ArrowDown"||e.key.toLowerCase()==="j")?1:-1;
+    const ni=Math.max(0,Math.min(ids.length-1,(i<0?0:i)+dir));
+    selectCustomer(ids[ni]);
+    const node=document.querySelector(".cust.active,.intake.active");
+    if(node) node.scrollIntoView({block:"nearest"});
+    e.preventDefault();
+  }
+});
+
+/* ====================== Clock ====================== */
+function tick(){ document.getElementById("clock").textContent=fmtClock(new Date()); }
+
+/* ====================== Boot ====================== */
+buildLocSwitcher();
+buildSortSwitcher();
+buildTimeSwitcher();
+syncFs();
+renderAll();
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
