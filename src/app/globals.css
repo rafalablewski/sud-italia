@@ -8962,6 +8962,8 @@ select.pub-input {
 .wa-act-btn { appearance: none; cursor: pointer; width: 100%; border: 1px solid var(--wa-hair-strong); background: var(--wa-raised); color: var(--wa-dim); font-weight: 600; font-size: 12.5px; border-radius: 9px; padding: 10px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: color .14s, border-color .14s; }
 .wa-act-btn:hover { color: var(--wa-late); border-color: var(--wa-late); }
 .wa-act-btn svg { width: 14px; height: 14px; }
+.wa-act-btn.neutral:hover { color: var(--wa-text); border-color: var(--wa-text); }
+.wa-conv-pin { width: 12px; height: 12px; color: var(--wa-accent); flex: 0 0 auto; }
 
 /* empty states */
 .wa-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--wa-faint); text-align: center; padding: 40px; }
@@ -8981,6 +8983,12 @@ select.pub-input {
 .wa-cfg-switch { display: inline-flex; align-items: center; gap: 10px; }
 .wa-cfg-replies { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .wa-cfg-reply { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; width: 100%; }
+.wa-cfg-hours { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.wa-cfg-hour-row { display: grid; grid-template-columns: 44px auto 14px auto 1fr; gap: 8px; align-items: center; }
+.wa-cfg-hour-row.is-closed { opacity: .6; }
+.wa-cfg-hour-day { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--admin-text, inherit); }
+.wa-cfg-hour-sep { text-align: center; color: var(--text-muted, #6b7280); }
+.wa-cfg-hour-closed { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted, #6b7280); white-space: nowrap; }
 
 @media (max-width: 1180px) {
   .wa-editor { grid-template-columns: 300px 1fr; }

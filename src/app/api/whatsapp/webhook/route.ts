@@ -11,7 +11,9 @@ import {
   getCustomer,
   getWaSession,
   getWaSettings,
+  setWaArchived,
 } from "@/lib/store";
+import { isWithinBusinessHours } from "@/lib/whatsapp/hours";
 import { incrCounter } from "@/lib/metrics";
 
 /**
@@ -128,6 +130,10 @@ async function processOne(message: {
     actor: "customer",
   });
 
+  // A fresh customer message pulls the chat out of the operator's Archived
+  // view (auto- or manually-archived) back into the active inbox.
+  await setWaArchived(phone, false);
+
   const settings = await getWaSettings();
 
   // Opt-out gate. Honour the existing customer.smsOptout flag — one
@@ -172,6 +178,20 @@ async function processOne(message: {
       logger.info("whatsapp.autoreply.sent", { phone, keyword: hit.keyword, layer: "whatsapp.webhook" });
       return;
     }
+  }
+
+  // Business-hours gate: outside the configured opening hours, send the away
+  // message and stop — no welcome, no LLM. Disabled schedule → always open, so
+  // this is a no-op by default. Auto-replies above still answer (FAQs work 24/7).
+  if (!isWithinBusinessHours(settings.businessHours)) {
+    const provider = getWhatsAppProvider();
+    await provider.sendText(
+      phone,
+      settings.awayMessage?.trim() ||
+        "Dziękujemy za wiadomość! Jesteśmy teraz zamknięci — napisz w godzinach otwarcia albo zamów online: https://sudita.lia 🍕",
+    );
+    incrCounter("whatsapp.afterhours.skipped");
+    return;
   }
 
   // First-touch welcome: when this is the customer's very first message

@@ -9,6 +9,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  Archive,
+  ArchiveRestore,
   ArrowDownToLine,
   CheckCircle2,
   Circle,
@@ -18,6 +20,8 @@ import {
   MapPin,
   Maximize2,
   Minimize2,
+  Pin,
+  PinOff,
   RotateCw,
   Search,
   Send,
@@ -287,6 +291,10 @@ function AdminWhatsAppDesktop() {
   const [filter, setFilter] = useState<ConvFilter>("inbox");
   const [query, setQuery] = useState("");
 
+  // Operator archive / pin flags (phones).
+  const [archivedSet, setArchivedSet] = useState<Set<string>>(new Set());
+  const [pinnedSet, setPinnedSet] = useState<Set<string>>(new Set());
+
   // Thread (selected conversation transcript)
   const [thread, setThread] = useState<WaMessage[]>([]);
   const [threadLoading, setThreadLoading] = useState(false);
@@ -314,11 +322,12 @@ function AdminWhatsAppDesktop() {
   const loadAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [sRes, cRes, hRes, mRes] = await Promise.all([
+      const [sRes, cRes, hRes, mRes, fRes] = await Promise.all([
         fetch("/api/admin/whatsapp/settings"),
         fetch("/api/admin/whatsapp/sessions"),
         fetch("/api/admin/whatsapp/transcripts"),
         fetch("/api/admin/whatsapp/metrics"),
+        fetch("/api/admin/whatsapp/flags"),
       ]);
       if (sRes.ok) {
         setSettings((await sRes.json()) as WaSettings);
@@ -333,6 +342,11 @@ function AdminWhatsAppDesktop() {
       }
       if (mRes.ok) {
         setMetrics((await mRes.json()) as MetricsResponse);
+      }
+      if (fRes.ok) {
+        const f = (await fRes.json()) as { archived: string[]; pinned: string[] };
+        setArchivedSet(new Set(f.archived));
+        setPinnedSet(new Set(f.pinned));
       }
     } finally {
       if (!silent) setLoading(false);
@@ -361,9 +375,12 @@ function AdminWhatsAppDesktop() {
   // because lastAt refreshes. 0 minutes disables it.
   const archiveMs = (settings?.autoArchiveMinutes ?? 0) * 60_000;
   const isArchived = useCallback(
-    (c: ConversationRow) =>
-      archiveMs > 0 && Date.now() - Date.parse(c.lastAt) > archiveMs,
-    [archiveMs],
+    (c: ConversationRow) => {
+      if (pinnedSet.has(c.phone)) return false; // pinned stays in the inbox
+      if (archivedSet.has(c.phone)) return true; // manually archived
+      return archiveMs > 0 && Date.now() - Date.parse(c.lastAt) > archiveMs;
+    },
+    [archiveMs, archivedSet, pinnedSet],
   );
 
   const counts = useMemo(() => {
@@ -480,6 +497,24 @@ function AdminWhatsAppDesktop() {
     const ok = await patch({ enabled: !settings.enabled });
     if (ok) toast.success(`WhatsApp ${settings.enabled ? "disabled" : "enabled"}`);
   };
+
+  const setFlag = useCallback(
+    async (phone: string, patchFlags: { archived?: boolean; pinned?: boolean }) => {
+      const res = await fetch("/api/admin/whatsapp/flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, ...patchFlags }),
+      });
+      if (res.ok) {
+        const f = (await res.json()) as { archived: string[]; pinned: string[] };
+        setArchivedSet(new Set(f.archived));
+        setPinnedSet(new Set(f.pinned));
+      } else {
+        toast.error("Could not update conversation");
+      }
+    },
+    [toast],
+  );
 
   const resetSession = async (phone: string) => {
     const res = await fetch(
@@ -768,6 +803,7 @@ function AdminWhatsAppDesktop() {
                   key={c.phone}
                   conv={c}
                   active={c.phone === selectedPhone}
+                  pinned={pinnedSet.has(c.phone)}
                   onSelect={() => setSelectedPhone(c.phone)}
                 />
               ))
@@ -935,6 +971,22 @@ function AdminWhatsAppDesktop() {
               )}
 
               <div className="wa-ctx-actions">
+                <button
+                  type="button"
+                  className="wa-act-btn neutral"
+                  onClick={() => void setFlag(selected.phone, { pinned: !pinnedSet.has(selected.phone) })}
+                >
+                  {pinnedSet.has(selected.phone) ? <PinOff /> : <Pin />}
+                  <span>{pinnedSet.has(selected.phone) ? "Unpin" : "Pin to inbox"}</span>
+                </button>
+                <button
+                  type="button"
+                  className="wa-act-btn neutral"
+                  onClick={() => void setFlag(selected.phone, { archived: !archivedSet.has(selected.phone) })}
+                >
+                  {archivedSet.has(selected.phone) ? <ArchiveRestore /> : <Archive />}
+                  <span>{archivedSet.has(selected.phone) ? "Unarchive" : "Archive"}</span>
+                </button>
                 {selected.hasActiveSession && (
                   <button
                     type="button"
@@ -970,10 +1022,12 @@ function AdminWhatsAppDesktop() {
 function ConvItem({
   conv,
   active,
+  pinned,
   onSelect,
 }: {
   conv: ConversationRow;
   active: boolean;
+  pinned: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -985,6 +1039,7 @@ function ConvItem({
       <div className="wa-conv-top">
         <span className="wa-conv-dot" />
         <span className="wa-conv-name">{conv.customerName || conv.phone}</span>
+        {pinned && <Pin className="wa-conv-pin" />}
         <span className="wa-conv-ago tnum">{fmtAgo(conv.lastAt)}</span>
       </div>
       {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}

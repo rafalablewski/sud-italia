@@ -56,6 +56,21 @@ export const PATCH = withAdmin({ roles: ["manager", "owner"] }, async (req, _ctx
       .filter((r) => r.keyword && r.reply)
       .slice(0, 30);
   }
+  if (body.businessHours && typeof body.businessHours === "object") {
+    const bh = body.businessHours as { enabled?: unknown; days?: unknown };
+    const hhmm = (v: unknown, fallback: string) =>
+      typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v.trim()) ? v.trim() : fallback;
+    const rawDays = Array.isArray(bh.days) ? bh.days : [];
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = (rawDays[i] ?? {}) as { open?: unknown; close?: unknown; closed?: unknown };
+      return {
+        open: hhmm(d.open, "11:00"),
+        close: hhmm(d.close, "22:00"),
+        closed: d.closed === true,
+      };
+    });
+    updates.businessHours = { enabled: bh.enabled === true, days };
+  }
 
   const before = await getWaSettings();
   const next = await updateWaSettings(updates);

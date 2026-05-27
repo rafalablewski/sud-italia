@@ -8591,7 +8591,20 @@ export interface WaSettings {
    *  first whose keyword is contained (case-insensitive) in an inbound text
    *  wins: the reply is sent and the turn ends without calling the model. */
   autoReplies: { keyword: string; reply: string }[];
+  /** Opening hours (Europe/Warsaw). When enabled, messages received outside
+   *  the day's open→close window get the away message instead of the bot.
+   *  `days` is indexed 0=Sunday … 6=Saturday. */
+  businessHours: {
+    enabled: boolean;
+    days: { open: string; close: string; closed: boolean }[];
+  };
 }
+
+const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
+  open: "11:00",
+  close: "22:00",
+  closed: false,
+}));
 
 const DEFAULT_WA_SETTINGS: WaSettings = {
   enabled: true,
@@ -8606,6 +8619,7 @@ const DEFAULT_WA_SETTINGS: WaSettings = {
   aiInstructions: "",
   awayMessage: "",
   autoReplies: [],
+  businessHours: { enabled: false, days: DEFAULT_BUSINESS_DAYS },
 };
 
 export async function getWaSettings(): Promise<WaSettings> {
@@ -8987,6 +9001,56 @@ export async function deleteSimulatedWaConversations(): Promise<number> {
   }
   await writeJSON(WA_SIM_REGISTRY_KEY, []);
   return removed;
+}
+
+// --- WhatsApp conversation flags (operator console: archive / pin) -------
+//
+// Operator-side organisational state, independent of the bot session. A
+// manually-archived phone drops to the Archived view even if recent; a pinned
+// phone never auto-archives. A new inbound message clears the manual-archive
+// flag (the webhook calls setWaArchived(phone, false)) so a reply pulls the
+// chat back to the inbox. Stored as two phone registries.
+
+const WA_ARCHIVED_KEY = "whatsapp-archived-phones.json";
+const WA_PINNED_KEY = "whatsapp-pinned-phones.json";
+
+export async function getWaConversationFlags(): Promise<{ archived: string[]; pinned: string[] }> {
+  const [archived, pinned] = await Promise.all([
+    readJSON<string[]>(WA_ARCHIVED_KEY, []),
+    readJSON<string[]>(WA_PINNED_KEY, []),
+  ]);
+  return {
+    archived: Array.isArray(archived) ? archived : [],
+    pinned: Array.isArray(pinned) ? pinned : [],
+  };
+}
+
+async function setPhoneFlag(key: string, rawPhone: string, on: boolean): Promise<void> {
+  const phone = normalizePlPhoneE164(rawPhone);
+  if (!phone) return;
+  await withLock(key, async () => {
+    const list = await readJSON<string[]>(key, []);
+    const has = list.includes(phone);
+    if (on && !has) {
+      await writeJSON(key, [...list, phone]);
+    } else if (!on && has) {
+      await writeJSON(key, list.filter((p) => p !== phone));
+    }
+  });
+}
+
+/** Manually archive (or restore) a conversation in the operator console. */
+export async function setWaArchived(rawPhone: string, archived: boolean): Promise<void> {
+  await setPhoneFlag(WA_ARCHIVED_KEY, rawPhone, archived);
+  // Pinning and archiving are mutually exclusive — archiving unpins.
+  if (archived) await setPhoneFlag(WA_PINNED_KEY, rawPhone, false);
+}
+
+/** Pin (or unpin) a conversation so it never auto-archives. */
+export async function setWaPinned(rawPhone: string, pinned: boolean): Promise<void> {
+  await setPhoneFlag(WA_PINNED_KEY, rawPhone, pinned);
+  // Pinning clears any manual archive so the chat returns to the inbox.
+  if (pinned) await setPhoneFlag(WA_ARCHIVED_KEY, rawPhone, false);
 }
 
 // --- Business costs (operating expense ledger) ---------------------------

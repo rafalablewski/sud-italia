@@ -18,6 +18,18 @@ interface AutoReply {
   reply: string;
 }
 
+interface BusinessDay {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+interface BusinessHours {
+  enabled: boolean;
+  days: BusinessDay[];
+}
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 interface WaSettings {
   enabled: boolean;
   welcomeMessage: string;
@@ -30,6 +42,7 @@ interface WaSettings {
   aiInstructions: string;
   awayMessage: string;
   autoReplies: AutoReply[];
+  businessHours: BusinessHours;
 }
 
 export function WhatsAppSettingsDialog({
@@ -112,6 +125,21 @@ export function WhatsAppSettingsDialog({
   const removeReply = (i: number) =>
     setDraft((d) => (d ? { ...d, autoReplies: d.autoReplies.filter((_, j) => j !== i) } : d));
 
+  const setHoursEnabled = (enabled: boolean) =>
+    setDraft((d) => (d ? { ...d, businessHours: { ...d.businessHours, enabled } } : d));
+  const setDay = (i: number, patch: Partial<BusinessDay>) =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            businessHours: {
+              ...d.businessHours,
+              days: d.businessHours.days.map((day, j) => (j === i ? { ...day, ...patch } : day)),
+            },
+          }
+        : d,
+    );
+
   const save = async () => {
     if (!draft) return;
     setSaving(true);
@@ -138,6 +166,7 @@ export function WhatsAppSettingsDialog({
           aiInstructions: draft.aiInstructions,
           awayMessage: draft.awayMessage,
           autoReplies,
+          businessHours: draft.businessHours,
         }),
       });
       if (res.ok) {
@@ -254,6 +283,50 @@ export function WhatsAppSettingsDialog({
                 A conversation with no new message for this long moves to the Archived filter. 0 = never archive.
               </p>
             </Field>
+          </Section>
+
+          {/* Business hours */}
+          <Section title="Business hours" desc="Times are Europe/Warsaw. Outside the open→close window the channel sends the away message instead of taking orders (auto-replies still answer 24/7). A close time at or before open means it runs past midnight.">
+            <div className="wa-cfg-switch">
+              <Switch
+                checked={draft.businessHours.enabled}
+                onChange={setHoursEnabled}
+                label="Enforce business hours"
+              />
+              <span className="admin-text text-sm">
+                {draft.businessHours.enabled ? "On — closed outside hours" : "Off — open 24/7"}
+              </span>
+            </div>
+            {draft.businessHours.enabled && (
+              <div className="wa-cfg-hours">
+                {draft.businessHours.days.map((day, i) => (
+                  <div key={i} className={`wa-cfg-hour-row${day.closed ? " is-closed" : ""}`}>
+                    <span className="wa-cfg-hour-day">{DAY_LABELS[i]}</span>
+                    <Input
+                      type="time"
+                      value={day.open}
+                      onChange={(e) => setDay(i, { open: e.target.value })}
+                      disabled={day.closed}
+                    />
+                    <span className="wa-cfg-hour-sep">–</span>
+                    <Input
+                      type="time"
+                      value={day.close}
+                      onChange={(e) => setDay(i, { close: e.target.value })}
+                      disabled={day.closed}
+                    />
+                    <label className="wa-cfg-hour-closed">
+                      <input
+                        type="checkbox"
+                        checked={day.closed}
+                        onChange={(e) => setDay(i, { closed: e.target.checked })}
+                      />
+                      <span>Closed</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
 
           {/* AI concierge */}
