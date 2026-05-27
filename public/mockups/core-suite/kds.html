@@ -10,7 +10,7 @@
     --canvas:#0a0a0c; --panel:#141318; --raised:#222028; --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
     --t:#f4f2ee; --dim:#b6afa6; --faint:#918880;
     --queued:#6a655f; --firing:#4d90e8; --warn:#e0a93f; --late:#e5484d; --ready:#3dd68c; --risk:#9a72e0;
-    background: radial-gradient(110% 42% at 50% -8%, rgba(166,45,73,.07), transparent 55%), var(--canvas); height:100vh; overflow:hidden;
+    background: var(--canvas); height:100vh; overflow:hidden;
   }
   .tk { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
   .ctrl .icn { width:16px; height:16px; }
@@ -49,7 +49,7 @@
   .col-head .lbl { font:700 13px var(--ui); letter-spacing:.12em; text-transform:uppercase; }
   .col-head .cnt { font:600 13px var(--mono); color:var(--faint); }
   .col-head .rule { flex:1; height:1px; background:var(--hair); }
-  .col.active .col-head .rule { background:linear-gradient(90deg,var(--platinum),transparent); }
+  .col.active .col-head .rule { background: rgba(203,180,138,.4); }
   .col-body { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:2px; }
 
   .tk { background:var(--panel); border:1px solid var(--hair); border-left:3px solid var(--queued); border-radius:var(--r-lg); overflow:hidden; }

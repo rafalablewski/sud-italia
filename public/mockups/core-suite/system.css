@@ -97,7 +97,7 @@ body {
 .brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 14px; }
 .brand-mark {
   width: 30px; height: 30px; border-radius: 9px;
-  background: linear-gradient(155deg, var(--brand-bright), var(--brand));
+  background: var(--brand);
   box-shadow: var(--sh-sm), inset 0 0 0 1px var(--platinum-soft);
   display: grid; place-items: center;
   color: #fff; font-weight: 700; font-size: 11px; letter-spacing: .04em;
@@ -152,19 +152,15 @@ body {
 .btn:hover { background: var(--surface-hover); }
 .btn.ghost { background: transparent; border-color: var(--border-strong); color: var(--fg-muted); }
 .btn.ghost:hover { color: var(--fg); border-color: var(--fg-subtle); }
-.btn.primary { background: linear-gradient(180deg, var(--brand-bright), var(--brand)); color: #fff; box-shadow: var(--sh-sm), inset 0 1px 0 rgba(255,255,255,.14); }
-.btn.primary:hover { background: linear-gradient(180deg, #d04b69, var(--brand-bright)); }
-.btn.primary.xl, .btn.primary.lg { box-shadow: 0 8px 24px rgba(166,45,73,.3), inset 0 1px 0 rgba(255,255,255,.15); }
+.btn.primary { background: var(--brand); color: #fff; box-shadow: var(--sh-sm); }
+.btn.primary:hover { background: var(--brand-bright); }
 .btn.lg { height: 44px; padding: 0 20px; font-size: 14px; border-radius: var(--r-lg); }
 .btn.xl { height: 60px; padding: 0 24px; font-size: 16px; font-weight: 600; border-radius: var(--r-lg); }
 .btn.icon { width: 34px; padding: 0; justify-content: center; }
 
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--sh-xs), inset 0 1px 0 rgba(255,255,255,.04); }
 
-/* ── global finish: material light + signature focus (shell pages) ── */
-.main { background:
-  radial-gradient(120% 70% at 88% -8%, rgba(166,45,73,.05), transparent 58%),
-  radial-gradient(80% 55% at 2% -4%, rgba(203,180,138,.03), transparent 52%); }
+/* ── global finish: crisp focus ring (no gradients — flat + hairline) ── */
 .btn:focus-visible, .fchip:focus-visible, .conv:focus-visible, .cust:focus-visible {
   outline: none; box-shadow: 0 0 0 1px var(--platinum), 0 0 0 4px var(--platinum-soft); }
 .icn { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -2px; }
@@ -203,7 +199,7 @@ body {
 .up { color: var(--success); } .down { color: var(--danger); }
 
 .hair { height: 1px; background: var(--border); border: 0; }
-.platinum-rule { height: 1px; background: linear-gradient(90deg, var(--platinum), transparent); border: 0; }
+.platinum-rule { height: 1px; background: var(--platinum-soft); border: 0; }
 
 /* ============================================================
    EXTENDED KIT — for feature-complete module mockups
@@ -262,7 +258,7 @@ body {
 .fstep .top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
 .fstep .top .c { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .fstep .bar { height: 22px; border-radius: var(--r-sm); background: var(--surface-2); overflow: hidden; }
-.fstep .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-bright)); }
+.fstep .bar i { display: block; height: 100%; background: var(--brand); }
 .fstep .drop { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
 
 /* checklist (per-conversation funnel) */

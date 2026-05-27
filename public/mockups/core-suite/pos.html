@@ -44,7 +44,7 @@
 
   .menu-wrap { display: flex; flex-direction: column; min-height: 0; }
   /* live pace steering strip */
-  .steer { display: flex; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, var(--warning-soft), transparent); font-size: 12px; }
+  .steer { display: flex; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--border); background: var(--warning-soft); font-size: 12px; }
   .steer .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--warning); flex: none; }
   .steer b { color: var(--fg); font-weight: 600; }
   .steer .cap { margin-left: auto; font-family: var(--mono); color: var(--warning); }
@@ -53,7 +53,7 @@
   .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; padding: 2px 18px 18px; overflow-y: auto; align-content: start; }
   .prod { text-align: left; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; cursor: pointer; transition: border-color var(--fast), transform var(--fast); position: relative; }
   .prod:hover { border-color: var(--border-strong); transform: translateY(-1px); }
-  .prod .swatch { height: 64px; border-radius: var(--r-md); margin-bottom: 11px; background: radial-gradient(110% 80% at 28% 14%, rgba(203,180,138,.22), transparent), linear-gradient(155deg, #322e3a, #221f29); border: 1px solid var(--border-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .prod .swatch { height: 64px; border-radius: var(--r-md); margin-bottom: 11px; background: #26242e; border: 1px solid var(--border-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
   .prod h3 { font-size: 14px; font-weight: 600; color: var(--fg); }
   .prod .row { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
   .prod .price { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--fg); }
@@ -118,29 +118,22 @@
   /* ───────── finish layer: material · light · signature ─────────
      Motif: a brand left-bar marks the ACTIVE/selected thing; a platinum
      hairline marks the PREMIUM/focal thing. Used with discipline. */
-  .main {
-    background:
-      radial-gradient(120% 70% at 88% -8%, rgba(166,45,73,.06), transparent 58%),
-      radial-gradient(80% 55% at 2% -4%, rgba(203,180,138,.035), transparent 52%);
-  }
   /* honest depth — a whisper of top-light on raised surfaces */
   .tab, .prod, .fulfil-block { box-shadow: inset 0 1px 0 rgba(255,255,255,.045); }
   .prod { transition: border-color var(--fast) var(--ease), transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
   .prod:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 26px rgba(0,0,0,.34); }
-  .swatch { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -14px 22px rgba(0,0,0,.22); }
+  .swatch { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
   /* the live ticket is the focal column — elevate it + platinum crown hairline */
   .ticket { position: relative; box-shadow: -18px 0 44px rgba(0,0,0,.26); }
-  .ticket::before { content:""; position:absolute; top:0; left:0; right:0; height:1px;
-    background: linear-gradient(90deg, transparent, var(--platinum-soft) 22%, rgba(203,180,138,.4) 50%, var(--platinum-soft) 78%, transparent); }
+  .ticket::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background: var(--platinum-soft); }
   /* active = brand left-bar (matches the nav motif) */
   .cat.on { box-shadow: inset 2px 0 0 var(--brand); }
   .tab.on { box-shadow: inset 0 2px 0 var(--brand), inset 0 1px 0 1px transparent; }
   /* premium = platinum hairline */
   .promise-badge { box-shadow: inset 0 0 0 1px var(--platinum-soft); }
   /* hero CTA — soft brand glow + top-light, the one thing that pops */
-  .charge .btn { background: linear-gradient(180deg, var(--brand-bright), var(--brand)); border: 0;
-    box-shadow: 0 8px 26px rgba(166,45,73,.34), inset 0 1px 0 rgba(255,255,255,.16); letter-spacing: .01em; }
-  .charge .btn:hover { background: linear-gradient(180deg, #d04b69, var(--brand-bright)); box-shadow: 0 10px 30px rgba(166,45,73,.42), inset 0 1px 0 rgba(255,255,255,.18); }
+  .charge .btn { background: var(--brand); border: 0; box-shadow: var(--sh-md); letter-spacing: .01em; }
+  .charge .btn:hover { background: var(--brand-bright); box-shadow: var(--sh-md); }
   /* refined focus ring (signature) */
   .prod:focus-visible, .tab:focus-visible, .btn:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--platinum), 0 0 0 4px var(--platinum-soft); }
   svg.i { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }

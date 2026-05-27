@@ -453,7 +453,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(155deg, color-mix(in oklab, var(--brand) 86%, white), var(--brand));
+  background: var(--brand);
   color: var(--brand-fg);
   display: inline-flex;
   align-items: center;
@@ -1185,7 +1185,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-btn-lg { padding: 9px 18px; font-size: var(--text-md); min-height: 42px; }
 
 .v2-btn-primary {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 86%, white 14%), var(--brand));
+  background: var(--brand);
   color: var(--brand-fg);
   border-color: color-mix(in oklab, var(--brand) 92%, black 8%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-xs);
@@ -5615,16 +5615,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 
 .admin-bg > * { position: relative; z-index: 1; }
 
-/* Finish: a faint warm vignette on the page canvas (dark only) — burgundy
-   glow top-right, platinum top-left. Subtle material, not decoration. */
-:root:not([data-admin-theme]) .admin-bg,
-[data-admin-theme="dark"] .admin-bg {
-  background:
-    radial-gradient(120% 60% at 90% -6%, rgba(166, 45, 73, 0.05), transparent 55%),
-    radial-gradient(70% 45% at 0% -2%, rgba(203, 180, 138, 0.028), transparent 50%),
-    var(--admin-bg);
-}
-
 /* --- Unified type scale (admin scope) ---
  *  Every admin page reads from the same `--text-*` tokens defined on
  *  [data-admin-theme] so the visual size of "small print" / "body" / "page
@@ -6327,7 +6317,7 @@ select.pub-input {
 .bm-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .bm-card { position: relative; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: left; color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: transform var(--duration-fast), border-color var(--duration-fast); font: inherit; }
 .bm-card:hover { transform: translateY(-1px); border-color: var(--border-strong); }
-.bm-card--default { border-color: rgba(166,45,73,0.4); background: linear-gradient(180deg, rgba(166,45,73,0.06), var(--surface-1)); }
+.bm-card--default { border-color: rgba(166,45,73,0.4); background: var(--surface-1); }
 .bm-card--anchor  { border-color: rgba(200,160,46,0.4); }
 .bm-card--decoy   { opacity: 0.85; }
 .bm-card--inactive { opacity: 0.55; }
@@ -6837,7 +6827,7 @@ select.pub-input {
 .v2-m-stat {
   flex: 0 0 100%;
   scroll-snap-align: center;
-  background: linear-gradient(180deg, var(--surface-1) 0%, var(--surface-2) 100%);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--m-card-radius);
   padding: var(--m-pad-md);
