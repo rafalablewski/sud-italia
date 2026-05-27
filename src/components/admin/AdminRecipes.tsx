@@ -489,7 +489,7 @@ function RecipesPanel() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading recipes…</div>
+        <div className="v2-page-loading">Loading Recipes…</div>
       ) : grouped.length === 0 ? (
         <Card>
           <CardBody>
@@ -1839,7 +1839,7 @@ function IngredientsPanel() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading…</div>
+        <div className="v2-page-loading">Loading Recipes…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

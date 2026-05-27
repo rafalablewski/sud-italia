@@ -36,7 +36,7 @@ export function AdminUpsell() {
   if (loading) {
     return (
       <div className="v2-page">
-        <div className="v2-page-loading">Loading upsell settings…</div>
+        <div className="v2-page-loading">Loading Upsell…</div>
       </div>
     );
   }

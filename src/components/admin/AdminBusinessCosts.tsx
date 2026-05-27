@@ -571,7 +571,7 @@ export function AdminBusinessCosts() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading costs…</div>
+        <div className="v2-page-loading">Loading Business costs…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

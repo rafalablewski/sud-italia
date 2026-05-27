@@ -289,7 +289,7 @@ export function AdminLocationsManager() {
             </span>
           </div>
           {loading ? (
-            <div className="v2-page-loading">Loading…</div>
+            <div className="v2-page-loading">Loading Manage locations…</div>
           ) : list.length === 0 ? (
             <EmptyState
               title="No locations"

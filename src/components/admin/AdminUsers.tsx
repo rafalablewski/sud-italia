@@ -215,7 +215,7 @@ function AdminUsersDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading users…</div>
+        <div className="v2-page-loading">Loading Users & roles…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

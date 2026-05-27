@@ -231,7 +231,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
 
       {/* ---------------- Boards ---------------- */}
       {loading && !data ? (
-        <div className="ka-loading">Loading fleet…</div>
+        <div className="v2-page-loading">Loading Kitchen Display…</div>
       ) : error && !data ? (
         <div className="ka-loading ka-error">
           <AlertTriangle className="h-4 w-4" /> Couldn’t load fleet — {error}

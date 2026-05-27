@@ -321,7 +321,7 @@ function AdminCustomersDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading customers…</div>
+        <div className="v2-page-loading">Loading Customers…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

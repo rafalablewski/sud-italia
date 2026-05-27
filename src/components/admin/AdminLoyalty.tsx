@@ -349,7 +349,7 @@ function AdminLoyaltyDesktop() {
           </div>
 
           {loading ? (
-            <div className="v2-page-loading">Loading members…</div>
+            <div className="v2-page-loading">Loading Loyalty…</div>
           ) : filteredMembers.length === 0 ? (
             <Card>
               <CardBody>

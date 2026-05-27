@@ -305,7 +305,7 @@ export function AdminGrowth() {
             <h1 className="v2-page-title">Growth</h1>
           </div>
         </header>
-        <div className="v2-page-loading">Loading growth settings…</div>
+        <div className="v2-page-loading">Loading Campaigns…</div>
       </div>
     );
   }

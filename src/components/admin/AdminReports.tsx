@@ -506,7 +506,7 @@ function AdminReportsDesktop() {
         <BundleAnalyticsCard locationSlug={location || undefined} days={presetDays(preset)} />
       </section>
 
-      {loading && <div className="v2-page-loading">Loading…</div>}
+      {loading && <div className="v2-page-loading">Loading Reports…</div>}
     </div>
   );
 }

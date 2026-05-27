@@ -146,7 +146,7 @@ export function AdminRegulatoryCompliance() {
         <header className="v2-page-header">
           <h1 className="v2-page-title">Regulatory compliance</h1>
         </header>
-        <p className="admin-text-secondary">Loading…</p>
+        <div className="v2-page-loading">Loading Regulatory disclosures…</div>
       </div>
     );
   }

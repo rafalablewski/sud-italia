@@ -348,7 +348,7 @@ function AdminPurchaseOrdersDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading purchase orders…</div>
+        <div className="v2-page-loading">Loading Purchase orders…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

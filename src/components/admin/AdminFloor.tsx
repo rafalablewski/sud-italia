@@ -359,7 +359,7 @@ export function AdminFloor() {
 
       {view === "tables" ? (
         loadingTables ? (
-          <div className="v2-page-loading">Loading tables…</div>
+          <div className="v2-page-loading">Loading Floor…</div>
         ) : tables.length === 0 ? (
           <Card>
             <CardBody>
@@ -405,7 +405,7 @@ export function AdminFloor() {
           </div>
         )
       ) : loadingReservations ? (
-        <div className="v2-page-loading">Loading reservations…</div>
+        <div className="v2-page-loading">Loading Floor…</div>
       ) : sortedReservations.length === 0 ? (
         <Card>
           <CardBody>

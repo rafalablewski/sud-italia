@@ -322,7 +322,7 @@ export function AdminStaff() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading staff…</div>
+        <div className="v2-page-loading">Loading Staff…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

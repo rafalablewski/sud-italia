@@ -117,7 +117,7 @@ export function AdminLanguages() {
         <header className="v2-page-header">
           <h1 className="v2-page-title">Languages</h1>
         </header>
-        <p className="admin-text-secondary">Loading…</p>
+        <div className="v2-page-loading">Loading Languages…</div>
       </div>
     );
   }

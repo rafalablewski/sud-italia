@@ -121,6 +121,8 @@ export function AdminCorporate() {
         </Button>
       </header>
 
+      {loading && <div className="v2-page-loading">Loading Corporate…</div>}
+
       {error && (
         <div className="glass-card p-3 mb-4 border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
           <p className="text-sm text-[var(--danger)]">{error}</p>

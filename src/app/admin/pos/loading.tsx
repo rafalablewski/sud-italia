@@ -6,18 +6,8 @@
  */
 export default function Loading() {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "calc(100vh - 53px)",
-        color: "#8a8f98",
-        fontSize: 13,
-        letterSpacing: "0.04em",
-      }}
-    >
-      Loading POS…
+    <div className="v2-page">
+      <div className="v2-page-loading">Loading POS…</div>
     </div>
   );
 }

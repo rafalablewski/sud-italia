@@ -100,7 +100,7 @@ function AdminCohortReportDesktop() {
   if (loading) {
     return (
       <div className="v2-page">
-        <div className="v2-page-loading">Loading cohort report…</div>
+        <div className="v2-page-loading">Loading Cohort & CLTV…</div>
       </div>
     );
   }

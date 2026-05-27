@@ -249,7 +249,7 @@ function AdminComplianceDesktop() {
       </section>
 
       {loading ? (
-        <div className="v2-page-loading">Loading compliance items…</div>
+        <div className="v2-page-loading">Loading Compliance…</div>
       ) : items.length === 0 ? (
         <Card>
           <CardBody>

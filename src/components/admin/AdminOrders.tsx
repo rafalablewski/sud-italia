@@ -303,7 +303,7 @@ function AdminOrdersDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading…</div>
+        <div className="v2-page-loading">Loading Orders…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

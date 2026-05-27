@@ -202,7 +202,7 @@ function AdminCashDesktop() {
       </header>
 
       {loading ? (
-        <div className="v2-page-loading">Loading sessions…</div>
+        <div className="v2-page-loading">Loading Cash…</div>
       ) : null}
 
       {!loading && openSession && (

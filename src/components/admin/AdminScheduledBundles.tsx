@@ -118,10 +118,7 @@ export function AdminScheduledBundles() {
       )}
 
       {loading ? (
-        <div className="glass-card p-8 text-center text-sm admin-text-secondary mt-3">
-          <Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />
-          Loading intents…
-        </div>
+        <div className="v2-page-loading">Loading Scheduled bundles…</div>
       ) : sorted.length === 0 ? (
         <div className="glass-card p-8 text-center mt-3">
           <Calendar className="h-8 w-8 text-[var(--warning)] mx-auto mb-2" />

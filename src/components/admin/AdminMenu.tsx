@@ -908,7 +908,7 @@ function AdminMenuDesktop() {
       )}
 
       {loading ? (
-        <div className="v2-page-loading">Loading menu…</div>
+        <div className="v2-page-loading">Loading Menu…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

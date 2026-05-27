@@ -182,7 +182,7 @@ function AuditLogDesktop() {
       </div>
 
       {loading ? (
-        <div className="v2-page-loading">Loading audit log…</div>
+        <div className="v2-page-loading">Loading Audit log…</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardBody>

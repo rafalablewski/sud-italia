@@ -252,7 +252,7 @@ function AdminScheduleDesktop() {
       </Card>
 
       {loading ? (
-        <div className="v2-page-loading">Loading shifts…</div>
+        <div className="v2-page-loading">Loading Schedule…</div>
       ) : staff.length === 0 ? (
         <Card>
           <CardBody>
