@@ -370,6 +370,9 @@ body.kds-immersive .v2-shell > .v2-sidebar { display: none; }
 body.kds-immersive .v2-topbar { display: none; }
 body.kds-immersive .v2-content { min-height: 100vh; }
 body.kds-immersive { overflow: hidden; }
+/* Edge-to-edge like the fullscreen fleet wall — drop the panel's margin, border
+   and radius so the drilled-in board fills the viewport with no top gap. */
+body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 100vh; }
 
 /* --- Sidebar --- */
 .v2-sidebar {
