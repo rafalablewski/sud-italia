@@ -143,20 +143,24 @@ body {
    PRIMITIVES — button, card, input, badge, segmented, kpi
    ============================================================ */
 .btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 34px; padding: 0 14px; border-radius: var(--r-md);
-  font: 500 13px/1 var(--ui); letter-spacing: -.01em;
-  border: 1px solid transparent; background: var(--surface-2); color: var(--fg);
-  cursor: pointer; white-space: nowrap; transition: all var(--fast) var(--ease);
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 32px; padding: 0 12px; border-radius: 7px;
+  font: 500 13px/1 var(--ui); letter-spacing: -0.005em;
+  border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg);
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease), color var(--fast) var(--ease);
 }
-.btn:hover { background: var(--surface-hover); }
+.btn:hover { background: var(--surface-hover); border-color: var(--fg-subtle); }
+.btn:active { transform: translateY(0.5px); }
+/* secondary stays a quiet filled edge; ghost drops the fill */
 .btn.ghost { background: transparent; border-color: var(--border-strong); color: var(--fg-muted); }
-.btn.ghost:hover { color: var(--fg); border-color: var(--fg-subtle); }
-.btn.primary { background: var(--brand); color: #fff; box-shadow: var(--sh-sm); }
-.btn.primary:hover { background: var(--brand-bright); }
-.btn.lg { height: 44px; padding: 0 20px; font-size: 14px; border-radius: var(--r-lg); }
-.btn.xl { height: 60px; padding: 0 24px; font-size: 16px; font-weight: 600; border-radius: var(--r-lg); }
-.btn.icon { width: 34px; padding: 0; justify-content: center; }
+.btn.ghost:hover { background: var(--surface-2); color: var(--fg); border-color: var(--fg-subtle); }
+/* primary: solid brand with a precise 1px defining edge — no glow, no gradient */
+.btn.primary { background: var(--brand); color: #fff; border-color: color-mix(in oklab, var(--brand) 76%, #000); }
+.btn.primary:hover { background: var(--brand-bright); border-color: color-mix(in oklab, var(--brand-bright) 80%, #000); }
+.btn.lg { height: 38px; padding: 0 17px; border-radius: 8px; font-size: 13.5px; }
+.btn.xl { height: 46px; padding: 0 22px; border-radius: 8px; font-size: 14.5px; font-weight: 600; }
+.btn.icon { width: 32px; padding: 0; }
 
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--sh-xs), inset 0 1px 0 rgba(255,255,255,.04); }
 

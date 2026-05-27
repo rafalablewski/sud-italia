@@ -1163,10 +1163,11 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: var(--radius-md);
+  border-radius: 7px;
   border: 1px solid transparent;
   font-family: var(--font-ui);
   font-weight: 500;
+  letter-spacing: -0.005em;
   cursor: pointer;
   transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
   white-space: nowrap;
@@ -1187,17 +1188,16 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-btn-primary {
   background: var(--brand);
   color: var(--brand-fg);
-  border-color: color-mix(in oklab, var(--brand) 92%, black 8%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-xs);
+  border-color: color-mix(in oklab, var(--brand) 74%, black);
 }
-.v2-btn-primary:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--brand) 90%, black 10%); }
+.v2-btn-primary:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--brand) 88%, white 12%); }
 
 .v2-btn-secondary {
   background: var(--surface-2);
   color: var(--fg);
-  border-color: var(--border);
+  border-color: var(--border-strong);
 }
-.v2-btn-secondary:hover:not(:disabled):not(.is-loading) { background: var(--surface-3); border-color: var(--border-strong); }
+.v2-btn-secondary:hover:not(:disabled):not(.is-loading) { background: var(--surface-3); border-color: var(--fg-subtle); }
 
 .v2-btn-ghost {
   background: transparent;
@@ -1209,18 +1209,16 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-btn-danger {
   background: var(--danger);
   color: var(--danger-fg);
-  border-color: color-mix(in oklab, var(--danger) 92%, black 8%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-xs);
+  border-color: color-mix(in oklab, var(--danger) 74%, black);
 }
-.v2-btn-danger:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--danger) 90%, black 10%); }
+.v2-btn-danger:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--danger) 88%, white 12%); }
 
 .v2-btn-success {
   background: var(--success);
   color: var(--success-fg);
-  border-color: color-mix(in oklab, var(--success) 92%, black 8%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-xs);
+  border-color: color-mix(in oklab, var(--success) 74%, black);
 }
-.v2-btn-success:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--success) 90%, black 10%); }
+.v2-btn-success:hover:not(:disabled):not(.is-loading) { background: color-mix(in oklab, var(--success) 88%, white 12%); }
 
 @keyframes v2-spin { to { transform: rotate(360deg); } }
 
@@ -5819,7 +5817,8 @@ select.pub-input {
   font-size: var(--text-base);
   line-height: 1.25rem;
   font-weight: 500;
-  border-radius: var(--radius-md);
+  border-radius: 7px;
+  letter-spacing: -0.005em;
   transition: background 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
   white-space: nowrap;
@@ -5857,35 +5856,35 @@ select.pub-input {
 
 /* Color variants */
 .glass-btn {
-  --btn-bg: rgba(var(--admin-accent), 0.7);
-  --btn-border: rgba(var(--admin-accent), 0.3);
+  --btn-bg: var(--brand);
+  --btn-border: color-mix(in oklab, var(--brand) 74%, black);
   --btn-color: #fff;
-  --btn-hover: rgba(var(--admin-accent), 0.85);
+  --btn-hover: color-mix(in oklab, var(--brand) 88%, white 12%);
 }
 
 .glass-btn-green {
-  --btn-bg: rgba(var(--admin-success), 0.5);
-  --btn-border: rgba(var(--admin-success), 0.25);
+  --btn-bg: var(--success);
+  --btn-border: color-mix(in oklab, var(--success) 74%, black);
   --btn-color: #fff;
-  --btn-hover: rgba(var(--admin-success), 0.7);
+  --btn-hover: color-mix(in oklab, var(--success) 88%, white 12%);
 }
 
 .glass-btn-blue {
-  --btn-bg: rgba(var(--admin-info), 0.45);
-  --btn-border: rgba(var(--admin-info), 0.25);
+  --btn-bg: var(--info);
+  --btn-border: color-mix(in oklab, var(--info) 74%, black);
   --btn-color: #fff;
-  --btn-hover: rgba(var(--admin-info), 0.65);
+  --btn-hover: color-mix(in oklab, var(--info) 88%, white 12%);
 }
 
 .glass-btn-ghost {
   --btn-bg: transparent;
-  --btn-border: rgba(255, 255, 255, 0.1);
-  --btn-color: var(--text-tertiary);
-  --btn-hover: rgba(255, 255, 255, 0.05);
+  --btn-border: var(--border-strong);
+  --btn-color: var(--text-secondary);
+  --btn-hover: var(--surface-hover);
 }
 .glass-btn-ghost:hover {
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--fg-subtle);
 }
 
 /* Button size variants */
