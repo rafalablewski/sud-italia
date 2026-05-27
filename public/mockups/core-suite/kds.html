@@ -10,8 +10,10 @@
     --canvas:#0a0a0c; --panel:#141318; --raised:#222028; --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
     --t:#f4f2ee; --dim:#b6afa6; --faint:#918880;
     --queued:#6a655f; --firing:#4d90e8; --warn:#e0a93f; --late:#e5484d; --ready:#3dd68c; --risk:#9a72e0;
-    background:var(--canvas); height:100vh; overflow:hidden;
+    background: radial-gradient(110% 42% at 50% -8%, rgba(166,45,73,.07), transparent 55%), var(--canvas); height:100vh; overflow:hidden;
   }
+  .tk { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .ctrl .icn { width:16px; height:16px; }
   .kds-wrap { height:100vh; display:flex; flex-direction:column; padding:12px 16px; gap:10px; }
   .kds-top { display:flex; align-items:center; gap:14px; flex:none; }
   .kds-id { display:flex; align-items:center; gap:11px; }
@@ -103,10 +105,10 @@
       <button>Ready <span class="n">3</span></button>
     </div>
     <div class="clock">20:14</div>
-    <div class="ctrl" title="Refresh">↻</div>
-    <div class="ctrl on" title="Sound on">♪</div>
-    <div class="ctrl" title="Pause">⏸</div>
-    <div class="ctrl" title="Fullscreen kiosk">⤢</div>
+    <div class="ctrl" title="Refresh"><svg class="icn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></div>
+    <div class="ctrl on" title="Sound on"><svg class="icn" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></div>
+    <div class="ctrl" title="Pause"><svg class="icn" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></div>
+    <div class="ctrl" title="Fullscreen kiosk"><svg class="icn" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></div>
   </div>
 
   <!-- manager ops header -->
@@ -144,7 +146,7 @@
           <div class="tk-h"><span class="tk-id">#4824</span><span class="tk-type">Takeaway</span><span class="tk-timer">0:41</span></div>
           <div class="tk-pred">Predicted ready in ~7 min</div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Bufala DOP</div><div class="tk-mod">light cheese</div></div></div></div>
-          <div class="tk-alrg">⚠ Allergens: milk · gluten</div>
+          <div class="tk-alrg"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Allergens: milk · gluten</div>
           <div class="tk-f"><div class="sla"><i style="width:12%;background:var(--queued)"></i></div><button class="bump fire">Start</button></div>
         </div>
       </div>
