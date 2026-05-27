@@ -69,25 +69,29 @@
   .tk.warn .tk-timer, .tk.risk .tk-timer { color:var(--warn); }
   .tk.late .tk-timer { color:var(--late); }
   .tk.ready .tk-timer { color:var(--ready); font-size:13px; font-family:var(--ui); font-weight:600; letter-spacing:.02em; text-transform:uppercase; }
-  .tk-pred { padding:0 13px 7px; font:500 11.5px var(--ui); color:var(--faint); }
-  .tk-pred.over { color:var(--warn); }
-  .tk-items { padding:1px 13px 7px; }
+  .tk-items { padding:1px 13px 7px; min-width:0; }
   .tk-grp { font:600 9px var(--ui); letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin:5px 0 3px; }
-  .tk-it { display:flex; gap:11px; padding:4px 0; }
-  .tk-q { font:600 15px var(--mono); min-width:26px; color:var(--dim); }
-  .tk-nm { font-family:var(--display); font-weight:500; font-size:16.5px; letter-spacing:.005em; color:var(--t); }
-  .tk-mod { font:500 12.5px var(--ui); color:var(--warn); margin-top:2px; }
+  .tk-it { display:flex; gap:11px; padding:4px 0; min-width:0; }
+  .tk-it > div { min-width:0; }
+  .tk-q { font:600 15px var(--mono); min-width:26px; flex:none; color:var(--dim); }
+  .tk-nm { font-family:var(--display); font-weight:500; font-size:16.5px; letter-spacing:.005em; color:var(--t); overflow-wrap:anywhere; }
+  .tk-mod { font-family:var(--display); font-style:italic; font-weight:500; font-size:14px; color:var(--warn); margin-top:2px; }
   .tk-alrg { margin:1px 13px 7px; padding:5px 9px; border-radius:6px; background:color-mix(in oklab, var(--late) 12%, transparent); color:var(--late); font:600 11.5px var(--ui); display:flex; gap:7px; align-items:center; }
   .tk-notes { margin:0 13px 8px; padding:6px 9px; border-radius:6px; background:var(--raised); font-size:12px; color:var(--dim); }
   .tk-notes b { color:var(--t); font-weight:600; }
-  .tk-f { display:flex; align-items:center; gap:12px; padding:8px 13px 11px; }
+  .tk-f { display:flex; flex-direction:column; gap:9px; padding:8px 13px 12px; }
+  .tk-eta { display:flex; align-items:center; gap:10px; }
+  .tk-eta .lbl { font:500 11.5px var(--ui); color:var(--faint); white-space:nowrap; flex:none; }
+  .tk.warn .tk-eta .lbl, .tk.risk .tk-eta .lbl { color:var(--warn); }
+  .tk.late .tk-eta .lbl { color:var(--late); }
+  .tk.ready .tk-eta .lbl { color:var(--ready); }
   .sla { flex:1; height:4px; border-radius:99px; background:var(--raised); overflow:hidden; }
   .sla i { display:block; height:100%; background:var(--dim); }
   .tk.warn .sla i, .tk.risk .sla i { background:var(--warn); }
   .tk.late .sla i { background:var(--late); }
   .tk.ready .sla i { background:var(--ready); }
   /* bump: refined neutral action; late ticket gets a red-tinted edge */
-  .bump { height:38px; padding:0 18px; border:1px solid var(--hair-2); border-radius:7px; font:600 13px var(--ui); letter-spacing:-.005em; cursor:pointer; background:var(--raised); color:var(--t); transition:border-color .12s,background .12s; }
+  .bump { width:100%; height:38px; padding:0 18px; border:1px solid var(--hair-2); border-radius:7px; font:600 13px var(--ui); letter-spacing:-.005em; cursor:pointer; background:var(--raised); color:var(--t); transition:border-color .12s,background .12s; }
   .bump:hover { border-color:var(--t); }
   .tk.late .bump { border-color:color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
 
@@ -151,16 +155,14 @@
       <div class="col-body">
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4823</span><span class="tk-type">Dine-in · T9</span><span class="tk-timer">0:18</span></div>
-          <div class="tk-pred">Predicted ready in ~9 min</div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Marinara</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Capricciosa</div></div></div>
-          <div class="tk-f"><div class="sla"><i style="width:6%"></i></div><button class="bump">Start prep</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~9 min</span><div class="sla"><i style="width:6%"></i></div></div><button class="bump">Start prep</button></div>
         </div>
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4824</span><span class="tk-type">Takeaway</span><span class="tk-timer">0:41</span></div>
-          <div class="tk-pred">Predicted ready in ~7 min</div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Bufala DOP</div><div class="tk-mod">light cheese</div></div></div></div>
           <div class="tk-alrg"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Allergens: milk · gluten</div>
-          <div class="tk-f"><div class="sla"><i style="width:12%"></i></div><button class="bump">Start prep</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~7 min</span><div class="sla"><i style="width:12%"></i></div></div><button class="bump">Start prep</button></div>
         </div>
       </div>
     </div>
@@ -171,22 +173,19 @@
       <div class="col-body">
         <div class="tk late">
           <div class="tk-h"><span class="tk-id">#4818</span><span class="tk-type">Delivery</span><span class="tk-timer">14:32</span></div>
-          <div class="tk-pred over">Model: ~4 min to ready · over promise</div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja · well-fired</div></div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">’Nduja &amp; Honey</div></div></div>
           <div class="tk-notes"><b>Driver note:</b> leave at reception, call on arrival</div>
-          <div class="tk-f"><div class="sla"><i style="width:100%"></i></div><button class="bump">Mark ready</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Over promise · ~4 min</span><div class="sla"><i style="width:100%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
         <div class="tk risk">
-          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-risk">At risk</span><span class="tk-timer">9:07</span></div>
-          <div class="tk-pred over">Model: predicted to miss by ~2 min</div>
+          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">9:07</span></div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja</div></div></div></div>
-          <div class="tk-f"><div class="sla"><i style="width:82%"></i></div><button class="bump">Mark ready</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">At risk · miss by ~2 min</span><div class="sla"><i style="width:82%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4821</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">3:55</span></div>
-          <div class="tk-pred">Predicted ready in ~6 min</div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Bufala DOP</div></div></div>
-          <div class="tk-f"><div class="sla"><i style="width:38%"></i></div><button class="bump">Mark ready</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~6 min</span><div class="sla"><i style="width:38%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
       </div>
     </div>
@@ -198,12 +197,12 @@
         <div class="tk ready">
           <div class="tk-h"><span class="tk-id">#4816</span><span class="tk-type">Dine-in · T3</span><span class="tk-timer">plated</span></div>
           <div class="tk-items"><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div></div>
-          <div class="tk-f"><div class="sla"><i style="width:100%"></i></div><button class="bump">Bump · Done</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready for expo</span><div class="sla"><i style="width:100%"></i></div></div><button class="bump">Bump · Done</button></div>
         </div>
         <div class="tk ready">
           <div class="tk-h"><span class="tk-id">#4817</span><span class="tk-type">Takeaway</span><span class="tk-timer">plated</span></div>
           <div class="tk-items"><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Capricciosa</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">San Pellegrino</div></div></div>
-          <div class="tk-f"><div class="sla"><i style="width:100%"></i></div><button class="bump">Bump · Done</button></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready for expo</span><div class="sla"><i style="width:100%"></i></div></div><button class="bump">Bump · Done</button></div>
         </div>
       </div>
     </div>
