@@ -5,5 +5,9 @@
  * (which read as "it didn't open on the first click"). This paints immediately.
  */
 export default function Loading() {
-  return <div className="v2-page-loading">Loading POS…</div>;
+  return (
+    <div className="v2-page">
+      <div className="v2-page-loading">Loading POS…</div>
+    </div>
+  );
 }
