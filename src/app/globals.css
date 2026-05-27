@@ -4137,6 +4137,12 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   gap: 8px;
   min-width: 0;
 }
+.v2-rcp-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
 .v2-rcp-card-name {
   margin: 0;
   font-size: var(--text-base);
@@ -4147,6 +4153,12 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+.v2-rcp-card-only {
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--fg-subtle);
 }
 .v2-rcp-card-badge {
   display: inline-flex;
@@ -4227,41 +4239,76 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 }
 .v2-rcp-empty > p { margin: 0; max-width: 28ch; }
 
-.v2-rcp-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
-  margin: 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 0;
-}
-.v2-rcp-stat {
+/* Chain-wide cost line — one figure, shared across every location. */
+.v2-rcp-costline {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: flex-start;
-  padding: 0 8px;
+  align-items: baseline;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 8px 0 6px;
 }
-.v2-rcp-stat + .v2-rcp-stat { border-left: 1px solid var(--border); }
-.v2-rcp-stat > dt {
+.v2-rcp-costline-label {
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--fg-subtle);
   font-weight: 500;
 }
-.v2-rcp-stat > dd {
-  margin: 0;
+.v2-rcp-costline-value {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
-.v2-rcp-margin-success { color: var(--success); }
-.v2-rcp-margin-warning { color: var(--warning); }
-.v2-rcp-margin-danger { color: var(--danger); }
-.v2-rcp-margin-neutral { color: var(--fg-subtle); }
+.v2-rcp-costline-note {
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}
+
+/* Per-location price + margin. The recipe is shared; only price (and so
+   margin) varies by city, so each location gets its own row. */
+.v2-rcp-locs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+.v2-rcp-loc {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 10px;
+}
+.v2-rcp-loc > dt,
+.v2-rcp-loc > dd { margin: 0; }
+.v2-rcp-loc-city {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-rcp-loc-price {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.v2-rcp-loc-margin {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
+}
+.v2-rcp-loc[data-tone="success"] .v2-rcp-loc-margin { color: var(--success); }
+.v2-rcp-loc[data-tone="warning"] .v2-rcp-loc-margin { color: var(--warning); }
+.v2-rcp-loc[data-tone="danger"] .v2-rcp-loc-margin { color: var(--danger); }
+.v2-rcp-loc[data-tone="neutral"] .v2-rcp-loc-margin { color: var(--fg-subtle); }
 
 .v2-rcp-card-footer {
   display: flex;

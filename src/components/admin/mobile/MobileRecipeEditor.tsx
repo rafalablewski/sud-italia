@@ -43,6 +43,9 @@ interface Props {
   menuItem: MenuItemRow | null;
   recipe?: RecipeData;
   ingredients: IngredientData[];
+  /** Every location that lists this dish. The recipe is chain-wide, so
+   *  cost is one figure; only price (and so margin) varies per city. */
+  offers?: { city: string; price: number }[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -115,6 +118,7 @@ export function MobileRecipeEditor({
   menuItem,
   recipe,
   ingredients,
+  offers,
   onClose,
   onSaved,
 }: Props) {
@@ -201,12 +205,24 @@ export function MobileRecipeEditor({
   };
   const totalCost = rows.reduce((acc, r) => acc + lineCost(r), 0);
   const perPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : totalCost;
-  const margin =
-    menuItem.price > 0
-      ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
-      : 0;
+  // Cost is chain-wide; margin is per-location because price varies. Show a
+  // range across locations, colour-coded by the worst (lowest) case.
+  const offerList =
+    offers && offers.length > 0 ? offers : [{ city: "", price: menuItem.price }];
+  const offerMargins = offerList.map((o) => ({
+    city: o.city,
+    price: o.price,
+    margin: o.price > 0 ? Math.round(((o.price - perPortion) / o.price) * 100) : 0,
+  }));
+  const minMargin = Math.min(...offerMargins.map((o) => o.margin));
+  const maxMargin = Math.max(...offerMargins.map((o) => o.margin));
+  const margin = minMargin;
+  const marginDisplay = minMargin === maxMargin ? `${minMargin}%` : `${minMargin}–${maxMargin}%`;
   const marginTone =
     margin < 50 ? "danger" : margin < 65 ? "warning" : "success";
+  const priceSummary = offerMargins
+    .map((o) => (o.city ? `${o.city} ${formatPrice(o.price)}` : formatPrice(o.price)))
+    .join(" · ");
 
   const save = async () => {
     // Reject any row where the qty/waste went non-finite — `JSON.stringify`
@@ -349,17 +365,19 @@ export function MobileRecipeEditor({
           <div className="v2-m-rcp-kpi">
             <span className="v2-m-rcp-kpi-label">Per portion</span>
             <span className="v2-m-rcp-kpi-value tabular">{formatPrice(perPortion)}</span>
-            <span className="v2-m-rcp-kpi-hint">Listed {formatPrice(menuItem.price)}</span>
+            <span className="v2-m-rcp-kpi-hint">{priceSummary}</span>
           </div>
           <div className="v2-m-rcp-kpi">
             <span className="v2-m-rcp-kpi-label">Margin</span>
-            <span className={`v2-m-rcp-kpi-value tabular tone-${marginTone}`}>{margin}%</span>
+            <span className={`v2-m-rcp-kpi-value tabular tone-${marginTone}`}>{marginDisplay}</span>
             <span className="v2-m-rcp-kpi-hint">
-              {margin < 50
-                ? "Review pricing"
-                : margin < 65
-                  ? "Healthy"
-                  : "Strong"}
+              {offerMargins.length > 1 && minMargin !== maxMargin
+                ? offerMargins.map((o) => `${o.city} ${o.margin}%`).join(" · ")
+                : margin < 50
+                  ? "Review pricing"
+                  : margin < 65
+                    ? "Healthy"
+                    : "Strong"}
             </span>
           </div>
           <div className="v2-m-rcp-kpi">
