@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest Engagement — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="system.css">
+<style>
+  .guest { display: grid; grid-template-columns: 322px 1fr 344px; flex: 1; min-height: 0; }
+
+  /* ---- pane 1: conversations ---- */
+  .convs { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--surface-1); }
+  .convs-h { padding: 16px 16px 12px; }
+  .convs-h h2 { font-family: var(--display); font-size: 20px; font-weight: 600; }
+  .conv-search { margin-top: 12px; position: relative; }
+  .conv-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--fg-subtle); }
+  .conv-search .input { padding-left: 32px; }
+  .conv-tabs { display: flex; gap: 6px; padding: 10px 16px; }
+  .conv-tab { font: 600 12px var(--ui); color: var(--fg-subtle); padding: 5px 10px; border-radius: var(--r-pill); cursor: pointer; }
+  .conv-tab.on { background: var(--brand-soft); color: var(--brand-bright); }
+  .conv-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+  .conv { display: grid; grid-template-columns: 40px 1fr auto; gap: 11px; padding: 11px 10px; border-radius: var(--r-md); cursor: pointer; }
+  .conv:hover { background: var(--surface-2); }
+  .conv.on { background: var(--surface-3); }
+  .conv .av { width: 40px; height: 40px; border-radius: 99px; background: var(--surface-3); display: grid; place-items: center; font: 600 14px var(--ui); color: var(--platinum); border: 1px solid var(--border-strong); position: relative; }
+  .conv .av .ch { position: absolute; right: -2px; bottom: -2px; width: 16px; height: 16px; border-radius: 99px; background: var(--success); border: 2px solid var(--surface-1); display:grid; place-items:center; }
+  .conv .nm { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .conv .msg { font-size: 12px; color: var(--fg-subtle); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .conv .meta { text-align: right; }
+  .conv .tm { font-size: 11px; color: var(--fg-subtle); }
+  .conv .un { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--brand); color: #fff; font: 700 11px var(--mono); margin-top: 6px; }
+
+  /* ---- pane 2: transcript ---- */
+  .thread { display: flex; flex-direction: column; min-height: 0; }
+  .thread-h { height: 60px; flex: none; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; padding: 0 18px; }
+  .thread-h .nm { font-family: var(--display); font-size: 18px; font-weight: 600; }
+  .thread-h .btn { height: 32px; }
+  .thread-body { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; background:
+      radial-gradient(80% 50% at 50% 0%, rgba(203,180,138,.03), transparent); }
+  .day { align-self: center; font: 600 11px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-subtle); padding: 3px 10px; background: var(--surface-2); border-radius: var(--r-pill); }
+  .bub { max-width: 64%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; }
+  .bub .t { font-size: 10.5px; color: var(--fg-subtle); margin-top: 5px; }
+  .bub.in { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 5px; }
+  .bub.out { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 5px; }
+  .bub.out .t { color: rgba(255,255,255,.7); }
+  .sys { align-self: center; font-size: 12px; color: var(--fg-subtle); display: flex; align-items: center; gap: 8px; }
+  .sys .l { width: 28px; height: 1px; background: var(--border); }
+
+  /* concierge AI assist — inline, platinum */
+  .assist { align-self: stretch; border: 1px solid var(--platinum-soft); border-radius: var(--r-lg); background: linear-gradient(180deg, var(--platinum-soft), transparent); padding: 13px 15px; }
+  .assist .hd { display: flex; align-items: center; gap: 8px; font: 700 11px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--platinum); }
+  .assist .bd { font-size: 13.5px; color: var(--fg-muted); margin-top: 7px; line-height: 1.5; }
+  .assist .bd b { color: var(--fg); font-weight: 600; }
+  .assist .acts { display: flex; gap: 8px; margin-top: 11px; }
+  .assist .acts .btn { height: 30px; font-size: 12.5px; }
+
+  .composer { flex: none; border-top: 1px solid var(--border); padding: 12px 16px; }
+  .composer-quick { display: flex; gap: 7px; margin-bottom: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--r-pill); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg-muted); font: 500 12px var(--ui); cursor: pointer; }
+  .chip:hover { color: var(--fg); border-color: var(--fg-subtle); }
+  .composer-row { display: flex; gap: 10px; align-items: flex-end; }
+  .composer textarea { flex: 1; resize: none; height: 42px; padding: 11px 14px; border-radius: var(--r-lg); background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); font: 400 14px var(--ui); }
+  .composer textarea:focus { outline: none; border-color: var(--info); box-shadow: 0 0 0 3px var(--info-soft); }
+
+  /* ---- pane 3: guest profile (CRM + concierge) ---- */
+  .profile { border-left: 1px solid var(--border); background: var(--surface-1); overflow-y: auto; padding: 22px 18px; }
+  .pf-id { text-align: center; padding-bottom: 18px; }
+  .pf-av { width: 64px; height: 64px; border-radius: 99px; margin: 0 auto 12px; background: linear-gradient(155deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--border-strong); display: grid; place-items: center; font-family: var(--display); font-size: 24px; font-weight: 600; color: var(--platinum); box-shadow: inset 0 0 0 1px var(--platinum-soft); }
+  .pf-name { font-family: var(--display); font-size: 22px; font-weight: 600; }
+  .pf-sub { font-size: 12px; color: var(--fg-subtle); margin-top: 4px; }
+  .pf-tier { margin-top: 10px; }
+
+  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+  .pf-stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px; }
+  .pf-stat .l { font-size: 11px; color: var(--fg-subtle); }
+  .pf-stat .v { font-family: var(--display); font-size: 21px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 5px; }
+
+  .pf-sec { margin-top: 18px; }
+  .pf-sec > .eyebrow { margin-bottom: 9px; }
+  .pf-tag { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); font: 500 12px var(--ui); margin: 0 6px 6px 0; }
+  .pf-tag.allergy { background: var(--danger-soft); color: var(--danger); }
+  .pf-tag.pref { background: var(--surface-3); color: var(--fg-muted); }
+  .pf-note { background: var(--surface-2); border: 1px solid var(--border); border-left: 2px solid var(--platinum); border-radius: var(--r-md); padding: 11px 13px; font-size: 12.5px; color: var(--fg-muted); line-height: 1.5; }
+  .pf-note .w { color: var(--platinum); font-weight: 600; }
+  .pf-order { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 12.5px; }
+  .pf-order:first-of-type { border-top: 0; }
+  .pf-order .dt { color: var(--fg-subtle); width: 58px; flex: none; }
+  .pf-order .amt { margin-left: auto; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Operations</div></div></div>
+    <div class="nav-group">
+      <div class="eyebrow">Core</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>POS</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>KDS</div>
+      <div class="nav-item active"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>Guest Engagement<span class="dot"></span></div>
+    </div>
+    <div class="nav-group">
+      <div class="eyebrow">Customers</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.5 5 5.5.8-4 4 1 5.5L12 21l-5-2.7 1-5.5-4-4 5.5-.8z"/></svg>Loyalty</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="M4 9h16"/></svg>Corporate</div>
+    </div>
+    <div class="sidebar-foot"><div class="avatar">RA</div><div style="font-size:12px"><div style="font-weight:500">Rafał A.</div><div class="subtle" style="font-size:10.5px">Owner · Kraków</div></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs">Core / <b>Guest Engagement</b></div>
+      <div class="topbar-right">
+        <span class="badge success"><span class="d"></span>WhatsApp connected</span>
+        <button class="btn ghost">Broadcast</button>
+      </div>
+    </div>
+
+    <div class="guest">
+      <!-- conversations -->
+      <section class="convs">
+        <div class="convs-h">
+          <h2>Conversations</h2>
+          <div class="conv-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+            <input class="input" placeholder="Search guests, phone, order…">
+          </div>
+        </div>
+        <div class="conv-tabs">
+          <span class="conv-tab on">All</span><span class="conv-tab">Live</span><span class="conv-tab">Awaiting</span><span class="conv-tab">VIP</span>
+        </div>
+        <div class="conv-list">
+          <div class="conv on">
+            <div class="av">LB<span class="ch"><svg viewBox="0 0 24 24" width="9" height="9" fill="#06140d"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2z"/></svg></span></div>
+            <div><div class="nm">Lucia Bianchi <span class="badge platinum" style="height:16px;font-size:9.5px;padding:0 6px">Gold</span></div><div class="msg">Perfect — see you at 8. Grazie!</div></div>
+            <div class="meta"><div class="tm">now</div></div>
+          </div>
+          <div class="conv">
+            <div class="av">MK</div>
+            <div><div class="nm">Marek Kowalski</div><div class="msg">Is the ’nduja pizza spicy?</div></div>
+            <div class="meta"><div class="tm">3m</div><span class="un">2</span></div>
+          </div>
+          <div class="conv">
+            <div class="av">SF</div>
+            <div><div class="nm">Sofia Ferrari <span class="badge brand" style="height:16px;font-size:9.5px;padding:0 6px">VIP</span></div><div class="msg">Can we do the corner table again?</div></div>
+            <div class="meta"><div class="tm">12m</div><span class="un">1</span></div>
+          </div>
+          <div class="conv">
+            <div class="av">TN</div>
+            <div><div class="nm">Tomasz Nowak</div><div class="msg">Payment received · Order #4819</div></div>
+            <div class="meta"><div class="tm">28m</div></div>
+          </div>
+          <div class="conv">
+            <div class="av">AW</div>
+            <div><div class="nm">Anna Wójcik</div><div class="msg">Thank you! The tiramisù was 🤌</div></div>
+            <div class="meta"><div class="tm">1h</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- transcript -->
+      <section class="thread">
+        <div class="thread-h">
+          <div style="flex:1"><div class="nm">Lucia Bianchi</div><div class="subtle" style="font-size:11.5px">+48 600 ··· 142 · WhatsApp · last visit 14 days ago</div></div>
+          <button class="btn ghost">Share payment link</button>
+          <button class="btn ghost">Book table</button>
+        </div>
+        <div class="thread-body">
+          <div class="day">Today</div>
+          <div class="bub in">Buonasera! Do you have a table for two tonight around 8? It’s our anniversary 🥂<div class="t">19:31</div></div>
+
+          <div class="assist">
+            <div class="hd"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 .7-3.6 3.5 1 5.3L12 20l-4.4 2.5 1-5.3L5 13.7 10 13z"/></svg>Concierge · suggested</div>
+            <div class="bd"><b>Lucia is Gold (₂₈ visits).</b> She celebrated her anniversary here last year and sat at the <b>corner banquette (T7)</b>. T7 is free at 20:00. Allergy on file: <b>none</b>.</div>
+            <div class="acts"><button class="btn primary">Hold T7 · 20:00</button><button class="btn ghost">Insert reply</button></div>
+          </div>
+
+          <div class="bub out">Buonasera Lucia! Auguri 🥂 We’d love to have you — I’ve held your corner banquette (T7) for 20:00. Shall I confirm?<div class="t">19:33 · sent by Marco</div></div>
+          <div class="bub in">Yes please, that’s perfect — see you at 8. Grazie!<div class="t">19:34</div></div>
+          <div class="sys"><span class="l"></span>Reservation T7 · 20:00 · 2 covers created<span class="l"></span></div>
+        </div>
+        <div class="composer">
+          <div class="composer-quick">
+            <span class="chip">＋ Menu</span><span class="chip">💳 Payment link</span><span class="chip">📅 Reservation</span><span class="chip">🎁 Comp dessert</span>
+          </div>
+          <div class="composer-row">
+            <textarea placeholder="Message Lucia…"></textarea>
+            <button class="btn primary lg">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- guest profile -->
+      <aside class="profile">
+        <div class="pf-id">
+          <div class="pf-av">LB</div>
+          <div class="pf-name">Lucia Bianchi</div>
+          <div class="pf-sub">Guest since 2023 · Kraków + Warszawa</div>
+          <div class="pf-tier"><span class="badge platinum"><span class="d"></span>Gold tier · 2,840 pts</span></div>
+        </div>
+        <div class="pf-stats">
+          <div class="pf-stat"><div class="l">Lifetime value</div><div class="v">4,210 zł</div></div>
+          <div class="pf-stat"><div class="l">Visits</div><div class="v">28</div></div>
+          <div class="pf-stat"><div class="l">Avg spend</div><div class="v">150 zł</div></div>
+          <div class="pf-stat"><div class="l">Last visit</div><div class="v" style="font-size:16px">14d ago</div></div>
+        </div>
+
+        <div class="pf-sec">
+          <div class="eyebrow">Allergens & preferences</div>
+          <span class="pf-tag pref">Prefers corner seating</span>
+          <span class="pf-tag pref">Sparkling water</span>
+          <span class="pf-tag pref">Loves Bufala DOP</span>
+        </div>
+
+        <div class="pf-sec">
+          <div class="eyebrow">Concierge notes</div>
+          <div class="pf-note"><span class="w">VIP — anniversary couple.</span> Always offer the corner banquette (T7). Enjoys a complimentary limoncello at close. Husband: Paolo.</div>
+        </div>
+
+        <div class="pf-sec">
+          <div class="eyebrow">Recent orders</div>
+          <div class="pf-order"><span class="dt">12 May</span><span>Bufala DOP · Diavola · 2× Pellegrino</span><span class="amt">168 zł</span></div>
+          <div class="pf-order"><span class="dt">28 Apr</span><span>Margherita · Tiramisù</span><span class="amt">76 zł</span></div>
+          <div class="pf-order"><span class="dt">9 Apr</span><span>Capricciosa · ’Nduja & Honey</span><span class="amt">115 zł</span></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</body>
+</html>

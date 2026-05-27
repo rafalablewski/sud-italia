@@ -179,6 +179,11 @@ The token foundation already reskins every module (burgundy, warm neutrals,
 real fonts, refined charts). These are the **structural** next moves. Each is
 written to be implemented against a live preview (`npm run dev`).
 
+> High-fidelity HTML mockups of POS, KDS, and the unified Guest Engagement hub
+> live at `tests/sketches/core-suite/` (open `index.html` in a browser). They
+> use the real tokens/fonts and are the agreed visual target for the React
+> implementation. Per `/tests/` convention they do not ship.
+
 ### 7.1 KDS — *shipped (re-tone)*
 
 Already done: Atlas fleet-command + kiosk palettes warmed to the suite family
