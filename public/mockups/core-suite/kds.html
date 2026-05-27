@@ -65,6 +65,7 @@
   .tk-h { display:flex; align-items:center; gap:9px; padding:11px 13px 7px; }
   .tk-id { font:600 15px var(--ui); letter-spacing:-.01em; color:var(--t); }
   .tk-type { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--raised); color:var(--dim); }
+  .tk-course { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:5px; border:1px solid var(--hair-2); color:var(--dim); }
   .tk-risk { font:600 9px var(--ui); letter-spacing:.05em; text-transform:uppercase; color:var(--warn); border:1px solid color-mix(in oklab, var(--warn) 45%, transparent); border-radius:4px; padding:1px 6px; }
   .tk-timer { margin-left:auto; font:600 20px var(--mono); color:var(--dim); font-variant-numeric:tabular-nums; letter-spacing:.01em; }
   .tk.warn .tk-timer, .tk.risk .tk-timer { color:var(--warn); }
@@ -155,9 +156,14 @@
       <div class="col-head"><span class="lbl">New</span><span class="cnt">3</span><span class="rule"></span></div>
       <div class="col-body">
         <div class="tk">
-          <div class="tk-h"><span class="tk-id">#4823</span><span class="tk-type">Dine-in · T9</span><span class="tk-timer">0:18</span></div>
+          <div class="tk-h"><span class="tk-id">#4823</span><span class="tk-type">Dine-in · T9</span><span class="tk-course">2 · Mains</span><span class="tk-timer">0:18</span></div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Marinara</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Capricciosa</div></div></div>
           <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~9 min</span><div class="sla"><i style="width:6%"></i></div></div><button class="bump">Start prep</button></div>
+        </div>
+        <div class="tk">
+          <div class="tk-h"><span class="tk-id">#4825</span><span class="tk-type">Dine-in · T5</span><span class="tk-course">1 · Starters</span><span class="tk-timer">0:09</span></div>
+          <div class="tk-items"><div class="tk-grp">Antipasti</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Bruschetta</div></div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Olive Ascolane</div></div></div>
+          <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~4 min</span><div class="sla"><i style="width:4%"></i></div></div><button class="bump">Start prep</button></div>
         </div>
         <div class="tk">
           <div class="tk-h"><span class="tk-id">#4824</span><span class="tk-type">Takeaway</span><span class="tk-timer">0:41</span></div>
@@ -179,12 +185,12 @@
           <div class="tk-f"><div class="tk-eta"><span class="lbl">Over promise · ~4 min</span><div class="sla"><i style="width:100%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
         <div class="tk risk">
-          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">9:07</span></div>
+          <div class="tk-h"><span class="tk-id">#4820</span><span class="tk-type">Dine-in · T7</span><span class="tk-course">2 · Mains</span><span class="tk-timer">9:07</span></div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div><div class="tk-it"><span class="tk-q">1×</span><div><div class="tk-nm">Diavola</div><div class="tk-mod">+ extra ’nduja</div></div></div></div>
           <div class="tk-f"><div class="tk-eta"><span class="lbl">At risk · miss by ~2 min</span><div class="sla"><i style="width:82%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
         <div class="tk">
-          <div class="tk-h"><span class="tk-id">#4821</span><span class="tk-type">Dine-in · T7</span><span class="tk-timer">3:55</span></div>
+          <div class="tk-h"><span class="tk-id">#4821</span><span class="tk-type">Dine-in · T7</span><span class="tk-course">2 · Mains</span><span class="tk-timer">3:55</span></div>
           <div class="tk-items"><div class="tk-grp">Pizza</div><div class="tk-it"><span class="tk-q">1×</span><div class="tk-nm">Bufala DOP</div></div></div>
           <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready in ~6 min</span><div class="sla"><i style="width:38%"></i></div></div><button class="bump">Mark ready</button></div>
         </div>
@@ -196,7 +202,7 @@
       <div class="col-head"><span class="lbl">Ready · Pass</span><span class="cnt">3</span><span class="rule"></span></div>
       <div class="col-body">
         <div class="tk ready">
-          <div class="tk-h"><span class="tk-id">#4816</span><span class="tk-type">Dine-in · T3</span><span class="tk-timer">plated</span></div>
+          <div class="tk-h"><span class="tk-id">#4816</span><span class="tk-type">Dine-in · T3</span><span class="tk-course">2 · Mains</span><span class="tk-timer">plated</span></div>
           <div class="tk-items"><div class="tk-it"><span class="tk-q">2×</span><div class="tk-nm">Margherita</div></div></div>
           <div class="tk-f"><div class="tk-eta"><span class="lbl">Ready for expo</span><div class="sla"><i style="width:100%"></i></div></div><button class="bump">Bump · Done</button></div>
         </div>

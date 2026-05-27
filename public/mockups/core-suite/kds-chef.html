@@ -44,6 +44,7 @@
   .ct.warn { border-left-color:var(--warn); } .ct.late { border-left-color:var(--late); box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
   .ct-h { display:flex; align-items:center; gap:10px; }
   .ct-id { font:600 16px var(--ui); letter-spacing:-.01em; color:var(--t); } .ct-type { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:5px; background:var(--raised); color:var(--dim); }
+  .ct-course { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:5px; border:1px solid var(--hair-2); color:var(--dim); }
   .ct-timer { margin-left:auto; font:600 22px var(--mono); color:var(--dim); font-variant-numeric:tabular-nums; } .ct.warn .ct-timer { color:var(--warn); } .ct.late .ct-timer { color:var(--late); }
   .ct-it { display:flex; gap:12px; padding:9px 0 4px; min-width:0; }
   .ct-it > div { min-width:0; }
@@ -93,18 +94,18 @@
 
   <div class="queue">
     <div class="ct warn">
-      <div class="ct-h"><span class="ct-id">#4820</span><span class="ct-type">Dine-in T7</span><span class="ct-timer">9:07</span></div>
+      <div class="ct-h"><span class="ct-id">#4820</span><span class="ct-type">Dine-in T7</span><span class="ct-course">2 · Mains</span><span class="ct-timer">9:07</span></div>
       <div class="ct-it"><span class="ct-q">2×</span><div class="ct-nm">Margherita</div></div>
       <div class="ct-it"><span class="ct-q">1×</span><div><div class="ct-nm">Diavola</div><div class="ct-mod">+ extra ’nduja</div></div></div>
       <div class="ct-f"><button class="bump">Mark ready</button></div>
     </div>
     <div class="ct">
-      <div class="ct-h"><span class="ct-id">#4821</span><span class="ct-type">Dine-in T7</span><span class="ct-timer">3:55</span></div>
+      <div class="ct-h"><span class="ct-id">#4821</span><span class="ct-type">Dine-in T7</span><span class="ct-course">2 · Mains</span><span class="ct-timer">3:55</span></div>
       <div class="ct-it"><span class="ct-q">1×</span><div class="ct-nm">Bufala DOP</div></div>
       <div class="ct-f"><button class="bump">Mark ready</button></div>
     </div>
     <div class="ct">
-      <div class="ct-h"><span class="ct-id">#4823</span><span class="ct-type">Dine-in T9</span><span class="ct-timer">0:18</span></div>
+      <div class="ct-h"><span class="ct-id">#4823</span><span class="ct-type">Dine-in T9</span><span class="ct-course">2 · Mains</span><span class="ct-timer">0:18</span></div>
       <div class="ct-it"><span class="ct-q">1×</span><div class="ct-nm">Capricciosa</div></div>
       <div class="ct-f"><button class="bump">Start prep</button></div>
     </div>
@@ -114,7 +115,7 @@
       <div class="ct-f"><button class="bump">Start prep</button></div>
     </div>
     <div class="ct">
-      <div class="ct-h"><span class="ct-id">#4816</span><span class="ct-type">Dine-in T3</span><span class="ct-timer" style="color:var(--ready);font-size:14px;font-family:var(--ui);font-weight:600;letter-spacing:.02em;text-transform:uppercase">plated</span></div>
+      <div class="ct-h"><span class="ct-id">#4816</span><span class="ct-type">Dine-in T3</span><span class="ct-course">2 · Mains</span><span class="ct-timer" style="color:var(--ready);font-size:14px;font-family:var(--ui);font-weight:600;letter-spacing:.02em;text-transform:uppercase">plated</span></div>
       <div class="ct-it"><span class="ct-q">2×</span><div class="ct-nm">Margherita</div></div>
       <div class="ct-f"><button class="bump">Bump · Done</button></div>
     </div>
