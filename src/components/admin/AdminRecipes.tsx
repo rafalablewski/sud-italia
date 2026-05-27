@@ -7,7 +7,6 @@ import {
   FlaskConical,
   IceCream,
   Leaf,
-  Package,
   Pencil,
   Pizza,
   Plus,
@@ -30,7 +29,6 @@ import {
   type NutritionInfo,
 } from "@/data/types";
 import dynamic from "next/dynamic";
-import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
@@ -231,6 +229,36 @@ interface MenuItemData {
   _isCustom?: boolean;
 }
 
+/** One location's listing of a dish. The recipe (cost, nutrition,
+ *  ingredients) is chain-wide; only `price` — and therefore margin —
+ *  varies per city. `itemId` is that location's menu-item id (e.g.
+ *  `krk-pizza-margherita`), needed to write product metadata back to
+ *  every location that carries the dish. */
+interface DishOffer {
+  slug: string;
+  city: string;
+  itemId: string;
+  price: number;
+  isCustom: boolean;
+}
+
+/** A dish, deduped across locations by its base slug. The Recipes board
+ *  shows one card per dish (not one per location) because a Kraków and a
+ *  Warszawa Margherita share a single recipe — the location switch that
+ *  used to gate this view was misleading. `offers` carries the
+ *  per-location price/margin, and `exclusiveCities` is set when the dish
+ *  isn't on every location's menu. */
+interface DishGroup {
+  baseSlug: string;
+  name: string;
+  category: MenuCategory;
+  /** Full menu item used to seed the editor's product-info form. */
+  representative: MenuItemData;
+  offers: DishOffer[];
+  /** Cities the dish is sold in, only when it's not on every menu. */
+  exclusiveCities: string[];
+}
+
 const INGREDIENT_CATEGORIES: IngredientCategory[] = [
   "dairy",
   "meat",
@@ -247,7 +275,6 @@ const INGREDIENT_CATEGORIES: IngredientCategory[] = [
 const INGREDIENT_UNITS: IngredientUnit[] = ["kg", "g", "L", "ml", "piece", "bunch", "can", "bottle"];
 
 const activeLocations = getActiveLocations();
-const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";
 
 const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
   pizza: Pizza,
@@ -302,18 +329,18 @@ function AdminRecipesDesktop() {
 // =============================================================
 
 function RecipesPanel() {
-  const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
 
-  const [menu, setMenu] = useState<MenuItemData[]>([]);
+  // Recipes + ingredients are chain-wide; menus are per-location. We pull
+  // every active location's menu and dedupe dishes by base slug so the
+  // board shows ONE card per dish — there's no location switch because a
+  // dish has one recipe everywhere. Per-location price/margin live on the
+  // card as chips; dishes that aren't on every menu get an "only" tag.
+  const [menusByLoc, setMenusByLoc] = useState<Record<string, MenuItemData[]>>({});
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
   const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<MenuItemData | null>(null);
+  const [editing, setEditing] = useState<DishGroup | null>(null);
   /** Mounted alongside the recipe editor so a recipe row's "Link
    *  offering" affordance can open the ingredient dialog in-place,
    *  no tab hop required. */
@@ -327,56 +354,99 @@ function RecipesPanel() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [m, r, i] = await Promise.all([
-        fetch(`/api/admin/menu?location=${pageLoc}`).then((res) => (res.ok ? res.json() : [])),
+      const [menuLists, r, i] = await Promise.all([
+        Promise.all(
+          activeLocations.map((l) =>
+            fetch(`/api/admin/menu?location=${l.slug}`).then((res) =>
+              res.ok ? res.json() : [],
+            ),
+          ),
+        ),
         fetch(`/api/admin/recipes`).then((res) => (res.ok ? res.json() : [])),
         fetch(`/api/admin/ingredients`).then((res) => (res.ok ? res.json() : [])),
       ]);
-      setMenu(Array.isArray(m) ? m : []);
+      const byLoc: Record<string, MenuItemData[]> = {};
+      activeLocations.forEach((l, idx) => {
+        byLoc[l.slug] = Array.isArray(menuLists[idx]) ? menuLists[idx] : [];
+      });
+      setMenusByLoc(byLoc);
       setRecipes(Array.isArray(r) ? r : []);
       setIngredients(Array.isArray(i) ? i : []);
     } finally {
       setLoading(false);
     }
-  }, [pageLoc]);
+  }, []);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  // Recipes are chain-wide (keyed by dish base slug after the
-  // 2026-05 refactor), but the recipes board groups by per-location
-  // menu items. Map by base slug so a Kraków + Warsaw Margherita card
-  // both resolve to the same recipe row.
+  // Recipes are chain-wide (keyed by dish base slug). The API returns one
+  // row per dish already keyed by base slug, so this maps straight through.
   const recipeByBaseSlug = useMemo(() => {
     const m = new Map<string, RecipeData>();
     for (const r of recipes) m.set(r.menuItemId, r);
     return m;
   }, [recipes]);
 
+  // Collapse every location's menu into one dish per base slug.
+  const dishes = useMemo<DishGroup[]>(() => {
+    const groups = new Map<string, DishGroup>();
+    for (const loc of activeLocations) {
+      for (const item of menusByLoc[loc.slug] ?? []) {
+        const base = getBaseSlug(item.id);
+        let g = groups.get(base);
+        if (!g) {
+          g = {
+            baseSlug: base,
+            name: item.name,
+            category: item.category,
+            representative: item,
+            offers: [],
+            exclusiveCities: [],
+          };
+          groups.set(base, g);
+        }
+        g.offers.push({
+          slug: loc.slug,
+          city: loc.city,
+          itemId: item.id,
+          price: item.price,
+          isCustom: !!item._isCustom,
+        });
+      }
+    }
+    const totalLocs = activeLocations.length;
+    for (const g of groups.values()) {
+      if (g.offers.length < totalLocs) {
+        g.exclusiveCities = g.offers.map((o) => o.city);
+      }
+    }
+    return Array.from(groups.values());
+  }, [menusByLoc]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return menu.filter((m) => {
-      if (filterCat !== "all" && m.category !== filterCat) return false;
+    return dishes.filter((d) => {
+      if (filterCat !== "all" && d.category !== filterCat) return false;
       if (!q) return true;
-      return m.name.toLowerCase().includes(q);
+      return d.name.toLowerCase().includes(q);
     });
-  }, [menu, search, filterCat]);
+  }, [dishes, search, filterCat]);
 
   const grouped = useMemo(() => {
-    const m = new Map<MenuCategory, MenuItemData[]>();
-    for (const i of filtered) {
-      const arr = m.get(i.category) || [];
-      arr.push(i);
-      m.set(i.category, arr);
+    const m = new Map<MenuCategory, DishGroup[]>();
+    for (const d of filtered) {
+      const arr = m.get(d.category) || [];
+      arr.push(d);
+      m.set(d.category, arr);
     }
     return Array.from(m.entries());
   }, [filtered]);
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
   const categories = useMemo(
-    () => Array.from(new Set(menu.map((m) => m.category))) as MenuCategory[],
-    [menu],
+    () => Array.from(new Set(dishes.map((d) => d.category))) as MenuCategory[],
+    [dishes],
   );
 
   const onSaved = async () => {
@@ -388,15 +458,6 @@ function RecipesPanel() {
   return (
     <>
       <div className="v2-filters">
-        <div className="v2-field-inline">
-          <Package className="h-3.5 w-3.5 v2-muted" />
-          <Select
-            value={pageLoc}
-            onChange={(e) => setPageLoc(e.target.value)}
-            options={locOptions}
-            aria-label="Menu location"
-          />
-        </div>
         <div className="v2-filter-search">
           <Input
             placeholder="Search dishes…"
@@ -409,11 +470,11 @@ function RecipesPanel() {
           value={filterCat}
           onChange={(v) => setFilterCat(v as MenuCategory | "all")}
           tabs={[
-            { value: "all", label: "All", count: menu.length },
+            { value: "all", label: "All", count: dishes.length },
             ...categories.map((c) => ({
               value: c,
               label: MENU_CATEGORY_LABELS[c],
-              count: menu.filter((m) => m.category === c).length,
+              count: dishes.filter((d) => d.category === c).length,
             })),
           ]}
           variant="pill"
@@ -441,24 +502,20 @@ function RecipesPanel() {
                   <span className="v2-rcp-group-count">{items.length}</span>
                 </header>
                 <div className="v2-rcp-grid">
-                  {items.map((item) => {
-                    const recipe = recipeByBaseSlug.get(getBaseSlug(item.id));
+                  {items.map((dish) => {
+                    const recipe = recipeByBaseSlug.get(dish.baseSlug);
                     const hasRecipe = !!recipe;
                     const enriched = (recipe?.enrichedIngredients ?? []) as EnrichedRecipeIngredient[];
                     const calculatedCost = recipe?.calculatedCost ?? 0;
-                    const margin = item.price > 0 ? Math.round(((item.price - calculatedCost) / item.price) * 100) : 0;
-                    const marginTone: "success" | "warning" | "danger" = margin >= 65 ? "success" : margin >= 50 ? "warning" : "danger";
                     return (
                       <RecipeCard
-                        key={item.id}
-                        item={item}
+                        key={dish.baseSlug}
+                        dish={dish}
                         recipe={recipe}
                         hasRecipe={hasRecipe}
                         ingredients={enriched}
                         calculatedCost={calculatedCost}
-                        margin={margin}
-                        marginTone={marginTone}
-                        onEdit={() => setEditing(item)}
+                        onEdit={() => setEditing(dish)}
                       />
                     );
                   })}
@@ -470,12 +527,10 @@ function RecipesPanel() {
       )}
 
       <RecipeEditor
-        menuItem={editing}
-        recipe={editing ? recipeByBaseSlug.get(getBaseSlug(editing.id)) : undefined}
+        menuItem={editing?.representative ?? null}
+        offers={editing?.offers ?? []}
+        recipe={editing ? recipeByBaseSlug.get(editing.baseSlug) : undefined}
         ingredients={ingredients}
-        locationLabel={
-          activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc
-        }
         onClose={() => setEditing(null)}
         onSaved={onSaved}
         onEditIngredient={(id) => {
@@ -519,27 +574,38 @@ const COST_BAR_COLORS = [
   "#84cc16",
 ] as const;
 
+function marginToneOf(margin: number): "success" | "warning" | "danger" {
+  return margin >= 65 ? "success" : margin >= 50 ? "warning" : "danger";
+}
+
 interface RecipeCardProps {
-  item: MenuItemData;
+  dish: DishGroup;
   recipe: RecipeData | undefined;
   hasRecipe: boolean;
   ingredients: EnrichedRecipeIngredient[];
   calculatedCost: number;
-  margin: number;
-  marginTone: "success" | "warning" | "danger";
   onEdit: () => void;
 }
 
 function RecipeCard({
-  item,
+  dish,
   recipe,
   hasRecipe,
   ingredients,
   calculatedCost,
-  margin,
-  marginTone,
   onEdit,
 }: RecipeCardProps) {
+  // Cost is chain-wide; margin is per-location because price varies. The
+  // card accent uses the worst (lowest) margin so a thin-margin city
+  // isn't hidden behind a healthy one.
+  const offerMargins = dish.offers.map((o) => ({
+    ...o,
+    margin: o.price > 0 ? Math.round(((o.price - calculatedCost) / o.price) * 100) : 0,
+  }));
+  const worstMargin = offerMargins.length
+    ? Math.min(...offerMargins.map((o) => o.margin))
+    : 0;
+  const cardTone = hasRecipe ? marginToneOf(worstMargin) : "neutral";
   // Sort ingredients by cost share descending so the bar reads largest→smallest.
   // Anything <2% of total cost is grouped into "Other" so the bar doesn't end
   // in a row of one-pixel slivers that are impossible to hover.
@@ -587,10 +653,15 @@ function RecipeCard({
   return (
     <article
       className={`v2-rcp-card ${hasRecipe ? "" : "is-empty"}`}
-      data-margin-tone={hasRecipe ? marginTone : "neutral"}
+      data-margin-tone={cardTone}
     >
       <header className="v2-rcp-card-header">
-        <h3 className="v2-rcp-card-name">{item.name}</h3>
+        <div className="v2-rcp-card-title">
+          <h3 className="v2-rcp-card-name">{dish.name}</h3>
+          {dish.exclusiveCities.length > 0 && (
+            <span className="v2-rcp-card-only">{dish.exclusiveCities.join(" + ")} only</span>
+          )}
+        </div>
         {hasRecipe ? (
           <span className="v2-rcp-card-badge is-info">{ingredients.length} ingredients</span>
         ) : (
@@ -632,21 +703,22 @@ function RecipeCard({
         </div>
       )}
 
-      <dl className="v2-rcp-stats">
-        <div className="v2-rcp-stat">
-          <dt>Price</dt>
-          <dd className="tabular">{formatPrice(item.price)}</dd>
-        </div>
-        <div className="v2-rcp-stat">
-          <dt>Cost</dt>
-          <dd className="tabular">{hasRecipe ? formatPrice(calculatedCost) : "—"}</dd>
-        </div>
-        <div className="v2-rcp-stat">
-          <dt>Margin</dt>
-          <dd className={`tabular v2-rcp-margin v2-rcp-margin-${hasRecipe ? marginTone : "neutral"}`}>
-            {hasRecipe ? `${margin}%` : "—"}
-          </dd>
-        </div>
+      <div className="v2-rcp-costline">
+        <span className="v2-rcp-costline-label">Cost / portion</span>
+        <span className="v2-rcp-costline-value tabular">
+          {hasRecipe ? formatPrice(calculatedCost) : "—"}
+        </span>
+        <span className="v2-rcp-costline-note">shared · all locations</span>
+      </div>
+
+      <dl className="v2-rcp-locs" aria-label="Listed price and margin per location">
+        {offerMargins.map((o) => (
+          <div key={o.slug} className="v2-rcp-loc" data-tone={hasRecipe ? marginToneOf(o.margin) : "neutral"}>
+            <dt className="v2-rcp-loc-city">{o.city}</dt>
+            <dd className="v2-rcp-loc-price tabular">{formatPrice(o.price)}</dd>
+            <dd className="v2-rcp-loc-margin tabular">{hasRecipe ? `${o.margin}%` : "—"}</dd>
+          </div>
+        ))}
       </dl>
 
       <footer className="v2-rcp-card-footer">
@@ -676,12 +748,11 @@ interface EditorProps {
   menuItem: MenuItemData | null;
   recipe?: RecipeData;
   ingredients: IngredientData[];
-  /** City label of the location whose menu item this recipe is keyed
-   *  to. Recipes are per-(menuItemId), and menu items are per-location,
-   *  so each city has its own Margherita recipe + Margherita listed
-   *  price. Without this label the dialog header is misleading: it
-   *  shows ONE listed price + ONE cost but doesn't say which location. */
-  locationLabel?: string;
+  /** Every location that lists this dish. The recipe is shared, so a
+   *  save writes the formula once (server keys by base slug) and the
+   *  product metadata to each location's menu item. `price` differs per
+   *  location, so margin is shown per city. */
+  offers: DishOffer[];
   onClose: () => void;
   onSaved: () => void;
   /** Open the IngredientDialog for the given ingredient — lets the
@@ -733,7 +804,7 @@ function productDraftFromItem(item: MenuItemData): ProductDraft {
   };
 }
 
-function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, onSaved, onEditIngredient }: EditorProps) {
+function RecipeEditor({ menuItem, recipe, ingredients, offers, onClose, onSaved, onEditIngredient }: EditorProps) {
   const toast = useToast();
   const [rows, setRows] = useState<EnrichedRecipeIngredient[]>([]);
   const [yieldPortions, setYieldPortions] = useState(1);
@@ -834,10 +905,24 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
     Math.round((r.unitCost ?? 0) * r.quantity * (r.wasteFactor || 1));
   const totalCost = rows.reduce((acc, r) => acc + lineCost(r), 0);
   const perPortion = yieldPortions > 0 ? Math.round(totalCost / yieldPortions) : totalCost;
-  const margin =
-    menuItem && menuItem.price > 0
-      ? Math.round(((menuItem.price - perPortion) / menuItem.price) * 100)
-      : 0;
+  // Cost is chain-wide; margin is per-location because price varies. Show
+  // a range across locations and colour-code by the worst (lowest) case.
+  const offerMargins = offers.map((o) => ({
+    city: o.city,
+    price: o.price,
+    margin: o.price > 0 ? Math.round(((o.price - perPortion) / o.price) * 100) : 0,
+  }));
+  const marginValues = offerMargins.map((o) => o.margin);
+  const minMargin = marginValues.length ? Math.min(...marginValues) : 0;
+  const maxMargin = marginValues.length ? Math.max(...marginValues) : 0;
+  const margin = minMargin;
+  const marginDisplay =
+    offerMargins.length === 0
+      ? "—"
+      : minMargin === maxMargin
+        ? `${minMargin}%`
+        : `${minMargin}–${maxMargin}%`;
+  const priceSummary = offers.map((o) => `${o.city} ${formatPrice(o.price)}`).join(" · ");
   // Per-portion macros computed locally so the KPI + nutrition panel
   // update as the operator edits quantities, without waiting for the
   // server roundtrip. Missing values default to 0 (rather than null'ing
@@ -972,24 +1057,40 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
       }
 
       if (Object.keys(productPatch).length > 0) {
-        const productRes = menuItem._isCustom
-          ? await fetch(
-              `/api/admin/menu/custom?id=${encodeURIComponent(menuItem.id)}`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(productPatch),
-              },
-            )
-          : await fetch("/api/admin/menu", {
+        // The recipe is shared, so the dish's name / description / dietary
+        // facts must stay identical across every location that sells it —
+        // write the same patch to each location's menu item. Price is
+        // per-location and isn't part of this patch. Seed items go through
+        // the override map (one bulk PUT); custom items are PATCHed
+        // individually.
+        const seedIds = offers.filter((o) => !o.isCustom).map((o) => o.itemId);
+        const customIds = offers.filter((o) => o.isCustom).map((o) => o.itemId);
+        const calls: Promise<Response>[] = [];
+        if (seedIds.length > 0) {
+          const items: Record<string, unknown> = {};
+          for (const id of seedIds) items[id] = productPatch;
+          calls.push(
+            fetch("/api/admin/menu", {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ items: { [menuItem.id]: productPatch } }),
-            });
-        if (!productRes.ok) {
+              body: JSON.stringify({ items }),
+            }),
+          );
+        }
+        for (const id of customIds) {
+          calls.push(
+            fetch(`/api/admin/menu/custom?id=${encodeURIComponent(id)}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(productPatch),
+            }),
+          );
+        }
+        const results = await Promise.all(calls);
+        if (results.some((r) => !r.ok)) {
           toast.error(
             "Product info save failed",
-            "Recipe saved but the product fields didn't update.",
+            "Recipe saved but the product fields didn't update everywhere.",
           );
           return;
         }
@@ -1031,7 +1132,7 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
         onClose={onClose}
         size="xl"
         title={`Recipe · ${menuItem.name}`}
-        description={`Chain-wide formula · ${locationLabel ? `listed at ${formatPrice(menuItem.price)} in ${locationLabel}` : `listed price ${formatPrice(menuItem.price)}`}. Cost + nutrition recalculate from each ingredient's active distributor offering. Other locations on this dish share the same recipe — only the listed price varies.`}
+        description={`One recipe, shared across all locations${priceSummary ? ` · sold at ${priceSummary}` : ""}. Cost + nutrition recalculate from each ingredient's active distributor offering. Editing here updates the dish everywhere — only the listed price varies by location.`}
         footer={
           <>
             {hasExisting && (
@@ -1058,22 +1159,24 @@ function RecipeEditor({ menuItem, recipe, ingredients, locationLabel, onClose, o
               icon={Coins}
               tone="brand"
               staticValue
-              hint={`Listed at ${formatPrice(menuItem.price)}`}
+              hint={priceSummary ? `Sold at ${priceSummary}` : "Chain-wide cost"}
             />
             <KpiCard
               label="Margin"
               value={margin}
-              display={`${margin}%`}
+              display={marginDisplay}
               icon={Percent}
               tone={margin < 50 ? "danger" : margin < 65 ? "warning" : "success"}
               staticValue
               higherIsBetter
               hint={
-                margin < 50
-                  ? "Below 50% — review pricing or recipe"
-                  : margin < 65
-                    ? "Healthy for QSR pizza"
-                    : "Strong"
+                offerMargins.length > 1 && minMargin !== maxMargin
+                  ? offerMargins.map((o) => `${o.city} ${o.margin}%`).join(" · ")
+                  : margin < 50
+                    ? "Below 50% — review pricing or recipe"
+                    : margin < 65
+                      ? "Healthy for QSR pizza"
+                      : "Strong"
               }
             />
             <KpiCard

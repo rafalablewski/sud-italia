@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlaskConical } from "lucide-react";
 import type { MenuCategory } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
-import { useAdminLocation } from "../v2/LocationContext";
 import {
   Chip,
   ChipStrip,
@@ -18,7 +17,7 @@ import {
 } from "../v2/mobile";
 import { MobileRecipeEditor } from "./MobileRecipeEditor";
 
-const FALLBACK_LOC = getActiveLocations()[0]?.slug ?? "krakow";
+const ACTIVE_LOCATIONS = getActiveLocations();
 
 interface MenuItemRow {
   id: string;
@@ -26,6 +25,13 @@ interface MenuItemRow {
   category: MenuCategory;
   price: number;
   cost: number;
+}
+
+interface DishOffer {
+  slug: string;
+  city: string;
+  itemId: string;
+  price: number;
 }
 
 interface RecipeRow {
@@ -52,74 +58,61 @@ interface IngredientData {
 }
 
 interface CombinedRow {
-  id: string;
+  baseSlug: string;
   name: string;
   category: MenuCategory;
-  price: number;
   baseCost: number;
   recipeCost?: number;
   hasRecipe: boolean;
+  offers: DishOffer[];
+  exclusiveCities: string[];
 }
 
 /**
- * Mobile recipes — read-only costing overview. Each row shows menu item,
- * base cost vs recipe cost, and margin tone. Editing the ingredient table
- * stays desktop per the audit (multi-row form is unsalvageable on a phone).
+ * Mobile recipes — read-only costing overview. Recipes are chain-wide, so
+ * there's no location switch: each dish shows once (deduped by base slug)
+ * with its shared cost and per-location margin. Editing the ingredient
+ * table stays desktop per the audit (multi-row form is unsalvageable on a
+ * phone).
  */
 export function MobileRecipes() {
-  const { location: globalLoc } = useAdminLocation();
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  const [items, setItems] = useState<MenuItemRow[]>([]);
+  const [menusByLoc, setMenusByLoc] = useState<Record<string, MenuItemRow[]>>({});
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [ingredients, setIngredients] = useState<IngredientData[]>([]);
   const [cat, setCat] = useState<MenuCategory | "all">("all");
-  const [editing, setEditing] = useState<{ id: string; name: string; price: number } | null>(null);
-  const activeLocations = useMemo(() => getActiveLocations(), []);
+  const [editing, setEditing] = useState<
+    { id: string; name: string; price: number; offers: DishOffer[] } | null
+  >(null);
 
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
-
-  const refresh = async () => {
-    // Menu list is per-location; recipes + ingredients are chain-wide
-    // (recipes keyed by menuItemId, ingredients keyed by id).
-    const [m, r, i] = await Promise.all([
-      fetch(`/api/admin/menu?location=${encodeURIComponent(pageLoc)}`).then((res) =>
-        res.ok ? res.json() : [],
+  const refresh = useCallback(async () => {
+    // Menus are per-location; recipes + ingredients are chain-wide
+    // (recipes keyed by dish base slug, ingredients keyed by id).
+    const [menuLists, r, i] = await Promise.all([
+      Promise.all(
+        ACTIVE_LOCATIONS.map((l) =>
+          fetch(`/api/admin/menu?location=${encodeURIComponent(l.slug)}`).then((res) =>
+            res.ok ? res.json() : [],
+          ),
+        ),
       ),
       fetch("/api/admin/recipes").then((res) => (res.ok ? res.json() : [])),
       fetch("/api/admin/ingredients").then((res) => (res.ok ? res.json() : [])),
     ]);
-    setItems(Array.isArray(m) ? m : []);
+    const byLoc: Record<string, MenuItemRow[]> = {};
+    ACTIVE_LOCATIONS.forEach((l, idx) => {
+      byLoc[l.slug] = Array.isArray(menuLists[idx]) ? menuLists[idx] : [];
+    });
+    setMenusByLoc(byLoc);
     setRecipes(Array.isArray(r) ? r : []);
     setIngredients(Array.isArray(i) ? i : []);
-  };
+  }, []);
 
   useEffect(() => {
+    // Initial load. setState lands after the awaited fetch, not
+    // synchronously, so the cascading-render warning is a false positive.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageLoc]);
-
-  const combined: CombinedRow[] = useMemo(() => {
-    // Recipes are chain-wide (keyed by dish base slug). Look up by
-    // base slug so Kraków's krk-X and Warsaw's waw-X both resolve to
-    // the same row.
-    const byBaseSlug = new Map(recipes.map((r) => [r.menuItemId, r]));
-    return items
-      .filter((it) => cat === "all" || it.category === cat)
-      .map((it) => {
-        const r = byBaseSlug.get(getBaseSlug(it.id));
-        return {
-          id: it.id,
-          name: it.name,
-          category: it.category,
-          price: it.price,
-          baseCost: it.cost,
-          recipeCost: r?.calculatedCost,
-          hasRecipe: !!r,
-        };
-      });
-  }, [items, recipes, cat]);
+  }, [refresh]);
 
   const recipeByBaseSlug = useMemo(() => {
     const m = new Map<string, RecipeRow>();
@@ -127,22 +120,63 @@ export function MobileRecipes() {
     return m;
   }, [recipes]);
 
+  // Collapse every location's menu into one dish per base slug.
+  const combined: CombinedRow[] = useMemo(() => {
+    const groups = new Map<string, CombinedRow>();
+    for (const loc of ACTIVE_LOCATIONS) {
+      for (const it of menusByLoc[loc.slug] ?? []) {
+        if (cat !== "all" && it.category !== cat) continue;
+        const base = getBaseSlug(it.id);
+        let g = groups.get(base);
+        if (!g) {
+          const r = recipeByBaseSlug.get(base);
+          g = {
+            baseSlug: base,
+            name: it.name,
+            category: it.category,
+            baseCost: it.cost,
+            recipeCost: r?.calculatedCost,
+            hasRecipe: !!r,
+            offers: [],
+            exclusiveCities: [],
+          };
+          groups.set(base, g);
+        }
+        g.offers.push({ slug: loc.slug, city: loc.city, itemId: it.id, price: it.price });
+      }
+    }
+    for (const g of groups.values()) {
+      if (g.offers.length < ACTIVE_LOCATIONS.length) {
+        g.exclusiveCities = g.offers.map((o) => o.city);
+      }
+    }
+    return Array.from(groups.values());
+  }, [menusByLoc, recipeByBaseSlug, cat]);
+
   const rows: MobileListItem<CombinedRow>[] = combined.map((r) => {
     const cost = r.recipeCost ?? r.baseCost;
-    const margin = r.price ? ((r.price - cost) / r.price) * 100 : 0;
+    const margins = r.offers.map((o) => (o.price ? ((o.price - cost) / o.price) * 100 : 0));
+    const minMargin = margins.length ? Math.min(...margins) : 0;
+    const maxMargin = margins.length ? Math.max(...margins) : 0;
     const tone: "success" | "warning" | "danger" =
-      margin >= 60 ? "success" : margin >= 40 ? "warning" : "danger";
+      minMargin >= 60 ? "success" : minMargin >= 40 ? "warning" : "danger";
+    const marginLabel =
+      Math.round(minMargin) === Math.round(maxMargin)
+        ? `${minMargin.toFixed(0)}%`
+        : `${minMargin.toFixed(0)}–${maxMargin.toFixed(0)}%`;
+    const exclusive = r.exclusiveCities.length > 0 ? ` · ${r.exclusiveCities.join(" + ")} only` : "";
+    const rep = r.offers[0];
     return {
-      id: r.id,
+      id: r.baseSlug,
       data: r,
       icon: FlaskConical,
       iconTone: r.hasRecipe ? "info" : "neutral",
       title: r.name,
-      subtitle: `${MENU_CATEGORY_LABELS[r.category] ?? r.category} · ${r.hasRecipe ? "recipe" : "no recipe"}`,
+      subtitle: `${MENU_CATEGORY_LABELS[r.category] ?? r.category} · ${r.hasRecipe ? "recipe" : "no recipe"}${exclusive}`,
       trailing: `${formatPrice(cost)}`,
-      status: { label: `${margin.toFixed(0)}%`, tone },
+      status: { label: marginLabel, tone },
       onTap: () =>
-        setEditing({ id: r.id, name: r.name, price: r.price }),
+        rep && setEditing({ id: rep.itemId, name: r.name, price: rep.price, offers: r.offers }),
     };
   });
 
@@ -161,40 +195,28 @@ export function MobileRecipes() {
       <PullToRefresh onRefresh={refresh}>
         <MobilePage
           toolbar={
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <ChipStrip ariaLabel="Location">
-                {activeLocations.map((l) => (
-                  <Chip
-                    key={l.slug}
-                    label={l.city}
-                    active={pageLoc === l.slug}
-                    onClick={() => setPageLoc(l.slug)}
-                  />
-                ))}
-              </ChipStrip>
-              <ChipStrip ariaLabel="Category">
-                {CATS.map((c) => (
-                  <Chip
-                    key={c}
-                    label={c === "all" ? "All" : MENU_CATEGORY_LABELS[c]}
-                    active={cat === c}
-                    onClick={() => setCat(c)}
-                    count={c === "all" ? items.length : items.filter((i) => i.category === c).length}
-                  />
-                ))}
-              </ChipStrip>
-            </div>
+            <ChipStrip ariaLabel="Category">
+              {CATS.map((c) => (
+                <Chip
+                  key={c}
+                  label={c === "all" ? "All" : MENU_CATEGORY_LABELS[c]}
+                  active={cat === c}
+                  onClick={() => setCat(c)}
+                />
+              ))}
+            </ChipStrip>
           }
         >
           <PageHeader
             title="Recipes"
-            subtitle={`${combined.length} items · ${pageLoc.toUpperCase()} · tap to edit`}
+            subtitle={`${combined.length} dishes · shared across all locations · tap to edit`}
           />
           <MobileList items={rows} virtualizeAt={64} />
         </MobilePage>
       </PullToRefresh>
       <MobileRecipeEditor
         menuItem={editing}
+        offers={editing?.offers}
         recipe={editing ? recipeByBaseSlug.get(getBaseSlug(editing.id)) : undefined}
         ingredients={ingredients}
         onClose={() => setEditing(null)}
