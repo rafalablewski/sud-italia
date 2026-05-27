@@ -6,41 +6,44 @@
 <title>KDS · Chef Line — Sud Italia Core Suite</title>
 <link rel="stylesheet" href="/mockups/core-suite/system.css">
 <style>
-  body.kds { --canvas:#0a0a0c; --panel:#141318; --raised:#222028; --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
-    --t:#f4f2ee; --dim:#b6afa6; --faint:#918880; --queued:#6a655f; --firing:#4d90e8; --warn:#e0a93f; --late:#e5484d; --ready:#3dd68c;
+  body.kds { --canvas:#0a0a0c; --panel:#141318; --raised:#1f1d25; --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+    --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b; --warn:#e0a93f; --late:#e5484d; --ready:#4ea882;
     background: var(--canvas); height:100vh; overflow:hidden; }
-  .ct, .chefstrip { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
   .wrap { height:100vh; display:flex; flex-direction:column; padding:14px 18px; gap:12px; }
   .top { display:flex; align-items:center; gap:14px; flex:none; }
   .id { display:flex; align-items:center; gap:11px; } .id .nm { font-family:var(--display); font-size:17px; font-weight:600; } .id .loc { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
-  .backfleet { font-size:12px; color:var(--firing); text-decoration:none; }
-  .clock { margin-left:auto; font:700 20px var(--mono); padding:5px 13px; border-radius:var(--r-pill); background:var(--panel); border:1px solid var(--hair-2); }
+  .clock { margin-left:auto; font:600 19px var(--mono); padding:5px 13px; border-radius:8px; background:var(--panel); border:1px solid var(--hair); color:var(--t); }
 
   /* chef line strip: station focus + queue depth + 86 */
-  .chefstrip { display:flex; align-items:center; gap:16px; flex:none; background:var(--panel); border:1px solid var(--hair); border-radius:var(--r-lg); padding:13px 16px; }
-  .stations { display:flex; gap:8px; }
-  .station { height:38px; padding:0 16px; border-radius:var(--r-md); border:1px solid var(--hair); background:var(--raised); color:var(--dim); font:600 14px var(--ui); cursor:pointer; display:flex; align-items:center; gap:9px; }
-  .station.on { background:var(--firing); color:#04101f; border-color:transparent; }
-  .station .n { font:700 12px var(--mono); }
-  .qdepth { display:flex; gap:22px; margin-left:8px; }
-  .qd .l { font-size:10.5px; color:var(--faint); } .qd .v { font:700 20px var(--mono); margin-top:2px; } .qd.warn .v { color:var(--warn); }
+  .chefstrip { display:flex; align-items:center; gap:18px; flex:none; background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:13px 16px; }
+  .stations { display:flex; gap:6px; }
+  .station { height:38px; padding:0 17px; border-radius:8px; border:1px solid var(--hair); background:transparent; color:var(--dim); font:600 14px var(--ui); cursor:pointer; display:flex; align-items:center; gap:9px; letter-spacing:-.005em; }
+  .station:hover { color:var(--t); border-color:var(--hair-2); }
+  .station.on { background:var(--raised); color:var(--t); border-color:var(--hair-2); }
+  .station .n { font:600 12px var(--mono); color:var(--faint); }
+  .station.on .n { color:var(--dim); }
+  .qdepth { display:flex; gap:24px; margin-left:8px; }
+  .qd .l { font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); } .qd .v { font:600 20px var(--mono); margin-top:3px; color:var(--t); } .qd.warn .v { color:var(--warn); }
   .chef-86 { margin-left:auto; display:flex; align-items:center; gap:9px; }
-  .restore { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:var(--r-pill); background:rgba(229,72,77,.14); color:var(--late); border:1px solid rgba(229,72,77,.3); font:600 12px var(--ui); cursor:pointer; }
-  .restore .x { color:var(--ready); }
-  .btn86 { height:32px; padding:0 14px; border-radius:var(--r-md); border:1px solid var(--hair-2); background:var(--raised); color:var(--t); font:600 13px var(--ui); cursor:pointer; }
+  .restore { display:inline-flex; align-items:center; gap:7px; height:30px; padding:0 12px; border-radius:7px; background:var(--raised); color:var(--dim); border:1px solid var(--hair); font:500 12px var(--ui); cursor:pointer; }
+  .restore .dot { width:6px; height:6px; border-radius:99px; background:var(--late); }
+  .restore .x { color:var(--faint); }
+  .btn86 { height:32px; padding:0 14px; border-radius:7px; border:1px solid var(--hair-2); background:var(--raised); color:var(--t); font:600 13px var(--ui); cursor:pointer; }
 
   /* dense station queue */
   .queue { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; align-content:start; }
-  .ct { background:var(--panel); border:1px solid var(--hair); border-left:4px solid var(--queued); border-radius:var(--r-lg); padding:14px 16px; }
-  .ct.firing { border-left-color:var(--firing); } .ct.warn { border-left-color:var(--warn); } .ct.late { border-left-color:var(--late); box-shadow:0 0 0 1px var(--late); }
+  .ct { background:var(--panel); border:1px solid var(--hair); border-left:3px solid transparent; border-radius:10px; padding:14px 16px; }
+  .ct.warn { border-left-color:var(--warn); } .ct.late { border-left-color:var(--late); box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
   .ct-h { display:flex; align-items:center; gap:10px; }
-  .ct-id { font:700 18px var(--ui); } .ct-type { font:600 11px var(--ui); padding:3px 8px; border-radius:99px; background:var(--raised); color:var(--dim); }
-  .ct-timer { margin-left:auto; font:700 24px var(--mono); color:var(--dim); } .ct.warn .ct-timer { color:var(--warn); } .ct.late .ct-timer { color:var(--late); }
+  .ct-id { font:600 16px var(--ui); letter-spacing:-.01em; color:var(--t); } .ct-type { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:5px; background:var(--raised); color:var(--dim); }
+  .ct-timer { margin-left:auto; font:600 22px var(--mono); color:var(--dim); font-variant-numeric:tabular-nums; } .ct.warn .ct-timer { color:var(--warn); } .ct.late .ct-timer { color:var(--late); }
   .ct-it { display:flex; gap:12px; padding:9px 0 4px; }
-  .ct-q { font:700 22px var(--mono); min-width:38px; } .ct-nm { font:600 20px var(--ui); } .ct-mod { font:500 14px var(--ui); color:var(--warn); margin-top:2px; }
-  .ct-f { margin-top:10px; } .ct-f .bump { width:100%; height:48px; border:0; border-radius:var(--r-md); font:700 15px var(--ui); cursor:pointer; background:var(--ready); color:#06140d; }
-  .ct.firing .ct-f .bump, .ct.warn .ct-f .bump, .ct.late .ct-f .bump { background:var(--ready); }
-  .legend { flex:none; font:600 11px var(--ui); color:var(--faint); }
+  .ct-q { font:600 22px var(--mono); min-width:38px; color:var(--dim); } .ct-nm { font:500 20px var(--ui); color:var(--t); } .ct-mod { font:500 14px var(--ui); color:var(--warn); margin-top:2px; }
+  .ct-f { margin-top:11px; } .ct-f .bump { width:100%; height:46px; border:1px solid var(--hair-2); border-radius:8px; font:600 15px var(--ui); letter-spacing:-.005em; cursor:pointer; background:var(--raised); color:var(--t); transition:border-color .12s; }
+  .ct-f .bump:hover { border-color:var(--t); }
+  .ct.late .ct-f .bump { border-color:color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
+  .legend { flex:none; font:500 11px var(--ui); color:var(--faint); }
+  .legend b { color:var(--dim); }
 </style>
 </head>
 <body class="kds">
@@ -66,9 +69,8 @@
       <div class="qd warn"><div class="l">Oldest</div><div class="v">9:07</div></div>
     </div>
     <div class="chef-86">
-      <span class="subtle" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">86'd</span>
-      <button class="restore">Tartufo <span class="x">↺</span></button>
-      <button class="btn86">Out of an item? 86 it…</button>
+      <span class="restore"><span class="dot"></span>Tartufo <span class="x">restore</span></span>
+      <button class="btn86">86 an item…</button>
     </div>
   </div>
 
@@ -79,7 +81,7 @@
       <div class="ct-it"><span class="ct-q">1×</span><div><div class="ct-nm">Diavola</div><div class="ct-mod">+ extra ’nduja</div></div></div>
       <div class="ct-f"><button class="bump">Mark ready</button></div>
     </div>
-    <div class="ct firing">
+    <div class="ct">
       <div class="ct-h"><span class="ct-id">#4821</span><span class="ct-type">Dine-in T7</span><span class="ct-timer">3:55</span></div>
       <div class="ct-it"><span class="ct-q">1×</span><div class="ct-nm">Bufala DOP</div></div>
       <div class="ct-f"><button class="bump">Mark ready</button></div>
@@ -87,12 +89,12 @@
     <div class="ct">
       <div class="ct-h"><span class="ct-id">#4823</span><span class="ct-type">Dine-in T9</span><span class="ct-timer">0:18</span></div>
       <div class="ct-it"><span class="ct-q">1×</span><div class="ct-nm">Capricciosa</div></div>
-      <div class="ct-f"><button class="bump" style="background:var(--firing);color:#04101f">Start prep</button></div>
+      <div class="ct-f"><button class="bump">Start prep</button></div>
     </div>
     <div class="ct">
       <div class="ct-h"><span class="ct-id">#4824</span><span class="ct-type">Takeaway</span><span class="ct-timer">0:41</span></div>
       <div class="ct-it"><span class="ct-q">2×</span><div class="ct-nm">Margherita</div></div>
-      <div class="ct-f"><button class="bump" style="background:var(--firing);color:#04101f">Start prep</button></div>
+      <div class="ct-f"><button class="bump">Start prep</button></div>
     </div>
   </div>
 
