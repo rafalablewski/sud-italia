@@ -171,6 +171,12 @@ export interface LocationConfig {
 
 export type AllSettings = Record<string, LocationConfig>;
 
+/** Shape of a row from `/api/admin/menu?location=<slug>` — a full MenuItem
+ *  with overrides + custom items already merged in, plus the admin-only
+ *  `_hidden` soft-delete flag we filter on so deleted items disappear from
+ *  the pickers. */
+type LiveMenuItem = MenuItem & { _hidden?: boolean };
+
 // ─── Constants ───────────────────────────────────────────────────────────
 
 export const TIME_WINDOW_VARIANTS = [
@@ -275,6 +281,12 @@ function defaultsAsConfig(): TimeWindowConfig[] {
 export function useSellingSettings() {
   const toast = useToast();
   const [settings, setSettings] = useState<AllSettings>({});
+  // Live per-location menu (seed + custom items + overrides), keyed by slug.
+  // Populated from /api/admin/menu so the item pickers reflect exactly what
+  // operators have added / renamed / 86'd in /admin/menu — not the static
+  // seed catalogue. A slug stays absent until its fetch succeeds, which is
+  // the signal to fall back to the seed menu for that location.
+  const [liveMenus, setLiveMenus] = useState<Record<string, MenuItem[]>>({});
   const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -283,22 +295,57 @@ export function useSellingSettings() {
   const [dirty, setDirty] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    fetch("/api/admin/upsell")
-      .then(async (r) => {
+    let cancelled = false;
+
+    const loadSettings = (async () => {
+      try {
+        const r = await fetch("/api/admin/upsell");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        setSettings(data || {});
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoadError(err instanceof Error ? err.message : "Failed to load settings");
-        setLoading(false);
-      });
+        const data = await r.json();
+        if (!cancelled) setSettings(data || {});
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : "Failed to load settings");
+        }
+      }
+    })();
+
+    // Live menus load independently of settings: a menu-fetch failure for one
+    // location just falls back to that location's seed catalogue (the picker
+    // still works) rather than blocking edits or wiping production settings.
+    const loadMenus = (async () => {
+      const entries = await Promise.all(
+        LOCATIONS.map(async (l) => {
+          try {
+            const r = await fetch(`/api/admin/menu?location=${l.slug}`);
+            if (!r.ok) return null;
+            const items = (await r.json()) as LiveMenuItem[];
+            return [l.slug, items.filter((m) => !m._hidden)] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      const next: Record<string, MenuItem[]> = {};
+      for (const entry of entries) {
+        if (entry) next[entry[0]] = entry[1];
+      }
+      setLiveMenus(next);
+    })();
+
+    Promise.allSettled([loadSettings, loadMenus]).then(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loc = LOCATIONS.find((l) => l.slug === activeLocation) ?? LOCATIONS[0];
+  const baseLoc = LOCATIONS.find((l) => l.slug === activeLocation) ?? LOCATIONS[0];
+  const liveMenu = liveMenus[activeLocation];
+  const loc = liveMenu ? { ...baseLoc, menu: liveMenu } : baseLoc;
   const config: LocationConfig = settings[activeLocation] || getDefaultConfig(activeLocation);
 
   const updateConfig = useCallback(
