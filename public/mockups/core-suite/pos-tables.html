@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POS · Tables — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="/mockups/core-suite/system.css">
+<style>
+  .tgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .tcard { text-align:left; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:12px; cursor:pointer; position:relative; }
+  .tcard:hover { border-color:var(--border-strong); }
+  .tcard.on { border-color:var(--brand); background:var(--brand-soft); }
+  .tcard.busy { opacity:.6; } .tcard .no { font-family:var(--display); font-size:20px; font-weight:600; }
+  .tcard .seats { font-size:11px; color:var(--fg-subtle); margin-top:2px; }
+  .tcard .zone { font-size:10.5px; color:var(--fg-subtle); margin-top:6px; }
+  .tcard .st { position:absolute; top:10px; right:10px; font:600 9px var(--ui); letter-spacing:.04em; text-transform:uppercase; padding:2px 6px; border-radius:99px; }
+  .tcard .st.free { background:var(--success-soft); color:var(--success); }
+  .tcard .st.use { background:var(--warning-soft); color:var(--warning); }
+  .tcard .flag { font-size:10.5px; color:var(--danger); margin-top:6px; }
+</style>
+</head>
+<body style="height:100vh;overflow:hidden">
+<div class="overlay">
+  <div class="dialog" style="width:min(560px,100%)">
+    <div class="dialog-h"><h2>Assign table</h2><span class="subtle" style="font-size:12px;margin-left:6px">2 covers</span><a class="x" href="/mockups/core-suite/pos.html">✕</a></div>
+    <div class="dialog-b">
+      <div class="tgrid">
+        <div class="tcard on"><span class="st free">Open</span><div class="no">7</div><div class="seats">4 seats</div><div class="zone">Window</div></div>
+        <div class="tcard"><span class="st free">Open</span><div class="no">1</div><div class="seats">2 seats</div><div class="zone">Bar</div></div>
+        <div class="tcard"><span class="st free">Open</span><div class="no">2</div><div class="seats">2 seats</div><div class="zone">Bar</div></div>
+        <div class="tcard busy"><span class="st use">In use</span><div class="no">3</div><div class="seats">4 seats</div><div class="zone">Window</div></div>
+        <div class="tcard"><span class="st free">Open</span><div class="no">4</div><div class="seats">6 seats</div><div class="zone">Terrace</div></div>
+        <div class="tcard"><span class="st free">Open</span><div class="no">5</div><div class="seats">2 seats</div><div class="zone">Terrace</div><div class="flag">Seats 2 &lt; covers? ok</div></div>
+        <div class="tcard busy"><span class="st use">In use</span><div class="no">6</div><div class="seats">4 seats</div><div class="zone">Main</div></div>
+        <div class="tcard"><span class="st free">Open</span><div class="no">8</div><div class="seats">8 seats</div><div class="zone">Private</div></div>
+      </div>
+      <div class="subtle" style="font-size:11px;margin-top:14px;line-height:1.5">Live from the Floor page (polled). In-use = another open dine-in check. Staff can still seat over-capacity (soft warning).</div>
+    </div>
+    <div class="dialog-f"><a class="btn ghost" href="/mockups/core-suite/pos.html">Cancel</a><a class="btn primary" href="/mockups/core-suite/pos.html">Seat at Table 7</a></div>
+  </div>
+</div>
+</body>
+</html>
