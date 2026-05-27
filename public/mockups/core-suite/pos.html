@@ -99,6 +99,17 @@
   .line .lp { font-family: var(--mono); font-size: 13px; text-align: right; }
   .combo-row { margin: 4px 12px; padding: 8px 11px; border: 1px dashed var(--success); border-radius: var(--r-md); background: var(--success-soft); font-size: 12px; color: var(--success); display: flex; justify-content: space-between; }
 
+  /* dine-in coursing — fire starters → mains → dessert to the kitchen in sequence */
+  .course { border-top: 1px solid var(--border); }
+  .course:first-child { border-top: 0; }
+  .course-h { display: flex; align-items: center; gap: 9px; padding: 9px 12px 3px; }
+  .course-nm { font: 600 10.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-muted); }
+  .course-st { margin-left: auto; font: 600 10px var(--ui); padding: 2px 8px; border-radius: 99px; display: inline-flex; align-items: center; gap: 5px; }
+  .course-st.sent { background: var(--success-soft); color: var(--success); }
+  .course-st.hold { background: var(--surface-3); color: var(--fg-subtle); }
+  .course-fire { margin-left: auto; height: 24px; padding: 0 11px; border-radius: 6px; border: 1px solid color-mix(in oklab, var(--brand) 55%, var(--border-strong)); background: var(--brand-soft); color: var(--brand-bright); font: 600 11px var(--ui); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .course-fire:hover { background: var(--brand-soft-strong); }
+
   .offers { padding: 8px 12px; border-top: 1px solid var(--border); }
   .offers .eyebrow { margin-bottom: 7px; }
   .offer { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-md); background: var(--surface-2); margin-bottom: 6px; }
@@ -241,7 +252,7 @@
         <!-- live ticket -->
         <section class="ticket">
           <div class="ticket-head">
-            <div class="t1"><h2>Table 7</h2><span class="badge success"><span class="d"></span>Open</span><span class="badge platinum promise-badge">Ready ~16 min</span></div>
+            <div class="t1"><h2>Table 7</h2><span class="badge success"><span class="d"></span>Open</span><span class="badge platinum promise-badge">Mains firing · ~14 min</span></div>
             <div class="ticket-meta"><span>Server <b>Marco</b></span><span>Opened <b>19:42</b></span><span>Guest <b>L. Bianchi · Gold</b></span></div>
           </div>
 
@@ -254,31 +265,46 @@
           </div>
 
           <div class="lines">
-            <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">Margherita</div><div class="each">42 zł each</div></div><div class="lp">84 zł</div></div>
-            <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Diavola</div><div class="mod">+ extra ’nduja · well-fired</div></div><div class="lp">58 zł</div></div>
-            <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Bufala DOP</div></div><div class="lp">58 zł</div></div>
-            <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">San Pellegrino 50cl</div></div><div class="lp">24 zł</div></div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">1 · Starters</span><span class="course-st sent"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>Fired 19:44</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Bruschetta</div></div><div class="lp">24 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Burrata Pugliese</div></div><div class="lp">34 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">2 · Mains</span><button class="course-fire"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3c1 3-2 4-2 7a2 2 0 0 0 4 0c0-1 0-1 .5-2 1 1.5 1.5 3 1.5 5a6 6 0 0 1-12 0c0-4 4-6 8-10z"/></svg>Fire course</button></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">Margherita</div><div class="each">42 zł each</div></div><div class="lp">84 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Diavola</div><div class="mod">+ extra ’nduja · well-fired</div></div><div class="lp">58 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Bufala DOP</div></div><div class="lp">58 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">3 · Dessert</span><span class="course-st hold">Holding</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Tiramisù</div></div><div class="lp">22 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">Drinks</span><span class="course-st sent"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>Sent</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">San Pellegrino 50cl</div></div><div class="lp">24 zł</div></div>
+            </div>
           </div>
 
           <div class="combo-row"><span>✓ Pizza + drink combo applied</span><span>−8 zł</span></div>
 
           <div class="offers">
             <div class="eyebrow">Suggested</div>
-            <div class="offer combo"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div><div class="tx"><b>Complete the Famiglia</b> — add tiramisù, save 12 zł</div><button class="btn ghost">+ Add</button></div>
-            <div class="offer cross"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.4z"/></svg></div><div class="tx"><b>2× espresso</b> pairs with this table</div><button class="btn ghost">+ 18 zł</button></div>
+            <div class="offer cross"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.4z"/></svg></div><div class="tx"><b>2× espresso</b> — fire with dessert</div><button class="btn ghost">+ 18 zł</button></div>
+            <div class="offer cross"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.4z"/></svg></div><div class="tx"><b>Limoncello</b> — perfect digestivo to close</div><button class="btn ghost">+ 16 zł</button></div>
           </div>
 
           <div class="totals">
-            <div class="trow"><span>Subtotal</span><span class="v">224 zł</span></div>
+            <div class="trow"><span>Subtotal</span><span class="v">304 zł</span></div>
             <div class="trow"><span>Combo discount</span><span class="v" style="color:var(--success)">−8 zł</span></div>
-            <div class="trow"><span>Loyalty · Gold −5%</span><span class="v" style="color:var(--success)">−10.80 zł</span></div>
-            <div class="trow grand"><span>Total</span><span class="v">205.20 zł</span></div>
+            <div class="trow"><span>Loyalty · Gold −5%</span><span class="v" style="color:var(--success)">−15.20 zł</span></div>
+            <div class="trow grand"><span>Total</span><span class="v">280.80 zł</span></div>
           </div>
           <div class="actions">
             <button class="btn">Park</button>
             <button class="btn">Send to KDS</button>
           </div>
-          <div class="charge"><a class="btn primary xl" href="/mockups/core-suite/pos-tender.html" style="width:100%;justify-content:center">Charge 205.20 zł</a></div>
+          <div class="charge"><a class="btn primary xl" href="/mockups/core-suite/pos-tender.html" style="width:100%;justify-content:center">Charge 280.80 zł</a></div>
           <div class="kbd-hint"><span><kbd>N</kbd> new</span><span><kbd>1–9</kbd> switch tab</span><span><kbd>F</kbd> fullscreen</span><span><kbd>Esc</kbd> close</span></div>
         </section>
       </div>
