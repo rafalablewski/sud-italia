@@ -45,6 +45,7 @@ interface Settings {
   };
   simulationEnabled?: boolean;
   kdsSimulatorEnabled?: boolean;
+  whatsappSimulatorEnabled?: boolean;
 }
 
 interface AuditEntry {
@@ -93,9 +94,11 @@ function AdminSettingsDesktop() {
   const [thVip, setThVip] = useState("");
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
+  const [whatsappSimulatorEnabled, setWhatsappSimulatorEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
   const [kdsSimBusy, setKdsSimBusy] = useState(false);
+  const [whatsappSimBusy, setWhatsappSimBusy] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -121,6 +124,7 @@ function AdminSettingsDesktop() {
     setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
     setSimulationEnabled(!!data.simulationEnabled);
     setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
+    setWhatsappSimulatorEnabled(!!data.whatsappSimulatorEnabled);
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -237,6 +241,37 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setKdsSimBusy(false);
+    }
+  };
+
+  const toggleWhatsappSimulator = async (next: boolean) => {
+    setWhatsappSimBusy(true);
+    setWhatsappSimulatorEnabled(next); // optimistic
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappSimulatorEnabled: next }),
+      });
+      if (res.ok) {
+        // Turning it off clears the sandbox conversations it staged (purge
+        // stays allowed even with the toggle now off).
+        if (!next) {
+          await fetch("/api/admin/whatsapp-simulator", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "purge" }),
+          }).catch(() => {});
+        }
+        toast.success(next ? "Chat simulator on — Add / Purge controls now show in the WhatsApp console" : "Chat simulator off — sandbox conversations cleared");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setWhatsappSimulatorEnabled(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setWhatsappSimBusy(false);
     }
   };
 
@@ -496,6 +531,30 @@ function AdminSettingsDesktop() {
                       {kdsSimulatorEnabled
                         ? "On — the Kitchen Display shows Add 1 / Add 5 / Purge all controls for staging marked SIMULATION tickets."
                         : "Off — the Kitchen Display only ever shows real tickets."}
+                    </span>
+                  </span>
+                </label>
+                <label className="v2-field">
+                  <span className="v2-field-label">WhatsApp</span>
+                  <span className="v2-muted text-sm">
+                    Demo / training tool. Adds Add 1 / Add 5 / Purge controls to the WhatsApp
+                    console so staff can stage sandbox conversations (carts built only from your
+                    real menu) at random funnel stages — browsing, cart, slot picked, awaiting
+                    payment. Each chat is marked <b>sim</b>, kept on a reserved phone range, and
+                    never sends a real WhatsApp message. Turning it off clears every sandbox
+                    conversation.
+                  </span>
+                  <span className="inline-flex items-center gap-2 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={whatsappSimulatorEnabled}
+                      onChange={(e) => toggleWhatsappSimulator(e.target.checked)}
+                      disabled={whatsappSimBusy}
+                    />
+                    <span className="v2-muted text-sm">
+                      {whatsappSimulatorEnabled
+                        ? "On — the WhatsApp console shows Add 1 / Add 5 / Purge controls for staging marked sandbox conversations."
+                        : "Off — the WhatsApp console only ever shows real conversations."}
                     </span>
                   </span>
                 </label>

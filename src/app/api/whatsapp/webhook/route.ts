@@ -7,11 +7,14 @@ import { extractInboundMessages, type MetaWebhookPayload } from "@/lib/whatsapp/
 import { handleInboundTurn } from "@/lib/whatsapp/turn";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import {
+  appendWaFunnelEvent,
   appendWaMessage,
   getCustomer,
   getWaSession,
   getWaSettings,
+  setWaArchived,
 } from "@/lib/store";
+import { isWithinBusinessHours } from "@/lib/whatsapp/hours";
 import { incrCounter } from "@/lib/metrics";
 
 /**
@@ -128,6 +131,10 @@ async function processOne(message: {
     actor: "customer",
   });
 
+  // A fresh customer message pulls the chat out of the operator's Archived
+  // view (auto- or manually-archived) back into the active inbox.
+  await setWaArchived(phone, false);
+
   const settings = await getWaSettings();
 
   // Opt-out gate. Honour the existing customer.smsOptout flag — one
@@ -156,6 +163,38 @@ async function processOne(message: {
     return;
   }
 
+  // Keyword auto-replies run BEFORE the LLM: the first reply whose keyword is
+  // contained (case-insensitive) in the inbound text wins, sends its canned
+  // reply, and ends the turn without spending a model call. Empty list (the
+  // default) is a no-op, so the LLM flow below is unchanged.
+  if (message.kind === "text" && settings.autoReplies?.length) {
+    const haystack = message.value.toLowerCase();
+    const hit = settings.autoReplies.find(
+      (r) => r.keyword && haystack.includes(r.keyword.toLowerCase()),
+    );
+    if (hit) {
+      const provider = getWhatsAppProvider();
+      await provider.sendText(phone, hit.reply);
+      incrCounter("whatsapp.autoreply.sent");
+      logger.info("whatsapp.autoreply.sent", { phone, keyword: hit.keyword, layer: "whatsapp.webhook" });
+      return;
+    }
+  }
+
+  // Business-hours gate: outside the configured opening hours, send the away
+  // message and stop — no welcome, no LLM. Disabled schedule → always open, so
+  // this is a no-op by default. Auto-replies above still answer (FAQs work 24/7).
+  if (!isWithinBusinessHours(settings.businessHours)) {
+    const provider = getWhatsAppProvider();
+    await provider.sendText(
+      phone,
+      settings.awayMessage?.trim() ||
+        "Dziękujemy za wiadomość! Jesteśmy teraz zamknięci — napisz w godzinach otwarcia albo zamów online: https://sudita.lia 🍕",
+    );
+    incrCounter("whatsapp.afterhours.skipped");
+    return;
+  }
+
   // First-touch welcome: when this is the customer's very first message
   // (no active session yet) deliver the welcome blurb before handing
   // off to the LLM. Keeps cold-start UX warm even when the model is
@@ -165,6 +204,13 @@ async function processOne(message: {
   if (!sessionBefore || sessionBefore.llmMessageHistory.length === 0) {
     const provider = getWhatsAppProvider();
     await provider.sendText(phone, settings.welcomeMessage);
+    // Top of the conversion funnel — a brand-new conversation started.
+    void appendWaFunnelEvent({
+      stage: "started",
+      phone,
+      locationSlug: sessionBefore?.locationSlug ?? settings.defaultLocation ?? null,
+      at: new Date().toISOString(),
+    }).catch(() => {});
   }
 
   await handleInboundTurn({ message: { ...message, from: phone }, phone });

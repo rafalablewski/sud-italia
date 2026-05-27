@@ -56,6 +56,11 @@ const ALL_JOBS = [
   // Audit §3 — daily sales-per-labor-hour + schedule-vs-sales gap
   // calculation, written to a daily summary the dashboard can read.
   { path: "/api/admin/cron/labor-efficiency", everyDay: true },
+  // WhatsApp abandoned-cart recovery — re-open template to carts left unpaid.
+  // Self-skips when the toggle is off or no template is configured.
+  { path: "/api/admin/cron/whatsapp-abandoned-cart", everyDay: true },
+  // WhatsApp broadcast backstop — finishes any campaign left mid-send.
+  { path: "/api/admin/cron/whatsapp-broadcast-drain", everyDay: true },
 ] as const;
 
 function shouldRun(

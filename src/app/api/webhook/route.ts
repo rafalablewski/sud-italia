@@ -74,9 +74,25 @@ export async function POST(req: NextRequest) {
           stripePaymentIntentId: paymentIntentId ?? undefined,
         });
         // For WhatsApp-channel orders, the session has done its job —
-        // wipe it so the customer's next message starts fresh.
+        // wipe it so the customer's next message starts fresh, and close out
+        // the conversion funnel with the terminal "paid" event.
         if (channel === "whatsapp" && customerPhone) {
           await clearWaSession(customerPhone);
+          void (async () => {
+            try {
+              const { appendWaFunnelEvent, clearWaAbandonedCart } = await import("@/lib/store");
+              await appendWaFunnelEvent({
+                stage: "paid",
+                phone: customerPhone,
+                locationSlug: null,
+                at: new Date().toISOString(),
+              });
+              // Converted — drop any abandoned-cart record so no nudge fires.
+              await clearWaAbandonedCart(customerPhone);
+            } catch {
+              /* funnel telemetry is best-effort */
+            }
+          })();
         }
         // Audit §6 #5 — referral give-get. If this customer's first
         // paid order qualifies them as a referee, queue the referrer
