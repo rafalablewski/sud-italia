@@ -120,6 +120,24 @@ filter the grid in place.
   terracotta + ochre-light count chip. Categories not in the
   bilingual map (`CAT_IT`) render English-only — falls back without
   the `· bibite` style subtitle.
+  - **"All" is the default tab.** V8's mockup designs the menu
+    around browsing rather than landing on a single category — the
+    All tab shows every available item at once. The pre-V8 site
+    landed on the first category (Pizza); V8 deliberately doesn't.
+- **Sort affordance** (`.v8-cat-sort`) — small popover anchored at
+  the right end of the category tab row. Trigger reuses the
+  `.v8-cat-tab` pill shape with an up/down-arrow SVG and "Sort"
+  label; click opens a parchment-paper popover with three radio-
+  style options: `Pizzaiolo's layout · scelta dello chef` (the
+  audit §4.4 menu-engineering hierarchy — the default), `Price:
+  low → high · prezzo crescente`, `Price: high → low · prezzo
+  decrescente`. The trigger pill fills terracotta when a non-default
+  sort is active, signalling "you're not on the menu-engineering
+  default" without taking up extra space.
+  - V8's mockup doesn't ship a sort UI — the popover is an
+    intentional addition to preserve the pre-V8 price-sort feature
+    inside the V8 chrome. Removing the sort dropdown without an
+    affordance would be a real feature regression.
 - **15-minute guarantee banner** (`.v8-guarantee`) — ochre-tinted
   card with a 4px ochre→terracotta left rail, a sundial SVG icon,
   italic Cormorant title "15 minutes guaranteed · 15 minuti
@@ -134,10 +152,15 @@ filter the grid in place.
   `DEFAULT_COMBO_DEALS` entries; the full bundle ladder lives on
   the homepage `<BundlesShowcase />`.
 - **Surprise me button** (`.v8-surprise`) — dashed-ochre pill with
-  the V8 dice-pattern SVG. Click picks a random available item and
-  scrolls the grid to it (via search prefill, repurposing the
-  existing search-filter logic so the picker doesn't need a
-  separate selection store).
+  the V8 dice-pattern SVG. Click picks a random available item,
+  resets the filter to All, scrolls the picked card into view, and
+  pulses a warm terracotta + ochre glow around it for 2.4s so the
+  visitor sees the pick **in context** with the rest of the menu
+  (rather than filtering everything else out). The highlight animation
+  is `.v8-menu-item-highlight` keyframed via `v8-menu-item-highlight-pulse`
+  — self-clears via a 2.4s `setTimeout` that's cleaned up on
+  unmount. Repurposes the existing `setActiveCategory` + scroll-to-
+  data-attribute pattern; no separate selection store needed.
 - **Item grid** (`.v8-menu-items`) — 1 → 2-col grid. Items render
   via the existing `<MenuItemCard />` for now (Step 10 ports the
   per-item card to V8). Items can claim 2-col span when the

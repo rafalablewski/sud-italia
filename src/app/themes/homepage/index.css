@@ -1631,6 +1631,88 @@ body {
 }
 .v8-cat-tab.is-on .v8-cat-tab-count { color: var(--color-ochre-light); opacity: 0.95; }
 
+/* Sort affordance — V8 mockup doesn't ship a sort dropdown, but the
+   pre-V8 site shipped sort-by-price. Adding a minimal V8-styled
+   popover next to the category tabs preserves the feature for users
+   who want a price-sorted glance. The trigger reuses the .v8-cat-tab
+   pill shape (same visual cadence as the tabs); the popover is a
+   parchment paper card with three radio-style options. */
+.v8-cat-sort {
+  position: relative;
+  margin-left: auto;
+}
+.v8-cat-sort-trigger {
+  font-family: var(--font-heading);
+  font-style: italic;
+}
+.v8-cat-sort-trigger svg { color: currentColor; flex-shrink: 0; }
+.v8-cat-sort-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 220px;
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v8-cat-sort-opt {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-espresso);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.v8-cat-sort-opt:hover { background: rgba(184, 92, 56, 0.06); }
+.v8-cat-sort-opt.is-selected {
+  background: rgba(184, 92, 56, 0.10);
+  color: var(--color-terracotta-dark);
+  font-weight: 600;
+}
+.v8-cat-sort-opt .bi-sec {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--color-muted);
+  opacity: 0.75;
+}
+.v8-cat-sort-opt.is-selected .bi-sec { color: var(--color-terracotta-dark); opacity: 0.8; }
+
+/* Surprise-me highlight — brief warm pulse around the randomly-picked
+   item card so the visitor can see the pick in context (V8's mockup
+   button has no reveal flow; this is the substantive UX layer on top
+   of the V8 button shape). Self-clears after 2.4s. */
+.v8-menu-item-highlight {
+  position: relative;
+  z-index: 1;
+  animation: v8-menu-item-highlight-pulse 2.4s ease-out 1;
+  border-radius: 14px;
+}
+@keyframes v8-menu-item-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(184, 92, 56, 0.6), 0 0 0 0 rgba(201, 162, 62, 0.4);
+  }
+  35% {
+    box-shadow: 0 0 0 6px rgba(184, 92, 56, 0.35), 0 0 24px 8px rgba(201, 162, 62, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(184, 92, 56, 0), 0 0 0 0 rgba(201, 162, 62, 0);
+  }
+}
+
 /* ---- 15-minute guarantee banner ----------------------------------- */
 .v8-guarantee {
   margin: 22px 0;

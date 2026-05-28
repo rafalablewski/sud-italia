@@ -148,11 +148,49 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
     [itemsLive],
   );
 
-  // null = "All" tab (search-friendly default that shows every category).
+  // null = "All" tab (V8's design defaults to All-first; the previous
+  // pre-V8 site defaulted to the first category — V8 trades a
+  // single-category-on-load for a browsing-friendly default).
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const isSearching = searchQuery.trim().length > 0;
   const menuGridRef = useRef<HTMLDivElement>(null);
+
+  // Sort affordance — V8 mockup omits a user-facing sort dropdown, but
+  // the pre-V8 site shipped one (default / price-low / price-high).
+  // Removing it would be a real feature regression for visitors who
+  // want a price-sorted glance. Restored as a small V8-styled popover
+  // sitting inline with the category tabs (the popover row).
+  type MenuSortValue = "default" | "price-low" | "price-high";
+  const [sortBy, setSortBy] = useState<MenuSortValue>("default");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const el = sortMenuRef.current;
+      if (el && !el.contains(e.target as Node)) setSortMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSortMenuOpen(false); };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [sortMenuOpen]);
+
+  // Surprise-me: pick a random item, scroll its card into view, give
+  // it a brief pulse so the visitor can see what was picked WITHOUT
+  // filtering everything else out (pre-V8 used a search prefill which
+  // hid the rest of the menu until the visitor cleared search).
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+  }, []);
 
   const filteredItems = useMemo(() => {
     const available = itemsLive.filter((i) => i.available);
@@ -170,11 +208,13 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
     } else {
       result = available;
     }
+    if (sortBy === "price-low") return [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-high") return [...result].sort((a, b) => b.price - a.price);
     return [...result].sort((a, b) => {
       const eng = compareMenuEngineering(a, b, locationSlug, upsellConfig);
       return eng !== 0 ? eng : a.name.localeCompare(b.name);
     });
-  }, [itemsLive, activeCategory, searchQuery, isSearching, locationSlug, upsellConfig]);
+  }, [itemsLive, activeCategory, searchQuery, isSearching, sortBy, locationSlug, upsellConfig]);
 
   // V8 combos: render the first two DEFAULT_COMBO_DEALS as inline
   // wax-seal cards. The full bundle ladder lives on the homepage
@@ -185,9 +225,19 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
     const available = itemsLive.filter((i) => i.available);
     if (available.length === 0) return;
     const random = available[Math.floor(Math.random() * available.length)];
-    // Pre-fill the search to scroll the user to the surprise item.
-    setSearchQuery(random.name);
-    setTimeout(() => menuGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    // Switch to All so the picked item is reachable regardless of which
+    // category was active, but don't search-filter — visitor sees the
+    // pick in context with the rest of the menu around it.
+    setSearchQuery("");
+    setActiveCategory(null);
+    setHighlightId(random.id);
+    // Wait for re-render then scroll + highlight the picked card.
+    setTimeout(() => {
+      const node = menuGridRef.current?.querySelector<HTMLElement>(`[data-menu-item-id="${random.id}"]`);
+      if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlightId(null), 2400);
   };
 
   return (
@@ -303,6 +353,53 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
               </button>
             );
           })}
+
+          {/* Sort popover — sits inline with the category tabs at the
+           *  far right. V8 mockup doesn't ship a sort UI; we add a
+           *  minimal V8-styled popover so visitors who want a
+           *  price-sorted glance keep the pre-V8 feature. */}
+          <div className="v8-cat-sort" ref={sortMenuRef}>
+            <button
+              type="button"
+              className={`v8-cat-tab v8-cat-sort-trigger ${sortBy !== "default" ? "is-on" : ""}`}
+              onClick={() => setSortMenuOpen((o) => !o)}
+              aria-expanded={sortMenuOpen}
+              aria-haspopup="listbox"
+              aria-label={`Sort by — currently ${
+                sortBy === "default" ? "Pizzaiolo's layout" : sortBy === "price-low" ? "price low → high" : "price high → low"
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M4 3 L4 13 M4 13 L2 11 M4 13 L6 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 13 L12 3 M12 3 L10 5 M12 3 L14 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Sort</span>
+            </button>
+            {sortMenuOpen && (
+              <div className="v8-cat-sort-menu" role="listbox" aria-label="Sort options">
+                {([
+                  { value: "default", label: "Pizzaiolo's layout", it: "scelta dello chef" },
+                  { value: "price-low", label: "Price: low → high", it: "prezzo crescente" },
+                  { value: "price-high", label: "Price: high → low", it: "prezzo decrescente" },
+                ] as { value: MenuSortValue; label: string; it: string }[]).map((opt) => {
+                  const selected = sortBy === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      className={`v8-cat-sort-opt ${selected ? "is-selected" : ""}`}
+                      onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
+                    >
+                      <span>{opt.label}</span>
+                      <span className="bi-sec">· {opt.it}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 15-minute guarantee banner */}
@@ -379,10 +476,12 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
         <div ref={menuGridRef} className="v8-menu-items">
           {filteredItems.map((item, index) => {
             const heroSpan = !isSearching && activeCategory === null && item.menuRole === "hero";
+            const isHighlighted = highlightId === item.id;
             return (
               <div
                 key={item.id}
-                className={`menu-item-enter ${heroSpan ? "md:col-span-2" : ""}`}
+                data-menu-item-id={item.id}
+                className={`menu-item-enter ${heroSpan ? "md:col-span-2" : ""} ${isHighlighted ? "v8-menu-item-highlight" : ""}`}
                 style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}
               >
                 <MenuItemCard
