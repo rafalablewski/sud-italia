@@ -104,18 +104,18 @@ listed there is invisible to operators — treat the missing entry as a bug.
 
 ## Per-section design notes
 
-Per-page design notes will land here as each section gets a dedicated
-review. Backlog:
+Each admin section has its own design doc under [`sections/`](./sections/).
+Progress:
 
-- `operations.md` — menu, recipes (chain-wide rule), slots, floor
-- `inventory.md` — stock, suppliers, POs, low-stock alerts during service
-- `people.md` — staff, schedule, role-gated visibility
-- `customers.md` — customers, loyalty, corporate, feedback
-- `finance.md` — reports, cash, business costs, calculator
-- `growth.md` — campaigns, upsell, cross-sell, scheduled bundles
-- `intelligence.md` — multi-location, cohort/CLTV, menu engineering, AI
-- `system.md` — users & roles, compliance, audit log, capabilities,
-  currency, settings
+- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), slots, floor
+- [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
+- `sections/people.md` — staff, schedule, role-gated visibility *(backlog)*
+- `sections/customers.md` — customers, loyalty, corporate, feedback *(backlog)*
+- `sections/finance.md` — reports, cash, business costs, calculator *(backlog)*
+- `sections/growth.md` — campaigns, upsell, cross-sell, scheduled bundles *(backlog)*
+- `sections/intelligence.md` — multi-location, cohort/CLTV, menu engineering, AI *(backlog)*
+- `sections/system.md` — users & roles, compliance, audit log, capabilities,
+  currency, settings *(backlog)*
 
 ## Authority
 
