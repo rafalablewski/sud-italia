@@ -113,9 +113,8 @@ Progress:
 - [`sections/customers.md`](./sections/customers.md) — customers, loyalty, corporate, feedback
 - [`sections/finance.md`](./sections/finance.md) — reports, cash, business costs, calculator
 - [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, truck ops
-- `sections/intelligence.md` — multi-location, cohort/CLTV, menu engineering, AI *(backlog)*
-- `sections/system.md` — users & roles, compliance, audit log, capabilities,
-  currency, settings *(backlog)*
+- [`sections/intelligence.md`](./sections/intelligence.md) — multi-location, manage-locations, cohort/CLTV, menu engineering, AI insights, expansion
+- [`sections/system.md`](./sections/system.md) — users & roles, compliance, regulatory disclosures, audit log, capabilities, currency, languages, settings
 
 ## Authority
 
