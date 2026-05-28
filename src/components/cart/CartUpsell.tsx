@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useCallback, useMemo } from "react";
-import { Plus, Sparkles } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import { UpsellSuggestion } from "@/lib/upsell";
@@ -13,27 +12,21 @@ interface CartUpsellProps {
 }
 
 /**
- * "Complete your meal" — fixed four-slot panel.
+ * "Pairs beautifully with —" — sommelier-style cross-sell rail.
  *
- * Slots in order: Coffee → Dessert → Side (Garlic Bread) → Drink. All four
- * are admin-configurable from /admin/crosssell → Cart pairings; defaults
- * are Espresso, Tiramisù, Garlic Bread, Limonata.
+ * V8 reskin of the audit §2.2 four-slot panel. Same wiring (admin-tunable
+ * via /admin/crosssell → Cart pairings; defaults Espresso, Tiramisù,
+ * Garlic Bread, Limonata), same getCartSuggestions() upstream ranking.
+ * Visually it now reads as a list of paper-card rows instead of a
+ * horizontal pill slider — each row carries the dish glyph, italic
+ * Cormorant name, italic sourcing copy, tabular price, and a terracotta
+ * italic "Add · aggiungi" text button.
  *
- * Behaviour:
- *   - Chips render even when the item is in the cart — the panel is the
- *     shape of "complete your meal," not a context-dependent recommend.
- *   - Tap the chip → addItem(); cart store's same-id handling increments
- *     the existing line. The chip shows a green ×N badge with the running
- *     quantity so the customer sees the effect without leaving the chip.
- *   - Horizontal scroll-snap so a fifth slot wouldn't break the layout.
- *
- * Performance notes:
- *   - The slider is contained within the cart drawer's px-5 padding (no
- *     negative margins). That avoids horizontal overflow on the Sheet
- *     panel, which previously made the entire drawer scroll sideways.
- *   - CompleteTheMealChip is React.memo'd and accepts a stable onAdd
- *     callback per item-id. The cart-store qty for one slot changing no
- *     longer re-renders the other three slots — only the affected chip.
+ * Behaviour preserved:
+ *   - Tap a row's Add → addItem; same-id increments the existing line.
+ *   - Once added, the button flips to basil-deep "Added · aggiunto ×N"
+ *     and stays tappable for another increment.
+ *   - Memoised per-item so a Tiramisù add doesn't re-render the Espresso row.
  */
 export function CartUpsell({ suggestions }: CartUpsellProps) {
   const addItem = useCartStore((s) => s.addItem);
@@ -46,8 +39,6 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
     return map;
   }, [items]);
 
-  // Stable per-item handler keyed by id keeps React.memo on the chip honest.
-  // Without this, every render produces a fresh closure and the chip re-renders.
   const handleAdd = useCallback(
     (item: MenuItem) => {
       if (locationSlug) addItem(item, locationSlug);
@@ -58,132 +49,116 @@ export function CartUpsell({ suggestions }: CartUpsellProps) {
   if (suggestions.length === 0) return null;
 
   return (
-    <div className="px-5 mt-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="h-4 w-4 text-italia-gold" />
-        <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">
-          Complete your meal
-        </p>
-      </div>
-      {/* Slider contained within the px-5 padding — no negative margins.
-          touch-pan-x hints the browser to use compositor-thread panning,
-          which is meaningfully smoother on iOS Safari. */}
-      <div className="overflow-x-auto scrollbar-hide touch-pan-x">
-        <div className="flex gap-2 snap-x snap-mandatory pb-1">
-          {suggestions.map((suggestion) => (
-            <CompleteTheMealChip
-              key={suggestion.item.id}
-              suggestion={suggestion}
-              qty={qtyById.get(suggestion.item.id) ?? 0}
-              onAdd={handleAdd}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="v8-cart-pairs">
+      <div className="v8-cart-pairs-kicker">Tonight&apos;s pairing · l&apos;abbinamento di stasera</div>
+      <h3 className="v8-cart-pairs-title">Pairs beautifully with —</h3>
+      <div className="v8-cart-pairs-sub">Our pizzaiolo suggests, sommelier-style.</div>
+      {suggestions.slice(0, 4).map((suggestion) => (
+        <PairRow
+          key={suggestion.item.id}
+          suggestion={suggestion}
+          qty={qtyById.get(suggestion.item.id) ?? 0}
+          onAdd={handleAdd}
+        />
+      ))}
     </div>
   );
 }
 
-interface ChipProps {
+interface PairProps {
   suggestion: UpsellSuggestion;
   qty: number;
   onAdd: (item: MenuItem) => void;
 }
 
-/**
- * Memoised so adding a Tiramisù doesn't re-render the Espresso, Garlic
- * Bread, and Limonata chips alongside it. Each chip only re-renders when
- * its own qty (or suggestion data) changes — meaningful on iOS where each
- * extra render costs perceptible frames during the localStorage persist.
- */
-const CompleteTheMealChip = memo(function CompleteTheMealChip({
-  suggestion,
-  qty,
-  onAdd,
-}: ChipProps) {
+const PairRow = memo(function PairRow({ suggestion, qty, onAdd }: PairProps) {
   const inCart = qty > 0;
   const item = suggestion.item;
 
-  // Stable click handler — the chip only re-renders when qty or suggestion
-  // change, and the handler closes over those via the memoized component
-  // body so it doesn't need its own useCallback.
-  const handleClick = () => onAdd(item);
-
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-label={inCart ? `Add another ${item.name}` : `Add ${item.name}`}
-      // No `transition-all` or `animate-fade-in` — both fire on every render
-      // and cost paints. Hover effects are cheap (transform only) so they
-      // stay; tactile feedback on tap is preserved by `active:translate-y-0`.
-      className={`relative shrink-0 snap-start w-[140px] rounded-xl border p-3 text-center select-none ${
-        inCart
-          ? "bg-italia-green/5 border-italia-green/40"
-          : "bg-italia-cream border-italia-gold/15 hover:border-italia-gold/40 hover:-translate-y-0.5 active:translate-y-0"
-      }`}
-      style={{
-        // contain: layout isolates the chip's reflow so a qty badge appearing
-        // doesn't trigger layout of the sibling chips.
-        contain: "layout paint",
-      }}
-    >
-      {/* Quantity badge — only mounts when in cart so the badge appearing
-          is the visible "added" feedback. No animation needed; the mount
-          itself is the transition. */}
-      {inCart && (
-        <span
-          className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-italia-green text-white text-[10px] font-bold leading-none"
-          aria-label={`${qty} in cart`}
-        >
-          ×{qty}
-        </span>
-      )}
-      <span
-        className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md ${
-          inCart ? "bg-italia-green text-white" : "bg-italia-red text-white"
-        }`}
-      >
-        <Plus className="h-3.5 w-3.5" />
-      </span>
-
-      <div className="text-[22px] leading-none mb-1 mt-0.5" aria-hidden="true">
-        {categoryGlyph(item.category)}
+    <div className="v8-cart-pair">
+      <div className="v8-cart-pair-illus" aria-hidden="true">
+        <PairGlyph category={item.category} />
       </div>
-      <div className="text-sm font-medium text-italia-dark leading-tight truncate">
-        {item.name}
+      <div className="v8-cart-pair-body">
+        <div className="v8-cart-pair-name">{item.name}</div>
+        <div className="v8-cart-pair-origin">{suggestion.reason}</div>
+        <div className="v8-cart-pair-meta">
+          <span className="v8-cart-pair-price">{formatPrice(item.price)}</span>
+          <button
+            type="button"
+            onClick={() => onAdd(item)}
+            className={`v8-cart-pair-add${inCart ? " is-added" : ""}`}
+            aria-label={inCart ? `Add another ${item.name}` : `Add ${item.name}`}
+          >
+            {inCart ? <>added · aggiunto <span style={{ fontFamily: "var(--font-body)", fontStyle: "normal", marginLeft: 2 }}>×{qty}</span></> : <>+ Add · aggiungi</>}
+          </button>
+        </div>
       </div>
-      <div className="text-[11px] text-italia-gray leading-tight truncate mt-0.5">
-        {suggestion.reason}
-      </div>
-      <div
-        className={`text-sm font-semibold mt-1.5 ${
-          inCart ? "text-italia-green-dark" : "text-italia-red"
-        }`}
-      >
-        {formatPrice(item.price)}
-      </div>
-    </button>
+    </div>
   );
 });
 
-/** Cheap visual identifier per category. Real product photography is the
- *  Top-50 #2 follow-up; until that lands these emojis are at least more
- *  legible than a generic placeholder. */
-function categoryGlyph(category: MenuCategory): string {
+/** SVG glyph per category — matches the V8 mockup's hand-drawn pair illus. */
+function PairGlyph({ category }: { category: MenuCategory }) {
   switch (category) {
     case "drinks":
-      return "☕️";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <rect x="11" y="9" width="14" height="20" rx="2" stroke="currentColor" strokeWidth="1.5" fill="#E6C97A" fillOpacity="0.3" />
+          <path d="M14 9 L14 5 L22 5 L22 9" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="18" cy="19" r="3" stroke="#C9A23E" strokeWidth="1.2" fill="#C9A23E" fillOpacity="0.4" />
+          <path d="M18 16 L18 22 M15 19 L21 19" stroke="#C9A23E" strokeWidth="1" />
+        </svg>
+      );
     case "desserts":
-      return "🍰";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <rect x="7" y="14" width="22" height="14" rx="1.5" stroke="#3D2817" strokeWidth="1.5" fill="#C9A23E" fillOpacity="0.25" />
+          <path d="M7 18 L29 18" stroke="#3D2817" strokeWidth="1.2" />
+          <path d="M7 22 L29 22" stroke="#3D2817" strokeWidth="1.2" />
+          <path d="M11 14 L11 10 L25 10 L25 14" stroke="#3D2817" strokeWidth="1.5" />
+          <circle cx="13" cy="20" r="0.6" fill="#3D2817" />
+          <circle cx="18" cy="20" r="0.6" fill="#3D2817" />
+          <circle cx="23" cy="20" r="0.6" fill="#3D2817" />
+        </svg>
+      );
     case "antipasti":
-      return "🥖";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <ellipse cx="18" cy="20" rx="13" ry="5" stroke="#B85C38" strokeWidth="1.5" fill="#E6C97A" fillOpacity="0.4" />
+          <path d="M9 18 C 12 17, 24 17, 27 18" stroke="#B85C38" strokeWidth="1" fill="none" />
+          <path d="M9 22 C 12 23, 24 23, 27 22" stroke="#B85C38" strokeWidth="1" fill="none" />
+          <circle cx="14" cy="20" r="0.8" fill="#4A7C59" />
+          <circle cx="22" cy="20" r="0.8" fill="#4A7C59" />
+        </svg>
+      );
     case "panini":
-      return "🥪";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <path d="M6 14 C 6 11, 9 9, 18 9 C 27 9, 30 11, 30 14 L 30 22 C 30 25, 27 27, 18 27 C 9 27, 6 25, 6 22 Z" stroke="#B85C38" strokeWidth="1.5" fill="#E6C97A" fillOpacity="0.4" />
+          <path d="M6 18 L30 18" stroke="#4A7C59" strokeWidth="1.2" />
+        </svg>
+      );
     case "pasta":
-      return "🍝";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="20" r="11" stroke="#C9A23E" strokeWidth="1.5" fill="#F2E2C2" />
+          <path d="M11 19 C 13 16, 17 16, 19 19 C 21 22, 25 22, 27 19" stroke="#C9A23E" strokeWidth="1.2" fill="none" />
+          <path d="M11 23 C 13 20, 17 20, 19 23 C 21 26, 25 26, 27 23" stroke="#B85C38" strokeWidth="1.2" fill="none" />
+        </svg>
+      );
     case "pizza":
     default:
-      return "🍕";
+      return (
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <path d="M5 28 L18 6 L31 28 Z" fill="#C9A23E" fillOpacity="0.18" stroke="#B85C38" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d="M5 28 L31 28" stroke="#7A2B2B" strokeWidth="1.5" />
+          <circle cx="14" cy="21" r="1.6" fill="#7A2B2B" />
+          <circle cx="22" cy="18" r="1.6" fill="#7A2B2B" />
+          <circle cx="18" cy="24" r="1.6" fill="#7A2B2B" />
+          <circle cx="17" cy="15" r="1.2" fill="#4A7C59" />
+        </svg>
+      );
   }
 }

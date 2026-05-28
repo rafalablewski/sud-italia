@@ -1,6 +1,6 @@
 "use client";
 
-import { Truck, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import {
   FREE_DELIVERY_THRESHOLD,
@@ -22,15 +22,17 @@ interface DeliveryProgressProps {
 }
 
 /**
- * Free-delivery progress bar — audit §2.1 post-attach.
+ * Free-delivery progress — audit §2.1 post-attach, V8 reskin.
  *
- *  - While below threshold: gradient red→green bar with a continuous
- *    shimmer overlay so motion catches the eye. "Add 8 zł more" copy.
- *  - On unlock: premium celebratory card with a gold→green medallion,
- *    Georgia-serif headline, one-shot shimmer sweep, pop-in on the
- *    medallion. Not a status flip — a moment.
+ *   Below threshold: italic Cormorant headline + terracotta rail + a
+ *   pencil-sketched cyclist riding the fill. The shimmer keyframe lives
+ *   over the gradient fill so motion still catches the eye.
  *
- * Hidden when fulfillment is takeout (no delivery fee in play).
+ *   On unlock: the gold→basil medallion + one-shot shimmer sweep + the
+ *   delivery-unlock pop-in (the same --animate-delivery-* keyframes
+ *   that have lived in themes/homepage/index.css since Step 1).
+ *
+ * Hidden when fulfilment is anything other than delivery.
  */
 export function DeliveryProgress({
   cartTotal,
@@ -48,69 +50,60 @@ export function DeliveryProgress({
 
   if (qualified) {
     return (
-      <div className="px-5 mt-3">
-        <div className="relative overflow-hidden rounded-xl border border-italia-gold/40 px-4 py-3 animate-delivery-unlock bg-[linear-gradient(135deg,rgba(184,146,46,0.14)_0%,rgba(0,140,69,0.10)_100%)]">
-          {/* one-shot shimmer sweep when the card first appears */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 -translate-x-full animate-delivery-sweep bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.55)_45%,transparent_100%)] pointer-events-none"
-          />
-          <div className="relative flex items-center gap-3">
-            <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white animate-delivery-medallion bg-[linear-gradient(135deg,var(--color-italia-gold)_0%,var(--color-italia-green)_100%)] shadow-[0_4px_14px_rgba(184,146,46,0.40),inset_0_1px_0_rgba(255,255,255,0.30)]">
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <div className="font-heading text-base font-semibold text-italia-dark">
-                Free delivery unlocked
-              </div>
-              <div className="text-xs text-italia-gray mt-0.5">
-                Your order ships on us today · we&apos;ll bring it warm
-              </div>
-            </div>
+      <div className="v8-cart-delivery is-unlocked" role="status">
+        <span className="v8-cart-delivery-sweep" aria-hidden="true" />
+        <div className="v8-cart-delivery-unlocked-row">
+          <span className="v8-cart-delivery-medallion" aria-hidden="true">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div className="v8-cart-delivery-unlocked-text">
+            <strong>Consegna gratuita — free delivery unlocked.</strong>
+            <span>Our rider Marco pedals it on the house · we&apos;ll bring it warm.</span>
           </div>
         </div>
       </div>
     );
   }
 
+  const pct = Math.min(progress * 100, 100);
+
   return (
-    <div className="px-5 mt-3">
-      <div className="p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-sm text-italia-gray">
-            <Truck className="h-4 w-4" />
-            <span>
-              Add{" "}
-              <span className="font-semibold text-italia-dark">
-                {formatPrice(remaining)}
-              </span>{" "}
-              for free delivery
-            </span>
-          </div>
-          <span className="text-xs text-italia-gray">
-            {formatPrice(threshold)}
-            {isPersonalised && (
-              <span
-                className="ml-1 italic text-italia-gray/80"
-                title="Threshold tuned for your segment (audit §2.5)"
-              >
-                · tuned for you
-              </span>
-            )}
-          </span>
+    <div className="v8-cart-delivery">
+      <div className="v8-cart-delivery-head">
+        <div className="v8-cart-delivery-title">
+          Consegna a casa — {Math.round(pct)}% verso la gratuità
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden relative">
-          <div
-            className="relative h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-italia-red to-italia-green overflow-hidden"
-            style={{ width: `${Math.min(progress * 100, 100)}%` }}
-          >
-            {/* shimmer overlay — gives the bar a live, breathing feel */}
+        <div className="v8-cart-delivery-amt">+{formatPrice(remaining)}</div>
+      </div>
+      <div className="v8-cart-delivery-track">
+        <div className="v8-cart-delivery-rail">
+          <div className="v8-cart-delivery-fill" style={{ width: `${pct}%` }}>
+            <span className="v8-cart-delivery-shimmer" aria-hidden="true" />
+          </div>
+        </div>
+        <span className="v8-cart-cyclist" style={{ left: `${pct}%` }} aria-hidden="true">
+          <svg width="34" height="22" viewBox="0 0 34 22" fill="none">
+            <circle cx="7" cy="16" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="#F8EFDE" />
+            <circle cx="27" cy="16" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="#F8EFDE" />
+            <path d="M7 16 L14 8 L20 16 L27 16 L23 8 L14 8" stroke="#B85C38" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+            <circle cx="14" cy="8" r="1.4" fill="#7A2B2B" />
+            <path d="M23 8 L25 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+        </span>
+      </div>
+      <div className="v8-cart-delivery-foot">
+        Add a little more — and our rider Marco pedals it on the house.{" "}
+        <span className="v8-cart-delivery-target">
+          {formatPrice(threshold)}
+          {isPersonalised && (
             <span
-              aria-hidden="true"
-              className="absolute inset-0 animate-delivery-shimmer bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.45)_50%,transparent_100%)]"
-            />
-          </div>
-        </div>
+              style={{ marginLeft: 4, fontStyle: "italic", fontWeight: 400, color: "var(--color-muted)" }}
+              title="Threshold tuned for your segment (audit §2.5)"
+            >
+              · tuned for you
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );

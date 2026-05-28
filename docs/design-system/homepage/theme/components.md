@@ -651,34 +651,87 @@ countdown, compliance pills — only the markup changed.
 
 ### `<CartDrawer />` — `src/components/cart/CartDrawer.tsx`
 
-The full checkout drawer (see [`../pages/checkout.md`](../pages/checkout.md)
-for flow contract).
+The V8 Trattoria checkout drawer (see [`../pages/checkout.md`](../pages/checkout.md)
+for the full surface contract).
 
-- Built on `<Sheet />`.
-- Stages flow within the same surface — no page navigation.
-- Bottom-sticky footer with the running total + primary `Continue`
-  CTA.
+- **Builds its own portalled sheet** — does not compose `<Sheet />`.
+  The V8 paper-card vocabulary needs to extend edge-to-edge inside the
+  drawer (gripped header, basil sprig + italic Italian sublabel,
+  Italian-flag tricolore strip, parchment scroll region, sticky
+  paybar with a tricolore band of its own). The shell selectors live
+  under `.v8-cart-*` — `.v8-cart-overlay`, `.v8-cart-sheet`,
+  `.v8-cart-grip`, `.v8-cart-top`, `.v8-cart-tricolore`,
+  `.v8-cart-scroll`, `.v8-cart-paybar`. See `themes/homepage/index.css`.
+- Portalled to `document.body` per Rule 4. `body.v8-cart-open` toggles
+  while open so the floating cart pill / nav can fade out without
+  rolling their own state.
+- Stages still flow within the same surface — no page navigation.
+- Sticky paybar with the running total + bilingual `Pay · procedi
+  · 46,51 zł` CTA (terracotta) + outline trash chip for `Clear cart`.
+
+### `<CartItem />` — `src/components/cart/CartItem.tsx`
+
+V8 paper-card line item rendered inside the drawer's `.v8-cart-items`
+rail.
+
+- `.v8-cart-item-illus` — 64×64 parchment-deep tile with an inline
+  pencil-sketched glyph per `menuItem.category` (pizza, pasta,
+  dessert, drinks, coffee, antipasti, panini). Glyphs are inline SVGs
+  in the same file (`DishGlyph` helper) so no asset pipeline is needed.
+- `.v8-cart-item-name` — italic Cormorant 20px espresso.
+- `.v8-cart-item-price` — Cormorant 600 tabular ink (line total).
+- `.v8-cart-item-origin` — Lora italic muted, prints
+  `menuItem.description` so the cart row still tells the sourcing
+  story.
+- `.v8-cart-qty` — terracotta-tinted pill stepper (`− 1 +`).
+  Decrement at 1 removes the line (preserved behaviour).
+- `.v8-cart-item-action` — italic text buttons `note · nota` +
+  `remove · rimuovi`. Note panel opens below the row via
+  `.v8-cart-note` parchment-cream textarea (140-char cap, counter
+  on the right of the foot).
+- `data-soldout="true"` dims the row to 60% opacity and adds an
+  italic "Sold out · esaurita — remove to continue" line.
+
+### `<CartUpsell />` — `src/components/cart/CartUpsell.tsx`
+
+"Pairs beautifully with —" sommelier-style cross-sell rail.
+
+- `.v8-cart-pairs-kicker` "Tonight's pairing · l'abbinamento di
+  stasera", `.v8-cart-pairs-title` italic Cormorant 22px headline,
+  italic Lora sub.
+- `.v8-cart-pair` rows: 56×56 illus tile (basil-deep glyph per
+  category) + italic name + italic Lora "reason" copy + tabular
+  price + terracotta italic `+ Add · aggiungi` text button.
+- Once added, the button flips to basil-deep `added · aggiunto ×N`
+  and stays tappable for another increment (audit §2.2 chip behaviour).
+- Wired through `getCartSuggestions()` with the same `PairingContext`
+  ranking (hour-of-day + per-customer attach history).
 
 ### `<FloatingCartButton />` — `src/components/cart/FloatingCartButton.tsx`
 
-The persistent in-thumb-reach order surface.
+The persistent in-thumb-reach order surface. **Pre-V8 styling — Step 12
+will port to `.v8-float-cart`.** Currently the mobile-only
+`floating-cart-bar` strip from the pre-V8 vocabulary.
 
 - Fixed bottom-right desktop, bottom-centre mobile (24px gutter from
   edge).
-- `bg-italia-red text-white rounded-full`
-- The **one** brand-tinted shadow on the storefront:
-  `box-shadow: 0 4px 16px rgba(154,39,66,0.15)`.
 - Renders nothing when the cart is empty (don't tease an empty cart).
 
-### `<DeliveryProgress />`
+### `<DeliveryProgress />` — `src/components/cart/DeliveryProgress.tsx`
 
-The shimmer-sweep-unlock micro-flow for free delivery.
+V8 free-delivery shimmer-sweep-unlock micro-flow.
 
-- Below threshold: shimmer crawls across a hairline progress bar
-  (`--animate-delivery-shimmer`).
-- At threshold: one-shot sweep + the medallion award
-  (`--animate-delivery-sweep` + `--animate-delivery-medallion`).
-- Unlock card pop: `--animate-delivery-unlock`.
+- Below threshold: `.v8-cart-delivery` italic Cormorant
+  "Consegna a casa — N% verso la gratuità" headline +
+  `.v8-cart-delivery-rail` terracotta rail + `.v8-cart-delivery-fill`
+  terracotta gradient + `.v8-cart-delivery-shimmer` running
+  `--animate-delivery-shimmer` + `.v8-cart-cyclist` SVG that rides
+  the fill (`left: {pct}%`).
+- At threshold: `.v8-cart-delivery.is-unlocked` gold→basil-tinted
+  card + `.v8-cart-delivery-medallion` with the gold-to-basil radial
+  + the one-shot `.v8-cart-delivery-sweep` overlay. Uses the same
+  `--animate-delivery-unlock` / `--animate-delivery-sweep` /
+  `--animate-delivery-medallion` keyframes declared in Step 1.
 
 ## Loyalty components
 
@@ -752,3 +805,25 @@ ones with confidence.
 Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
 before removing — admin-facing surfaces (operator previews) or
 tests might still import them.
+
+### Cart sub-components still on pre-V8 chrome
+
+These render **inside** the V8 cart sheet at their pre-V8 visual but
+are still wired and shipping — Step 11 left them deliberately so the
+drawer's audit-tied behaviour stayed untouched. Each one will be
+ported in a follow-up step; until then, they sit on the parchment
+canvas with their original surface treatment.
+
+- `src/components/cart/CorporateOrderBanner.tsx`
+- `src/components/cart/TodBanner.tsx`
+- `src/components/cart/TierPerkBanner.tsx`
+- `src/components/cart/BundleLadder.tsx`
+- `src/components/cart/ComboDealBanner.tsx`
+- `src/components/cart/LoyaltyEarnPreview.tsx`
+- `src/components/cart/SlotPicker.tsx`
+- `src/components/cart/FloatingCartButton.tsx`
+- `src/components/cart/AddToCartToast.tsx`
+
+The drawer chrome itself, the items list, the cross-sell rail, the
+delivery progress bar, and the pay bar are V8 (Step 11). Everything
+else above is queued for Steps 12+.

@@ -1,7 +1,5 @@
 "use client";
 
-import { Sheet } from "@/components/ui/Sheet";
-import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/store/cart";
 import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
@@ -25,20 +23,9 @@ import {
   PairingContext,
 } from "@/lib/upsell";
 import { calculateTier } from "@/lib/loyalty";
-import {
-  ShoppingCart,
-  Trash2,
-  Package,
-  Truck,
-  Utensils,
-  Users,
-  Minus,
-  Plus,
-  Star,
-  Clock,
-  Check,
-} from "lucide-react";
+import { Star, Clock, Check, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { SlotPicker } from "./SlotPicker";
 import { krakowMenu } from "@/data/menus/krakow";
 import { warszawaMenu } from "@/data/menus/warszawa";
@@ -85,6 +72,30 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
+
+  // Portal mount + body scroll lock. The mockup also adds .cart-open on
+  // <body> so the floating cart pill / nav fade away when the sheet is
+  // up — FloatingCartButton and Header read that class. CartDrawer keeps
+  // the .v8-cart-open mirror so any future surface (toast, scroll-lock
+  // observers) can key off the same signal.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add("v8-cart-open");
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("v8-cart-open");
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("v8-cart-open");
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   // Fetch location-specific upsell config from admin settings. The drawer
   // is rendered unconditionally by FloatingCartButton so it stays mounted
   // across opens — if we don't aggressively refetch, an admin edit (rename
@@ -457,540 +468,599 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
     }
   };
 
-  if (items.length === 0) {
-    return (
-      <Sheet open={open} onClose={onClose} title="Your Order">
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-          <div className="w-20 h-20 rounded-full bg-italia-cream flex items-center justify-center mb-5">
-            <span className="text-4xl">🍕</span>
-          </div>
-          <p className="font-heading font-bold text-xl text-italia-dark mb-2">Your next meal is waiting</p>
-          <p className="text-sm text-italia-gray mb-6">Browse the menu and add your favorites to get started</p>
-          <button
-            onClick={onClose}
-            className="px-6 py-3 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors text-sm"
-          >
-            Browse Menu
-          </button>
-        </div>
-      </Sheet>
-    );
-  }
+  if (!mounted) return null;
 
-  return (
-    <Sheet open={open} onClose={onClose} title="Your Order">
-      {unavailableItems.length > 0 && (
-        <div className="mx-5 mt-3 mb-1 rounded-xl border border-italia-red/30 bg-italia-red/5 px-3 py-2.5">
-          <p className="text-xs font-semibold text-italia-red leading-snug">
-            {unavailableItems.length === 1
-              ? `"${unavailableItems[0].menuItem.name}" just sold out`
-              : `${unavailableItems.length} items just sold out`}
-          </p>
-          <p className="text-[11px] text-italia-gray mt-0.5">
-            Remove {unavailableItems.length === 1 ? "it" : "them"} below to continue.
-          </p>
-        </div>
-      )}
-
-      {/* Audit §3.4 — Sud Italia Corporate. Surfaces above everything so
-          the customer sees who's paying before they scan their cart. */}
-      <CorporateOrderBanner />
-
-      {/* Time-of-day banner (audit §2.3) — picks one variant by local hour.
-          Sits above the items list so it primes the customer before they
-          scroll into their cart contents. Admin override via
-          LocationUpsellConfig.timeWindows[] when set; otherwise the
-          hardcoded DEFAULT_TIME_WINDOWS. */}
-      <TodBanner allMenuItems={allMenuItems} upsellConfig={upsellConfig} />
-
-      {/* Items list */}
-      <div className="px-5">
-        {items.map((item) => {
-          const soldOut = liveAvailability[item.menuItem.id] === false;
-          return (
-            <div
-              key={item.menuItem.id}
-              className={soldOut ? "opacity-60" : ""}
-              data-soldout={soldOut ? "true" : undefined}
-            >
-              <CartItemRow item={item} />
-              {soldOut && (
-                <p className="-mt-2 mb-3 text-[11px] font-medium text-italia-red">
-                  Sold out — remove to continue
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Loyalty status banner */}
-      <div className="px-5 mt-3">
-        {loyaltyCustomer ? (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-italia-gold/8 border border-italia-gold/15">
-            <Star className="h-4 w-4 text-italia-gold flex-shrink-0" />
-            <p className="text-xs text-italia-dark">
-              Earning points as <span className="font-semibold">{loyaltyCustomer.name.split(" ")[0]}</span>
-              <span className="text-italia-gold-dark font-bold ml-1">{loyaltyCustomer.points} pts</span>
-            </p>
-          </div>
-        ) : (
-          <a href="/rewards" className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-italia-gold/5 transition-colors">
-            <Star className="h-4 w-4 text-italia-gray flex-shrink-0" />
-            <p className="text-xs text-italia-gray leading-snug">
-              <span className="font-medium text-italia-dark">Points follow the phone you enter below.</span>{" "}
-              Tap to sign in — see your balance and redeem coupons.
-            </p>
-          </a>
-        )}
-      </div>
-
-      {/* Gold/Platinum perk banner (audit §2.2 row 6) — visible only to
-          eligible tiers; offers a comp'd antipasto via a price-0 cart line. */}
-      <TierPerkBanner allMenuItems={allMenuItems} />
-
-      {/* Bundle ladder (audit §3.2) — fixed-price tiers above the per-item
-          chips. Sits before the combo banner because once the customer locks
-          a bundle, the percentage-discount combo is moot. Lunch ladder is
-          hour-gated; Family Feast is quantity-gated; both rules are
-          admin-configurable via LocationUpsellConfig.bundleRules. */}
-      <BundleLadder
-        allMenuItems={resolvedMenuItems}
-        configBundles={
-          (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null
-        }
-        configRules={
-          (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null
-        }
-        configExperiment={
-          (upsellConfig as { experiment?: import("@/lib/experiments").Experiment | null } | null)?.experiment ?? null
-        }
-        fulfillmentType={fulfillmentType}
-        activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
-        activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
+  return createPortal(
+    <>
+      <div
+        className={`v8-cart-overlay${open ? " is-open" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
       />
+      <aside
+        className={`v8-cart-sheet${open ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Your order"
+        aria-hidden={!open}
+      >
+        <div className="v8-cart-grip" aria-hidden="true" />
 
-      {/* Combo deal banner — suppressed only when a bundle is actually
-          LOCKED into the cart. The previous gate (hide whenever the
-          bundle ladder was merely showable) was too aggressive: a
-          customer who locked Make-it-a-Lunch and then removed the
-          dessert would see neither the bundle savings nor the smaller
-          pasta-combo fallback, so the cart silently dropped both
-          discounts. With no bundle applied, both promos can coexist —
-          the bundle card pitches the bigger save, the combo banner
-          delivers the smaller one on what's already in the cart. When
-          a bundle IS locked, `comboDiscount` is already zeroed above,
-          so showing the banner would be misleading. */}
-      {!isBundleActive && (
-        <ComboDealBanner
-          cartItems={items}
-          fulfillmentType={fulfillmentType}
-          allMenuItems={resolvedMenuItems}
-          locationSlug={locationSlug}
-          upsellConfig={upsellConfig}
-        />
-      )}
-
-      {/* Cross-sell suggestions */}
-      <LayoutGate flag="showCartUpsell">
-        <CartUpsell suggestions={suggestions} />
-      </LayoutGate>
-
-      {/* Delivery progress bar */}
-      {/* Per-segment threshold (audit §2.5 Uber Eats): first-timers see 39 PLN,
-          regulars 60 PLN, Gold/Platinum 0 (already free). */}
-      <LayoutGate flag="showDeliveryProgress">
-        <DeliveryProgress
-          cartTotal={total}
-          fulfillmentType={fulfillmentType}
-          thresholdGrosze={deliveryThreshold}
-          isPersonalised={isDeliveryPersonalised}
-        />
-      </LayoutGate>
-
-      {/* Fulfillment type selector */}
-      <div className="px-5 mt-4 mb-3">
-        <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
-          How would you like your order?
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => setFulfillmentType("takeout")}
-            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-              fulfillmentType === "takeout"
-                ? "border-italia-green bg-italia-green/5 text-italia-green"
-                : "border-gray-200 text-italia-gray hover:border-gray-300"
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            Takeout
-          </button>
-          <button
-            onClick={() => setFulfillmentType("delivery")}
-            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-              fulfillmentType === "delivery"
-                ? "border-italia-red bg-italia-red/5 text-italia-red"
-                : "border-gray-200 text-italia-gray hover:border-gray-300"
-            }`}
-          >
-            <Truck className="h-4 w-4" />
-            Delivery
-          </button>
-          <button
-            onClick={() => setFulfillmentType("dine-in")}
-            className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-              fulfillmentType === "dine-in"
-                ? "border-italia-gold bg-italia-gold/5 text-italia-gold-dark"
-                : "border-gray-200 text-italia-gray hover:border-gray-300"
-            }`}
-          >
-            <Utensils className="h-4 w-4" />
-            Dine-in
-          </button>
-        </div>
-      </div>
-
-      {/* Delivery address — TODO: integrate Google Places Autocomplete
-           When NEXT_PUBLIC_GOOGLE_PLACES_KEY is set, replace this input with
-           a Places Autocomplete component. See: https://developers.google.com/maps/documentation/places/web-service/autocomplete */}
-      {fulfillmentType === "delivery" && (
-        <div className="px-5 mb-3">
-          <label className="sr-only" htmlFor="checkout-address">Delivery address</label>
-          <input
-            id="checkout-address"
-            type="text"
-            placeholder="Street address, apt/building, city"
-            value={deliveryAddress}
-            onChange={(e) => setDeliveryAddress(e.target.value)}
-            autoComplete="street-address"
-            className="pub-input min-h-[44px]"
-          />
-        </div>
-      )}
-
-      {/* Dine-in reservation — reserve a table and pre-choose the food.
-           The time slot picker below doubles as the booking time. */}
-      {fulfillmentType === "dine-in" && (
-        <div className="px-5 mb-3">
-          <div className="flex items-start gap-2.5 rounded-xl border border-italia-gold/25 bg-italia-gold/5 px-3 py-2.5">
-            <Utensils className="h-4 w-4 flex-shrink-0 text-italia-gold-dark mt-0.5" aria-hidden />
-            <p className="text-[11px] leading-relaxed text-italia-dark">
-              <span className="font-semibold">Reserve your table.</span>{" "}
-              Pick how many are coming and a time below — your food is prepared
-              for when you sit down.
-            </p>
+        <header className="v8-cart-top">
+          <div className="v8-cart-top-row">
+            <div className="v8-cart-top-title">
+              <BasilSprig />
+              <div>
+                <h2>Your order</h2>
+                <div className="v8-cart-top-sub">— il tuo ordine</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="v8-cart-close"
+              aria-label="Close cart"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            <label htmlFor="checkout-party-size" className="flex items-center gap-1.5 text-sm font-medium text-italia-dark">
-              <Users className="h-4 w-4 text-italia-gray" />
-              Party size
-            </label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPartySize(partySize - 1)}
-                disabled={partySize <= 1}
-                aria-label="Fewer guests"
-                className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-italia-dark disabled:opacity-40 hover:border-gray-300 active:scale-95 transition"
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span
-                id="checkout-party-size"
-                className="min-w-[2ch] text-center text-base font-bold text-italia-dark tabular-nums"
-                aria-live="polite"
-              >
-                {partySize}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPartySize(partySize + 1)}
-                disabled={partySize >= 50}
-                aria-label="More guests"
-                className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-italia-dark disabled:opacity-40 hover:border-gray-300 active:scale-95 transition"
-              >
-                <Plus className="h-4 w-4" />
+        </header>
+
+        <div className="v8-cart-tricolore" aria-hidden="true" />
+
+        <div className="v8-cart-scroll">
+          {items.length === 0 ? (
+            <div className="v8-cart-empty">
+              <div className="v8-cart-empty-illus" aria-hidden="true">
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                  <path d="M11 22 C 11 32, 16 37, 22 37 C 28 37, 33 32, 33 22 C 33 17, 30 14, 22 14 C 14 14, 11 17, 11 22 Z"
+                        fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M22 14 L22 9" stroke="#4A7C59" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M22 12 C 19 10, 17 9, 15 9 C 16 12, 18 13, 22 14" stroke="#4A7C59" strokeWidth="1.5" fill="#4A7C59" fillOpacity="0.2" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="v8-cart-empty-title">Your table is set</div>
+              <div className="v8-cart-empty-sub">
+                Browse the menu — every dish ferments overnight and is baked the moment you order.
+              </div>
+              <button type="button" onClick={onClose} className="v8-cart-empty-cta">
+                Browse menu <span className="it" style={{ marginLeft: 6, fontStyle: "italic", fontWeight: 500, opacity: 0.9 }}>· il menù</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Time slot picker */}
-      {locationSlug && (
-        <div className="px-5 mb-3">
-          <SlotPicker
-            locationSlug={locationSlug}
-            fulfillmentType={fulfillmentType}
-          />
-          {slotFomo &&
-            (() => {
-              if (!selectedSlotId) {
-                // Low-stock warning already shown inside SlotPicker; avoid duplicate amber banner.
-                if (slotFomo.anyLow) {
-                  return null;
-                }
-                return (
-                  <div
-                    className="mt-2 flex items-start gap-2.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5"
-                    role="status"
-                  >
-                    <Clock
-                      className="h-4 w-4 flex-shrink-0 text-italia-red mt-0.5"
-                      aria-hidden
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-italia-dark leading-snug">
-                        {fulfillmentType === "dine-in"
-                          ? "Pick your table time"
-                          : fulfillmentType === "delivery"
-                            ? "Pick your delivery time"
-                            : "Pick your pickup time"}
-                      </p>
-                      <p className="text-[11px] text-italia-gray mt-1 leading-relaxed">
-                        Popular times fill up fast — choose yours below.
-                      </p>
+          ) : (
+            <>
+              {unavailableItems.length > 0 && (
+                <div className="v8-cart-soldout" role="alert">
+                  <div aria-hidden="true" style={{ marginTop: 1 }}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M10 6 L10 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      <circle cx="10" cy="14" r="0.9" fill="currentColor" />
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="v8-cart-soldout-title">
+                      {unavailableItems.length === 1
+                        ? <><em className="it">{unavailableItems[0].menuItem.name}</em> — sold out <span style={{ opacity: 0.7 }}>· esaurita</span></>
+                        : <>{unavailableItems.length} items just sold out <span style={{ opacity: 0.7 }}>· esauriti</span></>}
+                    </div>
+                    <div className="v8-cart-soldout-sub">
+                      Remove {unavailableItems.length === 1 ? "it" : "them"} below to continue.
                     </div>
                   </div>
-                );
-              }
-
-              // Per-slot scarcity ("Only 2 left", "Last spot!") is already on the slot button.
-              return (
-                <div
-                  className="mt-2 flex items-start gap-2.5 rounded-xl border border-italia-green/20 bg-italia-green/5 px-3 py-2.5"
-                  role="status"
-                >
-                  <Check
-                    className="h-4 w-4 flex-shrink-0 text-italia-green mt-0.5"
-                    aria-hidden
-                  />
-                  <p className="text-xs leading-snug text-italia-dark">
-                    <span className="font-semibold">Time selected.</span>{" "}
-                    <span className="text-italia-gray font-normal">
-                      {fulfillmentType === "dine-in"
-                        ? "Complete checkout to confirm your table."
-                        : fulfillmentType === "delivery"
-                          ? "Complete checkout to confirm your delivery window."
-                          : "Complete checkout to confirm your pickup window."}
-                    </span>
-                  </p>
                 </div>
-              );
-            })()}
-        </div>
-      )}
+              )}
 
-      {/* Customer details section */}
-      <div className="border-t border-gray-100 px-4 pt-3 pb-3 sm:px-5 sm:pt-3 sm:pb-4 space-y-2 bg-gray-50">
-        <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide">Your details</p>
-        <div className="space-y-1.5">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="sr-only" htmlFor="checkout-first-name">First name</label>
-              <input
-                id="checkout-first-name"
-                type="text"
-                placeholder="First name"
-                value={customerFirstName}
-                onChange={(e) => setCustomerFirstName(e.target.value)}
-                className="pub-input min-h-[40px] text-sm"
-                autoComplete="given-name"
+              {/* Audit §3.4 — Sud Italia Corporate. Surfaces above everything so
+                  the customer sees who's paying before they scan their cart. */}
+              <CorporateOrderBanner />
+
+              {/* Time-of-day banner (audit §2.3) — picks one variant by local hour. */}
+              <TodBanner allMenuItems={allMenuItems} upsellConfig={upsellConfig} />
+
+              {/* Items list */}
+              <div className="v8-cart-section" style={{ paddingTop: 22, paddingBottom: 0 }}>
+                <div className="v8-cart-section-title">
+                  The table <span style={{ fontStyle: "italic", color: "var(--color-muted)", letterSpacing: 0, textTransform: "none", fontWeight: 400, fontSize: 12 }}>· il tavolo</span>
+                </div>
+              </div>
+              <div className="v8-cart-items">
+                {items.map((item) => {
+                  const soldOut = liveAvailability[item.menuItem.id] === false;
+                  return (
+                    <CartItemRow
+                      key={item.menuItem.id}
+                      item={item}
+                      soldOut={soldOut}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Loyalty status — earn chip when known, sign-in invite when not. */}
+              {loyaltyCustomer ? (
+                <div className="v8-cart-loyalty">
+                  <span className="v8-cart-loyalty-icon" aria-hidden="true">
+                    <Star className="h-4 w-4" fill="currentColor" />
+                  </span>
+                  <div className="v8-cart-loyalty-body">
+                    Earning points as{" "}
+                    <span className="v8-cart-loyalty-name">{loyaltyCustomer.name.split(" ")[0]}</span>
+                    <span className="v8-cart-loyalty-pts">{loyaltyCustomer.points} pts</span>
+                  </div>
+                </div>
+              ) : (
+                <a href="/rewards" className="v8-cart-loyalty is-invite">
+                  <span className="v8-cart-loyalty-icon" aria-hidden="true">
+                    <Star className="h-4 w-4" />
+                  </span>
+                  <div className="v8-cart-loyalty-body">
+                    <span className="v8-cart-loyalty-name">Soci e amici.</span>{" "}
+                    Points follow the phone you enter below — tap to sign in.
+                  </div>
+                </a>
+              )}
+
+              {/* Gold/Platinum perk banner (audit §2.2 row 6). */}
+              <TierPerkBanner allMenuItems={allMenuItems} />
+
+              {/* Bundle ladder (audit §3.2). */}
+              <BundleLadder
+                allMenuItems={resolvedMenuItems}
+                configBundles={
+                  (upsellConfig as { bundles?: BundleTier[] } | null)?.bundles ?? null
+                }
+                configRules={
+                  (upsellConfig as { bundleRules?: import("@/lib/bundles").BundleAvailabilityRules } | null)?.bundleRules ?? null
+                }
+                configExperiment={
+                  (upsellConfig as { experiment?: import("@/lib/experiments").Experiment | null } | null)?.experiment ?? null
+                }
+                fulfillmentType={fulfillmentType}
+                activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
+                activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
               />
-            </div>
-            <div>
-              <label className="sr-only" htmlFor="checkout-last-name">Last name</label>
-              <input
-                id="checkout-last-name"
-                type="text"
-                placeholder="Last name"
-                value={customerLastName}
-                onChange={(e) => setCustomerLastName(e.target.value)}
-                className="pub-input min-h-[40px] text-sm"
-                autoComplete="family-name"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-0">
-            <label className="sr-only" htmlFor="checkout-phone">Phone number</label>
-            <span className="inline-flex items-center px-2.5 min-h-[40px] rounded-l-[0.75rem] border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none" aria-hidden="true">
-              +48
-            </span>
-            <input
-              id="checkout-phone"
-              type="tel"
-              placeholder="Phone number"
-              value={customerPhone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              autoComplete="tel"
-              className={`pub-input min-h-[40px] text-sm rounded-l-none ${
-                phoneError ? "border-italia-red" : ""
-              }`}
-            />
-          </div>
 
-          {/* Optional email */}
-          <label className="sr-only" htmlFor="checkout-email">Email address</label>
-          <input
-            id="checkout-email"
-            type="email"
-            placeholder="Email (receipt + 10% off next order)"
-            autoComplete="email"
-            value={customerEmail}
-            onChange={(e) => setCustomerEmail(e.target.value)}
-            className="pub-input min-h-[40px] text-sm text-italia-gray"
-          />
-          <label className="sr-only" htmlFor="checkout-notes">Special instructions</label>
-          <textarea
-            id="checkout-notes"
-            placeholder="Special instructions (allergies, doorbell code, etc.)"
-            value={specialInstructions}
-            onChange={(e) => setSpecialInstructions(e.target.value)}
-            rows={2}
-            className="pub-input min-h-[52px] py-2 text-sm text-italia-gray resize-none leading-snug"
-          />
-        </div>
-        {phoneError && (
-          <p className="text-xs text-italia-red">
-            Please enter a valid phone number
-          </p>
-        )}
-      </div>
+              {/* Combo deal banner — see prior comment for the bundle-active gate. */}
+              {!isBundleActive && (
+                <ComboDealBanner
+                  cartItems={items}
+                  fulfillmentType={fulfillmentType}
+                  allMenuItems={resolvedMenuItems}
+                  locationSlug={locationSlug}
+                  upsellConfig={upsellConfig}
+                />
+              )}
 
-      {/* Tip picker — optional gratuity. Tied to cart subtotal so the
-           preset percentages always look right; custom amount in zł for
-           anyone who prefers absolute. */}
-      <TipPicker
-        subtotalGrosze={subtotal - comboDiscount}
-        valueGrosze={tipAmount}
-        onChange={setTipAmount}
-      />
+              {/* Cross-sell suggestions */}
+              <LayoutGate flag="showCartUpsell">
+                <CartUpsell suggestions={suggestions} />
+              </LayoutGate>
 
-      {/* Sticky pay bar */}
-      <div className="sticky bottom-0 border-t border-gray-100 px-4 py-3 sm:px-5 sm:py-4 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-sm text-italia-gray">
-            <span>Subtotal{isBundleActive && <span className="ml-1 text-italia-green-dark text-xs font-medium">· bundle locked</span>}</span>
-            <span>{formatPrice(subtotal)}</span>
-          </div>
-          {comboDiscount > 0 && (
-            <div className="flex justify-between items-center text-sm font-medium text-italia-green">
-              <span>{comboResult.activeDeal?.name} -{comboResult.activeDeal?.discountPercent}%</span>
-              <span>-{formatPrice(comboDiscount)}</span>
-            </div>
-          )}
-          {tipAmount > 0 && (
-            <div className="flex justify-between items-center text-sm text-italia-gray">
-              <span>Tip</span>
-              <span>{formatPrice(tipAmount)}</span>
-            </div>
-          )}
-          {fulfillmentType === "delivery" && (
-            <div className="flex justify-between items-center text-sm text-italia-gray">
-              <span>Delivery</span>
-              <span>
-                {deliveryFee === 0 ? (
-                  <span className="text-italia-green font-medium">Free</span>
-                ) : (
-                  formatPrice(deliveryFee)
+              {/* Delivery progress bar — per-segment threshold (audit §2.5). */}
+              <LayoutGate flag="showDeliveryProgress">
+                <DeliveryProgress
+                  cartTotal={total}
+                  fulfillmentType={fulfillmentType}
+                  thresholdGrosze={deliveryThreshold}
+                  isPersonalised={isDeliveryPersonalised}
+                />
+              </LayoutGate>
+
+              {/* Fulfillment type selector */}
+              <div className="v8-cart-section" style={{ paddingBottom: 0 }}>
+                <div className="v8-cart-section-title">
+                  How <span style={{ fontStyle: "italic", color: "var(--color-muted)", letterSpacing: 0, textTransform: "none", fontWeight: 400, fontSize: 12 }}>· come lo vuoi</span>
+                </div>
+              </div>
+              <div className="v8-cart-fulfill" role="radiogroup" aria-label="Fulfillment type">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={fulfillmentType === "takeout"}
+                  onClick={() => setFulfillmentType("takeout")}
+                  className={`v8-cart-fulfill-btn${fulfillmentType === "takeout" ? " is-on" : ""}`}
+                >
+                  <span>Takeaway</span>
+                  <span className="v8-cart-fulfill-it">· asporto</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={fulfillmentType === "delivery"}
+                  onClick={() => setFulfillmentType("delivery")}
+                  className={`v8-cart-fulfill-btn${fulfillmentType === "delivery" ? " is-on" : ""}`}
+                >
+                  <span>Delivery</span>
+                  <span className="v8-cart-fulfill-it">· consegna</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={fulfillmentType === "dine-in"}
+                  onClick={() => setFulfillmentType("dine-in")}
+                  className={`v8-cart-fulfill-btn${fulfillmentType === "dine-in" ? " is-on" : ""}`}
+                >
+                  <span>Dine-in</span>
+                  <span className="v8-cart-fulfill-it">· a tavola</span>
+                </button>
+              </div>
+
+              {/* Delivery address */}
+              {fulfillmentType === "delivery" && (
+                <div className="v8-cart-field">
+                  <label className="v8-cart-field-label" htmlFor="checkout-address">
+                    Address <span className="v8-cart-field-label-aside">· indirizzo</span>
+                  </label>
+                  <input
+                    id="checkout-address"
+                    type="text"
+                    placeholder="Where shall we send it?"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    autoComplete="street-address"
+                    className="v8-cart-input"
+                  />
+                </div>
+              )}
+
+              {/* Dine-in reservation — party size + table-time copy. */}
+              {fulfillmentType === "dine-in" && (
+                <div className="v8-cart-party">
+                  <div className="v8-cart-party-head">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden style={{ flexShrink: 0 }}>
+                      <circle cx="9" cy="6" r="3" stroke="currentColor" strokeWidth="1.4" />
+                      <path d="M3 16 C 3 12.5, 5.5 11, 9 11 C 12.5 11, 15 12.5, 15 16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <span>
+                      <strong style={{ fontWeight: 600, fontStyle: "normal", color: "var(--color-espresso)" }}>Reserve your table.</strong>{" "}
+                      Pick how many are coming and a time below — your food is prepared for when you sit down.
+                    </span>
+                  </div>
+                  <div className="v8-cart-party-row">
+                    <span className="v8-cart-party-label">
+                      Party size <span style={{ fontFamily: "var(--font-body)", fontStyle: "italic", fontSize: 12.5, color: "var(--color-muted)", marginLeft: 4 }}>· il tavolo</span>
+                    </span>
+                    <div className="v8-cart-party-stepper">
+                      <button
+                        type="button"
+                        onClick={() => setPartySize(partySize - 1)}
+                        disabled={partySize <= 1}
+                        aria-label="Fewer guests"
+                        className="v8-cart-party-btn"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7 L11 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                      </button>
+                      <span className="v8-cart-party-count" aria-live="polite">{partySize}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPartySize(partySize + 1)}
+                        disabled={partySize >= 50}
+                        aria-label="More guests"
+                        className="v8-cart-party-btn"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7 L11 7 M7 3 L7 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Time slot picker */}
+              {locationSlug && (
+                <>
+                  <div className="v8-cart-section" style={{ paddingBottom: 0 }}>
+                    <div className="v8-cart-section-title">
+                      Time <span style={{ fontStyle: "italic", color: "var(--color-muted)", letterSpacing: 0, textTransform: "none", fontWeight: 400, fontSize: 12 }}>· a che ora</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: "0 20px" }}>
+                    <SlotPicker
+                      locationSlug={locationSlug}
+                      fulfillmentType={fulfillmentType}
+                    />
+                    {slotFomo &&
+                      (() => {
+                        if (!selectedSlotId) {
+                          if (slotFomo.anyLow) return null;
+                          return (
+                            <div className="v8-cart-party" style={{ marginTop: 10, background: "rgba(140,111,79,0.06)", borderColor: "var(--color-line)" }} role="status">
+                              <div className="v8-cart-party-head" style={{ alignItems: "flex-start" }}>
+                                <Clock className="h-4 w-4" style={{ flexShrink: 0, color: "var(--color-terracotta)", marginTop: 2 }} aria-hidden />
+                                <span>
+                                  <strong style={{ fontWeight: 600, fontStyle: "normal", color: "var(--color-espresso)" }}>
+                                    {fulfillmentType === "dine-in"
+                                      ? "Pick your table time"
+                                      : fulfillmentType === "delivery"
+                                        ? "Pick your delivery time"
+                                        : "Pick your pickup time"}
+                                  </strong>
+                                  <span style={{ display: "block", marginTop: 2 }}>Popular times fill up fast — choose yours below.</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="v8-cart-party" style={{ marginTop: 10, background: "rgba(74,124,89,0.08)", borderColor: "rgba(74,124,89,0.35)" }} role="status">
+                            <div className="v8-cart-party-head" style={{ alignItems: "flex-start", color: "var(--color-basil-deep)" }}>
+                              <Check className="h-4 w-4" style={{ flexShrink: 0, color: "var(--color-basil-deep)", marginTop: 2 }} aria-hidden />
+                              <span>
+                                <strong style={{ fontWeight: 600, fontStyle: "normal", color: "var(--color-espresso)" }}>Time selected.</strong>{" "}
+                                {fulfillmentType === "dine-in"
+                                  ? "Complete checkout to confirm your table."
+                                  : fulfillmentType === "delivery"
+                                    ? "Complete checkout to confirm your delivery window."
+                                    : "Complete checkout to confirm your pickup window."}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                  </div>
+                </>
+              )}
+
+              {/* Customer details section */}
+              <div className="v8-cart-section" style={{ paddingBottom: 0, paddingTop: 22 }}>
+                <div className="v8-cart-section-title">
+                  Your details <span style={{ fontStyle: "italic", color: "var(--color-muted)", letterSpacing: 0, textTransform: "none", fontWeight: 400, fontSize: 12 }}>· i tuoi dati</span>
+                </div>
+              </div>
+
+              <div className="v8-cart-field">
+                <label className="v8-cart-field-label" htmlFor="checkout-first-name">
+                  Name <span className="v8-cart-field-label-aside">· nome</span>
+                </label>
+                <div className="v8-cart-name-grid">
+                  <input
+                    id="checkout-first-name"
+                    type="text"
+                    placeholder="First name"
+                    value={customerFirstName}
+                    onChange={(e) => setCustomerFirstName(e.target.value)}
+                    className="v8-cart-input"
+                    autoComplete="given-name"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last name"
+                    value={customerLastName}
+                    onChange={(e) => setCustomerLastName(e.target.value)}
+                    className="v8-cart-input"
+                    autoComplete="family-name"
+                    aria-label="Last name"
+                  />
+                </div>
+              </div>
+
+              <div className="v8-cart-field">
+                <label className="v8-cart-field-label" htmlFor="checkout-phone">
+                  Phone <span className="v8-cart-field-label-aside">· cellulare</span>
+                </label>
+                <div className="v8-cart-phone">
+                  <span className="v8-cart-phone-prefix" aria-hidden="true">+48</span>
+                  <input
+                    id="checkout-phone"
+                    type="tel"
+                    placeholder="512 ··· ···"
+                    value={customerPhone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    autoComplete="tel"
+                    className={`v8-cart-input${phoneError ? " is-error" : ""}`}
+                  />
+                </div>
+                {phoneError && (
+                  <div className="v8-cart-field-error">Please enter a valid phone number.</div>
                 )}
-              </span>
-            </div>
+              </div>
+
+              <div className="v8-cart-field">
+                <label className="v8-cart-field-label" htmlFor="checkout-email">
+                  Email <span className="v8-cart-field-label-aside">(optional, for the receipt)</span>
+                </label>
+                <input
+                  id="checkout-email"
+                  type="email"
+                  placeholder="ale@esempio.it"
+                  autoComplete="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="v8-cart-input"
+                />
+              </div>
+
+              <div className="v8-cart-field">
+                <label className="v8-cart-field-label" htmlFor="checkout-notes">
+                  Notes for the kitchen <span className="v8-cart-field-label-aside">· nota per la cucina</span>
+                </label>
+                <textarea
+                  id="checkout-notes"
+                  placeholder="Allergies, doorbell code, anything we should know"
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  rows={2}
+                  className="v8-cart-textarea"
+                />
+              </div>
+
+              {/* Tip picker */}
+              <TipPicker
+                subtotalGrosze={subtotal - comboDiscount}
+                valueGrosze={tipAmount}
+                onChange={setTipAmount}
+              />
+
+              <div className="v8-cart-foot">
+                <em>&ldquo;Mangia bene, ridi spesso, ama molto.&rdquo;</em>
+                <small>Sud Italia · Kraków · Warszawa</small>
+              </div>
+
+              {/* Sticky pay bar */}
+              <div className="v8-cart-paybar">
+                <div className="v8-cart-paybar-tricolore" aria-hidden="true" />
+                <div className="v8-cart-paybar-inner">
+                  <div className="v8-cart-totals">
+                    <div className="v8-cart-totals-row">
+                      <span className="v8-cart-totals-label">
+                        Subtotal <span style={{ fontStyle: "italic", color: "var(--color-muted)" }}>· subtotale</span>
+                        {isBundleActive && (
+                          <span style={{ marginLeft: 6, fontFamily: "var(--font-heading)", fontStyle: "italic", color: "var(--color-basil-deep)", fontSize: 12 }}>
+                            · bundle locked
+                          </span>
+                        )}
+                      </span>
+                      <span className="v8-cart-totals-val">{formatPrice(subtotal)}</span>
+                    </div>
+                    {comboDiscount > 0 && comboResult.activeDeal && (
+                      <div className="v8-cart-totals-row is-discount">
+                        <span className="v8-cart-totals-label">
+                          {comboResult.activeDeal.name} · −{comboResult.activeDeal.discountPercent}%
+                        </span>
+                        <span className="v8-cart-totals-val">−{formatPrice(comboDiscount)}</span>
+                      </div>
+                    )}
+                    {fulfillmentType === "delivery" && (
+                      <div className="v8-cart-totals-row">
+                        <span className="v8-cart-totals-label">
+                          Delivery <span style={{ fontStyle: "italic", color: "var(--color-muted)" }}>· consegna</span>
+                        </span>
+                        <span className="v8-cart-totals-val">
+                          {deliveryFee === 0 ? (
+                            <span style={{ color: "var(--color-basil-deep)", fontStyle: "italic" }}>Free</span>
+                          ) : (
+                            formatPrice(deliveryFee)
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {tipAmount > 0 && (
+                      <div className="v8-cart-totals-row">
+                        <span className="v8-cart-totals-label">
+                          Mancia
+                        </span>
+                        <span className="v8-cart-totals-val">{formatPrice(tipAmount)}</span>
+                      </div>
+                    )}
+                    <div className="v8-cart-totals-row is-total">
+                      <span className="v8-cart-totals-label">
+                        Total <span className="it" style={{ color: "var(--color-muted)" }}>· totale</span>
+                      </span>
+                      <span className="v8-cart-totals-val">{formatPrice(total)}</span>
+                    </div>
+                    {gstAmount > 0 && (
+                      <div className="v8-cart-totals-row is-gst">
+                        <span className="v8-cart-totals-label">
+                          of which GST{compliance?.gstNumber ? ` (${compliance.gstNumber})` : ""} @{" "}
+                          {(gstRateBps / 100).toFixed(gstRateBps % 100 === 0 ? 0 : 1)}%
+                        </span>
+                        <span className="v8-cart-totals-val">{formatPrice(gstAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="v8-cart-paybar-foot empty:hidden">
+                    <LoyaltyEarnPreview cartTotal={total} />
+                    {compliance?.zone === "NYC" && compliance.packagingDisclosure && (
+                      <p>
+                        <strong>Packaging:</strong> {compliance.packagingDisclosure}
+                      </p>
+                    )}
+                    {compliance?.zone === "SG" && compliance.pdpaConsentText && (
+                      <p>
+                        <strong>PDPA §13 consent:</strong> {compliance.pdpaConsentText} By placing this order you confirm you have read this notice.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Sprint 9 #2 — weekly-usual opt-in. */}
+                  {isBundleActive && (
+                    <label className="v8-cart-weekly">
+                      <input
+                        type="checkbox"
+                        checked={scheduleWeekly}
+                        onChange={(e) => setScheduleWeekly(e.target.checked)}
+                      />
+                      <span>
+                        Make this my <em>weekly usual</em> — same order, same time, every week.
+                      </span>
+                    </label>
+                  )}
+
+                  {checkoutError && (
+                    <div className="v8-cart-checkout-error" role="alert">
+                      <span aria-hidden="true" style={{ marginTop: 1 }}>!</span>
+                      <div>
+                        <p style={{ margin: 0 }}>{checkoutError}</p>
+                        <button type="button" onClick={() => setCheckoutError(null)}>Dismiss</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="v8-cart-pay-actions" style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCheckoutError(null); handleCheckout(); }}
+                      disabled={isSubmitting || !canCheckout}
+                      className="v8-cart-pay-cta"
+                    >
+                      {isSubmitting
+                        ? "Processing…"
+                        : unavailableItems.length > 0
+                          ? "Remove sold-out items"
+                          : !selectedSlotId
+                            ? "Select a time slot"
+                            : canCheckout
+                              ? (
+                                <>
+                                  <span>Pay</span>
+                                  <span className="it">· procedi</span>
+                                  <span className="num">{formatPrice(total)}</span>
+                                </>
+                              )
+                              : fulfillmentType === "delivery" && !deliveryAddress.trim()
+                                ? "Enter delivery address"
+                                : "Enter name & phone to order"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Clear your cart?")) clearCart();
+                      }}
+                      aria-label="Clear cart"
+                      title="Clear cart"
+                      className="v8-cart-pay-clear"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
-          {gstAmount > 0 && (
-            <div className="flex justify-between items-center text-xs text-italia-gray">
-              <span>
-                of which GST{compliance?.gstNumber ? ` (${compliance.gstNumber})` : ""} @{" "}
-                {(gstRateBps / 100).toFixed(gstRateBps % 100 === 0 ? 0 : 1)}%
-              </span>
-              <span>{formatPrice(gstAmount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center text-lg font-bold border-t border-gray-100 pt-2">
-            <span>Total</span>
-            <span className="text-italia-red">{formatPrice(total)}</span>
-          </div>
         </div>
+      </aside>
+    </>,
+    document.body,
+  );
+}
 
-        {compliance?.zone === "NYC" && compliance.packagingDisclosure && (
-          <p className="mt-2 text-[10px] leading-relaxed text-italia-gray border-t border-gray-100 pt-2">
-            <span className="font-semibold">Packaging:</span>{" "}
-            {compliance.packagingDisclosure}
-          </p>
-        )}
-
-        {compliance?.zone === "SG" && compliance.pdpaConsentText && (
-          <p className="mt-2 text-[10px] leading-relaxed text-italia-gray border-t border-gray-100 pt-2">
-            <span className="font-semibold">PDPA §13 consent:</span>{" "}
-            {compliance.pdpaConsentText} By placing this order you confirm
-            you have read this notice.
-          </p>
-        )}
-
-        <div className="mt-1.5 flex flex-col gap-1 empty:hidden">
-          <LoyaltyEarnPreview cartTotal={total} />
-        </div>
-
-        {/* Sprint 9 #2 — weekly-usual opt-in. Only when a bundle is
-            applied so the scheduled meal has a clear composition. */}
-        {isBundleActive && (
-          <label className="mt-2 flex items-center gap-2 text-xs text-italia-gray cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={scheduleWeekly}
-              onChange={(e) => setScheduleWeekly(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span>
-              🗓️ Make this my <span className="font-semibold">weekly usual</span>
-              {" "}— same order, same time, every week
-            </span>
-          </label>
-        )}
-
-        {checkoutError && (
-          <div className="mt-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 flex items-start gap-2">
-            <span className="text-red-500 mt-0.5 flex-shrink-0">!</span>
-            <div>
-              <p>{checkoutError}</p>
-              <button onClick={() => setCheckoutError(null)} className="text-xs text-red-500 underline mt-1">Dismiss</button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-3 flex items-stretch gap-2">
-          <Button
-            onClick={() => { setCheckoutError(null); handleCheckout(); }}
-            disabled={isSubmitting || !canCheckout}
-            className="flex-1 min-h-[48px]"
-            size="md"
-          >
-            {isSubmitting
-              ? "Processing..."
-              : unavailableItems.length > 0
-                ? "Remove sold-out items"
-                : !selectedSlotId
-                  ? "Select a time slot"
-                  : canCheckout
-                    ? `Pay ${formatPrice(total)}`
-                    : fulfillmentType === "delivery" && !deliveryAddress.trim()
-                      ? "Enter delivery address"
-                      : "Enter name & phone to order"}
-          </Button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("Clear your cart?")) clearCart();
-            }}
-            aria-label="Clear cart"
-            title="Clear cart"
-            className="flex-shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-xl border border-gray-200 text-italia-gray hover:text-italia-red hover:border-italia-red/40 active:scale-[0.97] transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </Sheet>
+/**
+ * Basil sprig SVG — mirrors the V8 mockup's hand-drawn three-leaf
+ * marker. Sits in the sticky header next to "Your order".
+ */
+function BasilSprig() {
+  return (
+    <span className="v8-cart-basil" aria-hidden="true">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <path d="M18 32 C 18 26, 18 20, 18 12" stroke="#4A7C59" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M18 24 C 14 22, 12 19, 11 16 C 14 17, 17 19, 18 22" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M18 19 C 22 17, 24 14, 25 11 C 22 12, 19 14, 18 17" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M18 14 C 15 13, 13 10, 13 7 C 16 8, 17 11, 18 13" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    </span>
   );
 }
 
@@ -999,6 +1069,10 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
  * Zustand cart so it survives a refresh and gets cleared on checkout. The
  * picker computes preset percentages off `subtotalGrosze` (post-discount,
  * pre-tip) so toggling between presets feels stable.
+ *
+ * V8 styling: terracotta pill buttons (.v8-cart-tip), active = darker
+ * terracotta + ochre inset, 4-up grid (None / 10 / 15 / 20), custom-zł
+ * input appears below when "None" is held + the customer types in.
  */
 function TipPicker({
   subtotalGrosze,
@@ -1022,25 +1096,28 @@ function TipPicker({
 
   if (subtotalGrosze <= 0) return null;
 
+  const labels = ["no thanks", "kind", "generous", "family"];
+
   return (
-    <div className="px-5 pt-3 pb-4">
-      <p className="text-xs font-semibold text-italia-gray uppercase tracking-wide mb-2">
-        Add a tip — optional
-      </p>
-      <div className="grid grid-cols-5 gap-1.5">
+    <>
+      <div className="v8-cart-section" style={{ paddingBottom: 0, paddingTop: 22 }}>
+        <div className="v8-cart-section-title">
+          A tip for the crew <span style={{ fontStyle: "italic", color: "var(--color-muted)", letterSpacing: 0, textTransform: "none", fontWeight: 400, fontSize: 12 }}>· una mancia</span>
+        </div>
+      </div>
+      <div className="v8-cart-tips" role="radiogroup" aria-label="Tip amount">
         <button
           type="button"
+          role="radio"
+          aria-checked={valueGrosze === 0 && !customMode}
           onClick={() => {
             setCustomMode(false);
             onChange(0);
           }}
-          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
-            valueGrosze === 0 && !customMode
-              ? "border-italia-red bg-italia-red/5 text-italia-red"
-              : "border-gray-200 text-italia-gray hover:border-gray-300"
-          }`}
+          className={`v8-cart-tip${valueGrosze === 0 && !customMode ? " is-on" : ""}`}
         >
-          None
+          <span>0%</span>
+          <span className="v8-cart-tip-label">{labels[0]}</span>
         </button>
         {presets.map((p, i) => {
           const g = presetValues[i];
@@ -1049,54 +1126,41 @@ function TipPicker({
             <button
               key={p}
               type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => {
                 setCustomMode(false);
                 onChange(g);
               }}
-              className={`flex flex-col items-center justify-center px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                selected
-                  ? "border-italia-red bg-italia-red/5 text-italia-red"
-                  : "border-gray-200 text-italia-gray hover:border-gray-300"
-              }`}
+              className={`v8-cart-tip${selected ? " is-on" : ""}`}
             >
               <span>{Math.round(p * 100)}%</span>
-              <span className="text-[10px] opacity-70">{(g / 100).toFixed(2)} zł</span>
+              <span className="v8-cart-tip-label">{labels[i + 1]}</span>
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => {
-            setCustomMode(true);
-            onChange(Math.round(parseFloat(customStr || "0") * 100));
-          }}
-          className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
-            customMode
-              ? "border-italia-red bg-italia-red/5 text-italia-red"
-              : "border-gray-200 text-italia-gray hover:border-gray-300"
-          }`}
-        >
-          Custom
-        </button>
       </div>
-      {customMode && (
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-xs text-italia-gray">zł</span>
-          <input
-            type="number"
-            min="0"
-            step="0.50"
-            inputMode="decimal"
-            value={customStr}
-            onChange={(e) => {
-              setCustomStr(e.target.value);
-              onChange(Math.round(parseFloat(e.target.value || "0") * 100));
-            }}
-            placeholder="0.00"
-            className="pub-input min-h-[36px] text-sm"
-          />
-        </div>
-      )}
-    </div>
+      <div className="v8-cart-tip-custom">
+        <span className="v8-cart-tip-custom-prefix">Custom</span>
+        <input
+          type="number"
+          min="0"
+          step="0.50"
+          inputMode="decimal"
+          value={customStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setCustomStr(v);
+            setCustomMode(true);
+            onChange(Math.round(parseFloat(v || "0") * 100));
+          }}
+          onFocus={() => setCustomMode(true)}
+          placeholder="0.00 zł"
+          aria-label="Custom tip amount in złoty"
+          className="v8-cart-input"
+          style={{ flex: 1, padding: "10px 14px" }}
+        />
+      </div>
+    </>
   );
 }
