@@ -1,88 +1,53 @@
 # Sud Italia — Design System
 
-Standards for the visual + interaction language across the whole operating
-system: **POS, KDS, CRM, Concierge, WhatsApp**, every admin surface, and the
-guest storefront.
+Three independent themes. **No shared layer.** This is the WordPress
+model: each theme owns its own tokens, components, and rules — change a
+font in one and the other two stay untouched.
 
-**Code is the source of truth.** Canonical tokens live in
-`src/app/globals.css` (the `[data-admin-theme]` blocks + the `:root --cmd-*`
-command palette + the public `@theme inline` tokens) and are mirrored for
-JS/Recharts in `src/components/admin/v2/theme.ts`. Reference mockups live at
-`public/mockups/core-suite/` (open `/mockups/core-suite/index.html` on any
-deploy).
+## The three themes
 
-## Map
+| Theme                       | Surface                                          | Owns                                                                                            |
+| --------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [**Core**](./core/)         | POS, KDS, Guest (CRM + Concierge + WhatsApp)     | Operator-pressure surfaces. The productised IP.                                                 |
+| [**Admin**](./admin/)       | The back-office: every `/admin/*` outside Core   | Dashboard, Orders, Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System |
+| [**Homepage**](./homepage/) | The public storefront: `/`, `/menu`, `/checkout`, `/order`, `/loyalty` | Guest-facing web. Zero-friction ordering.                          |
 
-**Foundations** (shared across every surface — never fork these)
+Each theme has the same internal shape:
 
-- [`foundations/philosophy.md`](./foundations/philosophy.md) — three ideas
-  held together + the operating principle that resolves conflicts.
-- [`foundations/color.md`](./foundations/color.md) — dark + light tokens,
-  command palette, the colour rules ("no gradient, no glow", platinum =
-  jewellery, brand ≠ status).
-- [`foundations/typography.md`](./foundations/typography.md) — Inter /
-  Fraunces / JetBrains Mono + the rule for where each face goes.
-- [`foundations/material.md`](./foundations/material.md) — depth, hairlines,
-  radius, motion.
+```
+<theme>/
+├── README.md       ← theme overview + the rules unique to this theme
+├── theme/          ← color, typography, material, components (theme-owned)
+└── <surfaces>/     ← per-page or per-module docs
+```
 
-**Components**
+## The rule
 
-- [`components.md`](./components.md) — buttons, badges, inputs, segmented,
-  cards, dialogs, tables, icons.
+**A token, font, component, or layout belongs to exactly one theme.** When
+you change Admin's accent colour, Core does not move. When you change
+Homepage's body font, Admin does not move. If a change to one theme
+forces a change to another, you've found a leak — fix the leak, do not
+ship the cross-theme change.
 
-**Core modules** (the IP — operator-pressure surfaces)
+## Today vs target
 
-- [`modules/kds.md`](./modules/kds.md) — calm monochrome + colour-on-exception
-  + the role triad + coursing-aware tickets.
-- [`modules/pos.md`](./modules/pos.md) — text-forward cards, coursing model,
-  pace steering, tab rail.
-- [`modules/crm.md`](./modules/crm.md) — health gauge, RFM, NBA, filters,
-  GDPR.
-- [`modules/concierge.md`](./modules/concierge.md) — AI capability layer +
-  allergen matrix.
-- [`modules/whatsapp.md`](./modules/whatsapp.md) — inbox + funnel + settings
-  hub.
+The doctrine above is the **target**. The code today only partially
+enforces it:
 
-**Admin** (the back-office around the Core modules)
+| What                  | State                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin tokens          | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/globals.css`. Edits here only affect admin surfaces.                   |
+| Homepage tokens       | ⚠️ Live in the `@theme inline` block of the same `src/app/globals.css`. Same file as Admin → token bleed is possible if names collide. |
+| Core tokens           | ❌ No separate scope today — Core surfaces (`/admin/pos`, `/admin/kds`, `/admin/{crm,concierge,whatsapp}`) inherit the Admin theme.    |
+| Fonts                 | ❌ Loaded once in `src/app/layout.tsx` via `next/font`. Change Inter here → every theme moves.                                          |
+| CSS file              | ❌ One `globals.css` shared by all surfaces.                                                                                            |
+| Per-theme `theme.ts`  | ❌ One `src/components/admin/v2/theme.ts` mirrors admin tokens for JS/Recharts. Core/Homepage have no equivalent.                       |
 
-- [`admin/README.md`](./admin/README.md) — the AdminShell, glass tokens,
-  the portal rule, capabilities, and per-section design notes (Operations,
-  Inventory, People, Customers, Finance, Growth, Intelligence, System).
-
-**Surfaces** (per-shape rules — inherit from Foundations + Admin)
-
-- [`mobile/README.md`](./mobile/README.md) — mobile-shaped admin: bottom-nav,
-  thumb zone, `.v2-m-*` tokens, mobile audit → strategy → review → next.
-- `web/` — public storefront (coming).
-- `tablet/` — coming when first tablet-only patterns ship.
-
-**Reference**
-
-- [`canonical-orders.md`](./canonical-orders.md) — the demo order narrative
-  (Table 7 = #4821, etc.) used coherently across all mockups.
-- [`backlog.md`](./backlog.md) — not-yet-shipped, in priority order.
-- [`extend.md`](./extend.md) — how to add a colour / surface / page / icon
-  without drifting.
-
-## Quick rules (the absolute don'ts)
-
-1. **No decorative gradients.** Flat solids, hairlines for separation,
-   neutral shadows for elevation. No `linear-gradient` fills on surfaces or
-   buttons, no colour-tinted glow shadows.
-2. **No emoji in UI chrome.** Use a custom stroke icon. (Exceptions: real
-   chat-content emoji, and the EU-14 allergen pictograms in Concierge.)
-3. **Burgundy is brand, never status.** A red ticket means *late*, not
-   *brand*.
-4. **Platinum is jewellery, not paint.** Hairlines, the wordmark mark,
-   owner-tier flourishes, key numerals. Never as a fill or action colour.
-5. **In high-pressure surfaces (POS / KDS), operational clarity outranks
-   brand expression.** In exploratory surfaces (CRM / Concierge), beauty is
-   allowed to breathe.
-6. **One order = one number.** The same id everywhere (POS tender, KDS
-   ticket, Guest hub pending) — see [`canonical-orders.md`](./canonical-orders.md).
+The code split that closes these gaps is in flight — see the per-theme
+README for what each theme's "today" looks like.
 
 ## Authority
 
-When this doc and the code disagree, the **code wins** — open a PR to fix
-the doc. When the doc and a mockup disagree, the doc wins and the mockup
-follows.
+**Code wins** over docs. When this doc and the code disagree, open a PR
+to fix the doc. When two themes disagree on a shared surface, the theme
+that owns the surface wins (see the per-theme README for ownership).
