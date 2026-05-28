@@ -47,6 +47,13 @@ deploy).
   the portal rule, capabilities, and per-section design notes (Operations,
   Inventory, People, Customers, Finance, Growth, Intelligence, System).
 
+**Surfaces** (per-shape rules — inherit from Foundations + Admin)
+
+- [`mobile/README.md`](./mobile/README.md) — mobile-shaped admin: bottom-nav,
+  thumb zone, `.v2-m-*` tokens, mobile audit → strategy → review → next.
+- `web/` — public storefront (coming).
+- `tablet/` — coming when first tablet-only patterns ship.
+
 **Reference**
 
 - [`canonical-orders.md`](./canonical-orders.md) — the demo order narrative
