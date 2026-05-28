@@ -1,4 +1,5 @@
 import "../themes/homepage/index.css";
+import { Inter, Fraunces } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
@@ -7,6 +8,23 @@ import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CustomerProvider } from "@/store/customer";
 
+// Homepage fonts — owned by the Homepage theme. Loaded here (not in the
+// root layout) so a weight / subset change can't drift into Admin or
+// Core. The exposed CSS variables are namespaced (--font-homepage-*) so
+// the storefront's Tailwind tokens (themes/homepage/tokens.css) resolve
+// against THIS scope; admin routes can change their own Inter / Fraunces
+// in admin/layout.tsx without touching storefront type.
+const homepageBody = Inter({
+  subsets: ["latin"],
+  variable: "--font-homepage-body",
+  display: "swap",
+});
+const homepageHeading = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-homepage-heading",
+  display: "swap",
+});
+
 export default function PublicLayout({
   children,
 }: {
@@ -14,14 +32,16 @@ export default function PublicLayout({
 }) {
   return (
     <CustomerProvider>
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-      <LayoutGate flag="showChatWidget">
-        <ChatWidget />
-      </LayoutGate>
-      <AbandonedCartWrapper />
-      <CartPresenceSync />
+      <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <LayoutGate flag="showChatWidget">
+          <ChatWidget />
+        </LayoutGate>
+        <AbandonedCartWrapper />
+        <CartPresenceSync />
+      </div>
     </CustomerProvider>
   );
 }
