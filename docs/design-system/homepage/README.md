@@ -20,7 +20,7 @@ homepage/
     ├── menu.md        ✅ /locations/[slug] — hero, menu sections, info, floating cart
     ├── checkout.md    ✅ cart drawer flow — review, slot, address, identity, Stripe
     ├── order.md       ✅ /order-confirmation — receipt, live tracker, points, feedback
-    └── loyalty.md     ← /rewards — points wallet, tiers, redemption (backlog)
+    └── loyalty.md     ✅ /rewards — tier card, rewards grid, challenges, referral
 ```
 
 ## Storefront rules (universal — apply to every page)

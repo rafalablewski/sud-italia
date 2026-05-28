@@ -39,17 +39,13 @@ These rules apply even before the code split:
 - **No mock/fake data anywhere** — every visible price, item, slot,
   loyalty balance comes from the real store (CLAUDE rule 1).
 
-## Backlog (to write once the code split lands)
+## Per-token docs
 
-- `philosophy.md` — Homepage's operating principle (consumer trust,
-  conversion clarity).
-- `color.md` — Homepage-scoped tokens; the storefront accent + warm
-  surfaces.
-- `typography.md` — Homepage face/weight choices (display headings, menu
-  copy, price callouts).
-- `material.md` — Homepage surface rules (hero, item card, slot picker).
-- `components.md` — Homepage primitives (location card, item card,
-  cross-sell rail, slot grid, address form).
+- [`philosophy.md`](./philosophy.md) — Homepage's operating principle: hospitality outranks density; beauty earns its keep.
+- `color.md` — Homepage-scoped tokens; the storefront accent + warm surfaces *(backlog)*
+- `typography.md` — Homepage face/weight choices (display headings, menu copy, price callouts) *(backlog)*
+- `material.md` — Homepage surface rules (hero, item card, slot picker) *(backlog)*
+- `components.md` — Homepage primitives (location card, item card, cross-sell rail, slot grid, address form) *(backlog)*
 
 ## Authority
 
