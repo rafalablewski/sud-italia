@@ -722,3 +722,33 @@ The Homepage component set is **the brand vocabulary on the
 storefront** — type-first cards, brand-red CTAs, cream-and-white
 cards, the delight moments (sheet, toast, delivery shimmer, tier-up
 bounce).
+
+## Pre-V8 components retained but unused
+
+The V8 port (Steps 1-10) folded several pre-V8 sub-components into
+inline V8 chrome inside their parent component. The originals stay
+in the repo for any other surface that might want to import them,
+but the V8 storefront no longer renders them. Listed here so a
+future cleanup commit can grep importers and remove the truly dead
+ones with confidence.
+
+- `src/components/landing/CTASection.tsx` — pre-V8 red-gradient
+  "Hungry? Order Now!" closing block. V8 closes with the Soci
+  rail; CTASection is no longer imported by `(public)/page.tsx`.
+- `src/components/location/SpeedGuarantee.tsx` — pre-V8 15-minute
+  guarantee banner. V8 menu chrome inlines `.v8-guarantee` instead.
+- `src/components/location/ComboDealsPreview.tsx` — pre-V8 combo
+  deals preview. V8 menu chrome inlines `.v8-combos` /
+  `.v8-combo-card` instead.
+- `src/components/location/SurpriseMe.tsx` — pre-V8 spinner-reveal
+  surprise picker. V8 menu chrome inlines the `.v8-surprise` pill
+  with a scroll-and-highlight picker instead.
+- `src/components/location/MenuCategoryNav.tsx` — pre-V8 category
+  pill nav. V8 menu chrome inlines `.v8-cat-tabs` instead.
+- `src/components/location/MenuItemImage.tsx` — pre-V8 thumbnail
+  with category-gradient emoji fallback. V8 item card inlines the
+  per-category SVG sketch in `.v8-mi-illus` instead.
+
+Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
+before removing — admin-facing surfaces (operator previews) or
+tests might still import them.
