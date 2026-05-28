@@ -827,9 +827,9 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Live activity bar (social proof)",
-          status: "needs-config",
+          status: "live",
           href: "/admin/growth",
-          summary: "Per-location dynamic-widget strip (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active. The admin write surface is live; the customer-side render is OFF on /locations/[slug] during the V8 port (the V8 menu chrome ports in Step 9 will fold the strip back inside the menu wrapper as the `.live-act` row).",
+          summary: "Per-location live-activity strip. As of Step 9 the V8 menu chrome folds the strip inline inside the `.v8-menu-card` wrapper as the `.v8-live-act` row (italic Cormorant `X orders in the last hour · Trending: <item>` with a pulsing basil pip). Data from simulateLiveActivity, refreshes every 30s. The admin write surface in Growth → Live widgets supports more widget types (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text); the V8 inline strip currently surfaces the two highest-signal of those (orders + trending). Cap of 7 active widgets per location stays enforced at the admin layer.",
         },
         {
           name: "Live ticker (V8 nav strip)",

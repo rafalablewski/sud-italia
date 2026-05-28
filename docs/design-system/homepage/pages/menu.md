@@ -82,27 +82,81 @@ keeps V8's hospitality voice.
   Location type stays operator-data only — same trade-off bundles
   + the homepage hero took.
 
-### Menu sections — `<MenuSection />`
+### Menu section — `<MenuSection />`
 
-The repeating block: one per category.
+V8 Trattoria treatment — the entire menu surface (header, search,
+live activity, category tabs, guarantee banner, combo cards,
+surprise button, item grid) sits inside a single soft paper card
+(`.v8-menu-card`). The previous per-category section pattern is
+gone; the V8 design uses a single card with category tabs that
+filter the grid in place.
 
-- **Category header:** name (Cormorant Garamond 600, 24px), short description,
-  optional "Chef's pick" badge on featured items.
-- **Item grid:** responsive grid of item cards (2 cols mobile, 3 cols
-  tablet, 4 cols desktop).
-- **Item card:** name (Cormorant Garamond 500, 18px), description (Lora 400,
-  14px, 2-line clamp), price (Lora 700, 18px, with `zł` suffix at
-  14px), dietary tags (vegetarian / GF / spicy as inline chips), the
-  `Add` button.
-- **Allergens** show on item card hover as a tooltip and on the
-  detail drawer always.
-- **Sold-out items** (per `/api/menu/availability`) render with a
-  diagonal strikethrough on the price and a "Sold out today" pill
-  instead of the `Add` button. Don't hide them — visitors searching
-  for a specific item shouldn't think the site is broken.
-- **The empty image-box pattern is forbidden** (CLAUDE recipes rule
-  carries over — until real food photography exists, cards lead with
-  type, not a placeholder thumbnail).
+- **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
+  shadow-paper, 14px radius, 22/28px padding ramp). Renders at the
+  `#menu` anchor; the location-hero's status pill scrolls here on
+  tap (the floating cart button also lands the visitor here).
+- **Section header** uses the shared `.v8-ps-eyebrow / -title / -sub`
+  primitives — "The menu · il menù", "What comes out of *the oven*"
+  (italic-oxblood "the oven"), italic-Cormorant sub.
+- **Search input** (`.v8-menu-search`) — paper-card pill with a
+  terracotta search SVG and italic Cormorant placeholder. Search
+  filters across `name`, `description`, and `tags` (case-insensitive)
+  in the existing data wiring. A small clear-X button surfaces when
+  the field is non-empty.
+- **Per-location live activity strip** (`.v8-live-act`) — italic
+  Cormorant line with a pulsing basil pip, "X orders in the last
+  hour · X ordini nell'ultima ora", a separator dot, and
+  "Trending · in tendenza: <item>" with the trending item in
+  italic oxblood. Reads from `simulateLiveActivity(locationSlug)`,
+  refreshes every 30s, mount-gated to avoid the SSR/client
+  Math.random() mismatch.
+  - This is the V8 location of the live-activity surface — Step 8
+    removed it from rendering above the menu to fix a duplicate-
+    ticker-band finding; Step 9 re-introduces it here, inside the
+    menu card, where V8's mockup places it.
+- **Category tabs** (`.v8-cat-tabs`) — terracotta-bordered pill row
+  with an "All" tab + one per active category (Pizza / Pasta /
+  Antipasti / Panini / Drinks / Desserts). Active tab fills with
+  terracotta + ochre-light count chip. Categories not in the
+  bilingual map (`CAT_IT`) render English-only — falls back without
+  the `· bibite` style subtitle.
+- **15-minute guarantee banner** (`.v8-guarantee`) — ochre-tinted
+  card with a 4px ochre→terracotta left rail, a sundial SVG icon,
+  italic Cormorant title "15 minutes guaranteed · 15 minuti
+  garantiti", and a Lora sub "Ready in 15 minutes — or your next
+  drink's on us."
+- **Inline combo deals** (`.v8-combos`) — 1→2-col grid of compact
+  combo cards, each with a tricolore left rail, a small SVG (pizza
+  wedge for the Italian Classic, pasta bowl for the Pasta Combo),
+  the combo name in italic Cormorant 18px, the composition in
+  italic Cormorant 12.5px muted, and a rotated wax-seal stamp
+  ("−10%" / etc.) on the right. Renders the first two
+  `DEFAULT_COMBO_DEALS` entries; the full bundle ladder lives on
+  the homepage `<BundlesShowcase />`.
+- **Surprise me button** (`.v8-surprise`) — dashed-ochre pill with
+  the V8 dice-pattern SVG. Click picks a random available item and
+  scrolls the grid to it (via search prefill, repurposing the
+  existing search-filter logic so the picker doesn't need a
+  separate selection store).
+- **Item grid** (`.v8-menu-items`) — 1 → 2-col grid. Items render
+  via the existing `<MenuItemCard />` for now (Step 10 ports the
+  per-item card to V8). Items can claim 2-col span when the
+  default sort is in play and `menuRole === "hero"`.
+- **Empty state** (`.v8-menu-empty`) — italic Cormorant muted line,
+  with a clear-search affordance if the user is searching.
+
+The pre-V8 MenuSection imported `<SpeedGuarantee />`,
+`<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`.
+Those components are still in the repo (other surfaces might use
+them) but the V8 menu inlines bespoke blocks instead — keeping the
+markup auditable against the mockup without coordinating restyles
+across 5 components.
+
+`<ReorderSection />` (returning-customer rail) and
+`<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card
+when active — V8's mockup doesn't ship them but they're valuable
+existing features. They sit outside the V8 wrapper so the menu
+card stays clean.
 
 ### Item detail drawer
 

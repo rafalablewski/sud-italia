@@ -525,6 +525,52 @@ V8 Trattoria treatment — full spec in
   cross-link / share URL return to the landing without scrolling
   back to the nav.
 
+### `<MenuSection />` — `src/components/location/MenuSection.tsx`
+
+V8 Trattoria menu chrome. Wraps the entire menu surface in a single
+soft paper card (`.v8-menu-card`) holding the section header,
+search input, per-location live-activity strip, category tabs,
+15-min guarantee banner, inline combo deals row, surprise-me pill,
+and the items grid. Full layout spec in
+[`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
+
+- **Single paper-card wrapper** — `.v8-menu-card` (parchment-deep
+  with the shared `shadow-paper`, 14px radius). The whole menu
+  surface is one continuous V8 block instead of the pre-V8
+  per-category sections.
+- **Category tabs filter in place.** The "All" tab + a per-active-
+  category pill row replaces the pre-V8 sort/pill split. The
+  active tab fills terracotta with an ochre-light count chip.
+- **Inline V8 blocks** — `.v8-guarantee`, `.v8-combos` /
+  `.v8-combo-card` / `.v8-wax-seal`, `.v8-surprise`, `.v8-live-act`.
+  These replace the imported `<SpeedGuarantee />`,
+  `<ComboDealsPreview />`, `<SurpriseMe />`, `<LiveActivityBar />`,
+  `<MenuCategoryNav />` markup that the pre-V8 MenuSection used —
+  the components stay in the repo for any other surface that needs
+  them, but the V8 menu uses inline bespoke blocks for fidelity.
+- **Wax-seal** — a CSS-only circle: oxblood radial gradient + inset
+  shadows + dashed inner ring at 6px inset + `rotate(-8deg)`. Holds
+  the discount percent (`−10%`) in italic Cormorant. Adjacent to
+  each combo card; same component on every combo means a token
+  retune (oxblood) ripples across the row.
+- **Surprise me** — dashed-ochre pill with the V8 dice-pattern SVG.
+  Click picks a random available item and prefills the search
+  field with its name (`setSearchQuery(random.name)`), repurposing
+  the existing filter logic so the picker doesn't need a separate
+  selection store. Existing `<SurpriseMe />` component (which has a
+  fancier spinner-reveal UX) is left in the repo for a future
+  surface.
+- **Per-location live activity** — re-introduced inside the menu
+  wrapper (after Step 8 removed it from the location-page chrome
+  to fix a duplicate-ticker-band finding). Pulsing basil pip +
+  italic Cormorant copy + italic-oxblood trending item. Reads
+  `simulateLiveActivity(locationSlug)`, refreshes every 30s,
+  mount-gated.
+- **`<ReorderSection />` + `<SeasonalSpecials />`** render ABOVE
+  the V8 menu card, outside the wrapper. V8's mockup doesn't ship
+  them but they're valuable existing features; placing them above
+  keeps the V8 menu card visually clean.
+
 ### Item card (in `<MenuSection />`)
 
 - `pub-card` styling (`#fff` on cream, 16px radius, soft shadow).
