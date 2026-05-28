@@ -8,7 +8,13 @@
    constraint that prevents the file from being JS-imported per route
    like the rest of themes/homepage/index.css.
 
-   Practical effect: this file ships globally (~30 lines on every
+   Palette: V8 Tuscany — parchment, terracotta, basil, oxblood, ochre,
+   espresso. The existing `--color-italia-*` token names are kept as
+   semantic aliases (788 use sites across the codebase) and remapped to
+   the V8 equivalent values; new code can also reach for the V8-named
+   tokens (`bg-parchment`, `text-terracotta`, `border-basil`) directly.
+
+   Practical effect: this file ships globally (~50 lines on every
    route), but it's also the SINGLE place the storefront's tokens are
    declared, and a change here only requires touching one file under
    themes/homepage/. The bulky storefront CSS stays route-isolated in
@@ -16,21 +22,64 @@
    ========================================================================= */
 
 @theme inline {
-  --color-background: #FFF8F0;
-  --color-foreground: #1A1A1A;
-  --color-italia-red: #9A2742;
-  --color-italia-red-dark: #7B1F33;
-  --color-italia-green: #008C45;
-  --color-italia-green-dark: #006B35;
-  --color-italia-cream: #FFF8F0;
-  --color-italia-cream-dark: #F5EDDF;
-  --color-italia-gold: #B8922E;
+  /* ----- Canvas + foreground ------------------------------------------- */
+  --color-background: #F8EFDE;       /* parchment */
+  --color-foreground: #2C1810;       /* ink */
+
+  /* ----- Italia-* semantic aliases (remapped to Tuscany values) -------- */
+  --color-italia-red: #7A2B2B;       /* oxblood — brand burgundy */
+  --color-italia-red-dark: #5A1F1F;  /* oxblood hover */
+  --color-italia-green: #4A7C59;     /* basil — open / active */
+  --color-italia-green-dark: #355C40;
+  --color-italia-cream: #F8EFDE;     /* parchment (== background) */
+  --color-italia-cream-dark: #F2E2C2;/* parchment-deep — alt sections */
+  --color-italia-gold: #C9A23E;      /* ochre — editorial accent */
   --color-italia-gold-dark: #9A7A24;
-  --color-italia-dark: #1A1A1A;
-  --color-italia-gray: #6B7280;
-  --color-italia-light-gray: #F3F4F6;
-  --font-heading: var(--font-homepage-heading), Georgia, "Times New Roman", serif;
-  --font-body: var(--font-homepage-body), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-italia-dark: #2C1810;      /* ink — headings */
+  --color-italia-gray: #8C6F4F;      /* muted — secondary text */
+  --color-italia-light-gray: #E0CFA8;/* line-soft — disabled / inactive */
+
+  /* ----- V8 named tokens (use these in new V8 components) -------------- */
+  --color-parchment: #F8EFDE;
+  --color-parchment-deep: #F2E2C2;
+  --color-paper-shadow: #E8D6B5;
+  --color-terracotta: #B85C38;       /* V8 primary action accent */
+  --color-terracotta-dark: #9A4A2B;
+  --color-terracotta-soft: #D88E6E;
+  --color-basil: #4A7C59;
+  --color-basil-deep: #355C40;
+  --color-oxblood: #7A2B2B;
+  --color-oxblood-soft: #A85252;
+  --color-ochre: #C9A23E;
+  --color-ochre-light: #E6C97A;
+  --color-espresso: #3D2817;
+  --color-espresso-soft: #6B4A30;
+  --color-ink: #2C1810;
+  --color-muted: #8C6F4F;
+  --color-line: #C9B48E;
+  --color-line-soft: #E0CFA8;
+
+  /* ----- Italian flag (Famiglia strip + Made-in-Italy badges) ---------- */
+  --color-italy-green: #008C45;
+  --color-italy-white: #F4F5F0;
+  --color-italy-red: #CD212A;
+
+  /* ----- Type stacks --------------------------------------------------- *
+   * The next/font variables (--font-homepage-*) are injected onto <body>
+   * by (public)/layout.tsx as an SSR'd <style> tag (see the comment there).
+   * That puts them above the wrapping div so body { font-family: var(--font-body) }
+   * and portalled overlays both resolve to the full metric-matched chain
+   * (`"Lora", "Lora Fallback", Georgia, ...`). The inner-fallback string is
+   * kept as defense-in-depth — if the layout's <style> injection ever drops
+   * out, the var still resolves to the literal "Lora" / "Cormorant Garamond"
+   * names, which match the @font-face declarations next/font registers
+   * globally. So we degrade gracefully: lose the metric-matched fallback face
+   * but never the font itself.
+   */
+  --font-heading: var(--font-homepage-heading, "Cormorant Garamond"), "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: var(--font-homepage-body, "Lora"), Georgia, "Times New Roman", serif;
+
+  /* ----- Animations (unchanged) ---------------------------------------- */
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.4s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;

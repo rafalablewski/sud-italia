@@ -61,6 +61,7 @@ interface Settings {
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
     showChatWidget: boolean;
+    showLiveTicker: boolean;
   };
 }
 
@@ -167,6 +168,15 @@ const LAYOUT_TOGGLES: LayoutToggleSpec[] = [
     description: "The floating chat affordance in the public site footer.",
     onCopy: "Floating chat available across the public site.",
     offCopy: "Hidden — no in-page chat.",
+  },
+  {
+    key: "showLiveTicker",
+    group: "Header",
+    label: "Live activity ticker",
+    description:
+      "V8 espresso strip below the top nav: orders in the last hour, currently preparing, trending item, average prep time. Same widget data as /locations/[slug] LiveActivityBar but rendered chain-wide on every storefront route.",
+    onCopy: "Live ticker visible under the nav.",
+    offCopy: "Hidden — nav sits directly above page content.",
   },
 ];
 

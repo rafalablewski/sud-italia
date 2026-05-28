@@ -33,10 +33,270 @@
   100% { transform: scale(1) rotate(0); }
 }
 
+/* ============================
+   V8 Trattoria — shared vars
+   ============================
+   Plain CSS vars (not @theme tokens — these don't need to mint Tailwind
+   utilities). Available everywhere under the storefront route group. */
+:root {
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+
+  --shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.6) inset,
+                  0 6px 18px -10px rgba(61, 40, 23, 0.25);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.55) inset,
+                 0 8px 24px -14px rgba(61, 40, 23, 0.35);
+  --shadow-cta: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
+                0 10px 22px -10px rgba(184, 92, 56, 0.55);
+
+  /* V8 sticky nav height — used for scroll-padding-top below + as the
+   *  go-to offset for any future surface that needs to clear the nav
+   *  (anchored toasts, sticky sub-headers, etc.). Measured at 98px at
+   *  ≥md with the brand-sub line visible (basil-mark 38px + name 24px
+   *  + sub 11.5px + 14/18px padding + 1px border), rounded up to 100px
+   *  for a 2px breathing band between the nav border and the section
+   *  edge it anchors to. Stays the same at base — the nav loses the
+   *  brand-sub line but gains a tighter padding bottom, so 100px
+   *  comfortably clears both viewports. */
+  --v8-nav-height: 100px;
+}
+
+/* Anchor-link offset for the sticky V8 nav. Without this, clicking the
+ * nav's "Menu / Bundles / Locations / Story" links (or the hero's "Our
+ * Story" CTA, or any in-page #foo deep-link) scrolls the target section
+ * to viewport y=0 — where the sticky nav covers its eyebrow. This rule
+ * tells the browser to leave --v8-nav-height of padding above the
+ * scroll target on every native anchor + programmatic scrollIntoView.
+ * Storefront-only because this file ships only under (public). */
+html {
+  scroll-padding-top: var(--v8-nav-height);
+}
+
+/* ============================
+   V8 Trattoria — page canvas
+   ============================
+   Parchment ground + two warm radial washes (ochre top-left, terracotta
+   bottom-right on mobile; oxblood + basil on desktop) + an SVG paper-grain
+   fractal noise overlay. Matches V8 mockup body styling 1:1. */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(at 20% 8%, rgba(201, 162, 62, 0.07), transparent 55%),
+    radial-gradient(at 80% 92%, rgba(184, 92, 56, 0.08), transparent 55%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@media (min-width: 768px) {
+  body {
+    background-image:
+      radial-gradient(at 15% 12%, rgba(122, 43, 43, 0.08), transparent 50%),
+      radial-gradient(at 85% 80%, rgba(74, 124, 89, 0.07), transparent 55%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+}
+
+/* Italian phrasing helper — the bilingual `<span class="it">Margherita</span>`
+   pattern V8 uses for Italian phrases inline with EN/PL copy. Display serif
+   in italic so the language change is felt typographically, not just lexically. */
+.it {
+  font-style: italic;
+  font-family: var(--font-heading);
+}
+
+/* Tabular numerals — price columns, order numbers, the loyalty balance.
+   Same intent as the existing Core / Admin `.num` helper. */
+.num {
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* ============================
+   V8 Trattoria — top nav
+   ============================
+   Sticky parchment-gradient bar (`.v8-nav`), basil-sprig brand mark
+   with rotate-on-hover (`.v8-brand-mark`), bilingual nav links with a
+   hand-drawn terracotta underline that swipes in on hover
+   (`.v8-nav-link::after`), and the V8 cart pill (`.v8-cart`). The
+   markup lives in src/components/layout/Header.tsx. Most of V8's
+   spacing / colour is reached via Tailwind utilities against the
+   homepage tokens; what lives here is only what Tailwind can't do
+   cleanly (gradients, pseudo-elements, multi-step hover swaps). */
+
+.v8-nav {
+  background: linear-gradient(180deg, rgba(248, 239, 222, 0.98) 0%, rgba(248, 239, 222, 0.88) 100%);
+  border-bottom-color: var(--color-line-soft);
+}
+.v8-nav-scrolled {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 12px 24px -16px rgba(61, 40, 23, 0.35);
+  border-bottom-color: var(--color-line);
+}
+
+/* Brand mark — rotates -8° on parent hover. */
+.v8-brand-mark { transition: transform 0.6s ease; }
+.v8-brand:hover .v8-brand-mark { transform: rotate(-8deg); }
+
+/* Nav link hover swipe underline (terracotta, 1.5px). */
+.v8-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1.5px;
+  background: var(--color-terracotta);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.v8-nav-link { transition: color 0.2s ease; }
+.v8-nav-link:hover { color: var(--color-terracotta-dark); }
+.v8-nav-link:hover::after { transform: scaleX(1); }
+
+/* Italian italic sublabel stacked under the primary nav link. */
+.v8-nav-link .it {
+  display: block;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-left: 4px;
+  margin-top: 1px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+/* In the mobile menu the italian phrase sits inline next to the primary. */
+.v8-nav-mobile-link .it {
+  display: inline;
+  margin-left: 6px;
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+/* Mobile menu sheet uses a slightly more opaque parchment. */
+.v8-nav-mobile-menu {
+  background: rgba(248, 239, 222, 0.98);
+}
+
+/* ----- V8 cart pill -------------------------------------------------- *
+ * Parchment-deep base, terracotta count badge. Hover flips the pill to
+ * terracotta fill with parchment text and inverts the count badge. */
+.v8-cart {
+  box-shadow: var(--shadow-paper);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.v8-cart:hover {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+}
+.v8-cart:hover .v8-cart-lines { stroke: var(--color-parchment); }
+.v8-cart:hover .v8-cart-count {
+  background: var(--color-parchment);
+  color: var(--color-terracotta-dark);
+}
+
+/* ----- Language pill ------------------------------------------------- */
+.v8-lang-picker {
+  background: rgba(184, 92, 56, 0.06);
+  border: 1px solid rgba(184, 92, 56, 0.25);
+}
+.v8-lang-opt { color: var(--color-muted); }
+.v8-lang-opt:hover { color: var(--color-terracotta-dark); }
+.v8-lang-opt-active,
+.v8-lang-opt-active:hover {
+  background: var(--color-terracotta);
+  color: #FFF7E8;
+  box-shadow: 0 1px 2px rgba(122, 43, 43, 0.15);
+}
+@media (max-width: 640px) {
+  .v8-lang-opt { padding: 5px 8px; font-size: 10px; }
+}
+
+/* ----- Currency pill (basil) ---------------------------------------- */
+.v8-curr-picker {
+  background: rgba(74, 124, 89, 0.08);
+  border: 1px solid rgba(74, 124, 89, 0.28);
+  margin-left: 6px;
+}
+.v8-curr-opt { color: var(--color-muted); }
+.v8-curr-opt:hover { color: #2E5840; }
+.v8-curr-opt-active,
+.v8-curr-opt-active:hover {
+  background: var(--color-basil);
+  color: #FFF7E8;
+  box-shadow: 0 1px 2px rgba(46, 88, 64, 0.18);
+}
+@media (max-width: 640px) {
+  .v8-curr-picker { margin-left: 4px; }
+  .v8-curr-opt { padding: 4px 7px; font-size: 11px; }
+}
+
+/* ============================
+   V8 Trattoria — live ticker
+   ============================
+   Slim espresso-gradient bar that sits directly under .v8-nav.
+   Parchment + ochre text on a dark canvas — the single dark slab on
+   the storefront, deliberately contrasting with the parchment body.
+   Markup in src/components/layout/LiveTicker.tsx. */
+
+.v8-live-ticker {
+  background: linear-gradient(180deg, #2D1810 0%, #3D2817 100%);
+  color: rgba(244, 245, 240, 0.92);
+  font-family: var(--font-body);
+  font-size: 13px;
+  border-bottom: 1px solid rgba(201, 162, 62, 0.16);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18) inset;
+}
+.v8-live-ticker-inner {
+  scrollbar-width: none;
+}
+.v8-live-ticker-inner::-webkit-scrollbar { display: none; }
+.v8-live-stat strong {
+  color: var(--color-parchment-deep);
+  font-weight: 600;
+  font-family: var(--font-heading);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-live-en { font-weight: 500; }
+.v8-live-it {
+  font-style: italic;
+  color: var(--color-parchment);
+  opacity: 0.6;
+  font-size: 0.9em;
+  margin-left: 4px;
+  font-family: var(--font-heading);
+}
+.v8-live-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(201, 162, 62, 0.22);
+  flex-shrink: 0;
+}
+.v8-live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 0 rgba(74, 124, 89, 0.7);
+  animation: v8-live-pulse 2s ease-in-out infinite;
+}
+@keyframes v8-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 124, 89, 0); }
+  50%      { box-shadow: 0 0 0 5px rgba(74, 124, 89, 0.18); }
+}
+@media (max-width: 640px) {
+  .v8-live-ticker { font-size: 12px; }
+  .v8-live-it { display: none; }
 }
 
 /* ============================
@@ -99,3 +359,1868 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
+
+/* ============================
+   V8 Trattoria — tricolore
+   ============================
+   The 3px Italian-flag hairline used at the foot of the hero, location
+   cards, etc. Same look as V8's `.tricolore`. Surface is independent
+   of the storefront's flag-red rule because this is a *flag* artifact,
+   not a status colour. */
+.v8-tricolore {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--color-italy-green) 0%, var(--color-italy-green) 33.3%,
+    var(--color-italy-white) 33.3%, var(--color-italy-white) 66.6%,
+    var(--color-italy-red) 66.6%, var(--color-italy-red) 100%
+  );
+  opacity: 0.85;
+}
+
+/* ============================
+   V8 Trattoria — hero
+   ============================
+   Centred parchment hero block with scattered ornament SVGs behind,
+   a pulsing "Open now" pill, a Cormorant display headline + italic
+   sublabel, a hand-drawn terracotta squiggle, the lede paragraph with
+   italic-Cormorant italian phrases (<em>), two terracotta CTAs +
+   one ghost oxblood CTA, and a tricolore hairline at the foot.
+
+   Markup in src/components/landing/HeroSection.tsx. Most spacing /
+   colour reaches into the Tuscany tokens via Tailwind utilities;
+   what lives here is the section padding, the pulse keyframe, the
+   ornament positions, the CTA hover lift, and the squiggle underline
+   (which uses currentColor + the terracotta text colour). */
+
+.v8-hero {
+  padding: 48px 0 56px;
+}
+@media (min-width: 768px) {
+  .v8-hero { padding: 80px 0 90px; }
+}
+
+/* Kicker — oxblood "Open now" pill above the headline */
+.v8-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-oxblood);
+  font-size: 11.5px;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  background: rgba(122, 43, 43, 0.05);
+  border: 1px solid rgba(122, 43, 43, 0.18);
+  border-radius: 999px;
+}
+.v8-hero-kicker .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  opacity: 0.75;
+}
+.v8-hero-kicker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-italy-green);
+  box-shadow: 0 0 0 3px rgba(0, 140, 69, 0.18);
+}
+.v8-hero-kicker-dot.is-live {
+  animation: v8-hero-kicker-pulse 2.4s ease-in-out infinite;
+}
+.v8-hero-kicker-dot.is-muted {
+  background: var(--color-muted);
+  box-shadow: 0 0 0 3px rgba(140, 111, 79, 0.18);
+}
+@keyframes v8-hero-kicker-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+
+/* Headline — Cormorant display, 44px → 76px @ md */
+.v8-hero-h1 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.02;
+  margin: 0 0 8px;
+  color: var(--color-espresso);
+  letter-spacing: -0.5px;
+}
+@media (min-width: 768px) {
+  .v8-hero-h1 { font-size: 76px; }
+}
+
+/* Italian sublabel — italic Cormorant, muted brown */
+.v8-hero-en {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 19px;
+  color: var(--color-muted);
+  margin: 4px 0 22px;
+  letter-spacing: 0.2px;
+}
+@media (min-width: 768px) {
+  .v8-hero-en { font-size: 24px; margin: 6px 0 28px; }
+}
+
+/* Hand-drawn squiggle underline beneath the italian sublabel.
+   Uses currentColor so the SVG strokes inherit the terracotta below. */
+.v8-hero-underline {
+  display: block;
+  margin: 0 auto 26px;
+  color: var(--color-terracotta);
+}
+
+/* Lede paragraph — Lora 16/18px, espresso-soft, italic Cormorant on <em> */
+.v8-hero-lede {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-espresso-soft);
+  max-width: 580px;
+  margin: 0 auto 30px;
+}
+@media (min-width: 768px) {
+  .v8-hero-lede { font-size: 18px; margin-bottom: 38px; }
+}
+.v8-hero-lede em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* CTA row — column at base, row + wrap at ≥640px */
+.v8-hero-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  max-width: 480px;
+  margin: 0 auto;
+}
+@media (min-width: 640px) {
+  .v8-hero-ctas {
+    flex-direction: row;
+    justify-content: center;
+    max-width: none;
+    flex-wrap: wrap;
+  }
+}
+
+/* Primary CTA — terracotta fill */
+.v8-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 14px 22px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--shadow-cta);
+  transition: all 0.25s ease;
+}
+.v8-hero-cta:hover {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px -10px rgba(184, 92, 56, 0.6);
+}
+.v8-hero-cta .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  color: rgba(255, 247, 232, 0.78);
+}
+.v8-hero-cta:hover .bi-sec { color: rgba(255, 247, 232, 0.92); }
+
+/* Ghost CTA — oxblood outline on parchment */
+.v8-hero-cta-ghost {
+  background: transparent;
+  color: var(--color-oxblood);
+  border-color: var(--color-oxblood);
+  box-shadow: none;
+}
+.v8-hero-cta-ghost:hover {
+  background: rgba(122, 43, 43, 0.06);
+  color: var(--color-oxblood);
+  box-shadow: 0 8px 18px -10px rgba(122, 43, 43, 0.4);
+  transform: translateY(-2px);
+}
+.v8-hero-cta-ghost .bi-sec { color: rgba(122, 43, 43, 0.65); }
+.v8-hero-cta-ghost:hover .bi-sec { color: rgba(122, 43, 43, 0.85); }
+
+/* Tricolore at the bottom of the hero — 200px hairline, slightly faded */
+.v8-hero-tricolore {
+  margin: 40px auto 0;
+  width: 200px;
+  opacity: 0.7;
+}
+
+/* Background ornaments — absolutely positioned, behind content,
+   non-interactive. Each one has its own corner / opacity. */
+.v8-hero-orn {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 1;
+}
+.v8-hero-orn-basil-tl { top: 30px;   left: 4%;   transform: rotate(-12deg); }
+.v8-hero-orn-basil-br { bottom: 40px; right: 4%; transform: rotate(150deg); opacity: 0.4; }
+.v8-hero-orn-stain-1  { top: 18%;    right: 8%;  opacity: 0.15; }
+.v8-hero-orn-stain-2  { bottom: 12%; left: 6%;   opacity: 0.12; }
+.v8-hero-orn-tomato   { top: 12%;    left: 10%;  opacity: 0.35; }
+
+/* ============================
+   V8 Trattoria — section primitives
+   ============================
+   Reusable "page section" primitives — eyebrow, title, subtitle, the
+   alternating warm-paper background. Picked up by LocationsGrid first;
+   future Bundles / Famiglia / Menu sections compose against the same
+   classes so spacing + type ladder stay identical across the landing. */
+
+.v8-page-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+@media (min-width: 768px) {
+  .v8-page-inner { padding: 0 36px; }
+}
+
+.v8-ps {
+  padding: 56px 0;
+  position: relative;
+}
+@media (min-width: 768px) {
+  .v8-ps { padding: 80px 0; }
+}
+
+/* Alternating warm-paper tone — used on every other section so the
+   landing has rhythm without a hard divider. Doubled gradient stops
+   make the band cap at the section edges. */
+.v8-ps-alt {
+  background:
+    linear-gradient(180deg, transparent, rgba(232, 214, 181, 0.35) 12%, rgba(232, 214, 181, 0.35) 88%, transparent),
+    var(--color-parchment);
+}
+
+/* Dark espresso variant — the V8 Soci / closing-rail treatment.
+   Two radial washes (terracotta top-left, ochre bottom-right) on
+   the espresso canvas, parchment text. Inside this variant the
+   shared `.v8-ps-title` / `.v8-ps-sub` / `.v8-ps-eyebrow` flip to
+   light-on-dark via the descendant selectors below. */
+.v8-ps-dark {
+  background:
+    radial-gradient(at 30% 20%, rgba(184, 92, 56, 0.16), transparent 60%),
+    radial-gradient(at 80% 80%, rgba(201, 162, 62, 0.10), transparent 60%),
+    var(--color-espresso);
+  color: var(--color-parchment);
+}
+.v8-ps-dark .v8-ps-eyebrow { color: var(--color-ochre-light); }
+.v8-ps-dark .v8-ps-eyebrow::before,
+.v8-ps-dark .v8-ps-eyebrow::after { color: var(--color-espresso-soft); }
+.v8-ps-dark .v8-ps-title { color: var(--color-parchment); }
+.v8-ps-dark .v8-ps-title .it { color: var(--color-ochre-light); }
+.v8-ps-dark .v8-ps-sub { color: rgba(244, 245, 240, 0.7); }
+
+.v8-ps-head {
+  text-align: center;
+  margin-bottom: 36px;
+}
+@media (min-width: 768px) {
+  .v8-ps-head { margin-bottom: 48px; }
+}
+
+/* Eyebrow — uppercase oxblood with em-dashes flanking the text */
+.v8-ps-eyebrow {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-oxblood);
+  font-size: 11px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+.v8-ps-eyebrow::before,
+.v8-ps-eyebrow::after {
+  content: "—";
+  color: var(--color-line);
+  margin: 0 8px;
+  font-weight: 400;
+}
+.v8-ps-eyebrow .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  opacity: 0.75;
+}
+
+/* Title — Cormorant 600 with optional `.it` span flipping to italic
+   oxblood (V8's "Two addresses, one family" pattern) */
+.v8-ps-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 1.05;
+  color: var(--color-espresso);
+  margin: 0 0 6px;
+}
+@media (min-width: 768px) {
+  .v8-ps-title { font-size: 52px; }
+}
+.v8-ps-title .it {
+  font-style: italic;
+  color: var(--color-oxblood);
+  font-weight: 500;
+}
+
+/* Subtitle — italic Cormorant, muted */
+.v8-ps-sub {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--color-muted);
+  margin: 4px auto 0;
+  max-width: 640px;
+  line-height: 1.45;
+}
+@media (min-width: 768px) {
+  .v8-ps-sub { font-size: 20px; }
+}
+
+/* ============================
+   V8 Trattoria — locations grid
+   ============================
+   1-column at base, 2-column at ≥768px. Each card is a paper rectangle
+   with a per-slug illustration up top, the tricolore hairline below
+   it, then a flex-column body that ends with the CTA pushed to bottom
+   (margin-top: auto on .v8-loc-cta). */
+
+.v8-locs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+@media (min-width: 768px) {
+  .v8-locs { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+
+.v8-loc-card {
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.v8-loc-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 28px 50px -28px rgba(61, 40, 23, 0.45);
+}
+
+/* Per-slug pen-sketch illustration on a parchment-deep canvas with a
+   warm gradient wash and the same paper-grain noise as <body>. */
+.v8-loc-illus {
+  position: relative;
+  height: 180px;
+  background:
+    linear-gradient(180deg, rgba(184, 92, 56, 0.08), rgba(201, 162, 62, 0.10)),
+    var(--color-parchment-deep);
+  border-bottom: 1px solid var(--color-line-soft);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.v8-loc-illus > svg { display: block; position: relative; z-index: 1; }
+.v8-loc-illus::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.32 0 0 0 0 0.18 0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Tricolore hairline between the illustration and the body — slightly
+   thinner (2.5px) than the hero's tricolore so it reads as a separator,
+   not a closer. */
+.v8-loc-tricolore { height: 2.5px; margin: 0; }
+
+.v8-loc-body {
+  padding: 22px 22px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.v8-loc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.v8-loc-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--color-espresso);
+  letter-spacing: -0.3px;
+}
+
+/* Status pill — basil tint with pulsing terracotta dot when live.
+   Muted brown when location is active but currently closed. Gold
+   when the location is `isActive: false` ("Coming soon"). */
+.v8-loc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 12.5px;
+  letter-spacing: 0.6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.v8-loc-status.is-live {
+  color: var(--color-basil-deep);
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.3);
+}
+.v8-loc-status.is-muted {
+  color: var(--color-muted);
+  background: rgba(140, 111, 79, 0.08);
+  border: 1px solid rgba(140, 111, 79, 0.25);
+}
+.v8-loc-status.is-soon {
+  color: var(--color-ochre);
+  background: rgba(201, 162, 62, 0.10);
+  border: 1px solid rgba(201, 162, 62, 0.35);
+}
+.v8-loc-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-terracotta);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.15);
+}
+.v8-loc-status.is-live .v8-loc-status-dot {
+  animation: v8-loc-status-pulse 2s ease-in-out infinite;
+}
+.v8-loc-status.is-muted .v8-loc-status-dot {
+  background: var(--color-muted);
+  box-shadow: 0 0 0 3px rgba(140, 111, 79, 0.15);
+}
+@keyframes v8-loc-status-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+
+.v8-loc-info {
+  margin-top: 6px;
+  color: var(--color-espresso-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.v8-loc-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--color-line-soft);
+}
+.v8-loc-info-row:last-child { border-bottom: none; }
+.v8-loc-info-row svg { flex: 0 0 18px; margin-top: 2px; }
+.v8-hours-line { display: block; }
+
+/* Description — italic Cormorant, 16px, espresso */
+.v8-loc-desc {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--color-espresso);
+  margin: 14px 0 6px;
+  line-height: 1.45;
+}
+
+/* Attribution note — italic Cormorant 13px with ochre left border */
+.v8-loc-note {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0 0 18px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-ochre);
+}
+
+/* CTA — terracotta-fill button, pushed to the bottom of the card */
+.v8-loc-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  text-align: center;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 13px 18px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: auto;
+  text-decoration: none;
+  box-shadow: var(--shadow-cta);
+}
+.v8-loc-cta:hover {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+}
+.v8-loc-cta .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Notify-me block for inactive locations — replaces the CTA */
+.v8-loc-notify {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v8-loc-notify > p {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
+}
+.v8-loc-notify .it {
+  font-style: italic;
+  color: var(--color-muted);
+}
+
+/* ============================
+   V8 Trattoria — bundles section
+   ============================
+   Wider than the standard 1180px column — V8 lets the bundles row
+   breathe at the iframe edges with a 1500px hard cap. The page-inner
+   here overrides the shared .v8-page-inner via the chained
+   `.v8-bundles-section .v8-bundles-page-inner` selector. Cards lay out
+   1 → 2 → 4 column across mobile / tablet / desktop. Each card carries
+   a per-variant accent (--v8-bundle-accent / --v8-bundle-accent-soft)
+   that drives the top stripe, icon colour, and english subtitle. */
+
+.v8-bundles-section .v8-bundles-page-inner {
+  width: min(calc(100% - 48px), 1500px);
+  max-width: none;
+  padding: 0;
+}
+@media (min-width: 768px) {
+  .v8-bundles-section .v8-bundles-page-inner { width: min(calc(100% - 96px), 1500px); }
+}
+@media (min-width: 1400px) {
+  .v8-bundles-section .v8-bundles-page-inner { width: min(calc(100% - 128px), 1500px); }
+}
+
+.v8-bundles {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .v8-bundles { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1000px) {
+  .v8-bundles { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+}
+@media (min-width: 1400px) {
+  .v8-bundles { gap: 28px; }
+}
+
+.v8-bundle {
+  --v8-bundle-accent: var(--color-terracotta);
+  --v8-bundle-accent-soft: var(--color-terracotta-soft);
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 22px 20px 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.v8-bundle::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--v8-bundle-accent), var(--v8-bundle-accent-soft));
+}
+.v8-bundle:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 24px 40px -22px rgba(61, 40, 23, 0.45);
+}
+
+/* Per-variant accents — V8 hand-tuned these so the four cards read as
+   distinct meal-windows: family rose, lunch ochre, night espresso,
+   classic basil. */
+.v8-bundle-family  { --v8-bundle-accent: #C75A6A;             --v8-bundle-accent-soft: #E89AA1; }
+.v8-bundle-lunch   { --v8-bundle-accent: var(--color-ochre);   --v8-bundle-accent-soft: var(--color-ochre-light); }
+.v8-bundle-night   { --v8-bundle-accent: var(--color-espresso); --v8-bundle-accent-soft: var(--color-espresso-soft); }
+.v8-bundle-classic { --v8-bundle-accent: var(--color-basil);   --v8-bundle-accent-soft: #88B196; }
+
+.v8-bundle-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 50%;
+  margin-bottom: 14px;
+  color: var(--v8-bundle-accent);
+}
+
+/* Tag pill — dashed border in the soft accent, italic Cormorant copy. */
+.v8-bundle-tag {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--v8-bundle-accent);
+  letter-spacing: 0.5px;
+  border: 1px dashed var(--v8-bundle-accent-soft);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 14px;
+  align-self: flex-start;
+}
+.v8-bundle-tag .bi-sec {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Bundle name — italian italic on top, english uppercase subtitle below. */
+.v8-bundle-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--color-espresso);
+  line-height: 1.05;
+  margin: 0 0 2px;
+}
+.v8-bundle-name .en {
+  display: block;
+  font-style: normal;
+  font-size: 13.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--v8-bundle-accent);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* Price row — `now` in oxblood Cormorant 28px tabular, `was` in muted
+   italic strikethrough, `savings` as a basil-deep label (for the
+   auto-applied discount combo that has no fixed price). */
+.v8-bundle-price {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.v8-bundle-price .now {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--color-oxblood);
+  line-height: 1;
+}
+.v8-bundle-price .was {
+  font-family: var(--font-heading);
+  color: var(--color-muted);
+  font-size: 15px;
+  text-decoration: line-through;
+  font-style: italic;
+}
+.v8-bundle-price .savings {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-basil-deep);
+}
+
+/* Description — Lora body, italic Cormorant on <em> Italian phrases */
+.v8-bundle-desc {
+  font-family: var(--font-body);
+  color: var(--color-espresso-soft);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 12px 0 0;
+  flex: 1;
+}
+.v8-bundle-desc em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* Foot note + CTA — italic Cormorant note, reused .v8-hero-cta button */
+.v8-bundle-foot-note {
+  text-align: center;
+  margin: 28px 0 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 14.5px;
+}
+.v8-bundle-cta-wrap {
+  text-align: center;
+  margin-top: 24px;
+}
+
+/* ============================
+   V8 Trattoria — Famiglia strip
+   ============================
+   Slim italic-Cormorant quote between Bundles and Loyalty. Not a
+   `.v8-ps` block — V8 deliberately strips the eyebrow / title chrome
+   and lets the quote land alone on a soft terracotta radial wash, the
+   way a hand-printed menu inserts its founder's voice. Tighter
+   vertical rhythm (64px padding both sides) than the standard `.v8-ps`.
+   Markup in src/components/landing/AboutSection.tsx. */
+
+.v8-famiglia {
+  text-align: center;
+  padding: 64px 0;
+  background: radial-gradient(at 50% 50%, rgba(184, 92, 56, 0.06), transparent 70%);
+}
+
+.v8-famiglia blockquote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--color-espresso);
+  line-height: 1.3;
+  margin: 0 auto 18px;
+  max-width: 720px;
+  position: relative;
+}
+@media (min-width: 768px) {
+  .v8-famiglia blockquote { font-size: 36px; }
+}
+
+/* Translucent oxblood curly quotes wrap the blockquote — pseudo-
+   elements so the visible text content stays clean (screen readers
+   read just the quote, not the typographic punctuation). */
+.v8-famiglia blockquote::before,
+.v8-famiglia blockquote::after {
+  content: "\201C";
+  color: var(--color-oxblood);
+  opacity: 0.4;
+  font-family: var(--font-heading);
+  font-size: 60px;
+  line-height: 0;
+  position: relative;
+  top: 12px;
+}
+.v8-famiglia blockquote::after { content: "\201D"; }
+
+/* Citation — uppercase tracked Cormorant, muted brown. The dot
+   separator between name + role ("Giuseppe Esposito · Pizzaiolo") is
+   plain text so it adapts if the role is translated or removed. */
+.v8-famiglia cite {
+  font-family: var(--font-heading);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+/* ============================
+   V8 Trattoria — Soci / loyalty rail
+   ============================
+   The closing dark-espresso strip composed against `.v8-ps.v8-ps-dark`.
+   Markup in src/components/location/LoyaltySection.tsx. The shared
+   primitives (.v8-ps-eyebrow / -title / -sub) handle the type ladder
+   — this block adds the Soci-specific accents (the "1 point" strong
+   callout in ochre-light, italic-Cormorant <em> on `Famiglia Oro` /
+   `antipasto della casa`, the centered CTA wrap). */
+
+.v8-soci-inner {
+  text-align: center;
+}
+
+/* The "1 point" callout — ochre-light, normal style (overrides the
+   surrounding italic Lora sub), Cormorant 600. */
+.v8-soci-strong {
+  color: var(--color-ochre-light);
+  font-style: normal;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
+/* Italian phrases in the pitch — italic Cormorant ochre-light against
+   the espresso background so they read as the same "bilingual signal"
+   pattern the lighter sections use but with the dark-mode accent. */
+.v8-ps-dark .v8-ps-sub em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-ochre-light);
+  opacity: 0.92;
+}
+
+.v8-soci-cta-wrap {
+  margin-top: 22px;
+  text-align: center;
+}
+
+/* ============================
+   V8 Trattoria — footer
+   ============================
+   Espresso canvas that picks up the Soci rail's palette so the
+   close→footer transition reads as one continuous block instead of
+   a dark→light jolt. 4-column grid on desktop (1.4fr brand + 1fr ×
+   3 link cols), single-column stack on mobile. Markup in
+   src/components/layout/Footer.tsx. Visible on every storefront
+   route (the Footer mounts in (public)/layout.tsx). */
+
+.v8-pfoot {
+  background: var(--color-espresso);
+  color: var(--color-parchment);
+  padding: 50px 0 32px;
+}
+
+.v8-pfoot-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+@media (min-width: 768px) {
+  .v8-pfoot-grid { grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 36px; }
+}
+
+/* Column heads — italic ochre-light Cormorant, V8's footer voice. */
+.v8-pfoot h4 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 18px;
+  margin: 0 0 12px;
+  color: var(--color-ochre-light);
+  font-weight: 600;
+}
+
+/* Body copy + links — Lora 13.5px at parchment 75% opacity. */
+.v8-pfoot p,
+.v8-pfoot a,
+.v8-pfoot li {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: rgba(244, 245, 240, 0.75);
+  line-height: 1.65;
+}
+.v8-pfoot p { margin: 0 0 12px; }
+.v8-pfoot a {
+  text-decoration: none;
+  display: block;
+  padding: 3px 0;
+  transition: color 0.2s ease;
+}
+.v8-pfoot a:hover { color: var(--color-ochre-light); }
+.v8-pfoot ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Brand block — basil-sprig SVG (ochre-light strokes + basil leaves)
+   + Sud Italia wordmark in parchment Cormorant. */
+.v8-pfoot-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--color-parchment);
+  margin-bottom: 12px;
+}
+
+/* Tricolore hairline under the brand paragraph — 90px so it reads as
+   accent, not divider. Reuses the shared .v8-tricolore but scopes
+   width / margin to the footer placement. */
+.v8-pfoot-trico {
+  width: 90px;
+  height: 3px;
+  margin-top: 14px;
+}
+
+/* Bottom bar — italic Cormorant tagline + copyright, parchment 50%
+   opacity, separated from the columns by a faint parchment border. */
+.v8-pfoot-bottom {
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(244, 245, 240, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: rgba(244, 245, 240, 0.5);
+  font-size: 12.5px;
+}
+.v8-pfoot-bottom em {
+  font-style: italic;
+  color: rgba(244, 245, 240, 0.6);
+}
+
+/* ============================
+   V8 Trattoria — location page
+   ============================
+   Markup in src/components/location/LocationHero.tsx. The location
+   pages share the storefront `(public)/layout.tsx`, so the V8 nav +
+   LiveTicker + Footer wrap a per-location hero + menu + bundles
+   stack. Step 8 ports the hero + the back-chip nav-helper above it;
+   subsequent steps port the menu chrome + the location-page menu
+   item grid. */
+
+/* ---- Back chip — "← Home · la casa" -------------------------------- */
+.v8-back-chip-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 18px 0;
+}
+@media (min-width: 768px) {
+  .v8-back-chip-wrap { padding: 18px 36px 0; }
+}
+.v8-back-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-size: 13.5px;
+  color: var(--color-oxblood);
+  background: rgba(122, 43, 43, 0.06);
+  border: 1px solid rgba(122, 43, 43, 0.22);
+  border-radius: 999px;
+  padding: 6px 14px 6px 10px;
+  transition: all 0.2s ease;
+}
+.v8-back-chip:hover {
+  background: var(--color-oxblood);
+  color: var(--color-parchment);
+}
+.v8-back-chip .bi-sec {
+  font-style: italic;
+  opacity: 0.65;
+}
+.v8-back-chip:hover .bi-sec { color: rgba(255, 247, 232, 0.85); }
+
+/* ---- Location hero -------------------------------------------------- */
+.v8-loc-hero {
+  position: relative;
+  padding: 18px 20px 36px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.45) 100%),
+    var(--color-parchment);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+@media (min-width: 768px) {
+  .v8-loc-hero { padding: 24px 36px 48px; }
+}
+
+.v8-loc-hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.v8-loc-hero-illus {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 12px;
+  display: block;
+  height: auto;
+}
+
+.v8-loc-hero-tricolore {
+  display: inline-block;
+  width: 80px;
+  height: 3px;
+  margin: 4px auto 10px;
+  border-radius: 2px;
+}
+
+/* Name + tagline — city heading 44/60px with the italic terracotta
+   tagline stacked below. */
+.v8-loc-hero-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--color-espresso);
+  margin: 8px 0 6px;
+}
+@media (min-width: 768px) {
+  .v8-loc-hero-name { font-size: 60px; }
+}
+.v8-loc-hero-tagline {
+  display: block;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 0.55em;
+  margin-top: 6px;
+  color: var(--color-terracotta);
+}
+.v8-loc-hero-tagline .bi-sec {
+  color: var(--color-muted);
+  opacity: 0.65;
+}
+
+/* Italic-Cormorant sub — "With Giuseppe, in the heart of the Rynek" */
+.v8-loc-hero-sub {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--color-espresso-soft);
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+.v8-loc-hero-sub .bi-sec {
+  color: var(--color-muted);
+  opacity: 0.65;
+}
+.v8-loc-hero-sub em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* Status pill — basil-tinted, terracotta-dot pulse when live, muted
+   when outside hours. Same is-live/is-muted state pattern as the
+   LocationsGrid card status pills. */
+.v8-loc-hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.v8-loc-hero-status.is-live {
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.32);
+  color: var(--color-basil-deep);
+}
+.v8-loc-hero-status.is-muted {
+  background: rgba(140, 111, 79, 0.08);
+  border: 1px solid rgba(140, 111, 79, 0.25);
+  color: var(--color-muted);
+}
+.v8-loc-hero-status .bi-sec {
+  font-style: italic;
+  opacity: 0.7;
+}
+.v8-loc-hero-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-terracotta);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.15);
+}
+.v8-loc-hero-status.is-live .v8-loc-hero-status-dot {
+  animation: v8-loc-status-pulse 2s ease-in-out infinite;
+}
+.v8-loc-hero-status.is-muted .v8-loc-hero-status-dot {
+  background: var(--color-muted);
+  box-shadow: 0 0 0 3px rgba(140, 111, 79, 0.15);
+}
+
+/* ============================
+   V8 Trattoria — location menu chrome
+   ============================
+   The menu section on /locations/[slug]. Lives inside a soft paper
+   wrapper (`.v8-menu-card`) holding the section header, search,
+   live-act strip, category tabs, 15-min guarantee, inline combo
+   cards, the surprise-me button, and the menu items grid. The
+   wrapper sits inside the standard `.v8-page-inner` column on
+   desktop and goes edge-to-edge on mobile so the menu surface
+   feels like the conversion landing it is.
+
+   Markup in src/components/location/MenuSection.tsx (V8 rewrite).
+   Item cards inside `.v8-menu-items` stay the existing
+   <MenuItemCard /> for now — Step 10 ports the per-item V8 card. */
+
+.v8-menu-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 14px;
+  padding: 22px 18px 28px;
+  box-shadow: var(--shadow-paper);
+  max-width: 1180px;
+  margin: 22px auto;
+}
+@media (min-width: 768px) {
+  .v8-menu-card { padding: 28px 28px 36px; margin: 28px auto; }
+}
+
+/* Section header inside the menu card — slightly tighter than the
+   landing's `.v8-ps-head` (margin-bottom shrinks because the search
+   sits right under the sub). */
+.v8-menu-card .v8-ps-head { margin-bottom: 18px; }
+
+/* ---- Menu search input -------------------------------------------- */
+.v8-menu-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FBF4E1;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow-paper);
+  margin-bottom: 18px;
+  position: relative;
+}
+.v8-menu-search > svg {
+  color: var(--color-terracotta-dark);
+  flex-shrink: 0;
+}
+.v8-menu-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--color-ink);
+  min-width: 0;
+}
+.v8-menu-search input::placeholder {
+  color: var(--color-muted);
+  font-style: italic;
+  font-family: var(--font-heading);
+}
+.v8-menu-search-clear {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.v8-menu-search-clear:hover { background: rgba(184, 92, 56, 0.08); color: var(--color-terracotta-dark); }
+
+/* ---- Live activity strip (per-location, inside the menu) ---------- */
+.v8-live-act {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 14px;
+  margin: 0 0 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.v8-live-act-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.18);
+  animation: v8-live-pulse 2s ease-in-out infinite;
+}
+.v8-live-act .num,
+.v8-live-act strong {
+  font-family: var(--font-heading);
+  color: var(--color-espresso);
+  font-style: normal;
+  font-weight: 600;
+}
+.v8-live-act .v8-live-act-trend {
+  color: var(--color-oxblood);
+  font-style: italic;
+}
+.v8-live-act-dot { opacity: 0.5; }
+
+/* ---- Category tabs ------------------------------------------------ */
+.v8-cat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.v8-cat-tab {
+  background: transparent;
+  border: 1px solid var(--color-line);
+  color: var(--color-espresso);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.v8-cat-tab:hover {
+  background: var(--color-parchment-deep);
+  border-color: var(--color-terracotta-soft);
+}
+.v8-cat-tab.is-on {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+  font-weight: 600;
+}
+.v8-cat-tab .v8-cat-tab-count {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-style: italic;
+  opacity: 0.7;
+}
+.v8-cat-tab.is-on .v8-cat-tab-count { color: var(--color-ochre-light); opacity: 0.95; }
+
+/* Sort affordance — V8 mockup doesn't ship a sort dropdown, but the
+   pre-V8 site shipped sort-by-price. Adding a minimal V8-styled
+   popover next to the category tabs preserves the feature for users
+   who want a price-sorted glance. The trigger reuses the .v8-cat-tab
+   pill shape (same visual cadence as the tabs); the popover is a
+   parchment paper card with three radio-style options. */
+.v8-cat-sort {
+  position: relative;
+  margin-left: auto;
+}
+.v8-cat-sort-trigger {
+  font-family: var(--font-heading);
+  font-style: italic;
+}
+.v8-cat-sort-trigger svg { color: currentColor; flex-shrink: 0; }
+.v8-cat-sort-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 220px;
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v8-cat-sort-opt {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-espresso);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.v8-cat-sort-opt:hover { background: rgba(184, 92, 56, 0.06); }
+.v8-cat-sort-opt.is-selected {
+  background: rgba(184, 92, 56, 0.10);
+  color: var(--color-terracotta-dark);
+  font-weight: 600;
+}
+.v8-cat-sort-opt .bi-sec {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--color-muted);
+  opacity: 0.75;
+}
+.v8-cat-sort-opt.is-selected .bi-sec { color: var(--color-terracotta-dark); opacity: 0.8; }
+
+/* Surprise-me highlight — brief warm pulse around the randomly-picked
+   item card so the visitor can see the pick in context (V8's mockup
+   button has no reveal flow; this is the substantive UX layer on top
+   of the V8 button shape). Self-clears after 2.4s. */
+.v8-menu-item-highlight {
+  position: relative;
+  z-index: 1;
+  animation: v8-menu-item-highlight-pulse 2.4s ease-out 1;
+  border-radius: 14px;
+}
+@keyframes v8-menu-item-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(184, 92, 56, 0.6), 0 0 0 0 rgba(201, 162, 62, 0.4);
+  }
+  35% {
+    box-shadow: 0 0 0 6px rgba(184, 92, 56, 0.35), 0 0 24px 8px rgba(201, 162, 62, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(184, 92, 56, 0), 0 0 0 0 rgba(201, 162, 62, 0);
+  }
+}
+
+/* ---- 15-minute guarantee banner ----------------------------------- */
+.v8-guarantee {
+  margin: 22px 0;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.18), rgba(201, 162, 62, 0.06));
+  border: 1px solid rgba(201, 162, 62, 0.5);
+  border-radius: 12px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.v8-guarantee::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--color-ochre), var(--color-terracotta));
+}
+.v8-guarantee-icon {
+  flex: 0 0 56px;
+  color: var(--color-terracotta-dark);
+}
+.v8-guarantee-text { flex: 1; }
+.v8-guarantee-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+}
+.v8-guarantee-sub {
+  font-size: 13.5px;
+  color: var(--color-espresso-soft);
+  margin-top: 3px;
+  font-style: italic;
+  font-family: var(--font-heading);
+}
+.v8-guarantee-title .bi-sec,
+.v8-guarantee-sub .bi-sec {
+  font-style: italic;
+  color: var(--color-muted);
+  opacity: 0.75;
+}
+
+/* ---- Combo deals row + wax-seal ----------------------------------- */
+.v8-combos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+@media (min-width: 640px) {
+  .v8-combos { grid-template-columns: 1fr 1fr; }
+}
+.v8-combo-card {
+  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment));
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.v8-combo-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--color-italy-green) 0 33%, var(--color-italy-white) 33% 66%, var(--color-italy-red) 66%);
+}
+.v8-combo-card-illus {
+  flex: 0 0 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--color-terracotta-dark);
+}
+.v8-combo-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.v8-combo-card-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+}
+.v8-combo-card-title .bi-sec {
+  font-style: italic;
+  opacity: 0.7;
+}
+.v8-combo-card-sub {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 2px;
+  font-style: italic;
+  font-family: var(--font-heading);
+}
+
+/* Wax seal — oxblood circle with dashed inner ring, rotated -8°.
+   Anchored to the right side of each combo card with the discount
+   percent ("−10%") set in italic Cormorant. */
+.v8-wax-seal {
+  flex: 0 0 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, var(--color-oxblood-soft), var(--color-oxblood) 70%);
+  color: var(--color-parchment);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+    0 4px 10px -4px rgba(122, 43, 43, 0.6);
+  transform: rotate(-8deg);
+  border: 1px solid rgba(122, 43, 43, 0.6);
+  position: relative;
+}
+.v8-wax-seal::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(244, 245, 240, 0.4);
+  border-radius: 50%;
+}
+
+/* ---- Surprise-me button ------------------------------------------- */
+.v8-surprise {
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.15), rgba(201, 162, 62, 0.05));
+  border: 1px dashed var(--color-ochre);
+  color: var(--color-espresso);
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 15.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  transition: all 0.2s ease;
+}
+.v8-surprise:hover {
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.28), rgba(201, 162, 62, 0.1));
+  transform: translateY(-1px);
+}
+.v8-surprise svg { color: var(--color-terracotta-dark); flex-shrink: 0; }
+.v8-surprise .bi-sec { font-style: italic; opacity: 0.7; }
+
+/* ---- Menu items grid ---------------------------------------------- */
+.v8-menu-items {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+@media (min-width: 900px) {
+  .v8-menu-items { grid-template-columns: 1fr 1fr; gap: 22px; }
+}
+
+/* Empty state — italic Cormorant muted in centre. */
+.v8-menu-empty {
+  text-align: center;
+  padding: 48px 12px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 17px;
+}
+.v8-menu-empty-clear {
+  display: inline-block;
+  margin-top: 12px;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--color-terracotta);
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  cursor: pointer;
+  padding: 0;
+}
+.v8-menu-empty-clear:hover {
+  color: var(--color-terracotta-dark);
+  border-bottom-color: var(--color-terracotta-dark);
+}
+
+/* ============================
+   V8 Trattoria — menu item card
+   ============================
+   Per-item V8 card inside `.v8-menu-items`. Step 10 ports the
+   per-item card visual (illustration / name / origin / chips /
+   meta / price / add button + the floating flag ribbon at the top
+   of the card and the chef's signature crown). Logic stays in
+   MenuItemCard (cart wiring, in-cart counter, badges, LTO
+   countdown, detail-drawer trigger) — only the markup changed. */
+
+.v8-mi {
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 22px 20px 20px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.3s ease;
+  height: 100%;
+}
+.v8-mi:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 22px 40px -22px rgba(61, 40, 23, 0.4);
+}
+.v8-mi.is-unavailable {
+  opacity: 0.55;
+  filter: grayscale(0.2);
+}
+.v8-mi.is-unavailable:hover { transform: none; }
+.v8-mi.is-incart {
+  border-color: rgba(74, 124, 89, 0.45);
+  box-shadow: 0 0 0 1px rgba(74, 124, 89, 0.12) inset, var(--shadow-card);
+}
+
+/* ---- Top row: illustration + info -------------------------------- */
+.v8-mi-top {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.v8-mi-illus {
+  flex: 0 0 84px;
+  width: 84px;
+  height: 84px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--color-terracotta-dark);
+  transition: transform 0.4s ease;
+}
+.v8-mi:hover .v8-mi-illus { transform: rotate(-3deg); }
+
+.v8-mi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Name — italic Cormorant 24px espresso + uppercase EN subtitle. */
+.v8-mi-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-espresso);
+  line-height: 1.05;
+  margin: 0;
+}
+.v8-mi-name .en {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--color-italy-red);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Origin line — italic Cormorant muted, "San Marzano DOP · fior di
+   latte di Agerola" style. */
+.v8-mi-origin {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--color-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Diet / proofing chips — basil-tinted by default; .warn for oxblood
+   allergen pills; .gold for ochre "Chef's pick" callout. */
+.v8-mi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.v8-mi-chip {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(74, 124, 89, 0.10);
+  color: var(--color-basil-deep);
+  border: 1px solid rgba(74, 124, 89, 0.3);
+  font-weight: 600;
+}
+.v8-mi-chip.is-italic {
+  font-style: italic;
+  font-weight: 500;
+}
+.v8-mi-chip.is-warn {
+  background: rgba(122, 43, 43, 0.07);
+  color: var(--color-oxblood);
+  border-color: rgba(122, 43, 43, 0.3);
+}
+.v8-mi-chip.is-gold {
+  background: rgba(201, 162, 62, 0.15);
+  color: var(--color-ochre);
+  border-color: rgba(201, 162, 62, 0.4);
+}
+
+/* Meta row — rating / time / kcal / Details button. */
+.v8-mi-meta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--color-espresso-soft);
+}
+.v8-mi-meta .v8-mi-star { color: var(--color-ochre); }
+.v8-mi-meta-details {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-terracotta);
+  border: 0;
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  font-size: 13.5px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.v8-mi-meta-details:hover {
+  color: var(--color-terracotta-dark);
+  border-bottom-color: var(--color-terracotta-dark);
+}
+
+/* Foot — dashed separator, price + add button or in-cart counter. */
+.v8-mi-foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v8-mi-price {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-ink);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-mi-price.is-strike { text-decoration: line-through; opacity: 0.65; }
+.v8-mi-add {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 10px 18px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-cta);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.v8-mi-add:hover {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+}
+.v8-mi-add:disabled {
+  background: var(--color-muted);
+  border-color: var(--color-espresso-soft);
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.6;
+}
+.v8-mi-add .it { font-style: italic; font-weight: 500; opacity: 0.9; }
+
+/* In-cart counter — when quantity > 0, the add button becomes a
+   stepper with the cart's current count. Visually: parchment pill
+   with terracotta − / + buttons and italic count between. */
+.v8-mi-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.32);
+  border-radius: 999px;
+  padding: 2px;
+}
+.v8-mi-stepper-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-basil-deep);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+.v8-mi-stepper-btn:hover { background: rgba(74, 124, 89, 0.18); }
+.v8-mi-stepper-count {
+  min-width: 22px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-basil-deep);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Floating flag ribbon — terracotta / ochre / basil pill badges at
+   the top of the card. Sit slightly above the card edge (negative
+   top) so they read as ribbons pinned onto the paper. */
+.v8-mi-flags {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  z-index: 2;
+}
+.v8-mi-flag {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  box-shadow: 0 6px 14px -8px rgba(184, 92, 56, 0.6);
+  white-space: nowrap;
+}
+.v8-mi-flag.is-gold {
+  background: var(--color-ochre);
+  color: var(--color-espresso);
+  border-color: #B58F36;
+}
+.v8-mi-flag.is-basil {
+  background: var(--color-basil);
+  color: var(--color-parchment);
+  border-color: var(--color-basil-deep);
+}
+.v8-mi-flag.is-muted {
+  background: rgba(140, 111, 79, 0.7);
+  color: var(--color-parchment);
+  border-color: var(--color-espresso-soft);
+  box-shadow: none;
+}
+
+/* Chef's signature crown — espresso pill in the top-right corner
+   when the item is menuRole === "anchor" / "pizzaiolo-choice". */
+.v8-mi-signature {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-espresso);
+  color: var(--color-ochre-light);
+  border: 1px solid var(--color-espresso-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 4px 12px -6px rgba(61, 40, 23, 0.5);
+}
+.v8-mi-signature svg { color: var(--color-ochre); }

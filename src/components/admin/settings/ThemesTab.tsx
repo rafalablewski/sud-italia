@@ -131,7 +131,7 @@ const THEME_INFO: Record<ThemeKey, ThemeInfo> = {
       "/privacy",
     ],
     fonts:
-      "src/app/(public)/layout.tsx loads its own Inter + Fraunces as --font-homepage-body and --font-homepage-heading. Independent next/font instances from admin so weight / subset changes don't drift across themes.",
+      "src/app/(public)/layout.tsx loads its own Lora + Cormorant Garamond as --font-homepage-body and --font-homepage-heading (V8 Trattoria editorial-serif duo). Independent next/font instances from admin so weight / subset changes don't drift across themes.",
     selectorPrefixes: ["--color-italia-*", ".pub-*", ".delivery-*"],
     docs: "docs/design-system/homepage/",
     sourceDir: "src/app/themes/homepage/",

@@ -30,40 +30,157 @@ This means:
 
 ## Section-by-section
 
+### Back chip — `<Link href="/">`
+
+The location page opens with a small oxblood-tinted back chip
+("Home · la casa") rendered ABOVE the hero by `<LocationHero />`.
+Pill-shape, hover swaps to oxblood fill with parchment text. Lets
+a visitor who arrived deep (search engine, cross-link, share URL)
+hop back to the landing without scrolling up to the nav. Lives at
+the `.v8-back-chip-wrap` container — 14/18px top padding, 1180px
+max width, shares the column gutter with the rest of the layout.
+
 ### Location hero — `<LocationHero />`
 
-- Compact, not full-bleed (lighter than the landing's hero — the
-  visitor is here to order, not to be wowed).
-- City name + address + today's hours + the `Open now` pill (same
-  primitive as the landing's locations grid).
-- Today's seasonal callouts surface here — pulled from
-  `/api/settings/public?location={slug}` (the `seasonalItems` array
-  filtered by location).
-- The hero is **also** the route entry for cross-sells from elsewhere
-  on the site — the URL hash (`#pizza` / `#pasta`) scrolls to the
-  matching category.
+V8 Trattoria treatment — a centred parchment hero with a per-slug
+pen-sketch illustration above the city name. Compact relative to the
+homepage hero (the visitor is here to order, not to be wowed) but
+keeps V8's hospitality voice.
 
-### Menu sections — `<MenuSection />`
+- **Parchment canvas** with a soft fade to parchment-deep at the
+  bottom (a vertical gradient that ramps from transparent → 45%
+  parchment-deep). Line-soft hairline border-bottom separates it
+  from the menu section below.
+- **Basil-sprig ornament** top-left (re-uses the `.v8-hero-orn-basil-tl`
+  positioning from the landing hero) so the location page reads in
+  the same brand family.
+- **Per-slug hero illustration** (360×180 detailed SVG, wider /
+  more detailed than the 220×140 LocationsGrid card sketches):
+  - `krakow` — wood-fired oven with Kraków-style rooftops, flames,
+    chimney, peel, a floating tomato + basil garnish.
+  - `warszawa` — Vespa with the "Sud Italia" pizza box on the back +
+    Warszawa-style flat skyline + basil garnish.
+  - Generic fallback — market awning + crates of tomatoes / basil,
+    used until a new city's dedicated illustration lands.
+- **`.v8-loc-hero-tricolore`** — small 80×3px Italian-flag hairline
+  pill between the illustration and the city name.
+- **City name** in Cormorant 44/60px ≥md, espresso, tight letter-
+  spacing. An italic terracotta tagline stacks below at 0.55em
+  (V8's "Kraków · our first home · la nostra prima casa" pattern).
+- **Sub line** — italic Cormorant 17px, `<span>` for primary copy +
+  `.bi-sec` span for the Italian variant, optional trailing
+  `<em>` for the emphasis tail ("where it all began"). Per-slug
+  marketing copy in `LocationHero.tsx`'s `LOC_COPY` map.
+- **Status pill** — basil-tinted, terracotta-dot pulse when within
+  service hours, muted-brown when outside. Uses the new
+  `getCurrentHourSlot(location, now?)` helper to render the **real**
+  close time: `Open until 21:00 · aperto fino alle 21:00`. Outside
+  hours: `Closed now · chiuso ora`. Mount-gated so SSR/client agree.
+- **Marketing copy lives locally.** Tagline + sub are V8's brand
+  voice keyed by slug; new locations fall back to a generic
+  `defaultCopy()` derived from the existing `teamLead` field. The
+  Location type stays operator-data only — same trade-off bundles
+  + the homepage hero took.
 
-The repeating block: one per category.
+### Menu section — `<MenuSection />`
 
-- **Category header:** name (Fraunces 600, 24px), short description,
-  optional "Chef's pick" badge on featured items.
-- **Item grid:** responsive grid of item cards (2 cols mobile, 3 cols
-  tablet, 4 cols desktop).
-- **Item card:** name (Fraunces 500, 18px), description (Inter 400,
-  14px, 2-line clamp), price (Inter 700, 18px, with `zł` suffix at
-  14px), dietary tags (vegetarian / GF / spicy as inline chips), the
-  `Add` button.
-- **Allergens** show on item card hover as a tooltip and on the
-  detail drawer always.
-- **Sold-out items** (per `/api/menu/availability`) render with a
-  diagonal strikethrough on the price and a "Sold out today" pill
-  instead of the `Add` button. Don't hide them — visitors searching
-  for a specific item shouldn't think the site is broken.
-- **The empty image-box pattern is forbidden** (CLAUDE recipes rule
-  carries over — until real food photography exists, cards lead with
-  type, not a placeholder thumbnail).
+V8 Trattoria treatment — the entire menu surface (header, search,
+live activity, category tabs, guarantee banner, combo cards,
+surprise button, item grid) sits inside a single soft paper card
+(`.v8-menu-card`). The previous per-category section pattern is
+gone; the V8 design uses a single card with category tabs that
+filter the grid in place.
+
+- **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
+  shadow-paper, 14px radius, 22/28px padding ramp). Renders at the
+  `#menu` anchor; the location-hero's status pill scrolls here on
+  tap (the floating cart button also lands the visitor here).
+- **Section header** uses the shared `.v8-ps-eyebrow / -title / -sub`
+  primitives — "The menu · il menù", "What comes out of *the oven*"
+  (italic-oxblood "the oven"), italic-Cormorant sub.
+- **Search input** (`.v8-menu-search`) — paper-card pill with a
+  terracotta search SVG and italic Cormorant placeholder. Search
+  filters across `name`, `description`, and `tags` (case-insensitive)
+  in the existing data wiring. A small clear-X button surfaces when
+  the field is non-empty.
+- **Per-location live activity strip** (`.v8-live-act`) — italic
+  Cormorant line with a pulsing basil pip, "X orders in the last
+  hour · X ordini nell'ultima ora", a separator dot, and
+  "Trending · in tendenza: <item>" with the trending item in
+  italic oxblood. Reads from `simulateLiveActivity(locationSlug)`,
+  refreshes every 30s, mount-gated to avoid the SSR/client
+  Math.random() mismatch.
+  - This is the V8 location of the live-activity surface — Step 8
+    removed it from rendering above the menu to fix a duplicate-
+    ticker-band finding; Step 9 re-introduces it here, inside the
+    menu card, where V8's mockup places it.
+- **Category tabs** (`.v8-cat-tabs`) — terracotta-bordered pill row
+  with an "All" tab + one per active category (Pizza / Pasta /
+  Antipasti / Panini / Drinks / Desserts). Active tab fills with
+  terracotta + ochre-light count chip. Categories not in the
+  bilingual map (`CAT_IT`) render English-only — falls back without
+  the `· bibite` style subtitle.
+  - **"All" is the default tab.** V8's mockup designs the menu
+    around browsing rather than landing on a single category — the
+    All tab shows every available item at once. The pre-V8 site
+    landed on the first category (Pizza); V8 deliberately doesn't.
+- **Sort affordance** (`.v8-cat-sort`) — small popover anchored at
+  the right end of the category tab row. Trigger reuses the
+  `.v8-cat-tab` pill shape with an up/down-arrow SVG and "Sort"
+  label; click opens a parchment-paper popover with three radio-
+  style options: `Pizzaiolo's layout · scelta dello chef` (the
+  audit §4.4 menu-engineering hierarchy — the default), `Price:
+  low → high · prezzo crescente`, `Price: high → low · prezzo
+  decrescente`. The trigger pill fills terracotta when a non-default
+  sort is active, signalling "you're not on the menu-engineering
+  default" without taking up extra space.
+  - V8's mockup doesn't ship a sort UI — the popover is an
+    intentional addition to preserve the pre-V8 price-sort feature
+    inside the V8 chrome. Removing the sort dropdown without an
+    affordance would be a real feature regression.
+- **15-minute guarantee banner** (`.v8-guarantee`) — ochre-tinted
+  card with a 4px ochre→terracotta left rail, a sundial SVG icon,
+  italic Cormorant title "15 minutes guaranteed · 15 minuti
+  garantiti", and a Lora sub "Ready in 15 minutes — or your next
+  drink's on us."
+- **Inline combo deals** (`.v8-combos`) — 1→2-col grid of compact
+  combo cards, each with a tricolore left rail, a small SVG (pizza
+  wedge for the Italian Classic, pasta bowl for the Pasta Combo),
+  the combo name in italic Cormorant 18px, the composition in
+  italic Cormorant 12.5px muted, and a rotated wax-seal stamp
+  ("−10%" / etc.) on the right. Renders the first two
+  `DEFAULT_COMBO_DEALS` entries; the full bundle ladder lives on
+  the homepage `<BundlesShowcase />`.
+- **Surprise me button** (`.v8-surprise`) — dashed-ochre pill with
+  the V8 dice-pattern SVG. Click picks a random available item,
+  resets the filter to All, scrolls the picked card into view, and
+  pulses a warm terracotta + ochre glow around it for 2.4s so the
+  visitor sees the pick **in context** with the rest of the menu
+  (rather than filtering everything else out). The highlight animation
+  is `.v8-menu-item-highlight` keyframed via `v8-menu-item-highlight-pulse`
+  — self-clears via a 2.4s `setTimeout` that's cleaned up on
+  unmount. Repurposes the existing `setActiveCategory` + scroll-to-
+  data-attribute pattern; no separate selection store needed.
+- **Item grid** (`.v8-menu-items`) — 1 → 2-col grid. Items render
+  via the V8 `<MenuItemCard />` (see the spec entry in
+  [`../theme/components.md`](../theme/components.md#menuitemcard--srccomponentslocationmenuitemtsx)).
+  Items can claim 2-col span when activeCategory === null (the "All"
+  tab) and `menuRole === "hero"`.
+- **Empty state** (`.v8-menu-empty`) — italic Cormorant muted line,
+  with a clear-search affordance if the user is searching.
+
+The pre-V8 MenuSection imported `<SpeedGuarantee />`,
+`<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`.
+Those components are still in the repo (other surfaces might use
+them) but the V8 menu inlines bespoke blocks instead — keeping the
+markup auditable against the mockup without coordinating restyles
+across 5 components.
+
+`<ReorderSection />` (returning-customer rail) and
+`<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card
+when active — V8's mockup doesn't ship them but they're valuable
+existing features. They sit outside the V8 wrapper so the menu
+card stays clean.
 
 ### Item detail drawer
 

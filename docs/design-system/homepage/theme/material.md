@@ -7,20 +7,46 @@ breathes. Where Core's material is tight + quiet and Admin's is
 flat-glass utilitarian, Homepage allows shadows, rounder corners, and
 delightful animation moments.
 
+## The paper canvas
+
+The V8 Trattoria treatment is a **paper canvas**, not a flat colour.
+The `body` in `themes/homepage/index.css` carries three layered
+backgrounds:
+
+1. **Parchment ground** — `--color-background` (`#F8EFDE`), the flat
+   base tone.
+2. **Two warm radial washes** — ochre top-left + terracotta
+   bottom-right on mobile; oxblood + basil on desktop (the @768px
+   breakpoint swaps the colour pair to suit the wider canvas).
+3. **SVG paper-grain noise overlay** — an inline `feTurbulence`
+   fractal-noise filter at `baseFrequency=0.85`, recoloured to a
+   sub-6%-alpha warm-brown via `feColorMatrix`. Tiled (240×240). The
+   data URI is inline in `index.css` so no extra request.
+
+Together they give the page the same tooth as menu paper at a café —
+the warm tint isn't uniform, the grain reads under low light. **This
+is the only place on the storefront where the body is anything other
+than a flat colour.** Section backgrounds stay flat parchment /
+parchment-deep / white.
+
 ## The elevation ramp
 
 Three steps, every Homepage surface picks one:
 
 | Step | Surface                                  | Used by                                                  |
 | ---- | ---------------------------------------- | -------------------------------------------------------- |
-| 0    | `--color-background` (warm cream)        | Page canvas, base sections                               |
-| 1    | `#fff` (true white)                      | Cards on cream — item cards, location cards, the rewards tier card, the order-confirmation summary block. Resting `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`. |
+| 0    | `--color-background` (parchment)         | Page canvas, base sections (over the paper-grain layer)  |
+| 1    | `#fff` (true white)                      | Cards on parchment — item cards, location cards, the rewards tier card, the order-confirmation summary block. Resting `--shadow-card` or `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`. |
 | 2    | `#fff` with stronger shadow              | Portalled overlays — cart drawer, item detail drawer, modals. `box-shadow: 0 8px 32px rgba(0,0,0,0.12)` + the portal backdrop scrim. |
 
-The cream / white alternation IS the elevation. A card on cream is
-clearly raised because it's brighter than the background; no border
-needed unless the card needs containment (the `.pub-card` form
-container takes a `#f3f4f6` hairline border for definition).
+The parchment / white alternation IS the elevation. A card on
+parchment is clearly raised because it's brighter than the background;
+no border needed unless the card needs containment (the `.pub-card`
+form container takes a `#f3f4f6` hairline border for definition).
+
+The intermediate `--color-parchment-deep` (`#F2E2C2`) is used on
+alternating *sections* (not cards) to add rhythm without breaking the
+canvas — see `--color-italia-cream-dark` in `color.md`.
 
 ## Shadows
 
@@ -29,15 +55,21 @@ multi-layer drop shadows.
 
 | Use                                | Spec                                              |
 | ---------------------------------- | ------------------------------------------------- |
-| Card at rest                       | `0 1px 3px rgba(0,0,0,0.04)`                      |
+| Card at rest                       | `--shadow-card` (inset highlight + warm brown drop) or `0 1px 3px rgba(0,0,0,0.04)` for the lightest cards |
 | Card hover                         | `0 4px 12px rgba(0,0,0,0.08)` + translateY(-1px)  |
+| Paper edges (location cards, menu) | `--shadow-paper` — softer than `--shadow-card`, used to lift the parchment-on-parchment surfaces |
 | Portalled overlay backdrop         | A scrim — `rgba(0,0,0,0.4)` over the page         |
 | Portalled overlay surface          | `0 8px 32px rgba(0,0,0,0.12)`                     |
 | Sticky header on scroll            | `0 1px 0 rgba(0,0,0,0.04)` (hairline-as-shadow)   |
-| Floating cart button               | `0 4px 16px rgba(154,39,66,0.15)` — the **one** brand-tinted shadow exception, because the floating button needs to feel like part of the brand at all times |
+| Hero CTA                           | `--shadow-cta` — warm terracotta drop, the **one** brand-tinted shadow exception, because the hero CTA needs to feel like part of the brand at all times |
+| Floating cart button               | `0 4px 16px rgba(122,43,43,0.15)` — oxblood-tinted shadow, the second documented brand-tint, kept consistent with the brand burgundy |
 
-The floating cart button's brand-tinted shadow is the documented
-exception — every other shadow is neutral.
+`--shadow-paper`, `--shadow-card`, `--shadow-cta` are declared as
+plain CSS vars on `:root` in `themes/homepage/index.css` (they
+intentionally bypass Tailwind's `--shadow-*` token slot to stay V8-only
+and not override Tailwind defaults). The hero CTA + floating cart
+button are the documented brand-tinted-shadow exceptions — every
+other elevation uses neutral shadows.
 
 ## Radius
 

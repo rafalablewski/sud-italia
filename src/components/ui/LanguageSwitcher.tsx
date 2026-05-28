@@ -1,20 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getLocale, setLocale, ALL_LOCALES, LOCALE_META, Locale } from "@/lib/i18n";
 import { fetchPublicSettings } from "@/lib/public-settings";
-import { Globe, Check } from "lucide-react";
+
+// V8 Trattoria language pill — inline segmented control of one-letter
+// codes (EN / PL / DE / SG) inside a terracotta-tinted pill. The
+// previously-shipped dropdown is gone; V8's nav budget calls for the row
+// to read at a glance. Honours the enabledLocales from public settings
+// just like the old dropdown — disabled locales drop out of the row.
+const SHORT_CODE: Record<Locale, string> = {
+  pl: "PL",
+  en: "EN",
+  de: "DE",
+  "en-SG": "SG",
+};
 
 export function LanguageSwitcher() {
   const [locale, setLocaleState] = useState<Locale>("pl");
-  const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState<Locale[]>([...ALL_LOCALES]);
-  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLocaleState(getLocale());
-    // Shared single-flight fetch — coalesces with CurrencySwitcher so the
-    // top bar only hits /api/settings/public once per page load.
     fetchPublicSettings().then((data) => {
       if (data?.locale?.enabledLocales?.length) {
         setEnabled(data.locale.enabledLocales);
@@ -22,67 +29,39 @@ export function LanguageSwitcher() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
   const pick = (next: Locale) => {
+    if (next === locale) return;
     setLocale(next);
     setLocaleState(next);
-    setOpen(false);
-    // Reload so SSR-rendered strings and the new locale agree — same
-    // approach the i18n MVP has used since launch.
+    // Reload so SSR strings re-render with the new locale — same approach
+    // the i18n MVP has used since launch.
     window.location.reload();
   };
 
-  const current = LOCALE_META[locale];
+  // Preserve the ALL_LOCALES order so the pill reads predictably.
+  const visible = ALL_LOCALES.filter((l) => enabled.includes(l));
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-italia-gray hover:bg-gray-100 transition-colors min-h-[44px]"
-        title={`Language: ${current.label}`}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <Globe className="h-4 w-4" />
-        <span className="uppercase">{locale === "en-SG" ? "SG" : locale}</span>
-      </button>
-      {open && (
-        <ul
-          role="listbox"
-          className="absolute right-0 mt-2 min-w-[12rem] bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
-        >
-          {enabled.map((code) => {
-            const meta = LOCALE_META[code];
-            const active = code === locale;
-            return (
-              <li key={code}>
-                <button
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => pick(code)}
-                  className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-gray-50 ${
-                    active ? "text-italia-red font-semibold" : "text-italia-dark"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span aria-hidden>{meta.flag}</span>
-                    <span>{meta.nativeLabel}</span>
-                  </span>
-                  {active && <Check className="h-4 w-4" />}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+    <div className="v8-lang-picker inline-flex items-center rounded-full p-[2px] gap-[2px]" role="radiogroup" aria-label="Primary language">
+      {visible.map((code) => {
+        const meta = LOCALE_META[code];
+        const active = code === locale;
+        return (
+          <button
+            key={code}
+            type="button"
+            onClick={() => pick(code)}
+            role="radio"
+            aria-checked={active}
+            title={meta.label}
+            className={`v8-lang-opt appearance-none border-0 bg-transparent font-body text-[11px] font-semibold tracking-[0.12em] px-[10px] py-[5px] rounded-full leading-none cursor-pointer transition-colors ${
+              active ? "v8-lang-opt-active" : ""
+            }`}
+          >
+            {SHORT_CODE[code]}
+          </button>
+        );
+      })}
     </div>
   );
 }

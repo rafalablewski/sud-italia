@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Container } from "@/components/ui/Container";
 import {
   SITE_NAME,
   COMPANY_NAME,
@@ -8,117 +7,127 @@ import {
   SOCIAL_LINKS,
 } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
-import { MapPin, Mail, Phone } from "lucide-react";
+
+// V8 Trattoria footer — espresso canvas that picks up the Soci rail's
+// palette so the close→footer transition reads as one visual block
+// rather than a dark→light jolt. Four-column grid on desktop (1.4fr
+// brand + 1fr × 3 link cols), single column stack on mobile.
+//
+// We keep the **existing** column content (Locations / Contact /
+// Follow Us) over V8's mockup copy (Menu / Locations / For
+// businesses) because those columns wire to real operator data —
+// CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS from lib/constants and
+// the active locations list. V8's mockup ships marketing-led copy
+// the operator hasn't actually written yet ("Team lunch — invoiced",
+// "Private events", a placeholder phone number); shipping the
+// mockup's text would be Rule #1 territory ("never hardcoded
+// data"). The visual treatment — italic-Cormorant ochre-light
+// column heads, parchment-70% link colour, the basil-sprig brand
+// mark with ochre-light strokes, the tricolore hairline under the
+// brand block, the italic-Cormorant copyright tagline — comes
+// straight from V8.
 
 export function Footer() {
   const locations = getActiveLocations();
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-italia-dark text-white mt-auto">
-      <Container className="py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+    <footer className="v8-pfoot">
+      <div className="v8-page-inner">
+        <div className="v8-pfoot-grid">
           {/* Brand */}
-          <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-italia-red flex items-center justify-center">
-                <span className="text-white font-heading text-sm font-bold">SI</span>
-              </div>
-              <span className="text-xl font-heading font-bold">{SITE_NAME}</span>
+          <div>
+            <div className="v8-pfoot-brand">
+              <FooterBasilMark />
+              <span>{SITE_NAME}</span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Authentic Italian street food by {COMPANY_NAME}. Bringing the flavors of
-              Southern Italy to Poland, one food truck at a time.
+            <p>
+              Authentic Italian street food by {COMPANY_NAME}. Bringing the
+              flavours of Southern Italy to Poland, one food truck at a time.
             </p>
+            <div className="v8-tricolore v8-pfoot-trico" aria-hidden />
           </div>
 
           {/* Locations */}
           <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">Locations</h3>
-            <ul className="space-y-3">
+            <h4>Locations</h4>
+            <ul>
               {locations.map((loc) => (
                 <li key={loc.slug}>
-                  <Link
-                    href={`/locations/${loc.slug}`}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
-                  >
-                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                    {loc.name}
-                  </Link>
+                  <Link href={`/locations/${loc.slug}`}>{loc.name}</Link>
                 </li>
               ))}
+              <li>
+                <Link href="/#famiglia">Our story · la nostra storia</Link>
+              </li>
+              <li>
+                <Link href="/rewards">Loyalty programme · soci</Link>
+              </li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">Contact</h3>
-            <ul className="space-y-3">
+            <h4>Contact</h4>
+            <ul>
               <li>
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
-                >
-                  <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                  {CONTACT_EMAIL}
-                </a>
+                <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
               </li>
               <li>
-                <a
-                  href={`tel:${CONTACT_PHONE.replace(/\s/g, "")}`}
-                  className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
-                >
-                  <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                  {CONTACT_PHONE}
-                </a>
+                <a href={`tel:${CONTACT_PHONE.replace(/\s/g, "")}`}>{CONTACT_PHONE}</a>
+              </li>
+              <li>
+                <Link href="/privacy">Privacy</Link>
               </li>
             </ul>
           </div>
 
-          {/* Social */}
+          {/* Follow */}
           <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">Follow Us</h3>
-            <div className="flex gap-4">
-              <a
-                href={SOCIAL_LINKS.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors text-sm"
-              >
-                Instagram
-              </a>
-              <a
-                href={SOCIAL_LINKS.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors text-sm"
-              >
-                Facebook
-              </a>
-              <a
-                href={SOCIAL_LINKS.tiktok}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors text-sm"
-              >
-                TikTok
-              </a>
-            </div>
+            <h4>Follow us · seguiteci</h4>
+            <ul>
+              <li>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer">
+                  Instagram
+                </a>
+              </li>
+              <li>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer">
+                  Facebook
+                </a>
+              </li>
+              <li>
+                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer">
+                  TikTok
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-10 pt-8 flex flex-col sm:flex-row items-center justify-center gap-2 text-gray-500 text-sm">
+        <div className="v8-pfoot-bottom">
           <span>
-            &copy; {year} {SITE_NAME} by {COMPANY_NAME}. All rights reserved.
+            &copy; {year} {SITE_NAME} by {COMPANY_NAME}. ·{" "}
+            <em>&ldquo;Mangia bene, ridi spesso, ama molto.&rdquo;</em>
           </span>
-          <span className="hidden sm:inline" aria-hidden>
-            &middot;
-          </span>
-          <Link href="/privacy" className="hover:text-white transition-colors underline-offset-2 hover:underline">
-            Privacy
-          </Link>
+          <span>Made with passion in Napoli · cooked in Polska</span>
         </div>
-      </Container>
+      </div>
     </footer>
+  );
+}
+
+// Footer basil-mark — V8's variant of the nav brand mark with
+// ochre-light strokes + basil-translucent leaves so the sprig reads
+// against the espresso canvas (the nav's all-basil version would
+// vanish into the dark bg).
+function FooterBasilMark() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 38 38" fill="none" aria-hidden>
+      <path d="M19 33 C 19 27, 19 20, 19 12" stroke="#E6C97A" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M19 24 C 14 22, 11 19, 10 15 C 14 17, 17 19, 19 22" fill="#4A7C59" fillOpacity="0.3" stroke="#E6C97A" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M19 19 C 24 17, 27 14, 28 10 C 24 12, 21 14, 19 17" fill="#4A7C59" fillOpacity="0.3" stroke="#E6C97A" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M19 14 C 16 12, 14 9, 14 6 C 17 7, 18 10, 19 12" fill="#4A7C59" fillOpacity="0.3" stroke="#E6C97A" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
   );
 }

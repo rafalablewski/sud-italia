@@ -28,7 +28,7 @@ selling them the programme again is condescending.
 When `useCustomer()` returns no record yet — typically a visitor who
 landed here from a marketing link without having ordered.
 
-- **Headline:** "Earn rewards on every order" (Fraunces 700, 30px).
+- **Headline:** "Earn rewards on every order" (Cormorant Garamond 700, 30px).
 - **Sub-line:** "1 point per złoty. Free pizzas, drinks, and
   surprises. No app needed — just your phone number."
 - **The "How points attach" explainer card** (rendered by
@@ -53,7 +53,7 @@ The visual centrepiece.
   uses `TIER_CONFIG[tier]` for label + colour. Bronze and Gold both
   read as warm metallics; the tier *label* disambiguates (matches the
   admin loyalty section's tone choice).
-- **Balance:** "{points} pts" — Inter 700, 36px, tabular, with the
+- **Balance:** "{points} pts" — Lora 700, 36px, tabular, with the
   unit at 14px trailing.
 - **Progress to next tier:** a horizontal progress bar with the copy
   `{toNext} pts to {nextTierLabel}` — uses `pointsToNextTier()`.

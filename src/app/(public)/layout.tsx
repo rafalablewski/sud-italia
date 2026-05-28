@@ -1,6 +1,7 @@
 import "../themes/homepage/index.css";
-import { Inter, Fraunces } from "next/font/google";
+import { Lora, Cormorant_Garamond } from "next/font/google";
 import { Header } from "@/components/layout/Header";
+import { LiveTicker } from "@/components/layout/LiveTicker";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
@@ -12,18 +13,46 @@ import { CustomerProvider } from "@/store/customer";
 // root layout) so a weight / subset change can't drift into Admin or
 // Core. The exposed CSS variables are namespaced (--font-homepage-*) so
 // the storefront's Tailwind tokens (themes/homepage/tokens.css) resolve
-// against THIS scope; admin routes can change their own Inter / Fraunces
-// in admin/layout.tsx without touching storefront type.
-const homepageBody = Inter({
+// against THIS scope; admin routes can change their own type stack in
+// admin/layout.tsx without touching storefront type.
+//
+// Pair: Lora (body) + Cormorant Garamond (display) — the V8 Trattoria
+// editorial serif duo, matching the mockup at public/mockups/cart.html.
+const homepageBody = Lora({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
   variable: "--font-homepage-body",
   display: "swap",
 });
-const homepageHeading = Fraunces({
+const homepageHeading = Cormorant_Garamond({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
   variable: "--font-homepage-heading",
   display: "swap",
 });
+
+// next/font's `.variable` class only sets `--font-homepage-*` on the element it's
+// applied to (the wrapping <div> below). But Tailwind's @theme inline block in
+// themes/homepage/tokens.css declares `--font-body: var(--font-homepage-body, "Lora")…`
+// at `:root`. CSS substitutes nested vars at the *declaring* element's cascade,
+// not the consumer's — so the inner `var(--font-homepage-body)` is looked up at
+// :root, where the wrapping div hasn't injected anything, and the literal "Lora"
+// fallback wins. Result: body content silently degrades to the inner-fallback chain
+// (no metric-matched "Lora Fallback" face), and portalled overlays (Rule #4 mounts
+// modals to document.body, outside the wrapping div) get the same.
+//
+// Inject the next/font font-family chain as CSS variables on `:root` via an SSR'd
+// <style> tag so the inner var resolves on the same element where --font-body lives:
+//   1. body { font-family: var(--font-body) } resolves to the full metric-matched
+//      chain (`"Lora", "Lora Fallback", Georgia, …`) — no FOUT step through Georgia.
+//   2. Portalled modals (CartDrawer, ItemDetail, etc.) inherit Lora natively from
+//      body without needing per-component font-* classes.
+//
+// Server-rendered → no flash. Scoped to the (public) route group → admin / kitchen /
+// franchisee routes don't load this layout, so :root stays untouched there.
+const fontVarsOnRoot = `:root{--font-homepage-body:${homepageBody.style.fontFamily};--font-homepage-heading:${homepageHeading.style.fontFamily};}`;
 
 export default function PublicLayout({
   children,
@@ -32,8 +61,12 @@ export default function PublicLayout({
 }) {
   return (
     <CustomerProvider>
+      <style dangerouslySetInnerHTML={{ __html: fontVarsOnRoot }} />
       <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
         <Header />
+        <LayoutGate flag="showLiveTicker">
+          <LiveTicker />
+        </LayoutGate>
         <main className="flex-1">{children}</main>
         <Footer />
         <LayoutGate flag="showChatWidget">
