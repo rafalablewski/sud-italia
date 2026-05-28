@@ -207,7 +207,11 @@ The slim espresso strip directly under `<Header />`. Shown on every
   (basil trending icon), avg prep time (ochre bolt icon).
 - **Data source:** `simulateLiveActivity` from `src/lib/growth-engine.ts`
   with a chain-wide sentinel slug (`"chain"`) — same helper that powers
-  `<LiveActivityBar />` on `/locations/[slug]`, refreshed every 30s.
+  the admin-configurable `<LiveActivityBar />` widget. Refreshed every 30s.
+  As of Step 8 the LiveActivityBar is NOT rendered on `/locations/[slug]`
+  to avoid two stacked espresso ticker bands; Step 9 (menu chrome) will
+  re-mount it inside the menu's `loc-card-soft` wrapper where V8's
+  mockup places it (`.live-act` row).
 - **Bilingual subtitles** (`nell'ultima ora`, `in preparazione`, `in
   tendenza`, `tempo medio`) — italic Cormorant ochre, hidden under
   640px to keep the strip in one row.

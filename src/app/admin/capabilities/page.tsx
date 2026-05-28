@@ -827,9 +827,9 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Live activity bar (social proof)",
-          status: "live",
+          status: "needs-config",
           href: "/admin/growth",
-          summary: "Customer-site strip of dynamic widgets (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active.",
+          summary: "Per-location dynamic-widget strip (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active. The admin write surface is live; the customer-side render is OFF on /locations/[slug] during the V8 port (the V8 menu chrome ports in Step 9 will fold the strip back inside the menu wrapper as the `.live-act` row).",
         },
         {
           name: "Live ticker (V8 nav strip)",
