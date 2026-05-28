@@ -5,6 +5,7 @@ import {
   FlaskConical,
   History,
   KeyRound,
+  LayoutGrid,
   Phone,
   Save,
   ShieldCheck,
@@ -46,6 +47,10 @@ interface Settings {
   simulationEnabled?: boolean;
   kdsSimulatorEnabled?: boolean;
   whatsappSimulatorEnabled?: boolean;
+  /** Storefront visibility toggles set in the Layout tab. */
+  layout?: {
+    showCurrencySwitcher: boolean;
+  };
 }
 
 interface AuditEntry {
@@ -59,7 +64,7 @@ interface AuditEntry {
   occurredAt: string;
 }
 
-type TabKey = "general" | "security" | "audit" | "danger";
+type TabKey = "general" | "layout" | "security" | "audit" | "danger";
 
 function fmtTime(iso: string): string {
   try {
@@ -95,6 +100,8 @@ function AdminSettingsDesktop() {
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [whatsappSimulatorEnabled, setWhatsappSimulatorEnabled] = useState(false);
+  const [showCurrencySwitcher, setShowCurrencySwitcher] = useState(true);
+  const [currencyVisBusy, setCurrencyVisBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
   const [kdsSimBusy, setKdsSimBusy] = useState(false);
@@ -125,6 +132,10 @@ function AdminSettingsDesktop() {
     setSimulationEnabled(!!data.simulationEnabled);
     setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
     setWhatsappSimulatorEnabled(!!data.whatsappSimulatorEnabled);
+    // Layout tab — visibility toggles for storefront chrome. Default is
+    // "show" so a freshly-deployed instance behaves the same as before
+    // this tab existed.
+    setShowCurrencySwitcher(data.layout?.showCurrencySwitcher ?? true);
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -210,6 +221,35 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  const toggleCurrencyVisibility = async (next: boolean) => {
+    setCurrencyVisBusy(true);
+    setShowCurrencySwitcher(next); // optimistic
+    try {
+      // Merge with the existing layout object so toggling one flag
+      // doesn't clobber sibling flags added later.
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          layout: {
+            ...(settings?.layout ?? {}),
+            showCurrencySwitcher: next,
+          },
+        }),
+      });
+      if (res.ok) {
+        toast.success(next ? "Currency switcher shown" : "Currency switcher hidden");
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setShowCurrencySwitcher(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setCurrencyVisBusy(false);
     }
   };
 
@@ -393,6 +433,7 @@ function AdminSettingsDesktop() {
           onChange={(v) => setTab(v as TabKey)}
           tabs={[
             { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
+            { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
             { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
             { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
             { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
@@ -595,6 +636,41 @@ function AdminSettingsDesktop() {
             </Button>
           </div>
         </>
+      )}
+
+      {tab === "layout" && (
+        <Card>
+          <CardHeader
+            title="Storefront visibility"
+            description="Toggle whole pieces of the public site on or off. Off = the component unmounts on the storefront (no DOM, no painted CSS, no nav entry). Toggle is the saved state — no separate Save button."
+          />
+          <CardBody>
+            <div className="v2-stack-12">
+              <label className="v2-field">
+                <span className="v2-field-label">Currency switcher</span>
+                <span className="v2-muted text-sm">
+                  The currency picker in the public site header. When off, the
+                  storefront falls back to the saved currency (PLN by default)
+                  and the switcher button disappears entirely. Admin reports
+                  stay PLN-pinned regardless via AdminCurrencyGuard.
+                </span>
+                <span className="inline-flex items-center gap-2 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={showCurrencySwitcher}
+                    onChange={(e) => toggleCurrencyVisibility(e.target.checked)}
+                    disabled={currencyVisBusy || !settings}
+                  />
+                  <span className="v2-muted text-sm">
+                    {showCurrencySwitcher
+                      ? "Visible in the public site header."
+                      : "Hidden — storefront uses PLN everywhere."}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       {tab === "security" && (

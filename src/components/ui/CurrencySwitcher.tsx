@@ -16,6 +16,10 @@ export function CurrencySwitcher() {
   const [currency, setCurrencyState] = useState<Currency>("PLN");
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState<Currency[]>([...ALL_CURRENCIES]);
+  // Layout-tab visibility flag (admin → Settings → Layout). Default true
+  // so we don't briefly hide the switcher for visitors when the flag is
+  // actually on; the public-settings fetch may flip it off.
+  const [visible, setVisible] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +39,11 @@ export function CurrencySwitcher() {
     fetchPublicSettings().then((data) => {
       if (data?.currency?.enabledCurrencies?.length) {
         setEnabled(data.currency.enabledCurrencies);
+      }
+      // Operator toggle in admin Settings → Layout. When false the whole
+      // switcher unmounts so there's no DOM and no painted CSS.
+      if (data?.layout && data.layout.showCurrencySwitcher === false) {
+        setVisible(false);
       }
     });
   }, []);
@@ -56,6 +65,10 @@ export function CurrencySwitcher() {
     // with the new currency. Mirrors the LanguageSwitcher reload pattern.
     window.location.reload();
   };
+
+  // Layout toggle is off — render nothing. Storefront falls back to the
+  // saved currency (PLN by default) via the currency module's hydration.
+  if (!visible) return null;
 
   const current = CURRENCY_META[currency];
 

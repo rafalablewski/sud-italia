@@ -2733,7 +2733,24 @@ export interface AppSettings {
    *  EU/PL operates on the defaults; operators tag specific trucks as
    *  NYC or SG and the customer-facing chrome upgrades to match. */
   compliance?: ComplianceConfig;
+  /** Storefront visibility toggles — turn whole pieces of the public
+   *  UI on/off without code changes. Each flag is the saved state
+   *  (CLAUDE rule 7 — toggle = saved). When a flag is false, the
+   *  owning component returns null so the surface loses its DOM and
+   *  its painted CSS. */
+  layout?: LayoutSettings;
 }
+
+export interface LayoutSettings {
+  /** Show the currency picker in the public site header. When false the
+   *  CurrencySwitcher renders null and the storefront falls back to PLN
+   *  everywhere. */
+  showCurrencySwitcher: boolean;
+}
+
+export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
+  showCurrencySwitcher: true,
+};
 
 export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   defaultCurrency: "PLN",

@@ -86,6 +86,13 @@ export default async function CapabilitiesPage() {
           summary: "Loyalty, growth, AI, seasonal items and feature toggles. Persists via withLock on save.",
         },
         {
+          name: "Storefront layout toggles (Settings → Layout)",
+          status: "live",
+          href: "/admin/settings",
+          summary:
+            "Layout tab in /admin/settings lets the operator turn whole pieces of the public site on or off. Today's surface: currency switcher (show/hide). When off the owning component (CurrencySwitcher.tsx) reads /api/settings/public on mount and returns null — no DOM, no painted CSS, storefront falls back to PLN. Persists via the existing AppSettings.layout field; toggle is the saved state per the toggle-=-saved rule.",
+        },
+        {
           name: "Multi-currency display (PLN / USD / SGD / EUR)",
           status: "live",
           href: "/admin/currency",
