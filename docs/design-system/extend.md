@@ -19,7 +19,7 @@ canonical file, mirror it in the second, and stop there.
    Recharts / JS / inline SVG.
 3. **Mirror in `public/mockups/core-suite/system.css`** so the mockups
    pick it up.
-4. **Document** in [`color.md`](./color.md) — append to the right
+4. **Document** in [`foundations/color.md`](./foundations/color.md) — append to the right
    table; don't reorder.
 
 ```css
@@ -44,7 +44,7 @@ If you genuinely need a new surface treatment:
 1. Confirm it isn't actually a `.callout` or a `.well` — those exist.
 2. Reuse `--surface-2` with a `--border-strong` hairline before
    reaching for a new token.
-3. If it must be new: extend [`material.md`](./material.md) with the
+3. If it must be new: extend [`foundations/material.md`](./foundations/material.md) with the
    stacking rule + a screenshot.
 
 ## Add an admin page
@@ -146,7 +146,7 @@ A module that doesn't know what it isn't will drift.
 
 ## When in doubt
 
-Read [`philosophy.md`](./philosophy.md). The Rams / Ive / Thiel triad
+Read [`foundations/philosophy.md`](./foundations/philosophy.md). The Rams / Ive / Thiel triad
 resolves most edge cases. If it's still ambiguous after that, the
 question is probably:
 

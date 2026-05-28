@@ -7,10 +7,10 @@
 
 The folder layout:
 
-- **Foundations** — [`philosophy`](./design-system/philosophy.md) ·
-  [`color`](./design-system/color.md) ·
-  [`typography`](./design-system/typography.md) ·
-  [`material`](./design-system/material.md)
+- **Foundations** — [`philosophy`](./design-system/foundations/philosophy.md) ·
+  [`color`](./design-system/foundations/color.md) ·
+  [`typography`](./design-system/foundations/typography.md) ·
+  [`material`](./design-system/foundations/material.md)
 - **Components** — [`components`](./design-system/components.md)
 - **Modules** — [`KDS`](./design-system/modules/kds.md) ·
   [`POS`](./design-system/modules/pos.md) ·

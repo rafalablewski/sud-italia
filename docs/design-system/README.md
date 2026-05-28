@@ -13,15 +13,17 @@ deploy).
 
 ## Map
 
-**Foundations**
+**Foundations** (shared across every surface — never fork these)
 
-- [`philosophy.md`](./philosophy.md) — three ideas held together + the
-  operating principle that resolves conflicts.
-- [`color.md`](./color.md) — dark + light tokens, command palette, the colour
-  rules ("no gradient, no glow", platinum = jewellery, brand ≠ status).
-- [`typography.md`](./typography.md) — Inter / Fraunces / JetBrains Mono +
-  the rule for where each face goes.
-- [`material.md`](./material.md) — depth, hairlines, radius, motion.
+- [`foundations/philosophy.md`](./foundations/philosophy.md) — three ideas
+  held together + the operating principle that resolves conflicts.
+- [`foundations/color.md`](./foundations/color.md) — dark + light tokens,
+  command palette, the colour rules ("no gradient, no glow", platinum =
+  jewellery, brand ≠ status).
+- [`foundations/typography.md`](./foundations/typography.md) — Inter /
+  Fraunces / JetBrains Mono + the rule for where each face goes.
+- [`foundations/material.md`](./foundations/material.md) — depth, hairlines,
+  radius, motion.
 
 **Components**
 
