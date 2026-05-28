@@ -156,8 +156,8 @@ offers, the per-locale translation status.
 The chain-wide configuration tabs.
 
 - **Header:** `Settings` (h1).
-- **Tabs:** General · **Layout** · Security · Audit · Danger. Tab keys
-  are stable for deep linking.
+- **Tabs:** General · **Layout** · **Themes** · Security · Audit ·
+  Danger. Tab keys are stable for deep linking.
 - **General:** chain identity (name, tagline, contact email), service
   defaults (default prep time, delivery radius), loyalty programme
   config, feature toggles.
@@ -179,6 +179,17 @@ The chain-wide configuration tabs.
   with `<LayoutGate flag="…">` at the call site.
 - **Security:** session lifetime, 2FA enforcement, password policy,
   IP allow-list.
+- **Themes:** read-only inspector for the three-theme architecture
+  (`src/components/admin/settings/ThemesTab.tsx`). Sub-tabs for
+  Core / Admin / Homepage; each view shows the theme's source files +
+  line counts, the routes that load it, live token swatches imported
+  from the typed JS mirror (`themes/{core,homepage}/theme.ts` +
+  `components/admin/v2/theme.ts`) so the colours always match what
+  the code paints, the font stack and how it's loaded, the CSS
+  selector prefixes the theme owns, and the file paths to edit. This
+  is the surface where future write capabilities land (live token
+  override, theme upload) but today it's strictly read-only — token
+  edits go to the CSS files, UI edits to the components folders.
 - **Audit:** the same audit log surfaced as a tab here for quick access
   alongside settings changes.
 - **Danger:** seed development data (`DATABASE_URL` unset only), reset

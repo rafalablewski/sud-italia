@@ -6,6 +6,7 @@ import {
   History,
   KeyRound,
   LayoutGrid,
+  Palette,
   Phone,
   Save,
   ShieldCheck,
@@ -20,6 +21,7 @@ const MobileSettings = dynamic(
   () => import("./mobile/MobileSettings").then((m) => m.MobileSettings),
   { ssr: false },
 );
+import { ThemesTab } from "./settings/ThemesTab";
 import {
   Badge,
   Button,
@@ -179,7 +181,7 @@ interface AuditEntry {
   occurredAt: string;
 }
 
-type TabKey = "general" | "layout" | "security" | "audit" | "danger";
+type TabKey = "general" | "layout" | "themes" | "security" | "audit" | "danger";
 
 function fmtTime(iso: string): string {
   try {
@@ -566,6 +568,7 @@ function AdminSettingsDesktop() {
           tabs={[
             { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
             { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+            { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
             { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
             { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
             { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
@@ -823,6 +826,8 @@ function AdminSettingsDesktop() {
           })}
         </>
       )}
+
+      {tab === "themes" && <ThemesTab />}
 
       {tab === "security" && (
         <Card>
