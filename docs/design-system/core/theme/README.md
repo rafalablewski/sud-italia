@@ -38,8 +38,8 @@ tokens are inherited:
 
 - [`philosophy.md`](./philosophy.md) — Core's operating principle: operational clarity outranks brand expression.
 - [`color.md`](./color.md) — the `--cmd-*` palette + status hues + the platinum jewellery rule.
-- `typography.md` — Core face/weight choices (POS tender numerals, KDS ticket head) *(backlog)*
-- `material.md` — Core surface elevation rules (KDS ticket card depth, POS tab rail) *(backlog)*
+- [`typography.md`](./typography.md) — Inter + JetBrains Mono only; the dense 13px body default; the three read-across-the-line numerals.
+- [`material.md`](./material.md) — the canvas → panel → raised elevation ramp; hairlines; 12px card radius; quiet 160ms motion; no spring on operator stations.
 - `components.md` — Core primitives (tender pad, ticket card, course divider) *(backlog)*
 
 ## Authority
