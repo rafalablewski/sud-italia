@@ -71,3 +71,9 @@ cannot trigger cross-theme overrides.
 **Code wins** over docs. When this doc and the code disagree, open a PR
 to fix the doc. When two themes disagree on a shared surface, the theme
 that owns the surface wins (see the per-theme README for ownership).
+
+The same-commit discipline that keeps docs and code from drifting lives
+in [`CLAUDE.md` Rule #11](../../CLAUDE.md): every add / edit / write /
+delete / rename to theme code ships in the same commit as the matching
+edit under `docs/design-system/<theme>/`. Audits (`docs/audits/`) are
+historical snapshots and never edited retroactively.
