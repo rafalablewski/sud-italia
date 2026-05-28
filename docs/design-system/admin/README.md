@@ -109,8 +109,8 @@ Progress:
 
 - [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), slots, floor
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
-- `sections/people.md` — staff, schedule, role-gated visibility *(backlog)*
-- `sections/customers.md` — customers, loyalty, corporate, feedback *(backlog)*
+- [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
+- [`sections/customers.md`](./sections/customers.md) — customers, loyalty, corporate, feedback
 - `sections/finance.md` — reports, cash, business costs, calculator *(backlog)*
 - `sections/growth.md` — campaigns, upsell, cross-sell, scheduled bundles *(backlog)*
 - `sections/intelligence.md` — multi-location, cohort/CLTV, menu engineering, AI *(backlog)*
