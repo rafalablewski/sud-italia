@@ -114,7 +114,7 @@ Before changing code, read **`CLAUDE.md`**. The non-negotiables:
   read by `/api/customer/identify`.
 - **Mobile admin:** activates automatically below 900px. Mobile views
   live under `src/components/admin/v2/mobile/` and
-  `src/components/admin/mobile/`. See `docs/design-system/mobile/`.
+  `src/components/admin/mobile/`. See `docs/design-system/admin/mobile/`.
 
 ## Deployment
 

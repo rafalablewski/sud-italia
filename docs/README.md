@@ -7,34 +7,43 @@ exist to explain *why* decisions were made and *what* the next step is.
 
 ```
 docs/
-├── README.md            ← you are here
-├── design-system/       ← the visual + interaction language
-│   ├── foundations/     ← shared tokens: philosophy, color, type, material
-│   ├── modules/         ← Core (the IP): POS, KDS, CRM, Concierge, WhatsApp
-│   ├── admin/           ← back-office around the Core modules
-│   ├── mobile/          ← mobile shape of the admin
-│   ├── web/             ← public storefront (placeholder)
-│   ├── tablet/          ← tablet patterns (placeholder)
-│   ├── components.md    ← cross-surface primitives
-│   ├── canonical-orders.md
-│   ├── backlog.md
-│   └── extend.md
-└── audits/              ← dated, scoped audits of specific surfaces
+├── README.md              ← you are here
+├── design-system/         ← three independent themes — WordPress-style
+│   ├── README.md          ← the three-theme model + "today vs target"
+│   ├── core/              ← Core IP theme (POS, KDS, Guest)
+│   │   ├── README.md
+│   │   ├── theme/         ← Core-only tokens (backlog today)
+│   │   ├── modules/       ← pos.md, kds.md, guest.md, crm.md, concierge.md, whatsapp.md
+│   │   └── canonical-orders.md
+│   ├── admin/             ← back-office theme (everything else under /admin/*)
+│   │   ├── README.md      ← shell anatomy + per-section taxonomy
+│   │   ├── theme/         ← admin-owned tokens, components, extend guide
+│   │   └── mobile/        ← mobile shape of the admin
+│   ├── homepage/          ← public storefront theme (/, /menu, /checkout, …)
+│   │   ├── README.md
+│   │   └── theme/         ← homepage-only tokens (backlog today)
+│   └── backlog.md         ← cross-theme cleanup inventory
+└── audits/                ← dated, scoped audits of specific surfaces
 ```
 
 ## `design-system/`
 
-The shared design language. Start at
-[`design-system/README.md`](./design-system/README.md). The folder is
-organised around the **inheritance chain**:
+Three independent themes — no shared layer. Start at
+[`design-system/README.md`](./design-system/README.md) for the doctrine
+and the honest "today vs target" gap table. Each theme has the same
+internal shape:
 
-- **Foundations** are the shared visual language — every surface inherits,
-  none of them fork.
-- **Core modules** (POS, KDS, CRM, Concierge, WhatsApp) are the productised
-  IP and own per-module rules.
-- **Admin, mobile, web, tablet** are the surfaces the Core modules and the
-  back-office render into. Each documents its own layout / navigation /
-  ergonomics, on top of foundations.
+```
+<theme>/
+├── README.md       ← theme overview + the rules unique to this theme
+├── theme/          ← color, typography, material, components (theme-owned)
+└── <surfaces>/     ← per-page or per-module docs
+```
+
+The rule: **a token, font, component, or layout belongs to exactly one
+theme.** Changes to one theme must not move the other two. The code
+today only partially enforces this — see the design-system README for
+the gap list and the code-split work that closes it.
 
 ## `audits/`
 

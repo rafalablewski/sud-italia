@@ -54,7 +54,7 @@ The shell owns:
 - **Shortcuts help** (`?`) — auto-generated from `nav.config.ts`.
 - **Mobile shell** — switches to `MobileShell` below the breakpoint; admin
   pages must work in both. Mobile-specific patterns live in
-  [`../mobile/`](../mobile/).
+  [`mobile/`](./mobile/).
 
 Login (`/admin/login`) is the only bare route — it renders without the shell.
 
