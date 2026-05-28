@@ -36,7 +36,7 @@ This cashes out in specific ways:
 
 - **Cards have generous padding.** 24–32px, not Core's 12–16px. White
   space is the substrate trust grows on.
-- **Fraunces takes the lead on display.** Hero headlines, item names,
+- **Cormorant Garamond takes the lead on display.** Hero headlines, item names,
   section titles use the editorial serif — this is the Italian
   hospitality "soul" the brand sells.
 - **Warm cream is the canvas, not cold white.** `--color-background:
@@ -103,8 +103,8 @@ A beautiful but unclear CTA loses to a plain but obvious one.
 
 - It is **not** "Homepage can be slow." Beauty doesn't excuse weight.
   The storefront has performance budgets (LCP < 2.5s on mobile, CLS
-  < 0.1) that are enforced; Fraunces is loaded via `next/font` for
-  the same reason Inter is — fast.
+  < 0.1) that are enforced; Cormorant Garamond is loaded via `next/font` for
+  the same reason Lora is — fast.
 - It is **not** "anything goes on the storefront." The shared
   no-emoji rule still applies (the cart's empty-state pizza glyph
   and the milestone 🎉 are the documented exceptions). The shared

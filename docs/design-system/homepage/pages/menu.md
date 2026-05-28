@@ -47,12 +47,12 @@ This means:
 
 The repeating block: one per category.
 
-- **Category header:** name (Fraunces 600, 24px), short description,
+- **Category header:** name (Cormorant Garamond 600, 24px), short description,
   optional "Chef's pick" badge on featured items.
 - **Item grid:** responsive grid of item cards (2 cols mobile, 3 cols
   tablet, 4 cols desktop).
-- **Item card:** name (Fraunces 500, 18px), description (Inter 400,
-  14px, 2-line clamp), price (Inter 700, 18px, with `zł` suffix at
+- **Item card:** name (Cormorant Garamond 500, 18px), description (Lora 400,
+  14px, 2-line clamp), price (Lora 700, 18px, with `zł` suffix at
   14px), dietary tags (vegetarian / GF / spicy as inline chips), the
   `Add` button.
 - **Allergens** show on item card hover as a tooltip and on the

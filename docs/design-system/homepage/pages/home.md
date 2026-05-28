@@ -38,16 +38,16 @@ your nearest truck, place an order".
 - Full-bleed surface, brand-red accent, hero copy left, food
   photography or wordmark right.
 - One primary CTA: `Find a location` (anchors to LocationsGrid).
-- Fraunces display on the hero headline — this is the **one** place
+- Cormorant Garamond display on the hero headline — this is the **one** place
   on the storefront where the editorial serif takes the lead. Body
-  copy stays Inter.
+  copy stays Lora.
 - No carousel. A single, confident hero — never rotating slides.
   Carousels are an admission of indecision.
 
 ### Locations grid — `<LocationsGrid />`
 
 - One card per location (Kraków, Warszawa today).
-- Each card: city name (Fraunces 600), address line, today's hours,
+- Each card: city name (Cormorant Garamond 600), address line, today's hours,
   status pill (`Open now` / `Opens at 11:00` / `Closed`), primary
   CTA `Order from {city}` → `/locations/{slug}`.
 - **Status pill is live** — derives from current time vs
@@ -71,8 +71,8 @@ your nearest truck, place an order".
   Neapolitan-style detail (oven temperature, dough hydration,
   imported tomatoes).
 - Two visual pillars: chef portrait + ingredient close-up.
-- This is the only landing section where Fraunces body text appears
-  (display-italic for one pull-quote per section). Inter elsewhere.
+- This is the only landing section where Cormorant Garamond body text appears
+  (display-italic for one pull-quote per section). Lora elsewhere.
 
 ### Loyalty section — `<LoyaltySection />`
 
@@ -99,7 +99,7 @@ your nearest truck, place an order".
 3. **Bundles + Loyalty pull from real admin config.** Never hardcode
    what a bundle costs or what the loyalty tier thresholds are —
    read from the same source admin writes to.
-4. **Fraunces appears only in the Hero + About pull-quote.** Display
+4. **Cormorant Garamond appears only in the Hero + About pull-quote.** Display
    restraint is a brand decision — over-using it on every section
    would flatten the type hierarchy.
 5. **No popups on the landing.** No exit-intent modal, no

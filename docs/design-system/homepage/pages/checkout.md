@@ -66,7 +66,7 @@ The default state when the drawer opens.
   `--animate-delivery-*` keyframes for the shimmer/sweep/unlock
   moments.
 - **Bottom of drawer:** subtotal, applied discounts, total
-  (Inter 700, 22px, tabular), primary `Continue` CTA.
+  (Lora 700, 22px, tabular), primary `Continue` CTA.
 
 ### Fulfilment — `<SlotPicker />`
 

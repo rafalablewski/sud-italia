@@ -33,9 +33,10 @@ homepage/
   `src/app/(public)/layout.tsx` so it ships only on storefront routes.
 - **JS-side mirror:** `src/app/themes/homepage/theme.ts` — typed
   constants for future Recharts / canvas / inline-SVG.
-- **Fonts:** `(public)/layout.tsx` loads its own `Inter` + `Fraunces`
-  as `--font-homepage-body` / `--font-homepage-heading`. A storefront
-  Inter weight change can't move admin.
+- **Fonts:** `(public)/layout.tsx` loads its own `Lora` + `Cormorant
+  Garamond` (V8 Trattoria editorial-serif duo) as
+  `--font-homepage-body` / `--font-homepage-heading`. A storefront
+  Lora weight change can't move admin.
 
 ## Storefront rules (universal — apply to every page)
 

@@ -19,10 +19,10 @@ token change must leave Core and Admin visually unchanged.
   the same values as typed constants. No JS consumers today; future
   Recharts / canvas / inline-SVG code on the storefront imports from
   here.
-- **Fonts:** `src/app/(public)/layout.tsx` loads Inter + Fraunces
-  independently of every other layout, exposed as
-  `--font-homepage-body` + `--font-homepage-heading`. A storefront
-  font change can't move admin.
+- **Fonts:** `src/app/(public)/layout.tsx` loads Lora + Cormorant
+  Garamond (the V8 Trattoria editorial-serif duo) independently of
+  every other layout, exposed as `--font-homepage-body` +
+  `--font-homepage-heading`. A storefront font change can't move admin.
 
 ## Homepage-specific rules
 
@@ -42,8 +42,8 @@ token change must leave Core and Admin visually unchanged.
 ## Per-token docs
 
 - [`philosophy.md`](./philosophy.md) — Homepage's operating principle: hospitality outranks density; beauty earns its keep.
-- [`color.md`](./color.md) — `--color-italia-*` palette; burgundy-as-brand vs status; warm cream canvas; gold as editorial accent.
-- [`typography.md`](./typography.md) — Fraunces (display, brand voice) + Inter (workhorse) + JetBrains Mono (codes); 16px body default; sentence case headings; price callout rules.
+- [`color.md`](./color.md) — V8 Tuscany palette: parchment canvas, oxblood-as-brand vs flag-red, terracotta warm-action layer, ochre as editorial accent, basil for status. Italia-\* aliases remapped + new V8-named tokens (`parchment`, `terracotta`, `basil`, `oxblood`, `ochre`, `espresso`).
+- [`typography.md`](./typography.md) — Cormorant Garamond (display, brand voice) + Lora (workhorse) + JetBrains Mono (codes); 15–16px body default; sentence case headings; price callout rules.
 - [`material.md`](./material.md) — cream/white elevation alternation; the single brand-tinted shadow (FloatingCartButton); spring physics allowed on one-shot celebrations; 12/16/24px radius ladder; generous padding rhythm.
 - [`components.md`](./components.md) — `.pub-*` form primitives; shared `<Button>` / `<Sheet>` / `<Container>` / `<StarRating>` / `<CurrencySwitcher>`; landing sections; item card; `<CartDrawer>` and `<FloatingCartButton>`; `<DeliveryProgress>`; `<LoyaltyCard>`; `<OrderTracker>`.
 

@@ -61,7 +61,7 @@ The label that sits above a `.pub-input`.
 
 - `display: block; font-size: 0.875rem; font-weight: 500;
   color: var(--color-foreground); margin-bottom: 0.375rem;`
-- Inter 500, sentence case.
+- Lora 500, sentence case.
 
 ### `.pub-card`
 
@@ -105,7 +105,7 @@ item detail drawer, mobile menus.
 - Portalled to `document.body` (CLAUDE rule 4).
 - Backdrop: `rgba(0,0,0,0.4)` scrim, tap-to-close.
 - Enter motion: `--animate-slide-up-sheet` (350ms cubic-bezier).
-- Title row: Fraunces 600 (`font-heading`), close button right.
+- Title row: Cormorant Garamond 600 (`font-heading`), close button right.
 - Body scrolls; footer is sticky for action affordances.
 
 ### `<Container />` — `src/components/ui/Container.tsx`
@@ -140,8 +140,8 @@ don't have alternate variants.
 ### `<HeroSection />`
 
 - Full-bleed container, `bg-italia-cream-dark` or full-bleed image.
-- Headline: Fraunces 600, display range (48–72px).
-- Sub-headline: Inter 500, 18–20px.
+- Headline: Cormorant Garamond 600, display range (48–72px).
+- Sub-headline: Lora 500, 18–20px.
 - Primary CTA: `<Button size="xl" variant="primary" />`.
 
 ### `<LocationsGrid />`
@@ -161,7 +161,7 @@ don't have alternate variants.
 ### `<AboutSection />`
 
 - Two-column layout: copy left, image right (swaps on mobile).
-- The one place body italic appears — a single Fraunces pull-quote.
+- The one place body italic appears — a single Cormorant Garamond pull-quote.
 
 ### `<CTASection />`
 
@@ -175,9 +175,9 @@ don't have alternate variants.
 
 - `pub-card` styling (`#fff` on cream, 16px radius, soft shadow).
 - Image area (24px radius top) OR type-first if no photo.
-- Name: Fraunces 500, 18px, `text-italia-dark`.
-- Description: Inter 400, 14px, 2-line clamp, `text-italia-gray`.
-- Price: Inter 700, 18px, tabular, with `zł` suffix at 14px.
+- Name: Cormorant Garamond 500, 18px, `text-italia-dark`.
+- Description: Lora 400, 14px, 2-line clamp, `text-italia-gray`.
+- Price: Lora 700, 18px, tabular, with `zł` suffix at 14px.
 - Dietary tags: inline chips (`bg-italia-cream-dark
   text-italia-dark text-xs px-2 py-0.5 rounded-full`).
 - `Add` button: `<Button size="sm" variant="primary" />`.
@@ -220,7 +220,7 @@ The shimmer-sweep-unlock micro-flow for free delivery.
 The rewards-page centrepiece.
 
 - `pub-card` styling, extra-generous 32px interior padding.
-- Tier badge top, balance numeral 36px Inter 700, progress bar
+- Tier badge top, balance numeral 36px Lora 700, progress bar
   underneath, perks list at the bottom.
 
 ## Order tracker

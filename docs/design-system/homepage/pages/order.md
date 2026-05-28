@@ -39,10 +39,10 @@ make the wait feel handled.
 ### Success header
 
 - `CheckCircle` icon in `text-italia-green`, large.
-- Headline: "Order confirmed" (Fraunces 600, 28px).
+- Headline: "Order confirmed" (Cormorant Garamond 600, 28px).
 - Sub-line: "We'll have your order ready by {ETA}" — pulled from
   `OrderTracker`'s `getEstimatedTime(status)`.
-- Order number prominently: `#{orderId}` (Inter 700, 22px, tabular).
+- Order number prominently: `#{orderId}` (Lora 700, 22px, tabular).
   **Same number** appears on the POS tab, the KDS ticket, the receipt
   (canonical-orders rule — one order = one number).
 
