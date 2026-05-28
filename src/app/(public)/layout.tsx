@@ -32,6 +32,27 @@ const homepageHeading = Cormorant_Garamond({
   display: "swap",
 });
 
+// next/font's `.variable` class only sets `--font-homepage-*` on the element it's
+// applied to (the wrapping <div> below). But Tailwind's @theme inline block in
+// themes/homepage/tokens.css declares `--font-body: var(--font-homepage-body, "Lora")…`
+// at `:root`. CSS substitutes nested vars at the *declaring* element's cascade,
+// not the consumer's — so the inner `var(--font-homepage-body)` is looked up at
+// :root, where the wrapping div hasn't injected anything, and the literal "Lora"
+// fallback wins. Result: body content silently degrades to the inner-fallback chain
+// (no metric-matched "Lora Fallback" face), and portalled overlays (Rule #4 mounts
+// modals to document.body, outside the wrapping div) get the same.
+//
+// Inject the next/font font-family chain as CSS variables on `:root` via an SSR'd
+// <style> tag so the inner var resolves on the same element where --font-body lives:
+//   1. body { font-family: var(--font-body) } resolves to the full metric-matched
+//      chain (`"Lora", "Lora Fallback", Georgia, …`) — no FOUT step through Georgia.
+//   2. Portalled modals (CartDrawer, ItemDetail, etc.) inherit Lora natively from
+//      body without needing per-component font-* classes.
+//
+// Server-rendered → no flash. Scoped to the (public) route group → admin / kitchen /
+// franchisee routes don't load this layout, so :root stays untouched there.
+const fontVarsOnRoot = `:root{--font-homepage-body:${homepageBody.style.fontFamily};--font-homepage-heading:${homepageHeading.style.fontFamily};}`;
+
 export default function PublicLayout({
   children,
 }: {
@@ -39,6 +60,7 @@ export default function PublicLayout({
 }) {
   return (
     <CustomerProvider>
+      <style dangerouslySetInnerHTML={{ __html: fontVarsOnRoot }} />
       <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
         <Header />
         <main className="flex-1">{children}</main>

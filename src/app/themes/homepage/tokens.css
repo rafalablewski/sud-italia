@@ -65,13 +65,16 @@
   --color-italy-red: #CD212A;
 
   /* ----- Type stacks --------------------------------------------------- *
-   * The next/font variables (--font-homepage-*) live on the wrapping div
-   * in (public)/layout.tsx, not on <body>. body { font-family: var(--font-body) }
-   * still needs to resolve even outside that scope (Tailwind preflight sets
-   * a font-family on <html>, so an invalid body declaration falls back
-   * to ui-sans-serif and Lora never shows). Inner-fallback var() syntax
-   * (`var(--x, fallback)`) keeps the whole declaration valid when the
-   * scoped var is missing.
+   * The next/font variables (--font-homepage-*) are injected onto <body>
+   * by (public)/layout.tsx as an SSR'd <style> tag (see the comment there).
+   * That puts them above the wrapping div so body { font-family: var(--font-body) }
+   * and portalled overlays both resolve to the full metric-matched chain
+   * (`"Lora", "Lora Fallback", Georgia, ...`). The inner-fallback string is
+   * kept as defense-in-depth — if the layout's <style> injection ever drops
+   * out, the var still resolves to the literal "Lora" / "Cormorant Garamond"
+   * names, which match the @font-face declarations next/font registers
+   * globally. So we degrade gracefully: lose the metric-matched fallback face
+   * but never the font itself.
    */
   --font-heading: var(--font-homepage-heading, "Cormorant Garamond"), "Playfair Display", Georgia, "Times New Roman", serif;
   --font-body: var(--font-homepage-body, "Lora"), Georgia, "Times New Roman", serif;

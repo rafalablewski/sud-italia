@@ -30,6 +30,58 @@ Fallback stack:
 Both stacks stay all-serif. Falling back to a sans would jar the
 parchment-and-paper canvas.
 
+### The scope subtlety — why fonts are injected on `:root`
+
+next/font's `.variable` class — the one we apply on the wrapping
+`<div>` in `(public)/layout.tsx` — only sets `--font-homepage-body`
+(and `-heading`) *on that element*. Tailwind's `@theme inline` block
+in `themes/homepage/tokens.css` declares:
+
+```css
+--font-body: var(--font-homepage-body, "Lora"), Georgia, "Times New Roman", serif;
+```
+
+at `:root`. CSS substitutes nested `var()`s at the **declaring**
+element's cascade, not the consumer's — so when `body`'s
+`font-family: var(--font-body)` is evaluated, the inner
+`var(--font-homepage-body)` is looked up at `:root`, where the
+wrapping div hasn't injected anything, and the inner fallback
+literal `"Lora"` wins. Result: body content silently degrades to
+`Lora, Georgia, …` (no metric-matched `"Lora Fallback"` face — so
+text reflows visibly when the real Lora woff2 finally arrives), and
+portalled overlays (Rule #4 mounts modals to `document.body`,
+outside the wrapping div) get the same broken chain.
+
+`(public)/layout.tsx` fixes it with an SSR'd `<style>` tag that
+re-declares the next/font CSS variables on **`:root`** (not `body`),
+reading the family strings out of `homepageBody.style.fontFamily` /
+`homepageHeading.style.fontFamily` (next/font exposes them as part
+of the `NextFont` return type). Placing them at `:root` is essential
+— that's the same cascade level where `--font-body` is declared, so
+the nested `var()` substitution finally has a value to find. With
+the fix, `body { font-family: var(--font-body) }` resolves to the
+full metric-matched chain (`"Lora", "Lora Fallback", Georgia, …`)
+and portalled modals inherit Lora natively without per-component
+font classes.
+
+The `<style>` injection is scoped to the `(public)` route group, so
+admin / kitchen / franchisee routes (which don't load this layout)
+keep `:root` untouched and their own type stacks unaffected.
+
+**Defense in depth.** `themes/homepage/tokens.css` also uses inner-
+fallback `var()` syntax: `var(--font-homepage-body, "Lora")`. If the
+`<style>` injection ever drops out (a refactor accidentally removes
+it, an experimental layout switches the wiring, etc.), the var still
+resolves to the literal `"Lora"` — which matches the `@font-face`
+declarations next/font registers globally. We lose the metric-matched
+fallback face during font loading, but never the font itself.
+
+**When you add a new font:** apply both ends — the next/font
+`.variable` className on the wrapping div, and add the family to the
+SSR'd `<style>` block on `:root` in `(public)/layout.tsx`. The
+inner-fallback literal in `tokens.css` is the safety net, not the
+primary mechanism.
+
 ## The weight ladder
 
 | Weight | Cormorant Garamond use                                | Lora use                                              |
