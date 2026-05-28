@@ -6,6 +6,7 @@ import { useCartStore } from "@/store/cart";
 import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
 import { DeliveryProgress } from "./DeliveryProgress";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ComboDealBanner } from "./ComboDealBanner";
 import { LoyaltyEarnPreview } from "./LoyaltyEarnPreview";
 import { TodBanner } from "./TodBanner";
@@ -591,17 +592,21 @@ export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps
       )}
 
       {/* Cross-sell suggestions */}
-      <CartUpsell suggestions={suggestions} />
+      <LayoutGate flag="showCartUpsell">
+        <CartUpsell suggestions={suggestions} />
+      </LayoutGate>
 
       {/* Delivery progress bar */}
       {/* Per-segment threshold (audit §2.5 Uber Eats): first-timers see 39 PLN,
           regulars 60 PLN, Gold/Platinum 0 (already free). */}
-      <DeliveryProgress
-        cartTotal={total}
-        fulfillmentType={fulfillmentType}
-        thresholdGrosze={deliveryThreshold}
-        isPersonalised={isDeliveryPersonalised}
-      />
+      <LayoutGate flag="showDeliveryProgress">
+        <DeliveryProgress
+          cartTotal={total}
+          fulfillmentType={fulfillmentType}
+          thresholdGrosze={deliveryThreshold}
+          isPersonalised={isDeliveryPersonalised}
+        />
+      </LayoutGate>
 
       {/* Fulfillment type selector */}
       <div className="px-5 mt-4 mb-3">

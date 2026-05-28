@@ -1,73 +1,73 @@
 # Sud Italia — Design System
 
-Standards for the visual + interaction language across the whole operating
-system: **POS, KDS, CRM, Concierge, WhatsApp**, every admin surface, and the
-guest storefront.
+Three independent themes. **No shared layer.** This is the WordPress
+model: each theme owns its own tokens, components, and rules — change a
+font in one and the other two stay untouched.
 
-**Code is the source of truth.** Canonical tokens live in
-`src/app/globals.css` (the `[data-admin-theme]` blocks + the `:root --cmd-*`
-command palette + the public `@theme inline` tokens) and are mirrored for
-JS/Recharts in `src/components/admin/v2/theme.ts`. Reference mockups live at
-`public/mockups/core-suite/` (open `/mockups/core-suite/index.html` on any
-deploy).
+## The three themes
 
-## Map
+| Theme                       | Surface                                          | Owns                                                                                            |
+| --------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [**Core**](./core/)         | POS, KDS, Guest (CRM + Concierge + WhatsApp)     | Operator-pressure surfaces. The productised IP.                                                 |
+| [**Admin**](./admin/)       | The back-office: every `/admin/*` outside Core   | Dashboard, Orders, Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System |
+| [**Homepage**](./homepage/) | The public storefront: `/`, `/menu`, `/checkout`, `/order`, `/loyalty` | Guest-facing web. Zero-friction ordering.                          |
 
-**Foundations**
+Each theme has the same internal shape:
 
-- [`philosophy.md`](./philosophy.md) — three ideas held together + the
-  operating principle that resolves conflicts.
-- [`color.md`](./color.md) — dark + light tokens, command palette, the colour
-  rules ("no gradient, no glow", platinum = jewellery, brand ≠ status).
-- [`typography.md`](./typography.md) — Inter / Fraunces / JetBrains Mono +
-  the rule for where each face goes.
-- [`material.md`](./material.md) — depth, hairlines, radius, motion.
+```
+<theme>/
+├── README.md       ← theme overview + the rules unique to this theme
+├── theme/          ← color, typography, material, components (theme-owned)
+└── <surfaces>/     ← per-page or per-module docs
+```
 
-**Components**
+The only file at the top of `design-system/` is
+[`backlog.md`](./backlog.md) — the cross-theme cleanup inventory.
 
-- [`components.md`](./components.md) — buttons, badges, inputs, segmented,
-  cards, dialogs, tables, icons.
+## The rule
 
-**Modules** (per-module rules)
+**A token, font, component, or layout belongs to exactly one theme.** When
+you change Admin's accent colour, Core does not move. When you change
+Homepage's body font, Admin does not move. If a change to one theme
+forces a change to another, you've found a leak — fix the leak, do not
+ship the cross-theme change.
 
-- [`modules/kds.md`](./modules/kds.md) — calm monochrome + colour-on-exception
-  + the role triad + coursing-aware tickets.
-- [`modules/pos.md`](./modules/pos.md) — text-forward cards, coursing model,
-  pace steering, tab rail.
-- [`modules/crm.md`](./modules/crm.md) — health gauge, RFM, NBA, filters,
-  GDPR.
-- [`modules/concierge.md`](./modules/concierge.md) — AI capability layer +
-  allergen matrix.
-- [`modules/whatsapp.md`](./modules/whatsapp.md) — inbox + funnel + settings
-  hub.
+## Today vs target
 
-**Reference**
+The doctrine above is the **target** and the code today reaches it:
+file-level + bundle-level isolation, per-theme fonts, per-theme JS
+token mirrors. The Tailwind v4 `@theme` constraint is the one place
+the architecture compromises — the homepage tokens file ships globally
+(~50 lines) so Tailwind can generate utilities — and that file
+still lives under `themes/homepage/` so the "every theme file lives in
+its theme's folder" doctrine holds.
 
-- [`canonical-orders.md`](./canonical-orders.md) — the demo order narrative
-  (Table 7 = #4821, etc.) used coherently across all mockups.
-- [`backlog.md`](./backlog.md) — not-yet-shipped, in priority order.
-- [`extend.md`](./extend.md) — how to add a colour / surface / page / icon
-  without drifting.
+| What                          | State                                                                                                                                                                                              |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin tokens                  | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/themes/admin/index.css`. Edits only affect admin surfaces.                                                                         |
+| Homepage tokens               | ✅ `@theme inline` block lives in `src/app/themes/homepage/tokens.css` (@import-ed by `globals.css` so Tailwind v4 sees it for utility generation; ships globally — ~50 lines). All other Homepage CSS — body, delivery animations, `.pub-*` form elements — lives in `src/app/themes/homepage/index.css` and is JS-imported per-route. |
+| Core tokens                   | ✅ Live in `src/app/themes/core/index.css` (`:root --cmd-*` palette + `.kds-*` / `.ka-*` / `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces).                                                    |
+| Per-theme CSS file            | ✅ All theme CSS lives under `src/app/themes/{core,admin,homepage}/`. Editing one cannot accidentally affect another.                                                                              |
+| **Per-route bundle loading**  | ✅ `src/app/(public)/layout.tsx` imports `themes/homepage/index.css`; `src/app/admin/layout.tsx` imports `themes/admin/index.css` + `themes/core/index.css`. Storefront pages no longer ship admin's chunk or core's chunk; admin pages no longer ship homepage's chunk. The Homepage `tokens.css` (~50 lines, @theme inline only) ships globally — that's the Tailwind v4 utility-generation cost. |
+| Fonts                         | ✅ Each themed route-group layout loads its own `next/font` instances with namespaced variables: `(public)/layout.tsx` → `--font-homepage-{body,heading}`; `admin/layout.tsx` + `kitchen/layout.tsx` + `franchisee/layout.tsx` → `--font-admin-{body,display}`. The root `layout.tsx` no longer loads custom fonts. A weight / subset change in one theme can't move another. |
+| Per-theme `theme.ts`          | ✅ Three typed mirrors: `src/components/admin/v2/theme.ts` (admin), `src/app/themes/core/theme.ts` (Core), `src/app/themes/homepage/theme.ts` (Homepage). Core + Homepage have no JS consumers today — the mirrors exist so future Recharts / canvas / inline-SVG code imports from one place instead of hardcoding hex. |
 
-## Quick rules (the absolute don'ts)
+**What ships on each route:**
 
-1. **No decorative gradients.** Flat solids, hairlines for separation,
-   neutral shadows for elevation. No `linear-gradient` fills on surfaces or
-   buttons, no colour-tinted glow shadows.
-2. **No emoji in UI chrome.** Use a custom stroke icon. (Exceptions: real
-   chat-content emoji, and the EU-14 allergen pictograms in Concierge.)
-3. **Burgundy is brand, never status.** A red ticket means *late*, not
-   *brand*.
-4. **Platinum is jewellery, not paint.** Hairlines, the wordmark mark,
-   owner-tier flourishes, key numerals. Never as a fill or action colour.
-5. **In high-pressure surfaces (POS / KDS), operational clarity outranks
-   brand expression.** In exploratory surfaces (CRM / Concierge), beauty is
-   allowed to breathe.
-6. **One order = one number.** The same id everywhere (POS tender, KDS
-   ticket, Guest hub pending) — see [`canonical-orders.md`](./canonical-orders.md).
+| Route type           | Chunks loaded                                                              | Total minified CSS |
+| -------------------- | -------------------------------------------------------------------------- | ------------------ |
+| `(public)/*`         | base + Tailwind utilities + `themes/homepage/index.css`                    | ~108KB             |
+| `admin/*`            | base + Tailwind utilities + `themes/admin/index.css` + `themes/core/index.css` | ~392KB         |
+| neither (e.g. `/kitchen`) | base + Tailwind utilities only                                         | ~104KB             |
+
+Selectors are uniquely prefixed per theme (`[data-admin-theme]` / `.v2-`
+for Admin; `.cmd-` / `.kds-` / `.ka-` / `.pos-` / `.crm-` / `.cncrg-` /
+`.wa-` for Core; `--color-italia-*` / `.pub-` for Homepage), so even
+the small overlap that does still load globally (Tailwind utilities)
+cannot trigger cross-theme overrides.
 
 ## Authority
 
-When this doc and the code disagree, the **code wins** — open a PR to fix
-the doc. When the doc and a mockup disagree, the doc wins and the mockup
-follows.
+**Code wins** over docs. When this doc and the code disagree, open a PR
+to fix the doc. When two themes disagree on a shared surface, the theme
+that owns the surface wins (see the per-theme README for ownership).

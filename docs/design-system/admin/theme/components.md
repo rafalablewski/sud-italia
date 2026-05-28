@@ -182,7 +182,7 @@ Key rules:
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /
-  Loyalty / Staff (some still drift 40–60px — see [`backlog.md`](./backlog.md)).
+  Loyalty / Staff (some still drift 40–60px — see [`backlog.md`](../../backlog.md)).
 - `tabular-nums` on every numeric column.
 - Hairline `--border` between rows. Hover lifts the row background only.
 - Column header eyebrows: `11px uppercase 600 / .08em tracked` in

@@ -86,6 +86,20 @@ export default async function CapabilitiesPage() {
           summary: "Loyalty, growth, AI, seasonal items and feature toggles. Persists via withLock on save.",
         },
         {
+          name: "Storefront layout toggles (Settings → Layout)",
+          status: "live",
+          href: "/admin/settings",
+          summary:
+            "Layout tab in /admin/settings lets the operator turn whole pieces of the public site on or off. 10 toggles: Header (currency switcher, language switcher), Landing (bundles showcase, loyalty pitch), Menu pages (seasonal specials), Cart (cross-sell rail, free-delivery progress), Order confirmation (push opt-in, feedback survey), Site-wide (chat widget). Each call site wraps the owning component in <LayoutGate flag=...> which reads /api/settings/public on mount and returns null when the flag is false — no DOM, no painted CSS, no event listeners. Persists via AppSettings.layout; toggle is the saved state per the toggle-=-saved rule.",
+        },
+        {
+          name: "Themes inspector (Settings → Themes)",
+          status: "live",
+          href: "/admin/settings",
+          summary:
+            "Read-only inspector for the three-theme architecture (Core / Admin / Homepage). Each theme view shows: source files + line counts, the routes that load it, live token swatches imported from the typed JS mirror (themes/{core,homepage}/theme.ts + admin/v2/theme.ts) so colours always match the code, the font stack and how it's loaded, the CSS selector prefixes the theme owns, and the file paths to edit. Inspector-only today; future capabilities (live token override, theme upload) land on the same surface.",
+        },
+        {
           name: "Multi-currency display (PLN / USD / SGD / EUR)",
           status: "live",
           href: "/admin/currency",
@@ -127,7 +141,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin",
           summary:
-            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/mobile/*.md.",
+            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/design-system/admin/mobile/*.md.",
         },
         {
           name: "Mobile admin push notifications",

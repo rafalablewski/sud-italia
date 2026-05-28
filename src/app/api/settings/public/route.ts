@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import {
+  DEFAULT_LAYOUT_SETTINGS,
   getLoyaltySettings,
   getSettings,
   LIVE_WIDGET_LIMIT,
@@ -74,5 +75,10 @@ export async function GET(req: NextRequest) {
     compliance: location
       ? resolveLocationCompliance(appSettings.compliance, location)
       : { zone: appSettings.compliance?.defaultZone ?? "EU" },
+    /** Storefront visibility toggles set in /admin/settings → Layout.
+     *  Components like CurrencySwitcher read these and return null when
+     *  the corresponding flag is false, so the surface loses its DOM
+     *  and visible CSS without a code change. */
+    layout: appSettings.layout ?? DEFAULT_LAYOUT_SETTINGS,
   });
 }

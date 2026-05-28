@@ -131,8 +131,10 @@ reads frail in dark mode.
 If a new module ships (e.g. a Reservations console):
 
 1. Build the live component + mockup first.
-2. Once stable, write `docs/design-system/modules/<name>.md` following
-   the structure of the existing modules:
+2. Once stable, write `docs/design-system/<theme>/modules/<name>.md` for
+   the owning theme (Core for productised IP, Admin for back-office,
+   Homepage for storefront), following the structure of the existing
+   Core modules:
    - One-line thesis at the top
    - **Live code** / **Mockup** pointers
    - Layout sketch in ASCII

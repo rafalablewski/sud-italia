@@ -9,6 +9,7 @@ import { getActiveLocations } from "@/data/locations";
 import { CartButton } from "@/components/cart/CartButton";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CurrencySwitcher } from "@/components/ui/CurrencySwitcher";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { useCustomer } from "@/store/customer";
 
 export function Header() {
@@ -80,15 +81,23 @@ export function Header() {
                 {loc.city}
               </Link>
             ))}
-            <CurrencySwitcher />
-            <LanguageSwitcher />
+            <LayoutGate flag="showCurrencySwitcher">
+              <CurrencySwitcher />
+            </LayoutGate>
+            <LayoutGate flag="showLanguageSwitcher">
+              <LanguageSwitcher />
+            </LayoutGate>
             <CartButton />
           </nav>
 
           {/* Mobile: Cart + Hamburger */}
           <div className="flex items-center gap-2 md:hidden">
-            <CurrencySwitcher />
-            <LanguageSwitcher />
+            <LayoutGate flag="showCurrencySwitcher">
+              <CurrencySwitcher />
+            </LayoutGate>
+            <LayoutGate flag="showLanguageSwitcher">
+              <LanguageSwitcher />
+            </LayoutGate>
             <CartButton />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}

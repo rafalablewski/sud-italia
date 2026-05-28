@@ -12,6 +12,10 @@ import {
 import { fetchPublicSettings } from "@/lib/public-settings";
 import { Coins, Check } from "lucide-react";
 
+// Visibility (admin → Settings → Layout → "Currency switcher") is handled
+// by the <LayoutGate flag="showCurrencySwitcher"> wrapper at the call
+// site (src/components/layout/Header.tsx), so this component focuses on
+// the switcher logic itself.
 export function CurrencySwitcher() {
   const [currency, setCurrencyState] = useState<Currency>("PLN");
   const [open, setOpen] = useState(false);

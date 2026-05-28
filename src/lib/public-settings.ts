@@ -35,6 +35,21 @@ export interface PublicSettings {
     pdpaConsentText?: string | null;
   };
   deliveryThresholds?: Record<string, number | undefined> | null;
+  /** Storefront visibility toggles set via /admin/settings → Layout.
+   *  Components (or the LayoutGate wrapper) read these and return null
+   *  when the corresponding flag is `false`. */
+  layout?: {
+    showCurrencySwitcher: boolean;
+    showLanguageSwitcher: boolean;
+    showBundlesShowcase: boolean;
+    showLoyaltySection: boolean;
+    showSeasonalSpecials: boolean;
+    showCartUpsell: boolean;
+    showDeliveryProgress: boolean;
+    showPushOptIn: boolean;
+    showFeedbackSurvey: boolean;
+    showChatWidget: boolean;
+  };
 }
 
 // One in-flight promise per location key. `null` location = origin-wide

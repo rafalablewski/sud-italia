@@ -2733,7 +2733,54 @@ export interface AppSettings {
    *  EU/PL operates on the defaults; operators tag specific trucks as
    *  NYC or SG and the customer-facing chrome upgrades to match. */
   compliance?: ComplianceConfig;
+  /** Storefront visibility toggles — turn whole pieces of the public
+   *  UI on/off without code changes. Each flag is the saved state
+   *  (CLAUDE rule 7 — toggle = saved). When a flag is false, the
+   *  owning component returns null so the surface loses its DOM and
+   *  its painted CSS. */
+  layout?: LayoutSettings;
 }
+
+export interface LayoutSettings {
+  /** Show the currency picker in the public site header. When false the
+   *  CurrencySwitcher renders null and the storefront falls back to PLN
+   *  everywhere. */
+  showCurrencySwitcher: boolean;
+  /** Show the language picker in the public site header. When false the
+   *  storefront uses the saved or default locale only. */
+  showLanguageSwitcher: boolean;
+  /** Show the bundles showcase block on the landing page. */
+  showBundlesShowcase: boolean;
+  /** Show the loyalty pitch section on the landing + location pages.
+   *  The dedicated /rewards page is unaffected. */
+  showLoyaltySection: boolean;
+  /** Show the seasonal-specials rail on location menu pages. */
+  showSeasonalSpecials: boolean;
+  /** Show the cross-sell / upsell rail in the cart drawer. */
+  showCartUpsell: boolean;
+  /** Show the free-delivery progress bar in the cart drawer. */
+  showDeliveryProgress: boolean;
+  /** Show the push-opt-in button on the order-confirmation page. */
+  showPushOptIn: boolean;
+  /** Show the post-order feedback survey on the order-confirmation +
+   *  review pages. */
+  showFeedbackSurvey: boolean;
+  /** Show the floating chat widget across the public site. */
+  showChatWidget: boolean;
+}
+
+export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
+  showCurrencySwitcher: true,
+  showLanguageSwitcher: true,
+  showBundlesShowcase: true,
+  showLoyaltySection: true,
+  showSeasonalSpecials: true,
+  showCartUpsell: true,
+  showDeliveryProgress: true,
+  showPushOptIn: true,
+  showFeedbackSurvey: true,
+  showChatWidget: true,
+};
 
 export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   defaultCurrency: "PLN",

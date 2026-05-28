@@ -9,6 +9,7 @@ import { MenuItemCard } from "./MenuItem";
 import { MenuFomoMicroLine } from "./MenuFomoMicroLine";
 import { SurpriseMe } from "./SurpriseMe";
 import { SeasonalSpecials } from "./SeasonalSpecials";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ReorderSection } from "./ReorderSection";
 import { SpeedGuarantee } from "./SpeedGuarantee";
 import { ComboDealsPreview } from "./ComboDealsPreview";
@@ -301,7 +302,11 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
         {!isSearching && <ComboDealsPreview locationSlug={locationSlug} />}
 
         {/* Seasonal specials (Kodawari - limited-time) */}
-        {!isSearching && <SeasonalSpecials locationSlug={locationSlug} />}
+        {!isSearching && (
+          <LayoutGate flag="showSeasonalSpecials">
+            <SeasonalSpecials locationSlug={locationSlug} />
+          </LayoutGate>
+        )}
 
         {/* Surprise Me feature */}
         {!isSearching && (

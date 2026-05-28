@@ -5,6 +5,8 @@ import {
   FlaskConical,
   History,
   KeyRound,
+  LayoutGrid,
+  Palette,
   Phone,
   Save,
   ShieldCheck,
@@ -19,6 +21,7 @@ const MobileSettings = dynamic(
   () => import("./mobile/MobileSettings").then((m) => m.MobileSettings),
   { ssr: false },
 );
+import { ThemesTab } from "./settings/ThemesTab";
 import {
   Badge,
   Button,
@@ -46,7 +49,126 @@ interface Settings {
   simulationEnabled?: boolean;
   kdsSimulatorEnabled?: boolean;
   whatsappSimulatorEnabled?: boolean;
+  /** Storefront visibility toggles set in the Layout tab. */
+  layout?: {
+    showCurrencySwitcher: boolean;
+    showLanguageSwitcher: boolean;
+    showBundlesShowcase: boolean;
+    showLoyaltySection: boolean;
+    showSeasonalSpecials: boolean;
+    showCartUpsell: boolean;
+    showDeliveryProgress: boolean;
+    showPushOptIn: boolean;
+    showFeedbackSurvey: boolean;
+    showChatWidget: boolean;
+  };
 }
+
+type LayoutFlag = NonNullable<Settings["layout"]> extends infer L
+  ? L extends Record<string, boolean>
+    ? keyof L
+    : never
+  : never;
+
+interface LayoutToggleSpec {
+  key: LayoutFlag;
+  group: "Header" | "Landing" | "Menu pages" | "Cart" | "Order confirmation" | "Site-wide";
+  label: string;
+  description: string;
+  onCopy: string;
+  offCopy: string;
+}
+
+const LAYOUT_TOGGLES: LayoutToggleSpec[] = [
+  {
+    key: "showCurrencySwitcher",
+    group: "Header",
+    label: "Currency switcher",
+    description:
+      "The currency picker in the public site header. Off ⇒ storefront falls back to PLN. Admin reports stay PLN-pinned regardless via AdminCurrencyGuard.",
+    onCopy: "Visible in the public site header.",
+    offCopy: "Hidden — storefront uses PLN everywhere.",
+  },
+  {
+    key: "showLanguageSwitcher",
+    group: "Header",
+    label: "Language switcher",
+    description:
+      "The locale picker in the public site header. Off ⇒ storefront serves the default locale only.",
+    onCopy: "Visible in the public site header.",
+    offCopy: "Hidden — default locale only.",
+  },
+  {
+    key: "showBundlesShowcase",
+    group: "Landing",
+    label: "Bundles showcase",
+    description:
+      "The deal-bundles block on the public landing page (sourced from DEFAULT_BUNDLES + DEFAULT_COMBO_DEALS).",
+    onCopy: "Showing on the landing page.",
+    offCopy: "Hidden from the landing.",
+  },
+  {
+    key: "showLoyaltySection",
+    group: "Landing",
+    label: "Loyalty pitch",
+    description:
+      "The points / tier ladder pitch on the landing and per-location pages. The dedicated /rewards page is unaffected.",
+    onCopy: "Showing on the landing and location pages.",
+    offCopy: "Hidden from landing + location pages.",
+  },
+  {
+    key: "showSeasonalSpecials",
+    group: "Menu pages",
+    label: "Seasonal specials rail",
+    description: "The per-location seasonal-items callout on the menu page.",
+    onCopy: "Showing on location menu pages.",
+    offCopy: "Hidden — seasonals only via the menu list.",
+  },
+  {
+    key: "showCartUpsell",
+    group: "Cart",
+    label: "Cart cross-sell rail",
+    description:
+      "The espresso + dessert (and similar) suggestions inside the cart drawer (from getCartSuggestions).",
+    onCopy: "Suggestions visible inside the cart drawer.",
+    offCopy: "Hidden — no in-cart cross-sell.",
+  },
+  {
+    key: "showDeliveryProgress",
+    group: "Cart",
+    label: "Free-delivery progress",
+    description:
+      "The shimmer / sweep / unlock progress bar that counts up to the free-delivery threshold inside the cart.",
+    onCopy: "Progress bar visible in the cart drawer.",
+    offCopy: "Hidden — operators charging flat delivery may prefer off.",
+  },
+  {
+    key: "showPushOptIn",
+    group: "Order confirmation",
+    label: "Push opt-in button",
+    description:
+      "The web-push subscription button on the order-confirmation page.",
+    onCopy: "Visible after a successful order.",
+    offCopy: "Hidden — no in-page push prompt.",
+  },
+  {
+    key: "showFeedbackSurvey",
+    group: "Order confirmation",
+    label: "Feedback survey",
+    description:
+      "The post-order 5-star survey on the confirmation + review pages. Surveys still arrive via admin Feedback when this is off, just not collected client-side.",
+    onCopy: "Survey visible after pickup / delivery.",
+    offCopy: "Hidden — no client-side survey.",
+  },
+  {
+    key: "showChatWidget",
+    group: "Site-wide",
+    label: "Chat widget",
+    description: "The floating chat affordance in the public site footer.",
+    onCopy: "Floating chat available across the public site.",
+    offCopy: "Hidden — no in-page chat.",
+  },
+];
 
 interface AuditEntry {
   id: string;
@@ -59,7 +181,7 @@ interface AuditEntry {
   occurredAt: string;
 }
 
-type TabKey = "general" | "security" | "audit" | "danger";
+type TabKey = "general" | "layout" | "themes" | "security" | "audit" | "danger";
 
 function fmtTime(iso: string): string {
   try {
@@ -95,6 +217,14 @@ function AdminSettingsDesktop() {
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [whatsappSimulatorEnabled, setWhatsappSimulatorEnabled] = useState(false);
+  const [layoutFlags, setLayoutFlags] = useState<Record<LayoutFlag, boolean>>(
+    () =>
+      LAYOUT_TOGGLES.reduce((acc, spec) => {
+        acc[spec.key] = true;
+        return acc;
+      }, {} as Record<LayoutFlag, boolean>),
+  );
+  const [layoutBusy, setLayoutBusy] = useState<Set<LayoutFlag>>(new Set());
   const [saving, setSaving] = useState(false);
   const [simBusy, setSimBusy] = useState(false);
   const [kdsSimBusy, setKdsSimBusy] = useState(false);
@@ -125,6 +255,15 @@ function AdminSettingsDesktop() {
     setSimulationEnabled(!!data.simulationEnabled);
     setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
     setWhatsappSimulatorEnabled(!!data.whatsappSimulatorEnabled);
+    // Layout tab — visibility toggles for storefront chrome. Default to
+    // "show" so a freshly-deployed instance behaves the same as before
+    // this tab existed. Any unset flag stays `true`.
+    setLayoutFlags(
+      LAYOUT_TOGGLES.reduce((acc, spec) => {
+        acc[spec.key] = data.layout?.[spec.key] ?? true;
+        return acc;
+      }, {} as Record<LayoutFlag, boolean>),
+    );
   }, []);
 
   const fetchAudit = useCallback(async () => {
@@ -210,6 +349,41 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  const toggleLayoutFlag = async (spec: LayoutToggleSpec, next: boolean) => {
+    setLayoutBusy((s) => new Set(s).add(spec.key));
+    setLayoutFlags((s) => ({ ...s, [spec.key]: next })); // optimistic
+    try {
+      // Merge with the existing layout object so toggling one flag
+      // doesn't clobber sibling flags. Also merge in the *current* full
+      // map of in-memory flags so any flags that were defaulted-true on
+      // mount get explicitly persisted on the first toggle.
+      const mergedLayout = {
+        ...layoutFlags,
+        ...(settings?.layout ?? {}),
+        [spec.key]: next,
+      };
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layout: mergedLayout }),
+      });
+      if (res.ok) {
+        toast.success(next ? `${spec.label} shown` : `${spec.label} hidden`);
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setLayoutFlags((s) => ({ ...s, [spec.key]: !next })); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setLayoutBusy((s) => {
+        const next = new Set(s);
+        next.delete(spec.key);
+        return next;
+      });
     }
   };
 
@@ -393,6 +567,8 @@ function AdminSettingsDesktop() {
           onChange={(v) => setTab(v as TabKey)}
           tabs={[
             { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
+            { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+            { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
             { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
             { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
             { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
@@ -596,6 +772,62 @@ function AdminSettingsDesktop() {
           </div>
         </>
       )}
+
+      {tab === "layout" && (
+        <>
+          {(["Header", "Landing", "Menu pages", "Cart", "Order confirmation", "Site-wide"] as const).map((group) => {
+            const items = LAYOUT_TOGGLES.filter((t) => t.group === group);
+            if (items.length === 0) return null;
+            return (
+              <Card key={group}>
+                <CardHeader
+                  title={group}
+                  description={
+                    group === "Header"
+                      ? "Switchers that live in the top bar across every public route."
+                      : group === "Landing"
+                      ? "Sections rendered by the public landing page."
+                      : group === "Menu pages"
+                      ? "Surfaces specific to /locations/[slug]."
+                      : group === "Cart"
+                      ? "Blocks inside the cart drawer (slides over the menu page)."
+                      : group === "Order confirmation"
+                      ? "Post-checkout prompts on /order-confirmation."
+                      : "Anything global to the public site."
+                  }
+                />
+                <CardBody>
+                  <div className="v2-stack-12">
+                    {items.map((spec) => {
+                      const value = layoutFlags[spec.key];
+                      const busy = layoutBusy.has(spec.key);
+                      return (
+                        <label key={spec.key} className="v2-field">
+                          <span className="v2-field-label">{spec.label}</span>
+                          <span className="v2-muted text-sm">{spec.description}</span>
+                          <span className="inline-flex items-center gap-2 mt-1">
+                            <input
+                              type="checkbox"
+                              checked={value}
+                              onChange={(e) => toggleLayoutFlag(spec, e.target.checked)}
+                              disabled={busy || !settings}
+                            />
+                            <span className="v2-muted text-sm">
+                              {value ? spec.onCopy : spec.offCopy}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </>
+      )}
+
+      {tab === "themes" && <ThemesTab />}
 
       {tab === "security" && (
         <Card>

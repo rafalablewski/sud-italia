@@ -106,7 +106,7 @@ Shown only when `get_allergens` is selected. A compact table:
 | last | dietary tags (veg / gf / etc.) |
 
 This is the **one place where emoji are retained** — see
-[`components.md`](../components.md#iconography--custom-stroke-no-emoji-in-ui).
+the Core theme's iconography rule ([`../theme/`](../theme/) — custom stroke, no emoji in UI chrome).
 The allergen pictograms are a recognised EU-14 domain convention; replacing
 them with custom icons would lose clarity.
 

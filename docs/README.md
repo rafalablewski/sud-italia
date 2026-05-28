@@ -7,32 +7,43 @@ exist to explain *why* decisions were made and *what* the next step is.
 
 ```
 docs/
-├── README.md          ← you are here
-├── design-system.md   ← suite-wide visual + interaction language (tokens, type, modules)
-├── mobile/            ← mobile admin redesign — strategy → audit → next
-└── audits/            ← dated, scoped audits of specific surfaces
+├── README.md              ← you are here
+├── design-system/         ← three independent themes — WordPress-style
+│   ├── README.md          ← the three-theme model + "today vs target"
+│   ├── core/              ← Core IP theme (POS, KDS, Guest)
+│   │   ├── README.md
+│   │   ├── theme/         ← Core-only tokens (backlog today)
+│   │   ├── modules/       ← pos.md, kds.md, guest.md, crm.md, concierge.md, whatsapp.md
+│   │   └── canonical-orders.md
+│   ├── admin/             ← back-office theme (everything else under /admin/*)
+│   │   ├── README.md      ← shell anatomy + per-section taxonomy
+│   │   ├── theme/         ← admin-owned tokens, components, extend guide
+│   │   └── mobile/        ← mobile shape of the admin
+│   ├── homepage/          ← public storefront theme (/, /menu, /checkout, …)
+│   │   ├── README.md
+│   │   └── theme/         ← homepage-only tokens (backlog today)
+│   └── backlog.md         ← cross-theme cleanup inventory
+└── audits/                ← dated, scoped audits of specific surfaces
 ```
 
-## `design-system.md`
+## `design-system/`
 
-The shared design language for the whole operating system (POS, KDS, CRM,
-Concierge, WhatsApp, admin, storefront): philosophy, color/type/material
-tokens, component contracts, the module density spectrum, per-module redesign
-specs, and the not-yet-shipped backlog. Start here before any visual work.
+Three independent themes — no shared layer. Start at
+[`design-system/README.md`](./design-system/README.md) for the doctrine
+and the honest "today vs target" gap table. Each theme has the same
+internal shape:
 
-## `mobile/`
+```
+<theme>/
+├── README.md       ← theme overview + the rules unique to this theme
+├── theme/          ← color, typography, material, components (theme-owned)
+└── <surfaces>/     ← per-page or per-module docs
+```
 
-The mobile-admin redesign, in reading order:
-
-1. **`audit.md`** — what existed before, where mobile broke down
-2. **`ux-strategy.md`** — the strategic shape of the mobile experience
-3. **`navigation.md`** — bottom-nav, more-drawer, FAB, role filtering
-4. **`design-system.md`** — tokens, primitives, ergonomic patterns
-5. **`final-review.md`** — adversarial review of the shipped redesign
-6. **`next-steps.md`** — punch-list of what's not yet shipped
-
-Clickable HTML mockups for the same work live at
-`public/mockups/mobile/` — load any deploy at `/mockups/mobile/`.
+The rule: **a token, font, component, or layout belongs to exactly one
+theme.** Changes to one theme must not move the other two. The code
+today only partially enforces this — see the design-system README for
+the gap list and the code-split work that closes it.
 
 ## `audits/`
 
