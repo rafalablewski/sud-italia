@@ -40,7 +40,7 @@ tokens are inherited:
 - [`color.md`](./color.md) — the `--cmd-*` palette + status hues + the platinum jewellery rule.
 - [`typography.md`](./typography.md) — Inter + JetBrains Mono only; the dense 13px body default; the three read-across-the-line numerals.
 - [`material.md`](./material.md) — the canvas → panel → raised elevation ramp; hairlines; 12px card radius; quiet 160ms motion; no spring on operator stations.
-- `components.md` — Core primitives (tender pad, ticket card, course divider) *(backlog)*
+- [`components.md`](./components.md) — Core primitives: shared chrome (header, eyebrow, subbar, segmented, button, chip), KDS ticket + quantity badge + action button, POS tab card + tender pad + course divider, CRM regular row + health gauge, Concierge tool card + allergen matrix, WhatsApp thread card + live thread bubbles.
 
 ## Authority
 
