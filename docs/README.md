@@ -7,32 +7,34 @@ exist to explain *why* decisions were made and *what* the next step is.
 
 ```
 docs/
-├── README.md          ← you are here
-├── design-system.md   ← suite-wide visual + interaction language (tokens, type, modules)
-├── mobile/            ← mobile admin redesign — strategy → audit → next
-└── audits/            ← dated, scoped audits of specific surfaces
+├── README.md            ← you are here
+├── design-system/       ← the visual + interaction language
+│   ├── foundations/     ← shared tokens: philosophy, color, type, material
+│   ├── modules/         ← Core (the IP): POS, KDS, CRM, Concierge, WhatsApp
+│   ├── admin/           ← back-office around the Core modules
+│   ├── mobile/          ← mobile shape of the admin
+│   ├── web/             ← public storefront (placeholder)
+│   ├── tablet/          ← tablet patterns (placeholder)
+│   ├── components.md    ← cross-surface primitives
+│   ├── canonical-orders.md
+│   ├── backlog.md
+│   └── extend.md
+└── audits/              ← dated, scoped audits of specific surfaces
 ```
 
-## `design-system.md`
+## `design-system/`
 
-The shared design language for the whole operating system (POS, KDS, CRM,
-Concierge, WhatsApp, admin, storefront): philosophy, color/type/material
-tokens, component contracts, the module density spectrum, per-module redesign
-specs, and the not-yet-shipped backlog. Start here before any visual work.
+The shared design language. Start at
+[`design-system/README.md`](./design-system/README.md). The folder is
+organised around the **inheritance chain**:
 
-## `mobile/`
-
-The mobile-admin redesign, in reading order:
-
-1. **`audit.md`** — what existed before, where mobile broke down
-2. **`ux-strategy.md`** — the strategic shape of the mobile experience
-3. **`navigation.md`** — bottom-nav, more-drawer, FAB, role filtering
-4. **`design-system.md`** — tokens, primitives, ergonomic patterns
-5. **`final-review.md`** — adversarial review of the shipped redesign
-6. **`next-steps.md`** — punch-list of what's not yet shipped
-
-Clickable HTML mockups for the same work live at
-`public/mockups/mobile/` — load any deploy at `/mockups/mobile/`.
+- **Foundations** are the shared visual language — every surface inherits,
+  none of them fork.
+- **Core modules** (POS, KDS, CRM, Concierge, WhatsApp) are the productised
+  IP and own per-module rules.
+- **Admin, mobile, web, tablet** are the surfaces the Core modules and the
+  back-office render into. Each documents its own layout / navigation /
+  ergonomics, on top of foundations.
 
 ## `audits/`
 
