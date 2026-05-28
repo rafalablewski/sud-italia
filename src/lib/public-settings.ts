@@ -36,9 +36,19 @@ export interface PublicSettings {
   };
   deliveryThresholds?: Record<string, number | undefined> | null;
   /** Storefront visibility toggles set via /admin/settings → Layout.
-   *  Components read these and conditionally return null. */
+   *  Components (or the LayoutGate wrapper) read these and return null
+   *  when the corresponding flag is `false`. */
   layout?: {
     showCurrencySwitcher: boolean;
+    showLanguageSwitcher: boolean;
+    showBundlesShowcase: boolean;
+    showLoyaltySection: boolean;
+    showSeasonalSpecials: boolean;
+    showCartUpsell: boolean;
+    showDeliveryProgress: boolean;
+    showPushOptIn: boolean;
+    showFeedbackSurvey: boolean;
+    showChatWidget: boolean;
   };
 }
 

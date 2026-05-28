@@ -3,6 +3,7 @@
 import { use } from "react";
 import { Container } from "@/components/ui/Container";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { Star } from "lucide-react";
 
 interface PageProps {
@@ -31,7 +32,9 @@ export default function ReviewPage({ params }: PageProps) {
             </p>
           </div>
 
-          <FeedbackSurvey orderId={orderId} />
+          <LayoutGate flag="showFeedbackSurvey">
+            <FeedbackSurvey orderId={orderId} />
+          </LayoutGate>
         </div>
       </Container>
     </section>

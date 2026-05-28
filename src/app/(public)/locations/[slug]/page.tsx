@@ -8,6 +8,7 @@ import { LocationInfo } from "@/components/location/LocationInfo";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { AddToCartToast } from "@/components/cart/AddToCartToast";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { LiveActivityBar } from "@/components/location/LiveActivityBar";
 import { ComplianceBanner } from "@/components/location/ComplianceBanner";
 import { SITE_NAME } from "@/lib/constants";
@@ -117,7 +118,9 @@ export default async function LocationPage({ params }: PageProps) {
       <LocationHero location={location} />
       <ComplianceBanner compliance={compliance} />
       <LiveActivityBar locationSlug={slug} />
-      <LoyaltySection />
+      <LayoutGate flag="showLoyaltySection">
+        <LoyaltySection />
+      </LayoutGate>
       <MenuSection
         items={fullMenu}
         locationSlug={slug}

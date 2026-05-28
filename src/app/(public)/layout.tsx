@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
 import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CustomerProvider } from "@/store/customer";
 
 export default function PublicLayout({
@@ -16,7 +17,9 @@ export default function PublicLayout({
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
-      <ChatWidget />
+      <LayoutGate flag="showChatWidget">
+        <ChatWidget />
+      </LayoutGate>
       <AbandonedCartWrapper />
       <CartPresenceSync />
     </CustomerProvider>
