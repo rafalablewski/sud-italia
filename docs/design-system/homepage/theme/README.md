@@ -44,8 +44,8 @@ These rules apply even before the code split:
 - [`philosophy.md`](./philosophy.md) — Homepage's operating principle: hospitality outranks density; beauty earns its keep.
 - [`color.md`](./color.md) — `--color-italia-*` palette; burgundy-as-brand vs status; warm cream canvas; gold as editorial accent.
 - [`typography.md`](./typography.md) — Fraunces (display, brand voice) + Inter (workhorse) + JetBrains Mono (codes); 16px body default; sentence case headings; price callout rules.
-- `material.md` — Homepage surface rules (hero, item card, slot picker) *(backlog)*
-- `components.md` — Homepage primitives (location card, item card, cross-sell rail, slot grid, address form) *(backlog)*
+- [`material.md`](./material.md) — cream/white elevation alternation; the single brand-tinted shadow (FloatingCartButton); spring physics allowed on one-shot celebrations; 12/16/24px radius ladder; generous padding rhythm.
+- [`components.md`](./components.md) — `.pub-*` form primitives; shared `<Button>` / `<Sheet>` / `<Container>` / `<StarRating>` / `<CurrencySwitcher>`; landing sections; item card; `<CartDrawer>` and `<FloatingCartButton>`; `<DeliveryProgress>`; `<LoyaltyCard>`; `<OrderTracker>`.
 
 ## Authority
 
