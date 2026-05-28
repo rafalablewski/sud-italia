@@ -162,9 +162,10 @@ filter the grid in place.
   unmount. Repurposes the existing `setActiveCategory` + scroll-to-
   data-attribute pattern; no separate selection store needed.
 - **Item grid** (`.v8-menu-items`) — 1 → 2-col grid. Items render
-  via the existing `<MenuItemCard />` for now (Step 10 ports the
-  per-item card to V8). Items can claim 2-col span when the
-  default sort is in play and `menuRole === "hero"`.
+  via the V8 `<MenuItemCard />` (see the spec entry in
+  [`../theme/components.md`](../theme/components.md#menuitemcard--srccomponentslocationmenuitemtsx)).
+  Items can claim 2-col span when activeCategory === null (the "All"
+  tab) and `menuRole === "hero"`.
 - **Empty state** (`.v8-menu-empty`) — italic Cormorant muted line,
   with a clear-search affordance if the user is searching.
 

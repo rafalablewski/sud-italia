@@ -571,16 +571,83 @@ and the items grid. Full layout spec in
   them but they're valuable existing features; placing them above
   keeps the V8 menu card visually clean.
 
-### Item card (in `<MenuSection />`)
+### `<MenuItemCard />` — `src/components/location/MenuItem.tsx`
 
-- `pub-card` styling (`#fff` on cream, 16px radius, soft shadow).
-- Image area (24px radius top) OR type-first if no photo.
-- Name: Cormorant Garamond 500, 18px, `text-italia-dark`.
-- Description: Lora 400, 14px, 2-line clamp, `text-italia-gray`.
-- Price: Lora 700, 18px, tabular, with `zł` suffix at 14px.
-- Dietary tags: inline chips (`bg-italia-cream-dark
-  text-italia-dark text-xs px-2 py-0.5 rounded-full`).
-- `Add` button: `<Button size="sm" variant="primary" />`.
+V8 Trattoria per-item card. Lives inside `.v8-menu-items` on the
+location-page menu. All existing data wiring carried over — cart
+state, justAdded post-add feedback, detail-drawer trigger,
+popularThisWeek flag, badges from `lib/upsell` (role + admin), LTO
+countdown, compliance pills — only the markup changed.
+
+- **Paper card** (`.v8-mi`) — parchment gradient, line border, 14px
+  radius, paper-card shadow. Hover lifts 3px with a deeper
+  warm-brown drop. `.is-unavailable` → 0.55 opacity + slight
+  greyscale, no hover lift. `.is-incart` → basil border + soft basil
+  ring so the visitor can see at a glance which items are already in
+  the cart.
+
+- **Floating flag ribbon** (`.v8-mi-flags` at top:-10px left:16px) —
+  bilingual italic-Cormorant uppercase pills that sit slightly above
+  the card edge so they read as pinned ribbons:
+  - `Our Hero` (terracotta) — `item.menuRole === "hero"` or the
+    `variant === "hero"` prop.
+  - `Most Popular` (`.is-gold`) — `popularThisWeek === true` from
+    the hot-this-week popularity hook OR the `popular` badge.
+  - `Just landed` (`.is-basil`) — the `new` admin badge.
+  - `Sold out today` (`.is-muted`) — `!item.available`, replaces the
+    other flags rather than stacking.
+
+- **Chef's signature crown** (`.v8-mi-signature` at top-right) —
+  espresso pill with an ochre crown SVG + "Signature" label. Renders
+  when `item.menuRole === "anchor"` OR the admin badge
+  `chef-signature` is set. Two distinct signalling channels for the
+  premium-pick treatment.
+
+- **Body** — flex row, illustration on the left + name/origin/chips/
+  meta on the right:
+  - `.v8-mi-illus` — 84×84 parchment-deep tile with a 12px radius
+    and a per-category SVG sketch (pizza wedge with red dots, pasta
+    bowl, antipasti olive plate, panini cross-section, drink bottle,
+    dessert cake). The sketch rotates -3° on card hover for a paper-
+    print feel.
+  - `.v8-mi-name` — italic Cormorant 22px espresso. A `<span class="en">`
+    below carries the uppercase Italian-red EN tagline derived from
+    the item's role: "The gateway — start here" / "Pizzaiolo's
+    pick" / "Monthly small-batch" / "Chef's signature" / "Just
+    landed" / "Smart pick". Items with no signalling role get no
+    tagline.
+  - `.v8-mi-origin` — italic-Cormorant muted 13.5px, renders the
+    existing `item.description` as the V8 "San Marzano DOP · fior di
+    latte di Agerola" origin line.
+  - `.v8-mi-chips` — basil-tinted bilingual pills from `item.tags`
+    (`vegetarian`, `vegan`, `spicy`, `gluten-free` get the
+    appropriate `.is-warn` oxblood / `.is-gold` ochre variants). LTO
+    items add an italic ochre `Nd left · per N giorni` chip. Pizza
+    items get a standing "36h proofing · 36h lievitazione" chip
+    (V8's brand-voice nod to the long prove).
+  - `.v8-mi-meta` — cook time / kcal numbers + a small italic
+    terracotta "Details · dettagli" button (open the Kodawari detail
+    drawer). Only renders when `getItemDetails(item.id)` has
+    something to show.
+  - `<CompliancePills />` — regulatory disclosure pill row (kcal,
+    Nutri-Grade, halal, pork, alcohol, etc.) kept as the existing
+    component since the inline-pill format already fits.
+
+- **Foot** (`.v8-mi-foot`) — dashed-line separator above, flex
+  row with price on the left and add-action on the right:
+  - `.v8-mi-price` — Cormorant 600 22px tabular ink, `formatPrice(item.price)`.
+  - `.v8-mi-add` — terracotta-fill button "Add · aggiungi" with a
+    plus SVG. Disabled state (sold out) flips to muted-brown +
+    `cursor: not-allowed`. Post-add (1500ms) flips to "Added" with
+    a check SVG.
+  - When `quantity > 0`, the button becomes `.v8-mi-stepper` — a
+    basil-tinted pill with terracotta − / + buttons and the cart's
+    current count in italic basil between. Decrement at 1 removes
+    the item entirely.
+
+- **Detail drawer** — `<ItemDetailDrawer />` opens via the Details
+  button. Existing component, not yet V8-styled (its drawer surface
+  is Step 11+ territory).
 
 ### `<CartDrawer />` — `src/components/cart/CartDrawer.tsx`
 
