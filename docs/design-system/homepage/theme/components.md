@@ -169,7 +169,15 @@ The V8 Trattoria top nav.
 - **Sticky parchment-gradient bar** (`linear-gradient(180deg, rgba(248,
   239,222,0.98), rgba(248,239,222,0.88))` + 8px backdrop blur), line-soft
   hairline border-bottom. Adds a subtle warm-brown drop shadow once the
-  page is scrolled (`.v8-nav-scrolled`).
+  page is scrolled (`.v8-nav-scrolled`). Measured at **98px tall** at
+  ≥md (basil-mark 38px + wordmark 24px + italic sublabel 11.5px +
+  vertical padding). `--v8-nav-height` (in `themes/homepage/index.css`)
+  is set to `100px` to round up and is used for `scroll-padding-top`
+  on `<html>` so every storefront anchor link (`#locations`,
+  `#bundles`, the hero's `#famiglia` button, etc.) clears the sticky
+  nav by 2px instead of landing under it. **If you change the nav
+  layout in a way that affects its rendered height, update
+  `--v8-nav-height` to match — otherwise anchor scrolls regress.**
 - **Brand block (left):** basil-sprig SVG mark that rotates `-8°` on
   hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Sud Italia"
   (Cormorant Garamond 600, 24px, espresso) + the italic sublabel

@@ -49,6 +49,28 @@
                  0 8px 24px -14px rgba(61, 40, 23, 0.35);
   --shadow-cta: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
                 0 10px 22px -10px rgba(184, 92, 56, 0.55);
+
+  /* V8 sticky nav height — used for scroll-padding-top below + as the
+   *  go-to offset for any future surface that needs to clear the nav
+   *  (anchored toasts, sticky sub-headers, etc.). Measured at 98px at
+   *  ≥md with the brand-sub line visible (basil-mark 38px + name 24px
+   *  + sub 11.5px + 14/18px padding + 1px border), rounded up to 100px
+   *  for a 2px breathing band between the nav border and the section
+   *  edge it anchors to. Stays the same at base — the nav loses the
+   *  brand-sub line but gains a tighter padding bottom, so 100px
+   *  comfortably clears both viewports. */
+  --v8-nav-height: 100px;
+}
+
+/* Anchor-link offset for the sticky V8 nav. Without this, clicking the
+ * nav's "Menu / Bundles / Locations / Story" links (or the hero's "Our
+ * Story" CTA, or any in-page #foo deep-link) scrolls the target section
+ * to viewport y=0 — where the sticky nav covers its eyebrow. This rule
+ * tells the browser to leave --v8-nav-height of padding above the
+ * scroll target on every native anchor + programmatic scrollIntoView.
+ * Storefront-only because this file ships only under (public). */
+html {
+  scroll-padding-top: var(--v8-nav-height);
 }
 
 /* ============================
