@@ -91,10 +91,10 @@ primary mechanism.
 | 600    | Display headings (hero, About section)                | Emphasised body, button text                          |
 | 700    | (avoid — too heavy in parchment context)              | Price callouts, the loyalty balance numeral, headlines that compete with imagery |
 
-**The discipline:** Cormorant 600 only on the hero + About pull-quote.
-Section titles use Cormorant 500. Item names use Cormorant 500.
-Anything heavier in Cormorant reads as ad copy and breaks the
-editorial frame.
+**The discipline:** Cormorant 600 only on the hero headline + the
+Famiglia strip pull-quote. Section titles use Cormorant 500. Item
+names use Cormorant 500. Anything heavier in Cormorant reads as ad
+copy and breaks the editorial frame.
 
 JetBrains Mono uses 500 only — rare appearances on order numbers, the
 referral code, the points balance on the rewards card (when tabular

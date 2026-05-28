@@ -366,10 +366,33 @@ edges). Layout spec in
   the hero. Don't ship a `.v8-bundle-cta` variant; keep the primary
   CTA shape consistent across the landing.
 
-### `<AboutSection />`
+### `<AboutSection />` (V8 Famiglia strip)
 
-- Two-column layout: copy left, image right (swaps on mobile).
-- The one place body italic appears — a single Cormorant Garamond pull-quote.
+V8 Trattoria — a slim italic-Cormorant quote strip, NOT a content
+block. Full layout spec in
+[`../pages/home.md`](../pages/home.md#famiglia-strip--aboutsection).
+File name kept (`AboutSection.tsx`) so `(public)/page.tsx` and any
+existing LayoutGate wiring don't churn — the export stays
+`AboutSection`, the content is V8's Famiglia strip.
+
+- **No `.v8-ps` chrome.** Deliberately strips the eyebrow / title /
+  subtitle the other sections use. Uses a bespoke `.v8-famiglia`
+  class with tighter 64px vertical rhythm + a soft terracotta radial
+  wash (`radial-gradient(at 50% 50%, rgba(184,92,56,0.06),
+  transparent 70%)`).
+- **The pull-quote** — italic Cormorant 28 / 36px ≥md, espresso,
+  max-width 720px, centred. Wrapped in translucent oxblood curly-
+  quote pseudo-elements at 60px (`\201C` / `\201D`) — screen
+  readers only get the quote text, not the punctuation glyphs.
+- **The citation** — uppercase Cormorant 600 12px, muted brown,
+  letter-spacing 2px. Name and role separated by a plain `·`.
+- Lives at the `#famiglia` anchor — the hero's "Our Story" CTA and
+  the nav's "Story" link both point here.
+- **Quote + cite are brand copy.** V8 signs the quote with
+  "Giuseppe Esposito · Pizzaiolo" — the same Giuseppe whose name
+  shows on the Kraków LocationCard's `teamLead`, so the homepage
+  voice stays consistent. Untranslated "Pizzaiolo" is intentional:
+  the strip signs itself the way an Italian café signs its menu.
 
 ### `<CTASection />`
 

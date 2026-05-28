@@ -13,7 +13,7 @@ rendered in `src/app/(public)/page.tsx`.
 | Hero             | `src/components/landing/HeroSection.tsx`                   |
 | Locations grid   | `src/components/landing/LocationsGrid.tsx`                 |
 | Bundles showcase | `src/components/landing/BundlesShowcase.tsx`               |
-| About            | `src/components/landing/AboutSection.tsx`                  |
+| Famiglia strip   | `src/components/landing/AboutSection.tsx` (file name kept) |
 | Loyalty section  | `src/components/location/LoyaltySection.tsx` (shared)      |
 | CTA              | `src/components/landing/CTASection.tsx`                    |
 
@@ -27,8 +27,10 @@ The landing answers exactly four questions, in order:
    service hours + the order CTA per location.)
 3. **What's a good first order?** (Bundles showcase — the curated
    "if you don't know what to get" combos.)
-4. **Should I trust this brand?** (About — story, sourcing, the
-   Italian-authenticity proof points.)
+4. **Should I trust this brand?** (Famiglia strip — italic
+   Pizzaiolo voice quote tying the dough to a 1974 Neapolitan
+   grandmother. One sentence of brand grounding between bundles
+   and the loyalty pitch.)
 
 Loyalty + CTA close the page: "by the way, you earn points" + "find
 your nearest truck, place an order".
@@ -216,14 +218,49 @@ retuning a bundle dramatically away from the seed should expect a
 homepage-vs-cart mismatch during the experiment; rolling the seed
 config forward to match is the fix.
 
-### About — `<AboutSection />`
+### Famiglia strip — `<AboutSection />`
 
-- The "why us" copy: the family story, the sourcing line, the
-  Neapolitan-style detail (oven temperature, dough hydration,
-  imported tomatoes).
-- Two visual pillars: chef portrait + ingredient close-up.
-- This is the only landing section where Cormorant Garamond body text appears
-  (display-italic for one pull-quote per section). Lora elsewhere.
+V8 Trattoria treatment — a slim italic-Cormorant **quote strip**
+between Bundles and Loyalty/Menu, NOT the four-value-prop About
+panel the previous storefront shipped. Lives at the `#famiglia`
+anchor the hero's "Our Story" CTA + the nav's "Story" link both
+target. File name kept as `AboutSection.tsx` to avoid a rename
+churn — the export is still `AboutSection`, the content is now V8's
+Famiglia strip.
+
+- **Section is NOT a `.v8-ps` block.** Deliberately strips the
+  eyebrow / title / subtitle chrome — V8 lets the quote land alone
+  the way a hand-printed menu inserts its founder's voice between
+  the day's bundles and the loyalty pitch. Tighter vertical rhythm
+  (`64px` top + bottom, vs `.v8-ps` 56/80px).
+- **Background** is a single soft terracotta radial wash centred on
+  the section box (`radial-gradient(at 50% 50%, rgba(184,92,56,
+  0.06), transparent 70%)`). No alt-paper band, no tricolore, no
+  ornaments — restraint is the point.
+- **The quote** — italic Cormorant 28px → 36px ≥md, espresso
+  colour, max-width 720px, centred. Wrapped in translucent oxblood
+  curly quotes (`\201C` open + `\201D` close) as pseudo-elements at
+  60px, so screen readers read the quote text only, not the
+  punctuation.
+- **The citation** — uppercase Cormorant 600 12px in muted brown,
+  `letter-spacing: 2px`. The dot separator between name + role
+  (`Giuseppe Esposito · Pizzaiolo`) is plain text so it adapts if
+  the role gets translated.
+- **Quote + cite are brand copy**, hardcoded in
+  `AboutSection.tsx`. V8 ties the quote to the LocationsGrid's
+  Kraków `teamLead` ("Cooked by Giuseppe and family") by signing
+  it with the same Giuseppe — the homepage's voice stays
+  consistent across surfaces. "Pizzaiolo" stays untranslated
+  because V8 voices its quote the way an Italian café signs its
+  menu (the homepage gets to be looser than the operator's tier
+  labels).
+- **Why no longer four value props.** The previous storefront's
+  four-icon About panel (Authentic Recipes / Street Food Culture /
+  Made with Passion / Fresh & Quality) is gone. V8's homepage uses
+  the slim Famiglia strip for the brand moment and pushes the
+  longer "Our Story" content to a separate route if it ever lands
+  (the hero's Story CTA can re-point from `#famiglia` to `/story`
+  in the future without changing this strip).
 
 ### Loyalty section — `<LoyaltySection />`
 
@@ -250,9 +287,12 @@ config forward to match is the fix.
 3. **Bundles + Loyalty pull from real admin config.** Never hardcode
    what a bundle costs or what the loyalty tier thresholds are —
    read from the same source admin writes to.
-4. **Cormorant Garamond appears only in the Hero + About pull-quote.** Display
-   restraint is a brand decision — over-using it on every section
-   would flatten the type hierarchy.
+4. **Cormorant Garamond body italic is reserved for the hero + the
+   Famiglia strip + bundle italian phrases.** Display restraint is a
+   brand decision — Cormorant on every body paragraph would flatten
+   the type hierarchy. The italic-Cormorant `<em>` pattern (used in
+   the hero lede, bundle descriptions, and the LocationsGrid teamLead)
+   is bilingual signal, not decoration.
 5. **No popups on the landing.** No exit-intent modal, no
    newsletter overlay, no "would you like to chat?" interrupt. The
    chat widget is fixed in the footer (`ChatWidget`) — accessible,

@@ -1096,3 +1096,62 @@ body {
   text-align: center;
   margin-top: 24px;
 }
+
+/* ============================
+   V8 Trattoria — Famiglia strip
+   ============================
+   Slim italic-Cormorant quote between Bundles and Loyalty. Not a
+   `.v8-ps` block — V8 deliberately strips the eyebrow / title chrome
+   and lets the quote land alone on a soft terracotta radial wash, the
+   way a hand-printed menu inserts its founder's voice. Tighter
+   vertical rhythm (64px padding both sides) than the standard `.v8-ps`.
+   Markup in src/components/landing/AboutSection.tsx. */
+
+.v8-famiglia {
+  text-align: center;
+  padding: 64px 0;
+  background: radial-gradient(at 50% 50%, rgba(184, 92, 56, 0.06), transparent 70%);
+}
+
+.v8-famiglia blockquote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--color-espresso);
+  line-height: 1.3;
+  margin: 0 auto 18px;
+  max-width: 720px;
+  position: relative;
+}
+@media (min-width: 768px) {
+  .v8-famiglia blockquote { font-size: 36px; }
+}
+
+/* Translucent oxblood curly quotes wrap the blockquote — pseudo-
+   elements so the visible text content stays clean (screen readers
+   read just the quote, not the typographic punctuation). */
+.v8-famiglia blockquote::before,
+.v8-famiglia blockquote::after {
+  content: "\201C";
+  color: var(--color-oxblood);
+  opacity: 0.4;
+  font-family: var(--font-heading);
+  font-size: 60px;
+  line-height: 0;
+  position: relative;
+  top: 12px;
+}
+.v8-famiglia blockquote::after { content: "\201D"; }
+
+/* Citation — uppercase tracked Cormorant, muted brown. The dot
+   separator between name + role ("Giuseppe Esposito · Pizzaiolo") is
+   plain text so it adapts if the role is translated or removed. */
+.v8-famiglia cite {
+  font-family: var(--font-heading);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-size: 12px;
+}
