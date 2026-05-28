@@ -28,7 +28,7 @@ deploy).
 - [`components.md`](./components.md) — buttons, badges, inputs, segmented,
   cards, dialogs, tables, icons.
 
-**Modules** (per-module rules)
+**Core modules** (the IP — operator-pressure surfaces)
 
 - [`modules/kds.md`](./modules/kds.md) — calm monochrome + colour-on-exception
   + the role triad + coursing-aware tickets.
@@ -40,6 +40,12 @@ deploy).
   allergen matrix.
 - [`modules/whatsapp.md`](./modules/whatsapp.md) — inbox + funnel + settings
   hub.
+
+**Admin** (the back-office around the Core modules)
+
+- [`admin/README.md`](./admin/README.md) — the AdminShell, glass tokens,
+  the portal rule, capabilities, and per-section design notes (Operations,
+  Inventory, People, Customers, Finance, Growth, Intelligence, System).
 
 **Reference**
 
