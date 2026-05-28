@@ -65,7 +65,7 @@ Computed by `/api/admin/campaigns/triggers` (DOB month/day match + first-
 order anniversary). Tap-to-call / tap-to-message on the underlying records.
 
 The cake icon is **a stroke SVG**, not the emoji 🎂 — see
-[`components.md`](../components.md#iconography--custom-stroke-no-emoji-in-ui).
+[`components.md`](../../components.md#iconography--custom-stroke-no-emoji-in-ui).
 
 ## The deep profile
 

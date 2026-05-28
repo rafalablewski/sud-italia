@@ -48,7 +48,7 @@ Above the rail: summary stats (`4 tabs · 1 ready to pay · 1 parked ·
 ## Menu cards — text-forward
 
 **The empty image-box pattern is forbidden.** Until real food photography
-exists, menu cards lead with type — see [`components.md`](../components.md#menu--product-cards--text-forward)
+exists, menu cards lead with type — see [`components.md`](../../components.md#menu--product-cards--text-forward)
 for the contract.
 
 | Slot | Content |
