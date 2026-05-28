@@ -343,11 +343,17 @@ edges). Layout spec in
   var(--v8-bundle-accent)` + `stroke="currentColor"` on the SVG), the
   english subtitle colour, and the tag pill border. Adding a new
   variant is a one-line CSS addition — no per-component branching.
-- **Bundle name pattern:** italian italic Cormorant on top + an
-  uppercase english subtitle in the accent colour underneath. The
-  `<span class="en">` mark wraps the subtitle so V8's "italic name
-  + uppercase translation" treatment lands without a separate
-  element per card.
+- **Bundle name pattern:** italic Cormorant **English marketing
+  headline** on top (`Family Pack` / `Pizza Lunch+` / `Late-Night
+  Slice` / `Italian Classic`) + **uppercase Italian subtitle** in
+  the accent colour underneath (`Famiglia` / `Pranzo` / `Spicchio
+  Notturno` / `Il Classico`). The `<span class="en">` mark wraps the
+  subtitle so V8's "italic primary + uppercase secondary" treatment
+  lands without an extra element per card. Both strings are local
+  copy in `BundlesShowcase.tsx` (the bundle's `.tier` is the
+  cart-drawer internal label and would render "Pizza Pack" /
+  "Slice" instead of V8's marketing voice — the homepage is allowed
+  to be looser).
 - **Price logic:** two render branches — `kind: "money"` (now / was
   for fixed-price bundles, real values via `priceFromBundle()`
   reading `DEFAULT_BUNDLES.priceGrosze`) and `kind: "savings"`

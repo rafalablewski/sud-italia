@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getActiveLocations } from "@/data/locations";
-import { DEFAULT_BUNDLES, isDynamicBundle, type BundleTier } from "@/lib/bundles";
+import { DEFAULT_BUNDLES, isDynamicBundle } from "@/lib/bundles";
 import { DEFAULT_COMBO_DEALS } from "@/lib/upsell";
 import { formatPrice } from "@/lib/utils";
 
@@ -31,12 +31,17 @@ import { formatPrice } from "@/lib/utils";
 
 interface BundleCard {
   /** Card accent variant — controls the top stripe gradient, icon
-   *  colour, and the uppercase english subtitle colour. */
+   *  colour, and the uppercase italian subtitle colour. */
   variant: "family" | "lunch" | "night" | "classic";
-  /** Italian primary name in italic Cormorant — V8's signature pattern.
-   *  English subtitle below comes from `english`. */
+  /** English marketing headline — italic Cormorant 24px on top (V8's
+   *  "Family Pack" / "Pizza Lunch+" / "Late-Night Slice" / "Italian
+   *  Classic" pattern). Local copy, not the bundle's `.tier` field —
+   *  the homepage marketing voice is allowed to be looser than the
+   *  cart drawer's tier label (audit §3). */
+  headline: string;
+  /** Italian short name — uppercase Cormorant subtitle in the accent
+   *  colour, sits under the headline. Also local copy. */
   italian: string;
-  english: string;
   /** Tag pill copy (EN) + italic Italian subtitle (after the dot). */
   tag: string;
   tagIt: string;
@@ -68,13 +73,12 @@ function buildShowcase(): BundleCard[] {
   const lateSlice = priceFromBundle("late-slice");
   const italianClassic = DEFAULT_COMBO_DEALS.find((c) => c.id === "italian-classic");
   const classicDiscount = italianClassic?.discountPercent ?? 10;
-  const findBundle = (id: string): BundleTier | undefined => DEFAULT_BUNDLES.find((b) => b.id === id);
 
   return [
     {
       variant: "family",
-      italian: findBundle("family-pizza-pack")?.name ?? "Family Pack",
-      english: "Famiglia",
+      headline: "Family Pack",
+      italian: "Famiglia",
       tag: "for 2–3 people",
       tagIt: "per 2–3 persone",
       price: { kind: "money", now: family.now, was: family.was },
@@ -88,8 +92,8 @@ function buildShowcase(): BundleCard[] {
     },
     {
       variant: "lunch",
-      italian: findBundle("lunch-pizza-plus")?.name ?? "Pizza Lunch+",
-      english: "Pranzo",
+      headline: "Pizza Lunch+",
+      italian: "Pranzo",
       tag: "11:00–14:00 only",
       tagIt: "soltanto",
       price: { kind: "money", now: pizzaLunch.now, was: pizzaLunch.was },
@@ -103,8 +107,8 @@ function buildShowcase(): BundleCard[] {
     },
     {
       variant: "night",
-      italian: findBundle("late-slice")?.name ?? "Late-Night Slice",
-      english: "Spicchio Notturno",
+      headline: "Late-Night Slice",
+      italian: "Spicchio Notturno",
       tag: "after 21:00",
       tagIt: "dopo le 21:00",
       price: { kind: "money", now: lateSlice.now, was: lateSlice.was },
@@ -118,8 +122,8 @@ function buildShowcase(): BundleCard[] {
     },
     {
       variant: "classic",
-      italian: italianClassic?.name ?? "Italian Classic",
-      english: "Il Classico",
+      headline: "Italian Classic",
+      italian: "Il Classico",
       tag: "automatic",
       tagIt: "automatico",
       price: { kind: "savings", label: `−${classicDiscount}%` },
@@ -159,14 +163,14 @@ export function BundlesShowcase() {
 
         <div className="v8-bundles">
           {bundles.map((b) => (
-            <article key={b.english} className={`v8-bundle v8-bundle-${b.variant}`}>
+            <article key={b.italian} className={`v8-bundle v8-bundle-${b.variant}`}>
               <div className="v8-bundle-icon" aria-hidden>{b.icon}</div>
               <span className="v8-bundle-tag">
                 <span>{b.tag}</span> <span className="bi-sec">· {b.tagIt}</span>
               </span>
               <h3 className="v8-bundle-name">
-                <span>{b.italian}</span>
-                <span className="en bi-sec">{b.english}</span>
+                <span>{b.headline}</span>
+                <span className="en bi-sec">{b.italian}</span>
               </h3>
               <div className="v8-bundle-price">
                 {b.price.kind === "money" ? (

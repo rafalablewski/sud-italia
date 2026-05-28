@@ -182,12 +182,18 @@ designed (family / lunch / late-night / auto-combo).
 - **Card body** is a flex column: SVG icon in a 56px translucent
   circle (family figures / sundial / crescent moon / sparkle), a
   dashed-border tag pill in the accent (`for 2–3 people · per 2–3
-  persone`), the bundle name (italian italic Cormorant 24px on top +
-  uppercase english subtitle in the accent colour), the price row,
-  then the Lora description with italic-Cormorant `<em>` Italian
-  phrases (`limonata`, `dolce`, `Margherita`, etc.). The description
-  uses `flex: 1` so cards in the same row align at the description
-  bottom and the price baseline.
+  persone`), the bundle name — **English marketing headline** in
+  italic Cormorant 24px on top (Family Pack / Pizza Lunch+ / Late-
+  Night Slice / Italian Classic) + **Italian short name** as the
+  uppercase Cormorant subtitle in the accent colour (Famiglia /
+  Pranzo / Spicchio Notturno / Il Classico). The headline + Italian
+  subtitle are local marketing copy in `BundlesShowcase.tsx` — not
+  the bundle's `.tier` field, because the homepage marketing voice
+  is allowed to be looser than the cart drawer's tier label. Then
+  the price row, then the Lora description with italic-Cormorant
+  `<em>` Italian phrases (`limonata`, `dolce`, `Margherita`, etc.).
+  The description uses `flex: 1` so cards in the same row align at
+  the description bottom and the card-edge baseline.
 - **Price treatments — two kinds:**
   - **Money** — `now` in oxblood Cormorant 28px tabular, `was` as
     italic muted strikethrough. Real prices via
