@@ -80,6 +80,15 @@ A single, confident hero — never rotating slides. The location CTAs
 are the entry points to ordering; the ghost Story CTA is the brand
 side-route.
 
+**Closes with the tricolore, not a chevron.** The previous dark-
+gradient hero had a `<ChevronDown />` "scroll for more" affordance
+bouncing at the bottom; the V8 port removes it intentionally. The
+tricolore hairline does the same closing-the-section job, and the
+location CTAs already point the visitor down the page (or directly
+into the order flow). Adding the chevron back would re-introduce the
+2010s SaaS landing-page trope V8 explicitly avoids — don't reach
+for it.
+
 ### Locations grid — `<LocationsGrid />`
 
 - One card per location (Kraków, Warszawa today).
