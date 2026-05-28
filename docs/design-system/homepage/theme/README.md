@@ -42,8 +42,8 @@ These rules apply even before the code split:
 ## Per-token docs
 
 - [`philosophy.md`](./philosophy.md) — Homepage's operating principle: hospitality outranks density; beauty earns its keep.
-- `color.md` — Homepage-scoped tokens; the storefront accent + warm surfaces *(backlog)*
-- `typography.md` — Homepage face/weight choices (display headings, menu copy, price callouts) *(backlog)*
+- [`color.md`](./color.md) — `--color-italia-*` palette; burgundy-as-brand vs status; warm cream canvas; gold as editorial accent.
+- [`typography.md`](./typography.md) — Fraunces (display, brand voice) + Inter (workhorse) + JetBrains Mono (codes); 16px body default; sentence case headings; price callout rules.
 - `material.md` — Homepage surface rules (hero, item card, slot picker) *(backlog)*
 - `components.md` — Homepage primitives (location card, item card, cross-sell rail, slot grid, address form) *(backlog)*
 
