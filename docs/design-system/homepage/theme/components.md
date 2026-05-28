@@ -295,9 +295,13 @@ of paper cards. Full layout spec in
 
 The reusable "page section" primitives the V8 sections compose
 against. Declared in `themes/homepage/index.css`. First adopted by
-`<LocationsGrid />`; future Bundles / Famiglia / About / CTA sections
-use the same classes so the landing's spacing, type ladder and
-alt-paper rhythm stay identical across sections.
+`<LocationsGrid />`; `<BundlesShowcase />`, `<LoyaltySection />`,
+and the future `<CTASection />` use the same classes so the
+landing's spacing, type ladder, and alt-paper rhythm stay identical
+across sections. **The Famiglia strip (`<AboutSection />`) is the
+deliberate exception** — it uses a bespoke `.v8-famiglia` block
+without `.v8-ps` chrome (no eyebrow / title / subtitle) so the
+quote lands as a single typographic gesture, not a content block.
 
 - **`.v8-page-inner`** — max-width 1180px, `margin: 0 auto`, 18px
   gutter at base / 36px at ≥md. The standard column wrapper inside a

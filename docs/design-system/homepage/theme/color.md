@@ -88,15 +88,20 @@ matured, hospitality-grade burgundy that holds *brand* separate from
 the Italian flag's *bright* red. This means:
 
 - **Brand:** primary CTAs, the wordmark mark, the cart-count badge,
-  the loyalty progress accent, the tier-up animation highlight.
+  the loyalty progress accent, the tier-up animation highlight, the
+  translucent curly-quote glyphs flanking the Famiglia strip
+  blockquote (40% opacity so they read as accent, not text).
 - **Danger:** errors, destructive confirmations, "sold out"
   annotations — use the same `--color-italia-red` (oxblood).
 - **Status (open / closed / active):** these go to `--color-italia-green`
   (basil) for affirmative, `--color-italia-gold` (ochre) for advisory
   ("Filling up"), `--color-italia-gray` (muted) for neutral ("Closed
   today").
-- **Flag red** (`--color-italy-red`, bright `#CD212A`): Famiglia strip
-  only. Never a UI red.
+- **Flag red** (`--color-italy-red`, bright `#CD212A`): only inside
+  the `.v8-tricolore` hairline gradient (closes the hero, separates
+  the LocationsGrid illustration from the card body). Paired with
+  flag green + flag off-white as the three equal-third stops —
+  never a UI red on its own.
 
 If an oxblood action reads as panic instead of brand, the rest of the
 storefront's burgundy loses its weight. **Hold the discipline.**
@@ -146,7 +151,9 @@ oxblood + basil on desktop). See `material.md` for the material spec.
 `--color-italia-gold` (`#C9A23E`, ochre) is reserved for the moments
 that need "hospitality elegance":
 
-- Cormorant Garamond pull-quotes on the About / Famiglia section.
+- Italic-Cormorant pull-quotes that need a calmer accent (the
+  LocationsGrid's `.v8-loc-note` "Cooked by X" attribution uses an
+  ochre left border — see `home.md`).
 - The "Chef's pick" / "Signature" badge on a menu item.
 - The Loyalty Gold tier badge + the gold-tier progress accent.
 - The free-delivery `delivery-medallion` keyframe (the celebratory

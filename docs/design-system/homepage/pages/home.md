@@ -151,9 +151,13 @@ paper cards. Lives at the `#locations` anchor for the hero kicker's
 
 The new `.v8-ps`, `.v8-ps-alt`, `.v8-ps-head`, `.v8-ps-eyebrow`,
 `.v8-ps-title`, `.v8-ps-sub`, `.v8-page-inner` primitives are
-**reusable** — Bundles, Famiglia, About and the rest of the V8
-sections compose against the same classes so spacing, type ladder
-and the alt-paper rhythm stay identical across the landing. See
+**reusable** — Bundles, Loyalty, the future CTA section compose
+against the same classes so spacing, type ladder, and the
+alt-paper rhythm stay identical across the landing. The Famiglia
+strip is the **deliberate exception** — V8 strips the eyebrow /
+title / subtitle chrome so the quote lands as a single
+typographic gesture between Bundles and Loyalty (see the Famiglia
+strip section below). See
 [`../theme/components.md`](../theme/components.md#section-primitives-v8-ps).
 
 ### Bundles showcase — `<BundlesShowcase />`

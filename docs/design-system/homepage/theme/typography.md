@@ -88,7 +88,7 @@ primary mechanism.
 | ------ | ----------------------------------------------------- | ----------------------------------------------------- |
 | 400    | Pull-quotes (italic), body italic emphasis            | Body paragraphs, captions                             |
 | 500    | Default Cormorant weight: section titles, item names  | UI labels, table cells                                |
-| 600    | Display headings (hero, About section)                | Emphasised body, button text                          |
+| 600    | Display headings (hero, Famiglia strip pull-quote)    | Emphasised body, button text                          |
 | 700    | (avoid — too heavy in parchment context)              | Price callouts, the loyalty balance numeral, headlines that compete with imagery |
 
 **The discipline:** Cormorant 600 only on the hero headline + the
@@ -110,7 +110,7 @@ across-the-line.
 | ---------------- | ------- | -------------------------------------------------------------------------- |
 | caption          | 12px    | Footer copy, fine print, the "We'll only use this for the receipt" reassurance |
 | body-sm          | 14px    | `.pub-input` fields, secondary copy                                        |
-| body             | 15–16px | The default body text size — paragraphs in About, item descriptions. V8 body is 15px / line-height 1.55. |
+| body             | 15–16px | The default body text size — bundle descriptions, location-card descriptions, menu-item descriptions. V8 body is 15px / line-height 1.55. |
 | label            | 18px    | Section headings inside cards (e.g. on `LoyaltyCard`)                      |
 | h3               | 20px    | Sub-section headings on the landing                                        |
 | h2               | 24–30px | Section titles (Cormorant 500/600)                                         |
@@ -132,9 +132,10 @@ across-the-line.
    item prices on a list drift across rows.
 4. **Italic is bilingual signal.** The `.it` helper renders italic
    Cormorant — used for inline Italian phrases (`<span class="it">
-   Margherita</span>` next to English / Polish copy) and for the single
-   Cormorant pull-quote on About. Italic Lora is fine for in-paragraph
-   emphasis but reserve italic Cormorant for the bilingual + editorial
+   Margherita</span>` next to English / Polish copy) and for the
+   Famiglia strip's full pull-quote. Italic Lora is fine for in-
+   paragraph emphasis but reserve italic Cormorant for the bilingual
+   + editorial
    moments.
 5. **Sentence case for headings** — "Find your nearest truck", not
    "Find Your Nearest Truck". Title case in Cormorant reads as
