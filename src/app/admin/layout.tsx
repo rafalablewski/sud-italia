@@ -1,3 +1,5 @@
+import "../themes/admin/index.css";
+import "../themes/core/index.css";
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/v2/AdminShell";
 import { AdminCurrencyGuard } from "@/components/admin/AdminCurrencyGuard";

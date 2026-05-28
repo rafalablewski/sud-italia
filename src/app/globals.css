@@ -1,14 +1,59 @@
 @import "tailwindcss";
-/* Three independent themes — see docs/design-system/. WordPress-style
-   FILE-level isolation: each theme owns its own CSS file under
-   src/app/themes/{core,admin,homepage}/index.css, so a token / font /
-   component change in one theme requires touching only one file. All
-   three are @import-ed here (not loaded per-route via the layouts):
-   route-level isolation conflicts with Tailwind v4's @theme processing,
-   which only scans the @import-chain rooted at this entry file. */
-@import "./themes/homepage/index.css";
-@import "./themes/core/index.css";
-@import "./themes/admin/index.css";
+
+/* ============================================================================
+   Three independent themes — bundle-level isolation.
+
+   Each theme's CSS lives in its own file under src/app/themes/, and is
+   loaded ONLY by the route-group layout that owns it:
+
+     src/app/(public)/layout.tsx → themes/homepage/index.css
+     src/app/admin/layout.tsx    → themes/admin/index.css + themes/core/index.css
+
+   So admin chunks no longer ship homepage's CSS, and storefront chunks
+   no longer ship admin's CSS. Next.js code-splits these per route.
+
+   The @theme inline block below is conceptually owned by the Homepage
+   theme but lives here for a Tailwind v4 reason: Tailwind only
+   processes @theme directives that are reachable via the @import chain
+   rooted at this entry CSS. Putting @theme inside a JS-imported theme
+   file would silently kill the bg-italia-* / text-italia-* utilities
+   the storefront depends on. Edit the token values here when changing
+   storefront colours / fonts; everything ELSE Homepage-flavoured (form
+   elements, body styling, delivery keyframes) lives in
+   themes/homepage/index.css.
+   ========================================================================= */
+
+@theme inline {
+  --color-background: #FFF8F0;
+  --color-foreground: #1A1A1A;
+  --color-italia-red: #9A2742;
+  --color-italia-red-dark: #7B1F33;
+  --color-italia-green: #008C45;
+  --color-italia-green-dark: #006B35;
+  --color-italia-cream: #FFF8F0;
+  --color-italia-cream-dark: #F5EDDF;
+  --color-italia-gold: #B8922E;
+  --color-italia-gold-dark: #9A7A24;
+  --color-italia-dark: #1A1A1A;
+  --color-italia-gray: #6B7280;
+  --color-italia-light-gray: #F3F4F6;
+  --font-heading: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-up-sheet: slide-up-sheet 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-count-up: count-up 0.3s ease-out;
+  /* Free-delivery progress bar (audit §2.1) — shimmer crawl while below the
+   *  threshold; one-shot sweep + pop-in on the celebratory unlock card. */
+  --animate-delivery-shimmer: delivery-shimmer 1.8s linear infinite;
+  --animate-delivery-sweep: delivery-sweep 1.4s ease-out 0.1s 1 both;
+  --animate-delivery-unlock: delivery-unlock 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-delivery-medallion: delivery-medallion 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
 /* ============================
    BASE — the small shared layer
