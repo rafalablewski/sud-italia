@@ -156,7 +156,7 @@ Settings → Layout).
 - Picking a non-current option calls `setLocale()` then full-reloads so
   every SSR string re-renders in the new locale.
 
-## Storefront chrome — Header + LiveTicker
+## Storefront chrome — Header + LiveTicker + Footer
 
 The storefront's two persistent layout slabs sit at the top of every
 `(public)` route. Markup in `src/components/layout/`. Custom styling
@@ -226,6 +226,43 @@ The V8 cart pill. Lives inside `<Header />`.
   dark text. Icon strokes follow via `currentColor` + a `.v8-cart-lines`
   class on the terracotta detail strokes.
 - Click opens `<CartDrawer />` (portalled, see the Sheet primitive above).
+
+### `<Footer />` — `src/components/layout/Footer.tsx`
+
+V8 Trattoria footer — espresso canvas that picks up the Soci rail's
+palette so the Soci → Footer transition reads as one continuous
+dark block instead of a dark → light jolt. Mounted on every
+storefront route via `(public)/layout.tsx`. Server component.
+
+- **`.v8-pfoot`** section — `--color-espresso` canvas, parchment
+  text, `50px / 32px` vertical padding. Lives inside the standard
+  `.v8-page-inner`.
+- **4-column grid** at ≥768px (`1.4fr 1fr 1fr 1fr` — the wider
+  leading column carries the brand block + tagline + tricolore),
+  stacks to a single column on mobile.
+- **Brand block** — `<FooterBasilMark />` SVG (ochre-light strokes
+  with translucent basil leaves, V8's footer variant of the nav
+  brand mark) + "Sud Italia" wordmark in parchment Cormorant 26px,
+  a body paragraph at parchment-75% opacity, then a 90×3px
+  `.v8-tricolore` hairline as the footer accent.
+- **Link columns** — italic ochre-light Cormorant 18px `<h4>` heads,
+  Lora 13.5px links at parchment-75% opacity, hover transitions to
+  ochre-light. Columns kept from the existing site (Locations /
+  Contact / Follow us) over V8's mockup copy (Menu / Locations /
+  For businesses) because those columns wire to **real operator
+  data** — CONTACT_EMAIL / CONTACT_PHONE / SOCIAL_LINKS from
+  lib/constants and the active-locations list. Shipping the
+  mockup's "Team lunch — invoiced" / "Private events" copy without
+  a real backing would be Rule #1 territory.
+- **Bottom bar** — italic Cormorant 12.5px at parchment-50%
+  opacity, copyright paired with the Italian tagline (`Mangia bene,
+  ridi spesso, ama molto.`) and the "Made with passion in Napoli ·
+  cooked in Polska" sign-off. Top border at parchment-12% opacity
+  separates it from the link columns.
+- Visible on every storefront route. The Soci rail above it on the
+  landing reads as the closing CTA + body; the footer is the
+  metadata block. Together they make the landing's bottom half
+  read as one dark continuous slab, the V8 design intent.
 
 ## Landing-specific components (in `src/components/landing/`)
 

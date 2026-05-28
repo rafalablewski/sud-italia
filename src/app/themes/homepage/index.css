@@ -1212,3 +1212,103 @@ body {
   margin-top: 22px;
   text-align: center;
 }
+
+/* ============================
+   V8 Trattoria — footer
+   ============================
+   Espresso canvas that picks up the Soci rail's palette so the
+   close→footer transition reads as one continuous block instead of
+   a dark→light jolt. 4-column grid on desktop (1.4fr brand + 1fr ×
+   3 link cols), single-column stack on mobile. Markup in
+   src/components/layout/Footer.tsx. Visible on every storefront
+   route (the Footer mounts in (public)/layout.tsx). */
+
+.v8-pfoot {
+  background: var(--color-espresso);
+  color: var(--color-parchment);
+  padding: 50px 0 32px;
+}
+
+.v8-pfoot-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+@media (min-width: 768px) {
+  .v8-pfoot-grid { grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 36px; }
+}
+
+/* Column heads — italic ochre-light Cormorant, V8's footer voice. */
+.v8-pfoot h4 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 18px;
+  margin: 0 0 12px;
+  color: var(--color-ochre-light);
+  font-weight: 600;
+}
+
+/* Body copy + links — Lora 13.5px at parchment 75% opacity. */
+.v8-pfoot p,
+.v8-pfoot a,
+.v8-pfoot li {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: rgba(244, 245, 240, 0.75);
+  line-height: 1.65;
+}
+.v8-pfoot p { margin: 0 0 12px; }
+.v8-pfoot a {
+  text-decoration: none;
+  display: block;
+  padding: 3px 0;
+  transition: color 0.2s ease;
+}
+.v8-pfoot a:hover { color: var(--color-ochre-light); }
+.v8-pfoot ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Brand block — basil-sprig SVG (ochre-light strokes + basil leaves)
+   + Sud Italia wordmark in parchment Cormorant. */
+.v8-pfoot-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--color-parchment);
+  margin-bottom: 12px;
+}
+
+/* Tricolore hairline under the brand paragraph — 90px so it reads as
+   accent, not divider. Reuses the shared .v8-tricolore but scopes
+   width / margin to the footer placement. */
+.v8-pfoot-trico {
+  width: 90px;
+  height: 3px;
+  margin-top: 14px;
+}
+
+/* Bottom bar — italic Cormorant tagline + copyright, parchment 50%
+   opacity, separated from the columns by a faint parchment border. */
+.v8-pfoot-bottom {
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(244, 245, 240, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: rgba(244, 245, 240, 0.5);
+  font-size: 12.5px;
+}
+.v8-pfoot-bottom em {
+  font-style: italic;
+  color: rgba(244, 245, 240, 0.6);
+}
