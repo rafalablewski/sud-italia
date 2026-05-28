@@ -16,11 +16,11 @@ homepage/
 ├── README.md          ← you are here
 ├── theme/             ← Homepage-only tokens: color, type, material, components
 └── pages/
-    ├── home.md        ← landing, hero, location picker
-    ├── menu.md        ← category nav, item card, cross-sell rail
-    ├── checkout.md    ← slot picker, address, payment, identity capture
-    ├── order.md       ← live order tracking, ETA, KDS reflection
-    └── loyalty.md     ← points, rewards, referral
+    ├── home.md        ✅ landing — hero, locations grid, bundles, about, loyalty, CTA
+    ├── menu.md        ✅ /locations/[slug] — hero, menu sections, info, floating cart
+    ├── checkout.md    ← slot picker, address, payment, identity capture (backlog)
+    ├── order.md       ← live order tracking, ETA, KDS reflection (backlog)
+    └── loyalty.md     ← /rewards — points wallet, tiers, redemption (backlog)
 ```
 
 ## Storefront rules (universal — apply to every page)
