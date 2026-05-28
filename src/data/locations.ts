@@ -107,9 +107,20 @@ function toMinutes(hhmm: string): number {
 
 /**
  * Returns true when `location` is within at least one of its `hours`
- * ranges right now. Used by the homepage hero kicker (V8 "Open now"
- * pill) and any future open-state UI that needs accuracy rather than
- * the `isActive` proxy LocationsGrid currently uses.
+ * ranges right now.
+ *
+ * Handles three day-string forms — single day `"Sun"`, ordered range
+ * `"Mon-Thu"`, and wrap range `"Fri-Mon"` (Fri/Sat/Sun/Mon — start
+ * index > end index). Each hour pair also wraps defensively: if
+ * `close <= open` the window is treated as overnight (`open–24:00`
+ * **or** `00:00–close`), so a future `Fri-Sat 11:00–02:00` schedule
+ * will report "open" at 01:30 on Saturday. The seed data doesn't use
+ * either wrap form today; the support is here so adding them later
+ * doesn't silently break the open-now signal.
+ *
+ * Used by the homepage hero kicker (V8 "Open now" pill) and any
+ * future open-state UI that needs accuracy rather than the
+ * `isActive` proxy LocationsGrid currently uses.
  */
 export function isLocationOpenNow(location: Location, now: Date = new Date()): boolean {
   if (!location.isActive) return false;

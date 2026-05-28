@@ -47,7 +47,14 @@ photography. The hero earns the "one place Cormorant leads" rule
   triple-ellipse stain (top-right, 15% opacity), an ochre stain
   (bottom-left, 12%), and a tomato (top-left interior, 35%). All
   positioned absolutely under the centred column, `z-index: 1`,
-  `pointer-events: none`.
+  `pointer-events: none`. **Their low opacities (12–50%) are the
+  defence against text-overlap at narrower viewports** — the
+  ornaments are anchored to the section corners with percentage
+  offsets, so on a 320–400px phone they sit close to the kicker /
+  CTAs but read as paper texture, not as glyphs competing with copy.
+  Don't push any of them past 60% opacity without verifying the
+  smallest target width — the V8 spec deliberately keeps them
+  subtle, not foreground.
 - **Live "Open now" kicker** — small oxblood-tinted pill with a
   pulsing green dot + bilingual `Open now · aperto ora` (or
   `Closed now · chiuso ora` outside hours), followed by every active
