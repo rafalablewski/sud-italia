@@ -294,14 +294,14 @@ of paper cards. Full layout spec in
 ## Section primitives — `.v8-ps`
 
 The reusable "page section" primitives the V8 sections compose
-against. Declared in `themes/homepage/index.css`. First adopted by
-`<LocationsGrid />`; `<BundlesShowcase />`, `<LoyaltySection />`,
-and the future `<CTASection />` use the same classes so the
-landing's spacing, type ladder, and alt-paper rhythm stay identical
-across sections. **The Famiglia strip (`<AboutSection />`) is the
-deliberate exception** — it uses a bespoke `.v8-famiglia` block
-without `.v8-ps` chrome (no eyebrow / title / subtitle) so the
-quote lands as a single typographic gesture, not a content block.
+against. Declared in `themes/homepage/index.css`. Adopted by
+`<LocationsGrid />`, `<BundlesShowcase />`, and `<LoyaltySection />`
+(via the dark `.v8-ps-dark` variant). They share spacing, type
+ladder, and the alt-paper rhythm across sections. **The Famiglia
+strip (`<AboutSection />`) is the deliberate exception** — it uses
+a bespoke `.v8-famiglia` block without `.v8-ps` chrome (no
+eyebrow / title / subtitle) so the quote lands as a single
+typographic gesture, not a content block.
 
 - **`.v8-page-inner`** — max-width 1180px, `margin: 0 auto`, 18px
   gutter at base / 36px at ≥md. The standard column wrapper inside a
@@ -316,6 +316,16 @@ quote lands as a single typographic gesture, not a content block.
   back to transparent at the edges, on top of `--color-parchment`).
   Use on every other section so the landing has rhythm without a
   hard divider line. Never apply two `.v8-ps-alt` in a row.
+- **`.v8-ps-dark`** — espresso canvas with two radial washes
+  (terracotta top-left + ochre bottom-right). Used by the Soci /
+  loyalty closing rail. Descendant selectors flip the shared
+  `.v8-ps-eyebrow / -title / -sub` colours to ochre-light /
+  parchment / parchment-70% so the type ladder inverts cleanly
+  without per-section overrides. `.v8-ps-dark .v8-ps-title .it`
+  flips the italic clause to ochre-light (not oxblood, which would
+  disappear into the espresso bg). `.v8-ps-dark .v8-ps-sub em`
+  is the dark-mode counterpart to `.v8-bundle-desc em` — italic
+  Cormorant ochre-light at 92% opacity for Italian phrases.
 - **`.v8-ps-head`** — centred header block, `margin-bottom: 36/48px`.
 - **`.v8-ps-eyebrow`** — uppercase Cormorant 600 in oxblood, 11px,
   `letter-spacing: 3px`. `::before` and `::after` em-dashes flank
@@ -398,11 +408,52 @@ existing LayoutGate wiring don't churn — the export stays
   voice stays consistent. Untranslated "Pizzaiolo" is intentional:
   the strip signs itself the way an Italian café signs its menu.
 
-### `<CTASection />`
+### `<LoyaltySection />` (V8 Soci closing rail)
 
-- Centred final-call section, `bg-italia-red text-white` background.
-- One large CTA button (the only place we use `<Button>` on a
-  brand-red background — uses the white variant).
+V8 Trattoria — the **closing** rail at the bottom of the landing,
+not the inline `<LoyaltyCard />` panel the previous storefront
+rendered here. Full layout spec in
+[`../pages/home.md`](../pages/home.md#soci--loyalty-rail--loyaltysection).
+File at `src/components/location/LoyaltySection.tsx` (shared with
+the location-pages route).
+
+- **Composes against `.v8-ps.v8-ps-dark`** — the dark variant of the
+  shared section primitive. Espresso canvas with terracotta +
+  ochre radial washes; the `.v8-ps-eyebrow / -title / -sub`
+  descendant selectors flip to ochre-light / parchment / parchment-
+  70%.
+- **Title** uses the `.v8-ps-title .it` clause-flip pattern but the
+  dark variant overrides the italic colour to ochre-light (rather
+  than oxblood, which would disappear into the espresso bg). The
+  title text `"A pizza, una storia"` deliberately echoes the
+  Famiglia strip's blockquote — same brand line, two voices: the
+  full sentence as a quote on Famiglia, the phrase as a title on
+  Soci.
+- **`.v8-soci-strong`** wraps the "1 point" callout in ochre-light
+  Cormorant 600 normal-style — overrides the surrounding italic
+  Lora sub so the loyalty rate spotlights.
+- **`.v8-ps-dark .v8-ps-sub em`** styles the Italian phrases
+  (`Famiglia Oro`, `antipasto della casa`) as italic Cormorant
+  ochre-light at 92% opacity — the dark-mode counterpart to the
+  `.v8-bundle-desc em` light-section pattern.
+- **CTA** reuses `.v8-hero-cta` (terracotta-fill pill, 2px hover
+  lift) → `/rewards`. Same shape as the hero + Bundles primary
+  CTAs to keep the landing's primary-action vocabulary consistent.
+- **Marketing numbers** (`1 point` per złoty, `300 points` for
+  Famiglia Oro, the `antipasto della casa` reward) are local
+  copy. Canonical loyalty rules live in `lib/loyalty.ts` — if the
+  operator retunes the formula, the homepage pitch needs an update
+  too. Same trade-off bundles take.
+
+### `<CTASection />` — kept in repo, not on landing
+
+The V8 homepage closes with the Soci rail above and does NOT use a
+separate red-gradient closing CTA. `CTASection.tsx` is intentionally
+left in the repo (not imported from `(public)/page.tsx`) in case a
+future surface needs the red-gradient closing block — but adding it
+back to the landing would re-introduce the 2010s SaaS pattern V8
+explicitly strips. See the `(public)/page.tsx` header comment for
+the rationale.
 
 ## Menu / cart components (in `src/components/cart/`, `src/components/location/`)
 

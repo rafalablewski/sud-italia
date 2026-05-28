@@ -14,8 +14,7 @@ rendered in `src/app/(public)/page.tsx`.
 | Locations grid   | `src/components/landing/LocationsGrid.tsx`                 |
 | Bundles showcase | `src/components/landing/BundlesShowcase.tsx`               |
 | Famiglia strip   | `src/components/landing/AboutSection.tsx` (file name kept) |
-| Loyalty section  | `src/components/location/LoyaltySection.tsx` (shared)      |
-| CTA              | `src/components/landing/CTASection.tsx`                    |
+| Soci / loyalty   | `src/components/location/LoyaltySection.tsx` (shared, V8 dark rail) |
 
 ## The page contract
 
@@ -32,8 +31,11 @@ The landing answers exactly four questions, in order:
    grandmother. One sentence of brand grounding between bundles
    and the loyalty pitch.)
 
-Loyalty + CTA close the page: "by the way, you earn points" + "find
-your nearest truck, place an order".
+The Soci rail closes the page: "by the way, you earn points" on a
+dark espresso block with the "Start earning points" CTA pointing to
+the dedicated `/rewards` route. V8 does NOT close with a second
+red-gradient order CTA — by then the visitor has seen 6+ order
+entry points already.
 
 ## Section-by-section
 
@@ -266,20 +268,62 @@ Famiglia strip.
   (the hero's Story CTA can re-point from `#famiglia` to `/story`
   in the future without changing this strip).
 
-### Loyalty section — `<LoyaltySection />`
+### Soci / loyalty rail — `<LoyaltySection />`
 
-- One-liner pitch ("Earn a point for every złoty"), tier ladder
-  preview (Bronze → Silver → Gold → Platinum), the
-  `Join in 10 seconds` CTA (phone number only — CLAUDE rule 6, no
-  account creation).
-- Reuses the same loyalty primitive as `/locations/{slug}` so the
-  tier ladder reads identically across surfaces.
+V8 Trattoria treatment — the **closing** dark-espresso rail that
+finishes the landing. NOT the small inline `<LoyaltyCard />` panel
+the previous storefront shipped on the landing (that interactive
+sign-in card lives on `/rewards` instead).
 
-### CTA — `<CTASection />`
+- **Section is `.v8-ps.v8-ps-dark`** — the dark variant of the
+  shared section primitive. Espresso background with a warm
+  terracotta radial wash top-left + an ochre wash bottom-right.
+  Light-on-dark variant flips the shared `.v8-ps-eyebrow / -title
+  / -sub` colours via descendant selectors so this section reads
+  with the same type ladder as the lighter sections, just inverted.
+- **Eyebrow** in ochre-light: `Members & friends · soci e amici`,
+  em-dashes in `--color-espresso-soft` (a darker brown than the
+  light-section line tokens).
+- **Title** in parchment with italic-ochre-light clause:
+  `"A pizza, une storia"` (the same brand line the Famiglia strip
+  used as a blockquote, here serving as the title — V8 deliberately
+  threads the "A pizza, a story" phrase across both surfaces).
+- **Sub** in parchment 70% opacity, with two distinctive accents:
+  - An ochre-light `<strong>` callout — `1 point` — wrapped to
+    spotlight the loyalty rate.
+  - Two italic-Cormorant `<em>` Italian phrases (`Famiglia Oro`,
+    `antipasto della casa`) in ochre-light at 92% opacity — the
+    dark-mode counterpart to the `.v8-bundle-desc em` pattern.
+- **CTA** — `Start earning points · inizia a guadagnare punti →`,
+  the same `.v8-hero-cta` terracotta pill used in the hero +
+  Bundles. Links to `/rewards` (Rule #5: loyalty has its own
+  dedicated page; this section funnels there rather than
+  bottling the sign-in UI inline).
+- The previous interactive `<LoyaltyCard />` (phone-number sign-in,
+  per-user points display) is NOT rendered here. It lives at
+  `/rewards`. The Soci pitch is the entry point on the landing;
+  the actual loyalty UX lives on the dedicated route.
+- Marketing numbers (`1 point` / złoty, `300 points` for the
+  `Famiglia Oro` tier, the `antipasto della casa` reward) are
+  local copy. Canonical loyalty rules live in `lib/loyalty.ts` —
+  if the operator retunes the formula away from "1 pt/zł" the
+  homepage pitch needs an update too. Same trade-off bundles take.
 
-- One last "order now" closer with the primary brand-red button.
-- No newsletter signup, no "join our community", no friction. A
-  single tap to the menu.
+### No separate closing CTA
+
+The previous storefront shipped a red-gradient `<CTASection />`
+("Hungry? Order Now!" with location buttons) AFTER the loyalty
+panel. V8's homepage closes with the Soci rail instead — by the
+time the visitor reaches it they've seen 6+ order entry points
+(hero ×2, every location card, the bundles "Order now"), and one
+more red CTA reads as 2010s SaaS landing-page padding V8 avoids
+(same rule as the Step 3 chevron-scroll-indicator removal).
+
+`CTASection.tsx` is intentionally left in the repo (not re-imported
+on the homepage) in case a future surface needs the red-gradient
+closing block. Reaching for it on the landing without a re-discussion
+of the V8 direction would re-introduce the trope V8 explicitly
+strips.
 
 ## The rules unique to the landing
 

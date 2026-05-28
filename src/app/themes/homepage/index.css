@@ -617,6 +617,25 @@ body {
     var(--color-parchment);
 }
 
+/* Dark espresso variant — the V8 Soci / closing-rail treatment.
+   Two radial washes (terracotta top-left, ochre bottom-right) on
+   the espresso canvas, parchment text. Inside this variant the
+   shared `.v8-ps-title` / `.v8-ps-sub` / `.v8-ps-eyebrow` flip to
+   light-on-dark via the descendant selectors below. */
+.v8-ps-dark {
+  background:
+    radial-gradient(at 30% 20%, rgba(184, 92, 56, 0.16), transparent 60%),
+    radial-gradient(at 80% 80%, rgba(201, 162, 62, 0.10), transparent 60%),
+    var(--color-espresso);
+  color: var(--color-parchment);
+}
+.v8-ps-dark .v8-ps-eyebrow { color: var(--color-ochre-light); }
+.v8-ps-dark .v8-ps-eyebrow::before,
+.v8-ps-dark .v8-ps-eyebrow::after { color: var(--color-espresso-soft); }
+.v8-ps-dark .v8-ps-title { color: var(--color-parchment); }
+.v8-ps-dark .v8-ps-title .it { color: var(--color-ochre-light); }
+.v8-ps-dark .v8-ps-sub { color: rgba(244, 245, 240, 0.7); }
+
 .v8-ps-head {
   text-align: center;
   margin-bottom: 36px;
@@ -1154,4 +1173,42 @@ body {
   text-transform: uppercase;
   color: var(--color-muted);
   font-size: 12px;
+}
+
+/* ============================
+   V8 Trattoria — Soci / loyalty rail
+   ============================
+   The closing dark-espresso strip composed against `.v8-ps.v8-ps-dark`.
+   Markup in src/components/location/LoyaltySection.tsx. The shared
+   primitives (.v8-ps-eyebrow / -title / -sub) handle the type ladder
+   — this block adds the Soci-specific accents (the "1 point" strong
+   callout in ochre-light, italic-Cormorant <em> on `Famiglia Oro` /
+   `antipasto della casa`, the centered CTA wrap). */
+
+.v8-soci-inner {
+  text-align: center;
+}
+
+/* The "1 point" callout — ochre-light, normal style (overrides the
+   surrounding italic Lora sub), Cormorant 600. */
+.v8-soci-strong {
+  color: var(--color-ochre-light);
+  font-style: normal;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
+/* Italian phrases in the pitch — italic Cormorant ochre-light against
+   the espresso background so they read as the same "bilingual signal"
+   pattern the lighter sections use but with the dark-mode accent. */
+.v8-ps-dark .v8-ps-sub em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-ochre-light);
+  opacity: 0.92;
+}
+
+.v8-soci-cta-wrap {
+  margin-top: 22px;
+  text-align: center;
 }
