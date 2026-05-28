@@ -124,13 +124,100 @@ The 5-star display for feedback + reviews.
 
 ### `<CurrencySwitcher />` — `src/components/ui/CurrencySwitcher.tsx`
 
-The optional currency picker (governed by the future Layout-tab toggle
-in admin Settings — when off, the component returns `null` and the
+The currency picker (governed by `showCurrencySwitcher` in admin
+Settings → Layout — when off, the component returns `null` and the
 storefront falls back to PLN).
 
-- Dropdown of supported currencies.
-- Inline with the page header, right-aligned.
-- Selected currency persists via the customer cookie.
+- **V8 pill segmented control.** Symbol-only buttons (zł / € / $ / S$)
+  inside a basil-tinted pill — the sibling of `<LanguageSwitcher />`,
+  in green. Single-row, no dropdown — V8 trades discoverability for
+  glanceability so the top nav reads at a tap.
+- Active option: basil fill + parchment text + subtle 0 1px 2px basil
+  drop. Inactive: muted-brown text on the basil-tinted background.
+- Honours `enabledCurrencies` from public settings; disabled currencies
+  drop out of the row.
+- Selected currency persists via the customer cookie (same `setCurrency`
+  helper as before). Picking a non-current option triggers a full
+  reload so every SSR'd `formatPrice()` re-renders.
+
+### `<LanguageSwitcher />` — `src/components/ui/LanguageSwitcher.tsx`
+
+The language picker (governed by `showLanguageSwitcher` in admin
+Settings → Layout).
+
+- **V8 pill segmented control.** Two-letter codes (EN / PL / DE / SG)
+  inside a terracotta-tinted pill — left-sibling of `<CurrencySwitcher />`.
+  Single-row, no dropdown.
+- Active option: terracotta fill + parchment text + subtle 0 1px 2px
+  oxblood drop. Inactive: muted-brown text on the terracotta-tinted
+  background.
+- Honours `enabledLocales` from public settings; disabled locales drop
+  out of the row.
+- Picking a non-current option calls `setLocale()` then full-reloads so
+  every SSR string re-renders in the new locale.
+
+## Storefront chrome — Header + LiveTicker
+
+The storefront's two persistent layout slabs sit at the top of every
+`(public)` route. Markup in `src/components/layout/`. Custom styling
+under the `.v8-*` selectors in `themes/homepage/index.css`.
+
+### `<Header />` — `src/components/layout/Header.tsx`
+
+The V8 Trattoria top nav.
+
+- **Sticky parchment-gradient bar** (`linear-gradient(180deg, rgba(248,
+  239,222,0.98), rgba(248,239,222,0.88))` + 8px backdrop blur), line-soft
+  hairline border-bottom. Adds a subtle warm-brown drop shadow once the
+  page is scrolled (`.v8-nav-scrolled`).
+- **Brand block (left):** basil-sprig SVG mark that rotates `-8°` on
+  hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Sud Italia"
+  (Cormorant Garamond 600, 24px, espresso) + the italic sublabel
+  "Neapolitan pizza · pizza napoletana · since 2019" (Cormorant 11.5px
+  italic muted, ≥768px only).
+- **Nav links (≥1024px):** Menu, Bundles, Locations, Story, Rewards.
+  Each renders the primary EN/PL on top + the Italian italic phrase
+  underneath (`Menù`, `Menù del giorno`, `Botteghe`, `La famiglia`,
+  `Soci`). Hover sweeps in a 1.5px terracotta underline via `::after
+  { transform: scaleX(0/1) }`.
+- **Right cluster:** `<LanguageSwitcher />` + `<CurrencySwitcher />`
+  (the V8 pill switchers above) + `<CartButton />` (the V8 cart pill)
+  + a `38×38` line-bordered hamburger circle (`<lg` only).
+- **Mobile menu:** appears under the nav-inner when the hamburger
+  toggles. Each link is the same EN/IT bilingual format but inline
+  instead of stacked.
+
+### `<LiveTicker />` — `src/components/layout/LiveTicker.tsx`
+
+The slim espresso strip directly under `<Header />`. Shown on every
+`(public)` route via the `showLiveTicker` LayoutGate.
+
+- **Espresso gradient canvas** (`#2D1810 → #3D2817`, the **only** dark
+  slab on the storefront), ochre-tinted hairline + inset highlight.
+- **Four widgets:** orders in the last hour (pulsing basil dot + ochre
+  people icon), currently preparing (flame icon), trending item
+  (basil trending icon), avg prep time (ochre bolt icon).
+- **Data source:** `simulateLiveActivity` from `src/lib/growth-engine.ts`
+  with a chain-wide sentinel slug (`"chain"`) — same helper that powers
+  `<LiveActivityBar />` on `/locations/[slug]`, refreshed every 30s.
+- **Bilingual subtitles** (`nell'ultima ora`, `in preparazione`, `in
+  tendenza`, `tempo medio`) — italic Cormorant ochre, hidden under
+  640px to keep the strip in one row.
+- Numerals are tabular (`.num` helper) and Cormorant 600 — `12 orders
+  in the last hour` reads as editorial copy, not analytics.
+
+### `<CartButton />` — `src/components/cart/CartButton.tsx`
+
+The V8 cart pill. Lives inside `<Header />`.
+
+- **Parchment-deep pill** with line border + paper shadow; Cormorant
+  italic "Cart" label (14px, espresso) + a terracotta count badge with
+  Cormorant 600 numerals (12px, parchment fill).
+- **Hover state inverts:** pill flips to terracotta fill with parchment
+  text, and the count badge inverts to parchment fill with terracotta-
+  dark text. Icon strokes follow via `currentColor` + a `.v8-cart-lines`
+  class on the terracotta detail strokes.
+- Click opens `<CartDrawer />` (portalled, see the Sheet primitive above).
 
 ## Landing-specific components (in `src/components/landing/`)
 

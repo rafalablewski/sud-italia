@@ -49,6 +49,7 @@ export interface PublicSettings {
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
     showChatWidget: boolean;
+    showLiveTicker: boolean;
   };
 }
 

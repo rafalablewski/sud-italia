@@ -832,6 +832,12 @@ export default async function CapabilitiesPage() {
           summary: "Customer-site strip of dynamic widgets (orders/hour, currently preparing, trending, prep time, happy hour, truck location, free text). CRUD in Growth → Live widgets, per-location targeting, cap of 7 active.",
         },
         {
+          name: "Live ticker (V8 nav strip)",
+          status: "live",
+          href: "/admin/settings",
+          summary: "V8 espresso-gradient strip directly under the top nav on every storefront route. Renders chain-wide orders-in-last-hour, currently-preparing, trending item, and avg prep time from the same simulateLiveActivity helper /locations/[slug] uses. Toggle in Settings → Layout → 'Live activity ticker'.",
+        },
+        {
           name: "Speed Guarantee",
           status: "live",
           href: "/admin/settings",

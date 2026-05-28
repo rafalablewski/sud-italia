@@ -1,174 +1,144 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Container } from "@/components/ui/Container";
-import { Menu, X, MapPin, Star, User } from "lucide-react";
-import { SITE_NAME } from "@/lib/constants";
-import { getActiveLocations } from "@/data/locations";
+import { useState, useEffect } from "react";
 import { CartButton } from "@/components/cart/CartButton";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CurrencySwitcher } from "@/components/ui/CurrencySwitcher";
 import { LayoutGate } from "@/components/layout/LayoutGate";
-import { useCustomer } from "@/store/customer";
+
+// V8 Trattoria Header — sticky parchment-gradient bar with the basil-sprig
+// brand mark on the left, bilingual nav links (EN/PL primary + Italian
+// italic subtitle) in the centre at ≥900px, language + currency pill
+// switchers, V8 cart pill, and a mobile hamburger circle. The layout
+// hash links target the homepage section IDs the V8 mockup uses
+// (#menu, #bundles, #locations, #famiglia, #soci) so the nav anchors land
+// even from a deep route — the homepage renders matching IDs in the
+// section ports that follow.
+//
+// Live activity (orders/hour, currently preparing, trending, avg prep)
+// lives in <LiveTicker /> below the header — same espresso bar V8 places
+// directly under the nav.
+const NAV_LINKS = [
+  { href: "/#menu", en: "Menu", pl: "Menu", it: "Menù" },
+  { href: "/#bundles", en: "Bundles", pl: "Zestawy", it: "Menù del giorno" },
+  { href: "/#locations", en: "Locations", pl: "Lokalizacje", it: "Botteghe" },
+  { href: "/#famiglia", en: "Story", pl: "Historia", it: "La famiglia" },
+  { href: "/rewards", en: "Rewards", pl: "Nagrody", it: "Soci" },
+];
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const locations = getActiveLocations();
-  const { customer } = useCustomer();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <Container>
-        <div className="flex items-center justify-between h-16 md:h-20">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-8 h-8 rounded-full bg-italia-red flex items-center justify-center">
-                <span className="text-white font-heading text-sm font-bold">SI</span>
-              </div>
-              <span className="text-xl font-heading font-bold text-italia-dark">
-                {SITE_NAME}
-              </span>
+    <header
+      className={`v8-nav sticky top-0 z-30 backdrop-blur-sm border-b transition-shadow ${
+        scrolled ? "v8-nav-scrolled" : ""
+      }`}
+      aria-label="Primary"
+    >
+      <div className="max-w-[1180px] mx-auto px-[18px] md:px-[36px] py-[14px] md:py-[18px] flex items-center gap-[18px]">
+        {/* Brand mark + wordmark */}
+        <Link href="/" className="v8-brand flex items-center gap-[10px] no-underline text-espresso">
+          <span className="v8-brand-mark grid place-items-center" aria-hidden>
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+              <path d="M19 33 C 19 27, 19 20, 19 12" stroke="#4A7C59" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M19 24 C 14 22, 11 19, 10 15 C 14 17, 17 19, 19 22" fill="#4A7C59" fillOpacity="0.22" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M19 19 C 24 17, 27 14, 28 10 C 24 12, 21 14, 19 17" fill="#4A7C59" fillOpacity="0.22" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M19 14 C 16 12, 14 9, 14 6 C 17 7, 18 10, 19 12" fill="#4A7C59" fillOpacity="0.22" stroke="#4A7C59" strokeWidth="1.5" strokeLinejoin="round" />
+              <circle cx="19" cy="34" r="1.3" fill="#B85C38" />
+            </svg>
+          </span>
+          <div>
+            <div className="font-heading font-semibold text-[24px] leading-none tracking-[0.3px] text-espresso">
+              Sud Italia
             </div>
-          </Link>
+            <div className="v8-brand-sub font-heading italic text-[11.5px] text-muted tracking-[0.8px] mt-[1px] hidden md:block">
+              Neapolitan pizza <span className="it">· pizza napoletana</span> · since 2019
+            </div>
+          </div>
+        </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link
-              href="/#locations"
-              className="text-sm font-medium text-italia-gray hover:text-italia-dark transition-colors"
-            >
-              Locations
-            </Link>
-            <Link
-              href="/#about"
-              className="text-sm font-medium text-italia-gray hover:text-italia-dark transition-colors"
-            >
-              About
-            </Link>
-            {customer ? (
-              <Link
-                href="/rewards"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-italia-gold/10 hover:bg-italia-gold/20 transition-colors"
-              >
-                <div className="w-6 h-6 rounded-full bg-italia-gold/20 flex items-center justify-center">
-                  <User className="h-3.5 w-3.5 text-italia-gold-dark" />
-                </div>
-                <span className="text-sm font-semibold text-italia-gold-dark">
-                  {customer.name.split(" ")[0]}
-                </span>
-                <span className="text-[11px] font-bold text-italia-gold bg-italia-gold/15 px-2 py-0.5 rounded-full">
-                  {customer.points} pts
-                </span>
+        {/* Desktop nav links (≥900px) */}
+        <ul className="v8-nav-links list-none p-0 m-0 ml-[18px] gap-[22px] hidden lg:flex">
+          {NAV_LINKS.map((l) => (
+            <li key={l.href}>
+              <Link href={l.href} className="v8-nav-link font-heading text-[16px] text-espresso no-underline py-1 relative inline-block">
+                <span>{l.en}</span>
+                <span className="it">{l.it}</span>
               </Link>
-            ) : (
-              <Link
-                href="/rewards"
-                className="text-sm font-medium text-italia-gold-dark hover:text-italia-gold transition-colors flex items-center gap-1"
-              >
-                <Star className="h-3.5 w-3.5" />
-                Rewards
-              </Link>
-            )}
-            {locations.map((loc) => (
-              <Link
-                key={loc.slug}
-                href={`/locations/${loc.slug}`}
-                className="text-sm font-medium text-italia-gray hover:text-italia-red transition-colors flex items-center gap-1"
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                {loc.city}
-              </Link>
-            ))}
-            <LayoutGate flag="showCurrencySwitcher">
-              <CurrencySwitcher />
-            </LayoutGate>
-            <LayoutGate flag="showLanguageSwitcher">
-              <LanguageSwitcher />
-            </LayoutGate>
-            <CartButton />
-          </nav>
+            </li>
+          ))}
+        </ul>
 
-          {/* Mobile: Cart + Hamburger */}
-          <div className="flex items-center gap-2 md:hidden">
-            <LayoutGate flag="showCurrencySwitcher">
-              <CurrencySwitcher />
-            </LayoutGate>
-            <LayoutGate flag="showLanguageSwitcher">
+        {/* Right cluster. The two pill switchers eat too much width on
+            a 390px viewport — V8's mockup is constrained to a 430px
+            frame so the same row works there — so on <md we hide them
+            from the top bar and surface them inside the mobile menu
+            instead. Cart + hamburger stay at every width. */}
+        <div className="v8-nav-right ml-auto lg:ml-0 flex items-center gap-[10px]">
+          <LayoutGate flag="showLanguageSwitcher">
+            <span className="hidden md:inline-flex">
               <LanguageSwitcher />
-            </LayoutGate>
-            <CartButton />
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
+            </span>
+          </LayoutGate>
+          <LayoutGate flag="showCurrencySwitcher">
+            <span className="hidden md:inline-flex">
+              <CurrencySwitcher />
+            </span>
+          </LayoutGate>
+          <CartButton />
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            className="v8-nav-mobile-btn inline-flex lg:hidden items-center justify-center w-[38px] h-[38px] bg-transparent border border-line rounded-full text-espresso"
+          >
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden>
               {mobileOpen ? (
-                <X className="h-6 w-6" />
+                <path d="M2 2 L16 12 M16 2 L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <path d="M1 2 L17 2 M1 7 L17 7 M1 12 L17 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               )}
-            </button>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu — slides under the nav-inner on <lg screens. The
+          language + currency pills move into the menu below the link
+          list so they remain reachable when the top-bar can't fit them. */}
+      {mobileOpen && (
+        <div className="v8-nav-mobile-menu border-t border-line-soft px-[18px] py-[12px] pb-[16px] lg:hidden">
+          {NAV_LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setMobileOpen(false)}
+              className="v8-nav-mobile-link block py-[10px] font-heading text-[18px] text-espresso no-underline border-b border-dashed border-line-soft last:border-b-0"
+            >
+              <span>{l.en}</span> <span className="it">{l.it}</span>
+            </Link>
+          ))}
+          <div className="md:hidden flex items-center gap-[10px] pt-[14px] mt-[6px] border-t border-dashed border-line-soft">
+            <LayoutGate flag="showLanguageSwitcher">
+              <LanguageSwitcher />
+            </LayoutGate>
+            <LayoutGate flag="showCurrencySwitcher">
+              <CurrencySwitcher />
+            </LayoutGate>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileOpen && (
-          <nav className="md:hidden border-t border-gray-100 py-4 space-y-1">
-            <Link
-              href="/#locations"
-              onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2.5 text-base font-medium text-italia-gray hover:text-italia-dark hover:bg-gray-50 rounded-lg"
-            >
-              Locations
-            </Link>
-            <Link
-              href="/#about"
-              onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2.5 text-base font-medium text-italia-gray hover:text-italia-dark hover:bg-gray-50 rounded-lg"
-            >
-              About
-            </Link>
-            {customer ? (
-              <Link
-                href="/rewards"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
-              >
-                <div className="w-8 h-8 rounded-full bg-italia-gold/15 flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-italia-gold-dark" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-italia-dark truncate">{customer.name.split(" ")[0]}</span>
-                  <span className="block text-xs text-italia-gold-dark">{customer.points} pts earned</span>
-                </div>
-              </Link>
-            ) : (
-              <Link
-                href="/rewards"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-gold-dark hover:bg-amber-50 rounded-lg"
-              >
-                <Star className="h-4 w-4" />
-                Rewards
-              </Link>
-            )}
-            <div className="border-t border-gray-100 pt-2 mt-2">
-              {locations.map((loc) => (
-                <Link
-                  key={loc.slug}
-                  href={`/locations/${loc.slug}`}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-base font-medium text-italia-red hover:bg-red-50 rounded-lg"
-                >
-                  <MapPin className="h-4 w-4" />
-                  {loc.name}
-                </Link>
-              ))}
-            </div>
-          </nav>
-        )}
-      </Container>
+      )}
     </header>
   );
 }

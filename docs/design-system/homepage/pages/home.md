@@ -3,11 +3,13 @@
 ← back to [Homepage README](../README.md)
 
 The storefront landing — the first impression at `/`. Six stacked
-sections under the public layout's `<Header />` + `<Footer />`,
+sections under the public layout's `<Header />` (the V8 Trattoria nav)
++ `<LiveTicker />` (espresso strip under the nav) + `<Footer />`,
 rendered in `src/app/(public)/page.tsx`.
 
 | Section          | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
+| Live ticker      | `src/components/layout/LiveTicker.tsx` (shipped under nav, all routes) |
 | Hero             | `src/components/landing/HeroSection.tsx`                   |
 | Locations grid   | `src/components/landing/LocationsGrid.tsx`                 |
 | Bundles showcase | `src/components/landing/BundlesShowcase.tsx`               |
