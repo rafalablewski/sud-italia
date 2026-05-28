@@ -34,20 +34,27 @@ ship the cross-theme change.
 
 ## Today vs target
 
-The doctrine above is the **target**. The code today only partially
-enforces it:
+The doctrine above is the **target**. The code today partially enforces
+it — file-level isolation is shipped; route-level isolation is bounded
+by a Tailwind v4 constraint:
 
 | What                  | State                                                                                                                                  |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Admin tokens          | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/globals.css`. Edits here only affect admin surfaces.                   |
-| Homepage tokens       | ⚠️ Live in the `@theme inline` block of the same `src/app/globals.css`. Same file as Admin → token bleed is possible if names collide. |
-| Core tokens           | ❌ No separate scope today — Core surfaces (`/admin/pos`, `/admin/kds`, `/admin/{crm,concierge,whatsapp}`) inherit the Admin theme.    |
+| Admin tokens          | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/themes/admin/index.css`. Edits here only affect admin surfaces.        |
+| Homepage tokens       | ✅ Live in `src/app/themes/homepage/index.css` (the `@theme inline` block + delivery animations + `.pub-*` form elements).              |
+| Core tokens           | ✅ Live in `src/app/themes/core/index.css` (`:root --cmd-*` palette + `.kds-*` / `.ka-*` / `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces). |
+| Per-theme CSS file    | ✅ Three files under `src/app/themes/{core,admin,homepage}/index.css`. Editing one cannot accidentally affect another.                  |
+| Per-route loading     | ❌ All three theme CSS files are `@import`-ed by `src/app/globals.css`, so all three ship globally. Route-level loading via per-layout JS imports breaks Tailwind v4's `@theme` utility generation (Tailwind only scans the `@import` chain rooted at the entry file). |
 | Fonts                 | ❌ Loaded once in `src/app/layout.tsx` via `next/font`. Change Inter here → every theme moves.                                          |
-| CSS file              | ❌ One `globals.css` shared by all surfaces.                                                                                            |
 | Per-theme `theme.ts`  | ❌ One `src/components/admin/v2/theme.ts` mirrors admin tokens for JS/Recharts. Core/Homepage have no equivalent.                       |
 
-The code split that closes these gaps is in flight — see the per-theme
-README for what each theme's "today" looks like.
+**File-level isolation is what the code can guarantee today.** Selectors
+are uniquely prefixed per theme (`[data-admin-theme]` / `.v2-` for
+Admin, `.cmd-` / `.kds-` / `.ka-` / `.pos-` / `.crm-` / `.cncrg-` / `.wa-`
+for Core, `--color-italia-*` / `.pub-` for Homepage) so even though
+all three load globally, no theme's rules override another's. Changing
+the Admin accent in `themes/admin/index.css` cannot accidentally repaint
+Core or Homepage.
 
 ## Authority
 
