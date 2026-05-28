@@ -325,8 +325,40 @@ alt-paper rhythm stay identical across sections.
 
 ### `<BundlesShowcase />`
 
-- Horizontal scroll on mobile, grid on desktop.
-- Each bundle card uses `<Sheet />` for detail expansion.
+V8 Trattoria — four paper cards in the wider `.v8-bundles-section`
+(breaks out to 1500px max, leaves a parchment gutter at the iframe
+edges). Layout spec in
+[`../pages/home.md`](../pages/home.md#bundles-showcase--bundlesshowcase).
+
+- **Wider page-inner override:** `.v8-bundles-section .v8-bundles-page-inner`
+  swaps the standard `.v8-page-inner` 1180px column for a
+  `min(calc(100% - 48/96/128px), 1500px)` band (the gutter widens at
+  768 / 1400). The default chained selector means the override is
+  scoped — drop the inner class on a card in another section and it
+  picks up the 1180px column instead.
+- **Per-variant accent CSS variables.** Each card sets
+  `--v8-bundle-accent` + `--v8-bundle-accent-soft` (family rose,
+  lunch ochre, night espresso, classic basil). The accent drives the
+  top stripe gradient, the icon colour (via `color:
+  var(--v8-bundle-accent)` + `stroke="currentColor"` on the SVG), the
+  english subtitle colour, and the tag pill border. Adding a new
+  variant is a one-line CSS addition — no per-component branching.
+- **Bundle name pattern:** italian italic Cormorant on top + an
+  uppercase english subtitle in the accent colour underneath. The
+  `<span class="en">` mark wraps the subtitle so V8's "italic name
+  + uppercase translation" treatment lands without a separate
+  element per card.
+- **Price logic:** two render branches — `kind: "money"` (now / was
+  for fixed-price bundles, real values via `priceFromBundle()`
+  reading `DEFAULT_BUNDLES.priceGrosze`) and `kind: "savings"`
+  (single `-X%` label for the auto-combo whose discount activates in
+  the cart, real value via `DEFAULT_COMBO_DEALS.italian-classic.discountPercent`).
+- **Description** uses Lora body with italic-Cormorant `<em>` on
+  Italian phrases (the same `.v8-bundle-desc em` selector V8 uses).
+- **CTA reuse:** the bottom "Order now · inizia un ordine →" pill
+  reuses `.v8-hero-cta` — same terracotta-fill + 2px lift hover as
+  the hero. Don't ship a `.v8-bundle-cta` variant; keep the primary
+  CTA shape consistent across the landing.
 
 ### `<AboutSection />`
 

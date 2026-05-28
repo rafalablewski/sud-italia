@@ -908,3 +908,191 @@ body {
   font-style: italic;
   color: var(--color-muted);
 }
+
+/* ============================
+   V8 Trattoria — bundles section
+   ============================
+   Wider than the standard 1180px column — V8 lets the bundles row
+   breathe at the iframe edges with a 1500px hard cap. The page-inner
+   here overrides the shared .v8-page-inner via the chained
+   `.v8-bundles-section .v8-bundles-page-inner` selector. Cards lay out
+   1 → 2 → 4 column across mobile / tablet / desktop. Each card carries
+   a per-variant accent (--v8-bundle-accent / --v8-bundle-accent-soft)
+   that drives the top stripe, icon colour, and english subtitle. */
+
+.v8-bundles-section .v8-bundles-page-inner {
+  width: min(calc(100% - 48px), 1500px);
+  max-width: none;
+  padding: 0;
+}
+@media (min-width: 768px) {
+  .v8-bundles-section .v8-bundles-page-inner { width: min(calc(100% - 96px), 1500px); }
+}
+@media (min-width: 1400px) {
+  .v8-bundles-section .v8-bundles-page-inner { width: min(calc(100% - 128px), 1500px); }
+}
+
+.v8-bundles {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .v8-bundles { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1000px) {
+  .v8-bundles { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+}
+@media (min-width: 1400px) {
+  .v8-bundles { gap: 28px; }
+}
+
+.v8-bundle {
+  --v8-bundle-accent: var(--color-terracotta);
+  --v8-bundle-accent-soft: var(--color-terracotta-soft);
+  background: linear-gradient(180deg, #FBF4E1 0%, var(--color-parchment) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 22px 20px 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.v8-bundle::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--v8-bundle-accent), var(--v8-bundle-accent-soft));
+}
+.v8-bundle:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 24px 40px -22px rgba(61, 40, 23, 0.45);
+}
+
+/* Per-variant accents — V8 hand-tuned these so the four cards read as
+   distinct meal-windows: family rose, lunch ochre, night espresso,
+   classic basil. */
+.v8-bundle-family  { --v8-bundle-accent: #C75A6A;             --v8-bundle-accent-soft: #E89AA1; }
+.v8-bundle-lunch   { --v8-bundle-accent: var(--color-ochre);   --v8-bundle-accent-soft: var(--color-ochre-light); }
+.v8-bundle-night   { --v8-bundle-accent: var(--color-espresso); --v8-bundle-accent-soft: var(--color-espresso-soft); }
+.v8-bundle-classic { --v8-bundle-accent: var(--color-basil);   --v8-bundle-accent-soft: #88B196; }
+
+.v8-bundle-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 50%;
+  margin-bottom: 14px;
+  color: var(--v8-bundle-accent);
+}
+
+/* Tag pill — dashed border in the soft accent, italic Cormorant copy. */
+.v8-bundle-tag {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--v8-bundle-accent);
+  letter-spacing: 0.5px;
+  border: 1px dashed var(--v8-bundle-accent-soft);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 14px;
+  align-self: flex-start;
+}
+.v8-bundle-tag .bi-sec {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Bundle name — italian italic on top, english uppercase subtitle below. */
+.v8-bundle-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--color-espresso);
+  line-height: 1.05;
+  margin: 0 0 2px;
+}
+.v8-bundle-name .en {
+  display: block;
+  font-style: normal;
+  font-size: 13.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--v8-bundle-accent);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* Price row — `now` in oxblood Cormorant 28px tabular, `was` in muted
+   italic strikethrough, `savings` as a basil-deep label (for the
+   auto-applied discount combo that has no fixed price). */
+.v8-bundle-price {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.v8-bundle-price .now {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--color-oxblood);
+  line-height: 1;
+}
+.v8-bundle-price .was {
+  font-family: var(--font-heading);
+  color: var(--color-muted);
+  font-size: 15px;
+  text-decoration: line-through;
+  font-style: italic;
+}
+.v8-bundle-price .savings {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-basil-deep);
+}
+
+/* Description — Lora body, italic Cormorant on <em> Italian phrases */
+.v8-bundle-desc {
+  font-family: var(--font-body);
+  color: var(--color-espresso-soft);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 12px 0 0;
+  flex: 1;
+}
+.v8-bundle-desc em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* Foot note + CTA — italic Cormorant note, reused .v8-hero-cta button */
+.v8-bundle-foot-note {
+  text-align: center;
+  margin: 28px 0 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 14.5px;
+}
+.v8-bundle-cta-wrap {
+  text-align: center;
+  margin-top: 24px;
+}

@@ -156,13 +156,59 @@ and the alt-paper rhythm stay identical across the landing. See
 
 ### Bundles showcase — `<BundlesShowcase />`
 
-- 3–5 curated bundle cards: name, contents, price, savings vs à-la-
-  carte.
-- Pulled from the same scheduled-bundles surface admin controls
-  (`/admin/scheduled-bundles`) — when a manager activates a new
-  lunch combo, it appears here.
-- Each bundle card has a `View on {city} menu` CTA that deep-links to
-  the location's menu with the bundle expanded.
+V8 Trattoria treatment — four paper cards inside a wider `.v8-ps`
+section (`.v8-bundles-section`) that breaks out of the standard
+`.v8-page-inner` 1180px column to a 1500px hard cap, with a parchment
+gutter at the iframe edges. The Famiglia / Pranzo / Spicchio Notturno
+/ Il Classico cards correspond to the four meal-window slots V8
+designed (family / lunch / late-night / auto-combo).
+
+- **Section header** uses the shared `.v8-ps-*` primitives:
+  - Eyebrow: `Today's bundles · menù del giorno` (em-dash flanked).
+  - Title: `Pick a bundle.` + italic `<span class="it">Skip the
+    maths.</span>` — the V8 italic-clause-in-title pattern.
+  - Subtitle: Lora muted with italic-Cormorant `<em>` Italian names
+    (`Famiglia`, `Pranzo`, `Spicchio`, `Il Classico`) inline with the
+    English copy.
+- **Grid** is 1 → 2 → 4 columns across mobile / tablet (≥640px) /
+  desktop (≥1000px), gap widens to 28px ≥1400px.
+- **Per-card variant accents** drive the top stripe (5px gradient
+  from accent → accent-soft), the icon colour, and the uppercase
+  english subtitle colour:
+  - `.v8-bundle-family` — rose (`#C75A6A` → `#E89AA1`)
+  - `.v8-bundle-lunch` — ochre → ochre-light
+  - `.v8-bundle-night` — espresso → espresso-soft
+  - `.v8-bundle-classic` — basil → softer basil
+- **Card body** is a flex column: SVG icon in a 56px translucent
+  circle (family figures / sundial / crescent moon / sparkle), a
+  dashed-border tag pill in the accent (`for 2–3 people · per 2–3
+  persone`), the bundle name (italian italic Cormorant 24px on top +
+  uppercase english subtitle in the accent colour), the price row,
+  then the Lora description with italic-Cormorant `<em>` Italian
+  phrases (`limonata`, `dolce`, `Margherita`, etc.). The description
+  uses `flex: 1` so cards in the same row align at the description
+  bottom and the price baseline.
+- **Price treatments — two kinds:**
+  - **Money** — `now` in oxblood Cormorant 28px tabular, `was` as
+    italic muted strikethrough. Real prices via
+    `priceFromBundle()` reading `DEFAULT_BUNDLES.priceGrosze` /
+    `refPriceGrosze` — Rule #1, no hardcoded zł on the homepage.
+  - **Savings** — for the Italian Classic combo that auto-applies a
+    percent discount instead of pinning a fixed price; reads
+    `DEFAULT_COMBO_DEALS.italian-classic.discountPercent`.
+- **Foot note + CTA** — italic Cormorant footnote ("Bundles activate
+  automatically in your cart when eligible.") + a terracotta "Order
+  now · inizia un ordine →" CTA reusing the hero's `.v8-hero-cta`
+  pill. CTA links to the **primary active location** (`getActiveLocations()[0].slug`)
+  — the cart drawer surfaces the actual bundle ladder once the
+  customer's on a menu.
+- **Card hover** — translateY(-4px) + warm-brown drop shadow.
+
+Per-location admin overrides (`LocationUpsellConfig.bundles`) do
+**not** reflect here — the homepage is location-agnostic. Operators
+retuning a bundle dramatically away from the seed should expect a
+homepage-vs-cart mismatch during the experiment; rolling the seed
+config forward to match is the fix.
 
 ### About — `<AboutSection />`
 
