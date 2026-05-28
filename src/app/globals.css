@@ -1,59 +1,26 @@
 @import "tailwindcss";
-/* Three independent themes — see docs/design-system/.
-   CSS @import must appear before any other rules, so all three load
-   early in the cascade. Selectors are uniquely prefixed per theme
-   (Core: .cmd-/.kds-/.ka-/.pos-/.crm-/.cncrg-/.wa-; Admin:
-   [data-admin-theme]/.v2-/.glass-/.admin-) so no inter-theme override
-   issues arise from the load order. */
+/* Three independent themes — see docs/design-system/. WordPress-style:
+   each theme owns its own tokens, components, and rules; no shared
+   layer between them. CSS @import must appear before any other rules,
+   so the three load early in the cascade. Selectors are uniquely
+   prefixed per theme so no inter-theme overrides arise from load order. */
+@import "./themes/homepage/index.css";
 @import "./themes/core/index.css";
 @import "./themes/admin/index.css";
 
-@theme inline {
-  --color-background: #FFF8F0;
-  --color-foreground: #1A1A1A;
-  --color-italia-red: #9A2742;
-  --color-italia-red-dark: #7B1F33;
-  --color-italia-green: #008C45;
-  --color-italia-green-dark: #006B35;
-  --color-italia-cream: #FFF8F0;
-  --color-italia-cream-dark: #F5EDDF;
-  --color-italia-gold: #B8922E;
-  --color-italia-gold-dark: #9A7A24;
-  --color-italia-dark: #1A1A1A;
-  --color-italia-gray: #6B7280;
-  --color-italia-light-gray: #F3F4F6;
-  --font-heading: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  --font-body: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
-  --animate-slide-up-sheet: slide-up-sheet 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
-  --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --animate-count-up: count-up 0.3s ease-out;
-  /* Free-delivery progress bar (audit §2.1) — shimmer crawl while below the
-   *  threshold; one-shot sweep + pop-in on the celebratory unlock card. */
-  --animate-delivery-shimmer: delivery-shimmer 1.8s linear infinite;
-  --animate-delivery-sweep: delivery-sweep 1.4s ease-out 0.1s 1 both;
-  --animate-delivery-unlock: delivery-unlock 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --animate-delivery-medallion: delivery-medallion 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
 /* ============================
-   BASE
+   BASE — the small shared layer
+   Only rules that genuinely apply to every theme live here:
+   global focus visibility, the reduced-motion media query, generic
+   animation keyframes consumed across themes, and a couple of
+   universal utilities. Anything theme-specific belongs in its
+   theme's index.css.
    ============================ */
 
 /* Accessibility: visible focus outlines for keyboard navigation */
 *:focus-visible {
   outline: 2px solid var(--color-italia-red);
   outline-offset: 2px;
-}
-
-/* Admin surfaces use the theme-aware steel focus ring rather than the public
-   brand red, so keyboard focus matches the v2 token system in both themes. */
-[data-admin-theme] *:focus-visible {
-  outline-color: var(--focus-ring, var(--border-focus));
 }
 
 /* Accessibility: respect reduced motion preference */
@@ -113,95 +80,7 @@
   to { width: 100%; }
 }
 
-/* Free-delivery surfaces (audit §2.1 + §2.5) */
-@keyframes delivery-shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-@keyframes delivery-sweep {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-@keyframes delivery-unlock {
-  0%   { transform: scale(0.96); opacity: 0; }
-  60%  { transform: scale(1.01); }
-  100% { transform: scale(1); opacity: 1; }
-}
-@keyframes delivery-medallion {
-  0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
-  55%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0); }
-}
-
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-body);
-}
-
 html { scroll-behavior: smooth; }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ============================
-   PUBLIC SITE — FORM ELEMENTS
-   ============================ */
-
-.pub-input {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--color-foreground);
-  background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.pub-input:focus {
-  border-color: var(--color-italia-red);
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-italia-red) 12%, transparent);
-}
-
-.pub-input::placeholder { color: #9ca3af; }
-
-.pub-select {
-  padding: 0.625rem 0.875rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--color-foreground);
-  background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-}
-
-.pub-select:focus {
-  border-color: var(--color-italia-red);
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-italia-red) 12%, transparent);
-}
-
-.pub-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-foreground);
-  margin-bottom: 0.375rem;
-}
-
-.pub-card {
-  background: #fff;
-  border: 1px solid #f3f4f6;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.pub-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
-}
-

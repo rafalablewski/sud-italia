@@ -1,3 +1,9 @@
+/* Admin surfaces use the theme-aware steel focus ring rather than the public
+   brand red, so keyboard focus matches the v2 token system in both themes. */
+[data-admin-theme] *:focus-visible {
+  outline-color: var(--focus-ring, var(--border-focus));
+}
+
 /* ============================
    ADMIN v2 — DESIGN TOKENS
    Scoped to [data-admin-theme]. Coexists with legacy .admin-bg during migration.
