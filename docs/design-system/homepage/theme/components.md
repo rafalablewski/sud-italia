@@ -6,6 +6,36 @@ The primitive vocabulary the storefront composes from. Same rule as
 the other themes: **don't add casually**. Every Homepage primitive
 lands on a brand surface where the guest is judging the operation.
 
+## Operator-controlled visibility — `<LayoutGate />`
+
+`src/components/layout/LayoutGate.tsx`. The client wrapper that lets
+an operator turn any storefront component on or off from
+`/admin/settings → Layout` without touching code.
+
+```tsx
+<LayoutGate flag="showBundlesShowcase">
+  <BundlesShowcase />
+</LayoutGate>
+```
+
+- Fetches `/api/settings/public` on mount (single-flight cache via
+  `fetchPublicSettings()`), reads the named flag in `data.layout`.
+- If `false`, returns `null` — the wrapped subtree drops out of the DOM
+  (no painted CSS, no event listeners, no layout impact).
+- If `true`, `undefined`, or the fetch fails, renders children — the
+  fail-open default protects the storefront when settings are briefly
+  unavailable.
+- Works for both client and server children: the server still renders
+  the child HTML inside the client boundary; the gate decides at
+  hydrate time whether to keep it mounted.
+
+The full list of supported flags is the union of `LayoutSettings` in
+`src/lib/store.ts`. Adding a new toggle is three steps documented in
+[`../../admin/sections/system.md`](../../admin/sections/system.md).
+This is the storefront's CMS-style operator-visibility primitive —
+every operator-toggleable storefront component should wrap through it
+rather than rolling its own visibility logic.
+
 ## Form primitives (`.pub-*`)
 
 The form-element classes declared in `themes/homepage/index.css`. Used

@@ -156,21 +156,33 @@ offers, the per-locale translation status.
 The chain-wide configuration tabs.
 
 - **Header:** `Settings` (h1).
-- **Tabs:** General · Security · Audit · Danger. Tab keys are stable
-  for deep linking.
+- **Tabs:** General · **Layout** · Security · Audit · Danger. Tab keys
+  are stable for deep linking.
 - **General:** chain identity (name, tagline, contact email), service
   defaults (default prep time, delivery radius), loyalty programme
   config, feature toggles.
+- **Layout:** storefront visibility toggles. Each flips a flag in
+  `AppSettings.layout` that the storefront reads via
+  `/api/settings/public`; the owning component is wrapped in
+  `<LayoutGate flag="…">` (`src/components/layout/LayoutGate.tsx`) and
+  returns `null` when the flag is `false` — no DOM, no painted CSS, no
+  event listeners. Toggle is the saved state (CLAUDE rule 7). 10
+  surfaces today, grouped:
+  - **Header** — currency switcher · language switcher
+  - **Landing** — bundles showcase · loyalty pitch
+  - **Menu pages** — seasonal specials rail
+  - **Cart** — cross-sell rail · free-delivery progress
+  - **Order confirmation** — push opt-in · feedback survey
+  - **Site-wide** — chat widget
+  Adding an 11th toggle is mechanical: add the key to `LayoutSettings`,
+  add a `LAYOUT_TOGGLES` entry in `AdminSettings.tsx`, wrap the target
+  with `<LayoutGate flag="…">` at the call site.
 - **Security:** session lifetime, 2FA enforcement, password policy,
   IP allow-list.
 - **Audit:** the same audit log surfaced as a tab here for quick access
   alongside settings changes.
 - **Danger:** seed development data (`DATABASE_URL` unset only), reset
   state, factory reset. Each requires typed confirmation.
-- **Future "Layout" tab** (planned) — visibility toggles for currency
-  switcher, loyalty card, seasonal specials, etc.; each toggle persists
-  immediately and the corresponding storefront component conditionally
-  renders.
 
 ## What System is not
 
