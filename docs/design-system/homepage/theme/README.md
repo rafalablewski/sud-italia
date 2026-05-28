@@ -3,28 +3,28 @@
 Everything the Homepage theme owns. **No cross-theme links.** A Homepage
 token change must leave Core and Admin visually unchanged.
 
-## Today
+## What ships today
 
-Homepage tokens live in the `@theme inline` block of
-`src/app/globals.css` (the Tailwind v4 token surface — variables like
-`--background`, `--foreground`, `--brand-red`, the public radii and
-spacing scale). The same file holds the `[data-admin-theme]` blocks
-that Admin and Core use, so token *bleed* is possible if names collide
-between blocks.
+- **Tokens:** `src/app/themes/homepage/tokens.css` — the `@theme
+  inline` block declaring `--color-italia-*` plus the
+  `--animate-delivery-*` family. `@import`-ed by `globals.css` (~50
+  lines, ships globally) because Tailwind v4 only generates utilities
+  for `@theme` blocks reachable from the entry CSS's `@import` chain.
+  Edit the `bg-italia-*` / `text-italia-*` source-of-truth here.
+- **Custom CSS:** `src/app/themes/homepage/index.css` — `.pub-*` form
+  elements, `body { ... }` styling, the `delivery-*` keyframes.
+  JS-imported by `src/app/(public)/layout.tsx` and route-scoped (does
+  not ship on admin / kitchen / franchisee routes).
+- **JS-side token mirror:** `src/app/themes/homepage/theme.ts` exports
+  the same values as typed constants. No JS consumers today; future
+  Recharts / canvas / inline-SVG code on the storefront imports from
+  here.
+- **Fonts:** `src/app/(public)/layout.tsx` loads Inter + Fraunces
+  independently of every other layout, exposed as
+  `--font-homepage-body` + `--font-homepage-heading`. A storefront
+  font change can't move admin.
 
-Fonts come from the single `src/app/layout.tsx` via `next/font` and are
-applied to the body — they cover every theme, not just Homepage.
-
-## Target
-
-Homepage gets its own CSS file (proposal: `src/app/themes/homepage.css`),
-its own font loading scoped to the storefront route group, its own
-colour/type/material file set, and its own component primitives. The
-code split that creates this lands in subsequent commits.
-
-## Homepage-specific rules (today)
-
-These rules apply even before the code split:
+## Homepage-specific rules
 
 - **Zero-friction ordering** — no registration walls, no passwords,
   phone-based auto-enrol for loyalty (CLAUDE rule 6). Component shapes

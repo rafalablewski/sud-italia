@@ -3,36 +3,34 @@
 Everything the Core theme owns. **No cross-theme links.** A Core token
 change must leave Admin and Homepage visually unchanged.
 
-## Today
+## What ships today
 
-Core surfaces (POS, KDS, Guest = CRM + Concierge + WhatsApp) render at
-`/admin/{pos,kds,crm,concierge,whatsapp}` and **inherit the Admin theme
-today**. There is no separate `[data-core-theme]` block in
-`src/app/globals.css`. Fonts, colours, materials, and the glass-*
-components all come from the Admin scope.
+- **CSS:** `src/app/themes/core/index.css` — declares the canonical
+  `--cmd-*` palette at `:root` and the `.cmd-*` / `.kds-*` / `.ka-*` /
+  `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces. Loaded only by
+  `src/app/admin/layout.tsx` (Core modules live at `/admin/{pos,kds,
+  crm,concierge,whatsapp}`).
+- **JS-side token mirror:** `src/app/themes/core/theme.ts` exports the
+  same values as typed constants. No JS consumers today; the file
+  exists so future Recharts / canvas / inline-SVG code on a Core
+  surface imports from one place instead of hardcoding hex.
+- **Fonts:** Core inherits the admin fonts loaded in
+  `src/app/admin/layout.tsx` (`--font-admin-body` /
+  `--font-admin-display`). Core has no display-serif use — `.cmd-*`
+  surfaces are workhorse-Inter throughout.
 
-## Target
+## Core-specific rules
 
-Core gets its own scoped theme block (proposal: `[data-core-theme]` on
-the root of each Core surface), its own colour/type/material file set,
-its own component primitives, and its own JS mirror for charts. The code
-split that creates this lands in subsequent commits — until then, the
-files below document **the rules Core overrides on top of the inherited
-Admin theme**, not a free-standing token set.
-
-## Core-specific overrides (today)
-
-These rules already apply on Core surfaces even though the underlying
-tokens are inherited:
-
-- **Operational clarity outranks brand expression.** In POS/KDS, density
-  wins; brand flourishes that are fine in CRM/Admin retreat. See the
-  per-module docs in `../modules/` for the specifics.
-- **Status hues on the line are reserved for genuine status** — not
-  data-viz. The Admin theme uses the same hues for charts; on KDS they
-  mean late/pacing/risk and must not be reused decoratively.
-- **The coursing model is a Core concept**, not an admin one. It shapes
-  POS card layout and KDS ticket grouping; see the per-module docs.
+- **Operational clarity outranks brand expression.** In POS/KDS,
+  density wins; brand flourishes retreat. See the per-module docs in
+  `../modules/`.
+- **Status hues are reserved for genuine status** — never decoration.
+  The `--cmd-firing` / `--cmd-warn` / `--cmd-late` / `--cmd-ready` /
+  `--cmd-risk` colours mean what they say on a Core surface; reusing
+  them for branding would be a worse bug than no brand at all.
+- **The coursing model is a Core concept**, not an admin one. It
+  shapes POS card layout and KDS ticket grouping; see the per-module
+  docs.
 
 ## Per-token docs
 

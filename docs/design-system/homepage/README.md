@@ -23,6 +23,20 @@ homepage/
     └── loyalty.md     ✅ /rewards — tier card, rewards grid, challenges, referral
 ```
 
+## What ships today
+
+- **Tokens:** `src/app/themes/homepage/tokens.css` (`@theme inline`
+  block — ~50 lines, @import-ed by `globals.css` so Tailwind v4
+  generates the `bg-italia-*` / `text-italia-*` utilities).
+- **Custom CSS:** `src/app/themes/homepage/index.css` (`.pub-*` forms,
+  body styling, delivery keyframes). JS-imported by
+  `src/app/(public)/layout.tsx` so it ships only on storefront routes.
+- **JS-side mirror:** `src/app/themes/homepage/theme.ts` — typed
+  constants for future Recharts / canvas / inline-SVG.
+- **Fonts:** `(public)/layout.tsx` loads its own `Inter` + `Fraunces`
+  as `--font-homepage-body` / `--font-homepage-heading`. A storefront
+  Inter weight change can't move admin.
+
 ## Storefront rules (universal — apply to every page)
 
 These come from CLAUDE.md and apply to every Homepage surface:
@@ -35,18 +49,5 @@ These come from CLAUDE.md and apply to every Homepage surface:
    (rule 4). Same rule as Admin, for the same stacking-context reasons.
 4. **Toggle = saved** — persist on change, no separate Save button
    (rule 7).
-
-## Today vs target
-
-**Target:** Homepage renders under its own theme scope, owns its own
-CSS file, owns its own font loading, and a change to the Admin or Core
-theme leaves the storefront visually unchanged.
-
-**Today:** Homepage tokens currently live in the `@theme inline` block
-of `src/app/globals.css` (the Tailwind v4 token surface). That file is
-shared with Admin and Core, so token bleed is possible. Fonts come from
-the single `src/app/layout.tsx`. Until the code split lands, "Homepage
-theme" is documented intent, not enforced reality — see
-`../README.md#today-vs-target` for the gap list.
 
 Mockups live at `public/mockups/` — open `/mockups/` on any deploy.

@@ -34,19 +34,23 @@ ship the cross-theme change.
 
 ## Today vs target
 
-The doctrine above is the **target**. The code today gets most of the
-way there — file-level *and* bundle-level isolation are shipped; only
-fonts and the JS token mirror are still cross-theme:
+The doctrine above is the **target** and the code today reaches it:
+file-level + bundle-level isolation, per-theme fonts, per-theme JS
+token mirrors. The Tailwind v4 `@theme` constraint is the one place
+the architecture compromises — the homepage tokens file ships globally
+(~50 lines) so Tailwind can generate utilities — and that file
+still lives under `themes/homepage/` so the "every theme file lives in
+its theme's folder" doctrine holds.
 
 | What                          | State                                                                                                                                                                                              |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Admin tokens                  | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/themes/admin/index.css`. Edits only affect admin surfaces.                                                                         |
-| Homepage tokens               | ⚠️ The `@theme inline` block lives in `src/app/globals.css` (Tailwind v4 constraint — `@theme` only fires from the entry CSS's `@import` chain, not from JS-imported CSS). All other Homepage CSS — body, delivery animations, `.pub-*` form elements — lives in `src/app/themes/homepage/index.css`. |
+| Homepage tokens               | ✅ `@theme inline` block lives in `src/app/themes/homepage/tokens.css` (@import-ed by `globals.css` so Tailwind v4 sees it for utility generation; ships globally — ~50 lines). All other Homepage CSS — body, delivery animations, `.pub-*` form elements — lives in `src/app/themes/homepage/index.css` and is JS-imported per-route. |
 | Core tokens                   | ✅ Live in `src/app/themes/core/index.css` (`:root --cmd-*` palette + `.kds-*` / `.ka-*` / `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces).                                                    |
-| Per-theme CSS file            | ✅ Three files under `src/app/themes/{core,admin,homepage}/index.css`. Editing one cannot accidentally affect another.                                                                              |
-| **Per-route bundle loading**  | ✅ `src/app/(public)/layout.tsx` imports `themes/homepage/index.css`; `src/app/admin/layout.tsx` imports `themes/admin/index.css` + `themes/core/index.css`. Storefront pages no longer ship admin's 184KB chunk or core's 104KB chunk; admin pages no longer ship homepage's chunk. Tailwind's generated utility CSS still ships globally — that's the cost of keeping `@theme` in the entry file. |
-| Fonts                         | ❌ Loaded once in `src/app/layout.tsx` via `next/font`. Change Inter here → every theme moves.                                                                                                      |
-| Per-theme `theme.ts`          | ❌ One `src/components/admin/v2/theme.ts` mirrors admin tokens for JS/Recharts. Core / Homepage have no equivalent.                                                                                 |
+| Per-theme CSS file            | ✅ All theme CSS lives under `src/app/themes/{core,admin,homepage}/`. Editing one cannot accidentally affect another.                                                                              |
+| **Per-route bundle loading**  | ✅ `src/app/(public)/layout.tsx` imports `themes/homepage/index.css`; `src/app/admin/layout.tsx` imports `themes/admin/index.css` + `themes/core/index.css`. Storefront pages no longer ship admin's chunk or core's chunk; admin pages no longer ship homepage's chunk. The Homepage `tokens.css` (~50 lines, @theme inline only) ships globally — that's the Tailwind v4 utility-generation cost. |
+| Fonts                         | ✅ Each themed route-group layout loads its own `next/font` instances with namespaced variables: `(public)/layout.tsx` → `--font-homepage-{body,heading}`; `admin/layout.tsx` + `kitchen/layout.tsx` + `franchisee/layout.tsx` → `--font-admin-{body,display}`. The root `layout.tsx` no longer loads custom fonts. A weight / subset change in one theme can't move another. |
+| Per-theme `theme.ts`          | ✅ Three typed mirrors: `src/components/admin/v2/theme.ts` (admin), `src/app/themes/core/theme.ts` (Core), `src/app/themes/homepage/theme.ts` (Homepage). Core + Homepage have no JS consumers today — the mirrors exist so future Recharts / canvas / inline-SVG code imports from one place instead of hardcoding hex. |
 
 **What ships on each route:**
 

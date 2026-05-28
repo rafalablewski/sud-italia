@@ -27,19 +27,22 @@ core/
     └── whatsapp.md    ← module under Guest
 ```
 
-## Today vs target
+## What ships today
 
-**Target:** Core renders under its own theme scope, owns its own CSS file,
-owns its own font loading, and a change to the Admin theme leaves Core
-visually unchanged.
-
-**Today:** Core surfaces live at `/admin/pos`, `/admin/kds`,
-`/admin/crm`, `/admin/concierge`, `/admin/whatsapp` and render under the
-Admin theme (`[data-admin-theme="dark"|"light"]` in
-`src/app/globals.css`). Fonts come from the single
-`src/app/layout.tsx`. Until the code split lands, "Core theme" is
-documented intent, not enforced reality — see
-`../README.md#today-vs-target` for the gap list.
+- **CSS:** `src/app/themes/core/index.css` (1,443 lines). JS-imported
+  by `src/app/admin/layout.tsx` so it ships only on `/admin/*` routes,
+  not on the storefront.
+- **JS-side mirror:** `src/app/themes/core/theme.ts` exposes the
+  `--cmd-*` palette as typed constants (no JS consumers today; future
+  Recharts / canvas code imports from here).
+- **Fonts:** inherited from `admin/layout.tsx` (`--font-admin-body` /
+  `--font-admin-display`). Core surfaces don't use Fraunces — the
+  display serif is admin / homepage territory.
+- **Surfaces:** POS, KDS, CRM, Concierge, WhatsApp all live at
+  `/admin/{module}` but render the Core CSS, not admin chrome,
+  because their wrapping divs use `.kds-atlas` / `.pos-tabs` /
+  `.crm-atlas` / `.cncrg-atlas` / `.wa-atlas` (all scoped to the
+  Core block).
 
 ## Authority
 
