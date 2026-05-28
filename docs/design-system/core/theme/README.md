@@ -34,16 +34,13 @@ tokens are inherited:
 - **The coursing model is a Core concept**, not an admin one. It shapes
   POS card layout and KDS ticket grouping; see the per-module docs.
 
-## Backlog (to write once the code split lands)
+## Per-token docs
 
-- `philosophy.md` — Core's operating principle when it diverges from Admin.
-- `color.md` — Core-scoped tokens (proposal: `[data-core-theme]`).
-- `typography.md` — Core face/weight choices (POS tender numerals, KDS
-  ticket head).
-- `material.md` — Core surface elevation rules (KDS ticket card depth,
-  POS tab rail).
-- `components.md` — Core primitives (tender pad, ticket card, course
-  divider).
+- [`philosophy.md`](./philosophy.md) — Core's operating principle: operational clarity outranks brand expression.
+- [`color.md`](./color.md) — the `--cmd-*` palette + status hues + the platinum jewellery rule.
+- `typography.md` — Core face/weight choices (POS tender numerals, KDS ticket head) *(backlog)*
+- `material.md` — Core surface elevation rules (KDS ticket card depth, POS tab rail) *(backlog)*
+- `components.md` — Core primitives (tender pad, ticket card, course divider) *(backlog)*
 
 ## Authority
 
