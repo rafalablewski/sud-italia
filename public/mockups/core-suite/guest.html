@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest Engagement · Inbox — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="/mockups/core-suite/system.css">
+<style>
+  .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:12px 18px; border-bottom:1px solid var(--border); flex:none; }
+  .guest { display:grid; grid-template-columns:312px 1fr 332px; flex:1; min-height:0; }
+
+  /* pane 1: conversations */
+  .convs { border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; background:var(--surface-1); }
+  .convs-h { padding:14px 14px 10px; }
+  .conv-search { position:relative; }
+  .conv-search svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--fg-subtle); }
+  .conv-search .input { padding-left:32px; }
+  .conv-tabs { display:flex; gap:5px; padding:8px 14px; flex-wrap:wrap; }
+  .conv-tab { font:600 11.5px var(--ui); color:var(--fg-subtle); padding:5px 9px; border-radius:var(--r-pill); cursor:pointer; display:inline-flex; gap:6px; align-items:center; }
+  .conv-tab .n { font:600 10px var(--mono); opacity:.7; }
+  .conv-tab.on { background:var(--brand-soft); color:var(--brand-bright); }
+  .conv-list { flex:1; overflow-y:auto; padding:0 8px 8px; }
+  .conv { display:grid; grid-template-columns:40px 1fr auto; gap:11px; padding:10px; border-radius:var(--r-md); cursor:pointer; }
+  .conv:hover { background:var(--surface-2); } .conv.on { background:var(--surface-3); }
+  .conv .av { width:40px; height:40px; border-radius:99px; background:var(--surface-3); display:grid; place-items:center; font:600 14px var(--ui); color:var(--platinum); border:1px solid var(--border-strong); position:relative; }
+  .conv .av .ch { position:absolute; right:-2px; bottom:-2px; width:15px; height:15px; border-radius:99px; background:var(--success); border:2px solid var(--surface-1); }
+  .conv .av.idle .ch { background:var(--fg-subtle); }
+  .conv .nm { font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .conv .pin { color:var(--fg-subtle); font-size:11px; }
+  .conv .msg { font-size:11.5px; color:var(--fg-subtle); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; }
+  .conv .ctags { display:flex; gap:5px; margin-top:5px; }
+  .conv .mtag { font:600 9.5px var(--ui); padding:1px 6px; border-radius:99px; background:var(--surface-hover); color:var(--fg-subtle); }
+  .conv .mtag.sim { background:var(--platinum-soft); color:var(--platinum); }
+  .conv .mtag.pay { background:var(--warning-soft); color:var(--warning); }
+  .conv .meta { text-align:right; } .conv .tm { font-size:11px; color:var(--fg-subtle); } .conv .un { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:99px; background:var(--brand); color:#fff; font:700 11px var(--mono); margin-top:6px; }
+
+  /* pane 2: transcript */
+  .thread { display:flex; flex-direction:column; min-height:0; }
+  .thread-h { height:56px; flex:none; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:11px; padding:0 16px; }
+  .thread-h .nm { font-family:var(--display); font-size:17px; font-weight:600; }
+  .win { font:600 10.5px var(--ui); padding:2px 8px; border-radius:99px; }
+  .win.open { background:var(--success-soft); color:var(--success); } .win.closed { background:var(--surface-3); color:var(--fg-subtle); }
+  .thread-body { flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:12px; }
+  .day { align-self:center; font:600 10.5px var(--ui); letter-spacing:.08em; text-transform:uppercase; color:var(--fg-subtle); padding:3px 10px; background:var(--surface-2); border-radius:var(--r-pill); }
+  .bub { max-width:66%; padding:9px 13px; border-radius:15px; font-size:13.5px; line-height:1.45; }
+  .bub .meta { display:flex; gap:7px; align-items:center; margin-bottom:4px; }
+  .bub .who { font:600 10px var(--ui); letter-spacing:.04em; text-transform:uppercase; opacity:.8; }
+  .bub .kind { font:600 9.5px var(--ui); padding:1px 6px; border-radius:4px; background:rgba(255,255,255,.08); }
+  .bub .t { font-size:10px; opacity:.6; margin-top:4px; }
+  .bub.in { align-self:flex-start; background:var(--surface-2); border:1px solid var(--border); border-bottom-left-radius:5px; }
+  .bub.bot { align-self:flex-start; background:var(--surface-1); border:1px solid var(--info-soft); border-bottom-left-radius:5px; }
+  .bub.out { align-self:flex-end; background:var(--brand); color:#fff; border-bottom-right-radius:5px; }
+  .sys { align-self:center; font-size:11.5px; color:var(--fg-subtle); display:flex; align-items:center; gap:8px; } .sys .l { width:24px; height:1px; background:var(--border); }
+
+  .assist { align-self:stretch; border:1px solid var(--platinum-soft); border-radius:var(--r-lg); background:var(--platinum-soft); padding:12px 14px; }
+  .assist .hd { display:flex; align-items:center; gap:8px; font:700 10.5px var(--ui); letter-spacing:.1em; text-transform:uppercase; color:var(--platinum); }
+  .assist .bd { font-size:13px; color:var(--fg-muted); margin-top:7px; line-height:1.5; } .assist .bd b { color:var(--fg); }
+  .assist .acts { display:flex; gap:8px; margin-top:10px; } .assist .acts .btn { height:30px; font-size:12.5px; }
+
+  .composer { flex:none; border-top:1px solid var(--border); padding:11px 14px; }
+  .composer-quick { display:flex; gap:7px; margin-bottom:9px; flex-wrap:wrap; }
+  .composer-row { display:flex; gap:10px; align-items:flex-end; }
+  .composer textarea { flex:1; resize:none; height:40px; padding:10px 13px; border-radius:var(--r-lg); background:var(--surface-2); border:1px solid var(--border); color:var(--fg); font:400 14px var(--ui); }
+  .composer textarea:focus { outline:none; border-color:var(--info); box-shadow:0 0 0 3px var(--info-soft); }
+  .composer .hint { font-size:10.5px; color:var(--fg-subtle); margin-top:7px; }
+
+  /* pane 3: live order context + funnel + guest */
+  .ctx { border-left:1px solid var(--border); background:var(--surface-1); overflow-y:auto; }
+  .ctx-sec { padding:16px; border-bottom:1px solid var(--border); }
+  .ctx-sec > .eyebrow { margin-bottom:11px; }
+  .kv { display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; }
+  .kv .k { color:var(--fg-subtle); } .kv .v { color:var(--fg); font-weight:500; }
+  .kv .v.mono { font-family:var(--mono); }
+  .paylink { display:flex; align-items:center; gap:8px; margin-top:10px; padding:9px 11px; border-radius:var(--r-md); background:var(--warning-soft); color:var(--warning); font-size:12.5px; font-weight:500; }
+  .gp { display:flex; align-items:center; gap:11px; }
+  .gp .av { width:44px; height:44px; border-radius:99px; background:var(--surface-3); border:1px solid var(--border-strong); display:grid; place-items:center; font-family:var(--display); font-size:17px; font-weight:600; color:var(--platinum); box-shadow:inset 0 0 0 1px var(--platinum-soft); }
+  .gp .nm { font-family:var(--display); font-size:17px; font-weight:600; }
+  .gp .sub { font-size:11.5px; color:var(--fg-subtle); margin-top:2px; }
+  .gp-stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:13px; }
+  .gp-stat { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:9px 11px; }
+  .gp-stat .l { font-size:10.5px; color:var(--fg-subtle); } .gp-stat .v { font-family:var(--display); font-size:18px; font-weight:500; margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Operations</div></div></div>
+    <div class="nav-group"><div class="eyebrow">Core</div>
+      <a class="nav-item" href="/mockups/core-suite/pos.html" style="text-decoration:none;color:inherit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>POS</a>
+      <a class="nav-item" href="/mockups/core-suite/kds-fleet.html" style="text-decoration:none;color:inherit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>KDS</a>
+      <div class="nav-item active"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>Guest Engagement<span class="dot"></span></div>
+    </div>
+    <div class="sidebar-foot"><div class="avatar">RA</div><div style="font-size:12px"><div style="font-weight:500">Rafał A.</div><div class="subtle" style="font-size:10.5px">Owner · Kraków</div></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs">Core / <b>Guest Engagement</b></div>
+      <div class="viewnav" style="margin-left:10px">
+        <button class="on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>Inbox <span class="n">7</span></button>
+        <a href="/mockups/core-suite/guest-crm.html" style="text-decoration:none"><button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>Guests</button></a>
+        <a href="/mockups/core-suite/guest-concierge.html" style="text-decoration:none"><button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2 5 5 .7-3.6 3.5 1 5.3L12 17l-4.4 2.5 1-5.3L5 10.7 10 10z"/></svg>Concierge</button></a>
+      </div>
+      <div class="topbar-right">
+        <span class="badge success"><span class="d"></span>WhatsApp live</span>
+        <a class="btn ghost" href="/mockups/core-suite/guest-funnel.html">Funnel</a>
+        <a class="btn ghost" href="/mockups/core-suite/guest-settings.html">Settings</a>
+        <a class="btn primary" href="/mockups/core-suite/guest-broadcast.html">Broadcast</a>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpis">
+      <div class="stat"><div class="l">Orders · 7d</div><div class="v">128</div><div class="h">paid via WhatsApp</div></div>
+      <div class="stat good"><div class="l">Conversion · 7d</div><div class="v">34%</div><div class="h">chat → paid</div></div>
+      <div class="stat"><div class="l">Active sessions</div><div class="v">9</div></div>
+      <div class="stat warn"><div class="l">Awaiting pay</div><div class="v">3</div></div>
+      <div class="stat"><div class="l">Lifetime paid</div><div class="v">2,940</div></div>
+    </div>
+
+    <div class="guest">
+      <!-- conversations -->
+      <section class="convs">
+        <div class="convs-h">
+          <div class="conv-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+            <input class="input" placeholder="Search name, phone, order…">
+          </div>
+        </div>
+        <div class="conv-tabs">
+          <span class="conv-tab on">Inbox <span class="n">7</span></span>
+          <span class="conv-tab">Live <span class="n">4</span></span>
+          <span class="conv-tab">Awaiting pay <span class="n">3</span></span>
+          <span class="conv-tab">Archived <span class="n">21</span></span>
+        </div>
+        <div class="conv-list">
+          <div class="conv on">
+            <div class="av">LB<span class="ch"></span></div>
+            <div><div class="nm">Lucia Bianchi <span class="badge platinum" style="height:15px;font-size:9px;padding:0 5px">Gold</span> <svg class="icn" style="width:12px;height:12px;color:var(--fg-subtle)" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3zM12 15v5"/></svg></div><div class="msg">Perfect — see you at 8. Grazie!</div><div class="ctags"><span class="mtag">Kraków</span><span class="mtag">9 items</span></div></div>
+            <div class="meta"><div class="tm">now</div></div>
+          </div>
+          <div class="conv">
+            <div class="av">MK<span class="ch"></span></div>
+            <div><div class="nm">Marek Kowalski</div><div class="msg">Is the ’nduja pizza spicy?</div><div class="ctags"><span class="mtag">Warszawa</span></div></div>
+            <div class="meta"><div class="tm">3m</div><span class="un">2</span></div>
+          </div>
+          <div class="conv">
+            <div class="av">SF<span class="ch"></span></div>
+            <div><div class="nm">Sofia Ferrari <span class="badge brand" style="height:15px;font-size:9px;padding:0 5px">VIP</span></div><div class="msg">[interactive list] picked 20:00 slot</div><div class="ctags"><span class="mtag">Kraków</span><span class="mtag pay">awaiting pay</span></div></div>
+            <div class="meta"><div class="tm">12m</div><span class="un">1</span></div>
+          </div>
+          <div class="conv">
+            <div class="av idle">TN<span class="ch"></span></div>
+            <div><div class="nm">Tomasz Nowak</div><div class="msg">Payment received · Order #4819</div><div class="ctags"><span class="mtag sim">sim</span><span class="mtag">Warszawa</span></div></div>
+            <div class="meta"><div class="tm">28m</div></div>
+          </div>
+          <div class="conv">
+            <div class="av idle">AW<span class="ch"></span></div>
+            <div><div class="nm">Anna Wójcik</div><div class="msg">Thank you! The tiramisù was 🤌</div></div>
+            <div class="meta"><div class="tm">1h</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- transcript -->
+      <section class="thread">
+        <div class="thread-h">
+          <div style="flex:1"><div class="nm">Lucia Bianchi</div><div class="subtle" style="font-size:11px">+48 600 ··· 142 · WhatsApp</div></div>
+          <span class="win open">24h window · open</span>
+          <button class="btn ghost icon" title="Reset session"><svg class="icn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></button>
+        </div>
+        <div class="thread-body">
+          <div class="day">Today</div>
+          <div class="bub in"><div class="meta"><span class="who">Customer</span></div>Buonasera! Table for two tonight ~8? It’s our anniversary 🥂<div class="t">19:31</div></div>
+          <div class="bub bot"><div class="meta"><span class="who" style="color:var(--info)">Bot</span><span class="kind">interactive list</span></div>We have 19:30, 20:00, 20:30 available — which suits?<div class="t">19:31</div></div>
+          <div class="sys"><span class="l"></span>Tapped “20:00” · slot held<span class="l"></span></div>
+
+          <div class="assist">
+            <div class="hd"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 .7-3.6 3.5 1 5.3L12 17l-4.4 2.5 1-5.3L5 10.7 10 10z"/></svg>Concierge · suggested</div>
+            <div class="bd"><b>Lucia is Gold (28 visits).</b> Anniversary here last year, sat at <b>corner banquette (T7)</b> — free at 20:00. Allergens on file: none.</div>
+            <div class="acts"><button class="btn primary">Hold T7 · 20:00</button><button class="btn ghost">Insert reply</button></div>
+          </div>
+
+          <div class="bub out"><div class="meta"><span class="who">You · Marco</span></div>Auguri 🥂 Held your corner banquette (T7) for 20:00. Confirm?<div class="t">19:33</div></div>
+          <div class="bub in"><div class="meta"><span class="who">Customer</span></div>Perfect — see you at 8. Grazie!<div class="t">19:34</div></div>
+          <div class="sys"><span class="l"></span>Reservation T7 · 20:00 · 2 covers created<span class="l"></span></div>
+        </div>
+        <div class="composer">
+          <div class="composer-quick">
+            <span class="chip"><svg class="icn" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Menu</span><span class="chip"><svg class="icn" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Payment link</span><span class="chip"><svg class="icn" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Reservation</span><span class="chip"><svg class="icn" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M12 8S10.5 3.5 8 4.8 9 8 12 8zM12 8s1.5-4.5 4-3.2S15 8 12 8z"/></svg> Comp dessert</span><span class="chip"><svg class="icn" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg> Re-open template</span>
+          </div>
+          <div class="composer-row">
+            <textarea placeholder="Message Lucia…"></textarea>
+            <button class="btn primary lg">Send</button>
+          </div>
+          <div class="hint">Inside 24h service window — free-text allowed. Outside it, only the <b>welcome_back</b> template can re-open.</div>
+        </div>
+      </section>
+
+      <!-- live order context + funnel + guest -->
+      <aside class="ctx">
+        <div class="ctx-sec">
+          <div class="eyebrow">Live order</div>
+          <div class="kv"><span class="k">Location</span><span class="v">Kraków</span></div>
+          <div class="kv"><span class="k">Cart</span><span class="v mono">9 items · 281 zł</span></div>
+          <div class="kv"><span class="k">Fulfillment</span><span class="v">Dine-in</span></div>
+          <div class="kv"><span class="k">Slot</span><span class="v">20:00</span></div>
+          <div class="kv"><span class="k">Pending order</span><span class="v mono">#4821</span></div>
+          <div class="paylink"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>Open Stripe pay link →</div>
+        </div>
+        <div class="ctx-sec">
+          <div class="eyebrow">Conversion funnel</div>
+          <div class="check done"><span class="b">✓</span>Location set</div>
+          <div class="check done"><span class="b">✓</span>Cart has items</div>
+          <div class="check done"><span class="b">✓</span>Fulfillment chosen</div>
+          <div class="check done"><span class="b">✓</span>Slot picked</div>
+          <div class="check"><span class="b"></span>Awaiting payment</div>
+        </div>
+        <div class="ctx-sec" style="border-bottom:0">
+          <div class="eyebrow">Guest</div>
+          <div class="gp">
+            <div class="av">LB</div>
+            <div><div class="nm">Lucia Bianchi</div><div class="sub">Gold · 28 visits · since 2023</div></div>
+          </div>
+          <div class="gp-stats">
+            <div class="gp-stat"><div class="l">Lifetime value</div><div class="v">4,210 zł</div></div>
+            <div class="gp-stat"><div class="l">Avg spend</div><div class="v">150 zł</div></div>
+          </div>
+          <a href="/mockups/core-suite/guest-crm.html" style="display:block;margin-top:12px;text-align:center;font-size:12.5px;color:var(--brand-bright);text-decoration:none;font-weight:600">Open full profile →</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</body>
+</html>

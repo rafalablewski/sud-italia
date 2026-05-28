@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POS — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="/mockups/core-suite/system.css">
+<style>
+  .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* concurrent checks rail (top) */
+  .tabrail { flex: none; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .tabrail-head { display: flex; align-items: center; gap: 14px; padding: 9px 18px 0; }
+  .tabrail-head .eyebrow { font-size: 10px; }
+  .tabrail-head .sum { font-size: 11.5px; color: var(--fg-subtle); }
+  .tabrail-head .sum b { color: var(--fg-muted); font-weight: 600; }
+  .tabs { display: flex; gap: 10px; padding: 10px 18px 12px; overflow-x: auto; }
+  .tab { flex: none; width: 178px; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-top: 2px solid var(--border-strong); border-radius: var(--r-md); padding: 9px 11px; cursor: pointer; transition: border-color var(--fast); }
+  .tab:hover { border-color: var(--border-strong); }
+  .tab.on { background: var(--surface-3); border-top-color: var(--brand); }
+  .tab.dinein { border-top-color: var(--platinum); } .tab.delivery { border-top-color: var(--info); }
+  .tab.on.dinein { border-top-color: var(--platinum); }
+  .tab .r1 { display: flex; align-items: center; gap: 7px; }
+  .tab .nm { font-size: 13px; font-weight: 600; }
+  .tab .st { margin-left: auto; font: 600 9.5px var(--ui); letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 99px; }
+  .tab .st.open { background: var(--success-soft); color: var(--success); }
+  .tab .st.pay { background: var(--warning-soft); color: var(--warning); }
+  .tab .st.parked { background: var(--surface-hover); color: var(--fg-subtle); }
+  .tab .r2 { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; font-size: 11.5px; color: var(--fg-subtle); }
+  .tab .r2 .tot { font-family: var(--mono); color: var(--fg-muted); font-weight: 500; }
+  .tab .warn { color: var(--warning); }
+  .tab.newtab { width: 52px; display: grid; place-items: center; border-style: dashed; border-top-width: 1px; color: var(--fg-subtle); font-size: 22px; }
+
+  .pos-body { display: grid; grid-template-columns: 86px 1fr 396px; flex: 1; min-height: 0; }
+
+  .cat-rail { border-right: 1px solid var(--border); padding: 12px 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+  .cat { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 11px 4px; margin: 0 8px; border-radius: var(--r-md); color: var(--fg-subtle); cursor: pointer; }
+  .cat:hover { background: var(--surface-hover); color: var(--fg-muted); }
+  .cat.on { background: var(--brand-soft); color: var(--brand-bright); }
+  .cat svg { width: 20px; height: 20px; }
+  .cat span { font-size: 10px; font-weight: 600; }
+  .cat .promise { font: 600 9px var(--mono); color: var(--fg-subtle); }
+  .cat.on .promise { color: var(--brand-bright); }
+
+  .menu-wrap { display: flex; flex-direction: column; min-height: 0; }
+  /* live pace steering strip */
+  .steer { display: flex; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--border); background: var(--warning-soft); font-size: 12px; }
+  .steer .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--warning); flex: none; }
+  .steer b { color: var(--fg); font-weight: 600; }
+  .steer .cap { margin-left: auto; font-family: var(--mono); color: var(--warning); }
+  .menu-head { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px 10px; }
+  .menu-head h2 { font-family: var(--display); font-weight: 500; font-size: 20px; }
+  .menu-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; padding: 2px 18px 18px; overflow-y: auto; align-content: start; }
+  .menu-sec { grid-column: 1/-1; display: flex; align-items: center; gap: 10px; margin: 14px 0 2px; font: 600 11px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-subtle); }
+  .menu-sec:first-child { margin-top: 0; }
+  .menu-sec .promise { font: 600 10px var(--mono); color: var(--fg-subtle); letter-spacing: 0; }
+  .menu-sec .ln { flex: 1; height: 1px; background: var(--border); }
+  /* text-forward menu card — name is the hero, a line of menu copy fills the
+     space, category icon is a quiet accent. No fake image box. */
+  .prod { display: flex; flex-direction: column; text-align: left; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 15px; cursor: pointer; transition: border-color var(--fast), transform var(--fast); }
+  .prod:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .prod .phead { display: flex; align-items: flex-start; gap: 9px; }
+  .prod .catico { width: 17px; height: 17px; stroke: var(--fg-subtle); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; margin-top: 4px; }
+  .prod h3 { font-family: var(--display); font-weight: 500; font-size: 17px; line-height: 1.15; letter-spacing: .005em; color: var(--fg); flex: 1; min-width: 0; min-height: 2.3em; }
+  .prod .desc { font-size: 12px; line-height: 1.45; color: var(--fg-subtle); margin-top: 8px; min-height: 2.9em; }
+  .prod .row { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 13px; gap: 8px; }
+  .prod .tags { display: flex; align-items: center; gap: 6px; }
+  .prod .badge { height: 18px; padding: 0 7px; border-radius: 4px; font: 600 9px var(--ui); letter-spacing: .09em; text-transform: uppercase; flex: none; }
+  .prod .price { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--fg); flex: none; }
+  .role { font: 700 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; flex: none; }
+  .role.hero { background: var(--brand-soft); color: var(--brand-bright); }
+  .role.profit { background: var(--success-soft); color: var(--success); }
+  .role.anchor { background: var(--platinum-soft); color: var(--platinum); }
+  .prod .pace-tag { height: 18px; padding: 0 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font: 600 9px var(--ui); letter-spacing: .06em; text-transform: uppercase; }
+  .pace-tag.ease { background: var(--warning-soft); color: var(--warning); }
+  .pace-tag.make { background: var(--success-soft); color: var(--success); }
+
+  /* ticket */
+  .ticket { background: var(--surface-1); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .ticket-head { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); }
+  .ticket-head .t1 { display: flex; align-items: center; gap: 9px; }
+  .ticket-head h2 { font-family: var(--display); font-size: 18px; font-weight: 600; }
+  .ticket-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; font-size: 11.5px; color: var(--fg-subtle); }
+  .ticket-meta b { color: var(--fg-muted); font-weight: 500; }
+  .promise-badge { margin-left: auto; }
+
+  .fulfil-block { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .fulfil-block .ic { width: 30px; height: 30px; border-radius: var(--r-md); background: var(--platinum-soft); color: var(--platinum); display: grid; place-items: center; flex: none; }
+  .fulfil-block .meta b { color: var(--fg); } .fulfil-block .meta div { color: var(--fg-subtle); font-size: 11px; margin-top: 1px; }
+  .covers { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .stp { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg); font-size: 15px; cursor: pointer; }
+  .covers .n { font: 600 14px var(--mono); min-width: 16px; text-align: center; }
+
+  .lines { flex: 1; overflow-y: auto; padding: 6px 8px; }
+  .line { display: grid; grid-template-columns: 12px auto 1fr auto; gap: 10px; padding: 9px 8px; border-radius: var(--r-md); cursor: grab; }
+  .line:hover { background: var(--surface-2); }
+  .line:active { cursor: grabbing; }
+  .line.dragging { opacity: .4; }
+  .line::before { content: ""; align-self: center; width: 8px; height: 13px; background-image: radial-gradient(var(--fg-subtle) 1px, transparent 1px); background-size: 4px 4px; opacity: .35; }
+  /* order-level kitchen timing + drag-to-recourse */
+  .course-mode { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .course-mode .cm-lbl { color: var(--fg-subtle); }
+  .course-mode .seg { margin-left: auto; }
+  .course-mode .seg button { height: 26px; font-size: 12px; }
+  .course.drop { outline: 1px dashed var(--platinum); outline-offset: -3px; background: var(--platinum-soft); border-radius: var(--r-md); }
+  .qstep { display: flex; align-items: center; gap: 4px; }
+  .qstep button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg-muted); font-size: 13px; cursor: pointer; }
+  .qstep .q { font: 600 13px var(--mono); min-width: 18px; text-align: center; }
+  .line .nm { font-size: 13px; font-weight: 500; }
+  .line .each { font-size: 11px; color: var(--fg-subtle); }
+  .line .mod { font-size: 11.5px; color: var(--platinum); margin-top: 2px; }
+  .line .note { font-size: 11.5px; color: var(--fg-subtle); font-style: italic; margin-top: 2px; }
+  .line .lp { font-family: var(--mono); font-size: 13px; text-align: right; }
+  .combo-row { margin: 4px 12px; padding: 8px 11px; border: 1px dashed var(--success); border-radius: var(--r-md); background: var(--success-soft); font-size: 12px; color: var(--success); display: flex; justify-content: space-between; }
+
+  /* dine-in coursing — fire starters → mains → dessert to the kitchen in sequence */
+  .course { border-top: 1px solid var(--border); }
+  .course:first-child { border-top: 0; }
+  .course-h { display: flex; align-items: center; gap: 9px; padding: 9px 12px 3px; }
+  .course-nm { font: 600 10.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-muted); }
+  .course-st { margin-left: auto; font: 600 10px var(--ui); padding: 2px 8px; border-radius: 99px; display: inline-flex; align-items: center; gap: 5px; }
+  .course-st.sent { background: var(--success-soft); color: var(--success); }
+  .course-st.hold { background: var(--surface-3); color: var(--fg-subtle); }
+  .course-fire { margin-left: auto; height: 24px; padding: 0 11px; border-radius: 6px; border: 1px solid color-mix(in oklab, var(--brand) 55%, var(--border-strong)); background: var(--brand-soft); color: var(--brand-bright); font: 600 11px var(--ui); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .course-fire:hover { background: var(--brand-soft-strong); }
+
+  .offers { padding: 8px 12px; border-top: 1px solid var(--border); }
+  .offers .eyebrow { margin-bottom: 7px; }
+  .offer { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-md); background: var(--surface-2); margin-bottom: 6px; }
+  .offer .ic { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; flex: none; }
+  .offer.combo .ic { background: var(--success-soft); color: var(--success); }
+  .offer.cross .ic { background: var(--platinum-soft); color: var(--platinum); }
+  .offer .tx { font-size: 12px; flex: 1; } .offer .tx b { font-weight: 600; }
+  .offer button { height: 26px; padding: 0 9px; font-size: 11.5px; }
+
+  .totals { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .trow { display: flex; justify-content: space-between; font-size: 13px; color: var(--fg-muted); padding: 3px 0; }
+  .trow .v { font-family: var(--mono); }
+  .trow.grand { color: var(--fg); font-weight: 600; padding-top: 9px; margin-top: 5px; border-top: 1px solid var(--border); }
+  .trow.grand .v { font-family: var(--display); font-size: 21px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 10px; }
+  .actions .btn { justify-content: center; }
+  .charge { padding: 0 14px 14px; } .charge .btn { width: 100%; justify-content: center; }
+  .kbd-hint { padding: 9px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--fg-subtle); display: flex; gap: 14px; }
+  .kbd-hint kbd { font-family: var(--mono); background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+
+  /* ───────── finish layer: material · light · signature ─────────
+     Motif: a brand left-bar marks the ACTIVE/selected thing; a platinum
+     hairline marks the PREMIUM/focal thing. Used with discipline. */
+  /* honest depth — a whisper of top-light on raised surfaces */
+  .tab, .prod, .fulfil-block { box-shadow: inset 0 1px 0 rgba(255,255,255,.045); }
+  .prod { transition: border-color var(--fast) var(--ease), transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+  .prod:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 26px rgba(0,0,0,.34); }
+  .swatch { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  /* the live ticket is the focal column — elevate it + platinum crown hairline */
+  .ticket { position: relative; box-shadow: -18px 0 44px rgba(0,0,0,.26); }
+  .ticket::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background: var(--platinum-soft); }
+  /* active = brand left-bar (matches the nav motif) */
+  .cat.on { box-shadow: inset 2px 0 0 var(--brand); }
+  .tab.on { box-shadow: inset 0 2px 0 var(--brand), inset 0 1px 0 1px transparent; }
+  /* premium = platinum hairline */
+  .promise-badge { box-shadow: inset 0 0 0 1px var(--platinum-soft); }
+  /* hero CTA — soft brand glow + top-light, the one thing that pops */
+  .charge .btn { background: var(--brand); border: 0; box-shadow: var(--sh-md); letter-spacing: .01em; }
+  .charge .btn:hover { background: var(--brand-bright); box-shadow: var(--sh-md); }
+  /* refined focus ring (signature) */
+  .prod:focus-visible, .tab:focus-visible, .btn:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--platinum), 0 0 0 4px var(--platinum-soft); }
+  svg.i { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Operations</div></div></div>
+    <div class="nav-group"><div class="eyebrow">Core</div>
+      <div class="nav-item active"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>POS</div>
+      <a class="nav-item" href="/mockups/core-suite/kds.html" style="text-decoration:none;color:inherit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>KDS</a>
+      <a class="nav-item" href="/mockups/core-suite/guest.html" style="text-decoration:none;color:inherit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>Guest Engagement</a>
+    </div>
+    <div class="nav-group"><div class="eyebrow">Operations</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</div>
+      <div class="nav-item"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v13H4zM4 7l3-3h10l3 3"/></svg>Floor</div>
+    </div>
+    <div class="sidebar-foot"><div class="avatar">MC</div><div style="font-size:12px"><div style="font-weight:500">Marco C.</div><div class="subtle" style="font-size:10.5px">Server · Kraków</div></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs">Core / <b>POS</b></div>
+      <div class="seg" style="margin-left:8px"><button class="on">Dine-in</button><button>Takeaway</button><button>Delivery</button></div>
+      <div class="topbar-right">
+        <span class="badge warning" title="Live pace steering on"><span class="d"></span>Steering</span>
+        <div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
+        <span class="mono subtle" style="font-size:13px">20:14:07</span>
+        <button id="fsBtn" class="btn ghost icon" title="Fullscreen"><svg class="i" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      </div>
+    </div>
+
+    <div class="pos-shell">
+      <!-- concurrent checks -->
+      <div class="tabrail">
+        <div class="tabrail-head">
+          <span class="eyebrow">Open checks</span>
+          <span class="sum"><b>4</b> tabs · <b>1</b> ready to pay · <b>1</b> parked · <b>681 zł</b> open</span>
+        </div>
+        <div class="tabs">
+          <div class="tab dinein on">
+            <div class="r1"><span class="badge success" style="height:7px;width:7px;padding:0"></span><span class="nm">Table 7</span><span class="st open">Open</span></div>
+            <div class="r2"><span>2 covers · 9 items</span><span class="tot">281 zł</span></div>
+          </div>
+          <div class="tab">
+            <div class="r1"><span class="nm">Tab 12</span><span class="st pay">Ready·Pay</span></div>
+            <div class="r2"><span>Takeaway · 2 items</span><span class="tot">96 zł</span></div>
+          </div>
+          <div class="tab delivery">
+            <div class="r1"><span class="nm">Nowak</span><span class="st open">Open</span></div>
+            <div class="r2"><span class="warn"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> delivery paused</span><span class="tot">118 zł</span></div>
+          </div>
+          <div class="tab dinein">
+            <div class="r1"><span class="nm">Table 3</span><span class="st parked">Parked</span></div>
+            <div class="r2"><span>4 covers · 6 items</span><span class="tot">186 zł</span></div>
+          </div>
+          <div class="tab newtab" title="New tab (N)">+</div>
+        </div>
+      </div>
+
+      <div class="pos-body">
+        <!-- category rail with capacity-true promise times -->
+        <nav class="cat-rail">
+          <div class="cat on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>All</span><span class="promise">32</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg><span>Pizze</span><span class="promise">~14m</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4v16M9 4v16M5 12h4"/></svg><span>Paste</span><span class="promise">~9m</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10a8 8 0 0 1 16 0z"/><path d="M3 10h18"/></svg><span>Antipasti</span><span class="promise">~5m</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10l-1 5a4 4 0 0 1-8 0z"/><path d="M12 13v5M8 21h8"/></svg><span>Bevande</span><span class="promise">~1m</span></div>
+          <div class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 20h14M7 20c0-4 2-6 5-6s5 2 5 6"/></svg><span>Dolci</span><span class="promise">~3m</span></div>
+        </nav>
+
+        <!-- menu + steering -->
+        <div class="menu-wrap">
+          <div class="steer">
+            <span class="dot"></span><b>Oven</b> at 86% — nearing capacity. Pushing <b>pasta &amp; antipasti</b>; easing pizza.
+            <span class="cap">Delivery cap 2 / 20m</span>
+          </div>
+          <div class="menu-head"><h2>All</h2><span class="subtle" style="font-size:12px">every category · 32 items</span></div>
+          <div class="menu-grid">
+            <div class="menu-sec">Pizze <span class="promise">~14m</span><span class="ln"></span></div>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>Margherita</h3><span class="role hero">Hero</span></div><p class="desc">San Marzano, fior di latte, basil, EVOO</p><div class="row"><div class="tags"><span class="badge neutral">Classica</span><span class="pace-tag ease"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>Ease</span></div><span class="price">42 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>Diavola</h3><span class="role profit">Profit</span></div><p class="desc">Spianata piccante, fior di latte, chilli</p><div class="row"><div class="tags"><span class="badge danger">Piccante</span></div><span class="price">52 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>Bufala DOP</h3><span class="role anchor">Signature</span></div><p class="desc">Mozzarella di bufala, datterini, basil</p><div class="row"><div class="tags"><span class="badge platinum">DOP</span></div><span class="price">58 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>Marinara</h3></div><p class="desc">San Marzano, garlic, oregano, EVOO</p><div class="row"><div class="tags"><span class="badge neutral">Classica</span></div><span class="price">38 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>Capricciosa</h3></div><p class="desc">Ham, artichoke, mushroom, olive, egg</p><div class="row"><div class="tags"><span class="badge neutral">Classica</span></div><span class="price">56 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M2.6 7.4 12 22l9.4-14.6a14 14 0 0 0-18.8 0z"/><circle cx="10" cy="11" r="1"/><circle cx="13.6" cy="11" r="1"/></svg><h3>’Nduja &amp; Honey</h3><span class="role profit">Profit</span></div><p class="desc">’Nduja, fior di latte, acacia honey</p><div class="row"><div class="tags"><span class="badge danger">Piccante</span></div><span class="price">59 zł</span></div></button>
+
+            <div class="menu-sec">Antipasti <span class="promise">~5m</span><span class="ln"></span></div>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0z"/><path d="M2.5 12h19"/></svg><h3>Bruschetta</h3></div><p class="desc">Grilled bread, datterini, garlic, basil</p><div class="row"><div class="tags"><span class="badge success">Veg</span></div><span class="price">24 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0z"/><path d="M2.5 12h19"/></svg><h3>Burrata Pugliese</h3><span class="role anchor">Signature</span></div><p class="desc">Creamy burrata, datterini, EVOO</p><div class="row"><div class="tags"><span class="badge success">Veg</span></div><span class="price">34 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0z"/><path d="M2.5 12h19"/></svg><h3>Olive Ascolane</h3></div><p class="desc">Fried stuffed olives, lemon zest</p><div class="row"><div class="tags"><span class="badge neutral">Fritto</span></div><span class="price">22 zł</span></div></button>
+
+            <div class="menu-sec">Bevande <span class="promise">~1m</span><span class="ln"></span></div>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M6 3h12l-1.4 12.2a3 3 0 0 1-3 2.8h-3.2a3 3 0 0 1-3-2.8z"/></svg><h3>San Pellegrino 50cl</h3></div><p class="desc">Sparkling mineral water · chilled</p><div class="row"><div class="tags"><span class="badge info">Acqua</span></div><span class="price">12 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M6 3h12l-1.4 12.2a3 3 0 0 1-3 2.8h-3.2a3 3 0 0 1-3-2.8z"/></svg><h3>Espresso</h3><span class="role profit">Profit</span></div><p class="desc">Single-origin, double shot</p><div class="row"><div class="tags"><span class="badge neutral">Caffè</span></div><span class="price">9 zł</span></div></button>
+            <button class="prod"><div class="phead"><svg class="catico" viewBox="0 0 24 24"><path d="M6 3h12l-1.4 12.2a3 3 0 0 1-3 2.8h-3.2a3 3 0 0 1-3-2.8z"/></svg><h3>Aperol Spritz</h3></div><p class="desc">Aperol, prosecco, soda, orange</p><div class="row"><div class="tags"><span class="badge warning">Aperitivo</span></div><span class="price">28 zł</span></div></button>
+          </div>
+        </div>
+
+        <!-- live ticket -->
+        <section class="ticket">
+          <div class="ticket-head">
+            <div class="t1"><h2>Table 7</h2><span class="badge success"><span class="d"></span>Open</span><span class="badge platinum promise-badge">Mains firing · ~14 min</span></div>
+            <div class="ticket-meta"><span>Server <b>Marco</b></span><span>Opened <b>19:42</b></span><span>Guest <b>L. Bianchi · Gold</b></span></div>
+          </div>
+
+          <!-- dine-in: table + covers -->
+          <div class="fulfil-block">
+            <div class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="9" width="16" height="3" rx="1"/><path d="M6 12v7M18 12v7M9 5h6v4H9z"/></svg></div>
+            <div class="meta" style="flex:1"><b>Table 7</b><div>Window zone · 4 seats</div></div>
+            <a class="btn ghost" href="/mockups/core-suite/pos-tables.html" style="height:26px;padding:0 9px;font-size:11px">Change</a>
+            <div class="covers"><span class="subtle" style="font-size:11px">Covers</span><button class="stp">−</button><span class="n">2</span><button class="stp">+</button></div>
+          </div>
+
+          <div class="course-mode">
+            <span class="cm-lbl">Kitchen timing</span>
+            <div class="seg"><button class="on">Coursed</button><button>All together</button></div>
+          </div>
+
+          <div class="lines">
+            <div class="course">
+              <div class="course-h"><span class="course-nm">1 · Starters</span><span class="course-st sent"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>Fired 19:44</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Bruschetta</div></div><div class="lp">24 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Burrata Pugliese</div></div><div class="lp">34 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">2 · Mains</span><button class="course-fire"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3c1 3-2 4-2 7a2 2 0 0 0 4 0c0-1 0-1 .5-2 1 1.5 1.5 3 1.5 5a6 6 0 0 1-12 0c0-4 4-6 8-10z"/></svg>Fire course</button></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">Margherita</div><div class="each">42 zł each</div></div><div class="lp">84 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Diavola</div><div class="mod">+ extra ’nduja · well-fired</div></div><div class="lp">58 zł</div></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Bufala DOP</div></div><div class="lp">58 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">3 · Dessert</span><span class="course-st hold">Holding</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">1</span><button>+</button></div><div><div class="nm">Tiramisù</div></div><div class="lp">22 zł</div></div>
+            </div>
+            <div class="course">
+              <div class="course-h"><span class="course-nm">Drinks</span><span class="course-st sent"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>Sent</span></div>
+              <div class="line"><div class="qstep"><button>−</button><span class="q">2</span><button>+</button></div><div><div class="nm">San Pellegrino 50cl</div></div><div class="lp">24 zł</div></div>
+            </div>
+          </div>
+
+          <div class="combo-row"><span>✓ Pizza + drink combo applied</span><span>−8 zł</span></div>
+
+          <div class="offers">
+            <div class="eyebrow">Suggested</div>
+            <div class="offer cross"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.4z"/></svg></div><div class="tx"><b>2× espresso</b> — fire with dessert</div><button class="btn ghost">+ 18 zł</button></div>
+            <div class="offer cross"><div class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.4z"/></svg></div><div class="tx"><b>Limoncello</b> — perfect digestivo to close</div><button class="btn ghost">+ 16 zł</button></div>
+          </div>
+
+          <div class="totals">
+            <div class="trow"><span>Subtotal</span><span class="v">304 zł</span></div>
+            <div class="trow"><span>Combo discount</span><span class="v" style="color:var(--success)">−8 zł</span></div>
+            <div class="trow"><span>Loyalty · Gold −5%</span><span class="v" style="color:var(--success)">−15.20 zł</span></div>
+            <div class="trow grand"><span>Total</span><span class="v">280.80 zł</span></div>
+          </div>
+          <div class="actions">
+            <button class="btn">Park</button>
+            <button class="btn">Send to KDS</button>
+          </div>
+          <div class="charge"><a class="btn primary xl" href="/mockups/core-suite/pos-tender.html" style="width:100%;justify-content:center">Charge 280.80 zł</a></div>
+          <div class="kbd-hint"><span><kbd>N</kbd> new</span><span><kbd>1–9</kbd> switch tab</span><span><kbd>F</kbd> fullscreen</span><span><kbd>Esc</kbd> close</span></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Drag a line item between courses (Starters / Mains / Dessert / Drinks).
+  (function () {
+    var dragged = null;
+    document.querySelectorAll('.lines .line').forEach(function (l) {
+      l.setAttribute('draggable', 'true');
+      l.addEventListener('dragstart', function (e) { dragged = l; l.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+      l.addEventListener('dragend', function () { l.classList.remove('dragging'); dragged = null; });
+    });
+    var fb = document.getElementById('fsBtn');
+    if (fb) fb.addEventListener('click', function () {
+      if (!document.fullscreenElement) { (document.documentElement.requestFullscreen || function () {}).call(document.documentElement); }
+      else { (document.exitFullscreen || function () {}).call(document); }
+    });
+    document.querySelectorAll('.lines .course').forEach(function (c) {
+      c.addEventListener('dragover', function (e) { e.preventDefault(); c.classList.add('drop'); });
+      c.addEventListener('dragleave', function (e) { if (!c.contains(e.relatedTarget)) c.classList.remove('drop'); });
+      c.addEventListener('drop', function (e) { e.preventDefault(); c.classList.remove('drop'); if (dragged) c.appendChild(dragged); });
+    });
+  })();
+</script>
+</body>
+</html>

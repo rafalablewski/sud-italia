@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Settings — Sud Italia Core Suite</title>
+<link rel="stylesheet" href="/mockups/core-suite/system.css">
+</head>
+<body style="height:100vh;overflow:hidden">
+<div class="overlay">
+  <div class="dialog" style="width:min(640px,100%)">
+    <div class="dialog-h">
+      <div class="brand-mark" style="width:26px;height:26px">SI</div>
+      <h2>WhatsApp settings</h2>
+      <span class="badge success" style="margin-left:6px"><span class="d"></span>Live</span>
+      <a class="x" href="/mockups/core-suite/guest.html">✕</a>
+    </div>
+    <div class="dialog-b">
+      <div class="setgroup">
+        <div class="eyebrow">Channel</div>
+        <div class="setrow"><div><div class="t">Channel enabled</div><div class="d">Bot answers inbound WhatsApp messages</div></div><span class="sw-toggle on"></span></div>
+        <div class="grid2" style="margin-top:13px">
+          <div class="field"><label>Default location fallback</label><select class="input"><option>Ask the guest</option><option>Kraków</option><option>Warszawa</option></select></div>
+          <div class="field"><label>Daily inbound cap / phone</label><input class="input" value="40"></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Messages</div>
+        <div class="field"><label>Welcome message</label><textarea class="input">Ciao! 👋 Welcome to Sud Italia. Which city — Kraków or Warszawa?</textarea></div>
+        <div class="grid2">
+          <div class="field"><label>Opt-out keywords</label><input class="input" value="STOP, UNSUBSCRIBE, NIE"><div class="help">Comma-separated · max 20</div></div>
+          <div class="field"><label>Re-open template</label><input class="input" value="welcome_back"><div class="help">Used to re-open after the 24h window</div></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Conversation lifecycle</div>
+        <div class="field"><label>Auto-archive after (minutes idle)</label><input class="input" value="5" style="max-width:120px"><div class="help">0 = never · console-only; the guest's 90-min cart survives</div></div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Business hours · Europe/Warsaw</div>
+        <div class="setrow"><div><div class="t">Enforce hours</div><div class="d">Outside hours, send the away message</div></div><span class="sw-toggle on"></span></div>
+        <div style="margin-top:10px">
+          <div class="timegrid"><span class="subtle">Mon–Thu</span><input class="input" value="11:00"><input class="input" value="22:00"><label style="font-size:11px;color:var(--fg-subtle)"><input type="checkbox"> Closed</label></div>
+          <div class="timegrid"><span class="subtle">Fri–Sat</span><input class="input" value="11:00"><input class="input" value="23:30"><label style="font-size:11px;color:var(--fg-subtle)"><input type="checkbox"> Closed</label></div>
+          <div class="timegrid"><span class="subtle">Sun</span><input class="input" value="12:00"><input class="input" value="22:00"><label style="font-size:11px;color:var(--fg-subtle)"><input type="checkbox"> Closed</label></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">AI concierge</div>
+        <div class="setrow"><div><div class="t">AI ordering enabled</div><div class="d">Claude drives the menu → cart → pay flow over the capability tools</div></div><span class="sw-toggle on"></span></div>
+        <div class="field" style="margin-top:13px"><label>Extra AI instructions</label><textarea class="input">Always offer espresso + dessert with pizza. Mention the corner banquette to VIP guests.</textarea><div class="help">Appended to the base prompt · max 4000 chars</div></div>
+        <div class="field"><label>Away message (outside hours / AI off)</label><textarea class="input">We're closed right now — back at 11:00. Leave your order and we'll confirm in the morning. 🍕</textarea></div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Auto-replies · keyword → reply</div>
+        <div class="kvpair"><input class="input" value="hours"><span class="subtle">→</span><input class="input" value="We're open 11:00–22:00 (Fri–Sat till 23:30)."><button class="btn ghost icon">✕</button></div>
+        <div class="kvpair"><input class="input" value="vegan"><span class="subtle">→</span><input class="input" value="Marinara & a vegan Margherita are on the menu — ask the bot for the full list."><button class="btn ghost icon">✕</button></div>
+        <button class="btn ghost" style="margin-top:4px">+ Add reply</button>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Abandoned-cart recovery</div>
+        <div class="setrow"><div><div class="t">Recover idle carts</div><div class="d">Re-open template once if a cart sits idle</div></div><span class="sw-toggle on"></span></div>
+        <div class="field" style="margin-top:13px"><label>Wait before nudge (hours)</label><input class="input" value="3" style="max-width:120px"></div>
+      </div>
+
+      <div class="setgroup">
+        <div class="eyebrow">Scripted flows · deterministic, ahead of the LLM</div>
+        <div class="card card-pad" style="margin-bottom:8px;background:var(--surface-2)">
+          <div style="display:flex;align-items:center;gap:10px"><span class="sw-toggle on"></span><b style="font-size:13px">Reservation flow</b><span class="badge neutral" style="margin-left:auto">trigger: "book"</span></div>
+          <div class="subtle" style="font-size:12px;margin-top:9px">1. Ask covers → 2. Offer slots → 3. Confirm + hold table</div>
+        </div>
+        <button class="btn ghost">+ Add flow</button>
+      </div>
+    </div>
+    <div class="dialog-f">
+      <a class="btn ghost" href="/mockups/core-suite/guest.html">Cancel</a>
+      <button class="btn primary">Save settings</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
