@@ -30,18 +30,57 @@ This means:
 
 ## Section-by-section
 
+### Back chip — `<Link href="/">`
+
+The location page opens with a small oxblood-tinted back chip
+("Home · la casa") rendered ABOVE the hero by `<LocationHero />`.
+Pill-shape, hover swaps to oxblood fill with parchment text. Lets
+a visitor who arrived deep (search engine, cross-link, share URL)
+hop back to the landing without scrolling up to the nav. Lives at
+the `.v8-back-chip-wrap` container — 14/18px top padding, 1180px
+max width, shares the column gutter with the rest of the layout.
+
 ### Location hero — `<LocationHero />`
 
-- Compact, not full-bleed (lighter than the landing's hero — the
-  visitor is here to order, not to be wowed).
-- City name + address + today's hours + the `Open now` pill (same
-  primitive as the landing's locations grid).
-- Today's seasonal callouts surface here — pulled from
-  `/api/settings/public?location={slug}` (the `seasonalItems` array
-  filtered by location).
-- The hero is **also** the route entry for cross-sells from elsewhere
-  on the site — the URL hash (`#pizza` / `#pasta`) scrolls to the
-  matching category.
+V8 Trattoria treatment — a centred parchment hero with a per-slug
+pen-sketch illustration above the city name. Compact relative to the
+homepage hero (the visitor is here to order, not to be wowed) but
+keeps V8's hospitality voice.
+
+- **Parchment canvas** with a soft fade to parchment-deep at the
+  bottom (a vertical gradient that ramps from transparent → 45%
+  parchment-deep). Line-soft hairline border-bottom separates it
+  from the menu section below.
+- **Basil-sprig ornament** top-left (re-uses the `.v8-hero-orn-basil-tl`
+  positioning from the landing hero) so the location page reads in
+  the same brand family.
+- **Per-slug hero illustration** (360×180 detailed SVG, wider /
+  more detailed than the 220×140 LocationsGrid card sketches):
+  - `krakow` — wood-fired oven with Kraków-style rooftops, flames,
+    chimney, peel, a floating tomato + basil garnish.
+  - `warszawa` — Vespa with the "Sud Italia" pizza box on the back +
+    Warszawa-style flat skyline + basil garnish.
+  - Generic fallback — market awning + crates of tomatoes / basil,
+    used until a new city's dedicated illustration lands.
+- **`.v8-loc-hero-tricolore`** — small 80×3px Italian-flag hairline
+  pill between the illustration and the city name.
+- **City name** in Cormorant 44/60px ≥md, espresso, tight letter-
+  spacing. An italic terracotta tagline stacks below at 0.55em
+  (V8's "Kraków · our first home · la nostra prima casa" pattern).
+- **Sub line** — italic Cormorant 17px, `<span>` for primary copy +
+  `.bi-sec` span for the Italian variant, optional trailing
+  `<em>` for the emphasis tail ("where it all began"). Per-slug
+  marketing copy in `LocationHero.tsx`'s `LOC_COPY` map.
+- **Status pill** — basil-tinted, terracotta-dot pulse when within
+  service hours, muted-brown when outside. Uses the new
+  `getCurrentHourSlot(location, now?)` helper to render the **real**
+  close time: `Open until 21:00 · aperto fino alle 21:00`. Outside
+  hours: `Closed now · chiuso ora`. Mount-gated so SSR/client agree.
+- **Marketing copy lives locally.** Tagline + sub are V8's brand
+  voice keyed by slug; new locations fall back to a generic
+  `defaultCopy()` derived from the existing `teamLead` field. The
+  Location type stays operator-data only — same trade-off bundles
+  + the homepage hero took.
 
 ### Menu sections — `<MenuSection />`
 

@@ -494,6 +494,33 @@ the rationale.
 
 ## Menu / cart components (in `src/components/cart/`, `src/components/location/`)
 
+### `<LocationHero />` — `src/components/location/LocationHero.tsx`
+
+V8 Trattoria treatment — full spec in
+[`../pages/menu.md`](../pages/menu.md#location-hero--locationhero).
+
+- **Composes against `.v8-loc-hero`** (a bespoke wrapper, not
+  `.v8-ps` — the location hero predates the menu chrome by one
+  block of vertical rhythm and uses its own padding ramp).
+  Parchment canvas with a soft fade to parchment-deep + line-soft
+  hairline border-bottom.
+- **Per-slug pen-sketch illustration** at 360×180 — wider + more
+  detailed than the LocationsGrid 220×140 card sketches. Add a
+  function-per-slug + a switch in `LocationHeroIllus` to introduce
+  a new city's art; `GenericHeroIllus` is the fallback.
+- **Tagline + sub** are local marketing copy in `LOC_COPY` keyed
+  by slug. The bundle component's "marketing copy lives locally"
+  pattern applied to per-location voice — the Location type stays
+  operator-data-only.
+- **`getCurrentHourSlot()` helper** (in `data/locations.ts`)
+  drives the status pill's real close time. Falls back to "Closed
+  now · chiuso ora" outside hours.
+- **Back chip** ("Home · la casa") renders ABOVE the hero in the
+  same component fragment — oxblood-tinted pill, hover flips to
+  filled oxblood with parchment text. Lets visitors arriving via
+  cross-link / share URL return to the landing without scrolling
+  back to the nav.
+
 ### Item card (in `<MenuSection />`)
 
 - `pub-card` styling (`#fff` on cream, 16px radius, soft shadow).

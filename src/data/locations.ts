@@ -167,3 +167,41 @@ export function isLocationOpenNow(location: Location, now: Date = new Date()): b
 export function getOpenLocations(now: Date = new Date()): Location[] {
   return getActiveLocations().filter((l) => isLocationOpenNow(l, now));
 }
+
+/**
+ * Returns the `{ day, open, close }` slot currently in effect for the
+ * location, or null when closed. Used by the V8 location-page hero
+ * status pill to render "Open until 21:00 · aperto fino alle 21:00"
+ * with the real close time, not a hardcoded label.
+ *
+ * Same two-branch logic as `isLocationOpenNow`:
+ *   - Today's range, normal-hour window OR overnight head [open, 24h)
+ *   - Yesterday's range when the slot is overnight + we're in
+ *     [00:00, close)
+ *
+ * Returns the first matching slot — if multiple slots overlap (which
+ * the seed data avoids) the earlier entry wins.
+ */
+export function getCurrentHourSlot(
+  location: Location,
+  now: Date = new Date(),
+): Location["hours"][number] | null {
+  if (!location.isActive) return null;
+  const jsDay = now.getDay();
+  const prevJsDay = (jsDay + 6) % 7;
+  const minsNow = now.getHours() * 60 + now.getMinutes();
+  for (const h of location.hours) {
+    const open = toMinutes(h.open);
+    const close = toMinutes(h.close);
+    const isOvernight = close <= open;
+
+    if (dayInRange(h.day, jsDay)) {
+      if (isOvernight && minsNow >= open) return h;
+      if (!isOvernight && minsNow >= open && minsNow < close) return h;
+    }
+    if (isOvernight && dayInRange(h.day, prevJsDay) && minsNow < close) {
+      return h;
+    }
+  }
+  return null;
+}

@@ -118,9 +118,6 @@ export default async function LocationPage({ params }: PageProps) {
       <LocationHero location={location} />
       <ComplianceBanner compliance={compliance} />
       <LiveActivityBar locationSlug={slug} />
-      <LayoutGate flag="showLoyaltySection">
-        <LoyaltySection />
-      </LayoutGate>
       <MenuSection
         items={fullMenu}
         locationSlug={slug}
@@ -128,6 +125,17 @@ export default async function LocationPage({ params }: PageProps) {
         compliance={compliance}
       />
       <LocationInfo location={location} />
+      {/* Soci rail closes the location page the same way it closes
+       *  the homepage — see (public)/page.tsx for the rationale.
+       *  After Step 7's V8 port, LoyaltySection is a dark espresso
+       *  closing block; rendering it BEFORE the menu (the old
+       *  pre-V8 placement) put a dark slab mid-page above light
+       *  content. The order here matches V8's location-page
+       *  composition: hero → menu → info → Soci → footer.
+       */}
+      <LayoutGate flag="showLoyaltySection">
+        <LoyaltySection />
+      </LayoutGate>
       <FloatingCartButton allMenuItems={menuItems} />
       <AddToCartToast allMenuItems={menuItems} />
     </>

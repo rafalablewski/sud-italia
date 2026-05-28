@@ -1312,3 +1312,172 @@ body {
   font-style: italic;
   color: rgba(244, 245, 240, 0.6);
 }
+
+/* ============================
+   V8 Trattoria — location page
+   ============================
+   Markup in src/components/location/LocationHero.tsx. The location
+   pages share the storefront `(public)/layout.tsx`, so the V8 nav +
+   LiveTicker + Footer wrap a per-location hero + menu + bundles
+   stack. Step 8 ports the hero + the back-chip nav-helper above it;
+   subsequent steps port the menu chrome + the location-page menu
+   item grid. */
+
+/* ---- Back chip — "← Home · la casa" -------------------------------- */
+.v8-back-chip-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 18px 0;
+}
+@media (min-width: 768px) {
+  .v8-back-chip-wrap { padding: 18px 36px 0; }
+}
+.v8-back-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-size: 13.5px;
+  color: var(--color-oxblood);
+  background: rgba(122, 43, 43, 0.06);
+  border: 1px solid rgba(122, 43, 43, 0.22);
+  border-radius: 999px;
+  padding: 6px 14px 6px 10px;
+  transition: all 0.2s ease;
+}
+.v8-back-chip:hover {
+  background: var(--color-oxblood);
+  color: var(--color-parchment);
+}
+.v8-back-chip .bi-sec {
+  font-style: italic;
+  opacity: 0.65;
+}
+.v8-back-chip:hover .bi-sec { color: rgba(255, 247, 232, 0.85); }
+
+/* ---- Location hero -------------------------------------------------- */
+.v8-loc-hero {
+  position: relative;
+  padding: 18px 20px 36px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(248, 239, 222, 0) 0%, rgba(232, 214, 181, 0.45) 100%),
+    var(--color-parchment);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+@media (min-width: 768px) {
+  .v8-loc-hero { padding: 24px 36px 48px; }
+}
+
+.v8-loc-hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.v8-loc-hero-illus {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 12px;
+  display: block;
+  height: auto;
+}
+
+.v8-loc-hero-tricolore {
+  display: inline-block;
+  width: 80px;
+  height: 3px;
+  margin: 4px auto 10px;
+  border-radius: 2px;
+}
+
+/* Name + tagline — city heading 44/60px with the italic terracotta
+   tagline stacked below. */
+.v8-loc-hero-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--color-espresso);
+  margin: 8px 0 6px;
+}
+@media (min-width: 768px) {
+  .v8-loc-hero-name { font-size: 60px; }
+}
+.v8-loc-hero-tagline {
+  display: block;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 0.55em;
+  margin-top: 6px;
+  color: var(--color-terracotta);
+}
+.v8-loc-hero-tagline .bi-sec {
+  color: var(--color-muted);
+  opacity: 0.65;
+}
+
+/* Italic-Cormorant sub — "With Giuseppe, in the heart of the Rynek" */
+.v8-loc-hero-sub {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--color-espresso-soft);
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+.v8-loc-hero-sub .bi-sec {
+  color: var(--color-muted);
+  opacity: 0.65;
+}
+.v8-loc-hero-sub em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* Status pill — basil-tinted, terracotta-dot pulse when live, muted
+   when outside hours. Same is-live/is-muted state pattern as the
+   LocationsGrid card status pills. */
+.v8-loc-hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.v8-loc-hero-status.is-live {
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.32);
+  color: var(--color-basil-deep);
+}
+.v8-loc-hero-status.is-muted {
+  background: rgba(140, 111, 79, 0.08);
+  border: 1px solid rgba(140, 111, 79, 0.25);
+  color: var(--color-muted);
+}
+.v8-loc-hero-status .bi-sec {
+  font-style: italic;
+  opacity: 0.7;
+}
+.v8-loc-hero-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-terracotta);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.15);
+}
+.v8-loc-hero-status.is-live .v8-loc-hero-status-dot {
+  animation: v8-loc-status-pulse 2s ease-in-out infinite;
+}
+.v8-loc-hero-status.is-muted .v8-loc-hero-status-dot {
+  background: var(--color-muted);
+  box-shadow: 0 0 0 3px rgba(140, 111, 79, 0.15);
+}
