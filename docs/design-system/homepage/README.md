@@ -18,8 +18,8 @@ homepage/
 └── pages/
     ├── home.md        ✅ landing — hero, locations grid, bundles, about, loyalty, CTA
     ├── menu.md        ✅ /locations/[slug] — hero, menu sections, info, floating cart
-    ├── checkout.md    ← slot picker, address, payment, identity capture (backlog)
-    ├── order.md       ← live order tracking, ETA, KDS reflection (backlog)
+    ├── checkout.md    ✅ cart drawer flow — review, slot, address, identity, Stripe
+    ├── order.md       ✅ /order-confirmation — receipt, live tracker, points, feedback
     └── loyalty.md     ← /rewards — points wallet, tiers, redemption (backlog)
 ```
 
