@@ -21,6 +21,9 @@ Each theme has the same internal shape:
 └── <surfaces>/     ← per-page or per-module docs
 ```
 
+The only file at the top of `design-system/` is
+[`backlog.md`](./backlog.md) — the cross-theme cleanup inventory.
+
 ## The rule
 
 **A token, font, component, or layout belongs to exactly one theme.** When

@@ -2,6 +2,10 @@
 
 ← back to [README](./README.md)
 
+**Cross-theme.** This list spans Core, Admin, and Homepage — each item
+notes its owning theme. Theme-specific backlog also lives in each
+theme's `theme/README.md`; this file is the cross-cutting inventory.
+
 Things that belong in the design system but aren't done. Listed in
 **rough priority order** — top of the list ships first when we open a
 design-cleanup window.

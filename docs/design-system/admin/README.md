@@ -1,10 +1,10 @@
 # Admin — Design System
 
 The design language for the **back-office admin** — every `/admin/*` surface
-that is *not* one of the five Core modules. Core (POS, KDS, CRM, Concierge,
-WhatsApp) is our IP and lives in [`../modules/`](../modules/) under its own
-rules; this doc covers the everything-else that runs the business behind
-the till.
+that is *not* one of the Core modules. Core (POS, KDS, Guest = CRM +
+Concierge + WhatsApp) is our IP and runs under its own theme — see the
+Core theme docs for those surfaces; this doc covers the everything-else
+that runs the business behind the till.
 
 **Code is the source of truth.** The shell lives at
 `src/components/admin/v2/AdminShell.tsx`; nav at
@@ -29,12 +29,14 @@ What this doc covers (the admin back-office):
 
 What this doc does **not** cover:
 
-- **Core modules** (POS, KDS, CRM, Concierge, WhatsApp) → [`../modules/`](../modules/).
-  They are operator-pressure surfaces with their own density rules and are the
-  productised IP.
-- **Guest storefront** (the public ordering site) → `../web/`.
-- **Foundations** (color, type, material, motion) shared across everything →
-  the design-system root.
+- **Core modules** (POS, KDS, CRM, Concierge, WhatsApp) — the productised
+  IP, documented under the Core theme. Operator-pressure surfaces with
+  their own density rules.
+- **Public storefront** (the guest ordering site) — documented under the
+  Homepage theme.
+- **Shared foundations** — there are none in the target architecture. Each
+  theme owns its own colour, typography, material, and components. See
+  the design-system root README for the three-theme doctrine.
 
 ## Shell
 

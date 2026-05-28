@@ -71,7 +71,8 @@ dark theme so every "command" surface reads as one product.
 
 Status hues exist for **data visualisation** (per-station pace gauges, health
 rings, throughput sparklines) — they are **not used as ticket-status colour.**
-See [`modules/kds.md`](../modules/kds.md).
+The Core theme's KDS module documents the equivalent rule on the operational
+side.
 
 ## The rules
 
