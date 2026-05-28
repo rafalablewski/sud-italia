@@ -253,12 +253,67 @@ The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#her
 
 ### `<LocationsGrid />`
 
-- Grid of `<LocationCard />`s (defined locally).
-- Each card: city, address, today-hours, status pill, `Order from
-  {city}` CTA.
-- Status pill colours: `bg-italia-green/10 text-italia-green` (open),
-  `bg-italia-gold/10 text-italia-gold` (opens soon), `bg-italia-light-gray
-  text-italia-gray` (closed).
+V8 Trattoria — `.v8-ps.v8-ps-alt` section with a 1 → 2-column grid
+of paper cards. Full layout spec in
+[`../pages/home.md`](../pages/home.md#locations-grid--locationsgrid).
+
+- **Layout:** `.v8-ps.v8-ps-alt` (warm-paper section primitive) wrapping
+  the standard `.v8-page-inner` (max-width 1180px, 18/36px gutter).
+- **Per-card structure:** illustration → tricolore → body. The body
+  is a flex-column ending in the CTA pinned to the bottom
+  (`.v8-loc-cta { margin-top: auto }`), so cards in the same row line
+  up at the action regardless of how much copy the description and
+  attribution note add.
+- **Per-slug illustration** — hand-tuned SVGs in
+  `LocationsGrid.tsx`. Add a new function next to `OvenIllus` /
+  `VespaIllus` and switch on the slug in `LocationIllustration` to
+  introduce a new city's art. Until then, `MarketStallIllus` is the
+  fallback so an `isActive: true` city always has art.
+- **Status pill — three states, all live:**
+  - `.v8-loc-status.is-live` — basil tint, pulsing terracotta dot,
+    "Open now · aperto ora". Driven by `isLocationOpenNow()`.
+  - `.v8-loc-status.is-muted` — muted-brown tint, still dot, "Closed
+    now · chiuso ora". Active location but currently outside hours.
+  - `.v8-loc-status.is-soon` — ochre tint, no dot, "Coming soon · in
+    arrivo". `isActive: false` locations.
+- **Attribution note** — italic Cormorant 13px with ochre left
+  border (`.v8-loc-note`), driven by the new optional
+  `location.teamLead` field on `Location`. Falls back to nothing if
+  unset, so future locations without a known team don't show a stub.
+- **Card hover** — translateY(-4px) + warm-brown drop shadow, 350ms
+  ease. No scale.
+
+## Section primitives — `.v8-ps`
+
+The reusable "page section" primitives the V8 sections compose
+against. Declared in `themes/homepage/index.css`. First adopted by
+`<LocationsGrid />`; future Bundles / Famiglia / About / CTA sections
+use the same classes so the landing's spacing, type ladder and
+alt-paper rhythm stay identical across sections.
+
+- **`.v8-page-inner`** — max-width 1180px, `margin: 0 auto`, 18px
+  gutter at base / 36px at ≥md. The standard column wrapper inside a
+  `.v8-ps` section. Bundles overrides this to be wider with a
+  parchment gutter against the iframe edges (see `bundles-section`
+  in the future Step 5).
+- **`.v8-ps`** — section vertical rhythm: `56px / 80px ≥md` top +
+  bottom padding, `position: relative` so absolutely-positioned
+  ornaments anchor to the section box.
+- **`.v8-ps-alt`** — alternating warm-paper background (a vertical
+  gradient that fades to a parchment-deep band 12–88% down, then
+  back to transparent at the edges, on top of `--color-parchment`).
+  Use on every other section so the landing has rhythm without a
+  hard divider line. Never apply two `.v8-ps-alt` in a row.
+- **`.v8-ps-head`** — centred header block, `margin-bottom: 36/48px`.
+- **`.v8-ps-eyebrow`** — uppercase Cormorant 600 in oxblood, 11px,
+  `letter-spacing: 3px`. `::before` and `::after` em-dashes flank
+  the text (the V8 signature meta line). Italian subtitle goes in a
+  `.bi-sec` span at 50% style weight + 75% opacity.
+- **`.v8-ps-title`** — Cormorant 600, `36 / 52px ≥md`, espresso.
+  Apply `.it` to a span inside to flip that span to italic oxblood
+  500 (V8's "Two addresses, **one family**" pattern).
+- **`.v8-ps-sub`** — italic Cormorant 17 / 20px, muted-brown, centred
+  with `max-width: 640px`. The supporting paragraph under the title.
 
 ### `<BundlesShowcase />`
 

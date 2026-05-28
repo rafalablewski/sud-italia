@@ -13,6 +13,10 @@ export interface Location {
   /** When true, Polish Labor Code §190 prohibits under-18 staff from working
    *  during the location's open hours. Drives scheduling-rule warnings. */
   servesAlcohol?: boolean;
+  /** Optional "Cooked by X and crew" attribution line shown under the
+   *  description on the V8 LocationsGrid cards. Keep short — V8 styles
+   *  this as a single Cormorant-italic line with an ochre left border. */
+  teamLead?: string;
 }
 
 export type MenuCategory =

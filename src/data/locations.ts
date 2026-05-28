@@ -34,6 +34,7 @@ export const locations: Location[] = [
     ],
     isActive: true,
     currency: "PLN",
+    teamLead: "Cooked by Giuseppe and family",
   },
   {
     slug: "warszawa",
@@ -53,6 +54,7 @@ export const locations: Location[] = [
     ],
     isActive: true,
     currency: "PLN",
+    teamLead: "Cooked by Anna and crew",
   },
   {
     slug: "wroclaw",

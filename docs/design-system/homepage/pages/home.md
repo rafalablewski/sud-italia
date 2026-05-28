@@ -98,14 +98,61 @@ for it.
 
 ### Locations grid — `<LocationsGrid />`
 
-- One card per location (Kraków, Warszawa today).
-- Each card: city name (Cormorant Garamond 600), address line, today's hours,
-  status pill (`Open now` / `Opens at 11:00` / `Closed`), primary
-  CTA `Order from {city}` → `/locations/{slug}`.
-- **Status pill is live** — derives from current time vs
-  `serviceHours` in `src/data/locations.ts`. The customer sees if
-  they can order *right now* without clicking through.
-- Card hover: lift 1px + shadow softens (no aggressive scale).
+V8 Trattoria treatment — alternating warm-paper section
+(`.v8-ps.v8-ps-alt`) with a centred header and a 1 → 2-column grid of
+paper cards. Lives at the `#locations` anchor for the hero kicker's
+"Locations" link.
+
+- **Section header** uses the new shared `<eyebrow / title / sub>`
+  primitives. Eyebrow: `THE TRUCKS · le botteghe` in uppercase
+  oxblood Cormorant, em-dashes flanking the line. Title:
+  `Two addresses, one family` — Cormorant 600 with an italic
+  `<span class="it">one family</span>` flipping the second clause
+  to oxblood italic. Subtitle: italic Cormorant muted, "Two trucks,
+  one kitchen, one nonna who taught us the dough."
+- **One card per location** (Kraków + Warszawa today, Wrocław auto-
+  shows as Coming Soon because `isActive: false` in the seed data).
+  Cards are paper rectangles with a parchment-deep gradient ground.
+- **Per-slug pen-sketch illustration** in the card's top 180px panel:
+  wood-fired oven (Kraków), Vespa with pizza box (Warszawa), a market-
+  stall fallback (any future location, until its slug is hand-drawn).
+  Same paper-grain noise overlay as the body canvas at 70% opacity.
+- **Tricolore hairline** (2.5px, the shared `.v8-tricolore`) sits
+  between the illustration and the body — reads as a separator, not
+  a closer.
+- **Card body** is a flex column ending in the CTA pinned to the
+  bottom. Lays out:
+  - **City name** (Cormorant 600, 32px, espresso) + **live status pill**
+    on the same baseline row. The pill is basil-tinted with a pulsing
+    terracotta dot when open, muted-brown with a still dot when active
+    but closed ("Closed now · chiuso ora"), and ochre when the location
+    isn't `isActive` yet ("Coming soon · in arrivo"). Status reads
+    from `isLocationOpenNow()` — Rule #1, real time-of-day, never a
+    decorative pill.
+  - **Info rows** with dashed-underline separators: terracotta pin
+    icon + address, terracotta clock icon + the full week-pattern
+    hours string in a single `.v8-hours-line`.
+  - **Description** in italic Cormorant 16px (`location.shortDescription`).
+  - **Attribution note** in italic Cormorant 13px with an ochre
+    left border, drawn from the new optional `location.teamLead`
+    field on `Location` ("Cooked by Giuseppe and family" / "Cooked
+    by Anna and crew"). Falls back to nothing when unset, so a
+    future location without a known team lead simply doesn't get
+    the note instead of showing a placeholder.
+  - **CTA** — terracotta-fill button "View Menu & Order · vedi il
+    menù & ordina →", links to `/locations/{slug}`. On inactive
+    locations the CTA is replaced with the existing `<NotifyMeForm />`
+    so visitors can leave their email; bilingual "avvisami
+    all'apertura" subtitle above the form.
+- **Card hover** lifts 4px with a deeper warm-brown drop shadow
+  (350ms ease). No aggressive scale.
+
+The new `.v8-ps`, `.v8-ps-alt`, `.v8-ps-head`, `.v8-ps-eyebrow`,
+`.v8-ps-title`, `.v8-ps-sub`, `.v8-page-inner` primitives are
+**reusable** — Bundles, Famiglia, About and the rest of the V8
+sections compose against the same classes so spacing, type ladder
+and the alt-paper rhythm stay identical across the landing. See
+[`../theme/components.md`](../theme/components.md#section-primitives-v8-ps).
 
 ### Bundles showcase — `<BundlesShowcase />`
 
