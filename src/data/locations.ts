@@ -113,12 +113,14 @@ function toMinutes(hhmm: string): number {
  *
  * Handles three day-string forms — single day `"Sun"`, ordered range
  * `"Mon-Thu"`, and wrap range `"Fri-Mon"` (Fri/Sat/Sun/Mon — start
- * index > end index). Each hour pair also wraps defensively: if
- * `close <= open` the window is treated as overnight (`open–24:00`
- * **or** `00:00–close`), so a future `Fri-Sat 11:00–02:00` schedule
- * will report "open" at 01:30 on Saturday. The seed data doesn't use
- * either wrap form today; the support is here so adding them later
- * doesn't silently break the open-now signal.
+ * index > end index). Each hour pair also wraps defensively: when
+ * `close <= open` the window is treated as overnight, and the helper
+ * checks BOTH today (`open–24:00`) AND the previous day (`00:00–close`)
+ * — so a `{ day: "Fri", open: "22:00", close: "02:00" }` schedule
+ * reports open at Saturday 01:30 even though `"Fri"` doesn't include
+ * Saturday as a day token. The seed data doesn't use either wrap form
+ * today; the support is here so adding them later doesn't silently
+ * break the open-now signal.
  *
  * Used by the homepage hero kicker (V8 "Open now" pill) and any
  * future open-state UI that needs accuracy rather than the
@@ -127,15 +129,33 @@ function toMinutes(hhmm: string): number {
 export function isLocationOpenNow(location: Location, now: Date = new Date()): boolean {
   if (!location.isActive) return false;
   const jsDay = now.getDay();
+  // (jsDay + 6) % 7 == yesterday — Sun(0) → Sat(6), Mon(1) → Sun(0), etc.
+  const prevJsDay = (jsDay + 6) % 7;
   const minsNow = now.getHours() * 60 + now.getMinutes();
   return location.hours.some((h) => {
-    if (!dayInRange(h.day, jsDay)) return false;
     const open = toMinutes(h.open);
     const close = toMinutes(h.close);
-    // Hours don't wrap past midnight in the seed data, but handle the case
-    // defensively for future overnight services (close <= open).
-    if (close > open) return minsNow >= open && minsNow < close;
-    return minsNow >= open || minsNow < close;
+    const isOvernight = close <= open;
+
+    // Branch 1 — today is in the day range. Normal hours need
+    // [open, close); overnight hours match the [open, 24:00) tail.
+    if (dayInRange(h.day, jsDay)) {
+      if (isOvernight) {
+        if (minsNow >= open) return true;
+      } else if (minsNow >= open && minsNow < close) {
+        return true;
+      }
+    }
+
+    // Branch 2 — yesterday was in the day range AND the schedule is
+    // overnight: we're inside the [00:00, close) tail of yesterday's
+    // window. Without this branch a "Fri 22:00–02:00" slot would
+    // silently close at midnight because Saturday isn't a `"Fri"` day.
+    if (isOvernight && dayInRange(h.day, prevJsDay) && minsNow < close) {
+      return true;
+    }
+
+    return false;
   });
 }
 
