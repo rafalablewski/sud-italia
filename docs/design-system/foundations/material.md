@@ -1,6 +1,6 @@
 # Material — depth, hairlines, radius, motion
 
-← back to [README](./README.md)
+← back to [README](../README.md)
 
 How surfaces sit on top of each other, where the lines go, how tight the
 corners are, and how things move.

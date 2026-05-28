@@ -282,7 +282,7 @@ Every primary list view supports PTR. Visual: a single colored ring filling as y
 
 | Constraint | Mitigation |
 |---|---|
-| Bundle | Mobile shell is code-split via dynamic import: `next/dynamic(() => import("./mobile/MobileShell"))` only on `< 900px`. |
+| Bundle | `MobileShell` is statically imported by `AdminShell` and conditionally rendered when `useIsMobile()` matches `(max-width: 900px)`. |
 | Render | Long lists virtualized with a windowed component (custom 60-line hook, no library). |
 | Network | Same APIs as desktop, but mobile views use `next/cache` `revalidate: 30s` for KPI summaries, SWR for hot lists. |
 | Images | All chart paint uses `<canvas>` (recharts SVG fallback for ≤ 12 points). Card icons inline SVG, never `<img>`. |

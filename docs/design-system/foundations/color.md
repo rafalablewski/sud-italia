@@ -1,6 +1,6 @@
 # Colour
 
-← back to [README](./README.md)
+← back to [README](../README.md)
 
 One signature accent (**deep burgundy / oxblood**), one metallic (**champagne
 platinum**), a calm steel-blue for focus/info, and a disciplined semantic
@@ -71,7 +71,7 @@ dark theme so every "command" surface reads as one product.
 
 Status hues exist for **data visualisation** (per-station pace gauges, health
 rings, throughput sparklines) — they are **not used as ticket-status colour.**
-See [`modules/kds.md`](./modules/kds.md).
+See [`modules/kds.md`](../modules/kds.md).
 
 ## The rules
 

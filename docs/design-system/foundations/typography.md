@@ -1,6 +1,6 @@
 # Typography
 
-← back to [README](./README.md)
+← back to [README](../README.md)
 
 Loaded via `next/font` in `src/app/layout.tsx`. (Previously named in the
 stack but never imported — everything fell back to system fonts. Now they
