@@ -111,8 +111,8 @@ Progress:
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
 - [`sections/customers.md`](./sections/customers.md) — customers, loyalty, corporate, feedback
-- `sections/finance.md` — reports, cash, business costs, calculator *(backlog)*
-- `sections/growth.md` — campaigns, upsell, cross-sell, scheduled bundles *(backlog)*
+- [`sections/finance.md`](./sections/finance.md) — reports, cash, business costs, calculator
+- [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, truck ops
 - `sections/intelligence.md` — multi-location, cohort/CLTV, menu engineering, AI *(backlog)*
 - `sections/system.md` — users & roles, compliance, audit log, capabilities,
   currency, settings *(backlog)*
