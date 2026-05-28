@@ -226,10 +226,30 @@ don't have alternate variants.
 
 ### `<HeroSection />`
 
-- Full-bleed container, `bg-italia-cream-dark` or full-bleed image.
-- Headline: Cormorant Garamond 600, display range (48–72px).
-- Sub-headline: Lora 500, 18–20px.
-- Primary CTA: `<Button size="xl" variant="primary" />`.
+The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#hero).
+
+- **Centred parchment block**, not full-bleed. Padding 48px/56px →
+  80px/90px ≥md. Five ornament SVGs scattered behind the column
+  (basil sprigs, ellipse stains, a tomato) at z-index 1 with
+  `pointer-events: none`.
+- **Headline** — Cormorant Garamond 600 at 44px → 76px ≥md,
+  letter-spacing -0.5px, line-height 1.02, espresso colour.
+- **Italian sublabel** — Cormorant italic, 19→24px, muted-brown.
+- **Hand-drawn underline** — `<svg>` squiggle, `currentColor` strokes
+  on the terracotta colour token.
+- **Live kicker pill** — bilingual `Open now · aperto ora · {cities}`
+  in oxblood text, oxblood-tinted background, green pulsing dot.
+  Status derives from `isLocationOpenNow()` in `src/data/locations.ts`
+  — falls back to a muted dot + "Closed now / chiuso ora" outside
+  hours so the kicker is never decorative.
+- **CTAs** — one terracotta-fill `Order in {City}` per active
+  location + a ghost oxblood `Our Story` (jumps to `#famiglia`). Each
+  button carries its italian phrase as a `.bi-sec` italic ("Ordina a
+  Kraków", "La nostra storia"). Hover lifts 2px with a warm
+  terracotta drop.
+- **Closing tricolore** — 200×3px Italian-flag gradient at 70%
+  opacity, also exposed as `.v8-tricolore` for reuse on other
+  surfaces.
 
 ### `<LocationsGrid />`
 

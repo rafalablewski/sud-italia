@@ -79,3 +79,58 @@ export function getLocation(slug: string): Location | undefined {
 export function getActiveLocations(): Location[] {
   return locations.filter((l) => l.isActive);
 }
+
+// Day-name → JS Date.getDay() index (Sun=0). Sud Italia's hours strings use
+// English short names (Mon-Thu, Fri-Sat, Sun, Mon-Sun, etc.) — we parse
+// either a single day token ("Sun") or an inclusive range ("Mon-Thu").
+const DAY_INDEX: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+function dayInRange(dayStr: string, jsDay: number): boolean {
+  const parts = dayStr.split("-").map((p) => p.trim());
+  if (parts.length === 1) {
+    return DAY_INDEX[parts[0]] === jsDay;
+  }
+  const start = DAY_INDEX[parts[0]];
+  const end = DAY_INDEX[parts[1]];
+  if (start === undefined || end === undefined) return false;
+  // Range can wrap (e.g. "Fri-Mon" = Fri,Sat,Sun,Mon).
+  if (start <= end) return jsDay >= start && jsDay <= end;
+  return jsDay >= start || jsDay <= end;
+}
+
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * Returns true when `location` is within at least one of its `hours`
+ * ranges right now. Used by the homepage hero kicker (V8 "Open now"
+ * pill) and any future open-state UI that needs accuracy rather than
+ * the `isActive` proxy LocationsGrid currently uses.
+ */
+export function isLocationOpenNow(location: Location, now: Date = new Date()): boolean {
+  if (!location.isActive) return false;
+  const jsDay = now.getDay();
+  const minsNow = now.getHours() * 60 + now.getMinutes();
+  return location.hours.some((h) => {
+    if (!dayInRange(h.day, jsDay)) return false;
+    const open = toMinutes(h.open);
+    const close = toMinutes(h.close);
+    // Hours don't wrap past midnight in the seed data, but handle the case
+    // defensively for future overnight services (close <= open).
+    if (close > open) return minsNow >= open && minsNow < close;
+    return minsNow >= open || minsNow < close;
+  });
+}
+
+/**
+ * Active locations that are within their service hours right now.
+ * Returns [] outside business hours — callers should fall back to a
+ * "Opens at HH:MM" message in that case (see HeroSection.tsx).
+ */
+export function getOpenLocations(now: Date = new Date()): Location[] {
+  return getActiveLocations().filter((l) => isLocationOpenNow(l, now));
+}

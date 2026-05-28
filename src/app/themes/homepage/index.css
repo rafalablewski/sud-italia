@@ -337,3 +337,226 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
+
+/* ============================
+   V8 Trattoria — tricolore
+   ============================
+   The 3px Italian-flag hairline used at the foot of the hero, location
+   cards, etc. Same look as V8's `.tricolore`. Surface is independent
+   of the storefront's flag-red rule because this is a *flag* artifact,
+   not a status colour. */
+.v8-tricolore {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--color-italy-green) 0%, var(--color-italy-green) 33.3%,
+    var(--color-italy-white) 33.3%, var(--color-italy-white) 66.6%,
+    var(--color-italy-red) 66.6%, var(--color-italy-red) 100%
+  );
+  opacity: 0.85;
+}
+
+/* ============================
+   V8 Trattoria — hero
+   ============================
+   Centred parchment hero block with scattered ornament SVGs behind,
+   a pulsing "Open now" pill, a Cormorant display headline + italic
+   sublabel, a hand-drawn terracotta squiggle, the lede paragraph with
+   italic-Cormorant italian phrases (<em>), two terracotta CTAs +
+   one ghost oxblood CTA, and a tricolore hairline at the foot.
+
+   Markup in src/components/landing/HeroSection.tsx. Most spacing /
+   colour reaches into the Tuscany tokens via Tailwind utilities;
+   what lives here is the section padding, the pulse keyframe, the
+   ornament positions, the CTA hover lift, and the squiggle underline
+   (which uses currentColor + the terracotta text colour). */
+
+.v8-hero {
+  padding: 48px 0 56px;
+}
+@media (min-width: 768px) {
+  .v8-hero { padding: 80px 0 90px; }
+}
+
+/* Kicker — oxblood "Open now" pill above the headline */
+.v8-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-oxblood);
+  font-size: 11.5px;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  background: rgba(122, 43, 43, 0.05);
+  border: 1px solid rgba(122, 43, 43, 0.18);
+  border-radius: 999px;
+}
+.v8-hero-kicker .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  opacity: 0.75;
+}
+.v8-hero-kicker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-italy-green);
+  box-shadow: 0 0 0 3px rgba(0, 140, 69, 0.18);
+}
+.v8-hero-kicker-dot.is-live {
+  animation: v8-hero-kicker-pulse 2.4s ease-in-out infinite;
+}
+.v8-hero-kicker-dot.is-muted {
+  background: var(--color-muted);
+  box-shadow: 0 0 0 3px rgba(140, 111, 79, 0.18);
+}
+@keyframes v8-hero-kicker-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+
+/* Headline — Cormorant display, 44px → 76px @ md */
+.v8-hero-h1 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.02;
+  margin: 0 0 8px;
+  color: var(--color-espresso);
+  letter-spacing: -0.5px;
+}
+@media (min-width: 768px) {
+  .v8-hero-h1 { font-size: 76px; }
+}
+
+/* Italian sublabel — italic Cormorant, muted brown */
+.v8-hero-en {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 19px;
+  color: var(--color-muted);
+  margin: 4px 0 22px;
+  letter-spacing: 0.2px;
+}
+@media (min-width: 768px) {
+  .v8-hero-en { font-size: 24px; margin: 6px 0 28px; }
+}
+
+/* Hand-drawn squiggle underline beneath the italian sublabel.
+   Uses currentColor so the SVG strokes inherit the terracotta below. */
+.v8-hero-underline {
+  display: block;
+  margin: 0 auto 26px;
+  color: var(--color-terracotta);
+}
+
+/* Lede paragraph — Lora 16/18px, espresso-soft, italic Cormorant on <em> */
+.v8-hero-lede {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-espresso-soft);
+  max-width: 580px;
+  margin: 0 auto 30px;
+}
+@media (min-width: 768px) {
+  .v8-hero-lede { font-size: 18px; margin-bottom: 38px; }
+}
+.v8-hero-lede em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-espresso);
+}
+
+/* CTA row — column at base, row + wrap at ≥640px */
+.v8-hero-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  max-width: 480px;
+  margin: 0 auto;
+}
+@media (min-width: 640px) {
+  .v8-hero-ctas {
+    flex-direction: row;
+    justify-content: center;
+    max-width: none;
+    flex-wrap: wrap;
+  }
+}
+
+/* Primary CTA — terracotta fill */
+.v8-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 14px 22px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--shadow-cta);
+  transition: all 0.25s ease;
+}
+.v8-hero-cta:hover {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px -10px rgba(184, 92, 56, 0.6);
+}
+.v8-hero-cta .bi-sec {
+  font-style: italic;
+  font-weight: 500;
+  color: rgba(255, 247, 232, 0.78);
+}
+.v8-hero-cta:hover .bi-sec { color: rgba(255, 247, 232, 0.92); }
+
+/* Ghost CTA — oxblood outline on parchment */
+.v8-hero-cta-ghost {
+  background: transparent;
+  color: var(--color-oxblood);
+  border-color: var(--color-oxblood);
+  box-shadow: none;
+}
+.v8-hero-cta-ghost:hover {
+  background: rgba(122, 43, 43, 0.06);
+  color: var(--color-oxblood);
+  box-shadow: 0 8px 18px -10px rgba(122, 43, 43, 0.4);
+  transform: translateY(-2px);
+}
+.v8-hero-cta-ghost .bi-sec { color: rgba(122, 43, 43, 0.65); }
+.v8-hero-cta-ghost:hover .bi-sec { color: rgba(122, 43, 43, 0.85); }
+
+/* Tricolore at the bottom of the hero — 200px hairline, slightly faded */
+.v8-hero-tricolore {
+  margin: 40px auto 0;
+  width: 200px;
+  opacity: 0.7;
+}
+
+/* Background ornaments — absolutely positioned, behind content,
+   non-interactive. Each one has its own corner / opacity. */
+.v8-hero-orn {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 1;
+}
+.v8-hero-orn-basil-tl { top: 30px;   left: 4%;   transform: rotate(-12deg); }
+.v8-hero-orn-basil-br { bottom: 40px; right: 4%; transform: rotate(150deg); opacity: 0.4; }
+.v8-hero-orn-stain-1  { top: 18%;    right: 8%;  opacity: 0.15; }
+.v8-hero-orn-stain-2  { bottom: 12%; left: 6%;   opacity: 0.12; }
+.v8-hero-orn-tomato   { top: 12%;    left: 10%;  opacity: 0.35; }

@@ -1,103 +1,150 @@
+"use client";
+
 import Link from "next/link";
-import { Container } from "@/components/ui/Container";
-import { Button } from "@/components/ui/Button";
-import { ChevronDown, MapPin, Clock } from "lucide-react";
-import { getActiveLocations } from "@/data/locations";
+import { useEffect, useState } from "react";
+import { getActiveLocations, getOpenLocations } from "@/data/locations";
+
+// V8 Trattoria hero — centered parchment block with the basil-leaf +
+// stain + tomato ornaments scattered behind, a pulsing "Open now"
+// oxblood-pill kicker, a Cormorant Garamond display headline + its
+// italian italic sublabel, a hand-drawn terracotta squiggle underline,
+// a lede paragraph with italic-Cormorant Italian phrases, two terracotta
+// location CTAs + a ghost oxblood "Our Story" CTA, and a tricolore
+// hairline at the foot of the section.
+//
+// "Open now": the kicker reflects real service-hours state. If any
+// active location is inside its hours window, the green dot + "Open
+// now / aperto ora" prefix shows. Outside hours, the kicker degrades
+// to "Closed now / chiuso ora" and the dot fades to muted. Lists every
+// active location's city after the status line — chain-wide, not
+// per-truck.
+
+const HEADLINE_EN = "Pizza, the way it's made in Naples";
+const HEADLINE_IT = "La pizza, fatta come a Napoli";
+const STORY_HREF = "/#famiglia";
 
 export function HeroSection() {
-  const locations = getActiveLocations();
+  // Service-hour state is time-of-day-sensitive, so we only compute it
+  // after mount to avoid an SSR/client mismatch when the page is
+  // requested at the wrong side of an opening boundary.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const active = getActiveLocations();
+  const openCount = mounted ? getOpenLocations().length : 0;
 
   return (
-    <section className="relative min-h-[60vh] md:min-h-[90vh] flex items-center bg-gradient-to-br from-italia-dark via-[#2a1a0a] to-italia-dark overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-italia-red blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-italia-gold blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-italia-green blur-3xl opacity-50" />
-      </div>
+    <section className="v8-hero relative overflow-hidden">
+      {/* Background ornaments — basil sprigs, stains, a tomato. All
+          absolutely positioned, pointer-events: none, behind content
+          (z-index 1). Hand-tuned SVGs lifted from the V8 mockup. */}
+      <span className="v8-hero-orn v8-hero-orn-basil-tl" aria-hidden>
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+          <path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" strokeWidth="2" strokeLinecap="round" />
+          <path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M60 65 C 75 60, 85 45, 90 30 C 75 35, 65 50, 60 60" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M60 48 C 50 44, 42 32, 42 22 C 52 26, 56 36, 60 45" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <span className="v8-hero-orn v8-hero-orn-basil-br" aria-hidden>
+        <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+          <path d="M50 92 C 50 70, 50 40, 50 12" stroke="#4A7C59" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M50 70 C 38 66, 30 54, 26 42 C 38 46, 46 56, 50 66" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M50 55 C 62 51, 70 38, 74 26 C 62 30, 54 42, 50 52" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="1.8" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <span className="v8-hero-orn v8-hero-orn-stain-1" aria-hidden>
+        <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+          <ellipse cx="80" cy="80" rx="60" ry="55" stroke="#7A2B2B" strokeWidth="2" fill="none" />
+          <ellipse cx="80" cy="80" rx="48" ry="44" stroke="#7A2B2B" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <ellipse cx="80" cy="80" rx="36" ry="33" stroke="#7A2B2B" strokeWidth="0.8" fill="none" opacity="0.5" />
+        </svg>
+      </span>
+      <span className="v8-hero-orn v8-hero-orn-stain-2" aria-hidden>
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+          <ellipse cx="60" cy="60" rx="48" ry="44" stroke="#C9A23E" strokeWidth="2" fill="none" />
+          <ellipse cx="60" cy="60" rx="36" ry="33" stroke="#C9A23E" strokeWidth="1.2" fill="none" opacity="0.6" />
+        </svg>
+      </span>
+      <span className="v8-hero-orn v8-hero-orn-tomato" aria-hidden>
+        <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
+          <path d="M16 38 C 16 54, 24 60, 35 60 C 46 60, 54 54, 54 38 C 54 30, 48 24, 35 24 C 22 24, 16 30, 16 38 Z" fill="#B85C38" fillOpacity="0.22" stroke="#B85C38" strokeWidth="2" />
+          <path d="M35 24 L35 16" stroke="#4A7C59" strokeWidth="2" strokeLinecap="round" />
+          <path d="M35 20 C 30 16, 25 14, 22 14 C 23 19, 27 22, 35 24" stroke="#4A7C59" strokeWidth="2" fill="#4A7C59" fillOpacity="0.22" strokeLinejoin="round" />
+          <path d="M35 20 C 40 16, 45 14, 48 14 C 47 19, 43 22, 35 24" stroke="#4A7C59" strokeWidth="2" fill="#4A7C59" fillOpacity="0.22" strokeLinejoin="round" />
+        </svg>
+      </span>
 
-      {/* Italian flag accent stripe */}
-      <div className="absolute top-0 left-0 right-0 h-1 flex">
-        <div className="flex-1 bg-italia-green" />
-        <div className="flex-1 bg-white" />
-        <div className="flex-1 bg-italia-red" />
-      </div>
+      <div className="v8-hero-inner max-w-[980px] mx-auto px-[22px] text-center relative z-[2]">
+        <span className="v8-hero-kicker">
+          <span className={`v8-hero-kicker-dot ${openCount > 0 ? "is-live" : "is-muted"}`} aria-hidden />
+          {openCount > 0 ? (
+            <>Open now · <span className="bi-sec">aperto ora</span></>
+          ) : (
+            <>Closed now · <span className="bi-sec">chiuso ora</span></>
+          )}
+          {active.map((loc) => (
+            <span key={loc.slug}> · {loc.city}</span>
+          ))}
+        </span>
 
-      <Container className="relative z-10 py-20">
-        <div className="max-w-3xl">
-          <p className="text-italia-gold font-medium text-sm tracking-[0.2em] uppercase mb-6 stagger-1">
-            Neapolitan Pizza Food Trucks
-          </p>
-          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-heading font-bold text-white leading-[1.1] mb-6 stagger-2">
-            Order{" "}
-            <span className="text-italia-red">Authentic Pizza</span>
-            <br />
-            Ready in{" "}
-            <span className="text-italia-green">15 Minutes</span>
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-300 leading-relaxed mb-10 max-w-xl stagger-3">
-            Order online from our food trucks in Kraków and Warsaw.
-            Neapolitan pizza, fresh pasta, and Italian street food —
-            ready in 15 minutes.
-          </p>
-
-          {/* Quick location picker (Uber/Grab style) */}
-          <div className="stagger-4">
-            {/* Desktop: horizontal buttons */}
-            <div className="hidden sm:flex gap-3">
-              {locations.map((loc) => (
-                <Link key={loc.slug} href={`/locations/${loc.slug}`}>
-                  <Button
-                    size="lg"
-                    className="group"
-                  >
-                    <MapPin className="h-5 w-5 mr-2" />
-                    Order in {loc.city}
-                  </Button>
-                </Link>
-              ))}
-              <Link href="#about">
-                <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 hover:text-white">
-                  Our Story
-                </Button>
-              </Link>
-            </div>
-
-            {/* Mobile: prominent location cards (Grab-style) */}
-            <div className="sm:hidden space-y-3">
-              <p className="text-white/70 text-sm font-medium mb-2">
-                Where would you like to order from?
-              </p>
-              {locations.map((loc) => (
-                <Link
-                  key={loc.slug}
-                  href={`/locations/${loc.slug}`}
-                  className="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl hover:bg-white/15 transition-all active:scale-[0.98]"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-italia-red/20 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-6 w-6 text-italia-red" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold text-base">
-                      {loc.name}
-                    </h3>
-                    <p className="text-white/60 text-sm truncate">{loc.address}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-italia-green text-xs font-medium flex-shrink-0">
-                    <Clock className="h-3 w-3" />
-                    Open
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+        <h1 className="v8-hero-h1">{HEADLINE_EN}</h1>
+        <div className="v8-hero-en">
+          <span className="it">{HEADLINE_IT}</span>
         </div>
-      </Container>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce hidden md:block">
-        <ChevronDown className="h-8 w-8 text-white/50" />
+        <svg className="v8-hero-underline" width="220" height="18" viewBox="0 0 220 18" fill="none" aria-hidden>
+          <path d="M4 11 C 40 4, 80 16, 110 9 S 180 4, 216 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <circle cx="216" cy="12" r="1.8" fill="currentColor" />
+        </svg>
+
+        <p className="v8-hero-lede">
+          San Marzano DOP from the slopes of Vesuvius. <em>Fior di latte</em> from
+          Agerola. A wood-fired oven that breathes at 485&deg;C. Cooked in 60
+          seconds, eaten in silence — a Neapolitan rule we like to break with a
+          glass of <em>vino della casa</em>.
+        </p>
+
+        <div className="v8-hero-ctas">
+          {active.map((loc) => (
+            <Link key={loc.slug} href={`/locations/${loc.slug}`} className="v8-hero-cta">
+              <PinIcon />
+              <span>Order in {loc.city}</span>
+              <span className="bi-sec it">· Ordina a {loc.city}</span>
+            </Link>
+          ))}
+          <Link href={STORY_HREF} className="v8-hero-cta v8-hero-cta-ghost">
+            <BookIcon />
+            <span>Our Story</span>
+            <span className="bi-sec it">· La nostra storia</span>
+          </Link>
+        </div>
+
+        <div className="v8-tricolore v8-hero-tricolore" aria-hidden />
       </div>
     </section>
+  );
+}
+
+// Drop-pin icon — V8's outlined "location" mark with a hollow circle
+// centre. Stroke uses currentColor so the same SVG works on the
+// terracotta-fill primary CTA (parchment stroke) and the ghost
+// oxblood CTA (oxblood stroke).
+function PinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden className="shrink-0">
+      <path d="M10 18 C 6 12, 3 9, 3 6 A 7 7 0 0 1 17 6 C 17 9, 14 12, 10 18 Z" stroke="currentColor" strokeWidth="1.6" fill="rgba(244,245,240,0.15)" />
+      <circle cx="10" cy="6.5" r="2.4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+    </svg>
+  );
+}
+
+// Small "menu / story" book icon — three short lines inside a
+// rectangle. Used on the ghost "Our Story" CTA.
+function BookIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden className="shrink-0">
+      <path d="M4 3 L16 3 L16 17 L4 17 Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M7 7 L13 7 M7 10 L13 10 M7 13 L11 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
   );
 }
