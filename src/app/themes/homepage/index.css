@@ -205,40 +205,137 @@ body {
   color: var(--color-terracotta-dark);
 }
 
-/* ----- Language pill ------------------------------------------------- */
-.v8-lang-picker {
-  background: rgba(184, 92, 56, 0.06);
-  border: 1px solid rgba(184, 92, 56, 0.25);
+/* ----- Nav switcher (language + currency) ---------------------------- *
+ * Collapsible disclosure pattern shared by <LanguageSwitcher /> and
+ * <CurrencySwitcher /> via the <NavDropdown /> primitive. Trigger is a
+ * compact tinted pill showing the active code + a caret; clicking
+ * reveals a small floating panel listing every enabled option as
+ * "CODE · native label". Replaces the always-expanded segmented pills
+ * that crowded the right cluster. Tone variants: terracotta (lang) +
+ * basil (currency). */
+.v8-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.v8-lang-opt { color: var(--color-muted); }
-.v8-lang-opt:hover { color: var(--color-terracotta-dark); }
-.v8-lang-opt-active,
-.v8-lang-opt-active:hover {
-  background: var(--color-terracotta);
-  color: #FFF7E8;
-  box-shadow: 0 1px 2px rgba(122, 43, 43, 0.15);
+.v8-switcher-trigger:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
 }
-@media (max-width: 640px) {
-  .v8-lang-opt { padding: 5px 8px; font-size: 10px; }
+.v8-switcher-trigger-label {
+  min-width: 16px;
+  text-align: center;
+}
+.v8-switcher-caret {
+  transition: transform 0.2s ease;
+  opacity: 0.7;
+}
+.v8-switcher-caret.is-open {
+  transform: rotate(180deg);
 }
 
-/* ----- Currency pill (basil) ---------------------------------------- */
-.v8-curr-picker {
+.v8-switcher-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  padding: 6px;
+  background: rgba(248, 239, 222, 0.98);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 12px 32px -12px rgba(61, 40, 23, 0.45);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.v8-switcher-opt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: var(--font-body);
+}
+.v8-switcher-opt-code {
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  color: var(--color-espresso);
+  min-width: 22px;
+}
+.v8-switcher-opt-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+/* Tone — terracotta (language) */
+.v8-switcher-terracotta .v8-switcher-trigger {
+  background: rgba(184, 92, 56, 0.06);
+  border-color: rgba(184, 92, 56, 0.25);
+  color: var(--color-terracotta-dark);
+}
+.v8-switcher-terracotta .v8-switcher-trigger:hover {
+  background: rgba(184, 92, 56, 0.12);
+  border-color: rgba(184, 92, 56, 0.4);
+}
+.v8-switcher-terracotta .v8-switcher-opt:hover {
+  background: rgba(184, 92, 56, 0.08);
+}
+.v8-switcher-terracotta .v8-switcher-opt[aria-selected="true"] {
+  background: rgba(184, 92, 56, 0.14);
+}
+.v8-switcher-terracotta .v8-switcher-opt[aria-selected="true"] .v8-switcher-opt-code {
+  color: var(--color-terracotta-dark);
+}
+
+/* Tone — basil (currency) */
+.v8-switcher-basil { margin-left: 6px; }
+.v8-switcher-basil .v8-switcher-trigger {
   background: rgba(74, 124, 89, 0.08);
-  border: 1px solid rgba(74, 124, 89, 0.28);
-  margin-left: 6px;
+  border-color: rgba(74, 124, 89, 0.28);
+  color: #2E5840;
 }
-.v8-curr-opt { color: var(--color-muted); }
-.v8-curr-opt:hover { color: #2E5840; }
-.v8-curr-opt-active,
-.v8-curr-opt-active:hover {
-  background: var(--color-basil);
-  color: #FFF7E8;
-  box-shadow: 0 1px 2px rgba(46, 88, 64, 0.18);
+.v8-switcher-basil .v8-switcher-trigger:hover {
+  background: rgba(74, 124, 89, 0.14);
+  border-color: rgba(74, 124, 89, 0.42);
 }
+.v8-switcher-basil .v8-switcher-opt:hover {
+  background: rgba(74, 124, 89, 0.1);
+}
+.v8-switcher-basil .v8-switcher-opt[aria-selected="true"] {
+  background: rgba(74, 124, 89, 0.16);
+}
+.v8-switcher-basil .v8-switcher-opt[aria-selected="true"] .v8-switcher-opt-code {
+  color: #2E5840;
+}
+
 @media (max-width: 640px) {
-  .v8-curr-picker { margin-left: 4px; }
-  .v8-curr-opt { padding: 4px 7px; font-size: 11px; }
+  .v8-switcher-basil { margin-left: 4px; }
+  .v8-switcher-panel { min-width: 160px; }
 }
 
 /* ============================

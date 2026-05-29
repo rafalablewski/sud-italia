@@ -122,20 +122,47 @@ The 5-star display for feedback + reviews.
 - Half star supported via SVG mask.
 - Inline rating count: `text-italia-gray` at body-sm.
 
+### `<NavDropdown />` — `src/components/ui/NavDropdown.tsx`
+
+Shared collapsible disclosure primitive for the language + currency
+switchers (and any future nav-cluster picker). A tinted pill trigger
+showing the current code + a caret; clicking expands a floating panel
+anchored `right: 0; top: calc(100% + 8px)` of the trigger, with a 10px
+backdrop blur and a 12/32px warm-brown drop shadow. Closes on outside
+click, touch, or `Escape`. Caret rotates 180° while open.
+
+- **Tone variants:** `terracotta` (language) + `basil` (currency).
+  Both share the same trigger shape and panel chrome; the tone
+  changes the trigger background tint, border colour, and the
+  `[aria-selected="true"]` highlight inside the panel. Keeps the
+  colour memory the old segmented pills established.
+- **ARIA:** trigger carries `aria-haspopup="listbox"`,
+  `aria-expanded`, `aria-controls={panelId}` (when open), and the
+  caller-supplied `aria-label`. The panel is `role="listbox"`; each
+  option button inside is `role="option"` with `aria-selected` on the
+  active code.
+- **Children-as-function:** `children: (close) => ReactNode` so the
+  caller can fire `close()` after writing the selection — both
+  switchers reload the page on pick, but the explicit close keeps
+  the focus model right if a future variant doesn't reload.
+
 ### `<CurrencySwitcher />` — `src/components/ui/CurrencySwitcher.tsx`
 
 The currency picker (governed by `showCurrencySwitcher` in admin
 Settings → Layout — when off, the component returns `null` and the
 storefront falls back to PLN).
 
-- **V8 pill segmented control.** Symbol-only buttons (zł / € / $ / S$)
-  inside a basil-tinted pill — the sibling of `<LanguageSwitcher />`,
-  in green. Single-row, no dropdown — V8 trades discoverability for
-  glanceability so the top nav reads at a tap.
-- Active option: basil fill + parchment text + subtle 0 1px 2px basil
-  drop. Inactive: muted-brown text on the basil-tinted background.
+- **Collapsible disclosure** built on `<NavDropdown tone="basil">`.
+  Trigger shows the active symbol only (zł / € / $ / S$) on a
+  basil-tinted pill. Clicking expands a panel of `SYMBOL · label`
+  rows (`zł · Polish Złoty`, `€ · Euro`, …) so the active selection
+  stays glanceable while every option becomes discoverable behind a
+  single click.
+- Active option: basil-tinted row + dark-basil code. Hover: faint
+  basil wash on the row. Inactive: muted-brown italic label on
+  parchment, espresso code.
 - Honours `enabledCurrencies` from public settings; disabled currencies
-  drop out of the row.
+  drop out of the panel.
 - Selected currency persists via the customer cookie (same `setCurrency`
   helper as before). Picking a non-current option triggers a full
   reload so every SSR'd `formatPrice()` re-renders.
@@ -145,14 +172,16 @@ storefront falls back to PLN).
 The language picker (governed by `showLanguageSwitcher` in admin
 Settings → Layout).
 
-- **V8 pill segmented control.** Two-letter codes (EN / PL / DE / SG)
-  inside a terracotta-tinted pill — left-sibling of `<CurrencySwitcher />`.
-  Single-row, no dropdown.
-- Active option: terracotta fill + parchment text + subtle 0 1px 2px
-  oxblood drop. Inactive: muted-brown text on the terracotta-tinted
-  background.
+- **Collapsible disclosure** built on `<NavDropdown tone="terracotta">`.
+  Trigger shows the active 2-letter code only (PL / EN / DE / SG) on a
+  terracotta-tinted pill. Clicking expands a panel of `CODE · native
+  name` rows (`PL · Polski`, `EN · English`, `DE · Deutsch`, `SG ·
+  Singapore English`) — codes for glanceability, native labels for
+  discoverability.
+- Active option: terracotta-tinted row + dark-terracotta code.
+  Inactive: muted-brown italic label, espresso code.
 - Honours `enabledLocales` from public settings; disabled locales drop
-  out of the row.
+  out of the panel.
 - Picking a non-current option calls `setLocale()` then full-reloads so
   every SSR string re-renders in the new locale.
 
@@ -181,16 +210,23 @@ The V8 Trattoria top nav.
 - **Brand block (left):** basil-sprig SVG mark that rotates `-8°` on
   hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Sud Italia"
   (Cormorant Garamond 600, 24px, espresso) + the italic sublabel
-  "Neapolitan pizza · pizza napoletana · since 2019" (Cormorant 11.5px
-  italic muted, ≥768px only).
+  "Pizza napoletana · est. 2019" (Cormorant 11.5px italic muted,
+  ≥768px only). The sublabel was previously the longer
+  "Neapolitan pizza · pizza napoletana · since 2019" — V8 polish trimmed
+  the redundant English half so the wordmark reads as a single, refined
+  line rather than two duplicated phrases.
 - **Nav links (≥1024px):** Menu, Bundles, Locations, Story, Rewards.
   Each renders the primary EN/PL on top + the Italian italic phrase
   underneath (`Menù`, `Menù del giorno`, `Botteghe`, `La famiglia`,
   `Soci`). Hover sweeps in a 1.5px terracotta underline via `::after
   { transform: scaleX(0/1) }`.
 - **Right cluster:** `<LanguageSwitcher />` + `<CurrencySwitcher />`
-  (the V8 pill switchers above) + `<CartButton />` (the V8 cart pill)
-  + a `38×38` line-bordered hamburger circle (`<lg` only).
+  (the collapsible V8 nav switchers above — single tinted pill each,
+  panel expands on click) + `<CartButton />` (the V8 cart pill) + a
+  `38×38` line-bordered hamburger circle (`<lg` only). The switchers
+  used to be always-expanded segmented rows of four codes each, which
+  ate ~250px of horizontal budget; the disclosure refactor reclaims
+  that width and keeps the nav reading at a glance.
 - **Mobile menu:** appears under the nav-inner when the hamburger
   toggles. Each link is the same EN/IT bilingual format but inline
   instead of stacked.

@@ -62,7 +62,7 @@ export function Header() {
               Sud Italia
             </div>
             <div className="v8-brand-sub font-heading italic text-[11.5px] text-muted tracking-[0.8px] mt-[1px] hidden md:block">
-              Neapolitan pizza <span className="it">· pizza napoletana</span> · since 2019
+              <span className="it">Pizza napoletana</span> · est. 2019
             </div>
           </div>
         </Link>
@@ -86,14 +86,14 @@ export function Header() {
             instead. Cart + hamburger stay at every width. */}
         <div className="v8-nav-right ml-auto lg:ml-0 flex items-center gap-[10px]">
           <LayoutGate flag="showLanguageSwitcher">
-            <span className="hidden md:inline-flex">
+            <div className="hidden md:inline-flex">
               <LanguageSwitcher />
-            </span>
+            </div>
           </LayoutGate>
           <LayoutGate flag="showCurrencySwitcher">
-            <span className="hidden md:inline-flex">
+            <div className="hidden md:inline-flex">
               <CurrencySwitcher />
-            </span>
+            </div>
           </LayoutGate>
           <CartButton />
           <button

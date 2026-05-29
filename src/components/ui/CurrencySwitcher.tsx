@@ -10,15 +10,18 @@ import {
   type Currency,
 } from "@/lib/currency";
 import { fetchPublicSettings } from "@/lib/public-settings";
+import { NavDropdown } from "./NavDropdown";
 
-// V8 Trattoria currency pill — sibling of the language pill, in the
-// basil-green Tuscany palette. Symbol-only buttons (zł, €, $, S$) keep
-// the four currencies in the same width budget as the language row.
-// Honours enabledCurrencies from public settings.
+// V8 Trattoria currency switcher — collapsible sibling of
+// <LanguageSwitcher /> in the basil-green palette. Trigger shows the
+// active symbol (zł / € / $ / S$); clicking expands a small panel
+// listing every enabled currency by symbol + label (Polish Złoty,
+// Euro, US Dollar, Singapore Dollar). Replaces the previous
+// always-expanded segmented row.
 //
 // Visibility (admin → Settings → Layout → "Currency switcher") is
-// handled by the <LayoutGate flag="showCurrencySwitcher"> wrapper at the
-// call site (src/components/layout/Header.tsx).
+// handled by the <LayoutGate flag="showCurrencySwitcher"> wrapper at
+// the call site (src/components/layout/Header.tsx).
 const SHORT_SYMBOL: Record<Currency, string> = {
   PLN: "zł",
   EUR: "€",
@@ -57,26 +60,29 @@ export function CurrencySwitcher() {
   const visible = ALL_CURRENCIES.filter((c) => enabled.includes(c));
 
   return (
-    <div className="v8-curr-picker inline-flex items-center rounded-full p-[2px] gap-[2px]" role="radiogroup" aria-label="Display currency">
-      {visible.map((code) => {
-        const meta = CURRENCY_META[code];
-        const active = code === currency;
-        return (
-          <button
-            key={code}
-            type="button"
-            onClick={() => pick(code)}
-            role="radio"
-            aria-checked={active}
-            title={meta.label}
-            className={`v8-curr-opt appearance-none border-0 bg-transparent font-body text-[12px] font-bold tracking-[0.02em] px-[9px] py-[4px] rounded-full leading-none cursor-pointer transition-colors ${
-              active ? "v8-curr-opt-active" : ""
-            }`}
-          >
-            {SHORT_SYMBOL[code]}
-          </button>
-        );
-      })}
-    </div>
+    <NavDropdown label={SHORT_SYMBOL[currency]} ariaLabel="Display currency" tone="basil">
+      {(close) =>
+        visible.map((code) => {
+          const meta = CURRENCY_META[code];
+          const active = code === currency;
+          return (
+            <button
+              key={code}
+              type="button"
+              role="option"
+              aria-selected={active}
+              onClick={() => {
+                close();
+                pick(code);
+              }}
+              className="v8-switcher-opt"
+            >
+              <span className="v8-switcher-opt-code">{SHORT_SYMBOL[code]}</span>
+              <span className="v8-switcher-opt-label">{meta.label}</span>
+            </button>
+          );
+        })
+      }
+    </NavDropdown>
   );
 }
