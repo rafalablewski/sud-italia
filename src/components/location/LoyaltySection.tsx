@@ -4,20 +4,12 @@ import Link from "next/link";
 // "Members & friends · soci e amici" loyalty pitch + a terracotta
 // "Start earning points · inizia a guadagnare punti →" CTA pointing
 // to the dedicated /rewards route (Rule #5: loyalty has its own
-// page; this is the entry point on the landing).
-//
-// File path stays `components/location/LoyaltySection.tsx` — it's
-// imported by `(public)/page.tsx` and the location-pages route. The
-// previous version rendered the interactive <LoyaltyCard /> (which
-// asks for phone-number sign-in) inline on the homepage; V8 swaps
-// that for a static pitch that funnels to /rewards where the full
-// LoyaltyCard already lives.
-//
-// V8 anchor is `#soci`; we keep `id="loyalty"` because the nav link
-// (Rewards) already targets the dedicated /rewards route, not the
-// section anchor on this page. Pre-existing deep-links to
-// `/#loyalty` continue to work; nothing on the storefront currently
-// uses `/#soci` so we don't need to add that anchor either.
+// page; this is the entry point on the landing). Imported by
+// `(public)/page.tsx` and the location-pages route. The pre-V8
+// version rendered an interactive sign-in card inline on the
+// homepage; V8 swaps that for a static pitch that funnels to
+// /rewards. Anchor stays `id="loyalty"` so pre-existing deep-links
+// keep working.
 //
 // Numbers (1 point per złoty, 300 points threshold, the Famiglia Oro
 // tier name + the antipasto della casa reward) are marketing copy —

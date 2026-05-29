@@ -111,7 +111,7 @@ across-the-line.
 | caption          | 12px    | Footer copy, fine print, the "We'll only use this for the receipt" reassurance |
 | body-sm          | 14px    | `.pub-input` fields, secondary copy                                        |
 | body             | 15–16px | The default body text size — bundle descriptions, location-card descriptions, menu-item descriptions. V8 body is 15px / line-height 1.55. |
-| label            | 18px    | Section headings inside cards (e.g. on `LoyaltyCard`)                      |
+| label            | 18px    | Section headings inside paper cards (e.g. `.v8-rewards-card-title`, `.v8-order-card` headings) |
 | h3               | 20px    | Sub-section headings on the landing                                        |
 | h2               | 24–30px | Section titles (Cormorant 500/600)                                         |
 | h1               | 36–48px | Page titles (Cormorant 600), the rewards page headline                     |

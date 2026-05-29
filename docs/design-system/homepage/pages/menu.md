@@ -169,12 +169,11 @@ filter the grid in place.
 - **Empty state** (`.v8-menu-empty`) — italic Cormorant muted line,
   with a clear-search affordance if the user is searching.
 
-The pre-V8 MenuSection imported `<SpeedGuarantee />`,
+The pre-V8 MenuSection composed `<SpeedGuarantee />`,
 `<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`.
-Those components are still in the repo (other surfaces might use
-them) but the V8 menu inlines bespoke blocks instead — keeping the
-markup auditable against the mockup without coordinating restyles
-across 5 components.
+All four were deleted in Step H once the V8 menu inlined bespoke
+blocks for the same chrome — keeping the markup auditable against
+the mockup without coordinating restyles across separate components.
 
 `<ReorderSection />` (returning-customer rail) and
 `<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card

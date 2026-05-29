@@ -26,15 +26,10 @@ import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 //   - upsellConfig editorial badges (used by MenuItemCard)
 //   - compareMenuEngineering sort (audit §4.4)
 //   - hot-this-week popularity overlay
-// What changed: the chrome markup (search, tabs, guarantee, combos,
-// surprise, live-act) is now inline V8 instead of imported
-// SpeedGuarantee / ComboDealsPreview / SurpriseMe / MenuCategoryNav.
-// Those components stay in the repo for any other surface that needs
-// them; the V8 menu uses bespoke inline blocks to keep the markup
-// auditable against the mockup.
-//
-// Items still render via <MenuItemCard /> — Step 10 ports the per-
-// item card to V8.
+// The chrome markup (search, tabs, guarantee, combos, surprise,
+// live-act) is inline V8 — the pre-V8 SpeedGuarantee /
+// ComboDealsPreview / SurpriseMe / MenuCategoryNav components were
+// deleted in Step H. Items still render via <MenuItemCard />.
 
 const MENU_PLACEHOLDER: LiveActivity = {
   ordersInLastHour: 0,

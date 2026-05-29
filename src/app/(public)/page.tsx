@@ -14,17 +14,11 @@ import { LayoutGate } from "@/components/layout/LayoutGate";
 //   Soci        → loyalty pitch + closing CTA (LoyaltySection.tsx)
 //
 // No separate closing CTA — V8 designs the Soci section as the
-// closer. The previous <CTASection /> ("Hungry? Order Now!" red
-// gradient block with location buttons) was removed because by the
-// time the visitor reaches the bottom they've seen 6+ order entry
-// points (hero ×2, every location card, the bundles "Order now").
-// One more red CTA reads as the 2010s SaaS pattern V8 avoids — same
-// rule the chevron-scroll-indicator removal in Step 3 followed.
-//
-// CTASection.tsx is intentionally left in the repo (not re-imported
-// here) in case a future surface needs the red-gradient closing
-// block. Don't reach for it on the landing without re-discussing
-// the V8 direction.
+// closer. By the time the visitor reaches the bottom they've seen
+// 6+ order entry points (hero ×2, every location card, the
+// bundles "Order now"); one more red CTA reads as the 2010s SaaS
+// pattern V8 avoids. The pre-V8 `<CTASection />` red-gradient
+// closing block was deleted in Step H.
 export default function Home() {
   return (
     <>

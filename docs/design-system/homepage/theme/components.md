@@ -486,16 +486,6 @@ the location-pages route).
   operator retunes the formula, the homepage pitch needs an update
   too. Same trade-off bundles take.
 
-### `<CTASection />` — kept in repo, not on landing
-
-The V8 homepage closes with the Soci rail above and does NOT use a
-separate red-gradient closing CTA. `CTASection.tsx` is intentionally
-left in the repo (not imported from `(public)/page.tsx`) in case a
-future surface needs the red-gradient closing block — but adding it
-back to the landing would re-introduce the 2010s SaaS pattern V8
-explicitly strips. See the `(public)/page.tsx` header comment for
-the rationale.
-
 ## Menu / cart components (in `src/components/cart/`, `src/components/location/`)
 
 ### `<LocationHero />` — `src/components/location/LocationHero.tsx`
@@ -543,11 +533,11 @@ and the items grid. Full layout spec in
   active tab fills terracotta with an ochre-light count chip.
 - **Inline V8 blocks** — `.v8-guarantee`, `.v8-combos` /
   `.v8-combo-card` / `.v8-wax-seal`, `.v8-surprise`, `.v8-live-act`.
-  These replace the imported `<SpeedGuarantee />`,
-  `<ComboDealsPreview />`, `<SurpriseMe />`, `<LiveActivityBar />`,
-  `<MenuCategoryNav />` markup that the pre-V8 MenuSection used —
-  the components stay in the repo for any other surface that needs
-  them, but the V8 menu uses inline bespoke blocks for fidelity.
+  These inline bespoke blocks replace the pre-V8 `<SpeedGuarantee />`,
+  `<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`
+  components — all deleted in Step H. `<LiveActivityBar />` stays in
+  the repo because it's still mounted on `/locations/[slug]` (just
+  not inside MenuSection).
 - **Wax-seal** — a CSS-only circle: oxblood radial gradient + inset
   shadows + dashed inner ring at 6px inset + `rotate(-8deg)`. Holds
   the discount percent (`−10%`) in italic Cormorant. Adjacent to
@@ -557,9 +547,7 @@ and the items grid. Full layout spec in
   Click picks a random available item and prefills the search
   field with its name (`setSearchQuery(random.name)`), repurposing
   the existing filter logic so the picker doesn't need a separate
-  selection store. Existing `<SurpriseMe />` component (which has a
-  fancier spinner-reveal UX) is left in the repo for a future
-  surface.
+  selection store.
 - **Per-location live activity** — re-introduced inside the menu
   wrapper (after Step 8 removed it from the location-page chrome
   to fix a duplicate-ticker-band finding). Pulsing basil pip +
@@ -1025,15 +1013,6 @@ Every business behaviour preserved verbatim
 dev-mode invite-code surfacing, refresh via `identify()` after every
 mutation).
 
-### `LoyaltyCard.tsx` — orphaned
-
-`src/components/loyalty/LoyaltyCard.tsx` is dead code. It used to
-be the rewards-page centrepiece but `LoyaltySection.tsx` (the
-location-page loyalty pitch) explicitly notes it was replaced
-(`// previous version rendered the interactive <LoyaltyCard />`).
-`/rewards` renders an inline `<LoyaltyCardSection />` instead.
-Queued for the Step H orphan-cleanup pass.
-
 ## Order-confirmation components
 
 All V8 as of Step 14 — selector family `.v8-order-*` in
@@ -1178,41 +1157,22 @@ Regulatory disclosure chip row under each menu item card.
 Renders nothing on EU/PL trucks unless the operator opts into kcal
 disclosure (settings.json → `compliance.byLocation[slug].calorieDisclosureRequired`).
 
-## Pre-V8 components retained but unused
+## Pre-V8 orphan cleanup — Step H
 
-The V8 port (Steps 1-10) folded several pre-V8 sub-components into
-inline V8 chrome inside their parent component. The originals stay
-in the repo for any other surface that might want to import them,
-but the V8 storefront no longer renders them. Listed here so a
-future cleanup commit can grep importers and remove the truly dead
-ones with confidence.
+Seven pre-V8 components were folded into inline V8 chrome by Steps
+1-15 and then deleted in Step H once a final grep confirmed no live
+importers. Listed here as a historical record so an archaeology dive
+into the git log knows where the markup went:
 
-- `src/components/landing/CTASection.tsx` — pre-V8 red-gradient
-  "Hungry? Order Now!" closing block. V8 closes with the Soci
-  rail; CTASection is no longer imported by `(public)/page.tsx`.
-- `src/components/location/SpeedGuarantee.tsx` — pre-V8 15-minute
-  guarantee banner. V8 menu chrome inlines `.v8-guarantee` instead.
-- `src/components/location/ComboDealsPreview.tsx` — pre-V8 combo
-  deals preview. V8 menu chrome inlines `.v8-combos` /
-  `.v8-combo-card` instead.
-- `src/components/location/SurpriseMe.tsx` — pre-V8 spinner-reveal
-  surprise picker. V8 menu chrome inlines the `.v8-surprise` pill
-  with a scroll-and-highlight picker instead.
-- `src/components/location/MenuCategoryNav.tsx` — pre-V8 category
-  pill nav. V8 menu chrome inlines `.v8-cat-tabs` instead.
-- `src/components/location/MenuItemImage.tsx` — pre-V8 thumbnail
-  with category-gradient emoji fallback. V8 item card inlines the
-  per-category SVG sketch in `.v8-mi-illus` instead.
-- `src/components/loyalty/LoyaltyCard.tsx` — used to be the rewards-
-  page centrepiece. As of Step 15 `/rewards` renders an inline
-  `<LoyaltyCardSection />` instead; `LoyaltySection.tsx` (the
-  location-page loyalty pitch) also explicitly notes it was
-  replaced. Last documented importer was the old `/rewards` page;
-  unreferenced now.
-
-Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
-before removing — admin-facing surfaces (operator previews) or
-tests might still import them.
+| Deleted file                                          | Replaced by                                         |
+| ----------------------------------------------------- | --------------------------------------------------- |
+| `src/components/landing/CTASection.tsx`               | the V8 Soci rail closes the landing instead         |
+| `src/components/location/SpeedGuarantee.tsx`          | inline `.v8-guarantee` in `MenuSection.tsx`         |
+| `src/components/location/ComboDealsPreview.tsx`       | inline `.v8-combos` / `.v8-combo-card` in `MenuSection.tsx` |
+| `src/components/location/SurpriseMe.tsx`              | inline `.v8-surprise` pill with scroll-and-highlight in `MenuSection.tsx` |
+| `src/components/location/MenuCategoryNav.tsx`         | inline `.v8-cat-tabs` in `MenuSection.tsx`          |
+| `src/components/location/MenuItemImage.tsx`           | inline per-category SVG sketch (`.v8-mi-illus`) in `MenuItem.tsx` |
+| `src/components/loyalty/LoyaltyCard.tsx`              | inline `<LoyaltyCardSection />` in `rewards/page.tsx` |
 
 ### Cart family — all V8
 

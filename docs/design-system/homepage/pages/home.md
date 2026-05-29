@@ -311,19 +311,13 @@ sign-in card lives on `/rewards` instead).
 
 ### No separate closing CTA
 
-The previous storefront shipped a red-gradient `<CTASection />`
-("Hungry? Order Now!" with location buttons) AFTER the loyalty
-panel. V8's homepage closes with the Soci rail instead — by the
-time the visitor reaches it they've seen 6+ order entry points
-(hero ×2, every location card, the bundles "Order now"), and one
-more red CTA reads as 2010s SaaS landing-page padding V8 avoids
-(same rule as the Step 3 chevron-scroll-indicator removal).
-
-`CTASection.tsx` is intentionally left in the repo (not re-imported
-on the homepage) in case a future surface needs the red-gradient
-closing block. Reaching for it on the landing without a re-discussion
-of the V8 direction would re-introduce the trope V8 explicitly
-strips.
+The V8 homepage closes with the Soci rail — by the time the visitor
+reaches it they've seen 6+ order entry points (hero ×2, every
+location card, the bundles "Order now"), and one more red CTA
+reads as the 2010s SaaS landing-page padding V8 avoids (same rule
+as the Step 3 chevron-scroll-indicator removal). The pre-V8
+`<CTASection />` red-gradient block ("Hungry? Order Now!") was
+deleted in Step H.
 
 ## The rules unique to the landing
 
