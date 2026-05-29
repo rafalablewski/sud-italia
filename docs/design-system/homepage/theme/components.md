@@ -1001,7 +1001,9 @@ V8 free-delivery shimmer-sweep-unlock micro-flow.
 Italic Lora "You'll earn N points · N punti" line shown inside the
 paybar foot. Filled ochre star + Cormorant 600 ochre-dark tabular
 count. Server is the source of truth for the actual number; this
-preview uses the bronze multiplier and is intentionally cosmetic.
+preview uses the bronze multiplier (read from the public-settings
+loyalty config so an operator-set earn rate propagates immediately)
+and is intentionally cosmetic.
 
 ### `<CorporateOrderBanner />` — `src/components/cart/CorporateOrderBanner.tsx`
 

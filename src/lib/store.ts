@@ -2975,12 +2975,24 @@ export interface LiveWidget {
   };
 }
 
+export interface LoyaltyTierConfig {
+  /** Customer-facing tier label. Editable so the operator can run an
+   *  Italian voice ("Famiglia Oro") without a deploy. */
+  label: string;
+  /** Points needed to enter the tier (cumulative lifetime). */
+  threshold: number;
+  /** Earn-rate multiplier applied to per-order points. */
+  multiplier: number;
+  /** Bullet list of perks shown on the rewards page tier card. */
+  perks: string[];
+}
+
 export interface LoyaltySettings {
   tiers: {
-    bronze: { threshold: number; multiplier: number; perks: string[] };
-    silver: { threshold: number; multiplier: number; perks: string[] };
-    gold: { threshold: number; multiplier: number; perks: string[] };
-    platinum: { threshold: number; multiplier: number; perks: string[] };
+    bronze: LoyaltyTierConfig;
+    silver: LoyaltyTierConfig;
+    gold: LoyaltyTierConfig;
+    platinum: LoyaltyTierConfig;
   };
   rewards: { id: string; name: string; pointsCost: number; description: string; active: boolean }[];
   referral: { referrerPoints: number; refereeDiscountGrosze: number; active: boolean };
@@ -3009,10 +3021,10 @@ function seedLiveWidgetsFromLegacy(legacy?: Record<string, boolean>): LiveWidget
 
 const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   tiers: {
-    bronze: { threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
-    silver: { threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },
-    gold: { threshold: 1500, multiplier: 2, perks: ["2x points multiplier", "Priority ordering", "Free delivery"] },
-    platinum: { threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
+    bronze: { label: "Bronze", threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
+    silver: { label: "Silver", threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },
+    gold: { label: "Gold", threshold: 1500, multiplier: 2, perks: ["2x points multiplier", "Priority ordering", "Free delivery"] },
+    platinum: { label: "Platinum", threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
   },
   rewards: [
     // Audit §3 — "10 PLN Off" at 100 points (100 zł spend → 10 zł back) was

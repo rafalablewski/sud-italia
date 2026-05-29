@@ -36,6 +36,20 @@ export async function GET(req: NextRequest) {
     /** Server runtime flag so browsers post snapshots even if NEXT_PUBLIC was missing at build time. */
     cartPresenceEnabled: isCartPresenceEnabled(),
     liveWidgets,
+    /** Loyalty programme config — tier ladder + active rewards catalogue.
+     *  Customer surfaces (the /rewards page, cart tier banners, the earn
+     *  preview) read tier thresholds + multipliers + perks from here so
+     *  the operator's edits in /admin/loyalty land immediately, not at
+     *  the next deploy. Only `active: true` rewards are shipped.        */
+    loyalty: {
+      tiers: settings.tiers,
+      rewards: settings.rewards.filter((r) => r.active).map((r) => ({
+        id: r.id,
+        name: r.name,
+        pointsCost: r.pointsCost,
+        description: r.description,
+      })),
+    },
     speedGuarantee: {
       active: settings.speedGuarantee.active,
       maxMinutes: settings.speedGuarantee.maxMinutes,

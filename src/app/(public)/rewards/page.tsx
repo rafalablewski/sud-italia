@@ -1,16 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCustomer } from "@/store/customer";
 import {
-  TIER_CONFIG,
-  TIER_THRESHOLDS,
-  REWARDS,
   LoyaltyTier,
   calculateTier,
   pointsToNextTier,
   getNextTier,
 } from "@/lib/loyalty";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 import {
   ACHIEVEMENTS,
   getActiveChallenges,
@@ -281,13 +279,27 @@ function RewardsDashboard() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "rewards" | "achievements" | "offers">("overview");
+  // Loyalty programme config (tier ladder + active rewards) — admin-edited
+  // in /admin/loyalty, served via /api/settings/public. The dashboard
+  // renders nothing until it arrives so we don't flash bronze defaults.
+  const [loyalty, setLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicSettings().then((s) => {
+      if (!cancelled && s?.loyalty) setLoyalty(s.loyalty);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (!customer) return null;
+  if (!customer || !loyalty) return null;
 
-  const tier = calculateTier(customer.points);
-  const tierConfig = TIER_CONFIG[tier];
+  const tiersCfg = loyalty.tiers;
+  const tier = calculateTier(customer.points, tiersCfg);
+  const tierConfig = tiersCfg[tier];
   const nextTier = getNextTier(tier);
-  const toNext = pointsToNextTier(customer.points, tier);
+  const toNext = pointsToNextTier(customer.points, tier, tiersCfg);
   const challenges = getActiveChallenges();
   const referralCode = generateReferralCode(customer.name);
 
@@ -297,8 +309,8 @@ function RewardsDashboard() {
 
   const tierProgressPct = nextTier
     ? Math.min(
-        ((customer.points - TIER_THRESHOLDS[tier]) /
-          (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) * 100,
+        ((customer.points - tiersCfg[tier].threshold) /
+          (tiersCfg[nextTier].threshold - tiersCfg[tier].threshold)) * 100,
         100,
       )
     : 100;
@@ -395,7 +407,7 @@ function RewardsDashboard() {
             <div className="v8-rewards-tier-progress-row">
               <span>{tierConfig.label}</span>
               <span>
-                <strong>{toNext}</strong> pts to {TIER_CONFIG[nextTier].label}
+                <strong>{toNext}</strong> pts to {tiersCfg[nextTier].label}
               </span>
             </div>
             <div className="v8-rewards-tier-rail">
@@ -521,9 +533,9 @@ function RewardsDashboard() {
           </h2>
           <div className="v8-rewards-roadmap">
             {(["bronze", "silver", "gold", "platinum"] as LoyaltyTier[]).map((t) => {
-              const cfg = TIER_CONFIG[t];
+              const cfg = tiersCfg[t];
               const isActive = t === tier;
-              const isUnlocked = customer.points >= TIER_THRESHOLDS[t];
+              const isUnlocked = customer.points >= tiersCfg[t].threshold;
               const classes = [
                 "v8-rewards-tier-tile",
                 isActive ? "is-active" : "",
@@ -540,7 +552,7 @@ function RewardsDashboard() {
                   </div>
                   <div className="v8-rewards-tier-tile-mult">{cfg.multiplier}× pts</div>
                   <div className="v8-rewards-tier-tile-sub">
-                    <span className="num">{TIER_THRESHOLDS[t]}</span> pts to unlock
+                    <span className="num">{tiersCfg[t].threshold}</span> pts to unlock
                   </div>
                   <div className="v8-rewards-tier-tile-perks">
                     {cfg.perks.map((p, i) => (
@@ -570,7 +582,7 @@ function RewardsDashboard() {
           </div>
 
           <div className="v8-rewards-grid">
-            {REWARDS.map((reward) => {
+            {loyalty.rewards.map((reward) => {
               const canRedeem = customer.spendablePoints >= reward.pointsCost;
               return (
                 <div key={reward.id} className={`v8-rewards-reward${canRedeem ? "" : " is-locked"}`}>
@@ -689,9 +701,9 @@ function RewardsDashboard() {
             {nextTier && (
               <div className="v8-rewards-next-tier">
                 <div className="v8-rewards-next-tier-label">
-                  Reach <strong>{TIER_CONFIG[nextTier].label}</strong> (<span className="num">{toNext}</span> more pts) to unlock:
+                  Reach <strong>{tiersCfg[nextTier].label}</strong> (<span className="num">{toNext}</span> more pts) to unlock:
                 </div>
-                {TIER_CONFIG[nextTier].perks.map((perk, i) => (
+                {tiersCfg[nextTier].perks.map((perk, i) => (
                   <div key={i} className="v8-rewards-perk-line is-locked">
                     <Lock className="h-3 w-3" /> {perk}
                   </div>

@@ -10,7 +10,35 @@ import type { Locale } from "./i18n";
 
 type Zone = "EU" | "NYC" | "SG";
 
+export interface PublicLoyaltyTier {
+  label: string;
+  threshold: number;
+  multiplier: number;
+  perks: string[];
+}
+
+export interface PublicLoyaltyReward {
+  id: string;
+  name: string;
+  pointsCost: number;
+  description: string;
+}
+
+export interface PublicLoyaltySettings {
+  tiers: {
+    bronze: PublicLoyaltyTier;
+    silver: PublicLoyaltyTier;
+    gold: PublicLoyaltyTier;
+    platinum: PublicLoyaltyTier;
+  };
+  rewards: PublicLoyaltyReward[];
+}
+
 export interface PublicSettings {
+  /** Loyalty programme config — tier ladder + active rewards. Sourced
+   *  from `getLoyaltySettings()` on the server so admin edits land
+   *  immediately on customer surfaces. */
+  loyalty?: PublicLoyaltySettings;
   currency?: {
     defaultCurrency: Currency;
     enabledCurrencies: Currency[];

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCartStore } from "@/store/cart";
 import { useCustomer } from "@/store/customer";
 import { calculateTier } from "@/lib/loyalty";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 import type { MenuItem } from "@/data/types";
 
 interface TierPerkBannerProps {
@@ -38,10 +39,21 @@ export function TierPerkBanner({ allMenuItems }: TierPerkBannerProps) {
   const removeItem = useCartStore((s) => s.removeItem);
   const locationSlug = useCartStore((s) => s.locationSlug);
 
+  const [loyalty, setLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicSettings().then((s) => {
+      if (!cancelled && s?.loyalty) setLoyalty(s.loyalty);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const tier = useMemo(() => {
-    if (!customer) return null;
-    return calculateTier(customer.points);
-  }, [customer]);
+    if (!customer || !loyalty) return null;
+    return calculateTier(customer.points, loyalty.tiers);
+  }, [customer, loyalty]);
 
   const compCandidate = useMemo(() => {
     const bruschetta = allMenuItems.find(

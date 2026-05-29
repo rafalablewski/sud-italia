@@ -33,7 +33,7 @@ import { warszawaMenu } from "@/data/menus/warszawa";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
-import { fetchPublicSettings } from "@/lib/public-settings";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
@@ -232,10 +232,15 @@ export function CartDrawer() {
   // segmented threshold to DeliveryProgress so the bar shows the right
   // target. The same threshold is passed to computeDeliveryFee in
   // /api/checkout so the receipt matches what the bar promised.
-  const deliverySegment = loyaltyCustomer
+  // Loyalty programme config (tier ladder) — populated from the same
+  // fetchPublicSettings call as deliveryThresholds + compliance below.
+  // Until it lands, the delivery segment falls back to null so the bar
+  // uses the default threshold instead of guessing a tier.
+  const [publicLoyalty, setPublicLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
-        tier: calculateTier(loyaltyCustomer.points),
+        tier: calculateTier(loyaltyCustomer.points, publicLoyalty.tiers),
       }
     : null;
   // Admin-tunable per-segment thresholds (audit §3) — fetched from the
@@ -269,6 +274,7 @@ export function CartDrawer() {
       if (data.compliance && typeof data.compliance === "object") {
         setCompliance(data.compliance);
       }
+      if (data.loyalty) setPublicLoyalty(data.loyalty);
     });
     return () => {
       cancelled = true;

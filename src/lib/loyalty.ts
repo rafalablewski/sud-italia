@@ -1,5 +1,13 @@
-// Loyalty program engine
-// 1 PLN spent = 1 point, 100 points = 10 PLN voucher
+// Loyalty program engine.
+//
+// All programme config (tier thresholds, multipliers, perks, labels,
+// rewards catalogue) lives in `LoyaltySettings` (see store.ts) and is
+// served to the customer site via /api/settings/public so admin edits
+// in /admin/loyalty land immediately. This module is the pure-compute
+// layer — every helper takes the tier ladder as a parameter so it's
+// trivially unit-testable + has no I/O.
+
+import type { LoyaltySettings } from "@/lib/store";
 
 export interface LoyaltyAccount {
   phone: string;
@@ -12,72 +20,50 @@ export interface LoyaltyAccount {
 
 export type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
-export const TIER_THRESHOLDS: Record<LoyaltyTier, number> = {
-  bronze: 0,
-  silver: 500,
-  gold: 1500,
-  platinum: 5000,
+/** Bronze → Silver → Gold → Platinum. Order matters for getNextTier
+ *  and for any reduce over the ladder. */
+export const TIER_ORDER: LoyaltyTier[] = ["bronze", "silver", "gold", "platinum"];
+
+/** Tier chrome — Tailwind utility tuples, theme-code per design-system
+ *  decision (operators don't reskin the loyalty ladder). The label,
+ *  thresholds, multiplier + perks ARE admin-editable; this is just
+ *  the colour. */
+export const TIER_COLORS: Record<LoyaltyTier, string> = {
+  bronze: "bg-amber-700/10 text-amber-700",
+  silver: "bg-gray-400/15 text-gray-600",
+  gold: "bg-italia-gold/15 text-italia-gold-dark",
+  platinum: "bg-purple-500/10 text-purple-600",
 };
 
-export const TIER_CONFIG: Record<
-  LoyaltyTier,
-  { label: string; color: string; multiplier: number; perks: string[] }
-> = {
-  bronze: {
-    label: "Bronze",
-    color: "bg-amber-700/10 text-amber-700",
-    multiplier: 1,
-    perks: ["1 point per 1 PLN spent"],
-  },
-  silver: {
-    label: "Silver",
-    color: "bg-gray-400/15 text-gray-600",
-    multiplier: 1.5,
-    perks: ["1.5x points multiplier", "Free birthday dessert"],
-  },
-  gold: {
-    label: "Gold",
-    color: "bg-italia-gold/15 text-italia-gold-dark",
-    multiplier: 2,
-    perks: ["2x points multiplier", "Priority ordering", "Free delivery"],
-  },
-  platinum: {
-    label: "Platinum",
-    color: "bg-purple-500/10 text-purple-600",
-    multiplier: 3,
-    perks: ["3x points multiplier", "Exclusive menu items", "VIP events"],
-  },
-};
+type Tiers = LoyaltySettings["tiers"];
 
-export const REWARDS = [
-  { id: "free-drink", name: "Free Drink", pointsCost: 50, description: "Any drink from the menu" },
-  { id: "10-off", name: "10 PLN Off", pointsCost: 100, description: "Discount on your next order" },
-  { id: "free-dessert", name: "Free Dessert", pointsCost: 120, description: "Any dessert from the menu" },
-  { id: "free-pizza", name: "Free Pizza", pointsCost: 250, description: "Any pizza from the menu" },
-  { id: "25-off", name: "25 PLN Off", pointsCost: 250, description: "Big discount on your next order" },
-];
-
-export function calculateTier(totalPoints: number): LoyaltyTier {
-  if (totalPoints >= TIER_THRESHOLDS.platinum) return "platinum";
-  if (totalPoints >= TIER_THRESHOLDS.gold) return "gold";
-  if (totalPoints >= TIER_THRESHOLDS.silver) return "silver";
+export function calculateTier(totalPoints: number, tiers: Tiers): LoyaltyTier {
+  if (totalPoints >= tiers.platinum.threshold) return "platinum";
+  if (totalPoints >= tiers.gold.threshold) return "gold";
+  if (totalPoints >= tiers.silver.threshold) return "silver";
   return "bronze";
 }
 
-export function calculatePointsForOrder(amountInGrosze: number, tier: LoyaltyTier): number {
+export function calculatePointsForOrder(
+  amountInGrosze: number,
+  tier: LoyaltyTier,
+  tiers: Tiers,
+): number {
   const basePoints = Math.floor(amountInGrosze / 100); // 1 point per 1 PLN
-  const multiplier = TIER_CONFIG[tier].multiplier;
-  return Math.floor(basePoints * multiplier);
+  return Math.floor(basePoints * tiers[tier].multiplier);
 }
 
 export function getNextTier(current: LoyaltyTier): LoyaltyTier | null {
-  const tiers: LoyaltyTier[] = ["bronze", "silver", "gold", "platinum"];
-  const idx = tiers.indexOf(current);
-  return idx < tiers.length - 1 ? tiers[idx + 1] : null;
+  const idx = TIER_ORDER.indexOf(current);
+  return idx < TIER_ORDER.length - 1 ? TIER_ORDER[idx + 1] : null;
 }
 
-export function pointsToNextTier(totalPoints: number, current: LoyaltyTier): number {
+export function pointsToNextTier(
+  totalPoints: number,
+  current: LoyaltyTier,
+  tiers: Tiers,
+): number {
   const next = getNextTier(current);
   if (!next) return 0;
-  return Math.max(0, TIER_THRESHOLDS[next] - totalPoints);
+  return Math.max(0, tiers[next].threshold - totalPoints);
 }

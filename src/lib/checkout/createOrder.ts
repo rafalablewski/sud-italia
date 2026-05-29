@@ -5,6 +5,7 @@ import {
   appendBundleEvent,
   createOrder,
   getCustomer,
+  getLoyaltySettings,
   getSettings,
   getSlotById,
   getUpsellSettings,
@@ -252,11 +253,12 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
 
   const segmentCustomer = await getCustomer(phoneE164);
   const appSettings = await getSettings();
+  const loyalty = await getLoyaltySettings();
   const segmentThreshold = getDeliveryThresholdForCustomer(
     segmentCustomer
       ? {
           ordersCount: segmentCustomer.orderCount,
-          tier: calculateTier(segmentCustomer.loyaltyPointsBalance),
+          tier: calculateTier(segmentCustomer.loyaltyPointsBalance, loyalty.tiers),
         }
       : null,
     appSettings.deliveryThresholds ?? null,
