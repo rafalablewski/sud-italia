@@ -2,10 +2,11 @@
 ## Brutal Institutional Diligence on Brand, Product, Ops, and Tech
 
 **Date:** 14 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Senior hospitality-tech consultant + restaurant operations expert + Series-A diligence partner + elite product teardown
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres / Upstash Redis
-**Scope:** All 353 `.ts/.tsx` files under `src/`, including 29 admin pages, ~80 admin API routes, customer public surface (Hero → Menu → Cart → Checkout → Confirmation → Rewards), KDS, food-truck ops, growth/loyalty engines, aggregator scaffolding, store + lock primitives.
+**Scope:** All 603 `.ts/.tsx` files under `src/`, including 42 admin pages, ~134 admin API routes, customer public surface (Hero → Menu → Cart → Checkout → Confirmation → Rewards), KDS, food-truck ops, growth/loyalty engines, aggregator scaffolding, store + lock primitives.
 **Benchmarks:** Toast POS, Square for Restaurants, Uber Eats Merchant, DoorDash Drive, GrabFood, Sweetgreen, Shake Shack, McDonald's NPP/SOS-100/ROAR, Domino's DOM Pizza Checker, Apple/Linear-grade UX.
 **Posture:** Assume this business will fail unless proven otherwise. No politeness. No protection of feelings.
 
@@ -27,16 +28,18 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 
 ### 1.1 Scorecard
 
-| Dimension | Score | Justification (one line) |
-|---|---:|---|
-| **Overall** | **42 / 100** | A competent Polish small-chain admin tool with a likeable customer skin, dressed up as something bigger. |
-| **NYC viability** | **22 / 100** | No Uber/DoorDash integration, no USD, no Spanish, no allergen-at-checkout, no order ETA pre-payment, no real-time POS terminal, single lock that breaks at 200 orders/hr. |
-| **Singapore viability** | **27 / 100** | No SGD, no Chinese/Malay/Tamil, no GrabFood/foodpanda integration, no PayNow/PayLah!, no GST-compliant invoicing, no NEA-compliant calorie labelling. |
-| **Operational maturity** | **35 / 100** | KDS exists and is pretty. Shift handover, refunds with reason codes, modifiers, item-86 propagation, inventory depletion, manager override, cash reconciliation — all absent or stubbed. |
-| **UX maturity** | **48 / 100** | Polished glassmorphism + sensible mobile-first patterns, undermined by zero food photography, no guest checkout, opaque ETAs, allergen data orphaned in `kodawari.ts`. |
-| **Scalability** | **30 / 100** | Single global `lock:slots.json` and `lock:orders.json` Redis keys, `withLock` falls back to in-process Promise chain across multi-region serverless, zero test coverage, no DB partitioning. |
-| **Franchise readiness** | **25 / 100** | `/franchisee` portal exists but has no territory exclusivity, no brand-price ceiling enforcement, no SLA dashboard, no royalty dispute flow, no MSA/FDD scaffolding. |
-| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | ~~Heuristic "AI" with `Math.random()`~~ ✅ deleted (real forecast at `src/lib/ai/forecast.ts`), ~~fake aggregator mocks~~ ✅ deleted, ~~fake review data~~ ✅ deleted. Still: zero automated tests, single shared `ADMIN_PASSWORD`, no SOC 2, no LTV/CAC, no cohort retention, hand-coded menus. Sequoia still walks — the deletions removed reputational foot-guns, not the structural gaps. |
+Scores below are the original 14 May figures; the **As of 2026-05-29** column carries the current value after the V8 storefront launch, the LLM layer, the relational migration, and the KDS/POS rewrite (full reasoning in the dated 2026-05-29 Update further down).
+
+| Dimension | Score (14 May) | **As of 2026-05-29** | Justification (one line) |
+|---|---:|---:|---|
+| **Overall** | **42 / 100** | **55 / 100** | Mid-May tool with a likeable skin → UX + ops materially up; NYC/SG viability still gated by the seven structural blockers. |
+| **NYC viability** | **22 / 100** | **27 / 100** | Premium frame shipped, compliance surfaces wired; still no Uber/DoorDash, no USD settlement, no Spanish, no food photography. |
+| **Singapore viability** | **27 / 100** | **31 / 100** | V8 + compliance help the feel; no GrabFood/foodpanda, no SGD, no PayNow/PayLah!, NEA A–D auto-grade still blocked. |
+| **Operational maturity** | **35 / 100** | **70 / 100** | KDS rewrite (role lenses, prediction, SLA, hotkeys), real POS Tabs terminal, floor/reservations, refund reason codes, recipe-driven stock, real LLM ops agent. No coursing, no offline POS. |
+| **UX maturity** | **48 / 100** | **64 / 100** | V8 Tuscany storefront in production (half the §2.4 burn-down list closed). Capped by missing food photography + two non-V8 legacy surfaces + fake rewards values. |
+| **Scalability** | **30 / 100** | **70 / 100** | Per-location lock keys + relational migration on hot paths; still no real test suite, KDS client lacks virtualization, single-region DB. |
+| **Franchise readiness** | **25 / 100** | **35 / 100** | DB-backed locations + cohort/segments + fleet model + chain-wide recipes; royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
+| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | **48 / 100** | Real audited LLM agent + relational data layer + real-order-backed simulation strengthen the story. Zero real test coverage, plaintext password, no MFA, no SOC 2, no aggregators, no food photography remain the floor. |
 
 ### 1.2 The Five Hard Truths
 
@@ -315,7 +318,7 @@ Yes, in three distinct ways:
 
 ### 6.3 Permissions
 
-Five-tier role hierarchy in `src/lib/admin-roles.ts`: owner (100) > franchisee (70) > manager (50) > staff (20) > kitchen (10). The nav config gates *display*. Enforcement on API routes is via opt-in `withAdmin()` wrapper (`src/lib/api-middleware.ts`). **Coverage is not 100% across the ~80 admin routes.** Any route that forgets the wrapper is a privilege escalation.
+Five-tier role hierarchy in `src/lib/admin-roles.ts`: owner (100) > franchisee (70) > manager (50) > staff (20) > kitchen (10). The nav config gates *display*. Enforcement on API routes is via opt-in `withAdmin()` wrapper (`src/lib/api-middleware.ts`). **Coverage is not 100% across the ~134 admin routes.** Any route that forgets the wrapper is a privilege escalation.
 
 Single `ADMIN_PASSWORD` shared across owners and legacy users is a fundamental control gap. There is no per-human credential, no MFA, no SSO, no SCIM. A staff member who learns the password becomes effectively the owner.
 
@@ -411,14 +414,14 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 ### 9.1 Architecture Quality
 
 **Strengths**
-- Single source of truth in `src/lib/store.ts` (~6,176 lines) with a `readJSON`/`writeJSON` abstraction over Neon Postgres + filesystem fallback.
+- Single source of truth in `src/lib/store.ts` (~11,105 lines) with a `readJSON`/`writeJSON` abstraction over Neon Postgres + filesystem fallback.
 - Phase-1 normalisation in progress — slot, order, recipe, etc. tables are dual-written.
 - `withLock` primitive (`src/lib/locks.ts`) is genuinely well-designed for single-region: SET NX PX, exponential backoff with jitter, metrics logging, in-process fallback.
 - Type safety end-to-end; `zod` schemas at API boundaries (`src/lib/api-schemas.ts`).
 - Sentry wired.
 
 **Weaknesses**
-- 6,176 lines in a single store file. Will be unmanageable at 20 locations.
+- 11,105 lines in a single store file. Will be unmanageable at 20 locations.
 - Lock keys are global (`slots.json`, `orders.json`) — must be scoped (`slots:${location}:${date}`).
 - In-process fallback when Upstash is down silently breaks mutual exclusion across lambdas.
 - Lock TTL of 10 s is too long to be safe (auto-release races) and too short to be sufficient under load (mid-section expiry).
@@ -457,7 +460,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 9.5 Obvious Technical Debt
 
-- ❌ The 6 K-line `store.ts`.
+- ❌ The 11 K-line `store.ts`.
 - ❌ Dual-write fallback chains that are not crash-consistent.
 - ❌ Lazy backfill that diverges from kv_store under load.
 - ✅ ~~The `ai-engine.ts` heuristic mascot.~~ Deleted 2026-05-21.
@@ -839,7 +842,7 @@ The KDS this audit inventoried (`AdminKDS.tsx`, ~410 lines, 3 kanban columns) wa
 
 ### §9 Tech — the architecture this audit critiqued has shifted under it
 
-- **Persistence is mid-migration to normalized Drizzle relational tables** (orders/recipes/ingredients/ingredientProducts/customers/loyalty/KDS) with dual-write + lazy backfill; hot paths read relational-first (`store.ts`, now 11,105 lines). The §9.1 "6 K-line `store.ts`, everything is a JSON blob under a global lock" critique is now **half-true** — high-volume tables moved to indexed relational writes with no application lock on the DB-first path; the JSON-blob-under-`withLock` pattern survives only on the un-migrated long tail (slots fallback, mirrors).
+- **Persistence is mid-migration to normalized Drizzle relational tables** (orders/recipes/ingredients/ingredientProducts/customers/loyalty/KDS) with dual-write + lazy backfill; hot paths read relational-first (`store.ts`, now 11,105 lines). The §9.1 "single oversized `store.ts`, everything is a JSON blob under a global lock" critique is now **half-true** — high-volume tables moved to indexed relational writes with no application lock on the DB-first path; the JSON-blob-under-`withLock` pattern survives only on the un-migrated long tail (slots fallback, mirrors).
 - **A genuine Anthropic-LLM layer now exists** (`src/lib/ai/` gateway with prompt caching + `forecast.ts` + an `agent.ts` tool-use loop with operator-approval gates + a role-gated, audit-logged tool registry; plus the WhatsApp LLM ordering bot with real Stripe pay-in-chat, and a concierge/MCP capability layer). Any "no real ML/LLM in the loop" line in this audit (§1.1 investor row, §11.3) is now **outdated** — there is a real, audited, budget-gated LLM agent in the admin.
 - **Tests: "zero" is now narrowly false.** Two real `node:test` files exist (`floor.test.ts`, `pace-steering.test.ts`, 11 assertions, passing). But there is **no vitest/jest, no test script in `package.json`, no config**, and **zero coverage of the payment/refund/RBAC/slot paths** this audit (§1.2 hard-truth #5, §13 Phase 1) called malpractice to leave untested. Status: 2 pure-function files, not a suite.
 

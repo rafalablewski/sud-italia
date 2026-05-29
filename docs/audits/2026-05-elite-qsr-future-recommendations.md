@@ -1,12 +1,15 @@
 # Elite QSR — what Sud Italia would still do differently
 
 **Date:** 2026-05  
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)  
 **Source:** §10 of `2026-05-revenue-growth-psychology-redesign.md` v3 (post-Sprint-9).  
 **Audience:** product + engineering planning the next 1–2 quarters of monetization work.
 
 The post-Sprint-9 monetization stack is at A-overall — single-codebase QSR pricing, full A/B harness, end-to-end telemetry, repeat-customer one-tap, operator margin alerts, scheduled-bundle Phase 1. What follows are the items that would push every section to A+, ranked by impact-per-week-of-engineering.
 
 The grading carries forward the v3 audit's standard: **A+** = an elite operator (McDonald's, Domino's, Chipotle, Starbucks, Pret) would be hard-pressed to point at a gap. The items below are the gaps they would point at.
+
+> **Status as of 2026-05-29.** Grade holds at **A-overall, not yet A+**. Item 13 (V8 brand direction) shipped to production and a real audited LLM agent layer now underpins item 1, but the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps, now on a premium surface, plus a new precondition: wire the V8 `/rewards` streak/challenge/referral surfaces to real data before instrumenting them. Per-item status re-verified in the dated 2026-05-29 Update below.
 
 ---
 

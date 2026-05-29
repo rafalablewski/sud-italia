@@ -1,6 +1,7 @@
 # Sud Italia — Institutional-Grade Audit
 
 **Date:** 2026-05-16
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Auditor lens:** McKinsey operational due diligence + PE operational advisor + Toast/Square systems architect + consumer-psychology operator
 **Scope:** Full repository (`/home/user/sud-italia`), business model, ops architecture, UX, monetization, scale readiness
 **Mode:** Brutally honest. No flattery. Specific citations.
@@ -139,7 +140,7 @@ The simulation also carries:
 
 **One-line verdict:** A genuinely impressive single-operator codebase wearing the costume of a multi-location chain — about 12 months of solo-builder over-engineering disguising a business that has not yet proven it can fill the trucks it already owns.
 
-The product side is sophisticated for a 2-truck Polish pizza concept: 27 admin pages, segmented delivery thresholds, customer-attach-history-weighted upsell scoring, hour-of-day bundle ladders, Stripe + idempotency + webhook dedup, a phone-first loyalty wallet with group pooling, JPK_V7M Polish tax export, dual-write database migration, distributed locking via Upstash, Sentry, structured logging, RBAC with HMAC-signed location-scoped sessions. This is **Toast-tier surface coverage built by what looks like one or two people**.
+The product side is sophisticated for a 2-truck Polish pizza concept: 42 admin pages, segmented delivery thresholds, customer-attach-history-weighted upsell scoring, hour-of-day bundle ladders, Stripe + idempotency + webhook dedup, a phone-first loyalty wallet with group pooling, JPK_V7M Polish tax export, dual-write database migration, distributed locking via Upstash, Sentry, structured logging, RBAC with HMAC-signed location-scoped sessions. This is **Toast-tier surface coverage built by what looks like one or two people**.
 
 But:
 
@@ -156,20 +157,20 @@ The honest framing: this is a **product engineering exercise** with a real resta
 
 ## 2. Business Quality Scorecard
 
-| Dimension | Score /10 | Revised /10 (post 2026-05-16) | One-line justification |
-|---|---|---|---|
-| Overall business quality | **5.5** | **6.5** | Brand + product strong; demand and unit economics unproven at two trucks. Codebase moved meaningfully closer to chain-ready. |
-| Scalability (ops) | **3** | **8** | ~~Hardcoded locations, no auto-stock, no supplier automation, no labor-to-revenue math.~~ DB-backed locations CRUD, recipe-driven stock, PAR-driven draft POs, SPLH + schedule-vs-forecast all wired (§0.1). |
-| Scalability (tech) | **5** | **8** | ~~Architecture passes 1–2 locations; breaks around 300 orders/hour on Upstash lock contention.~~ Per-location lock keys + DB-first order writes lift the ceiling to N × per-location concurrency; retention-trim cron prevents long-horizon table bloat. Zero tests + plaintext password keep this off 10. |
-| Defensibility | **3** | **7** | ~~No physical, brand, data, or network moat.~~ Real data moat now exists (cohort retention, CLTV by cohort, weekly RFM segmentation) and a network moat is wired (referral give-get loop, backend + dispatcher complete). Physical and brand moats still aren't a codebase problem. |
-| Operational sophistication | **4** | **8** | ~~Pretty admin; weak underlying ops (manual stock, no PAR-driven POs, no schedule-to-sales).~~ Auto stock + PAR POs from the first pass; SPLH per location + schedule-vs-forecast gap callout from this pass. Demand-forecast-to-prep-list still needs an operator hand-off. |
-| Product quality (food) | **Unknown / assumed 7** | **Unknown / assumed 7** | Code reflects a serious pizzaiolo (Tipo 00, San Marzano, 48h dough). Not auditable from repo. |
-| Systems maturity | **4** | **5** | Solid scaffolding; zero tests, plaintext auth, polling-as-realtime on legacy board remain. One tsx smoke test added; not real coverage. |
-| UX / UI sophistication | **7.5** | **7.5** | Genuinely premium for the category. Segment-aware delivery thresholds and combo banners are real differentiators. |
-| Profitability potential | **5** | **5.5** | Pizza margins are great. Referral loop adds an acquisition lever; the rest still bounded by EU labour costs + Polish AOV ceiling. |
-| Strategic positioning | **5** | **5** | "Naples in Poland" works; not enough scarcity, ritual, or community to defend price. |
+| Dimension | Score /10 | Post 2026-05-16 | **As of 2026-05-29** | One-line justification |
+|---|---|---|---|---|
+| Overall business quality | **5.5** | **6.5** | **6.7** | Brand + product strong; demand and unit economics unproven at two trucks. V8 storefront + real LLM layer + relational migration moved the codebase further past chain-ready. |
+| Scalability (ops) | **3** | **8** | **8** | ~~Hardcoded locations, no auto-stock, no supplier automation, no labor-to-revenue math.~~ DB-backed locations CRUD, recipe-driven stock, PAR-driven draft POs, SPLH + schedule-vs-forecast all wired (§0.1). |
+| Scalability (tech) | **5** | **8** | **8** | ~~Architecture passes 1–2 locations; breaks around 300 orders/hour on Upstash lock contention.~~ Per-location lock keys + DB-first order writes lift the ceiling to N × per-location concurrency; relational migration on hot paths reinforces it. Zero real test coverage + plaintext password keep this off 10. |
+| Defensibility | **3** | **7** | **7** | ~~No physical, brand, data, or network moat.~~ Real data moat now exists (cohort retention, CLTV by cohort, weekly RFM segmentation) and a network moat is wired (referral give-get loop, backend + dispatcher complete). Physical and brand moats still aren't a codebase problem. |
+| Operational sophistication | **4** | **8** | **8.8** | Auto stock + PAR POs + SPLH + schedule gap, plus (2026-05-29) the KDS/POS rewrite (role lenses, prediction, real POS Tabs terminal), floor/reservations, and a real audited LLM ops agent. No coursing, no offline POS. |
+| Product quality (food) | **Unknown / assumed 7** | **Unknown / assumed 7** | **Unknown / assumed 7** | Code reflects a serious pizzaiolo (Tipo 00, San Marzano, 48h dough). Not auditable from repo. |
+| Systems maturity | **4** | **5** | **5.5** | Relational migration on hot paths + a three-theme design system + 2 real (tiny) test files; zero coverage on payment/refund/RBAC + plaintext auth + legacy-board polling hold it down. |
+| UX / UI sophistication | **7.5** | **7.5** | **8** | V8 Tuscany storefront shipped to production — a coherent premium surface, not a mockup. Capped by missing food photography + two non-V8 legacy surfaces + the fake rewards streak/challenge values. |
+| Profitability potential | **5** | **5.5** | **5.5** | Pizza margins are great. Referral loop adds an acquisition lever; the rest still bounded by EU labour costs + Polish AOV ceiling. |
+| Strategic positioning | **5** | **5** | **5** | "Naples in Poland" works; not enough scarcity, ritual, or community to defend price. |
 
-Average around ~~**4.8/10**~~ → **6.4/10**. The codebase is no longer the bottleneck; demand generation and brand/founder execution are.
+Average around ~~**4.8/10**~~ → **6.4/10** (post 2026-05-16) → **~6.6/10 as of 2026-05-29**. The codebase is no longer the bottleneck; demand generation and brand/founder execution are.
 
 ---
 
@@ -577,7 +578,7 @@ But:
 
 **If you change one thing this year:** decide whether you are a restaurateur or a software-CEO and staff the other role from outside immediately. The current trajectory has you doing both badly; either done well is a real business.
 
-The codebase is a ~~7.5/10~~ **8.5/10** post PR #38. The business model is a 5/10. The operator is, on this evidence, an 8/10. Put a 5/10 operations partner alongside them and this is a 7/10 business. Don't, and it's a beautiful Github repo and an empty truck on a slow Tuesday.
+The codebase is a ~~7.5/10~~ **8.5/10** post PR #38, and **~8.7/10 as of 2026-05-29** (V8 storefront in production, a real audited LLM ops agent, relational data migration on the hot paths). The business model is a 5/10. The operator is, on this evidence, an 8/10. Put a 5/10 operations partner alongside them and this is a 7/10 business. Don't, and it's a beautiful Github repo and an empty truck on a slow Tuesday.
 
 **Post-2026-05-16 addendum.** The codebase is no longer the binding constraint on the next three trucks. Adding Wrocław is a 30-second admin form; ops can be run from the dashboard's SPLH tile + cohort report + PAR queue + variance report without any of the underlying spreadsheets that used to be required. The remaining bottlenecks are now (a) demand generation, (b) operator capacity to act on the new dashboards, and (c) the unfinished security + tests hygiene from §11. **The conversation in a diligence room would now be about marketing and unit economics, not theatre.** That's a different — and more solvable — problem than the one this audit opened on.
 

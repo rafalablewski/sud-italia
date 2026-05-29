@@ -2,6 +2,7 @@
 ## How To Squeeze 30–60% More Revenue Out Of The Same Trucks
 
 **Date:** 14 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Restaurant growth strategist + behavioural-psychology consultant + menu-engineering operator + restaurant-tech product architect + private-equity operating partner
 **Posture:** Elite PE operational audit × casino psychology consulting × FAANG conversion optimisation. Tactical, system-thinking, profit-per-minute mindset.
@@ -12,6 +13,8 @@
 ---
 
 ## Implementation status
+
+> **Status as of 2026-05-29.** Plays 1–3 unchanged in shipped status; the §1.5 "emoji-on-gradient" conversion killer is closed at the brand-frame level (V8 Tuscany storefront in production) but **real food photography is still missing**, and the three single-day revenue items (food photography, address autocomplete, post-order single-tap espresso upsell) remain un-shipped. Tip default still None. New regression: the V8 `/rewards` streak/challenge/referral surfaces ship with hardcoded/`Math.random()` values (Rule #1). Full re-verification in the dated 2026-05-29 Update below.
 
 Sections 2 and 3 are fully in production. Section 4 is mostly in
 production (charm pricing, hero/profit-driver/anchor cards, the LTO
