@@ -362,9 +362,11 @@ and an italic Italian translation (`asporto`, `consegna`,
 The terracotta pill grid from the mockup (`.v8-cart-tips` 4-up:
 `0% · no thanks`, `10% · kind`, `15% · generous`, `20% · family`).
 Active state darkens the terracotta + adds an ochre inset stroke +
-lifts the `box-shadow`. The custom-zł input lives in
+lifts the `box-shadow`. The custom-amount input lives in
 `.v8-cart-tip-custom` underneath; typing in it flips the picker into
-custom mode (clears the preset highlight). Tip values are still
+custom mode (clears the preset highlight). The placeholder formats
+zero through `formatPrice()` so the symbol tracks the customer's
+selected display currency (zł / € / $ / S$). Tip values are still
 stored in grosze on the Zustand cart, survive page refresh, and
 clear on checkout — unchanged from the pre-V8 version.
 

@@ -28,7 +28,7 @@
 | 12 | Cart copy | static button strings ("Add to cart", "Pay", "Delivery", "Order now") | `CartDrawer.tsx:683/1025`, `ItemDetailDrawer.tsx:253`, `BundlesShowcase.tsx:195`, `AdminSlots.tsx:597/730` | hardcoded JSX text | i18n via `src/lib/i18n.ts` (needs Q3 answer) | P1 | Blocks localization. Defer to Phase 6 — depends on i18n adoption status. |
 | 13 | Layout | `NAV_LINKS` | `src/components/layout/Header.tsx:22` | hardcoded nav config | OK as code (structural, not data) | P2 | No fix — flag only if a CMS-driven menu is planned. |
 | 14 | Order UI | `STATUS_STEPS` (order tracker labels) | `src/components/order/OrderTracker.tsx:23` | hardcoded status labels | i18n strings | P2 | Defer to Phase 6 (i18n). |
-| 15 | Cart placeholder | `placeholder="0.00 zł"` | `src/components/cart/CartDrawer.tsx:1165` | hardcoded currency symbol in placeholder | `formatPriceInCurrency(0, settings.currency)` | P2 | Cosmetic; breaks if non-PLN currency is enabled (admin currency UI already supports USD/EUR/SGD). |
+| 15 | ~~Cart placeholder~~ | ~~`placeholder="0.00 zł"`~~ | ~~`src/components/cart/CartDrawer.tsx:1165`~~ | `formatPrice(0)` (resolves to the customer's display currency) | — | ~~P2~~ | **DONE (Phase 1, Step 1.2).** Placeholder + aria-label now currency-agnostic. Tip values still grosze on the cart store; this is display-only. |
 | 16 | Branding | hex colors in inline SVG illustrations | `CartUpsell.tsx`, `CartItem.tsx`, `FloatingCartButton.tsx`, `DeliveryProgress.tsx` | hex literals in `<path fill>` / `<circle fill>` | OK — illustrations are code-managed per Q4 | — | No fix. Documented in design-system doc as illustration tokens if not already. |
 | 17 | Currency | inline `"PLN"` in non-store consumers | `src/app/(public)/locations/[slug]/page.tsx:104` (JSON-LD `priceCurrency`) | hardcoded `"PLN"` in schema.org markup | `getSettings().currency.defaultCurrency` | P2 | Cosmetic until multi-currency SEO matters. |
 
@@ -66,7 +66,7 @@
 | phase | PR | status |
 |-------|----|--------|
 | 0 | tracker landed | done |
-| 1 | money flow | step 1.1 (VAT) done — 1.2 (cart placeholder) + 1.3 (JSON-LD currency) pending |
+| 1 | money flow | steps 1.1 (VAT) + 1.2 (cart placeholder) done — 1.3 (JSON-LD currency) pending |
 | 2 | menu | not started |
 | 3 | locations | not started |
 | 4 | loyalty | not started |

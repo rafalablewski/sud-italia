@@ -1162,8 +1162,8 @@ function TipPicker({
             onChange(Math.round(parseFloat(v || "0") * 100));
           }}
           onFocus={() => setCustomMode(true)}
-          placeholder="0.00 zł"
-          aria-label="Custom tip amount in złoty"
+          placeholder={formatPrice(0)}
+          aria-label="Custom tip amount"
           className="v8-cart-input"
           style={{ flex: 1, padding: "10px 14px" }}
         />
