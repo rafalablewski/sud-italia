@@ -806,3 +806,71 @@ The §1 verdict that "Sud Italia would not survive NYC or SG as-is" is unchanged
 3. **The `/admin/capabilities` entry on regulatory disclosures** references `kcal × quantity × wasteFactor / yieldPortions` for the kcal formula; the actual code drops `wasteFactor` from the nutrition path. Documentation drift — should be tightened to `kcalPerUnit × quantity / yieldPortions`.
 
 — *Diligence delta lens: same five auditors, six days later — 21 May 2026*
+
+---
+
+## 2026-05-29 Update — the storefront was rebuilt; the seven NYC/SG blockers are unmoved
+
+Fifteen days from the original audit. The customer surface this teardown was hardest on (§2 UX, §2.4 "burn down and rebuild") was **fully rebuilt to production as the V8 Tuscany trattoria** — the proposal earlier updates filed under "mockup, no adoption decision." Two of the §2.4 "burn down" items are genuinely closed; the rest of the §0 verdict stands intact, because every one of the seven structural NYC/SG blockers is unaddressed.
+
+### §2 UX — the rebuild closed two of the §2.4 burn-down items, left the rest
+
+| §2.4 item | 2026-05-14 | 2026-05-29 |
+|---|---|---|
+| `HeroSection` dark gradient | "replace with a Neapolitan oven photograph" | ✅ **Rebuilt.** `LocationHero` (`src/components/location/LocationHero.tsx`) is a V8 parchment/serif hero. Still no oven *photograph* — the gradient is gone, the photo never arrived. |
+| `MenuItemCard` emoji-on-gradient | "fatal in market" | ✅ **Reframed, ❌ not solved.** `MenuItem` (`src/components/location/MenuItem.tsx`) is a V8 editorial card with diet/proofing chips + kcal meta. The emoji-on-gradient is gone; **real food photography is still absent** (`MenuItem.image` unpopulated). The §1.2 hard-truth #4 "the customer never sees their food" is **still true** — the frame improved, the food shot still doesn't exist. |
+| `CartDrawer` phone field PL-only regex | "replace with `libphonenumber-js` E.164 + country selector" | ❌ Still PL-style loose validation; no country selector. A `+1` / `+65` number is still not first-class. |
+| `StarRating` fake-data | done 2026-05-21 | ✅ Unchanged — no fake ratings on the customer surface. |
+| `SlotPicker` after item selection | "promote to a top-level When?" | ❌ Still inside the cart drawer, discovered after items are added. |
+
+The §2.1 "premium frame, empty content" verdict now resolves to: **frame is premium and shipped; content (photography) is still empty.** Real progress on the *first-impression* axis, zero on the *conversion-driver* axis.
+
+⚠ **Two surfaces did not get the V8 treatment** — `/review/[orderId]` and `/corporate/[slug]` still render in the legacy `italia-*` palette. The review surface is customer-facing and now visually inconsistent with the rest of the site.
+
+### §5 KDS — substantially rewritten since the audit; the §5.2 matrix needs re-reading
+
+The KDS this audit inventoried (`AdminKDS.tsx`, ~410 lines, 3 kanban columns) was rewritten. Current state (`AdminKDS.tsx`, 841 lines): **role lenses** (owner → Atlas Fleet board, manager/franchisee → floor board, kitchen/staff → chef strip, mobile → MobileKDS), a real **prediction engine** (`src/lib/kds-prediction.ts`, single-server FIFO queue per station, flags at-risk tickets before they're late), **SLA countdown + dual chimes**, **bump-bar hotkeys 1–9/0 with optimistic advance + SSE reconciliation + recall**, fullscreen/kiosk, and live `/api/admin/kds/floor-ops` (open/late/due-soon/oldest/avg-age + live-86). This closes several §5.4 rows (per-station ETA, dynamic prep ETA, the "AI assistant that recommends pause" — the last via `pace-steering.ts`, POS-facing).
+
+**Still ✗ on the §5.2 matrix:** hardware bump bar; modifiers first-class (still `notes` string only — the modifier schema exists but there's no customer picker and no KDS modifier surface); batch consolidation; hold/transfer between stations; photo capture. **An interim coursing feature (Starters/Mains/Dessert separate-fire, kitchen-timing, drag-to-recourse) was built mid-May and then dropped in the POS/KDS rewrite** (commits `79aa8b6`/`a61fa48` superseded by `814e548`/`49e7d6b`) — current KDS and POS have **no coursing**. The §5.3 "will it break at 300 orders" answer improves on transport (SSE + indexed `since`-filtered queries + active-only board that sheds completed tickets) but regresses on the client: there is **no list virtualization** and a 1-second full `analyzeTruck` recompute over the active set, so a literal 300-concurrently-*active* tickets would stress the browser. The lock-contention failure mode (§5.3 #1) is mitigated by the relational order path (below).
+
+### §6 Admin — RBAC matured past the "shared password" framing (but the root stays)
+
+§6.1/§6.3 said "single shared `ADMIN_PASSWORD`, role enum not enforced." Current state: a **5-role rank table** (owner 100 / franchisee 70 / manager 50 / staff 20 / kitchen 10), a `withAdmin()` wrapper declaring `roles` + `locationParam` per route, and **per-location session scope enforced server-side** (token `userId:locationScope:issuedAt.hmac`; `requireLocationAccess`). Enforcement is still **opt-in per route** (no central `src/middleware.ts`), the **shared `ADMIN_PASSWORD` root path still exists**, there is **still no MFA**, and there is **no UI to assign an N-of-M regional scope** (the token supports a comma list; the users page only assigns one slug or "All"). So §6.1 "could an owner run 10 locations" is now a credible **yes** for owner + single-site managers, **partial** for true regional managers.
+
+### §9 Tech — the architecture this audit critiqued has shifted under it
+
+- **Persistence is mid-migration to normalized Drizzle relational tables** (orders/recipes/ingredients/ingredientProducts/customers/loyalty/KDS) with dual-write + lazy backfill; hot paths read relational-first (`store.ts`, now 11,105 lines). The §9.1 "6 K-line `store.ts`, everything is a JSON blob under a global lock" critique is now **half-true** — high-volume tables moved to indexed relational writes with no application lock on the DB-first path; the JSON-blob-under-`withLock` pattern survives only on the un-migrated long tail (slots fallback, mirrors).
+- **A genuine Anthropic-LLM layer now exists** (`src/lib/ai/` gateway with prompt caching + `forecast.ts` + an `agent.ts` tool-use loop with operator-approval gates + a role-gated, audit-logged tool registry; plus the WhatsApp LLM ordering bot with real Stripe pay-in-chat, and a concierge/MCP capability layer). Any "no real ML/LLM in the loop" line in this audit (§1.1 investor row, §11.3) is now **outdated** — there is a real, audited, budget-gated LLM agent in the admin.
+- **Tests: "zero" is now narrowly false.** Two real `node:test` files exist (`floor.test.ts`, `pace-steering.test.ts`, 11 assertions, passing). But there is **no vitest/jest, no test script in `package.json`, no config**, and **zero coverage of the payment/refund/RBAC/slot paths** this audit (§1.2 hard-truth #5, §13 Phase 1) called malpractice to leave untested. Status: 2 pure-function files, not a suite.
+
+### The five §1.2 "Hard Truths" — re-verified
+
+1. **"AI" is a random number generator** → **Resolved and then some.** Not only were the `Math.random()` heuristics deleted (2026-05-21), a real agentic Claude layer now backs `/admin/ai` (agent + tools + forecast). 
+2. **Order pipeline serializes on two global locks** → **Further mitigated.** The DB-first relational order path has no application lock; global kv locks survive only on fire-and-forget mirror writes.
+3. **No real third-party delivery** → **Still true.** Wolt/Glovo are scaffolds (HMAC real, RPC bodies throw); no Uber Eats / DoorDash / GrabFood / foodpanda. The WhatsApp bot is a new *owned* channel, not an aggregator.
+4. **The customer never sees their food** → **Still true.** V8 replaced emoji-on-gradient with serif-on-parchment; `MenuItem.image` is still empty. Highest-ROI un-shipped change.
+5. **Zero automated tests** → **Narrowly false, materially true.** 2 pure-function test files; no runner, no coverage on payment/refund/RBAC.
+
+### Compliance (§1.4 / §10.2 #6) — the disclosure surfaces survived the rebuild
+
+The 2026-05-21 disclosure work is intact on the V8 surface: per-item `CompliancePills` (kcal / Nutri-Grade / halal / contains-pork / contains-alcohol), per-location `ComplianceBanner` (resolved server-side via `resolveLocationCompliance`), cart-drawer GST line + PDPA §13 consent + FRESH-Act packaging text. The item drawer **dropped the nutrition bars** for a printed-menu dotted-leader readout and **switched allergens to hand-drawn SVG line icons** — a presentation change that keeps the EU-1169 / NYC-§81.50 / SG-NEA data flowing. The schema-vs-content caveat is unchanged: surfaces ready, per-SKU calorie/Nutri-Grade data fill still sparse, counsel review still pending; NEA A–D auto-computation still blocked on `saturatedFatPerUnit`.
+
+### New finding — Rule-#1 regressions on the rewards surface
+
+The V8 `/rewards` rebuild introduced **hardcoded display values** this diligence lens should note: the loyalty **streak is a literal "2"**, the **weekly-challenge bar is a literal "33% / 1-of-target"** (`src/app/(public)/rewards/page.tsx`), and the **referral code uses `Math.random()`** per render (the persisted code lives in `referral-loop.ts`). A reviewer clicking through rewards finds the same class of "looks-real, isn't-wired" surface this audit flagged for `data/ratings.ts`. Lower legal exposure (no false reviews), same credibility tell.
+
+### Net read on the §1.1 scorecard
+
+| §1.1 row | 2026-05-21 (pm) | 2026-05-29 | Why |
+|---|---:|---:|---|
+| Overall | 52/100 | **55/100** | UX + operational maturity rise; the NYC/SG viability rows are governed by the seven structural blockers, none of which moved. |
+| NYC viability | 25/100 | **27/100** | Premium frame shipped; still no Uber/DoorDash, no USD settlement, no Spanish, no food photography. |
+| Singapore viability | 30/100 | **31/100** | V8 + compliance surfaces help the *feel*; no GrabFood/foodpanda, no SGD, no PayNow/PayLah!, NEA auto-grade still blocked. |
+| UX maturity | 52/100 | **64/100** | The real move — the §2.4 burn-down list is half-closed and the surface is a coherent premium trattoria in production, not a mockup. Capped by missing food photography + the two non-V8 legacy surfaces + the fake rewards values. |
+| Operational maturity | 65/100 | **70/100** | KDS rewrite (role lenses + prediction + SLA + hotkeys), real POS Tabs terminal, floor/reservations, real LLM ops agent. Capped by no coursing, no offline POS, no aggregators. |
+| Scalability | 65/100 | **70/100** | Relational migration on hot paths lifts the order/KDS ceiling; still no test suite, KDS client lacks virtualization, single-region DB. |
+| Investor readiness | 44/100 | **48/100** | Real LLM agent + relational data layer + real-order-backed simulation strengthen the story; zero real test coverage, plaintext password, no MFA, no SOC 2, no aggregators, no food photography remain the floor. |
+
+**The §0 verdict is unchanged: Sud Italia would not survive NYC or Singapore as-is.** Fifteen days of shipping closed half of the UX burn-down list and rebuilt the operational spine, but the seven binding constraints (aggregators, USD/SGD settlement, SOC 2, real test coverage, food photography, offline POS, MFA) are exactly where the 14 May audit left them. The §13 Phase 1–3 sequencing remains the right path; the operator is now meaningfully ahead on the *UX* and *ops* dimensions of Phase 1–4 and has not started the *channel* (Phase 3) or *enterprise-hardening* (Phase 5) work the two cities actually require.
+
+— *Re-run lens: same five auditors, fifteen days later — 29 May 2026*
