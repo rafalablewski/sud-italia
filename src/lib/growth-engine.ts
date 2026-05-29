@@ -183,13 +183,10 @@ export function simulateLiveActivity(locationSlug: string): LiveActivity {
   };
 }
 
-// --- Speed Guarantee ---
-
-export const SPEED_GUARANTEE = {
-  maxMinutes: 15,
-  guaranteeText: "Ready in 15 minutes or your next drink is free",
-  disclaimer: "Applies to takeout orders placed during off-peak hours",
-};
+// Speed-guarantee values live on `LoyaltySettings.speedGuarantee`
+// — maxMinutes, guaranteeText, active. The previous SPEED_GUARANTEE
+// const was a parallel literal nobody read; deleted to prevent
+// future drift. Edit at /admin/growth.
 
 // Reorder history is now fetched from the database via /api/orders/history
 // The customer is identified by a cookie set at checkout (no login needed)
