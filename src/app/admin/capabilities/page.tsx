@@ -555,7 +555,7 @@ export default async function CapabilitiesPage() {
           name: "Referral codes",
           status: "live",
           href: "/admin/growth",
-          summary: "Per-customer codes embedded in receipts.",
+          summary: "Per-customer codes embedded in receipts. Referrer-points + referee-PLN-off values + the active toggle all live on LoyaltySettings.referral — edit at /admin/growth → Referrals; shipped to customer surfaces (/rewards) via /api/settings/public as `loyalty.referral` (null when the operator disables the programme, which hides the Give/Get card entirely). No hardcoded fallback — disable = no surface.",
         },
         {
           name: "Upsell engine",
@@ -588,7 +588,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Per-segment delivery threshold",
           status: "live",
-          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 35 PLN (audit §3 — raised from 0 because VIPs were getting free delivery on 6.90 zł bottles of water, breaking unit economics on a 9 zł courier run). The checkout fee charge uses the same threshold via computeDeliveryFee(_,_, override) and getCustomerSegment(), so the bar and the receipt agree.",
+          summary: "Free-delivery bar shows a personalised threshold tuned to the customer's lifecycle: first-time 39 PLN, growing (2–4 orders) 49 PLN, regular (5+) 59 PLN, Gold/Platinum 35 PLN (audit §3 — raised from 0 because VIPs were getting free delivery on 6.90 zł bottles of water, breaking unit economics on a 9 zł courier run). The checkout fee charge uses the same threshold via computeDeliveryFee(_, _, thresholdOverride, feeOverride) and getCustomerSegment(), so the bar and the receipt agree. As of Phase 8b the flat-fee charged when a cart is below the threshold also comes from AppSettings.deliveryFee (was previously hardcoded 7 PLN regardless of /admin/settings); the cart drawer reads it off /api/settings/public.deliveryFee and server-side checkout pulls it from getSettings() — single source of truth at all three call sites.",
         },
         {
           name: "Delivery-exclusive SKUs + Pantry Pack bundle",

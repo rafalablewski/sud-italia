@@ -2,7 +2,7 @@
 
 **Scope:** every place where data that should be Admin-managed (or already has a store API) is hardcoded in a consumer.
 **Source-of-truth decisions:** menu = code seed (`src/data/menus/*`); branding/theme = code; feature flags = `getSettings()` going forward, `process.env` only for secrets/bootstrap.
-**Status:** **Audit closed.** 13 of 17 findings resolved across Phases 0–4 + 7; 3 deferred-by-design (i18n + nav); 1 verified clean. See the closing summary at the bottom.
+**Status:** **Audit closed.** 17 of 21 findings resolved across Phases 0–4 + 7 + 8; 3 deferred-by-design (i18n + nav); 1 verified clean. Regression guards (ESLint rule + `npm test` suite) ship alongside to keep the silent-drift bugs from coming back. See the closing summary at the bottom.
 
 ## Phase 8 — second sweep (post-close-out)
 

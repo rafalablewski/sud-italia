@@ -414,6 +414,14 @@ Every audit-tied behaviour from the pre-V8 drawer still holds:
 - Per-segment free-delivery threshold matches what
   `/api/checkout → computeDeliveryFee` charges
   (`getDeliveryThresholdForCustomer`).
+- Flat delivery fee (when the cart is below the threshold) reads
+  from `AppSettings.deliveryFee` — the drawer pulls it off
+  `fetchPublicSettings().deliveryFee` and passes it as the fourth
+  arg to `computeDeliveryFee`, server-side checkout
+  (`lib/checkout/createOrder.ts`) reads it via `getSettings()`,
+  and the WhatsApp quote in `lib/whatsapp/tools.ts` does the same.
+  Operator edits at `/admin/settings → Delivery fee` flow to all
+  three surfaces from the next request.
 - Sold-out item gate disables the pay CTA + surfaces a remove prompt.
 - Slot scarcity FOMO note flips between "Pick your time" and "Time
   selected" once `selectedSlotId` is set.
