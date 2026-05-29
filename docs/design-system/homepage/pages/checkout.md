@@ -189,12 +189,18 @@ parchment-paper feel can extend edge-to-edge inside the panel).
 | Editorial section title        | `.v8-cart-section-title` (Cormorant 13/2.4px) |
 | Sticky paybar                  | `.v8-cart-paybar` + `.v8-cart-paybar-tricolore` |
 
-### Single-mount contract (Step 11 follow-up)
+### Single-mount contract (Step 11 follow-up + Step 12)
 
 The drawer is mounted **exactly once** at `(public)/layout.tsx`. Every
-trigger surface — `<CartButton />` in the top nav, `<FloatingCartButton />`
-on the location page, `<AbandonedCartBanner />` 30s after idle — opens
-the same instance via `useCartUIStore.setDrawerOpen(true)`.
+trigger surface — `<CartButton />` in the top nav,
+`<FloatingCartButton />` floating bottom-right (Step 12, now layout-
+level too), `<AbandonedCartBanner />` 30s after idle — opens the same
+instance via `useCartUIStore.setDrawerOpen(true)`.
+
+`<FloatingCartButton />` + `<AddToCartToast />` also live at the
+layout level (Step 12) so they're available chain-wide — every
+storefront route sees the same pill + the same toast instance, and
+both fade behind `body.v8-cart-open` while the drawer is up.
 
 | Slot              | Store / source                                  |
 | ----------------- | ----------------------------------------------- |

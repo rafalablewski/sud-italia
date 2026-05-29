@@ -2,46 +2,57 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Sparkles } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
+import { useCartUIStore } from "@/store/cart-ui";
 import { getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
 import type { MenuItem } from "@/data/types";
 
 interface AddToCartToastProps {
-  allMenuItems: MenuItem[];
+  /** Optional override for the menu items used to compute the cross-sell
+   *  seed. Defaults to the active location's menu read from
+   *  useCartUIStore (seeded by <MenuItemsRegistrar />). */
+  allMenuItems?: MenuItem[];
   upsellConfig?: UpsellConfig | null;
 }
 
 interface ToastBody {
   id: number;
-  title: string;
+  itemName: string;
   seed: string | null;
 }
 
 const TOAST_DURATION_MS = 4000;
 
 /**
- * Inline add-to-cart toast — audit §2.1 T+0 "item added":
+ * V8 add-to-cart toast — audit §2.1 T+0 "item added":
  *
- *   "🍕 Margherita added. Customers usually add an espresso."
+ *   "Margherita added · aggiunto al carrello"
+ *   "Customers usually add an espresso."
  *
- * Seed-only copy, no CTA, no block. Slides in from the top of the viewport,
- * auto-dismisses in 4s. Portal-mounted to document.body so it escapes the
- * admin-shell stacking context (per CLAUDE.md rule #4 — same reason cart
- * drawers and other overlays portal).
+ * Slides up from the bottom of the viewport (espresso paper card,
+ * Cormorant italic title in parchment, Lora italic seed in muted
+ * parchment). Auto-dismisses in 4s. Portalled to document.body so it
+ * escapes any stacking context (CLAUDE rule 4).
  *
- * Subscribes to useCartStore and fires whenever a new item lands or an
- * existing line's quantity increases. The "seed" copy comes from
- * getCartSuggestions() — the same upsell rules the cart drawer uses, so the
- * recommendation here is consistent with what the customer sees once they
- * open the drawer.
+ * Subscribes to useCartStore and fires whenever a new line lands or an
+ * existing line's quantity increases. The seed copy comes from
+ * getCartSuggestions() — the same upsell rules the cart drawer uses,
+ * so the recommendation is consistent between the toast and the drawer.
+ *
+ * Single-mount surface: lives at (public)/layout.tsx — every storefront
+ * page that can mutate the cart shares one toast. Menu items used by
+ * the seed flow through useCartUIStore (seeded by MenuItemsRegistrar
+ * on the location page). Pages without a location see the toast title
+ * without a seed line.
  */
 export function AddToCartToast({
   allMenuItems,
   upsellConfig,
-}: AddToCartToastProps) {
+}: AddToCartToastProps = {}) {
   const items = useCartStore((s) => s.items);
+  const storeMenuItems = useCartUIStore((s) => s.menuItems);
+  const menuItems = allMenuItems ?? storeMenuItems;
   const prevQtyById = useRef<Map<string, number>>(new Map());
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<ToastBody | null>(null);
@@ -50,18 +61,16 @@ export function AddToCartToast({
   useEffect(() => {
     setMounted(true);
     // Prime previous-quantity map on first render so we don't fire a toast
-    // for items that were already in the persisted cart on page load.
+    // for items already in the persisted cart on page load.
     prevQtyById.current = new Map(
       items.map((i) => [i.menuItem.id, i.quantity]),
     );
-    // We intentionally only seed once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
 
-    // Find which line just grew (newly added or quantity incremented).
     let justAdded: MenuItem | null = null;
     for (const line of items) {
       const prev = prevQtyById.current.get(line.menuItem.id) ?? 0;
@@ -71,19 +80,15 @@ export function AddToCartToast({
       }
     }
 
-    // Rebuild the quantity snapshot for next diff (whether or not we toasted).
     prevQtyById.current = new Map(
       items.map((i) => [i.menuItem.id, i.quantity]),
     );
 
     if (!justAdded) return;
 
-    // Compute seed copy from the existing upsell rules. We omit the just-
-    // added item from the suggestion call's "current cart" to avoid the case
-    // where the just-added item IS the suggestion candidate.
     const suggestions = getCartSuggestions(
       items,
-      allMenuItems,
+      menuItems,
       1,
       upsellConfig ?? null,
     );
@@ -94,13 +99,11 @@ export function AddToCartToast({
 
     setToast({
       id: Date.now(),
-      title: `${justAdded.name} added`,
+      itemName: justAdded.name,
       seed,
     });
-  }, [items, allMenuItems, upsellConfig, mounted]);
+  }, [items, menuItems, upsellConfig, mounted]);
 
-  // Auto-dismiss the toast 4s after it appears (id changes whenever a new
-  // toast supersedes the previous one).
   useEffect(() => {
     if (!toast) return;
     setVisible(true);
@@ -121,28 +124,22 @@ export function AddToCartToast({
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 top-3 z-[60] flex justify-center px-4 pointer-events-none sm:top-4"
+      className={`v8-cart-toast${visible ? " is-show" : ""}`}
     >
-      <div
-        className={`flex items-start gap-3 max-w-md w-full sm:w-auto bg-white border border-italia-gold/30 rounded-xl shadow-lg px-4 py-3 pointer-events-auto transition-all duration-300 ${
-          visible
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-2"
-        }`}
-      >
-        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-italia-gold/15 text-italia-gold-dark flex items-center justify-center">
-          <Sparkles className="h-4 w-4" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-italia-dark leading-tight">
-            {toast.title}
-          </p>
-          {toast.seed && (
-            <p className="text-xs text-italia-gray mt-0.5 leading-snug">
-              {toast.seed}
-            </p>
-          )}
+      <span className="v8-cart-toast-illus" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 1.5 L11 6.5 L16.5 7 L12.5 10.5 L13.5 16 L9 13 L4.5 16 L5.5 10.5 L1.5 7 L7 6.5 Z"
+                fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <div className="v8-cart-toast-body">
+        <div className="v8-cart-toast-title">
+          <em>{toast.itemName}</em> added
+          <span className="v8-cart-toast-title-it">· aggiunto al carrello</span>
         </div>
+        {toast.seed && (
+          <div className="v8-cart-toast-seed">{toast.seed}</div>
+        )}
       </div>
     </div>,
     document.body,
@@ -150,8 +147,7 @@ export function AddToCartToast({
 }
 
 /** "a espresso" reads wrong; "an espresso" reads right. Picks indefinite
- *  article by first phoneme of the item name. We don't go full Webster on
- *  it — the menu is small enough that the vowel rule is sufficient. */
+ *  article by first phoneme of the item name. */
 function articled(name: string): string {
   const first = name.trim().charAt(0).toLowerCase();
   const startsVowel = ["a", "e", "i", "o", "u"].includes(first);

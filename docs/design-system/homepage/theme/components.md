@@ -728,17 +728,52 @@ rail.
 
 ### `<FloatingCartButton />` — `src/components/cart/FloatingCartButton.tsx`
 
-The mobile-only persistent in-thumb-reach order surface. Still on its
-pre-V8 chrome (`.floating-cart-bar`) — Step 12 will port to
-`.v8-float-cart`.
+The V8 "Il tuo carrello" floating pill — bottom-right on every
+storefront route.
 
+- `.v8-float-cart` parchment-cream pill with the bag SVG +
+  "Cart · il tuo carrello" italic bilingual label + a
+  `.v8-float-cart-count` terracotta count badge inside. On hover the
+  whole pill flips to terracotta fill + parchment text + parchment
+  count badge.
+- `data-bump="true"` toggles for ~360ms whenever the cart count
+  increases — fires the `v8-float-cart-bump` keyframe so the pill
+  scales up momentarily as a micro-feedback for items landing while
+  the drawer is closed.
+- `body.v8-cart-open` (toggled by `<CartDrawer />`) fades the pill to
+  opacity 0 + a 20px downward translate so the two surfaces don't
+  fight for attention.
 - Renders nothing when the cart is empty (don't tease an empty cart).
+- Single-mount surface: lives at `(public)/layout.tsx`. Every
+  storefront page sees the same pill instance. No props.
 - Opens the layout-level `<CartDrawer />` via
-  `useCartUIStore.setDrawerOpen(true)` — does not mount its own
-  drawer instance.
-- The `allMenuItems` prop is accepted for API stability but ignored;
-  menu items now flow through `<MenuItemsRegistrar />` into the same
-  UI store.
+  `useCartUIStore.setDrawerOpen(true)`.
+
+### `<AddToCartToast />` — `src/components/cart/AddToCartToast.tsx`
+
+The V8 audit §2.1 T+0 "item added" toast — espresso paper card that
+slides up from the bottom of the viewport.
+
+- `.v8-cart-toast` espresso fill with parchment text + a gold star
+  glyph on the left. Italic Cormorant title
+  `<em>Margherita</em> added · aggiunto al carrello` +
+  italic Lora seed line `Customers usually add an espresso.` The seed
+  comes from `getCartSuggestions()` — the same upsell rules the
+  cart drawer uses, so the toast and the drawer always agree on
+  what to recommend.
+- Slides up via `transform: translate(-50%, 20px) → translate(-50%, 0)`
+  + opacity 0 → 1 on the `.is-show` class. Auto-dismisses in 4s.
+- `body.v8-cart-open` fades the toast to opacity 0 — no point
+  surfacing a toast above an open drawer.
+- Portalled to `document.body` per Rule 4.
+- Subscribes to `useCartStore` and fires on every quantity increase
+  (new line OR existing line incremented). The previous-quantity
+  map is primed on mount so items already in the persisted cart on
+  page load don't fire a toast.
+- Single-mount surface: lives at `(public)/layout.tsx`. The menu
+  items used to compute the seed flow through `useCartUIStore`
+  (seeded by `<MenuItemsRegistrar />` on the location page). Pages
+  without a location see the toast title without a seed line.
 
 ### `<DeliveryProgress />` — `src/components/cart/DeliveryProgress.tsx`
 
@@ -939,22 +974,30 @@ Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
 before removing — admin-facing surfaces (operator previews) or
 tests might still import them.
 
-### Cart sub-components still on pre-V8 chrome
+### Cart family — all V8
 
-After the Step 11 follow-up, only two cart-area components remain on
-pre-V8 chrome:
+After Steps 11, 11 follow-up, and 12, every component in
+`src/components/cart/` reads as one paper-card vocabulary:
 
-- `src/components/cart/FloatingCartButton.tsx` — mobile floating cart
-  bar (`.floating-cart-bar`). Visible at the bottom of the location
-  page when the cart has items. Step 12 will port to `.v8-float-cart`.
-- `src/components/cart/AddToCartToast.tsx` — post-add toast with the
-  cross-sell hint. Step 12 will port to `.v8-cart-toast`.
+| Component                | Status       | Selectors                  |
+| ------------------------ | ------------ | -------------------------- |
+| `<CartDrawer />`         | V8 (Step 11) | `.v8-cart-*` shell         |
+| `<CartItem />`           | V8 (Step 11) | `.v8-cart-item-*`          |
+| `<CartUpsell />`         | V8 (Step 11) | `.v8-cart-pairs-*`         |
+| `<DeliveryProgress />`   | V8 (Step 11) | `.v8-cart-delivery-*`      |
+| `<LoyaltyEarnPreview />` | V8 (Step 11+) | `.v8-cart-loyalty-preview-*` |
+| `<CorporateOrderBanner />` | V8 (Step 11+) | `.v8-cart-corp-*`        |
+| `<TierPerkBanner />`     | V8 (Step 11+) | `.v8-cart-perk-*`          |
+| `<TodBanner />`          | V8 (Step 11+) | `.v8-cart-tod-*`           |
+| `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`         |
+| `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`     |
+| `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`        |
+| `<FloatingCartButton />` | V8 (Step 12) | `.v8-float-cart`           |
+| `<AddToCartToast />`     | V8 (Step 12) | `.v8-cart-toast`           |
+| `<MenuItemsRegistrar />` | n/a (bridge) | —                          |
+| `<AbandonedCartBanner />` | pre-V8 (low priority) | `.fixed top-20 …`  |
 
-The drawer shell, the items list, the loyalty status chip, the
-fulfilment toggle, the address / phone / email / notes fields, the
-dine-in party-size panel, the slot picker (date strip + grid + empty
-states), the tip picker, the pay bar, the cross-sell rail, the
-delivery progress bar, the loyalty-earn preview, the corporate-order
-banner, the gold-tier perk banner, the time-of-day banner, the
-combo-deal banner, and the bundle ladder all share the `.v8-cart-*`
-paper-card vocabulary now.
+`<AbandonedCartBanner />` is the only remaining pre-V8 surface in the
+cart family. It only renders 30s after the customer goes idle with
+items in cart, and the visual treatment isn't a major branding
+moment — left for a future polish pass.
