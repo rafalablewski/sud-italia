@@ -278,12 +278,12 @@ don't have alternate variants.
 The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#hero).
 
 - **Centred parchment block**, not full-bleed. Padding `48px top /
-  16px bottom` → `80px top / 24px bottom` ≥md. The bottom is
-  intentionally tight: the closing tricolore + the next `.v8-ps`
-  section's own 56/80px top padding already supply the rhythm —
-  doubling it up reads as a dead band under the CTAs. Five ornament
-  SVGs scattered behind the column (basil sprigs, ellipse stains, a
-  tomato) at z-index 1 with `pointer-events: none`.
+  0 bottom` → `80px top / 0 bottom` ≥md. The bottom is zeroed: the
+  closing tricolore sits 28px below the CTAs and the next `.v8-ps`
+  section's own 56/80px top padding supplies all the rhythm —
+  anything else stacks into a dead band under the CTAs. Five
+  ornament SVGs scattered behind the column (basil sprigs, ellipse
+  stains, a tomato) at z-index 1 with `pointer-events: none`.
 - **Headline** — Cormorant Garamond 600 at 44px → 76px ≥md,
   letter-spacing -0.5px, line-height 1.02, espresso colour.
 - **Italian sublabel** — Cormorant italic, 19→24px, muted-brown.

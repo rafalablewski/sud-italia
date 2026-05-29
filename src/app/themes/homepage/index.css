@@ -394,10 +394,10 @@ body {
    (which uses currentColor + the terracotta text colour). */
 
 .v8-hero {
-  padding: 48px 0 16px;
+  padding: 48px 0 0;
 }
 @media (min-width: 768px) {
-  .v8-hero { padding: 80px 0 24px; }
+  .v8-hero { padding: 80px 0 0; }
 }
 
 /* Kicker — oxblood "Open now" pill above the headline */
