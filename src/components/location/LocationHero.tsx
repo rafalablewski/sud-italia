@@ -20,9 +20,12 @@ import { getCurrentHourSlot } from "@/data/locations";
 // teamLead), not the homepage's hospitality voice. Same pattern the
 // bundles took.
 //
-// The back chip ("← Home · la casa") is rendered above the hero so a
-// visitor who landed deep can hop back to the landing without
-// scrolling up to the nav. Targets `/` (not `#famiglia` etc.).
+// The back chip ("← Home · la casa") is rendered inside the hero
+// at its top-left corner — a single anchored chip on the same
+// parchment canvas, not a separate cream strip above. A visitor
+// who landed deep can still hop back to the landing without
+// scrolling up to the nav; the chip targets `/` (not `#famiglia`
+// etc.).
 
 interface LocationHeroProps {
   location: Location;
@@ -74,20 +77,17 @@ export function LocationHero({ location }: LocationHeroProps) {
   const copy = LOC_COPY[location.slug] ?? defaultCopy(location);
 
   return (
-    <>
-      <div className="v8-back-chip-wrap">
-        <Link href="/" className="v8-back-chip">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-            <path d="M9 2 L4 7 L9 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </svg>
-          <span>
-            Home <span className="bi-sec">· la casa</span>
-          </span>
-        </Link>
-      </div>
+    <header className="v8-loc-hero">
+      <Link href="/" className="v8-back-chip v8-loc-back-chip">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+          <path d="M9 2 L4 7 L9 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+        <span>
+          Home <span className="bi-sec">· la casa</span>
+        </span>
+      </Link>
 
-      <header className="v8-loc-hero">
-        <span className="v8-hero-orn v8-hero-orn-basil-tl" aria-hidden>
+      <span className="v8-hero-orn v8-hero-orn-basil-tl" aria-hidden>
           <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
             <path d="M60 110 C 60 80, 60 50, 60 20" stroke="#4A7C59" strokeWidth="2" strokeLinecap="round" />
             <path d="M60 80 C 45 75, 35 60, 30 45 C 45 50, 55 65, 60 75" fill="#4A7C59" fillOpacity="0.18" stroke="#4A7C59" strokeWidth="2" strokeLinejoin="round" />
@@ -126,9 +126,8 @@ export function LocationHero({ location }: LocationHeroProps) {
               </>
             )}
           </span>
-        </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }
 

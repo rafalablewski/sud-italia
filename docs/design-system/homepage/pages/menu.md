@@ -33,12 +33,20 @@ This means:
 ### Back chip — `<Link href="/">`
 
 The location page opens with a small oxblood-tinted back chip
-("Home · la casa") rendered ABOVE the hero by `<LocationHero />`.
-Pill-shape, hover swaps to oxblood fill with parchment text. Lets
-a visitor who arrived deep (search engine, cross-link, share URL)
-hop back to the landing without scrolling up to the nav. Lives at
-the `.v8-back-chip-wrap` container — 14/18px top padding, 1180px
-max width, shares the column gutter with the rest of the layout.
+("Home · la casa") rendered as the **first child of
+`<header className="v8-loc-hero">`** by `<LocationHero />` — it
+sits at the top-left of the hero band, on the same parchment ground
+as the illustration + name. Pill-shape (`.v8-back-chip`), hover
+swaps to oxblood fill with parchment text. The chip carries the
+`v8-loc-back-chip` modifier — `display: flex` + `width: max-content`
+so it stays pill-shaped while breaking the centred
+`.v8-loc-hero-inner` onto a new line below it, plus `z-index: 3`
+to sit above the basil ornament. Lets a visitor who arrived deep
+(search engine, cross-link, share URL) hop back to the landing
+without scrolling up to the nav. Earlier builds shipped a separate
+`.v8-back-chip-wrap` strip above the hero (a wide cream band
+holding nothing but the chip) — V8 polish folded the chip into
+the hero so the page opens on one continuous parchment surface.
 
 ### Location hero — `<LocationHero />`
 
@@ -92,16 +100,20 @@ gone; the V8 design uses a single card with category tabs that
 filter the grid in place.
 
 - **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
-  `shadow-paper`, 22/28px padding ramp). **Full-bleed** — no
-  `max-width`, no border, no border-radius — the menu reads as a
-  continuous parchment band across the viewport, with only the
-  shadow signalling the slab's elevation. (V8 polish removed the
-  earlier 1180px card frame because the rounded-rectangle "card"
-  read as a settings panel inside an editorial layout; the band
-  treatment lands as one continuous surface that visually owns the
-  page.) Renders at the `#menu` anchor; the location-hero's status
-  pill scrolls here on tap (the floating cart button also lands the
-  visitor here).
+  `shadow-paper`, `margin: 0 auto`, 22/28px padding ramp).
+  **Full-bleed** — no `max-width`, no border, no border-radius — the
+  menu reads as a continuous parchment band across the viewport,
+  with only the shadow signalling the slab's elevation. Zero
+  vertical margin keeps the band flush against the location-info
+  block above and the Soci rail below — earlier builds shipped
+  `margin: 22/28px auto`, which stacked into the neighbours'
+  padding as visible parchment gutters above and below the band.
+  (V8 polish removed the earlier 1180px card frame because the
+  rounded-rectangle "card" read as a settings panel inside an
+  editorial layout; the band treatment lands as one continuous
+  surface that visually owns the page.) Renders at the `#menu`
+  anchor; the location-hero's status pill scrolls here on tap (the
+  floating cart button also lands the visitor here).
 - **Section header** uses the shared `.v8-ps-eyebrow / -title / -sub`
   primitives — "The menu · il menù", "What comes out of *the oven*"
   (italic-oxblood "the oven"), italic-Cormorant sub.
@@ -251,11 +263,12 @@ suspense fallback — what Next renders during the server-side fetch
 before `<LocationPage />` hydrates.
 
 - **Mirrors the real page's structure** by reusing the same V8
-  classes (`.v8-back-chip-wrap`, `.v8-loc-hero`, `.v8-menu-card`)
-  so the parchment background, hero proportions, and menu-card glass
-  are identical between skeleton and final paint. The route
-  transition reads as one continuous parchment surface — no theme
-  jump.
+  classes (`.v8-loc-hero` for the hero band — with a
+  `.v8-loc-back-chip` skeleton inside it where the live page renders
+  the back chip — and `.v8-menu-card` for the menu band), so the
+  parchment background, hero proportions, and menu band are
+  identical between skeleton and final paint. The route transition
+  reads as one continuous parchment surface — no theme jump.
 - **Skeleton blocks (`.v8-skel`)** are terracotta-tinted (the
   `rgba(184, 92, 56, 0.06–0.14)` shimmer band V8's accent layer uses
   elsewhere), not generic gray. Shimmer animation: a 1.4s

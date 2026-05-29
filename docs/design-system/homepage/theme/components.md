@@ -558,11 +558,17 @@ V8 Trattoria treatment — full spec in
 - **`getCurrentHourSlot()` helper** (in `data/locations.ts`)
   drives the status pill's real close time. Falls back to "Closed
   now · chiuso ora" outside hours.
-- **Back chip** ("Home · la casa") renders ABOVE the hero in the
-  same component fragment — oxblood-tinted pill, hover flips to
-  filled oxblood with parchment text. Lets visitors arriving via
-  cross-link / share URL return to the landing without scrolling
-  back to the nav.
+- **Back chip** ("Home · la casa") renders as the **first child of
+  the hero `<header>`** — oxblood-tinted pill (`.v8-back-chip`)
+  with the `.v8-loc-back-chip` modifier (`display: flex` + `width:
+  max-content` + `z-index: 3` so it stays pill-shaped at the top-
+  left while the centred `.v8-loc-hero-inner` flows below it).
+  Hover flips to filled oxblood with parchment text. Lets visitors
+  arriving via cross-link / share URL return to the landing without
+  scrolling back to the nav. Earlier builds shipped a separate
+  `.v8-back-chip-wrap` cream strip ABOVE the hero; V8 polish folded
+  the chip into the hero so the page opens on one continuous
+  parchment surface.
 
 ### `<MenuSection />` — `src/components/location/MenuSection.tsx`
 

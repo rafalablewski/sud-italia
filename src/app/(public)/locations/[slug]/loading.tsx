@@ -17,11 +17,8 @@
 export default function Loading() {
   return (
     <div className="v8-loc-loading" aria-busy="true" aria-live="polite">
-      <div className="v8-back-chip-wrap">
-        <div className="v8-skel v8-skel-chip" aria-hidden />
-      </div>
-
       <header className="v8-loc-hero">
+        <div className="v8-skel v8-skel-chip v8-loc-back-chip" aria-hidden />
         <div className="v8-loc-hero-inner">
           <div className="v8-skel v8-skel-illus" aria-hidden />
           <div className="v8-skel v8-skel-tricolore" aria-hidden />
