@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import type { MenuItem, ModifierGroup } from "@/data/types";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
+import { getMenu } from "@/data/menus";
+import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+
+type LiveMenuItem = MenuItem & { _hidden?: boolean };
 
 /**
  * Admin /admin/upsell → Item modifiers tab.
@@ -16,22 +18,51 @@ import { formatPrice } from "@/lib/utils";
  *
  * Per-item editing lives on /admin/menu (the item-edit dialog has the
  * canonical override surface — modifiers attach to the item, not to the
- * upsell config). This view is the operator's at-a-glance "what
- * modifiers does each truck currently offer?"
+ * upsell config). This view reads from /api/admin/menu so it reflects
+ * operator overrides + custom items, not the static seed.
  */
 export function ModifierInventory() {
+  const trucks = useMemo(() => getActiveLocations(), []);
+  const [liveMenus, setLiveMenus] = useState<Record<string, MenuItem[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const entries = await Promise.all(
+        trucks.map(async (l) => {
+          try {
+            const r = await fetch(`/api/admin/menu?location=${l.slug}`);
+            if (!r.ok) return null;
+            const items = (await r.json()) as LiveMenuItem[];
+            return [l.slug, items.filter((m) => !m._hidden)] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      const next: Record<string, MenuItem[]> = {};
+      for (const e of entries) if (e) next[e[0]] = e[1];
+      setLiveMenus(next);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [trucks]);
+
   const groupedByTruck = useMemo(() => {
-    const trucks: { slug: string; name: string; items: MenuItem[] }[] = [
-      { slug: "krakow", name: "Kraków", items: krakowMenu },
-      { slug: "warszawa", name: "Warszawa", items: warszawaMenu },
-    ];
-    return trucks.map((t) => ({
-      ...t,
-      items: t.items.filter(
-        (m) => (m.modifierGroups?.length ?? 0) > 0,
-      ),
-    }));
-  }, []);
+    return trucks.map((l) => {
+      // Live menu when the fetch landed, seed catalogue as fallback so
+      // the view still renders if /api/admin/menu is unreachable.
+      const items = liveMenus[l.slug] ?? getMenu(l.slug);
+      return {
+        slug: l.slug,
+        name: l.city,
+        items: items.filter((m) => (m.modifierGroups?.length ?? 0) > 0),
+      };
+    });
+  }, [trucks, liveMenus]);
 
   const totalItems = groupedByTruck.reduce(
     (s, t) => s + t.items.length,

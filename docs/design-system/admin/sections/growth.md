@@ -68,8 +68,16 @@ The AOV machinery: bundle ladders + modifier gating.
 - **Ladder rows** show: tier label, trigger condition, included items,
   customer-facing price delta, observed attach-rate. Reorder via
   arrows.
-- **Modifiers tab:** modifier-group gating — which modifiers appear for
-  which items, which are free vs charged, which are limit-N.
+- **Modifiers tab:** at-a-glance inventory of every menu item that
+  carries a `modifierGroups` payload, grouped per truck — group label,
+  selection bounds, option list with priceDelta + KDS-flag chips. Live
+  code: `src/components/admin/ModifierInventory.tsx`. Reads from
+  `/api/admin/menu?location=<slug>` per active truck (derived from
+  `getActiveLocations()` so new trucks show up automatically) with the
+  seed catalogue as a fallback when the fetch fails, so operator
+  overrides + custom items + soft-deletes flow through instead of
+  showing stale seed data. Per-item editing still lives on
+  `/admin/menu`.
 - **Combo discount validation** (CLAUDE rule 8) — preview the actual
   cart math on save, refuse to save a bundle whose math doesn't reduce
   the cart total.

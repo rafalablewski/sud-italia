@@ -24,7 +24,7 @@
 | 8 | Locations | `ACTIVE_LOCATIONS = ["krakow", "warszawa"]` (server tool) | `src/lib/whatsapp/tools.ts:41` | hardcoded literal in WhatsApp tool router | `getActiveLocationsAsync()` from `@/lib/locations-store` | P0 | Server-side — must use live store. Hardcoded list breaks when a third truck opens. |
 | 9 | Locations | server-side seed reads | `src/lib/store.ts:6` (`allLocations` from seed), `src/lib/kitchen-auth.ts:4`, `src/lib/comms/dispatcher.ts:7`, `src/lib/whatsapp/tools.ts:12`, `src/app/api/settings/upsell/route.ts:3` | server reads `getActiveLocations()` (seed sync) | `getActiveLocationsAsync()` (live store) for server paths | P1 | Per `src/data/locations.ts` docstring, server should use the async live store. Audit each: confirm sync seed is justified (e.g. bootstrap before DB exists) vs. needs migration. |
 | 10 | Locations | hardcoded `{krakow, warszawa}` dropdowns in admin | `AdminCrm.tsx:252`, `AdminConcierge.tsx:62`, `WhatsAppSettingsDialog.tsx:308`, `AdminSellingShared.tsx:191`, `ModifierInventory.tsx:25` | hardcoded slug+label arrays | `getActiveLocations()` (client) or `getActiveLocationsAsync()` (server) | P1 | Same pattern in 5 admin components; replace with helper. Breaks the moment a 3rd location ships. |
-| 11 | Menu | direct `krakowMenu` / `warszawaMenu` imports | `ModifierInventory.tsx:25-26`, `AdminSellingShared.tsx:191-192` | direct seed imports | iterate `getActiveLocations()` + `getMenuWithOverrides(slug)` | P1 | Today these never reflect runtime overrides (price, availability, hidden items). Editing in admin → no effect here. |
+| 11 | ~~Menu~~ | ~~direct `krakowMenu` / `warszawaMenu` imports~~ | ~~`ModifierInventory.tsx:25-26`, `AdminSellingShared.tsx:191-192`~~ | `getActiveLocations()` + `getMenu(slug)` seed fallback; `ModifierInventory` also fetches `/api/admin/menu?location=` so runtime overrides surface | — | ~~P1~~ | **DONE (Phase 2).** AdminSellingShared LOCATIONS derived from `getActiveLocations()`; new active trucks pick up automatically. ModifierInventory was rendering static seed (latent bug); now reads live menu with seed fallback. |
 | 12 | Cart copy | static button strings ("Add to cart", "Pay", "Delivery", "Order now") | `CartDrawer.tsx:683/1025`, `ItemDetailDrawer.tsx:253`, `BundlesShowcase.tsx:195`, `AdminSlots.tsx:597/730` | hardcoded JSX text | i18n via `src/lib/i18n.ts` (needs Q3 answer) | P1 | Blocks localization. Defer to Phase 6 — depends on i18n adoption status. |
 | 13 | Layout | `NAV_LINKS` | `src/components/layout/Header.tsx:22` | hardcoded nav config | OK as code (structural, not data) | P2 | No fix — flag only if a CMS-driven menu is planned. |
 | 14 | Order UI | `STATUS_STEPS` (order tracker labels) | `src/components/order/OrderTracker.tsx:23` | hardcoded status labels | i18n strings | P2 | Defer to Phase 6 (i18n). |
@@ -67,7 +67,7 @@
 |-------|----|--------|
 | 0 | tracker landed | done |
 | 1 | money flow | **complete** — 1.1 VAT, 1.2 cart placeholder, 1.3 JSON-LD currency |
-| 2 | menu | not started |
+| 2 | menu | **complete** |
 | 3 | locations | not started |
 | 4 | loyalty | not started |
 | 5 | kds/pos | not started |
