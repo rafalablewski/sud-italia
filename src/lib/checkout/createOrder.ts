@@ -267,6 +267,7 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     calculatedTotal,
     input.fulfillmentType,
     segmentThreshold,
+    appSettings.deliveryFee,
   );
   calculatedTotal += deliveryFee;
 

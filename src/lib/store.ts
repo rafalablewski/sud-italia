@@ -2894,7 +2894,11 @@ export function resolveLocationCompliance(
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  deliveryFee: 1000, // 10.00 PLN
+  // Matches the pre-Phase-8 hardcoded DELIVERY_FEE_GROSZE in lib/upsell.ts
+  // so first-deploy / unedited installs see no customer-visible price
+  // change. Operators who explicitly set a value in /admin/settings keep
+  // their saved number (which now actually drives the charge).
+  deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
   businessPhone: "+48 123 456 789",
   businessEmail: "hello@suditalia.pl",

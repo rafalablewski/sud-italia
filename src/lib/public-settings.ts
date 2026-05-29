@@ -71,6 +71,8 @@ export interface PublicSettings {
     pdpaConsentText?: string | null;
   };
   deliveryThresholds?: Record<string, number | undefined> | null;
+  /** Operator-managed flat delivery fee (grosze) — see /admin/settings. */
+  deliveryFee?: number;
   /** Operator-managed contact + social handles rendered in the
    *  public footer. */
   businessPhone?: string;

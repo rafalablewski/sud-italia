@@ -4,6 +4,7 @@ import {
   addNotification,
   getCustomer,
   getLoyaltySettings,
+  getSettings,
   getSlots,
   getSlotById,
   getUpsellSettings,
@@ -118,13 +119,16 @@ async function recomputeQuote(session: WaSession): Promise<{
   let deliveryFee = 0;
   if (session.fulfillmentType === "delivery") {
     const cust = await getCustomer(session.phone);
-    const loyalty = await getLoyaltySettings();
+    const [loyalty, appSettings] = await Promise.all([
+      getLoyaltySettings(),
+      getSettings(),
+    ]);
     const threshold = getDeliveryThresholdForCustomer(
       cust
         ? { ordersCount: cust.orderCount, tier: calculateTier(cust.loyaltyPointsBalance, loyalty.tiers) }
         : null,
     );
-    deliveryFee = computeDeliveryFee(afterDiscount, "delivery", threshold);
+    deliveryFee = computeDeliveryFee(afterDiscount, "delivery", threshold, appSettings.deliveryFee);
     afterDiscount += deliveryFee;
   }
   return {

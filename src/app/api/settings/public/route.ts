@@ -83,6 +83,11 @@ export async function GET(req: NextRequest) {
      *  charge calculated server-side. Undefined per-segment fields fall
      *  back to the SEGMENT_FREE_DELIVERY_THRESHOLD defaults at use. */
     deliveryThresholds: appSettings.deliveryThresholds ?? null,
+    /** Flat delivery fee (grosze) — the charge applied when a cart is
+     *  below the free-delivery threshold. Operator-edited at
+     *  /admin/settings → Delivery fee; cart drawer passes it to
+     *  computeDeliveryFee so the bar + the receipt agree. */
+    deliveryFee: appSettings.deliveryFee,
     /** Customer display-currency config: switcher options + rates.
      *  The customer site hydrates the currency module from this so a
      *  switch from PLN → SGD reflects operator-set rates, not the

@@ -237,6 +237,10 @@ export function CartDrawer() {
   // Until it lands, the delivery segment falls back to null so the bar
   // uses the default threshold instead of guessing a tier.
   const [publicLoyalty, setPublicLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  /** Operator-managed flat delivery fee (grosze) from public settings.
+   *  Falls back to the code-side seed in computeDeliveryFee until the
+   *  fetch resolves. */
+  const [publicDeliveryFee, setPublicDeliveryFee] = useState<number | undefined>(undefined);
   const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
@@ -275,6 +279,7 @@ export function CartDrawer() {
         setCompliance(data.compliance);
       }
       if (data.loyalty) setPublicLoyalty(data.loyalty);
+      if (typeof data.deliveryFee === "number") setPublicDeliveryFee(data.deliveryFee);
     });
     return () => {
       cancelled = true;
@@ -302,6 +307,7 @@ export function CartDrawer() {
     subtotal - comboDiscount,
     fulfillmentType,
     deliveryThreshold,
+    publicDeliveryFee,
   );
   const total = subtotal - comboDiscount + deliveryFee + tipAmount;
 
