@@ -30,7 +30,7 @@
 | 14 | Order UI | `STATUS_STEPS` (order tracker labels) | `src/components/order/OrderTracker.tsx:23` | hardcoded status labels | i18n strings | P2 | Defer to Phase 6 (i18n). |
 | 15 | ~~Cart placeholder~~ | ~~`placeholder="0.00 zł"`~~ | ~~`src/components/cart/CartDrawer.tsx:1165`~~ | `formatPrice(0)` (resolves to the customer's display currency) | — | ~~P2~~ | **DONE (Phase 1, Step 1.2).** Placeholder + aria-label now currency-agnostic. Tip values still grosze on the cart store; this is display-only. |
 | 16 | Branding | hex colors in inline SVG illustrations | `CartUpsell.tsx`, `CartItem.tsx`, `FloatingCartButton.tsx`, `DeliveryProgress.tsx` | hex literals in `<path fill>` / `<circle fill>` | OK — illustrations are code-managed per Q4 | — | No fix. Documented in design-system doc as illustration tokens if not already. |
-| 17 | Currency | inline `"PLN"` in non-store consumers | `src/app/(public)/locations/[slug]/page.tsx:104` (JSON-LD `priceCurrency`) | hardcoded `"PLN"` in schema.org markup | `getSettings().currency.defaultCurrency` | P2 | Cosmetic until multi-currency SEO matters. |
+| 17 | ~~Currency~~ | ~~inline `"PLN"` in JSON-LD~~ | ~~`src/app/(public)/locations/[slug]/page.tsx:104`~~ | `location.currency` (per-location transaction currency, scope-local) | — | ~~P2~~ | **DONE (Phase 1, Step 1.3).** Picked `location.currency` over a global settings read because schema.org `priceCurrency` is per-Offer and tracks the actual transaction currency for that location — future-ready when the Location type broadens beyond the `"PLN"` literal. Zero behavior change today. |
 
 ## Verified clean (no action)
 
@@ -66,7 +66,7 @@
 | phase | PR | status |
 |-------|----|--------|
 | 0 | tracker landed | done |
-| 1 | money flow | steps 1.1 (VAT) + 1.2 (cart placeholder) done — 1.3 (JSON-LD currency) pending |
+| 1 | money flow | **complete** — 1.1 VAT, 1.2 cart placeholder, 1.3 JSON-LD currency |
 | 2 | menu | not started |
 | 3 | locations | not started |
 | 4 | loyalty | not started |
