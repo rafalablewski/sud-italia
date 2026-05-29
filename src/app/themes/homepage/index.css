@@ -5380,60 +5380,55 @@ body.v8-detail-open { overflow: hidden; }
   font-weight: 600;
 }
 
-/* Nutrition bars */
+/* Nutrition — printed-menu editorial readout.
+   Each row is a 3-column grid: label / dotted leader / value, so
+   the line reads like a tasting-menu entry ("Calories · calorie
+   ··············· 480 kcal"). Replaces the earlier coloured
+   progress bars, which were filled against dev-picked maxes (1000
+   kcal, 50 g protein, …) that didn't map to RDA or any actionable
+   reading — decoration pretending to be information. */
 .v8-detail-nutrition {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 2px;
 }
-.v8-detail-bar {
-  font-family: var(--font-body);
-}
-.v8-detail-bar-head {
-  display: flex;
-  justify-content: space-between;
+.v8-detail-nutri-row {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
   align-items: baseline;
-  margin-bottom: 4px;
+  column-gap: 10px;
+  padding: 5px 0;
 }
-.v8-detail-bar-label {
+.v8-detail-nutri-label {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-espresso);
+  white-space: nowrap;
 }
-.v8-detail-bar-it {
+.v8-detail-nutri-it {
+  font-family: var(--font-heading);
   font-style: italic;
   font-weight: 400;
   color: var(--color-muted);
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  margin-left: 2px;
 }
-.v8-detail-bar-val {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--color-ink);
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-.v8-detail-bar-rail {
+.v8-detail-nutri-leader {
+  align-self: end;
+  margin-bottom: 6px;
+  background-image: radial-gradient(circle, rgba(140, 111, 79, 0.55) 1.1px, transparent 1.3px);
+  background-size: 6px 100%;
+  background-repeat: repeat-x;
+  background-position: center;
   height: 6px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
-  border-radius: 4px;
-  overflow: hidden;
 }
-.v8-detail-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s ease;
+.v8-detail-nutri-value {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-espresso);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  white-space: nowrap;
 }
-.v8-detail-bar-fill.is-ochre { background: var(--color-ochre); }
-.v8-detail-bar-fill.is-ochre-light { background: var(--color-ochre-light); }
-.v8-detail-bar-fill.is-terracotta { background: var(--color-terracotta); }
-.v8-detail-bar-fill.is-oxblood { background: var(--color-oxblood); }
-.v8-detail-bar-fill.is-basil { background: var(--color-basil); }
-.v8-detail-bar-fill.is-espresso { background: var(--color-espresso); }
 
 /* Sourcing — italic quote in a parchment-deep paper card */
 .v8-detail-sourcing {

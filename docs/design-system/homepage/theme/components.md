@@ -925,12 +925,19 @@ button on each menu card.
   row when present. Empty allergens collapse to a basil-deep
   `.v8-detail-no-allergens` line ("Senza allergeni maggiori — no major
   allergens reported.") with a hand-drawn basil-leaf SVG.
-- **Valori nutrizionali · nutrition** — `.v8-detail-bar` rows with
-  bilingual italic Lora labels (Calories · calorie, Protein · proteine,
-  Carbohydrates · carboidrati, Fat · grassi, Fiber · fibra, Sodium ·
-  sodio) and progress fills tinted per-nutrient (`.is-ochre`,
-  `.is-terracotta`, `.is-ochre-light`, `.is-oxblood`, `.is-basil`,
-  `.is-espresso`).
+- **Valori nutrizionali · nutrition** — `.v8-detail-nutri-row`
+  printed-menu readout, one row per macro. Three-column grid:
+  bilingual italic Cormorant label on the left
+  (`Calories · calorie`, `Protein · proteine`, …), a dotted-leader
+  filler in the centre (`background-image: radial-gradient(circle,
+  rgba(140, 111, 79, 0.55) 1.1px, transparent 1.3px)` repeating on
+  a 6px grid), and a tabular-num value on the right (`480 kcal`).
+  No bars: earlier builds shipped coloured `.v8-detail-bar` fills
+  scaled against dev-picked maxes (1000 kcal calories, 50 g
+  protein, …), but the fills didn't map to RDA or any actionable
+  rule, so they read as decoration pretending to be information —
+  V8 polish swapped them for the printed-menu line so the numbers
+  stay scannable without faking a visualisation.
 - **Provenienza · sourcing** — parchment-deep `.v8-detail-sourcing`
   paper card with a basil-sprig mark + italic Lora quote from the
   Kodawari sourcing copy.

@@ -220,8 +220,12 @@ for the full chrome breakdown; the sections it surfaces are:
 - Meta — oxblood price + prep time + calories editorial row
 - Allergens · allergeni — oxblood chip row or basil "no major
   allergens · senza allergeni maggiori" line
-- Valori nutrizionali · nutrition — Cormorant-labelled bilingual bars
-  for calories / protein / carbs / fat / fiber / sodium
+- Valori nutrizionali · nutrition — Cormorant-labelled bilingual
+  printed-menu readout (label · italian phrase ·· value, dotted
+  leader between) for calories / protein / carbs / fat / fiber /
+  sodium. No bars: see the
+  [`<ItemDetailDrawer />` doc](../theme/components.md#-itemdetaildrawer-----srccomponentslocationitemdetaildrawertsx)
+  for why the bar treatment was dropped.
 - Provenienza · sourcing — italic Lora ingredient-origin quote in a
   parchment-deep paper card
 - Sticky paybar — terracotta "Add to cart · aggiungi al carrello +
