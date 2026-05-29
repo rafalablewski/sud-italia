@@ -2,6 +2,7 @@
 ## Institutional-Grade Audit & Gap Analysis
 
 **Date:** 12 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Auditor scope:** Senior hospitality-tech product strategy, enterprise SaaS architecture, restaurant ops, UX systems
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres
 **Object of audit:** the entire `/admin/*` surface (25 pages, ~12,450 LOC) plus `src/lib/*` (store, ai-engine, growth-engine, loyalty, upsell, admin-auth)

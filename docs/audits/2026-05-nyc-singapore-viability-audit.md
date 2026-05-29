@@ -2,6 +2,7 @@
 ## Brutal Institutional Diligence on Brand, Product, Ops, and Tech
 
 **Date:** 14 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Senior hospitality-tech consultant + restaurant operations expert + Series-A diligence partner + elite product teardown
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres / Upstash Redis

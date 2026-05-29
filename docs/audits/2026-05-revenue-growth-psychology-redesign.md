@@ -2,6 +2,7 @@
 ## How To Squeeze 30–60% More Revenue Out Of The Same Trucks
 
 **Date:** 14 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Restaurant growth strategist + behavioural-psychology consultant + menu-engineering operator + restaurant-tech product architect + private-equity operating partner
 **Posture:** Elite PE operational audit × casino psychology consulting × FAANG conversion optimisation. Tactical, system-thinking, profit-per-minute mindset.

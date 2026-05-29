@@ -1,6 +1,7 @@
 # Sud Italia — Bundle Ladder & Revenue Architecture Rebuild
 
 **Date:** 15 May 2026
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Branch:** `claude/restaurant-revenue-audit-5jrVU`
 **Auditor lens:** Restaurant revenue strategist + menu engineer + pricing psychologist + enterprise POS auditor
 **Stance:** Post-audit ship. Companion to `2026-05-revenue-growth-psychology-redesign.md`.

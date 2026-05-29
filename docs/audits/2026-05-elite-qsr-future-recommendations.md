@@ -1,6 +1,7 @@
 # Elite QSR — what Sud Italia would still do differently
 
 **Date:** 2026-05  
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)  
 **Source:** §10 of `2026-05-revenue-growth-psychology-redesign.md` v3 (post-Sprint-9).  
 **Audience:** product + engineering planning the next 1–2 quarters of monetization work.
 

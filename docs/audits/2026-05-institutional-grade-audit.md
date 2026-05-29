@@ -1,6 +1,7 @@
 # Sud Italia — Institutional-Grade Audit
 
 **Date:** 2026-05-16
+**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Auditor lens:** McKinsey operational due diligence + PE operational advisor + Toast/Square systems architect + consumer-psychology operator
 **Scope:** Full repository (`/home/user/sud-italia`), business model, ops architecture, UX, monetization, scale readiness
 **Mode:** Brutally honest. No flattery. Specific citations.
