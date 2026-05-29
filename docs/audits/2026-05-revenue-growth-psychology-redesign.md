@@ -14,6 +14,8 @@
 
 ## Implementation status
 
+> **Status as of 2026-05-29.** Plays 1–3 unchanged in shipped status; the §1.5 "emoji-on-gradient" conversion killer is closed at the brand-frame level (V8 Tuscany storefront in production) but **real food photography is still missing**, and the three single-day revenue items (food photography, address autocomplete, post-order single-tap espresso upsell) remain un-shipped. Tip default still None. New regression: the V8 `/rewards` streak/challenge/referral surfaces ship with hardcoded/`Math.random()` values (Rule #1). Full re-verification in the dated 2026-05-29 Update below.
+
 Sections 2 and 3 are fully in production. Section 4 is mostly in
 production (charm pricing, hero/profit-driver/anchor cards, the LTO
 mechanism, and admin editability — all live; the loss-leader first-order

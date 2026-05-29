@@ -28,16 +28,18 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 
 ### 1.1 Scorecard
 
-| Dimension | Score | Justification (one line) |
-|---|---:|---|
-| **Overall** | **42 / 100** | A competent Polish small-chain admin tool with a likeable customer skin, dressed up as something bigger. |
-| **NYC viability** | **22 / 100** | No Uber/DoorDash integration, no USD, no Spanish, no allergen-at-checkout, no order ETA pre-payment, no real-time POS terminal, single lock that breaks at 200 orders/hr. |
-| **Singapore viability** | **27 / 100** | No SGD, no Chinese/Malay/Tamil, no GrabFood/foodpanda integration, no PayNow/PayLah!, no GST-compliant invoicing, no NEA-compliant calorie labelling. |
-| **Operational maturity** | **35 / 100** | KDS exists and is pretty. Shift handover, refunds with reason codes, modifiers, item-86 propagation, inventory depletion, manager override, cash reconciliation — all absent or stubbed. |
-| **UX maturity** | **48 / 100** | Polished glassmorphism + sensible mobile-first patterns, undermined by zero food photography, no guest checkout, opaque ETAs, allergen data orphaned in `kodawari.ts`. |
-| **Scalability** | **30 / 100** | Single global `lock:slots.json` and `lock:orders.json` Redis keys, `withLock` falls back to in-process Promise chain across multi-region serverless, zero test coverage, no DB partitioning. |
-| **Franchise readiness** | **25 / 100** | `/franchisee` portal exists but has no territory exclusivity, no brand-price ceiling enforcement, no SLA dashboard, no royalty dispute flow, no MSA/FDD scaffolding. |
-| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | ~~Heuristic "AI" with `Math.random()`~~ ✅ deleted (real forecast at `src/lib/ai/forecast.ts`), ~~fake aggregator mocks~~ ✅ deleted, ~~fake review data~~ ✅ deleted. Still: zero automated tests, single shared `ADMIN_PASSWORD`, no SOC 2, no LTV/CAC, no cohort retention, hand-coded menus. Sequoia still walks — the deletions removed reputational foot-guns, not the structural gaps. |
+Scores below are the original 14 May figures; the **As of 2026-05-29** column carries the current value after the V8 storefront launch, the LLM layer, the relational migration, and the KDS/POS rewrite (full reasoning in the dated 2026-05-29 Update further down).
+
+| Dimension | Score (14 May) | **As of 2026-05-29** | Justification (one line) |
+|---|---:|---:|---|
+| **Overall** | **42 / 100** | **55 / 100** | Mid-May tool with a likeable skin → UX + ops materially up; NYC/SG viability still gated by the seven structural blockers. |
+| **NYC viability** | **22 / 100** | **27 / 100** | Premium frame shipped, compliance surfaces wired; still no Uber/DoorDash, no USD settlement, no Spanish, no food photography. |
+| **Singapore viability** | **27 / 100** | **31 / 100** | V8 + compliance help the feel; no GrabFood/foodpanda, no SGD, no PayNow/PayLah!, NEA A–D auto-grade still blocked. |
+| **Operational maturity** | **35 / 100** | **70 / 100** | KDS rewrite (role lenses, prediction, SLA, hotkeys), real POS Tabs terminal, floor/reservations, refund reason codes, recipe-driven stock, real LLM ops agent. No coursing, no offline POS. |
+| **UX maturity** | **48 / 100** | **64 / 100** | V8 Tuscany storefront in production (half the §2.4 burn-down list closed). Capped by missing food photography + two non-V8 legacy surfaces + fake rewards values. |
+| **Scalability** | **30 / 100** | **70 / 100** | Per-location lock keys + relational migration on hot paths; still no real test suite, KDS client lacks virtualization, single-region DB. |
+| **Franchise readiness** | **25 / 100** | **35 / 100** | DB-backed locations + cohort/segments + fleet model + chain-wide recipes; royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
+| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | **48 / 100** | Real audited LLM agent + relational data layer + real-order-backed simulation strengthen the story. Zero real test coverage, plaintext password, no MFA, no SOC 2, no aggregators, no food photography remain the floor. |
 
 ### 1.2 The Five Hard Truths
 

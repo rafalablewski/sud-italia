@@ -8,6 +8,8 @@
 
 This audit dropped the politeness of the previous one and shipped every recommendation that survived 30 minutes of red-team review. The companion audit ("How To Squeeze 30–60% More Revenue Out Of The Same Trucks") laid the framework; this audit applied it to the bundle/combo/menu architecture and shipped the actual code.
 
+> **Status as of 2026-05-29.** Bundle ladder + pricing all verified intact and exact against current menu data, now rendering on the V8 Tuscany storefront with a relational cost store behind it. Two changes since the original ship: the dynamic **cross-sell engine was replaced by a fixed four-slot panel** (see the corrected "Cross-sell engine" section), and all five "Next steps" (customer modifier picker, save-time margin gate, espresso A/B, zone delivery surcharge) remain ✗. Full detail in the dated 2026-05-29 Update below.
+
 ---
 
 ## What we found (executive summary)

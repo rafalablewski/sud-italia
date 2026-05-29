@@ -9,6 +9,8 @@ The post-Sprint-9 monetization stack is at A-overall — single-codebase QSR pri
 
 The grading carries forward the v3 audit's standard: **A+** = an elite operator (McDonald's, Domino's, Chipotle, Starbucks, Pret) would be hard-pressed to point at a gap. The items below are the gaps they would point at.
 
+> **Status as of 2026-05-29.** Grade holds at **A-overall, not yet A+**. Item 13 (V8 brand direction) shipped to production and a real audited LLM agent layer now underpins item 1, but the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps, now on a premium surface, plus a new precondition: wire the V8 `/rewards` streak/challenge/referral surfaces to real data before instrumenting them. Per-item status re-verified in the dated 2026-05-29 Update below.
+
 ---
 
 ## 1. Per-customer ML upsell scoring  ⭐⭐⭐  (highest leverage)
