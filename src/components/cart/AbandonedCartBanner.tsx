@@ -3,26 +3,29 @@
 import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
-import { ShoppingBag, X, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
+/**
+ * V8 abandoned-cart nudge. Surfaces 30s after a customer goes idle
+ * with items in the cart. `body.v8-cart-open` hides it via CSS so it
+ * doesn't nag a customer who's already inside the checkout drawer.
+ *
+ * The Continue CTA opens the layout-level <CartDrawer /> via
+ * `useCartUIStore.setDrawerOpen` (Step 11+ single-mount). The ×
+ * dismisses for the rest of the session.
+ */
 export function AbandonedCartBanner() {
   const items = useCartStore((s) => s.items);
   const setDrawerOpen = useCartUIStore((s) => s.setDrawerOpen);
-  const getTotal = useCartStore((s) => s.getTotal);
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  // Show banner if user has items in cart and has been idle for 30 seconds
   useEffect(() => {
     if (items.length === 0 || dismissed) {
       setShow(false);
       return;
     }
-
-    const timer = setTimeout(() => {
-      setShow(true);
-    }, 30000); // 30 seconds of "inactivity" with items in cart
-
+    const timer = setTimeout(() => setShow(true), 30_000);
     return () => clearTimeout(timer);
   }, [items.length, dismissed]);
 
@@ -31,39 +34,56 @@ export function AbandonedCartBanner() {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md animate-slide-up">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-italia-red/10 flex items-center justify-center flex-shrink-0">
-          <ShoppingBag className="h-5 w-5 text-italia-red" />
+    <div className="v8-abandoned" role="status">
+      <span className="v8-abandoned-illus" aria-hidden="true">
+        <ToothpickSprig />
+      </span>
+      <div className="v8-abandoned-body">
+        <div className="v8-abandoned-title">
+          Still hungry? <em>· hai ancora fame?</em>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-italia-dark">
-            Still hungry? 🍕
-          </p>
-          <p className="text-xs text-italia-gray">
-            You have {itemCount} item{itemCount !== 1 ? "s" : ""} waiting in your cart
-          </p>
+        <div className="v8-abandoned-sub">
+          <span className="num">{itemCount}</span>
+          {itemCount === 1 ? "item" : "items"} waiting in your cart · <em>in attesa</em>
         </div>
-        <button
-          onClick={() => {
-            setDrawerOpen(true);
-            setShow(false);
-          }}
-          className="flex-shrink-0 flex items-center gap-1 px-3 py-2 bg-italia-red text-white text-xs font-semibold rounded-xl hover:bg-italia-red-dark transition-colors"
-        >
-          Checkout
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => {
-            setDismissed(true);
-            setShow(false);
-          }}
-          className="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDrawerOpen(true);
+          setShow(false);
+        }}
+        className="v8-abandoned-cta"
+      >
+        Continue <span style={{ opacity: 0.85 }}>· continua</span>
+        <ArrowRight className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setDismissed(true);
+          setShow(false);
+        }}
+        className="v8-abandoned-dismiss"
+        aria-label="Dismiss"
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+          <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
     </div>
+  );
+}
+
+/** Small dish glyph for the banner — a basil sprig over a circle.
+ *  Matches the rest of the V8 cart family's hand-sketched vocabulary. */
+function ToothpickSprig() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="14" r="7" stroke="currentColor" strokeWidth="1.4" fill="#F2E2C2" />
+      <path d="M12 14 C 12 10, 12 6, 12 4" stroke="#4A7C59" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M12 8 C 9.5 7, 8 5, 8 3 C 10.5 4, 12 6, 12 8" fill="#4A7C59" fillOpacity="0.22" stroke="#4A7C59" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M12 6 C 14.5 5, 16 3, 16 1.5 C 14 2, 12 4, 12 6" fill="#4A7C59" fillOpacity="0.22" stroke="#4A7C59" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
   );
 }

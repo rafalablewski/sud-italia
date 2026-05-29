@@ -1196,9 +1196,36 @@ in the storefront reads as one paper-card vocabulary:
 | `<AddToCartToast />`     | V8 (Step 12)  | `.v8-cart-toast`             |
 | `<ItemDetailDrawer />`   | V8 (Step 13)  | `.v8-detail-*`               |
 | `<MenuItemsRegistrar />` | n/a (bridge)  | —                            |
-| `<AbandonedCartBanner />` | pre-V8 (low priority) | `.fixed top-20 …`   |
+| `<AbandonedCartBanner />` | V8 (Step 17, polish) | `.v8-abandoned-*`    |
 
-`<AbandonedCartBanner />` is the only remaining pre-V8 surface in the
-cart family. It only renders 30s after the customer goes idle with
-items in cart, and the visual treatment isn't a major branding
-moment — left for a future polish pass.
+Every component in the cart family is V8 — no exceptions.
+
+### `<AbandonedCartBanner />` — `src/components/cart/AbandonedCartBanner.tsx`
+
+The 30-second "still hungry?" nudge that surfaces when a customer
+goes idle with items in their cart. Lives at the layout level (Step
+11+ single-mount) and reads from `useCartStore.items` to decide
+whether to schedule the timer.
+
+- `.v8-abandoned` — fixed top-center paper card, sized
+  `min(440px, 100% - 32px)`. Slides in via the dedicated
+  `v8-abandoned-slide` keyframe (opacity + 16px translate-y over
+  400ms cubic-bezier). Anchored under the sticky nav at
+  `top: calc(var(--v8-nav-height) + 12px)` so it clears the
+  header on every viewport.
+- `.v8-abandoned-illus` — 38px parchment-deep circle with a
+  basil-sprig-over-tomato glyph (the same hand-sketched vocabulary
+  the cart items + detail drawer use).
+- `.v8-abandoned-title` — italic Cormorant 15px "Still hungry?
+  · *hai ancora fame?*" with the Italian phrase in muted italic.
+- `.v8-abandoned-sub` — italic Lora 12px "**N** items waiting in
+  your cart · *in attesa*" — tabular item count in Cormorant 600.
+- `.v8-abandoned-cta` — terracotta italic Cormorant
+  "Continue · continua →". Opens the layout-level `<CartDrawer />`
+  via `useCartUIStore.setDrawerOpen`.
+- `.v8-abandoned-dismiss` — line-bordered round × button; hover
+  flips to oxblood. Sets `dismissed = true` so the banner stays
+  hidden for the rest of the session.
+- `body.v8-cart-open` fades the banner to opacity 0 + drops
+  pointer events — no nagging while the drawer is up.
+- `prefers-reduced-motion` disables the slide animation.
