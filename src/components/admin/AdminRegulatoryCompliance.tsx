@@ -28,6 +28,7 @@ interface LocationCompliance {
   gstRegistered?: boolean;
   gstNumber?: string | null;
   gstRateBps?: number;
+  vatRateBps?: number;
   nutriGradeRequired?: boolean;
   packagingDisclosure?: string | null;
   pdpaConsentText?: string | null;
@@ -109,6 +110,7 @@ export function AdminRegulatoryCompliance() {
           value.gstRegistered ||
           value.gstNumber ||
           typeof value.gstRateBps === "number" ||
+          typeof value.vatRateBps === "number" ||
           value.nutriGradeRequired ||
           value.packagingDisclosure ||
           value.pdpaConsentText;
@@ -447,6 +449,30 @@ export function AdminRegulatoryCompliance() {
                       operator action required. Polish JPK_V7M VAT exports
                       live at <code>/admin/reports</code>.
                     </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block admin-text-secondary text-xs mb-1">
+                          VAT rate (basis points, 800 = 8 %)
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={5000}
+                          value={active.vatRateBps ?? 800}
+                          onChange={(e) =>
+                            setActive({
+                              ...active,
+                              vatRateBps: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                        <p className="admin-text-secondary text-xs mt-1 leading-snug">
+                          Polish prepared food = 800 (ustawa o VAT, załącznik
+                          10, poz. 3). Applied per location on every JPK_V7M
+                          row — change here and the next export picks it up.
+                        </p>
+                      </div>
+                    </div>
                     <label className="flex items-center gap-2 admin-text text-sm">
                       <input
                         type="checkbox"

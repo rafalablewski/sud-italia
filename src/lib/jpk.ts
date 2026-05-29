@@ -1,4 +1,5 @@
-import { getOrders } from "@/lib/store";
+import { getOrders, getSettings, resolveLocationCompliance } from "@/lib/store";
+import type { ComplianceConfig } from "@/lib/store";
 
 /**
  * Build a JPK_V7M (monthly) XML envelope for orders in a date window.
@@ -16,8 +17,11 @@ import { getOrders } from "@/lib/store";
  * `WEW` (internal) document, but we emit one row per order for full
  * traceability so reconciliation against `orders.json` is line-perfect.
  *
- * VAT rate: prepared food in PL is taxed at 8% (ustawa o VAT, załącznik
- * 10, poz. 3). Refunds (full or partial) reduce the gross/net/VAT
+ * VAT rate: prepared food in PL defaults to 8% (ustawa o VAT, załącznik
+ * 10, poz. 3) but is resolved per location via
+ * `resolveLocationCompliance(...).vatRateBps`, so a truck on a
+ * different rate can override it from /admin/regulatory-compliance
+ * without a deploy. Refunds (full or partial) reduce the gross/net/VAT
  * components proportionally. Tips are excluded from the taxable base —
  * gratuities are not VATable under PL practice.
  *
@@ -31,7 +35,12 @@ import { getOrders } from "@/lib/store";
  *     food trucks don't use them.
  */
 
-const VAT_RATE = 0.08; // 8% on prepared food. Adjust if menu mix changes.
+const DEFAULT_VAT_BPS = 800; // 8% — Polish prepared food, ustawa o VAT zał. 10 poz. 3.
+
+function vatRateFor(locationSlug: string, compliance: ComplianceConfig | undefined): number {
+  const loc = resolveLocationCompliance(compliance, locationSlug);
+  return (loc.vatRateBps ?? DEFAULT_VAT_BPS) / 10000;
+}
 
 function escapeXml(s: string): string {
   return s
@@ -79,6 +88,7 @@ export async function buildJpkV7m(
   locationSlug?: string,
 ): Promise<string> {
   const settings = loadSettings();
+  const compliance = (await getSettings()).compliance;
   const orders = (await getOrders(locationSlug)).filter(
     (o) => o.status !== "pending" && o.status !== "cancelled",
   );
@@ -104,7 +114,8 @@ export async function buildJpkV7m(
     const grossGrosze = Math.max(0, tippable - refundDelta);
     if (grossGrosze === 0) continue;
 
-    const netGrosze = netFromGross(grossGrosze, VAT_RATE);
+    const rate = vatRateFor(o.locationSlug, compliance);
+    const netGrosze = netFromGross(grossGrosze, rate);
     const vatGrosze = grossGrosze - netGrosze;
     totalVatGrosze += vatGrosze;
     rowIndex++;
@@ -179,6 +190,7 @@ export async function summarizeJpk(
   toIso: string,
   locationSlug?: string,
 ): Promise<JpkSummary> {
+  const compliance = (await getSettings()).compliance;
   const orders = (await getOrders(locationSlug)).filter(
     (o) => o.status !== "pending" && o.status !== "cancelled",
   );
@@ -197,7 +209,8 @@ export async function summarizeJpk(
     if (g === 0) continue;
     rows++;
     gross += g;
-    const n = netFromGross(g, VAT_RATE);
+    const rate = vatRateFor(o.locationSlug, compliance);
+    const n = netFromGross(g, rate);
     net += n;
     vat += g - n;
   }

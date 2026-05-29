@@ -1079,7 +1079,7 @@ export default async function CapabilitiesPage() {
           name: "JPK_V7M (Polish tax export)",
           status: "live",
           href: "/api/admin/reports/jpk?format=summary",
-          summary: "VAT XML for the Polish tax authority. Summary preview before the accountant downloads.",
+          summary: "VAT XML for the Polish tax authority. Summary preview before the accountant downloads. VAT rate is resolved per location via resolveLocationCompliance(...).vatRateBps (default 800 = 8 % on prepared food, ustawa o VAT zał. 10 poz. 3) — operator-editable from /admin/regulatory-compliance → EU panel, so a truck on a different rate doesn't need a deploy. Aggregate exports apply each row's own location rate.",
         },
         {
           name: "Tips report",

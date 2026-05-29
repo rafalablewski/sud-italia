@@ -18,7 +18,7 @@
 | 2 | Loyalty | `TIER_THRESHOLDS` (0/500/1500/5000) | `src/lib/loyalty.ts:16` | hardcoded record | `getLoyaltySettings().tiers.{tier}.threshold` | P0 | Settings already has tier shape (`store.ts:3006`); collapse the two sources into one and have `loyalty.ts` read from settings. |
 | 3 | Loyalty | `TIER_CONFIG` (perks, multipliers, labels, colors) | `src/lib/loyalty.ts:22` | hardcoded record with customer-facing promises ("Free delivery", "VIP events") | settings for multiplier + perks; theme-managed for color/label | P0 | Multipliers + perks → settings (admin-editable); label + color stay in code (theme). |
 | 4 | Loyalty | duplicate tier config | `src/lib/store.ts:3006-3009` | second hardcoded copy of the same thresholds + perks | single source via settings | P0 | Same fix as #2/#3 — delete the duplicate after the migration lands. |
-| 5 | Fiscal | `VAT_RATE = 0.08` | `src/lib/jpk.ts:34` | hardcoded 8% VAT for JPK exports | `resolveLocationCompliance(...)` per location + tax category | P0 | Compliance settings already exist (`DEFAULT_COMPLIANCE_CONFIG` in store); read VAT per location from there. Mis-stated VAT = fiscal risk. |
+| 5 | ~~Fiscal~~ | ~~`VAT_RATE = 0.08`~~ | ~~`src/lib/jpk.ts:34`~~ | resolved per location via `vatRateBps` on `LocationComplianceConfig` (default 800 bps) | — | ~~P0~~ | **DONE (Phase 1, Step 1.1).** Added `vatRateBps` field, refactored `jpk.ts` to compute per-row, surfaced operator input in EU panel of `/admin/regulatory-compliance`, extended Zod schema, refreshed capabilities entry. Backward-compatible (default still 8%). |
 | 6 | Brand | `CONTACT_EMAIL`, `CONTACT_PHONE` | `src/lib/constants.ts:15-16` | hardcoded operational contact | `getSettings().contact.{email,phone}` | P0 | Per Q4 branding = code, but contact info is operational, not brand — must be admin-editable. |
 | 7 | Brand | `SOCIAL_LINKS` (IG / FB / TikTok URLs) | `src/lib/constants.ts:7` | hardcoded URLs | `getSettings().social.*` | P1 | Same reasoning as #6. Today they change without a code review = high churn. |
 | 8 | Locations | `ACTIVE_LOCATIONS = ["krakow", "warszawa"]` (server tool) | `src/lib/whatsapp/tools.ts:41` | hardcoded literal in WhatsApp tool router | `getActiveLocationsAsync()` from `@/lib/locations-store` | P0 | Server-side — must use live store. Hardcoded list breaks when a third truck opens. |
@@ -66,7 +66,7 @@
 | phase | PR | status |
 |-------|----|--------|
 | 0 | tracker landed | done |
-| 1 | money flow | not started |
+| 1 | money flow | step 1.1 (VAT) done — 1.2 (cart placeholder) + 1.3 (JSON-LD currency) pending |
 | 2 | menu | not started |
 | 3 | locations | not started |
 | 4 | loyalty | not started |

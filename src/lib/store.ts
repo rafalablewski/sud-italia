@@ -2844,6 +2844,11 @@ export interface LocationComplianceConfig {
   /** GST rate in basis points. Default 900 (9 %) for SG; operator can
    *  override if rates change. */
   gstRateBps?: number;
+  /** Prepared-food VAT rate in basis points (EU / PL). Default 800
+   *  (8 %, ustawa o VAT, załącznik 10, poz. 3). Drives JPK_V7M exports
+   *  — kept per location so a future foreign-zone EU truck can carry
+   *  its own rate. Operator-editable from /admin/regulatory-compliance. */
+  vatRateBps?: number;
   /** When true, the menu page surfaces NEA Nutri-Grade badges on any
    *  beverage with `nutriGrade` set. */
   nutriGradeRequired?: boolean;
