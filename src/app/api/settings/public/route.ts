@@ -94,5 +94,11 @@ export async function GET(req: NextRequest) {
      *  the corresponding flag is false, so the surface loses its DOM
      *  and visible CSS without a code change. */
     layout: appSettings.layout ?? DEFAULT_LAYOUT_SETTINGS,
+    /** Operator-managed contact + social handles rendered in the
+     *  public footer. Empty values let the footer hide the matching
+     *  row / link without a code change. */
+    businessPhone: appSettings.businessPhone,
+    businessEmail: appSettings.businessEmail,
+    socialLinks: appSettings.socialLinks,
   });
 }

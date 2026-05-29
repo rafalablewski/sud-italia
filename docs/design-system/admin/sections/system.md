@@ -179,9 +179,14 @@ The chain-wide configuration tabs.
 - **Header:** `Settings` (h1).
 - **Tabs:** General · **Layout** · **Themes** · Security · Audit ·
   Danger. Tab keys are stable for deep linking.
-- **General:** chain identity (name, tagline, contact email), service
-  defaults (default prep time, delivery radius), loyalty programme
-  config, feature toggles.
+- **General:** chain identity (name, tagline), service defaults
+  (delivery fee, minimum order, per-segment free-delivery
+  thresholds), **Business contact** (operator-managed
+  `businessPhone` + `businessEmail`), **Social links** (Instagram /
+  Facebook / TikTok URLs). The contact + social fields propagate to
+  the public footer through `getSettings()` (Footer is an async
+  server component) — empty fields hide the matching row / link
+  instead of shipping placeholder strings.
 - **Layout:** storefront visibility toggles. Each flips a flag in
   `AppSettings.layout` that the storefront reads via
   `/api/settings/public`; the owning component is wrapped in

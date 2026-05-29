@@ -83,7 +83,7 @@ export default async function CapabilitiesPage() {
           name: "Admin settings hub",
           status: "live",
           href: "/admin/settings",
-          summary: "Loyalty, growth, AI, seasonal items and feature toggles. Persists via withLock on save.",
+          summary: "Loyalty, growth, AI, seasonal items and feature toggles. Persists via withLock on save. Also home to the operator-managed public-footer fields — businessPhone, businessEmail, and the socialLinks (Instagram / Facebook / TikTok) URL set. Empty fields hide the corresponding row / link in the footer, so the operator can ship without placeholder strings; the Footer is an async server component that reads getSettings() on every render so edits surface within the next request.",
         },
         {
           name: "Storefront layout toggles (Settings → Layout)",

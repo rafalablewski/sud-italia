@@ -2701,6 +2701,14 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Operator-managed social handles, rendered in the public footer.
+   *  Empty string = the corresponding link is hidden. Editable from
+   *  /admin/settings → General. */
+  socialLinks: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
   /** Audit §3 — per-segment free-delivery thresholds (grosze). Operators
    *  retune these without a code push when the LTV per cohort shifts.
    *  Falls back to the SEGMENT_FREE_DELIVERY_THRESHOLD constants in
@@ -2888,8 +2896,13 @@ export function resolveLocationCompliance(
 const DEFAULT_SETTINGS: AppSettings = {
   deliveryFee: 1000, // 10.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
-  businessPhone: "",
-  businessEmail: "",
+  businessPhone: "+48 123 456 789",
+  businessEmail: "hello@suditalia.pl",
+  socialLinks: {
+    instagram: "https://instagram.com/suditalia.pl",
+    facebook: "https://facebook.com/suditalia.pl",
+    tiktok: "https://tiktok.com/@suditalia.pl",
+  },
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
   compliance: DEFAULT_COMPLIANCE_CONFIG,

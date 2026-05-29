@@ -4,14 +4,10 @@ export const SITE_DESCRIPTION =
 export const COMPANY_NAME = "Sud Italia Sp. z o.o.";
 export const DEFAULT_CURRENCY = "PLN";
 
-export const SOCIAL_LINKS = {
-  instagram: "https://instagram.com/suditalia.pl",
-  facebook: "https://facebook.com/suditalia.pl",
-  tiktok: "https://tiktok.com/@suditalia.pl",
-};
-
-export const CONTACT_EMAIL = "hello@suditalia.pl";
-export const CONTACT_PHONE = "+48 123 456 789";
+// Operator-managed contact + social handles live on AppSettings
+// (businessPhone, businessEmail, socialLinks) — edit them from
+// /admin/settings → General. The Footer reads them through
+// getSettings() / /api/settings/public; no constants live here.
 
 /** Max distinct phone numbers in one family wallet (shared pool). */
 export const WALLET_MAX_PHONES = 4;

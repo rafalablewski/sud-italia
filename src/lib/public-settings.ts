@@ -63,6 +63,15 @@ export interface PublicSettings {
     pdpaConsentText?: string | null;
   };
   deliveryThresholds?: Record<string, number | undefined> | null;
+  /** Operator-managed contact + social handles rendered in the
+   *  public footer. */
+  businessPhone?: string;
+  businessEmail?: string;
+  socialLinks?: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
   /** Storefront visibility toggles set via /admin/settings → Layout.
    *  Components (or the LayoutGate wrapper) read these and return null
    *  when the corresponding flag is `false`. */
