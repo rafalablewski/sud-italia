@@ -3,7 +3,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
-import { getActiveLocations, locations as allLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -1806,8 +1806,9 @@ export async function upsertCartPresence(
 }
 
 /** True if slug is an active location (cart presence only for open locations). */
-export function isActiveLocationSlug(slug: string): boolean {
-  return getActiveLocations().some((l) => l.slug === slug);
+export async function isActiveLocationSlug(slug: string): Promise<boolean> {
+  const list = await getActiveLocationsAsync();
+  return list.some((l) => l.slug === slug);
 }
 
 // --- Analytics ---
@@ -2086,7 +2087,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .sort((a, b) => a.time.localeCompare(b.time));
 
   // --- Location comparison ---
-  const activeLocations = allLocations.filter((l) => l.isActive);
+  const activeLocations = await getActiveLocationsAsync();
   const locationComparison: LocationComparison[] = [];
 
   for (const loc of activeLocations) {
@@ -2700,6 +2701,14 @@ export interface AppSettings {
   minOrderAmount: number; // in grosze
   businessPhone: string;
   businessEmail: string;
+  /** Operator-managed social handles, rendered in the public footer.
+   *  Empty string = the corresponding link is hidden. Editable from
+   *  /admin/settings → General. */
+  socialLinks: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
   /** Audit §3 — per-segment free-delivery thresholds (grosze). Operators
    *  retune these without a code push when the LTV per cohort shifts.
    *  Falls back to the SEGMENT_FREE_DELIVERY_THRESHOLD constants in
@@ -2844,6 +2853,11 @@ export interface LocationComplianceConfig {
   /** GST rate in basis points. Default 900 (9 %) for SG; operator can
    *  override if rates change. */
   gstRateBps?: number;
+  /** Prepared-food VAT rate in basis points (EU / PL). Default 800
+   *  (8 %, ustawa o VAT, załącznik 10, poz. 3). Drives JPK_V7M exports
+   *  — kept per location so a future foreign-zone EU truck can carry
+   *  its own rate. Operator-editable from /admin/regulatory-compliance. */
+  vatRateBps?: number;
   /** When true, the menu page surfaces NEA Nutri-Grade badges on any
    *  beverage with `nutriGrade` set. */
   nutriGradeRequired?: boolean;
@@ -2880,10 +2894,19 @@ export function resolveLocationCompliance(
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  deliveryFee: 1000, // 10.00 PLN
+  // Matches the pre-Phase-8 hardcoded DELIVERY_FEE_GROSZE in lib/upsell.ts
+  // so first-deploy / unedited installs see no customer-visible price
+  // change. Operators who explicitly set a value in /admin/settings keep
+  // their saved number (which now actually drives the charge).
+  deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
-  businessPhone: "",
-  businessEmail: "",
+  businessPhone: "+48 123 456 789",
+  businessEmail: "hello@suditalia.pl",
+  socialLinks: {
+    instagram: "https://instagram.com/suditalia.pl",
+    facebook: "https://facebook.com/suditalia.pl",
+    tiktok: "https://tiktok.com/@suditalia.pl",
+  },
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
   compliance: DEFAULT_COMPLIANCE_CONFIG,
@@ -2969,12 +2992,24 @@ export interface LiveWidget {
   };
 }
 
+export interface LoyaltyTierConfig {
+  /** Customer-facing tier label. Editable so the operator can run an
+   *  Italian voice ("Famiglia Oro") without a deploy. */
+  label: string;
+  /** Points needed to enter the tier (cumulative lifetime). */
+  threshold: number;
+  /** Earn-rate multiplier applied to per-order points. */
+  multiplier: number;
+  /** Bullet list of perks shown on the rewards page tier card. */
+  perks: string[];
+}
+
 export interface LoyaltySettings {
   tiers: {
-    bronze: { threshold: number; multiplier: number; perks: string[] };
-    silver: { threshold: number; multiplier: number; perks: string[] };
-    gold: { threshold: number; multiplier: number; perks: string[] };
-    platinum: { threshold: number; multiplier: number; perks: string[] };
+    bronze: LoyaltyTierConfig;
+    silver: LoyaltyTierConfig;
+    gold: LoyaltyTierConfig;
+    platinum: LoyaltyTierConfig;
   };
   rewards: { id: string; name: string; pointsCost: number; description: string; active: boolean }[];
   referral: { referrerPoints: number; refereeDiscountGrosze: number; active: boolean };
@@ -3003,10 +3038,10 @@ function seedLiveWidgetsFromLegacy(legacy?: Record<string, boolean>): LiveWidget
 
 const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   tiers: {
-    bronze: { threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
-    silver: { threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },
-    gold: { threshold: 1500, multiplier: 2, perks: ["2x points multiplier", "Priority ordering", "Free delivery"] },
-    platinum: { threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
+    bronze: { label: "Bronze", threshold: 0, multiplier: 1, perks: ["1 point per 1 PLN spent"] },
+    silver: { label: "Silver", threshold: 500, multiplier: 1.5, perks: ["1.5x points multiplier", "Free birthday dessert"] },
+    gold: { label: "Gold", threshold: 1500, multiplier: 2, perks: ["2x points multiplier", "Priority ordering", "Free delivery"] },
+    platinum: { label: "Platinum", threshold: 5000, multiplier: 3, perks: ["3x points multiplier", "Exclusive menu items", "VIP events"] },
   },
   rewards: [
     // Audit §3 — "10 PLN Off" at 100 points (100 zł spend → 10 zł back) was
@@ -8565,7 +8600,9 @@ export async function deletePushSubscription(endpoint: string): Promise<boolean>
 export interface WaSession {
   /** Canonical E.164 PL phone (the key). */
   phone: string;
-  locationSlug: "krakow" | "warszawa" | null;
+  /** Active-location slug (validated against the live locations store
+   *  at tool time — see whatsapp/tools.ts isActiveLocation). */
+  locationSlug: string | null;
   cartItems: import("@/data/types").CartItem[];
   fulfillmentType: import("@/data/types").FulfillmentType | null;
   slotId: string | null;

@@ -30,6 +30,31 @@ const eslintConfig = defineConfig([
       "react/no-unescaped-entities": "warn",
     },
   },
+  // Audit guardrails — keep the silent-drift bugs we already fixed
+  // from sneaking back in. See tests/audit-hardcoded.md for context.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/data/menus/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/data/menus/krakow",
+              message:
+                "Direct seed menu import bypasses runtime overrides. Use getMenu(slug) or getMenuWithOverrides(slug) from @/data/menus.",
+            },
+            {
+              name: "@/data/menus/warszawa",
+              message:
+                "Direct seed menu import bypasses runtime overrides. Use getMenu(slug) or getMenuWithOverrides(slug) from @/data/menus.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

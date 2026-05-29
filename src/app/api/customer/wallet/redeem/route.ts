@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { redeemLoyaltyReward } from "@/lib/store";
-import { REWARDS } from "@/lib/loyalty";
+import { redeemLoyaltyReward, getLoyaltySettings } from "@/lib/store";
 import { getCustomerSessionPhone } from "@/lib/customer-session";
 
 export async function POST(req: NextRequest) {
@@ -17,7 +16,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const reward = REWARDS.find((r) => r.id === rewardId);
+  // Validate against the live admin-managed rewards catalogue. Inactive
+  // rewards are rejected here too so a deactivated reward can't be
+  // redeemed via a stale client.
+  const loyalty = await getLoyaltySettings();
+  const reward = loyalty.rewards.find((r) => r.id === rewardId && r.active);
   if (!reward) {
     return NextResponse.json({ error: "Unknown reward" }, { status: 400 });
   }

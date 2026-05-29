@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     if (typeof locationSlug !== "string" || !locationSlug) {
       return NextResponse.json({ error: "Invalid location" }, { status: 400 });
     }
-    if (!isActiveLocationSlug(locationSlug)) {
+    if (!(await isActiveLocationSlug(locationSlug))) {
       return NextResponse.json({ error: "Unknown location" }, { status: 404 });
     }
 

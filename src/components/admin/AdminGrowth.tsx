@@ -41,6 +41,7 @@ import {
 import { KpiCard } from "./v2/charts";
 
 interface Tier {
+  label: string;
   threshold: number;
   multiplier: number;
   perks: string[];
@@ -405,6 +406,12 @@ export function AdminGrowth() {
                 />
                 <CardBody>
                   <div className="v2-stack-12">
+                    <Input
+                      label="Customer-facing label"
+                      value={tier.label}
+                      placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
+                      onChange={(e) => updateTier(k, { label: e.target.value })}
+                    />
                     <Input
                       label="Threshold (lifetime PLN)"
                       type="number"

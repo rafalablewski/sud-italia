@@ -1,6 +1,4 @@
 import { MenuItem } from "../types";
-import { krakowMenu } from "./krakow";
-import { warszawaMenu } from "./warszawa";
 import { getItemDetails } from "../kodawari";
 import {
   getCustomMenuItems,
@@ -11,14 +9,12 @@ import {
 } from "@/lib/store";
 import { getBaseSlug } from "@/lib/utils";
 
-const baseMenus: Record<string, MenuItem[]> = {
-  krakow: krakowMenu,
-  warszawa: warszawaMenu,
-};
-
-export function getMenu(locationSlug: string): MenuItem[] {
-  return baseMenus[locationSlug] ?? [];
-}
+// `getMenu` lives in a separate module so client components can read
+// the sync seed without pulling @/lib/store (and its node-only deps)
+// into the browser bundle. Re-exported here so server callers keep a
+// single entry point at `@/data/menus`.
+export { getMenu } from "./seed";
+import { getMenu } from "./seed";
 
 /** Per-portion nutrition map (kcal + protein + carbs + sugar + fiber +
  *  fat) for every dish that has a recipe. Each macro field populates

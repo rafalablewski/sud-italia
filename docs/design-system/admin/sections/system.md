@@ -82,15 +82,36 @@ inspections, certification renewals, supplier audits.
 
 ## Regulatory disclosures — `/admin/regulatory-compliance`
 
-The owner-only legal-text surface — privacy notice, terms, allergen
-declaration, GDPR articles 13/14 disclosure templates.
+The owner-only per-location regulatory pack — every truck is tagged
+with the zone it operates under (EU / NYC / SG) and the
+zone-specific disclosure fields. Live code:
+`src/components/admin/AdminRegulatoryCompliance.tsx`.
 
-- **Header:** `Regulatory disclosures` (h1).
-- **Body:** sections for each disclosure type, each with the current
-  published text, version history, the date of last legal review.
-- **No casual editing.** Every change requires the owner role + a
-  reason captured in the audit log. The customer-facing pages
-  (`/privacy`, `/terms`) read straight from this surface.
+- **Header:** `Regulatory disclosures` (h1) + the default-zone
+  selector.
+- **Per-location switcher:** pill-row of every active truck (reads
+  from `@/data/locations`); the panel below renders the fields for
+  the truck's zone.
+- **Zone panels:**
+  - **EU / Poland** — VAT rate input (basis points, default 800 = 8 %,
+    drives every JPK_V7M row via `resolveLocationCompliance().vatRateBps`
+    so a truck on a different rate doesn't need a deploy); optional
+    UK-style voluntary kcal disclosure toggle.
+  - **NYC** — DOH letter grade + issued date, §81.50 calorie disclosure
+    toggle, FRESH Act packaging text.
+  - **SG** — MUIS Halal cert + expiry, NEA Nutri-Grade toggle, IRAS GST
+    (registered + number + rate in bps, default 900 = 9 %), PDPA §13
+    consent body.
+- **Persistence:** `PUT /api/admin/regulatory-compliance` (owner only),
+  schema-validated with Zod. The "skip locations with no overrides"
+  rule keeps the persisted blob lean — a location at the default zone
+  with no extra fields set is omitted from `byLocation` on save.
+- **Customer surfaces consume this:** NYC DOH banner, per-item kcal
+  pill, SG Nutri-Grade hex + halal chip + GST line + PDPA consent
+  dialog. JPK_V7M reads the EU VAT rate per row. All served via
+  `/api/settings/public?location=` so SSR + hydration agree.
+- **Audit trail.** Every save lands in the audit log as
+  `settings.compliance.update` with before/after snapshots.
 
 ## Audit log — `/admin/audit-log`
 
@@ -158,9 +179,14 @@ The chain-wide configuration tabs.
 - **Header:** `Settings` (h1).
 - **Tabs:** General · **Layout** · **Themes** · Security · Audit ·
   Danger. Tab keys are stable for deep linking.
-- **General:** chain identity (name, tagline, contact email), service
-  defaults (default prep time, delivery radius), loyalty programme
-  config, feature toggles.
+- **General:** chain identity (name, tagline), service defaults
+  (delivery fee, minimum order, per-segment free-delivery
+  thresholds), **Business contact** (operator-managed
+  `businessPhone` + `businessEmail`), **Social links** (Instagram /
+  Facebook / TikTok URLs). The contact + social fields propagate to
+  the public footer through `getSettings()` (Footer is an async
+  server component) — empty fields hide the matching row / link
+  instead of shipping placeholder strings.
 - **Layout:** storefront visibility toggles. Each flips a flag in
   `AppSettings.layout` that the storefront reads via
   `/api/settings/public`; the owning component is wrapped in

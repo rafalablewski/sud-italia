@@ -5,8 +5,13 @@
 The customer-facing loyalty surface — wallet, tier ladder, redemption,
 challenges, referral, family wallet. Lives at `/rewards` in
 `src/app/(public)/rewards/page.tsx`. Reads from `useCustomer()` for
-identity + points; reads `TIER_CONFIG` / `TIER_THRESHOLDS` / `REWARDS`
-from `src/lib/loyalty.ts` as the source of truth.
+identity + points; fetches the programme config (tier ladder + active
+rewards catalogue) from `/api/settings/public` via
+`fetchPublicSettings()` so operator edits in `/admin/loyalty` flow
+through without a deploy. The pure-compute helpers in
+`src/lib/loyalty.ts` (`calculateTier`, `pointsToNextTier`,
+`calculatePointsForOrder`) take the tier ladder as a parameter — no
+hardcoded thresholds remain in the helper module.
 
 V8 since Step 15 — all selectors live under `.v8-rewards-*` in
 `themes/homepage/index.css`.
@@ -119,7 +124,11 @@ The "what's going on with my account" view.
   headline (oxblood italic accent), the dashed-border
   `.v8-rewards-referral-code` (Cormorant 22px tracking 2.8px), a
   copy chip that flips basil when clicked, and a terracotta italic
-  "Share with friends · condividi" CTA.
+  "Share with friends · condividi" CTA. The PLN-off + bonus-points
+  numbers come from `loyalty.referral` on the public-settings
+  payload (`{ referrerPoints, refereeDiscountGrosze }`); the entire
+  card hides itself when the operator sets `referral.active = false`
+  in `/admin/growth → Referrals` — there's no static fallback copy.
 - **Tier roadmap** (`.v8-rewards-roadmap`) — 4-up grid of
   `.v8-rewards-tier-tile` paper cards. Active tier gets the
   ochre-fill name pill + "Current · attuale" green sublabel + the
@@ -198,9 +207,14 @@ refresh via `identify()` after every mutation).
 
 ## The rules unique to the loyalty page
 
-1. **`TIER_CONFIG` and `TIER_THRESHOLDS` are the only source of
-   truth.** Never hard-code the names ("Silver") or numbers (1000) in
-   markup — read them from `src/lib/loyalty.ts`.
+1. **Programme config = admin settings, not code constants.** Tier
+   labels, thresholds, multipliers, perks, and the rewards catalogue
+   all live in `LoyaltySettings` (see `src/lib/store.ts`) and reach
+   this page via `/api/settings/public` → `fetchPublicSettings()`.
+   Never hard-code names ("Silver") or numbers (1000) in markup —
+   read them from the loaded `loyalty` state. The page renders
+   nothing until the public-settings fetch lands so we don't flash
+   bronze defaults.
 2. **The points balance is the actual ledger sum.** Order-based +
    manual admin adjustments (`getManualPointsTotal()`) — same number
    the admin Loyalty page reads.

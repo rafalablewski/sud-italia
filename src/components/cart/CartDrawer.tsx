@@ -28,12 +28,11 @@ import { Star, Clock, Check, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { SlotPicker } from "./SlotPicker";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
+import { getMenu } from "@/data/menus/seed";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
-import { fetchPublicSettings } from "@/lib/public-settings";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
@@ -232,10 +231,19 @@ export function CartDrawer() {
   // segmented threshold to DeliveryProgress so the bar shows the right
   // target. The same threshold is passed to computeDeliveryFee in
   // /api/checkout so the receipt matches what the bar promised.
-  const deliverySegment = loyaltyCustomer
+  // Loyalty programme config (tier ladder) — populated from the same
+  // fetchPublicSettings call as deliveryThresholds + compliance below.
+  // Until it lands, the delivery segment falls back to null so the bar
+  // uses the default threshold instead of guessing a tier.
+  const [publicLoyalty, setPublicLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  /** Operator-managed flat delivery fee (grosze) from public settings.
+   *  Falls back to the code-side seed in computeDeliveryFee until the
+   *  fetch resolves. */
+  const [publicDeliveryFee, setPublicDeliveryFee] = useState<number | undefined>(undefined);
+  const deliverySegment = loyaltyCustomer && publicLoyalty
     ? {
         ordersCount: loyaltyCustomer.ordersCount,
-        tier: calculateTier(loyaltyCustomer.points),
+        tier: calculateTier(loyaltyCustomer.points, publicLoyalty.tiers),
       }
     : null;
   // Admin-tunable per-segment thresholds (audit §3) — fetched from the
@@ -269,6 +277,8 @@ export function CartDrawer() {
       if (data.compliance && typeof data.compliance === "object") {
         setCompliance(data.compliance);
       }
+      if (data.loyalty) setPublicLoyalty(data.loyalty);
+      if (typeof data.deliveryFee === "number") setPublicDeliveryFee(data.deliveryFee);
     });
     return () => {
       cancelled = true;
@@ -296,6 +306,7 @@ export function CartDrawer() {
     subtotal - comboDiscount,
     fulfillmentType,
     deliveryThreshold,
+    publicDeliveryFee,
   );
   const total = subtotal - comboDiscount + deliveryFee + tipAmount;
 
@@ -336,15 +347,13 @@ export function CartDrawer() {
     }
   }, [loyaltyCustomer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Resolve menu items — use prop if available, otherwise look up by location
+  // Resolve menu items — use prop if available, otherwise fall back to
+  // the seed catalogue for the cart's location. A new active truck is
+  // picked up automatically via getMenu(slug) instead of a hardcoded
+  // {krakow, warszawa} map.
   const resolvedMenuItems = useMemo(() => {
     if (allMenuItems.length > 0) return allMenuItems;
-    // Fallback: load from hardcoded menus based on cart's location
-    const menus: Record<string, import("@/data/types").MenuItem[]> = {
-      krakow: krakowMenu,
-      warszawa: warszawaMenu,
-    };
-    return locationSlug ? menus[locationSlug] || [] : [];
+    return locationSlug ? getMenu(locationSlug) : [];
   }, [allMenuItems, locationSlug]);
 
   // Cross-sell suggestions — always have menu items to work with now.
@@ -1162,8 +1171,8 @@ function TipPicker({
             onChange(Math.round(parseFloat(v || "0") * 100));
           }}
           onFocus={() => setCustomMode(true)}
-          placeholder="0.00 zł"
-          aria-label="Custom tip amount in złoty"
+          placeholder={formatPrice(0)}
+          aria-label="Custom tip amount"
           className="v8-cart-input"
           style={{ flex: 1, padding: "10px 14px" }}
         />

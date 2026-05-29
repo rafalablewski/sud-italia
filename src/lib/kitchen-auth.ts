@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getSessionSigningSecret } from "@/lib/session-secret";
-import { getActiveLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 
 export const KITCHEN_SESSION_COOKIE = "sud-italia-kitchen";
 export const KITCHEN_SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
@@ -54,12 +54,13 @@ function passwordMatches(expected: string, provided: string): boolean {
  * Validates staff login for a location. Password must match KITCHEN_PASSWORDS[slug].
  * Username must be non-empty (display / audit only).
  */
-export function verifyKitchenCredentials(
+export async function verifyKitchenCredentials(
   slug: string,
   username: string,
   password: string
-): boolean {
-  const loc = getActiveLocations().find((l) => l.slug === slug);
+): Promise<boolean> {
+  const list = await getActiveLocationsAsync();
+  const loc = list.find((l) => l.slug === slug);
   if (!loc) return false;
   if (username.trim().length === 0 || password.length === 0) return false;
 

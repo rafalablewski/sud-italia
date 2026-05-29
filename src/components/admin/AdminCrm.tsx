@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getActiveLocations } from "@/data/locations";
 import {
   AlertTriangle,
   Bot,
@@ -249,8 +250,7 @@ const PERIODS: { key: string; label: string; days: number }[] = [
 ];
 const LOCS = [
   { key: "All", label: "All" },
-  { key: "krakow", label: "Kraków" },
-  { key: "warszawa", label: "Warszawa" },
+  ...getActiveLocations().map((l) => ({ key: l.slug, label: l.city })),
 ];
 
 function inSeg(c: CrmCustomer, seg: string): boolean {

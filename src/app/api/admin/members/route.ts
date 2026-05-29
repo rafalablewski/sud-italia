@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentLocationScope, LOCATION_SCOPE_ALL } from "@/lib/admin-auth";
-import { getOrders, getLoyaltyMembers, getAllManualPoints } from "@/lib/store";
+import { getOrders, getLoyaltyMembers, getAllManualPoints, getLoyaltySettings } from "@/lib/store";
 import { calculateTier, LoyaltyTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164, sumManualPointsForPhone } from "@/lib/phone";
 
@@ -25,9 +25,13 @@ export const GET = withAdmin({}, async () => {
   const scope = (await getCurrentLocationScope()) ?? [LOCATION_SCOPE_ALL];
   const unrestricted = scope.includes(LOCATION_SCOPE_ALL);
 
-  const allOrders = await getOrders();
-  const signups = await getLoyaltyMembers();
-  const manualAdj = await getAllManualPoints();
+  const [allOrders, signups, manualAdj, loyalty] = await Promise.all([
+    getOrders(),
+    getLoyaltyMembers(),
+    getAllManualPoints(),
+    getLoyaltySettings(),
+  ]);
+  const tiers = loyalty.tiers;
 
   // Group orders by normalized phone
   const byPhone = new Map<string, typeof allOrders>();
@@ -54,7 +58,7 @@ export const GET = withAdmin({}, async () => {
       phone: normalizePlPhoneE164(latest.customerPhone) || phone,
       name: latest.customerName,
       points,
-      tier: calculateTier(points),
+      tier: calculateTier(points, tiers),
       orders: completed.length,
       totalSpent,
       lastOrder: latest.slotDate || latest.createdAt.split("T")[0],
@@ -72,7 +76,7 @@ export const GET = withAdmin({}, async () => {
         phone: signupKey,
         name: signup.name,
         points: manual,
-        tier: calculateTier(manual),
+        tier: calculateTier(manual, tiers),
         orders: 0,
         totalSpent: 0,
         lastOrder: signup.signedUpAt.split("T")[0],

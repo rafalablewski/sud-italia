@@ -40,6 +40,11 @@ interface Settings {
   minOrderAmount: number;
   businessPhone: string;
   businessEmail: string;
+  socialLinks?: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
   deliveryThresholds?: {
     firstTime?: number;
     growing?: number;
@@ -218,6 +223,9 @@ function AdminSettingsDesktop() {
   const [minOrderStr, setMinOrderStr] = useState("0.00");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [igUrl, setIgUrl] = useState("");
+  const [fbUrl, setFbUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
   // Audit §3 — per-segment free-delivery thresholds. Empty string = use
   // the SEGMENT_FREE_DELIVERY_THRESHOLD default for that band.
   const [thFirstTime, setThFirstTime] = useState("");
@@ -257,6 +265,9 @@ function AdminSettingsDesktop() {
     setMinOrderStr((data.minOrderAmount / 100).toFixed(2));
     setPhone(data.businessPhone ?? "");
     setEmail(data.businessEmail ?? "");
+    setIgUrl(data.socialLinks?.instagram ?? "");
+    setFbUrl(data.socialLinks?.facebook ?? "");
+    setTiktokUrl(data.socialLinks?.tiktok ?? "");
     const t = data.deliveryThresholds;
     setThFirstTime(typeof t?.firstTime === "number" ? (t.firstTime / 100).toFixed(2) : "");
     setThGrowing(typeof t?.growing === "number" ? (t.growing / 100).toFixed(2) : "");
@@ -326,6 +337,11 @@ function AdminSettingsDesktop() {
           minOrderAmount: Math.round(parseFloat(minOrderStr || "0") * 100),
           businessPhone: phone.trim(),
           businessEmail: email.trim(),
+          socialLinks: {
+            instagram: igUrl.trim(),
+            facebook: fbUrl.trim(),
+            tiktok: tiktokUrl.trim(),
+          },
           deliveryThresholds,
         }),
       });
@@ -628,6 +644,35 @@ function AdminSettingsDesktop() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                </div>
+                <div className="v2-form-section">
+                  <h3 className="v2-form-section-h">Social links</h3>
+                  <p className="v2-form-section-sub">
+                    Rendered in the public footer. Leave a field blank to hide that link.
+                  </p>
+                  <div className="v2-form-row-3">
+                    <Input
+                      label="Instagram URL"
+                      type="url"
+                      placeholder="https://instagram.com/your-handle"
+                      value={igUrl}
+                      onChange={(e) => setIgUrl(e.target.value)}
+                    />
+                    <Input
+                      label="Facebook URL"
+                      type="url"
+                      placeholder="https://facebook.com/your-page"
+                      value={fbUrl}
+                      onChange={(e) => setFbUrl(e.target.value)}
+                    />
+                    <Input
+                      label="TikTok URL"
+                      type="url"
+                      placeholder="https://tiktok.com/@your-handle"
+                      value={tiktokUrl}
+                      onChange={(e) => setTiktokUrl(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
             </CardBody>

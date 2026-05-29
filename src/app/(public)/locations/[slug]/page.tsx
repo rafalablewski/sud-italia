@@ -101,7 +101,7 @@ export default async function LocationPage({ params }: PageProps) {
             offers: {
               "@type": "Offer",
               price: (i.price / 100).toFixed(2),
-              priceCurrency: "PLN",
+              priceCurrency: location.currency,
             },
           })),
       })),

@@ -5,7 +5,7 @@ import {
   KITCHEN_SESSION_COOKIE,
   KITCHEN_SESSION_MAX_AGE,
 } from "@/lib/kitchen-auth";
-import { getLocation } from "@/data/locations";
+import { getLocationAsync } from "@/lib/locations-store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,12 +15,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const location = getLocation(slug);
+    const location = await getLocationAsync(slug);
     if (!location?.isActive) {
       return NextResponse.json({ error: "Unknown or inactive location" }, { status: 404 });
     }
 
-    if (!verifyKitchenCredentials(slug, username, password)) {
+    if (!(await verifyKitchenCredentials(slug, username, password))) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 

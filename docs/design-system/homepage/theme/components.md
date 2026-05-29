@@ -338,7 +338,9 @@ part of the page, not a third-party drop-in. Mounted in
 V8 Trattoria footer — espresso canvas that picks up the Soci rail's
 palette so the Soci → Footer transition reads as one continuous
 dark block instead of a dark → light jolt. Mounted on every
-storefront route via `(public)/layout.tsx`. Server component.
+storefront route via `(public)/layout.tsx`. **Async server
+component** — reads `AppSettings` via `getSettings()` on each
+render so operator edits surface without a redeploy.
 
 - **`.v8-pfoot`** section — `--color-espresso` canvas, parchment
   text, `50px / 32px` vertical padding. Lives inside the standard
@@ -350,16 +352,20 @@ storefront route via `(public)/layout.tsx`. Server component.
   with translucent basil leaves, V8's footer variant of the nav
   brand mark) + "Sud Italia" wordmark in parchment Cormorant 26px,
   a body paragraph at parchment-75% opacity, then a 90×3px
-  `.v8-tricolore` hairline as the footer accent.
+  `.v8-tricolore` hairline as the footer accent. `SITE_NAME` +
+  `COMPANY_NAME` are code-managed (brand identity + legal entity).
 - **Link columns** — italic ochre-light Cormorant 18px `<h4>` heads,
   Lora 13.5px links at parchment-75% opacity, hover transitions to
-  ochre-light. Columns kept from the existing site (Locations /
-  Contact / Follow us) over V8's mockup copy (Menu / Locations /
-  For businesses) because those columns wire to **real operator
-  data** — CONTACT_EMAIL / CONTACT_PHONE / SOCIAL_LINKS from
-  lib/constants and the active-locations list. Shipping the
-  mockup's "Team lunch — invoiced" / "Private events" copy without
-  a real backing would be Rule #1 territory.
+  ochre-light. Four columns:
+  - **Locations** — driven by `getActiveLocations()` (seed). A new
+    truck shows up here automatically.
+  - **Contact** — `settings.businessEmail` + `settings.businessPhone`
+    + the static `/privacy` link. Each row hides itself when the
+    operator hasn't filled the value — no placeholder strings ship.
+  - **Follow us** — `settings.socialLinks.{instagram, facebook,
+    tiktok}`. Same hide-on-empty rule per link.
+  All four operator-editable fields live at /admin/settings →
+  General → Business contact / Social links.
 - **Bottom bar** — italic Cormorant 12.5px at parchment-50%
   opacity, copyright paired with the Italian tagline (`Mangia bene,
   ridi spesso, ama molto.`) and the "Made with passion in Napoli ·
@@ -1001,7 +1007,9 @@ V8 free-delivery shimmer-sweep-unlock micro-flow.
 Italic Lora "You'll earn N points · N punti" line shown inside the
 paybar foot. Filled ochre star + Cormorant 600 ochre-dark tabular
 count. Server is the source of truth for the actual number; this
-preview uses the bronze multiplier and is intentionally cosmetic.
+preview uses the bronze multiplier (read from the public-settings
+loyalty config so an operator-set earn rate propagates immediately)
+and is intentionally cosmetic.
 
 ### `<CorporateOrderBanner />` — `src/components/cart/CorporateOrderBanner.tsx`
 

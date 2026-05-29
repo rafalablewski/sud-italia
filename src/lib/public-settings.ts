@@ -10,7 +10,43 @@ import type { Locale } from "./i18n";
 
 type Zone = "EU" | "NYC" | "SG";
 
+export interface PublicLoyaltyTier {
+  label: string;
+  threshold: number;
+  multiplier: number;
+  perks: string[];
+}
+
+export interface PublicLoyaltyReward {
+  id: string;
+  name: string;
+  pointsCost: number;
+  description: string;
+}
+
+export interface PublicLoyaltyReferral {
+  referrerPoints: number;
+  refereeDiscountGrosze: number;
+}
+
+export interface PublicLoyaltySettings {
+  tiers: {
+    bronze: PublicLoyaltyTier;
+    silver: PublicLoyaltyTier;
+    gold: PublicLoyaltyTier;
+    platinum: PublicLoyaltyTier;
+  };
+  rewards: PublicLoyaltyReward[];
+  /** Null when the operator has the referral programme disabled —
+   *  customer surfaces should hide the Give/Get card in that case. */
+  referral: PublicLoyaltyReferral | null;
+}
+
 export interface PublicSettings {
+  /** Loyalty programme config — tier ladder + active rewards. Sourced
+   *  from `getLoyaltySettings()` on the server so admin edits land
+   *  immediately on customer surfaces. */
+  loyalty?: PublicLoyaltySettings;
   currency?: {
     defaultCurrency: Currency;
     enabledCurrencies: Currency[];
@@ -35,6 +71,17 @@ export interface PublicSettings {
     pdpaConsentText?: string | null;
   };
   deliveryThresholds?: Record<string, number | undefined> | null;
+  /** Operator-managed flat delivery fee (grosze) — see /admin/settings. */
+  deliveryFee?: number;
+  /** Operator-managed contact + social handles rendered in the
+   *  public footer. */
+  businessPhone?: string;
+  businessEmail?: string;
+  socialLinks?: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
   /** Storefront visibility toggles set via /admin/settings → Layout.
    *  Components (or the LayoutGate wrapper) read these and return null
    *  when the corresponding flag is `false`. */

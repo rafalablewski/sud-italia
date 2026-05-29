@@ -147,10 +147,13 @@ A segmented control at the top-right:
 
 ## Location scope
 
-A `[ Kraków ]  [ Warszawa ]` segmented in the header drives the sample
-payloads + the allergen matrix. All sample JSON is computed from **live
-menu/availability data**, not canned — so what the operator sees is what
-the agent answers with.
+A per-truck segmented control in the header drives the sample payloads
++ the allergen matrix. The truck list is derived from
+`getActiveLocations()` so the segmented automatically picks up a new
+truck the moment it's added in `/admin/locations` — no edit to this
+component needed. All sample JSON is computed from **live
+menu/availability data**, not canned — so what the operator sees is
+what the agent answers with.
 
 ## Status line + thesis
 

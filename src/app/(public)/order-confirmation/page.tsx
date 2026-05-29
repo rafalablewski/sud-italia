@@ -13,6 +13,7 @@ import { CheckCircle, MapPin, ArrowLeft, Share2, Link2, Sparkles, Users } from "
 import { getLocation } from "@/data/locations";
 import { useCustomer } from "@/store/customer";
 import { calculateTier } from "@/lib/loyalty";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 
 function OrderConfirmationContent() {
   const searchParams = useSearchParams();
@@ -23,6 +24,7 @@ function OrderConfirmationContent() {
 
   // Fetch real order data for points calculation
   const [orderData, setOrderData] = useState<{ totalAmount: number; itemCount: number } | null>(null);
+  const [loyalty, setLoyalty] = useState<PublicLoyaltySettings | null>(null);
   useEffect(() => {
     if (!orderId) return;
     fetch(`/api/orders?orderId=${encodeURIComponent(orderId)}`)
@@ -36,11 +38,22 @@ function OrderConfirmationContent() {
       })
       .catch(() => {});
   }, [orderId]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicSettings(locationSlug).then((s) => {
+      if (!cancelled && s?.loyalty) setLoyalty(s.loyalty);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locationSlug]);
 
   const pointsEarned = orderData ? Math.floor(orderData.totalAmount / 100) : 0;
   const priorPoints = customer?.points ?? 0;
   const totalPoints = priorPoints + pointsEarned;
-  const tierName = calculateTier(totalPoints);
+  // Tier resolves once loyalty settings arrive — bronze fallback for the
+  // brief window before the public-settings fetch lands.
+  const tierName = loyalty ? calculateTier(totalPoints, loyalty.tiers) : "bronze";
   // API ordersCount excludes the current order while it is still "pending"; +1 = this checkout.
   const orderCount = customer != null ? (customer.ordersCount ?? 0) + 1 : 1;
   const customerName = customer?.name || "Customer";

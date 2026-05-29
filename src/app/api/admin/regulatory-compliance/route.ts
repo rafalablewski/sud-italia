@@ -22,6 +22,7 @@ const locationComplianceSchema = z.object({
   gstRegistered: z.boolean().optional(),
   gstNumber: z.string().max(40).nullable().optional(),
   gstRateBps: z.number().int().min(0).max(5000).optional(),
+  vatRateBps: z.number().int().min(0).max(5000).optional(),
   nutriGradeRequired: z.boolean().optional(),
   packagingDisclosure: z.string().max(1000).nullable().optional(),
   pdpaConsentText: z.string().max(3000).nullable().optional(),

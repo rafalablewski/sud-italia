@@ -36,6 +36,29 @@ export async function GET(req: NextRequest) {
     /** Server runtime flag so browsers post snapshots even if NEXT_PUBLIC was missing at build time. */
     cartPresenceEnabled: isCartPresenceEnabled(),
     liveWidgets,
+    /** Loyalty programme config — tier ladder + active rewards catalogue.
+     *  Customer surfaces (the /rewards page, cart tier banners, the earn
+     *  preview) read tier thresholds + multipliers + perks from here so
+     *  the operator's edits in /admin/loyalty land immediately, not at
+     *  the next deploy. Only `active: true` rewards are shipped.        */
+    loyalty: {
+      tiers: settings.tiers,
+      rewards: settings.rewards.filter((r) => r.active).map((r) => ({
+        id: r.id,
+        name: r.name,
+        pointsCost: r.pointsCost,
+        description: r.description,
+      })),
+      /** Active referral mechanics — only shipped when the operator
+       *  has the programme turned on, so customer surfaces render
+       *  the Give/Get card from a single source of truth. */
+      referral: settings.referral.active
+        ? {
+            referrerPoints: settings.referral.referrerPoints,
+            refereeDiscountGrosze: settings.referral.refereeDiscountGrosze,
+          }
+        : null,
+    },
     speedGuarantee: {
       active: settings.speedGuarantee.active,
       maxMinutes: settings.speedGuarantee.maxMinutes,
@@ -60,6 +83,11 @@ export async function GET(req: NextRequest) {
      *  charge calculated server-side. Undefined per-segment fields fall
      *  back to the SEGMENT_FREE_DELIVERY_THRESHOLD defaults at use. */
     deliveryThresholds: appSettings.deliveryThresholds ?? null,
+    /** Flat delivery fee (grosze) — the charge applied when a cart is
+     *  below the free-delivery threshold. Operator-edited at
+     *  /admin/settings → Delivery fee; cart drawer passes it to
+     *  computeDeliveryFee so the bar + the receipt agree. */
+    deliveryFee: appSettings.deliveryFee,
     /** Customer display-currency config: switcher options + rates.
      *  The customer site hydrates the currency module from this so a
      *  switch from PLN → SGD reflects operator-set rates, not the
@@ -80,5 +108,11 @@ export async function GET(req: NextRequest) {
      *  the corresponding flag is false, so the surface loses its DOM
      *  and visible CSS without a code change. */
     layout: appSettings.layout ?? DEFAULT_LAYOUT_SETTINGS,
+    /** Operator-managed contact + social handles rendered in the
+     *  public footer. Empty values let the footer hide the matching
+     *  row / link without a code change. */
+    businessPhone: appSettings.businessPhone,
+    businessEmail: appSettings.businessEmail,
+    socialLinks: appSettings.socialLinks,
   });
 }

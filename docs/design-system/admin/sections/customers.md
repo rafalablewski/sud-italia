@@ -65,6 +65,10 @@ The book of records: every customer who paid, ranked by lifetime spend.
 ## Loyalty — `/admin/loyalty`
 
 The wallet list — every active loyalty member with balance + tier.
+This page is the **roster + adjustment** surface; the **programme
+config itself** (tier ladder, rewards catalogue, referral mechanics)
+lives at `/admin/growth` — see `growth.md → Programme`. The subtitle
+on the page links across.
 
 - **Header:** `Loyalty` (h1), search, tier filter chips with counts
   (`all` / `Bronze` / `Silver` / `Gold` / `Platinum`), `+ Adjust points`

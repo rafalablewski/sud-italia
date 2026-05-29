@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { getActiveLocations } from "@/data/locations";
 import {
   AlertTriangle,
   BookOpen,
@@ -58,10 +59,7 @@ const CAP_ICON: Record<CapId, React.ReactNode> = {
   locate_truck: <MapPin />,
 };
 
-const LOCS = [
-  { key: "krakow", label: "Kraków" },
-  { key: "warszawa", label: "Warszawa" },
-];
+const LOCS = getActiveLocations().map((l) => ({ key: l.slug, label: l.city }));
 
 /* JSON syntax highlight — escapes then colourises keys/strings/numbers. */
 function syntaxJson(obj: unknown): string {

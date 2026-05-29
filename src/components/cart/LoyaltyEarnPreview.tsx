@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { calculatePointsForOrder } from "@/lib/loyalty";
+import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 import { Star } from "lucide-react";
 
 interface LoyaltyEarnPreviewProps {
@@ -11,17 +13,29 @@ interface LoyaltyEarnPreviewProps {
  * "You'll earn N points" line shown inside the cart paybar foot. The
  * server is the source of truth for the points-earned number (it
  * resolves the customer's actual tier); this preview assumes bronze
- * (1× multiplier) and is intentionally cosmetic — it never gates
- * anything.
+ * and is intentionally cosmetic — it never gates anything. The
+ * bronze multiplier is admin-editable in /admin/loyalty so the
+ * preview tracks whatever earn rate the operator set.
  *
  * V8 styling lives on `.v8-cart-loyalty-preview` in
  * themes/homepage/index.css — italic Lora muted with a filled ochre
  * star + Cormorant 600 ochre-dark tabular point count.
  */
 export function LoyaltyEarnPreview({ cartTotal }: LoyaltyEarnPreviewProps) {
-  if (cartTotal <= 0) return null;
+  const [loyalty, setLoyalty] = useState<PublicLoyaltySettings | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicSettings().then((s) => {
+      if (!cancelled && s?.loyalty) setLoyalty(s.loyalty);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const pointsToEarn = calculatePointsForOrder(cartTotal, "bronze");
+  if (cartTotal <= 0 || !loyalty) return null;
+
+  const pointsToEarn = calculatePointsForOrder(cartTotal, "bronze", loyalty.tiers);
   if (pointsToEarn <= 0) return null;
 
   return (

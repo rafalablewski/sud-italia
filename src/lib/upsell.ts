@@ -797,7 +797,9 @@ export function getActiveComboDeals(
 // --- Free delivery threshold + fee (m2_12) ------------------------------
 
 export const FREE_DELIVERY_THRESHOLD = 6000; // 60 PLN
-/** Flat delivery fee in grosze applied when cart total is below threshold. */
+/** Code-side fallback when the operator hasn't set `AppSettings.deliveryFee`
+ *  (or when a caller hasn't loaded it yet). The canonical value is the
+ *  operator-managed `deliveryFee` field — see /admin/settings. */
 export const DELIVERY_FEE_GROSZE = 700; // 7.00 PLN
 
 export function getDeliveryProgress(cartTotal: number): {
@@ -815,9 +817,16 @@ export function getDeliveryProgress(cartTotal: number): {
 
 /**
  * Compute the delivery fee that applies to a cart (grosze). Returns 0 for
- * takeout, 0 for delivery above the threshold, and DELIVERY_FEE_GROSZE
+ * takeout, 0 for delivery above the threshold, and the
+ * operator-configured `AppSettings.deliveryFee` (passed by the caller)
  * otherwise. Mirrors getDeliveryProgress so the customer sees the same
  * "Spend X more for free delivery" CTA as the checkout charges.
+ *
+ * `feeOverride` is the canonical operator-managed fee. Server callers
+ * pass `getSettings().deliveryFee`; the cart drawer reads it off
+ * `fetchPublicSettings().deliveryFee`. When unset, the code-side
+ * `DELIVERY_FEE_GROSZE` fallback applies — only the first-deploy /
+ * fetch-pending case.
  */
 export function computeDeliveryFee(
   cartSubtotal: number,
@@ -826,11 +835,14 @@ export function computeDeliveryFee(
    *  60 PLN bar; callers that know the customer should pass the segmented
    *  threshold so the displayed bar and the actual charge stay in sync. */
   thresholdOverride: number = FREE_DELIVERY_THRESHOLD,
+  /** Operator-managed flat fee (grosze) from AppSettings. Falls back to
+   *  the DELIVERY_FEE_GROSZE seed when undefined. */
+  feeOverride?: number,
 ): number {
   if (fulfillmentType !== "delivery") return 0;
   const threshold = thresholdOverride <= 0 ? 0 : thresholdOverride;
   if (cartSubtotal >= threshold) return 0;
-  return DELIVERY_FEE_GROSZE;
+  return feeOverride ?? DELIVERY_FEE_GROSZE;
 }
 
 // --- Per-segment free-delivery threshold (audit §2.5 + §3.3) -------------

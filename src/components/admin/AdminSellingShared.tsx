@@ -11,8 +11,8 @@ import {
   ChevronRight,
   RotateCcw,
 } from "lucide-react";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
+import { getMenu } from "@/data/menus/seed";
+import { getActiveLocations } from "@/data/locations";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
 import {
@@ -187,10 +187,16 @@ export const TIME_WINDOW_VARIANTS = [
   "late",
 ] as const;
 
-export const LOCATIONS = [
-  { slug: "krakow", name: "Kraków", menu: krakowMenu },
-  { slug: "warszawa", name: "Warszawa", menu: warszawaMenu },
-];
+// Truck list derived from the locations seed so a new active truck
+// shows up here without editing this file. The `menu` field carries
+// the seed catalogue as a fallback; the live menu (seed + custom
+// items + overrides) is loaded per slug via /api/admin/menu in
+// useSellingSettings and overlaid on top.
+export const LOCATIONS = getActiveLocations().map((l) => ({
+  slug: l.slug,
+  name: l.city,
+  menu: getMenu(l.slug),
+}));
 
 export const CATEGORIES: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 

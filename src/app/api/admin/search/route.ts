@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getOrders, getLoyaltyMembers, getIngredients } from "@/lib/store";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
+import { getMenuWithOverrides } from "@/data/menus";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 
 export interface SearchResult {
@@ -92,11 +92,25 @@ export const GET = withAdmin({}, async (req) => {
       href: `/admin/loyalty#${encodeURIComponent(m.phone)}`,
     }));
 
-  // MENU ITEMS — across both location menus
-  const menuHits = [
-    ...krakowMenu.map((m) => ({ item: m, location: "krakow" as const })),
-    ...warszawaMenu.map((m) => ({ item: m, location: "warszawa" as const })),
-  ]
+  // MENU ITEMS — across every active truck. Read through getMenuWithOverrides
+  // so a hidden item / a renamed item / a custom item shows up in search
+  // (admin search across the live catalogue, not the static seed).
+  const locations = await getActiveLocationsAsync();
+  const menus = await Promise.all(
+    locations.map(async (loc) => {
+      try {
+        return { slug: loc.slug, items: await getMenuWithOverrides(loc.slug) };
+      } catch {
+        // One truck failing (e.g. transient DB blip on overrides) shouldn't
+        // collapse the whole admin search — return empty for that truck.
+        return { slug: loc.slug, items: [] };
+      }
+    }),
+  );
+  const menuHits = menus
+    .flatMap(({ slug, items }) =>
+      items.map((m) => ({ item: m, location: slug })),
+    )
     .filter(({ item }) => ciIncludes(item.name, q) || ciIncludes(item.description, q) || ciIncludes(item.category, q))
     .slice(0, MAX_PER_GROUP)
     .map<SearchResult>(({ item, location }) => ({
