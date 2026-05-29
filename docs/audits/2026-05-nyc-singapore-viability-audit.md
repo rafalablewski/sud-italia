@@ -43,7 +43,7 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 1. ✅ ~~**The "AI" is a random number generator.** `src/lib/ai-engine.ts:31, 36, 41, 62, 89, 97, 103, 107, 127` — `Math.random()` decides weather, expected-orders jitter, forecast confidence, the magnitude of every "price increase" / "price decrease" suggestion, the coin-flip that triggers a "demand-based" upcharge, *and* the confidence score returned with each price suggestion. There is no model, no embedding, no LLM call in the forecasting/pricing surface. The `/admin/ai` page is a credibility liability in front of any sophisticated buyer who clicks through the source.~~ **RESOLVED 2026-05-21** — the heuristic `generateDemandForecast` / `generatePriceSuggestions` / `generateInsights` exports were dead code (zero callers) and were deleted; `ai-engine.ts` now contains only the customer-side FAQ matcher `getChatResponse`, with a header comment that names it as keyword-rule lookup, not AI. The real AI surfaces live under `src/lib/ai/forecast.ts` (Claude-backed demand forecasting with honest "Heuristic" fallback when the API key is unset), `src/lib/ai/gateway.ts`, and `src/lib/ai/tools/`. The `/admin/ai` page is no longer a credibility liability.
 2. ⚠ **The order pipeline serializes on two global locks.** `lock:orders.json` and `lock:slots.json` (`src/lib/store.ts`, multiple call sites) gate every checkout, every status advance, every refund across *every location*. At 200 orders/hour the queue depth on these keys is sufficient to time out Vercel functions. **PARTIAL — 2026-05-21**: the hot path (`createOrder`) now goes through Postgres + `dualWriteOrder` when `DATABASE_URL` is set, with no application-level lock on the request-blocking path. The legacy kv-mirror writes still take the global `orders.json` / `slots.json` keys, but they run `void` fire-and-forget so the customer is not waiting on them; they only serialize the cold mirror, not the booking. ❌ The kv mirror still needs to be split per-location or deleted entirely (the DB is source-of-truth so the latter is the right answer). The lock-TTL-mid-section foot-gun referenced in §1.4 row 6 is unchanged.
 3. ✅ ~~**There is no real third-party delivery.** `src/lib/providers/aggregator.ts` ships a Wolt + Glovo *interface* with `WoltMockProvider` and `GlovoMockProvider` classes that just `console.log`. Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are not stubbed, not designed for. In NYC, 60–70% of QSR orders flow through these. In SG, 70–80%.~~ **PARTIAL — 2026-05-21**: the mock providers (which returned `true` from `verifyWebhookSignature` and just logged every event — a forged-webhook foot-gun the moment `ENABLE_AGGREGATORS` flipped on) were deleted. `getAggregatorProvider` now throws `AggregatorNotConfigured` with the missing env var list, and the webhook route returns 503. The honest read: there is still no live Wolt or Glovo integration, but the file no longer pretends to have one. ❌ Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are still unaddressed — building those is its own multi-week workstream per provider.
-4. ❌ **The customer never sees their food.** `MenuItem.image` exists in the type (`src/data/types.ts:88`) but is **never populated** in `src/data/menus/krakow.ts` or `warszawa.ts`. The customer sees a 🍕 emoji on a gradient. Industry mobile-conversion lift from real food photography: 15–25%. Sweetgreen, Shake Shack, every Uber Eats merchant — none of them ship this way.
+4. ❌ **The customer never sees their food.** `MenuItem.image` exists in the type (`src/data/types.ts:159`) but is **never populated** in `src/data/menus/krakow.ts` or `warszawa.ts`. The customer sees a 🍕 emoji on a gradient. Industry mobile-conversion lift from real food photography: 15–25%. Sweetgreen, Shake Shack, every Uber Eats merchant — none of them ship this way.
 5. ❌ **Zero automated tests.** `find src -name '*.test.*' -o -name '*.spec.*'` returns nothing. Every refactor is a hand-grenade. No CI gate, no Playwright smoke, no contract test on the lock primitive. For a system that takes payment, this is malpractice.
 
 ### 1.3 Strengths Worth Preserving
@@ -52,7 +52,7 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 - The glassmorphism design system (`admin-bg`, `glass-card`, `glass-input`) is internally consistent.
 - Loyalty mechanics (`src/lib/loyalty.ts` + `growth-engine.ts`) — tiered multipliers, family-pooled wallets, gamification — are genuinely thoughtful and ahead of most regional chains.
 - Checkout server-side validation (`src/app/api/checkout/route.ts:36-199`) is correct: server-side price lookup, idempotency hash, slot capacity check, tip cap, Stripe wiring with card + BLIK + Przelewy24 is on-spec for Polish market.
-- The capabilities page (`/admin/capabilities`) and the existing admin-dashboard audit (`docs/audits/2026-05-admin-dashboard-audit.md`) show genuine self-awareness — most teams at this stage don't write either. **Caveat:** the capabilities page is only as honest as its rows. `src/app/admin/capabilities/page.tsx:147-150` claims "Allergen surfacing on tickets" is `live` with the summary *"menu_items.allergens chips on KDS tickets. Edit in /admin/menu."* — yet `grep -i allergen src/components/admin/AdminKDS.tsx` returns zero matches. The Ticket component renders item name, quantity, modifier-notes, and category badge, and nothing else. The single most-cited claim on the page is false. If `/admin/capabilities` is the source of truth for "what's deployed", every row needs a runtime probe, not a static string.
+- The capabilities page (`/admin/capabilities`) and the existing admin-dashboard audit (`docs/audits/2026-05-admin-dashboard-audit.md`) show genuine self-awareness — most teams at this stage don't write either. **Caveat:** the capabilities page is only as honest as its rows. `src/app/admin/capabilities/page.tsx:147-150` claims "Allergen surfacing on tickets" is `live` with the summary *"menu_items.allergens chips on KDS tickets. Edit in /admin/menu."* — and the KDS rewrite makes that true: the ticket model declares `allergens: string[]` (`kds-ticket.ts:18`), populates it from `ci.menuItem.allergens ?? []` (`kds-ticket.ts:70`), and the ticket card dedupes (`KdsTicketCard.tsx:116`) and renders the allergen row (`KdsTicketCard.tsx:191`). A naïve `grep -i allergen src/components/admin/AdminKDS.tsx` returns zero matches only because the ticket UI now lives in `src/components/admin/kds/KdsTicketCard.tsx`, not the parent shell. The broader lesson stands regardless: if `/admin/capabilities` is the source of truth for "what's deployed", every row needs a runtime probe, not a static string — a `grep` against the wrong file would have mis-flagged this very row as a lie.
 
 ### 1.4 Biggest Risks
 
@@ -150,7 +150,7 @@ Does this feel current? Partially.
 2. **Land on home page.** Mobile load on 4G — acceptable (Next.js 16 + edge). Hero is dark, no food visible. Decision pressure: "is this open? what's it like?" Not answered. **Friction: moderate.**
 3. **Pick location.** Two trucks, both in Poland. **NYC customer bounces here.** Even after re-skinning, the LocationsGrid requires manual `src/data/locations.ts` edits.
 4. **Browse menu.** Emoji items on gradients. No prices in USD/SGD. No allergen filter. No "spicy/vegan/GF" filter (tags exist but filter UI is absent in audited components). **Friction: severe.**
-5. **Add to cart.** Smooth Zustand state, persistent across refresh (`store/cart.ts:32`). No modifiers — cannot say "large", "extra cheese", "no onion". `CartItem` shape is `{ menuItem, quantity, notes?, locationSlug }` (`store/cart.ts:5-30`). **Operationally crippling.**
+5. **Add to cart.** Smooth Zustand state, persistent across refresh (`store/cart.ts:32`). A first-class modifier schema exists (`CartItem.selectedModifiers`, `src/data/types.ts:354`; the `CartItem` interface lives in `types.ts:342` and is imported into `store/cart.ts:5`), but there is **no customer picker** — the shopper still cannot say "large", "extra cheese", "no onion" from the menu, and the freeform `notes` field is the only place that intent lands. **Operationally crippling until the picker ships.**
 6. **Open cart drawer.** Discover fulfillment type (`takeout` / `delivery`) and slot picker only *now*. Slot might be full. **Friction: severe.**
 7. **Enter name + phone + (delivery) address.** Phone regex is loose (`/^[\d\s\-()]{7,}$/`), address is freeform — no Google Places autocomplete. **Friction: severe for delivery.**
 8. **No ETA shown before payment.** User commits without knowing when their food will be ready. McDonald's app, Uber Eats, GrabFood, Shake Shack — all show ETA before pay. **Trust: damaged.**
@@ -204,11 +204,11 @@ Assume Bryant Park, 11:45–13:15, three workers in a 10 m² truck, target 180�
 **What breaks (in order):**
 
 1. **12:00:30 — KDS payload size.** `useAdminOrdersStream` over SSE streams the full orders array on each delta. With 200 active orders the JSON serialises to ~500 KB. Two iPads on the truck Wi-Fi each receive that on every change. Wi-Fi tethered to one operator's phone collapses.
-2. **12:01:00 — Slot increment fallback is hot, not racey-but-hot.** `incrementSlotOrders` (`src/lib/store.ts:355-418`) has a correct Postgres fast path (`UPDATE … WHERE currentOrders < maxOrders RETURNING …`, serializable). The kv_store fallback (line 405) is wrapped in `withLock("slots.json")`, so concurrent lambdas *queue* on the global Upstash key rather than racing — Gemini-Code-Assist is right to flag this. The realistic failure modes are therefore: **(a) queue depth on the single global `lock:slots.json` key** at lunch rush (every "Postgres says slot full" *and* every legacy-slot path funnels here), pushing 5 s `acquireTimeoutMs` exceedances and 503s back to checkout; **(b) lock TTL expiry mid-section** when `readJSON("slots.json")` + parse + `writeJSON` + `dualWriteSlot` exceeds 10 s under contention, at which point two acquirers think the lock is free and the overbooking risk becomes real; **(c) in-process fallback when Upstash is down** — `withLock` falls back to a per-lambda Promise chain (`src/lib/locks.ts`) which provides zero coordination across Vercel instances, and *that* is where the 1–3-order overbooking actually materialises. The mechanism for damage is contention + degradation, not garden-variety race during steady backfill.
+2. **12:01:00 — Slot increment fallback is hot, not racey-but-hot.** `incrementSlotOrders` (opens at `src/lib/store.ts:375`) has a correct Postgres fast path (`UPDATE … WHERE currentOrders < maxOrders RETURNING …`, serializable). The kv_store fallback (`withLock("slots.json")` at `store.ts:425`) is wrapped in that lock, so concurrent lambdas *queue* on the global Upstash key rather than racing — Gemini-Code-Assist is right to flag this. The realistic failure modes are therefore: **(a) queue depth on the single global `lock:slots.json` key** at lunch rush (every "Postgres says slot full" *and* every legacy-slot path funnels here), pushing 5 s `acquireTimeoutMs` exceedances and 503s back to checkout; **(b) lock TTL expiry mid-section** when `readJSON("slots.json")` + parse + `writeJSON` + `dualWriteSlot` exceeds 10 s under contention, at which point two acquirers think the lock is free and the overbooking risk becomes real; **(c) in-process fallback when Upstash is down** — `withLock` falls back to a per-lambda Promise chain (`src/lib/locks.ts`) which provides zero coordination across Vercel instances, and *that* is where the 1–3-order overbooking actually materialises. The mechanism for damage is contention + degradation, not garden-variety race during steady backfill.
 3. **12:05:00 — Lock TTL expiration mid-write.** Default lock TTL is 10 s (`src/lib/locks.ts`). With 200+ orders in `orders.json`, `readJSON` + `findIndex` + `writeJSON` regularly exceeds 10 s under contention. The lock auto-releases, a second lambda acquires it, both write — duplicate orders, lost status transitions.
 4. **12:10:00 — No offline mode at counter.** LTE in a metal box on a Bryant Park sidewalk is unreliable. There is no offline-first POS terminal; `offline-outbox.ts` exists for *public* customer mutations but admin/KDS surfaces don't have a comparable local-first queue. When LTE drops, the kitchen is blind.
 5. **12:15:00 — No item-86 propagation.** Truck runs out of basil. Manager opens `/admin/menu` on their phone, toggles Margherita to unavailable. Public availability endpoint cache TTL is 2 s; client poll is every ~10 s. Customers continue placing orders for Margherita for 12–14 s. Each one becomes a refund.
-6. **12:20:00 — Modifier ambiguity.** A customer writes "no anchovies" in the freeform `notes` field. KDS shows it as gray text under the line. Cook misses it. Refund. The schema (`CartItem`) has *no first-class modifier object* — only a `notes` string. Toast, Square, every POS solved this in 2014.
+6. **12:20:00 — Modifier ambiguity.** A customer writes "no anchovies" in the freeform `notes` field. KDS shows it as gray text under the line. Cook misses it. Refund. A first-class modifier schema now exists (`ModifierOption`/`ModifierGroup`/`SelectedModifier` in `src/data/types.ts:117/132/145`, `MenuItem.modifierGroups` `:189`, `CartItem.selectedModifiers` `:354`, with admin authoring in `ModifierEditor.tsx`/`ModifierInventory.tsx`) — but there is **no customer-facing picker and no KDS modifier render**, so at the counter the freeform `notes` string is still the only signal the cook sees. Toast, Square, every POS solved the full loop in 2014.
 7. **12:25:00 — Cash drawer drift.** `CashSession`/`CashDrop` types exist in `src/data/types.ts` but the `/admin/cash` page (per agent inspection) has no reconciliation flow, no opening-float capture, no variance flagging.
 
 ### 4.2 Singapore CBD Office-Lunch Stress Test
@@ -236,7 +236,7 @@ Different stressor — fewer orders/hour, more concurrent browsers (500+ Slack-s
 
 Could a $16/hr counter worker in Queens, hired Monday, run lunch on Wednesday?
 
-- **Order screen logic:** `nextStatus()` (`AdminKDS.tsx:44-49`) is a clean linear advance — yes, learnable in 10 minutes.
+- **Order screen logic:** `nextStatus()` (defined in `kds-board.tsx:39`, imported into `AdminKDS.tsx:36`) is a clean linear advance — yes, learnable in 10 minutes.
 - **What kills them:** no undo on bump (recall exists but is a 5-deep in-memory tray, lost on refresh), no batch advance, no "this ticket goes to *that* station" pre-routing, no modifier callout colour, no SLA breach red flash.
 - **Verdict:** trainable to baseline competence in two shifts. Trainable to *NYC rush competence*, no.
 
@@ -248,9 +248,9 @@ Could a $16/hr counter worker in Queens, hired Monday, run lunch on Wednesday?
 
 `src/components/admin/AdminKDS.tsx` is ~410 lines and implements:
 
-- Three kanban columns: New (`confirmed`) / In progress (`preparing`) / Ready · Expo (`ready`) (`AdminKDS.tsx:28-32`)
+- Three kanban columns: New (`confirmed`) / In progress (`preparing`) / Ready · Expo (`ready`) (`KDS_COLUMNS`, `kds-board.tsx:23-26`)
 - Station filter (all / pizza / pasta / antipasti / panini / drinks / desserts) (`AdminKDS.tsx:34-42`)
-- Per-ticket live MM:SS prep timer with 12 m warning, 25 m danger (`prepTone`, `AdminKDS.tsx:69-76`)
+- Per-ticket live MM:SS prep timer with SLA countdown via `remainingSlaSeconds` (`kds-board.tsx:23-26`)
 - Bump → completed; recall via `POST /api/admin/orders/[id]/recall`
 - Optional chime on new ticket (browser audio permission required)
 
@@ -266,7 +266,7 @@ Could a $16/hr counter worker in Queens, hired Monday, run lunch on Wednesday?
 | Per-station ETA | ✓ | ✓ | ⚠ | ✓ | ✗ |
 | Batch consolidation (4× Margherita as one prep) | ✓ | ⚠ | ✗ | ✓ | ✗ |
 | Item-86 live | ✓ | ✓ | ✓ | ✓ | ⚠ 2 s cache + 10 s poll |
-| Modifiers first-class | ✓ | ✓ | ✓ | ✓ | **✗ — `notes` string only** |
+| Modifiers first-class | ✓ | ✓ | ✓ | ✓ | **⚠ — schema + admin editor exist; no customer picker, no KDS modifier render** |
 | Hold / transfer between stations | ✓ | ✓ | ⚠ | ✓ | ✗ |
 | Photo capture (dispute / QC) | ⚠ | ✗ | ✓ | ✓ | ✗ |
 | Failover when network down | local SQLite | local SQLite | aggregator queue | proprietary | **none** |
@@ -278,7 +278,7 @@ Yes, in three distinct ways:
 
 1. **Lock contention.** Single global `lock:orders.json` serialises every status transition. With 50 ticket advances per minute (5 stations × 10 advances) the queue depth exceeds the 5 s acquire timeout, advance calls fail, cooks tap again, double-status writes corrupt state.
 2. **SSE payload growth.** Full array re-stream on every delta scales linearly with active-order count. At 300 orders the payload is ~750 KB. Multiply by N connected screens.
-3. **Browser audio permission.** The `.catch(() => {})` on `audio.play()` (line ~133) silently swallows missing audio permission. Many tablets default deny. Cooks miss tickets and nobody notices.
+3. **Browser audio permission.** The `.catch(() => {})` on the dual chimes (`audio.play()` at `AdminKDS.tsx:240` and `:262`) silently swallows missing audio permission. Many tablets default deny. Cooks miss tickets and nobody notices.
 
 ### 5.4 Required KDS Upgrades
 
@@ -475,7 +475,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 |---|---|---|---|---|---|---|---|---|
 | **Customer-facing** | | | | | | | | |
 | Food photography | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Item modifiers | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Item modifiers | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ schema + admin editor; no customer picker / KDS render |
 | Allergens at point-of-sale | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ data orphaned |
 | Calorie display (NYC §81.50) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ data orphaned |
 | Nutri-Grade (SG NEA) | n/a | n/a | n/a | n/a | n/a | ✓ | n/a | ✗ |
@@ -497,7 +497,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 | Bump bar | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✗ |
 | Shift handover | ✓ | ✓ | ✓ | ✓ | n/a | ✓ | ✓ | ✗ |
 | Cash reconciliation | ✓ | ✓ | ✓ | ✓ | n/a | ✓ | ✓ | ⚠ data only |
-| Refunds with reason codes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Refunds with reason codes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ reason codes ✓; manager-approval gating ✗ |
 | Manager override / void | ✓ | ✓ | ✓ | ✓ | n/a | ✓ | ✓ | ✗ |
 | Inventory depletion live | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Auto-86 on stockout | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
@@ -532,7 +532,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 ### 10.2 "Must-Have" Gaps For NYC/SG Launch
 
 1. ❌ Real food photography.
-2. ❌ Item modifiers as a first-class data structure.
+2. ⚠ Item modifiers — first-class schema + admin editor exist; no customer picker and no KDS modifier render yet.
 3. ❌ Apple Pay / Google Pay primary.
 4. ⚠ **Multi-currency + multi-tax + multi-locale.** ✅ Multi-currency *display* + multi-locale UI shipped 2026-05-21 (`/admin/currency`, `/admin/languages` with PLN/USD/SGD/EUR × pl/en/de/en-SG). ❌ Multi-tax (Stripe Tax / TaxJar replacing JPK_V7M) + per-region Stripe merchant settlement remain.
 5. ❌ Uber Eats / DoorDash / GrabFood / foodpanda webhook intake **with menu push and status push**. (Wolt + Glovo scaffold remains; mocks deleted.)
@@ -766,10 +766,10 @@ The largest single-day-late development relative to this audit is structural: a 
 
 | Change | File path |
 |---|---|
-| **`IngredientProduct`** — new table, one row per (ingredient × distributor) pair. Carries `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. | `src/data/types.ts:292` |
-| **`Ingredient.activeProductId`** — foreign key into the active offering. Recipe cost + customer kcal pill + PO pricing + inventory valuation all read through this pointer. Switching distributors is a single FK flip. | `src/data/types.ts:241` |
-| **`calculateRecipeCalories`** — sums `kcalPerUnit × quantity` across recipe lines, divides by `yieldPortions`. Returns `null` if any ingredient is missing an active offering or `kcalPerUnit`. **`wasteFactor` is intentionally excluded** (`quantity` = eaten weight; trim/spill is a cost concern). | `src/lib/store.ts:3537` |
-| **`calculateRecipeNutrition`** — sibling for the full macro panel (calories + protein + carbs + sugar + fiber + fat). Each macro is independent — `protein` resolves even if `fiber` is incomplete on one ingredient. | `src/lib/store.ts:3587` |
+| **`IngredientProduct`** — new table, one row per (ingredient × distributor) pair. Carries `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. | `src/data/types.ts:296` |
+| **`Ingredient.activeProductId`** — foreign key into the active offering. Recipe cost + customer kcal pill + PO pricing + inventory valuation all read through this pointer. Switching distributors is a single FK flip. | `src/data/types.ts:255` |
+| **`calculateRecipeCalories`** — sums `kcalPerUnit × quantity` across recipe lines, divides by `yieldPortions`. Returns `null` if any ingredient is missing an active offering or `kcalPerUnit`. **`wasteFactor` is intentionally excluded** (`quantity` = eaten weight; trim/spill is a cost concern). | `src/lib/store.ts:3890` |
+| **`calculateRecipeNutrition`** — sibling for the full macro panel (calories + protein + carbs + sugar + fiber + fat). Each macro is independent — `protein` resolves even if `fiber` is incomplete on one ingredient. | `src/lib/store.ts:3940` |
 | **Chain-wide recipes** — keyed by dish base slug (`pizza-margherita`), not by location-prefixed menu-item id. Edit Kraków, Warsaw updates automatically. Legacy rows migrate lazily on first read. | `src/lib/store.ts:getRecipe` |
 | **Product info + dietary moved into recipe editor.** Name, category, tags, description, kcal, halal status, Nutri-Grade, contains-pork, contains-alcohol all edited at `/admin/recipes` (one editor surface). | `src/components/admin/AdminRecipes.tsx:731` |
 | **"Defaulted to 0" indicator** — when operators backfill macros incrementally, the recipe editor shows `(N defaulted)` and a Calories KPI hint. Customer-facing compliance surfaces keep the stricter "all complete or no claim" rule — partial-data states never reach the customer. | `src/components/admin/AdminRecipes.tsx:perPortionMacro()` |
@@ -779,7 +779,7 @@ The largest single-day-late development relative to this audit is structural: a 
 | Row | 2026-05-21 (am) | 2026-05-21 (pm) |
 |---|---|---|
 | **§1.4 row 4 — NYC DOH calorie labelling (§81.50)** | Wired but "operator must complete the data fill before opening" — interpreted as filling `nutrition.calories` on every SKU (≈80 rows). | **Significantly easier.** The customer kcal pill now derives from `kcalPerUnit` on each ingredient's active offering. Fill kcal on the ~30 ingredients, every Margherita-bearing dish gets a live figure with no manual retyping. Operator data-entry surface area collapses by roughly 2/3. The "complete the data fill before opening" caveat shrinks correspondingly. |
-| **§1.4 row 5 — SG NEA Nutri-Grade** | Wired but operator-typed per beverage. | Marginal improvement only. The macro pipeline now stores per-100g sugar + (total) fat on each active offering (`IngredientProduct.sugarPerUnit` + `fatPerUnit` in `src/data/types.ts:312-317`); NEA's A–D bucketing also needs **saturated fat** (and added vs total sugars in some bands), and **neither field exists in the schema yet**. So the automation isn't "one commit away" as an earlier draft of this row said — it's the saturated-fat field migration on `IngredientProduct` _then_ a computation function _then_ the bucketing thresholds. **Still operator-typed today**; the structural gap is wider than the recipe refactor closed. |
+| **§1.4 row 5 — SG NEA Nutri-Grade** | Wired but operator-typed per beverage. | Marginal improvement only. The macro pipeline now stores per-100g sugar + (total) fat on each active offering (`IngredientProduct.sugarPerUnit` `src/data/types.ts:319` + `fatPerUnit` `:321`); NEA's A–D bucketing also needs **saturated fat** (and added vs total sugars in some bands), and **neither field exists in the schema yet**. So the automation isn't "one commit away" as an earlier draft of this row said — it's the saturated-fat field migration on `IngredientProduct` _then_ a computation function _then_ the bucketing thresholds. **Still operator-typed today**; the structural gap is wider than the recipe refactor closed. |
 | **§10 row "Allergens at point of sale (EU 1169/2011)"** | Per-item `allergens[]` field shipped, rendered on the item drawer + `CompliancePills` row on the card. | Unchanged. (Allergens are still per-item flags, not derived from ingredients. Recipe-derived allergens — "this dish contains gluten because Tipo 00 flour" — is the next-step but not in this batch.) |
 | **§11.B "Per-item data fill (calorie data for every SKU)"** | Pending. | **Surface area shrunk by ~2/3.** The operator now fills `kcalPerUnit` on each ingredient's active offering once; every recipe that uses it derives the per-portion kcal automatically. |
 | **§1.4 row 8 — "Hardcoded `currency: "PLN"`"** | Display-layer fixed (USD/SGD/EUR/PLN). | Unchanged. The cost ledger inside `IngredientProduct.costPerUnit` is stored in grosze. A per-region offering selector (different distributors for NYC + SG) is now structurally feasible — schema doesn't bind cost to currency at the offering level, so a Brooklyn distributor's offering can hold USD-cents and a Singapore distributor's can hold SGD-cents with no schema migration — but the read-path conversion to render currency isn't wired yet. |
@@ -831,7 +831,7 @@ The §2.1 "premium frame, empty content" verdict now resolves to: **frame is pre
 
 The KDS this audit inventoried (`AdminKDS.tsx`, ~410 lines, 3 kanban columns) was rewritten. Current state (`AdminKDS.tsx`, 841 lines): **role lenses** (owner → Atlas Fleet board, manager/franchisee → floor board, kitchen/staff → chef strip, mobile → MobileKDS), a real **prediction engine** (`src/lib/kds-prediction.ts`, single-server FIFO queue per station, flags at-risk tickets before they're late), **SLA countdown + dual chimes**, **bump-bar hotkeys 1–9/0 with optimistic advance + SSE reconciliation + recall**, fullscreen/kiosk, and live `/api/admin/kds/floor-ops` (open/late/due-soon/oldest/avg-age + live-86). This closes several §5.4 rows (per-station ETA, dynamic prep ETA, the "AI assistant that recommends pause" — the last via `pace-steering.ts`, POS-facing).
 
-**Still ✗ on the §5.2 matrix:** hardware bump bar; modifiers first-class (still `notes` string only — the modifier schema exists but there's no customer picker and no KDS modifier surface); batch consolidation; hold/transfer between stations; photo capture. **An interim coursing feature (Starters/Mains/Dessert separate-fire, kitchen-timing, drag-to-recourse) was built mid-May and then dropped in the POS/KDS rewrite** (commits `79aa8b6`/`a61fa48` superseded by `814e548`/`49e7d6b`) — current KDS and POS have **no coursing**. The §5.3 "will it break at 300 orders" answer improves on transport (SSE + indexed `since`-filtered queries + active-only board that sheds completed tickets) but regresses on the client: there is **no list virtualization** and a 1-second full `analyzeTruck` recompute over the active set, so a literal 300-concurrently-*active* tickets would stress the browser. The lock-contention failure mode (§5.3 #1) is mitigated by the relational order path (below).
+**Still ⚠/✗ on the §5.2 matrix:** hardware bump bar; modifiers first-class (the schema and admin editor exist, but there's no customer picker and no KDS modifier render — at the line, `notes` is still the only signal the cook sees); batch consolidation; hold/transfer between stations; photo capture. **An interim coursing feature (Starters/Mains/Dessert separate-fire, kitchen-timing, drag-to-recourse) was built mid-May and then dropped in the POS/KDS rewrite** (commits `79aa8b6`/`a61fa48` superseded by `814e548`/`49e7d6b`) — current KDS and POS have **no coursing**. The §5.3 "will it break at 300 orders" answer improves on transport (SSE + indexed `since`-filtered queries + active-only board that sheds completed tickets) but regresses on the client: there is **no list virtualization** and a 1-second full `analyzeTruck` recompute over the active set, so a literal 300-concurrently-*active* tickets would stress the browser. The lock-contention failure mode (§5.3 #1) is mitigated by the relational order path (below).
 
 ### §6 Admin — RBAC matured past the "shared password" framing (but the root stays)
 
@@ -874,38 +874,3 @@ The V8 `/rewards` rebuild introduced **hardcoded display values** this diligence
 **The §0 verdict is unchanged: Sud Italia would not survive NYC or Singapore as-is.** Fifteen days of shipping closed half of the UX burn-down list and rebuilt the operational spine, but the seven binding constraints (aggregators, USD/SGD settlement, SOC 2, real test coverage, food photography, offline POS, MFA) are exactly where the 14 May audit left them. The §13 Phase 1–3 sequencing remains the right path; the operator is now meaningfully ahead on the *UX* and *ops* dimensions of Phase 1–4 and has not started the *channel* (Phase 3) or *enterprise-hardening* (Phase 5) work the two cities actually require.
 
 — *Re-run lens: same five auditors, fifteen days later — 29 May 2026*
-
----
-
-## 2026-05-29 Verification Ledger (full claim-by-claim pass)
-
-A line-by-line re-verification of every citation, status mark, and assertion against current code. Per Rule #11 the body and dated updates are immutable; corrections recorded here. `store.ts` is now 11,105 lines, so cited lines drifted.
-
-**A. Claims that have flipped (now wrong in the body):**
-
-1. **§1.3 (line 55) — "Allergen surfacing on tickets is false; the single most-cited capabilities claim is false."** **No longer true.** The KDS rewrite surfaces allergens on the ticket: `kds-ticket.ts:18` declares `allergens: string[]`, populated `:70` (`ci.menuItem.allergens ?? []`); `KdsTicketCard.tsx:116` dedupes, `:191` renders the allergen row. The raw `grep allergen AdminKDS.tsx` returns 0 only because the ticket UI moved into `kds/KdsTicketCard.tsx`. The audit's "every capabilities row needs a runtime probe" *process* critique still stands; its concrete evidence is dead.
-2. **§10.1 feature matrix (line 500) — "Refunds with reason codes ✗".** Now wired end-to-end: `REFUND_REASON_CODES` (`types.ts:417`), `OrderRefund.reasonCode` (`:446`), `z.enum` validation (`api-schemas.ts:145`), rendered in `AdminOrders.tsx:1126` + `mobile/RefundSheet.tsx:183`. (§10.2 #9 / §12.4 #2's "reason codes exist; manager-approval not enforced" is the accurate version; the bare matrix "✗" is wrong.)
-3. **"Item modifiers — `notes` string only / ✗"** (§5.2 line 269, §10.1 line 478, §4.1 #6, §3.1 #5). First-class modifier schema now exists: `ModifierOption`/`ModifierGroup`/`SelectedModifier` (`types.ts:117/132/145`), `MenuItem.modifierGroups` (`:189`), `CartItem.selectedModifiers` (`:354`), with live admin authoring (`ModifierEditor.tsx`, `ModifierInventory.tsx`). Correct nuance (only in the 2026-05-29 Update): schema + admin editor exist, **but no customer picker and no KDS modifier render**. The flat "notes string only" in those sections is outdated.
-
-**B. Stale file:line pointers (symbol exists; line drifted):**
-
-| Audit citation | Current location |
-|---|---|
-| `MenuItem.image` `types.ts:88` | `:159` (still never populated — 0 hits in menus) |
-| `IngredientProduct` `types.ts:292` | `:296`; `sugar/fatPerUnit` `:319`/`:321` (not 312-317); `Ingredient.activeProductId` `:255` (not 241) |
-| `calculateRecipeCalories/Nutrition` `:3537`/`:3587` | `:3890` / `:3940` |
-| `incrementSlotOrders store.ts:355-418` | opens `:375`; kv fallback `withLock("slots.json")` `:425` |
-| `nextStatus() AdminKDS.tsx:44-49` | now **imported** from `kds-board.tsx:39` (import at `AdminKDS.tsx:36`) |
-| `prepTone (AdminKDS.tsx:69-76)`, columns `:28-32` | `prepTone` **gone**; replaced by `remainingSlaSeconds` + `KDS_COLUMNS` in `kds-board.tsx:23-26` |
-| `CartItem` shape `store/cart.ts:5-30` | `CartItem` **imported** into `cart.ts:5`; interface at `types.ts:342` |
-| audio `.catch(()=>{})` "~line 133" | now dual chimes `AdminKDS.tsx:240` and `:262` (silent-swallow substance holds) |
-
-**C. Confirmed accurate (the §0 verdict + structural blockers hold):**
-
-- Five §1.2 Hard Truths as restated in the 2026-05-29 §1.2 re-verification (AI now genuinely has an LLM agent layer; lock further mitigated; no real third-party delivery; `MenuItem.image` empty; tests narrowly-false/materially-true). 
-- §1.4 risk rows 1/2/6/7/9 (lock TTL 10s, shared `ADMIN_PASSWORD`, in-process fallback, Stripe-only, no offline POS) and the display-only currency caveat. KDS rewrite (841 lines, role lenses, `analyzeTruck` prediction, dual chimes, hotkeys, `/api/admin/kds/floor-ops`), **no coursing**, **no list virtualization**. Aggregators: live Wolt/Glovo scaffolds (RPC bodies throw, real HMAC), `getAggregatorProvider` throws `AggregatorNotConfigured` (`:182-206`), mocks deleted; no Uber/DoorDash/Grab/foodpanda. Currency display-only; i18n pl/en/de/en-SG (**no Spanish** — confirms the NYC "no Spanish" point). 5-role RBAC + `withAdmin`, no `src/middleware.ts`, `ADMIN_PASSWORD` root + no MFA. Phone regex `/^[\d\s\-()]{7,}$/` unchanged (`CartDrawer.tsx:38`); SlotPicker still inside the drawer; SSE + `FALLBACK_POLL_MS=15_000`. `kodawari.ts` present; `data/ratings.ts` deleted; `StarRating` survives only in the survey. V8 storefront (`LocationHero`, `MenuItem`, `CompliancePills`, `ComplianceBanner`, `AllergenIcon`) all present.
-- §1.1 scorecard trajectory numbers are internal-to-the-doc (not falsifiable against code); the structural blockers they rest on all verify as still-open.
-
-**D. New regressions beyond the 2026-05-29 Update:** the rewards Rule-#1 finding confirmed (`generateReferralCode` `Math.random()` `growth-engine.ts:18` called per-render `rewards/page.tsx:292`; streak literal `:459`; challenge `width:"33%"`/`1-of-target` `:482/486`), with **`getActiveChallenges()` (`growth-engine.ts:126`) as the static-template root** of the fake bar.
-
-— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

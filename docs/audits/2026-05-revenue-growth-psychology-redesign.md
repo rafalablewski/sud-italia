@@ -162,8 +162,8 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | ✅ | "Customers usually add…" (data-driven) | helpful | +9% | `AddToCartToast` seed copy + `CartUpsell` chips |
 | ⛔ | "Make it a large +PLN 6" (modifier) | smart | +14% | **Rejected** — fixed Neapolitan portions are a brand core value (overrules §2.5 Starbucks too) |
 | ✅ | "Add Pizzaiolo's espresso PLN 6" (named, named) | curated | +11% | `CartUpsell` chip with `suggestion.reason` copy |
-| ✅ | "Family Feast: your mains + 2 antipasti + 4 drinks + tiramisù, 28% off" | savings | +22% AOV per family order | §3.2 bundle engine live; `family-feast` tier in `DEFAULT_BUNDLES` (`src/lib/bundles.ts`) is now *dynamic on mains* — every pizza/pasta in cart carries into the bundle 1:1 and price scales from `(mains-à-la-carte + cheapest-add-ons) × 0.72`. Surfaces at ≥2 main items, locks subtotal to the computed price via `appliedBundleId`. Sample: 3 margheritas → PLN 120.74 (save 46.96). |
-| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink + dessert, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Limonata + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. The Limonata pick (vs the originally-considered espresso) was deliberate: espresso already attaches ~60% organically, so subsidising it would have paid customers to do what they were doing for free; Limonata captures the non-espresso cohort. |
+| ✅ | "Family Feast: your mains + 2 antipasti + 4 drinks + tiramisù, 22% off" | savings | +22% AOV per family order | §3.2 bundle engine live; `family-feast` tier in `DEFAULT_BUNDLES` (`src/lib/bundles.ts`) is now *dynamic on mains* — every pizza/pasta in cart carries into the bundle 1:1 and price scales from `(mains-à-la-carte + cheapest-add-ons)` at the tier's split mains/add-ons discount blend. Surfaces at ≥3 main items, locks subtotal to the computed price via `appliedBundleId`. The applied price is computed live by `computeBundlePrice`. |
+| 🟡 | "Lunch combo PLN 39: pasta + drink" | value | +18% | `TodBanner` lunch variant surfaces the generic `pasta-combo` (any pasta + drink, 10% off) during 11:30–13:00. The category-only combos sit alongside the new item-locked **Italian Classic Deal** (Margherita + Limonata + Tiramisù, 10%) — admins choose either pattern per location at `/admin/crosssell` → Combo deals. The Limonata pick (vs the originally-considered espresso) was deliberate: espresso already attaches ~60% organically, so subsidising it would have paid customers to do what they were doing for free; Limonata captures the non-espresso cohort. |
 | ✅ | "Tap to make it a Gold-Tier order: +pesto bruschetta included" | status | +9% | `TierPerkBanner` — Gold/Platinum-gated, comp'd via price-0 cart line |
 | ⏳ | "Try the new burrata — first 12 today" | scarcity | +6% | needs per-day inventory tracking on seasonal items |
 | ⛔ | **Don't:** "Are you sure you want to add fries?" | annoying | -3% | not shipped |
@@ -175,7 +175,7 @@ T+pay (Stripe sheet)                                                 ⏳ deferre
 | Status | Trigger | Surface | Example |
 |---|---|---|---|
 | ✅ | 07:00–10:00 | Cart top | "Pre-order lunch — beat the noon rush" (`TodBanner` morning variant) |
-| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the `pasta-combo` / `lunch-special` generic combos or the item-locked Italian Classic Deal, whichever the cart qualifies for) |
+| ✅ | 11:00–13:00 (rush) | Cart top | "Lunch combo — pasta + drink, save 10%" (`TodBanner` lunch variant, surfaces the `pasta-combo` / `pizza-side` generic combos or the item-locked Italian Classic Deal, whichever the cart qualifies for) |
 | ✅ | 14:00–16:00 (afternoon) | Cart top | "Espresso break — pickup in 4 min" with one-tap add (`TodBanner` afternoon) |
 | ✅ | 17:00–19:00 | Cart top | "Cooking for the table tonight?" hint with combo pairing (`TodBanner` dinner — surfaces the active combo from `getActiveComboDeals`) |
 | ✅ | 20:00–23:00 | Cart top | "Late-night espresso & dessert" one-tap espresso add (`TodBanner` late) |
@@ -191,14 +191,14 @@ From `src/data/menus/krakow.ts` actuals:
 
 | Item | Price PLN | Cost PLN | GM% | Per-attach profit PLN |
 |---|---:|---:|---:|---:|
-| Espresso | 6.00 | 1.00 | **83%** | **5.00** ← push hardest |
+| Espresso | 9.90 | 1.40 | **86%** | **8.50** ← push hardest |
 | Water (still 0.5 L) | 8.00 | 1.20 | **85%** | **6.80** ← push at delivery |
 | Limonata | 12.00 | 2.40 | 80% | 9.60 |
 | Tiramisu | 18.00 | 5.40 | 70% | 12.60 |
 | Cannoli | 16.00 | 4.80 | 70% | 11.20 |
 | Antipasti (burrata) | 22.00 | 7.70 | 65% | 14.30 |
 
-**The espresso is the single highest-leverage SKU in the entire catalogue.** Five PLN of margin × 60% attach rate × 100 orders/day = PLN 300/day = PLN 110k/year/truck on espresso alone.
+**The espresso is the single highest-leverage SKU in the entire catalogue.** Roughly PLN 8.50 of margin × 60% attach rate × 100 orders/day on espresso alone makes it the hardest-pushing attachment in the cart.
 
 `getCartSuggestions` priority numbers double as the margin × attach ranking (espresso 1, dessert 2, drink 3). Re-ordering them in `src/lib/upsell.ts` requires re-checking the cost table above — there's a comment in the file calling this out.
 
@@ -206,7 +206,7 @@ From `src/data/menus/krakow.ts` actuals:
 
 - **McDonald's:** Default-combo psychology. The single button "Make it a meal +PLN X" frames *non*-combo as the deviant choice. AOV uplift: 22%. — 🟡 **partial:** the `TodBanner` lunch variant surfaces the active combo as the default expectation during 11:00–13:00. Auto-apply when categories match exists via `getActiveComboDeals`, which now scores combos by largest savings (complete beats partial, original-index breaks ties) so a fully-satisfied combo always wins over an earlier partial one — fixes the order-dependent short-circuit that previously hid completed discounts. The new item-locked **Italian Classic Deal** (Margherita + Limonata + Tiramisù) is McDonald's-style "make it the Italian Classic" framing, admin-configurable from `/admin/crosssell` → Combo deals. A "Remove combo" CTA on the applied banner is the follow-up.
 - **Starbucks:** Size laddering with named premium ("Venti"). Modifier upsells ("add an espresso shot +PLN 4"). Personalised "your usual" rebuild. — ⛔ **rejected** on the size-laddering / modifier half (fixed Neapolitan portions). The "your usual" rebuild belongs in §5.2.4 habit-loop work.
-- **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 0) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
+- **Uber Eats:** "Frequently bought together" + "Customers near you ordered" + algorithmic free-delivery threshold tuned per user. AOV uplift attributable to algorithmic upsell: 11%. — ✅ **shipped:** per-segment delivery threshold (first-time 39 / regular 60 / Gold/Platinum 35) live in `DeliveryProgress` and respected by the checkout charge via `computeDeliveryFee(_, _, override)`. ML upsell scorer is §9.1.
 - **Domino's:** Pre-checkout "wait, don't forget…" upsell card. Polarising but proven +8% per checkout. — ✅ **shipped via** `CartUpsell` (3-up chips above subtotal).
 - **Shake Shack:** Premium frozen-custard concrete attached to every burger flow as the *default* meal completer. 38% attach. — ✅ **shipped via** the margin-ranked espresso chip — always first in the 3-up grid when a pizza or pasta is in cart.
 
@@ -253,19 +253,21 @@ follow-up; heuristic composite ships today.
 
 The decoy makes Lunch+ look reasonable. Lunch+ makes Lunch look cheap. The default-push on Lunch creates the McDonald's combo effect. **Predicted AOV: PLN 36–42 vs current PLN 28–32.**
 
-**Bundle tier — Family** (dynamic — mains scale with cart, quantity-gated at ≥2 pizzas+pastas; one-line hint at 1 main):
+**Bundle tier — Family** (dynamic — mains scale with cart, quantity-gated at ≥3 pizzas+pastas; one-line hint below the gate):
 
-The old fixed-composition family ladder locked the cart to "2 pizzas + 1 side + 2 drinks" regardless of how many pizzas the customer added — a 3-margherita cart got rewritten to 2 margheritas and paid a flat price unrelated to volume. The new family ladder is **dynamic on mains, static on add-ons**: every pizza/pasta in the cart carries into the bundle 1:1, the add-on allowance is a fixed composition, and the price is computed live from `(mains-à-la-carte + cheapest-add-ons) × (1 - discountPercent/100)`.
+The old fixed-composition family ladder locked the cart to "2 pizzas + 1 side + 2 drinks" regardless of how many pizzas the customer added — a 3-margherita cart got rewritten to 2 margheritas and paid a flat price unrelated to volume. The new family ladder is **dynamic on mains, static on add-ons**: every pizza/pasta in the cart carries into the bundle 1:1, the add-on allowance is a fixed composition, and the price is computed live by `computeBundlePrice` from `(mains-à-la-carte + cheapest-add-ons)` at the tier's split mains/add-ons discount blend.
 
-| Status | Tier | Composition | Discount | Sample @ 2 mains (Margherita) | Sample @ 3 mains |
-|---|---|---|---:|---:|---:|
-| ✅ | Family | X mains + 1 antipasti + 2 drinks | **20%** | PLN 72.64 (save 18.16) | PLN 94.96 (save 23.74) |
-| ✅ | Family Feast (anchor) | X mains + 2 antipasti + 4 drinks + tiramisù | **28%** | PLN 100.66 (save 39.14) | PLN 120.74 (save 46.96) |
-| ✅ | Feast Deluxe (decoy) | X mains + 2 antipasti + 6 drinks + 2 desserts | **24%** | — gated at ≥3 mains — | PLN 150.25 (save 47.45) |
+| Status | Tier | Composition | Discount | Min mains | Live price |
+|---|---|---|---:|---:|---|
+| ✅ | Family | X mains + 1 antipasti + 2 drinks | **18%** | ≥3 | computed by `computeBundlePrice` |
+| ✅ | Family Feast (anchor) | X mains + 2 antipasti + 4 drinks + tiramisù | **22%** | ≥3 | computed by `computeBundlePrice` |
+| ✅ | Feast Deluxe (decoy) | X mains + 2 antipasti + 6 drinks + 2 desserts | **25%** | ≥6 | computed by `computeBundlePrice` |
 
-Sample numbers use Kraków à la carte: Margherita 27.90, espresso 8.00 (cheapest drink), bruschetta 19.00 (cheapest antipasti), tiramisù 14.00. Anchor stays anchor: Family Feast carries the highest % savings; Feast Deluxe has the largest absolute savings on bigger carts but a lower %.
+Each tier ships with a default split mains/add-ons discount blend rather than a single flat percent. The displayed total is always whatever `computeBundlePrice` returns for the live cart at this location's à la carte prices — same number client-side, server-side, and at Stripe-session creation. Anchor stays anchor: Family Feast carries the highest effective % savings on a typical family cart; Feast Deluxe (gated higher, at ≥6 mains) has the largest absolute savings on bigger carts.
 
-Operator margin holds at 45–50% across all three tiers because the discount applies to a basket that's already weighted toward high-GM add-ons (espresso 87%, drinks 80%, dessert 60%). The strikethrough "you'd pay" reflects real à la carte at this location, so the "Save X" badge is always honest.
+Beyond the Lunch and Family ladders above, `DEFAULT_BUNDLES` ships several more production ladders: a flat-priced `family-pizza-pack` (3 pizzas + 1L drink, PLN 99), a late-night ladder (`late-slice` / `late-night` / `late-party`), a delivery-only `delivery-pantry`, and a parallel pizza-led lunch ladder alongside the pasta-led one.
+
+Operator margin holds at 45–50% across all three tiers because the discount applies to a basket that's already weighted toward high-GM add-ons (espresso ~86%, drinks 80%, dessert 60%). The strikethrough "you'd pay" reflects real à la carte at this location, so the "Save X" badge is always honest.
 
 - ✅ Schema: discriminated union `BundleFixedTier | BundleDynamicTier` in `src/lib/bundles.ts`. Lunch tiers stay fixed (solo eating, no "scale with mains" concept); family tiers ship dynamic by default.
 - ✅ `computeBundlePrice(bundle, cart, menu)` runs identically client-side (cart drawer chip), server-side (`createOrderFromCart`), and at Stripe-session creation. Same inputs → same number → displayed total always matches the charge.
@@ -283,7 +285,7 @@ Bundles collapse to one Stripe line, so the discount is implicit in the price. C
 
 Three combo behaviours are now correctness-verified end-to-end (`scripts/legacy/verify-combo-fix.ts`):
 
-- **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a panino+drink cart got "still need pizza+desserts for meal-deal" instead of the 8% lunch-special applied.
+- **Order-independent scoring.** `getActiveComboDeals` scores every combo, prefers fully-complete ones (largest savings, original-index tiebreak), then partials. Fixes the prior short-circuit where a pizza+garlic-bread cart got "still need pizza+desserts for meal-deal" instead of the 12% pizza-side deal applied.
 - **Quantity-capped discount.** Savings = `discountPercent` × cheapest unit per matched category (or per required item suffix). 5 pizzas + drink + dessert no longer scales 10% across all 5 pizzas; one combo's worth caps the savings.
 - **Item-locked combos.** New `requiredItems: { suffix; label }[]` on `ComboDeal` gates a combo on specific menu items via `id.endsWith(suffix)` so the same definition matches `krk-pizza-margherita` and `waw-pizza-margherita`. The default ladder now ships with **Italian Classic Deal** as an item-locked example (Margherita + Limonata + Tiramisù, 10%) — a Quattro Formaggi cart routes to a different promo rather than fraudulently completing this one.
 
@@ -343,7 +345,7 @@ progress bar with a personalised threshold.
 | ✅ | First-time | PLN 39 (low; remove friction) | +12% complete |
 | ✅ | 2–4 orders | PLN 49 (slightly raise) | +6% AOV |
 | ✅ | 5+ orders | PLN 59 (regular, will hit it) | +9% AOV |
-| ✅ | Gold/Platinum | PLN 0 (already free, surface as a tier perk) | +retention |
+| ✅ | Gold/Platinum | PLN 35 (low floor, surface as a tier perk) | +retention |
 
 Per-segment threshold is honoured by `computeDeliveryFee()` at checkout so
 the bar and the receipt agree. Personalised free-delivery thresholds added
@@ -375,10 +377,10 @@ Status snapshot. §4.2 + §4.3 mechanisms + §4.4 hierarchy are in production an
 What shipped:
 
 - ✅ **Charm pricing.** Every Kraków + Warszawa item re-aligned: pizza ends in 9, premium pasta ends in 5, espresso ends in 9, desserts end in 0. Stripe Checkout, Polish JPK_V7M VAT export, and the recipe-margin seed route all read the new prices directly — no parallel constants to drift.
-- ✅ **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 47.90, `waw-pizza-pizzaiolo` PLN 52.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip (hydration-safe — countdown defers to `useEffect` so SSR and client first paint agree).
+- ✅ **Premium anchor.** `Pizza del Pizzaiolo` lives in both menus (`krk-pizza-pizzaiolo` PLN 49.90, `waw-pizza-pizzaiolo` PLN 54.90) with `menuRole: "anchor"` + `isLimited: true` + `limitedUntil`. Renders with the dark Chef's Signature treatment and a days-left countdown chip (hydration-safe — countdown defers to `useEffect` so SSR and client first paint agree).
 - ✅ **Hero / profit-driver triangle.** New `MenuRole` type on `MenuItem`. Margherita = hero (full-width card, cream-gradient frame, "The gateway — start here" subtitle). Quattro Formaggi / Linguine al Pesto / Espresso = profit driver (gold "Pizzaiolo's Choice" badge, ChefHat icon, "quietly his favourite to make" copy).
 - ✅ **Hierarchy of menu page.** The default sort is now Pizzaiolo's layout — `compareMenuEngineering()` orders hero → profit-driver → anchor → standards by popularity → alpha tie-break. Sort dropdown still exposes price-low / price-high / rating.
-- ⚠ **Admin-editable — partially rolled back.** The original `/admin/menu` edit dialog briefly carried a role dropdown + LTO toggle + "available until" date picker (PR commit `b0d48cc`), but the editorial-badge editor was dropped from the admin dialog shortly after (PR commit `1b2de1c`) when the menu detail page narrowed its scope. `MenuOverride.menuRole / isLimited / limitedUntil` are still accepted by the `PUT /api/admin/menu` payload schema and propagated in the bulk-edit / cross-location clone paths (`src/app/api/admin/menu/route.ts:287`, `src/app/api/admin/menu/bulk/route.ts:384`), so the role + LTO state is operator-controllable via the API and the seed file — but there is no admin-form affordance today. Menu role-derived chips do surface on `/admin/menu` via the Menu badges tab (PR commit `854044a`), so the operator can see which items carry which role, just not edit it from the form.
+- ⚠ **Admin-editable — partially rolled back.** The original `/admin/menu` edit dialog briefly carried a role dropdown + LTO toggle + "available until" date picker (PR commit `b0d48cc`), but the editorial-badge editor was dropped from the admin dialog shortly after (PR commit `1b2de1c`) when the menu detail page narrowed its scope. `MenuOverride.menuRole / isLimited / limitedUntil` are still accepted by the `PUT /api/admin/menu` payload schema and propagated in the bulk-edit / cross-location clone paths (`src/app/api/admin/menu/route.ts:296`, `src/app/api/admin/menu/bulk/route.ts:384`), so the role + LTO state is operator-controllable via the API and the seed file — but there is no admin-form affordance today. Menu role-derived chips do surface on `/admin/menu` via the Menu badges tab (PR commit `854044a`), so the operator can see which items carry which role, just not edit it from the form.
 - ✅ **Capability ledger.** `Menu engineering hierarchy` row added to `/admin/capabilities` per CLAUDE.md rule #9.
 - ❌ **Loss-leader first-order espresso bundle** (§4.3 row 5). Not built. Distinct from the anchor — would need a first-order detector (orders count == 0 for the phone) + a comp'd or PLN 12 bundle line in the cart.
 - 🟡 **Monthly LTO rotation cadence** (§4.5). Mechanism shipped at the API + seed layer (`MenuOverride.menuRole / isLimited / limitedUntil` round-trip end-to-end); the admin-form affordance was dropped from `/admin/menu` when the detail page narrowed scope (commit `1b2de1c`), so flipping role + dates today means editing the seed file or POSTing the API directly. Ongoing rotation is a manager operational action, not yet automated.
@@ -401,10 +403,10 @@ Pulling from `src/data/menus/krakow.ts`:
 ### 4.2 Pricing Psychology Fixes
 
 1. ✅ **Charm pricing.** Move PLN 28.00 → PLN 27.90, PLN 32.00 → PLN 31.90. Empirical lift: 1–3% conversion. Cost: 0.10 PLN per unit. Free money. — *Applied across every Kraków + Warszawa item in `src/data/menus/`.*
-2. ✅ **Premium anchor.** Add one PLN 48 "Pizza del Pizzaiolo" with truffle + buffalo mozzarella. Doesn't need to sell much — its purpose is to make PLN 32 Diavola feel modest. Anchor goods lift adjacent AOV 6–11%. — *Shipped at PLN 47.90 (Kraków) / PLN 52.90 (Warszawa).*
+2. ✅ **Premium anchor.** Add one PLN 48 "Pizza del Pizzaiolo" with truffle + buffalo mozzarella. Doesn't need to sell much — its purpose is to make PLN 32 Diavola feel modest. Anchor goods lift adjacent AOV 6–11%. — *Shipped at PLN 49.90 (Kraków) / PLN 54.90 (Warszawa).*
 3. ✅ **Decoy bundle (see §3.2).** Decoy doesn't need to sell — purpose is to make tier-2 look correct. — *Shipped in §3.2 Bundle architecture.*
 4. ✅ **Tier 1 default-push.** Combo button labelled "Make it a lunch +PLN 6" rather than a separate menu page. Default-effect captures non-deliberators. — *Shipped via §3.2 Lunch ladder + §2.3 lunch time-window banner.*
-5. ✅ **Price-end alignment to category.** Pizza ends in 9 (perceived value), premium pasta ends in 5 (perceived premium), espresso ends in 9 (impulse), desserts end in 0 (perceived quality). Variable endings cue subliminal positioning. — *Applied: pizza items end in `90` (e.g. 27.90, 31.90), premium pasta in `95` (Carbonara 28.95, Bolognese 29.95), Espresso 7.90, desserts at 15.00 / 16.00 / 18.00.*
+5. ✅ **Price-end alignment to category.** Pizza ends in 9 (perceived value), premium pasta ends in 5 (perceived premium), espresso ends in 9 (impulse), desserts end in 0 (perceived quality). Variable endings cue subliminal positioning. — *Applied: pizza items end in `90` (e.g. 27.90, 31.90), premium pasta in `95` (Carbonara 28.95, Bolognese 29.95), Espresso 9.90, desserts at 15.00 / 16.00 / 18.00.*
 
 ### 4.3 Hero / Profit-Driver / LTO Triangle
 
@@ -1177,7 +1179,7 @@ A second batch of commits today (PR #61 + the recipes sequence) doesn't ship new
 
 ### 1. Per-distributor ingredient offerings drive True CM1, not a typed-in number
 
-The §10 "Cost Optimisation & P&L Improvement" section assumed the operator types a cost into each ingredient row and the recipe sums them. That was correct on the audit date. As of this update, costs flow through a `IngredientProduct` table — one row per (ingredient × distributor) pair (`src/data/types.ts:292`). Each ingredient has an `activeProductId` pointing at the offering currently in effect. Recipe cost + bundle margin alert + per-channel CM1 panel + sensitivity tornado all read through this pointer.
+The §10 "Cost Optimisation & P&L Improvement" section assumed the operator types a cost into each ingredient row and the recipe sums them. That was correct on the audit date. As of this update, costs flow through a `IngredientProduct` table — one row per (ingredient × distributor) pair (`src/data/types.ts:296`). Each ingredient has an `activeProductId` pointing at the offering currently in effect. Recipe cost + bundle margin alert + per-channel CM1 panel + sensitivity tornado all read through this pointer.
 
 **What that does for the audit's analysis:**
 
@@ -1196,7 +1198,7 @@ Recipes are now keyed by dish base slug, not by location-prefixed menu-item id. 
 
 ### 3. Auto-computed per-portion kcal + macros let psychology surfaces lean on real data
 
-The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrition` at `src/lib/store.ts:3537` / `:3587`) sums ingredient `kcalPerUnit × quantity` ÷ `yieldPortions`. **`wasteFactor` is intentionally excluded from nutrition math** because `quantity` is eaten weight; the trim/spill purchased extra is a cost concern, not a calorie one. The customer kcal pill is now a derived figure, not a typed-in one.
+The recipe nutrition pipeline (`calculateRecipeCalories`, `calculateRecipeNutrition` at `src/lib/store.ts:3890` / `:3940`) sums ingredient `kcalPerUnit × quantity` ÷ `yieldPortions`. **`wasteFactor` is intentionally excluded from nutrition math** because `quantity` is eaten weight; the trim/spill purchased extra is a cost concern, not a calorie one. The customer kcal pill is now a derived figure, not a typed-in one.
 
 **What this unlocks for §3 + §4 of the audit:**
 
@@ -1282,40 +1284,3 @@ These are exactly the "cosmetic implementation pretending to function" failures 
 The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The brand-frame half of the §1.5 conversion-killer complaint is **closed** (V8 live); the photography half is **still open**. Of the audit's three explicitly-named single-day revenue items — food photography, address autocomplete, post-order single-tap espresso upsell — **all three remain un-shipped after fourteen days.** The eight days of work went into the storefront rebuild, the three-theme design-system split, the data-layer migration, and the LLM layer. The §5 retention surface finally has UI, but it ships with hardcoded streak/challenge/referral values that must be wired to real data before the dopamine loop earns the trust the audit's §8 demands. The work-vs-revenue ratio on the three single-day items has, if anything, worsened — the premium surface now sits above an emoji-free but photo-free menu and a streak counter that doesn't count.
 
 — *Re-run lens: same growth/psychology audit, fifteen days later — 29 May 2026*
-
----
-
-## 2026-05-29 Verification Ledger (full claim-by-claim pass)
-
-A line-by-line re-verification of every ✅/🟡/⛔/⏳ tick, citation, and number against current code. Per Rule #11 the body and dated updates are immutable; corrections recorded here. The material drift is in **numeric specifics** of §2.2/§3.2/§3.3 that the engines were re-tuned past (most by the companion `bundle-ladder-revenue-rebuild` ship on 15 May, one day after this audit), plus a few stale pointers.
-
-**A. Status ticks now wrong:**
-
-1. **§2.5 (line 209) & §3.3 (line 346) — Gold/Platinum free-delivery threshold = PLN 0 ✅.** Now **PLN 35**: `SEGMENT_FREE_DELIVERY_THRESHOLD.vip = 3500` (`upsell.ts:868`), with a comment citing the §3 audit ("VIPs now have a non-zero floor so a Gold customer can't get free delivery on a 6.90 PLN water"). First-time 39 / growing 49 / regular 59 remain accurate. Two ✅ ticks are now factually wrong.
-2. **§2.2 (line 166) `pasta-combo` = "any pasta + drink + dessert, 10%".** Dessert was deliberately removed — it's now **pasta + drink** only (`upsell.ts:534-541`, comment: "Keeping dessert OUT of the discount aligns with the §3 audit rule").
-3. **§3.2.1 (line 286) & §2.3 (line 178) reference combo `lunch-special` (panino + drink).** Removed; replaced by `pizza-side` ("Any pizza + garlic bread", 12%, item-locked on `anti-garlic-bread`, `upsell.ts:545-555`).
-
-**B. Bundle ladder numbers re-tuned (§2.2 / §3.2 sample figures now stale):**
-
-| Audit | Current (`bundles.ts`) |
-|---|---|
-| family-feast "28% off" (§2.2 :165, §3.2 table) | Family **18%** (`:293`), Family Feast **22%** (`:312`), Feast Deluxe **25%** (`:337`); all now default to split mains/add-ons rates (8/28, 12/30, 15/38) |
-| Family "≥2 mains" (§3.2 :256, §2.2 :165) | `minMains: 3` (`:291`); comment "raised from 2 → 3" |
-| Feast Deluxe "≥3 mains" (§3.2 :264) | `minMains: 6` (`:335`) |
-| samples "3 margheritas → PLN 120.74 (save 46.96)" etc. | derive from the old 20/28% + espresso-8.00 assumptions; no longer reproduce. Treat all §3.2 sample totals as stale. |
-
-New production bundles undocumented in §3.2: `family-pizza-pack` (3 pizzas + 1L drink, flat PLN 99, `:266`), the late-night ladder (`late-slice`/`late-night`/`late-party`, `:354-406`), delivery-only `delivery-pantry` (`:412`), and a parallel pizza-led lunch ladder (`:212-256`).
-
-**C. Pricing pointers (§0.1 / §2.4 / §3.2 / §4):**
-
-- **Espresso 6.00 / cost 1.00 → 9.90 / 1.40** (`krakow.ts:313-314`; reprice comment `:307`). Cheapest Kraków drink is now **water at 5.90** (`:355`), not espresso — so §3.2's "espresso 8.00 (cheapest drink)" is doubly stale. The §2.4 "espresso = highest-margin push" *direction* is actually stronger now (GM ≈ 86%), but the literal table figures are stale.
-- **Pizza del Pizzaiolo 47.90/52.90 → 49.90/54.90** (`krakow.ts:129`, `warszawa.ts:111`). (`capabilities/page.tsx:781` still cites the old prices — a ledger discrepancy.)
-- Charm-pricing endings verified intact (pizza …90, premium pasta …95, espresso 990, desserts 1800/1600/1500).
-
-**D. Stale file:line pointers:** `MenuOverride.menuRole` cited `menu/route.ts:287` → actually `:296` (bulk `:384` correct); my own 2026-05-29 prose cited `CartUpsell CartDrawer.tsx:645` → `:646` and `DeliveryProgress :650` → `:651` (corrected in place).
-
-**E. Confirmed accurate (the §2–§6 design spine holds):** all §2.1 cart-sequence components exist and render in `CartDrawer.tsx` (re-themed V8); §2.1 `T+pay`/Apple Pay still ⏳; §2.4 margin ranking drives `getCartSuggestions` (espresso first); §3.1 `scorePairing` + `CATEGORY_HOUR_BIAS` + `noveltyDecay` + `ITEM_REASON_OVERRIDES` + ML scorer 🟡 deferred; §3.2 discriminated-union bundle schema + `computeBundlePrice`/`buildBundleCartLines`/`isBundleActiveNow`/`appliedBundleId`; §3.2.1 item-locked Italian Classic Deal (10%) + order-independent scoring; §3.4 corporate (head 20% bonus, invoice + reminder crons, `CorporateOrderBanner`); §4 `MenuRole`/menu-engineering (display-only badges — the "admin role editor rolled back" ⚠ status is accurate); §9.1 `ai-engine.ts` is the FAQ matcher + forecast at `ai/forecast.ts`. Context anchors all verified: tip default None, no customer modifier picker, no post-order item upsell, combo shows %+PLN, `computeSimulationActuals` `store.ts:10336`, WhatsApp `confirm_and_pay` → Stripe Checkout. §5/§0.2 regressions confirmed exactly (streak `:459`, challenge `:482/486`, referral `Math.random()` `growth-engine.ts:18`, root `getActiveChallenges` `:126`); `ratings.ts` deleted.
-
-**F. Adjacent discrepancy:** `capabilities/page.tsx:781` over-claims a menu-role *edit* dialog (the surface is display-only, matching §4's correct ⚠ status) and cites the old pizzaiolo prices — a capabilities-ledger drift surfaced during verification, relevant because §4 leans on that page as source of truth.
-
-— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

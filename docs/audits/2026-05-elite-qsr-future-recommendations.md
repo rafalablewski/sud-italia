@@ -80,7 +80,7 @@ The grading carries forward the v3 audit's standard: **A+** = an elite operator 
 
 **Who does this well.** Chipotle, Starbucks. Both algorithmically pick the single best upsell path per cart shape.
 
-**Effort.** Half-day. Pass `isBundleLadderShowable` (already in `lib/bundles.ts`) into `CartDrawer`; when true, demote `CartUpsell` to a single subtle line or hide entirely.
+**Effort.** Half-day. The combo banner already suppresses off `isBundleActive` (`CartDrawer.tsx:211`); reuse that signal (or the `bundleVisibleToCustomer` predicate in `lib/bundles.ts:620`) to also demote `CartUpsell` to a single subtle line or hide it entirely when the ladder is showing.
 
 ---
 
@@ -159,11 +159,11 @@ Items 3, 5, 6, 7 add 4–6 days of engineering and close the analytics gaps the 
 |---|---|---|
 | 1 | Per-customer ML upsell scoring | ⏳ Still rules-based in `getCartSuggestions` + `scorePairing`. **However**: per-customer **RFM segmentation** (`new` / `occasional` / `regular` / `champion` / `vip` / `lapsed`) shipped 2026-05-16 (PR #38), and the **simulation** now reports per-channel CM1 + attachment efficiency per segment. The remaining work is to wire the segment buckets into the upsell scorer as an additional feature column. Sprint slot Q3-1 still valid. |
 | 2 | Voice-of-customer feedback on bundle apply | ⏳ Not shipped. Bundle audit log still captures _what was sold_ only. `BundleAnalyticsCard` does not yet show thumbs-up/down. 2–3 days of work; sprint slot Q3-1 still valid. |
-| 3 | Refund × bundle correlation | 🟡 **Half shipped.** `OrderRefund.reasonCode` enum is live (`src/data/types.ts:413` — 8 codes: customer_request, wrong_item, quality_issue, late_or_no_show, missing_item, duplicate_charge, manager_comp, other) and the admin reason-picker is wired into the refund flow in `src/components/admin/AdminOrders.tsx:1028`. ⏳ **Still missing**: the join — `BundleAnalyticsCard` does not yet pull refund records and surface refund-rate per bundle id / per A/B variant. The data is captured; the analytics rollup isn't. |
+| 3 | Refund × bundle correlation | 🟡 **Half shipped.** `OrderRefund.reasonCode` enum is live (`REFUND_REASON_CODES` at `src/data/types.ts:417`, 8 codes at `:418-425`: customer_request, wrong_item, quality_issue, late_or_no_show, missing_item, duplicate_charge, manager_comp, other; `reasonCode` field on `OrderRefund` at `:446`) and the admin reason-picker is wired into the refund flow in `src/components/admin/AdminOrders.tsx:1122`. ⏳ **Still missing**: the join — `BundleAnalyticsCard` does not yet pull refund records and surface refund-rate per bundle id / per A/B variant. The data is captured; the analytics rollup isn't. |
 | 4 | Stripe Subscription auto-rebill for weekly usual | 🟡 **Phase 1 shipped** — `/admin/scheduled-bundles` queue + approval UI is live; the operator can approve and run a scheduled bundle order on the chosen weekday from the queue. **Phase 2 still outstanding** — Stripe Subscription create + customer portal + webhook handler + payment-failure auto-pause are not wired. The intent layer is in place; the auto-rebill is not. Sprint slot Q3-2 still valid. |
 | 5 | Slot-capacity × bundle dashboard pivot | ⏳ Not shipped. `BundleEvent.slotId` is still captured on every bundle order; the "of slots that hit ≥ 80% capacity, what % had a bundle in their first 5 minutes" pivot is not yet rendered. 2–3 days of work. |
 | 6 | "Bundle is the path" — hide cross-sell chips when bundle showable | ⏳ Not shipped. Combo banner is correctly suppressed when bundle is showable, but `CartUpsell` chips still render alongside. Half-day fix; still a quick win. |
-| 7 | Per-day-of-week bundle conversion analysis | 🟡 **Half shipped.** `activeDays` is configurable per bundle, and the `bundle-analytics` endpoint already computes a `perDay: { date, count, revenue }[]` array server-side (`src/app/api/admin/bundle-analytics/route.ts:152–158`). ⏳ **Still missing**: the `BundleAnalytics` interface returned to the client doesn't declare `perDay` and `BundleAnalyticsCard` doesn't render it. The backend half is done; bind it through the response type + add a day-of-week panel to close. Half a day, not 1 day. |
+| 7 | Per-day-of-week bundle conversion analysis | 🟡 **Half shipped.** `activeDays` is configurable per bundle, and the `bundle-analytics` endpoint already computes a `perDay` array server-side (`src/app/api/admin/bundle-analytics/route.ts:152–158`), declared on the route-side `BundleAnalytics` interface (`:46`). ⏳ **Still missing two things**: (a) `perDay` buckets by **calendar date** (`createdAt.slice(0,10)`, `route.ts:107`), not day-of-week, so a real per-weekday view needs a new `byDayOfWeek` group, not just a re-binding of `perDay`; (b) `BundleAnalyticsCard`'s local Props + render omit the breakdown entirely. The route returns daily buckets; the day-of-week rollup + the card panel are the work. Closer to 1 day than half. |
 | 8 | Drone / sidewalk-robot delivery × bundle weight | ⏳ Out of scope; still 2027+. |
 | 9 | Per-segment elasticity testing as a continuous loop | ⏳ Not shipped. The A/B framework still requires a human to spin up an experiment. **But**: the **simulation page now models sensitivity** for the operator via the tornado chart, which is a useful manual proxy until the auto-scheduler exists. The continuous loop is still 1–2 sprints. |
 | 10 | Refresh of the customer-side promo overload | ⏳ Not shipped. Cart drawer still renders bundle ladder + combo banner + cross-sell chips + delivery progress + fulfillment toggle + slot picker + tip picker + loyalty earn preview + weekly-usual opt-in + pay button. 1 sprint. |
@@ -228,8 +228,8 @@ Eight days on. The big movement is **item 13 — the V8 brand-direction commitme
 | 3 | Refund × bundle correlation | 🟡 Unchanged — `OrderRefund.reasonCode` enum + admin reason-picker live; the analytics **join** (refund-rate per bundle / per A/B variant) still not rendered. The cost-snapshot prerequisite flagged in Update #2 still applies. |
 | 4 | Stripe Subscription auto-rebill | 🟡 Unchanged — `/admin/scheduled-bundles` queue + approval is live; Stripe Subscription create + webhook + payment-failure auto-pause still ⏳. (Note: the WhatsApp channel now has real Stripe pay-in-chat via `confirm_and_pay`, but that's one-shot checkout, not recurring billing.) |
 | 5 | Slot-capacity × bundle pivot | ⏳ Still not shipped. |
-| 6 | "Bundle is the path" — hide cross-sell chips when bundle showable | ⏳ **Still not shipped — re-confirmed by source.** In the V8 cart drawer the combo banner is suppressed when a bundle is showable, but `CartUpsell` chips (`CartDrawer.tsx:645`) still render alongside `BundleLadder` (`:617`). Half-day fix; still a quick win, now on the V8 surface. |
-| 7 | Per-day-of-week bundle conversion | 🟡 Unchanged — `perDay` computed server-side; the client interface + `BundleAnalyticsCard` panel still not bound. |
+| 6 | "Bundle is the path" — hide cross-sell chips when bundle showable | ⏳ **Still not shipped — re-confirmed by source.** In the V8 cart drawer the combo banner is suppressed when a bundle is showable (off `isBundleActive`, `CartDrawer.tsx:211`), but `CartUpsell` chips (`CartDrawer.tsx:646`) still render alongside `BundleLadder` (`:617`). Half-day fix; still a quick win, now on the V8 surface. |
+| 7 | Per-day-of-week bundle conversion | 🟡 Unchanged — `perDay` computed server-side and declared on the route-side `BundleAnalytics` interface, but it buckets by calendar date (`route.ts:107`), not day-of-week, and `BundleAnalyticsCard`'s Props + render omit it. Closing it needs a `byDayOfWeek` group plus the card panel. |
 | 8 | Drone/robot delivery × bundle weight | ⏳ Out of scope; still 2027+. |
 | 9 | Continuous elasticity loop | ⏳ Still not shipped. The simulation's sensitivity tornado is still the manual proxy; now it runs over **real-order actuals** (`computeSimulationActuals`, `store.ts:10336`) rather than a typed baseline, which sharpens the manual read — but the auto-scheduler/bandit is still 1–2 sprints. |
 | 10 | Refresh the customer-side promo overload | ⏳ Still not shipped — re-confirmed. The V8 cart still stacks TodBanner + loyalty line + TierPerkBanner + BundleLadder + ComboDealBanner + CartUpsell + DeliveryProgress + fulfillment selector + slot picker + TipPicker + LoyaltyEarnPreview + (bundle-gated) weekly-usual opt-in + pay bar. The rebuild re-themed the stack; it did not thin it. The "one algorithmically-chosen card" still isn't built. |
@@ -243,35 +243,3 @@ Eight days on. The big movement is **item 13 — the V8 brand-direction commitme
 **Net read on A → A+.** Item 13 closing (V8 live) and the real LLM layer landing both move the operator-side substrate; the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps an elite operator would point at, now on a more premium surface. The headline self-improving-stack work (1, 2, 4) is still the right Q3 priority, and the new precondition is "make the rewards streak/challenge/referral surfaces real before instrumenting them."
 
 — *Re-run lens: same planning audit, fourteen days later — 29 May 2026*
-
----
-
-## 2026-05-29 Verification Ledger (full claim-by-claim pass)
-
-A line-by-line re-verification of all 15 items + the priority table against current code. Per Rule #11 corrections are recorded here, not edited into the body.
-
-**A. Stale file:line pointers (symbol exists; line drifted):**
-
-| Citation | Correction |
-|---|---|
-| `OrderRefund.reasonCode` enum `types.ts:413` (item 3) | line 413 is blank; `REFUND_REASON_CODES` `:417` (8 codes `:418-425` — **exactly** as listed), `RefundReasonCode` `:428`, `OrderRefund.reasonCode` `:446` |
-| admin reason-picker `AdminOrders.tsx:1028` (item 3) | `<Select>` at `:1122` (`reasonCode` state `:1037`) |
-| `CartUpsell CartDrawer.tsx:645` (item 6) | `:646` (`:645` is the `<LayoutGate flag="showCartUpsell">` wrapper); `BundleLadder :617` exact |
-| `BundleEvent.slotId` implied in `types.ts` (item 5) | `BundleEvent` is in `store.ts:5570`; `slotId?` at `:5588` (the `types.ts:502` `slotId` is `Order.slotId`, a different field) |
-| `bundle-analytics route.ts:152-158` `perDay` (item 7) | accurate |
-| `computeSimulationActuals store.ts:10336` (item 9) | accurate |
-
-**B. Claims now wrong / over-stated:**
-
-1. **Item 6 effort note cites a non-existent symbol.** "pass `isBundleLadderShowable` (already in `lib/bundles.ts`)" — there is no `isBundleLadderShowable` export. The combo-suppression actually keys off `isBundleActive` (`CartDrawer.tsx:211`); the nearest visibility predicate is `bundleVisibleToCustomer` (`bundles.ts:620`). An implementer following this note would hit a dead reference.
-2. **Item 7 over-states the gap.** Both the 2026-05-21 and 2026-05-29 entries say the client `BundleAnalytics` interface "doesn't declare `perDay`" — but the **route-side interface does** (`bundle-analytics/route.ts:46`). The real remaining gap is narrower: only `BundleAnalyticsCard`'s local Props + render omit it. **And `perDay` buckets by calendar date** (`e.createdAt.slice(0,10)`, `route.ts:107`), **not day-of-week** — so closing item 7 needs a `byDayOfWeek` group, not just binding `perDay` through. The "half a day, not 1 day" estimate undersells it.
-
-**C. Confirmed accurate (items 1-15 statuses hold):**
-
-- Item 1 still rules-based (`getCartSuggestions` `upsell.ts:397`, `scorePairing` `:97`, 1,245-line composite engine, no ML); the **real LLM substrate now exists** (`ai/gateway.ts` Anthropic SDK + prompt caching, `agent.ts` `MAX_HOPS=8` + approval gates, `ai/tools/` role-gated registry) — confirmed newly-true.
-- Item 2 not shipped (no bundle thumbs-up/down; `FeedbackSurvey` is per-item ratings only). Item 3 half-shipped (enum + picker live; **join still absent** — 0 refund refs in `bundle-analytics/route.ts`). Item 4 Phase 1 only (`/admin/scheduled-bundles` + status PATCH live; **no Stripe Subscription / billingPortal / `STRIPE_SCHEDULE_WEBHOOK_SECRET`**; WhatsApp `confirm_and_pay` is one-shot). Item 5 captured-no-pivot (`BundleEvent.slotId` `store.ts:5588`). Item 6 not shipped (`CartUpsell` renders unconditionally beside `BundleLadder`). Item 9 manual proxy (sensitivity tornado over `computeSimulationActuals`; no auto-scheduler). Item 10 re-themed not thinned (full ~12-element cart stack present). Item 11 unchanged. Item 12 half-day (relational distributor ledger). Item 14 storage correct (`ingredientProducts` relational), no RFQ UI. Item 15 chain-wide recipes live (`getBaseSlug`), no yield-test UI.
-- **Item 13 — V8 brand commitment SHIPPED — confirmed:** parchment/terracotta tokens `themes/homepage/tokens.css:26-43`, Cormorant + Lora loaded across `(public)/*`; no `/mockups/cart.html` dependency remains.
-
-**D. New regressions beyond the 2026-05-29 Update:** rewards Rule-#1 finding confirmed (`generateReferralCode` `Math.random()` `growth-engine.ts:18`, called `rewards/page.tsx:292`; streak `:459`; challenge `:482`); the static-template **root is `getActiveChallenges()` `growth-engine.ts:126`** (no progress field). Adjacent: `simulateLiveActivity` (`growth-engine.ts:175,181-182`) is another `Math.random()` fake-data surface in the same module.
-
-— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

@@ -84,15 +84,13 @@ Cart math wires through `effectiveUnitPrice()` / `effectiveUnitCost()` so the ca
 #### Anti-abuse
 - **Anchor SKUs** (Tartufata, Pizza del Pizzaiolo) excluded from bundle category-slot resolution. They never fold into discounted bundles.
 - **Delivery-only SKUs** excluded from non-delivery bundle slots.
-- **Member-only flag** on bundles drives phone collection as conversion lever.
+- **Member-only flag** on bundles drives phone collection as conversion lever. This is a capability (the `membersOnly` flag + `bundleVisibleToCustomer` gate exist), but it is not yet activated on any seeded bundle — no `DEFAULT_BUNDLE` sets `membersOnly: true`, so the lever is wired and ready rather than live.
 
 ### Cross-sell engine
 
-- **Quantity upsell ("Make it 2")** — single highest-leverage QSR pattern previously absent. Triggers on solo-pizza/pasta carts.
-- **Cart-aware default dessert** — Panna Cotta on sub-40 zł carts (75% GM), Tiramisù on premium carts.
-- **Cart-aware default drink** — Acqua Minerale on sub-35 zł carts (83% GM), Limonata on premium.
-- **Pasta-only carts** — antipasti escalated to priority 2.5 (above drink suggestion). Italian tradition: pasta with bruschetta.
-- **Pizza-only carts** — garlic bread injected at priority 1.5 (between espresso and dessert).
+This rebuild shipped a dynamic, cart-aware cross-sell engine — quantity upsell ("Make it 2") on solo-pizza/pasta carts, a cart-aware default dessert (Panna Cotta on sub-40 zł carts, Tiramisù on premium), a cart-aware default drink (Acqua Minerale on sub-35 zł carts, Limonata on premium), antipasti escalated to priority 2.5 on pasta-only carts, and garlic bread injected at priority 1.5 on pizza-only carts.
+
+**That dynamic engine has since been removed.** Current `getCartSuggestions()` (`upsell.ts:397-453`) is a **fixed four-slot suggestion panel** — Espresso → Tiramisù → Garlic Bread → Limonata, with each slot admin-configurable per location (`preferredCoffee` / `preferredDessert` / `preferredGarlicBread` / `preferredDrink`). The slot order is the customer-facing contract; chips render even when the item is already in cart. None of the dynamic rules above (Make-it-2, the cart-aware sub-40/sub-35 defaults, the pasta/pizza priority escalations) exist anymore — they were stripped when the panel went to the fixed four-slot model (removal recorded at `capabilities/page.tsx:625`).
 
 ### Delivery + dine-in economics
 
@@ -123,7 +121,7 @@ Cart math wires through `effectiveUnitPrice()` / `effectiveUnitCost()` so the ca
 | Item | Reason |
 |---|---|
 | Full menu-page modifier picker | Modifier data + cart math + admin viewer shipped; per-item picker UI on `/locations/[slug]` is a discrete follow-up (large diff, separate UX review). |
-| Cart abandonment SMS | Existing `AbandonedCartWrapper` handles the local-storage banner. A re-engagement SMS path needs comms ops sign-off. |
+| Cart abandonment SMS | Existing `AbandonedCartBanner.tsx` handles the local-storage banner. A re-engagement SMS path needs comms ops sign-off. |
 | Dynamic surge pricing | Bundle discounts auto-suspend during peak times — admin can toggle bundles by weekday today. Full surge layer is its own audit. |
 | Per-zone delivery surcharge | Current flat 7 zł works; per-zone needs the postcode → zone mapper which is a separate ticket. |
 | Per-bundle margin floor enforcement at admin save-time | The bundle low-margin alert fires post-order; an admin-save-time guard ("Will violate 50% floor — confirm?") is a discrete admin UX change. |
@@ -155,10 +153,10 @@ Conservative reconstruction at 100 orders/day/truck:
 |---|---|
 | Menu data | `src/data/menus/{krakow,warszawa}.ts` |
 | Types | `src/data/types.ts` (MenuItem.deliveryOnly, packagingCost, modifierGroups; CartItem.selectedModifiers; ModifierGroup, ModifierOption, SelectedModifier) |
-| Upsell engine | `src/lib/upsell.ts` (combo rebuild, channel filter, quantity-bump suggestion, cart-aware defaults, packaging cost, KDS complexity, modifier price/cost helpers) |
+| Upsell engine | `src/lib/upsell.ts` (combo rebuild, channel filter, quantity-bump suggestion and cart-aware defaults — both later removed in favour of the fixed four-slot panel, packaging cost, KDS complexity, modifier price/cost helpers) |
 | Bundle engine | `src/lib/bundles.ts` (new ladders, channel field, members-only flag, anchor/delivery-only exclusion in slot resolver and dynamic mains count, `bundleVisibleToCustomer` helper) |
 | Cart store | `src/store/cart.ts` (effective unit price including modifiers) |
-| Cart UI | `src/components/cart/CartDrawer.tsx`, `BundleLadder.tsx`, `CartUpsell.tsx` (channel-aware bundle resolution, quantity-bump chip variant) |
+| Cart UI | `src/components/cart/CartDrawer.tsx`, `BundleLadder.tsx`, `CartUpsell.tsx` (channel-aware bundle resolution, quantity-bump chip variant — later removed with the dynamic cross-sell engine) |
 | Admin | `src/components/admin/AdminUpsell.tsx`, `AdminSellingShared.tsx`, `ModifierInventory.tsx` (new), `/api/admin/upsell/route.ts` (validate channel + membersOnly + lateNight rules) |
 | Loyalty | `src/lib/store.ts` (rewards list) |
 | Homepage | `src/components/landing/BundlesShowcase.tsx` (new), `src/app/(public)/page.tsx` |
@@ -216,9 +214,9 @@ A second batch of commits today (PR #61 + the recipes sequence on the same branc
 
 **What changed structurally:**
 
-- **`IngredientProduct`** — new table holding one row per (ingredient × distributor) pair, each carrying `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. `Ingredient.activeProductId` is a foreign key into the active offering. `src/data/types.ts:292`.
-- **`calculateFoodCost`** (`src/lib/store.ts:3505`) now multiplies the active offering's `costPerUnit` × `quantity` × `wasteFactor`, summed across recipe lines, divided by `yieldPortions`. Switching distributors is a single FK flip — every bundle ladder's True CM1 reads through it immediately.
-- **`calculateRecipeNutrition`** (`src/lib/store.ts:3587`) is its sibling for energy + macros — the per-portion kcal pill on the customer card now derives from the same ledger. **`wasteFactor` is intentionally dropped from the nutrition math** because `quantity` is the eaten weight; trim/spill purchased extra is a cost issue, not a calorie one.
+- **`IngredientProduct`** — new table holding one row per (ingredient × distributor) pair, each carrying `costPerUnit` + `kcalPerUnit` + `proteinPerUnit` + `carbsPerUnit` + `sugarPerUnit` + `fiberPerUnit` + `fatPerUnit`. `Ingredient.activeProductId` is a foreign key into the active offering. `src/data/types.ts:296`.
+- **`calculateFoodCost`** (`src/lib/store.ts:3858`) now multiplies the active offering's `costPerUnit` × `quantity` × `wasteFactor`, summed across recipe lines, divided by `yieldPortions`. Switching distributors is a single FK flip — every bundle ladder's True CM1 reads through it immediately.
+- **`calculateRecipeNutrition`** (`src/lib/store.ts:3940`) is its sibling for energy + macros — the per-portion kcal pill on the customer card now derives from the same ledger. **`wasteFactor` is intentionally dropped from the nutrition math** because `quantity` is the eaten weight; trim/spill purchased extra is a cost issue, not a calorie one.
 - **Chain-wide recipes.** A single Margherita formula is now shared across `krk-pizza-margherita` and `waw-pizza-margherita` (keyed by base slug, location prefix collapsed). Editing the bundle math in Kraków updates Warsaw. The "Pantry Pack" delivery-only bundle, the Family Feast, and the Italian Classic combo all read from one formula, not two.
 
 **Effect on the bundle ladder economics:**
@@ -279,37 +277,3 @@ Eight days on. No new bundle *economics* shipped, but the surface the ladder ren
 **Net read.** The bundle architecture this audit shipped is intact, now rendered on the premium surface its companion docs called for, and now backed by a relational cost store + real-order simulation. The PLN ~261k/truck recovery hypothesis is unchanged and more checkable than before. But the four discrete build items (modifier picker, save-time margin gate, espresso A/B, zone surcharge) that were ✗ on 2026-05-21 are **all still ✗** on 2026-05-29 — the eight days of shipping went into the storefront rebuild and the data-layer migration, not into closing this audit's open list.
 
 — *Re-run lens: same revenue/menu-engineering audit, fourteen days later — 29 May 2026*
-
----
-
-## 2026-05-29 Verification Ledger (full claim-by-claim pass)
-
-A line-by-line re-verification of every "What we shipped" claim, price, and "Files changed" pointer against current code. Per Rule #11 corrections are recorded here, not edited into the body.
-
-**A. Major correction — the "Cross-sell engine" section (§89-95) describes functionality that was REMOVED.** This is the single biggest divergence and was **not** caught in the 2026-05-29 Update above (which re-verified only the 5 "Next steps"). Current `getCartSuggestions()` (`upsell.ts:397-453`) is a **fixed four-slot panel** (Espresso → Tiramisù → Garlic Bread → Limonata, consts `:377-395`) with **none** of the shipped dynamic behaviours:
-
-- §91 "Quantity upsell (Make it 2)" — `grep` for `Make it 2` / `quantityBump` across `src/` returns nothing. Gone.
-- §92 cart-aware default dessert (Panna Cotta on sub-40 zł) — gone (dessert slot hardcoded Tiramisù).
-- §93 cart-aware default drink (Acqua on sub-35 zł) — gone (drink slot hardcoded Limonata).
-- §94 pasta-only → antipasti priority 2.5 — gone. §95 pizza-only → garlic bread priority 1.5 — gone.
-
-The removal is explicitly recorded in `capabilities/page.tsx:625` ("dynamic rules removed: Make-it-2, pizza-only garlic-bread, pasta-only antipasti, only-drinks-suggest-pizza, sub-40-default-Panna-Cotta"). The "Files changed" attribution of "quantity-bump suggestion, cart-aware defaults" to `upsell.ts` and "quantity-bump chip variant" to the cart UI are likewise now false. **A reader trusting this audit would believe the dynamic cross-sell engine is live; it is not.**
-
-**B. Stale name / pointers:**
-
-- "Deliberately not shipped" table cites `AbandonedCartWrapper` — no such symbol; the component is `AbandonedCartBanner.tsx` (mechanism exists, name wrong).
-- Update #2 citations drifted post-relational-migration: `calculateFoodCost` `store.ts:3505` → `:3858`; `calculateRecipeNutrition` `:3587` → `:3940`; `IngredientProduct` `types.ts:292` → `:296`. (Dated update; noted for readers, not edited.)
-- 2026-05-29 citations (`CartDrawer.tsx:617`, `:924-930`, `store.ts:10336`) all exact.
-
-**C. Pricing — every figure verifies exact.** Espresso 9.90/10.90 (`krakow:313`/`warszawa:285`), Tartufata 79.90/89.90 (`:146`/`:126`), Pizzaiolo 49.90/54.90 (`:129`/`:111`), Personale 8" 18.90/19.90, Slice 11.90/12.90, Garlic Bread 9.90/10.90 (~78% GM), 1L Limonata 19.90/23.90, Frozen Tiramisù 24/28, Peroni 4-Pack 32/36, EVOO 35/39 — all match. Bundle prices/blends match: Solo 27.90 → Lunch 38.90 → Lunch+ 44.90 → Big Lunch 68.90; Pizza Solo 22.90 → Pizza Lunch 39.90 → Pizza Lunch+ 44.90; Family Pack flat 99; Family 18% / Feast 22% (anchor) / Deluxe 25% (decoy, minMains 6); Late slice 16.90, Late dinner 20%, Late Party 28%; Pantry Pack 15% delivery-only. "Margins vary 64-78%" holds for food plates (computed 66.7-77.8%); espresso higher (~86%, a drink). Loyalty ladder exact (Free Drink 50 / Garlic Bread 70 / Dessert 120 / Personal Pizza 180 / Pizza 280 / 25 PLN Off 280); "PLN 10 Off" removed.
-
-**D. Confirmed accurate:** modifier schema (`ModifierGroup`/`ModifierOption`/`SelectedModifier`, Margherita Crust + Premium toppings, Diavola Spice + Premium toppings) `types.ts:117-189,354`; `effectiveUnitPrice`/`effectiveUnitCost` (`upsell.ts:1120-1135`) used by both cart store **and** server checkout (`createOrder.ts`); combo rebuild (Lunch Special killed, Italian Classic on Limonata 10%, Pizza & Side 12%, `channel` filter); bundle engine intact + server-validated (`cartSatisfiesBundle bundles.ts:892`, anchor/delivery-only exclusion, `bundleVisibleToCustomer` membersOnly gate, Family minMains 3); VIP free-delivery 35 (`upsell.ts:864`); `packagingCostFor`/`totalPackagingCost`; KDS complexity (`KDS_COMPLEX_THRESHOLD=6`); surfaces (`BundlesShowcase`, `ModifierInventory` tab, route validation); all 5 Next steps / "not shipped" items re-confirmed ✗ (no customer modifier picker, no save-time margin gate — only post-order `bundle_low_margin` notification `store.ts:2258` — no espresso A/B, no zone surcharge).
-
-**E. New discrepancies beyond the 2026-05-29 Update:**
-1. **Cross-sell engine removal (A above)** — undocumented in any update.
-2. **`membersOnly` is schema-only** — the flag + `bundleVisibleToCustomer` gating exist, but **no seeded `DEFAULT_BUNDLE` sets `membersOnly: true`** (0 occurrences in the bundle array). §87's "Member-only flag drives phone collection" is an accurate *capability* but is not *activated* on any bundle.
-3. **Capabilities-ledger internal contradiction** (adjacent): `capabilities/page.tsx:631` still claims "Cross-sell rule 1.5 surfaces garlic bread on pizza-only carts" while `:625` says that exact rule was removed.
-4. Rewards Rule-#1 regressions confirmed (streak `rewards/page.tsx:459`, challenge `:482`, `generateReferralCode` `Math.random()` `growth-engine.ts:18`).
-
-— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*
-
