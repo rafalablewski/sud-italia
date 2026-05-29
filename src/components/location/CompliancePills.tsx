@@ -18,13 +18,6 @@ export interface PublicCompliance {
   pdpaConsentText?: string | null;
 }
 
-const NUTRI_GRADE_TONE: Record<Grade, string> = {
-  A: "bg-emerald-600 text-white",
-  B: "bg-lime-500 text-white",
-  C: "bg-orange-500 text-white",
-  D: "bg-red-600 text-white",
-};
-
 const NUTRI_GRADE_LABEL: Record<Grade, string> = {
   A: "Healthier — least sugar / saturated fat",
   B: "Less sugar / saturated fat than D",
@@ -32,10 +25,18 @@ const NUTRI_GRADE_LABEL: Record<Grade, string> = {
   D: "Highest sugar AND saturated fat",
 };
 
-/** Per-item regulatory pills surfaced under the price. Renders nothing
- *  on EU/PL trucks unless the operator opts into kcal disclosure. NYC
- *  trucks always show kcal (§81.50); SG trucks show Nutri-Grade on
- *  beverages + halal status + contains-pork / contains-alcohol chips. */
+/**
+ * V8 per-item regulatory pills surfaced under the price. Renders
+ * nothing on EU/PL trucks unless the operator opts into kcal
+ * disclosure. NYC trucks always show kcal (§81.50); SG trucks add
+ * Nutri-Grade on beverages + halal status + contains-pork /
+ * contains-alcohol chips.
+ *
+ * Visual chrome lives under `.v8-comp-*` in
+ * themes/homepage/index.css. The Nutri-Grade medallion keeps the
+ * regulatory A/B/C/D colour signal but re-tints it through the V8
+ * palette so the rest of the chrome stays editorial.
+ */
 export function CompliancePills({
   item,
   compliance,
@@ -54,9 +55,26 @@ export function CompliancePills({
     pills.push(
       <span
         key="kcal"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-italia-cream border border-italia-dark/10 text-[11px] font-semibold text-italia-dark"
+        className="v8-comp-pill is-kcal"
         title="Calories per serving (NYC Health Code §81.50)"
       >
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 12 12"
+          fill="none"
+          aria-hidden
+          className="v8-comp-stamp"
+        >
+          <path
+            d="M6 1.5 C 7.5 3, 8.5 4, 8.5 6 C 8.5 7.8, 7.2 9.2, 6 9.2 C 4.8 9.2, 3.5 7.8, 3.5 6 C 3.5 4, 4.5 3, 6 1.5 Z"
+            fill="currentColor"
+            fillOpacity="0.45"
+            stroke="currentColor"
+            strokeWidth="1.1"
+            strokeLinejoin="round"
+          />
+        </svg>
         {item.nutrition.calories} kcal
       </span>,
     );
@@ -67,11 +85,10 @@ export function CompliancePills({
     compliance.nutriGradeRequired &&
     item.nutriGrade
   ) {
-    const tone = NUTRI_GRADE_TONE[item.nutriGrade];
     pills.push(
       <span
         key="nutri"
-        className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${tone}`}
+        className={`v8-comp-grade is-${item.nutriGrade}`}
         title={`NEA Nutri-Grade ${item.nutriGrade}: ${NUTRI_GRADE_LABEL[item.nutriGrade]}`}
         aria-label={`NEA Nutri-Grade ${item.nutriGrade}`}
       >
@@ -85,17 +102,18 @@ export function CompliancePills({
       pills.push(
         <span
           key="halal"
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-[11px] font-semibold text-emerald-900"
+          className="v8-comp-pill is-halal"
           title="Halal — covered by location MUIS certificate"
         >
-          ✓ Halal
+          <span className="v8-comp-glyph" aria-hidden>✓</span>
+          Halal
         </span>,
       );
     } else if (item.halalStatus === "non-halal") {
       pills.push(
         <span
           key="nonhalal"
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-[11px] font-semibold text-red-900"
+          className="v8-comp-pill is-nonhalal"
           title="Non-halal — contains non-halal ingredients or prep"
         >
           Non-halal
@@ -108,10 +126,11 @@ export function CompliancePills({
     pills.push(
       <span
         key="pork"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 border border-rose-300 text-[11px] font-semibold text-rose-900"
+        className="v8-comp-pill is-pork"
         title="Contains pork — religious dietary disclosure"
       >
-        🐷 Contains pork
+        <span className="v8-comp-glyph" aria-hidden>🐷</span>
+        Contains pork
       </span>,
     );
   }
@@ -120,15 +139,16 @@ export function CompliancePills({
     pills.push(
       <span
         key="alc"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-[11px] font-semibold text-amber-900"
+        className="v8-comp-pill is-alc"
         title="Contains alcohol — religious dietary + under-18 disclosure"
       >
-        🍷 Contains alcohol
+        <span className="v8-comp-glyph" aria-hidden>🍷</span>
+        Contains alcohol
       </span>,
     );
   }
 
   if (pills.length === 0) return null;
 
-  return <div className="flex flex-wrap items-center gap-1.5">{pills}</div>;
+  return <div className="v8-comp-pills">{pills}</div>;
 }

@@ -630,8 +630,9 @@ countdown, compliance pills — only the markup changed.
     drawer). Only renders when `getItemDetails(item.id)` has
     something to show.
   - `<CompliancePills />` — regulatory disclosure pill row (kcal,
-    Nutri-Grade, halal, pork, alcohol, etc.) kept as the existing
-    component since the inline-pill format already fits.
+    Nutri-Grade, halal, contains-pork, contains-alcohol). V8 chrome
+    as of Step 16 — see the dedicated entry under "Polish components"
+    below.
 
 - **Foot** (`.v8-mi-foot`) — dashed-line separator above, flex
   row with price on the left and add-action on the right:
@@ -1131,6 +1132,51 @@ The Homepage component set is **the brand vocabulary on the
 storefront** — type-first cards, brand-red CTAs, cream-and-white
 cards, the delight moments (sheet, toast, delivery shimmer, tier-up
 bounce).
+
+## Polish components — Step 16
+
+Two small surfaces that were the last pre-V8 chrome inside V8 parent
+components.
+
+### `<NotifyMeForm />` — `src/components/landing/NotifyMeForm.tsx`
+
+Email signup pill that lives inside `.v8-loc-notify` on closed-
+location cards in the landing's LocationsGrid (today: Wrocław).
+
+- `.v8-notify` — flex row with a `.v8-notify-input-wrap` parchment-
+  cream email input (Bell glyph absolute-positioned on the left at
+  `left: 12px`) + an ochre `.v8-notify-cta` italic Cormorant
+  "Notify · avvisami" button.
+- `.v8-notify-confirmed` — basil-tinted post-submit pill with a
+  check glyph + italic Cormorant "*Ti avviseremo* — we'll let you
+  know." Email is logged to the console as a `[Notify Me]` marker
+  (TODO comment in source); a one-line POST to a future
+  `/api/notify-me` endpoint is the only change to wire it up.
+
+### `<CompliancePills />` — `src/components/location/CompliancePills.tsx`
+
+Regulatory disclosure chip row under each menu item card.
+
+- `.v8-comp-pills` — flex-wrap container.
+- `.v8-comp-pill` — italic Cormorant 600 11px chip, 999px radius,
+  font-feature `tnum + lnum` so the kcal number reads as tabular.
+  Variants:
+  - `.is-kcal` — parchment-deep editorial chip with an ochre stamp
+    SVG (oxygen-droplet glyph) + `{N} kcal`. Fires when the truck is
+    NYC zone or the operator opted into kcal disclosure +
+    `item.nutrition?.calories` is set.
+  - `.is-halal` / `.is-nonhalal` — basil-tinted ✓ Halal chip /
+    oxblood-tinted Non-halal chip. Fires on SG trucks.
+  - `.is-pork` — terracotta-tinted "🐷 Contains pork" chip.
+  - `.is-alc` — ochre-tinted "🍷 Contains alcohol" chip.
+- `.v8-comp-grade` — 22px circular medallion for SG NEA Nutri-Grade.
+  The regulatory A/B/C/D colour signal is preserved but re-tinted
+  through the V8 palette so it stays unambiguous while still
+  reading editorial: `.is-A` basil-deep, `.is-B` basil, `.is-C`
+  terracotta, `.is-D` oxblood.
+
+Renders nothing on EU/PL trucks unless the operator opts into kcal
+disclosure (settings.json → `compliance.byLocation[slug].calorieDisclosureRequired`).
 
 ## Pre-V8 components retained but unused
 
