@@ -280,3 +280,36 @@ Eight days on. No new bundle *economics* shipped, but the surface the ladder ren
 
 — *Re-run lens: same revenue/menu-engineering audit, fourteen days later — 29 May 2026*
 
+---
+
+## 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of every "What we shipped" claim, price, and "Files changed" pointer against current code. Per Rule #11 corrections are recorded here, not edited into the body.
+
+**A. Major correction — the "Cross-sell engine" section (§89-95) describes functionality that was REMOVED.** This is the single biggest divergence and was **not** caught in the 2026-05-29 Update above (which re-verified only the 5 "Next steps"). Current `getCartSuggestions()` (`upsell.ts:397-453`) is a **fixed four-slot panel** (Espresso → Tiramisù → Garlic Bread → Limonata, consts `:377-395`) with **none** of the shipped dynamic behaviours:
+
+- §91 "Quantity upsell (Make it 2)" — `grep` for `Make it 2` / `quantityBump` across `src/` returns nothing. Gone.
+- §92 cart-aware default dessert (Panna Cotta on sub-40 zł) — gone (dessert slot hardcoded Tiramisù).
+- §93 cart-aware default drink (Acqua on sub-35 zł) — gone (drink slot hardcoded Limonata).
+- §94 pasta-only → antipasti priority 2.5 — gone. §95 pizza-only → garlic bread priority 1.5 — gone.
+
+The removal is explicitly recorded in `capabilities/page.tsx:625` ("dynamic rules removed: Make-it-2, pizza-only garlic-bread, pasta-only antipasti, only-drinks-suggest-pizza, sub-40-default-Panna-Cotta"). The "Files changed" attribution of "quantity-bump suggestion, cart-aware defaults" to `upsell.ts` and "quantity-bump chip variant" to the cart UI are likewise now false. **A reader trusting this audit would believe the dynamic cross-sell engine is live; it is not.**
+
+**B. Stale name / pointers:**
+
+- "Deliberately not shipped" table cites `AbandonedCartWrapper` — no such symbol; the component is `AbandonedCartBanner.tsx` (mechanism exists, name wrong).
+- Update #2 citations drifted post-relational-migration: `calculateFoodCost` `store.ts:3505` → `:3858`; `calculateRecipeNutrition` `:3587` → `:3940`; `IngredientProduct` `types.ts:292` → `:296`. (Dated update; noted for readers, not edited.)
+- 2026-05-29 citations (`CartDrawer.tsx:617`, `:924-930`, `store.ts:10336`) all exact.
+
+**C. Pricing — every figure verifies exact.** Espresso 9.90/10.90 (`krakow:313`/`warszawa:285`), Tartufata 79.90/89.90 (`:146`/`:126`), Pizzaiolo 49.90/54.90 (`:129`/`:111`), Personale 8" 18.90/19.90, Slice 11.90/12.90, Garlic Bread 9.90/10.90 (~78% GM), 1L Limonata 19.90/23.90, Frozen Tiramisù 24/28, Peroni 4-Pack 32/36, EVOO 35/39 — all match. Bundle prices/blends match: Solo 27.90 → Lunch 38.90 → Lunch+ 44.90 → Big Lunch 68.90; Pizza Solo 22.90 → Pizza Lunch 39.90 → Pizza Lunch+ 44.90; Family Pack flat 99; Family 18% / Feast 22% (anchor) / Deluxe 25% (decoy, minMains 6); Late slice 16.90, Late dinner 20%, Late Party 28%; Pantry Pack 15% delivery-only. "Margins vary 64-78%" holds for food plates (computed 66.7-77.8%); espresso higher (~86%, a drink). Loyalty ladder exact (Free Drink 50 / Garlic Bread 70 / Dessert 120 / Personal Pizza 180 / Pizza 280 / 25 PLN Off 280); "PLN 10 Off" removed.
+
+**D. Confirmed accurate:** modifier schema (`ModifierGroup`/`ModifierOption`/`SelectedModifier`, Margherita Crust + Premium toppings, Diavola Spice + Premium toppings) `types.ts:117-189,354`; `effectiveUnitPrice`/`effectiveUnitCost` (`upsell.ts:1120-1135`) used by both cart store **and** server checkout (`createOrder.ts`); combo rebuild (Lunch Special killed, Italian Classic on Limonata 10%, Pizza & Side 12%, `channel` filter); bundle engine intact + server-validated (`cartSatisfiesBundle bundles.ts:892`, anchor/delivery-only exclusion, `bundleVisibleToCustomer` membersOnly gate, Family minMains 3); VIP free-delivery 35 (`upsell.ts:864`); `packagingCostFor`/`totalPackagingCost`; KDS complexity (`KDS_COMPLEX_THRESHOLD=6`); surfaces (`BundlesShowcase`, `ModifierInventory` tab, route validation); all 5 Next steps / "not shipped" items re-confirmed ✗ (no customer modifier picker, no save-time margin gate — only post-order `bundle_low_margin` notification `store.ts:2258` — no espresso A/B, no zone surcharge).
+
+**E. New discrepancies beyond the 2026-05-29 Update:**
+1. **Cross-sell engine removal (A above)** — undocumented in any update.
+2. **`membersOnly` is schema-only** — the flag + `bundleVisibleToCustomer` gating exist, but **no seeded `DEFAULT_BUNDLE` sets `membersOnly: true`** (0 occurrences in the bundle array). §87's "Member-only flag drives phone collection" is an accurate *capability* but is not *activated* on any bundle.
+3. **Capabilities-ledger internal contradiction** (adjacent): `capabilities/page.tsx:631` still claims "Cross-sell rule 1.5 surfaces garlic bread on pizza-only carts" while `:625` says that exact rule was removed.
+4. Rewards Rule-#1 regressions confirmed (streak `rewards/page.tsx:459`, challenge `:482`, `generateReferralCode` `Math.random()` `growth-engine.ts:18`).
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*
+

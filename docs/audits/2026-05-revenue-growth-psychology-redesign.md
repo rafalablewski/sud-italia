@@ -1248,7 +1248,7 @@ Every prior update called the Tuscany direction "a mockup at `/mockups/cart.html
 
 ### §2 Advanced Upsell — the sequence survived the rebuild, re-themed in place
 
-The §2.1 cart-upsell design-spec surfaces are all still live (verified by source, re-themed V8): `AddToCartToast` (post-add seed), `CartUpsell` ("Pairs beautifully with —", `CartDrawer.tsx:645`), `DeliveryProgress` (per-segment threshold bar, `:650`), `TodBanner` (five hour-window variants, `:568`), `TierPerkBanner` (`:614`). The §2.4 margin-optimised ranking still drives `getCartSuggestions` (`src/lib/upsell.ts`). **The §2.1 `T+pay` row (Apple Pay primary) is still ⏳** — checkout is still the Stripe redirect; no Payment Request API.
+The §2.1 cart-upsell design-spec surfaces are all still live (verified by source, re-themed V8): `AddToCartToast` (post-add seed), `CartUpsell` ("Pairs beautifully with —", `CartDrawer.tsx:646`), `DeliveryProgress` (per-segment threshold bar, `CartDrawer.tsx:651`), `TodBanner` (five hour-window variants, `:568`), `TierPerkBanner` (`:614`). The §2.4 margin-optimised ranking still drives `getCartSuggestions` (`src/lib/upsell.ts`). **The §2.1 `T+pay` row (Apple Pay primary) is still ⏳** — checkout is still the Stripe redirect; no Payment Request API.
 
 The one item this audit's §2.2 taxonomy marked ✅ "post-Add toast" is intact; the **post-order single-tap espresso upsell** (called out in the body and the 2026-05-21 net read as +6–12% on confirmed orders) is **still ⏳** — the confirmation page (`order-confirmation/page.tsx`) shows a comeback/FOMO + "Order again" block but no add-an-item prompt.
 
@@ -1282,3 +1282,40 @@ These are exactly the "cosmetic implementation pretending to function" failures 
 The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The brand-frame half of the §1.5 conversion-killer complaint is **closed** (V8 live); the photography half is **still open**. Of the audit's three explicitly-named single-day revenue items — food photography, address autocomplete, post-order single-tap espresso upsell — **all three remain un-shipped after fourteen days.** The eight days of work went into the storefront rebuild, the three-theme design-system split, the data-layer migration, and the LLM layer. The §5 retention surface finally has UI, but it ships with hardcoded streak/challenge/referral values that must be wired to real data before the dopamine loop earns the trust the audit's §8 demands. The work-vs-revenue ratio on the three single-day items has, if anything, worsened — the premium surface now sits above an emoji-free but photo-free menu and a streak counter that doesn't count.
 
 — *Re-run lens: same growth/psychology audit, fifteen days later — 29 May 2026*
+
+---
+
+## 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of every ✅/🟡/⛔/⏳ tick, citation, and number against current code. Per Rule #11 the body and dated updates are immutable; corrections recorded here. The material drift is in **numeric specifics** of §2.2/§3.2/§3.3 that the engines were re-tuned past (most by the companion `bundle-ladder-revenue-rebuild` ship on 15 May, one day after this audit), plus a few stale pointers.
+
+**A. Status ticks now wrong:**
+
+1. **§2.5 (line 209) & §3.3 (line 346) — Gold/Platinum free-delivery threshold = PLN 0 ✅.** Now **PLN 35**: `SEGMENT_FREE_DELIVERY_THRESHOLD.vip = 3500` (`upsell.ts:868`), with a comment citing the §3 audit ("VIPs now have a non-zero floor so a Gold customer can't get free delivery on a 6.90 PLN water"). First-time 39 / growing 49 / regular 59 remain accurate. Two ✅ ticks are now factually wrong.
+2. **§2.2 (line 166) `pasta-combo` = "any pasta + drink + dessert, 10%".** Dessert was deliberately removed — it's now **pasta + drink** only (`upsell.ts:534-541`, comment: "Keeping dessert OUT of the discount aligns with the §3 audit rule").
+3. **§3.2.1 (line 286) & §2.3 (line 178) reference combo `lunch-special` (panino + drink).** Removed; replaced by `pizza-side` ("Any pizza + garlic bread", 12%, item-locked on `anti-garlic-bread`, `upsell.ts:545-555`).
+
+**B. Bundle ladder numbers re-tuned (§2.2 / §3.2 sample figures now stale):**
+
+| Audit | Current (`bundles.ts`) |
+|---|---|
+| family-feast "28% off" (§2.2 :165, §3.2 table) | Family **18%** (`:293`), Family Feast **22%** (`:312`), Feast Deluxe **25%** (`:337`); all now default to split mains/add-ons rates (8/28, 12/30, 15/38) |
+| Family "≥2 mains" (§3.2 :256, §2.2 :165) | `minMains: 3` (`:291`); comment "raised from 2 → 3" |
+| Feast Deluxe "≥3 mains" (§3.2 :264) | `minMains: 6` (`:335`) |
+| samples "3 margheritas → PLN 120.74 (save 46.96)" etc. | derive from the old 20/28% + espresso-8.00 assumptions; no longer reproduce. Treat all §3.2 sample totals as stale. |
+
+New production bundles undocumented in §3.2: `family-pizza-pack` (3 pizzas + 1L drink, flat PLN 99, `:266`), the late-night ladder (`late-slice`/`late-night`/`late-party`, `:354-406`), delivery-only `delivery-pantry` (`:412`), and a parallel pizza-led lunch ladder (`:212-256`).
+
+**C. Pricing pointers (§0.1 / §2.4 / §3.2 / §4):**
+
+- **Espresso 6.00 / cost 1.00 → 9.90 / 1.40** (`krakow.ts:313-314`; reprice comment `:307`). Cheapest Kraków drink is now **water at 5.90** (`:355`), not espresso — so §3.2's "espresso 8.00 (cheapest drink)" is doubly stale. The §2.4 "espresso = highest-margin push" *direction* is actually stronger now (GM ≈ 86%), but the literal table figures are stale.
+- **Pizza del Pizzaiolo 47.90/52.90 → 49.90/54.90** (`krakow.ts:129`, `warszawa.ts:111`). (`capabilities/page.tsx:781` still cites the old prices — a ledger discrepancy.)
+- Charm-pricing endings verified intact (pizza …90, premium pasta …95, espresso 990, desserts 1800/1600/1500).
+
+**D. Stale file:line pointers:** `MenuOverride.menuRole` cited `menu/route.ts:287` → actually `:296` (bulk `:384` correct); my own 2026-05-29 prose cited `CartUpsell CartDrawer.tsx:645` → `:646` and `DeliveryProgress :650` → `:651` (corrected in place).
+
+**E. Confirmed accurate (the §2–§6 design spine holds):** all §2.1 cart-sequence components exist and render in `CartDrawer.tsx` (re-themed V8); §2.1 `T+pay`/Apple Pay still ⏳; §2.4 margin ranking drives `getCartSuggestions` (espresso first); §3.1 `scorePairing` + `CATEGORY_HOUR_BIAS` + `noveltyDecay` + `ITEM_REASON_OVERRIDES` + ML scorer 🟡 deferred; §3.2 discriminated-union bundle schema + `computeBundlePrice`/`buildBundleCartLines`/`isBundleActiveNow`/`appliedBundleId`; §3.2.1 item-locked Italian Classic Deal (10%) + order-independent scoring; §3.4 corporate (head 20% bonus, invoice + reminder crons, `CorporateOrderBanner`); §4 `MenuRole`/menu-engineering (display-only badges — the "admin role editor rolled back" ⚠ status is accurate); §9.1 `ai-engine.ts` is the FAQ matcher + forecast at `ai/forecast.ts`. Context anchors all verified: tip default None, no customer modifier picker, no post-order item upsell, combo shows %+PLN, `computeSimulationActuals` `store.ts:10336`, WhatsApp `confirm_and_pay` → Stripe Checkout. §5/§0.2 regressions confirmed exactly (streak `:459`, challenge `:482/486`, referral `Math.random()` `growth-engine.ts:18`, root `getActiveChallenges` `:126`); `ratings.ts` deleted.
+
+**F. Adjacent discrepancy:** `capabilities/page.tsx:781` over-claims a menu-role *edit* dialog (the surface is display-only, matching §4's correct ⚠ status) and cites the old pizzaiolo prices — a capabilities-ledger drift surfaced during verification, relevant because §4 leans on that page as source of truth.
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

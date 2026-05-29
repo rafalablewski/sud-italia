@@ -243,3 +243,35 @@ Eight days on. The big movement is **item 13 — the V8 brand-direction commitme
 **Net read on A → A+.** Item 13 closing (V8 live) and the real LLM layer landing both move the operator-side substrate; the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps an elite operator would point at, now on a more premium surface. The headline self-improving-stack work (1, 2, 4) is still the right Q3 priority, and the new precondition is "make the rewards streak/challenge/referral surfaces real before instrumenting them."
 
 — *Re-run lens: same planning audit, fourteen days later — 29 May 2026*
+
+---
+
+## 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of all 15 items + the priority table against current code. Per Rule #11 corrections are recorded here, not edited into the body.
+
+**A. Stale file:line pointers (symbol exists; line drifted):**
+
+| Citation | Correction |
+|---|---|
+| `OrderRefund.reasonCode` enum `types.ts:413` (item 3) | line 413 is blank; `REFUND_REASON_CODES` `:417` (8 codes `:418-425` — **exactly** as listed), `RefundReasonCode` `:428`, `OrderRefund.reasonCode` `:446` |
+| admin reason-picker `AdminOrders.tsx:1028` (item 3) | `<Select>` at `:1122` (`reasonCode` state `:1037`) |
+| `CartUpsell CartDrawer.tsx:645` (item 6) | `:646` (`:645` is the `<LayoutGate flag="showCartUpsell">` wrapper); `BundleLadder :617` exact |
+| `BundleEvent.slotId` implied in `types.ts` (item 5) | `BundleEvent` is in `store.ts:5570`; `slotId?` at `:5588` (the `types.ts:502` `slotId` is `Order.slotId`, a different field) |
+| `bundle-analytics route.ts:152-158` `perDay` (item 7) | accurate |
+| `computeSimulationActuals store.ts:10336` (item 9) | accurate |
+
+**B. Claims now wrong / over-stated:**
+
+1. **Item 6 effort note cites a non-existent symbol.** "pass `isBundleLadderShowable` (already in `lib/bundles.ts`)" — there is no `isBundleLadderShowable` export. The combo-suppression actually keys off `isBundleActive` (`CartDrawer.tsx:211`); the nearest visibility predicate is `bundleVisibleToCustomer` (`bundles.ts:620`). An implementer following this note would hit a dead reference.
+2. **Item 7 over-states the gap.** Both the 2026-05-21 and 2026-05-29 entries say the client `BundleAnalytics` interface "doesn't declare `perDay`" — but the **route-side interface does** (`bundle-analytics/route.ts:46`). The real remaining gap is narrower: only `BundleAnalyticsCard`'s local Props + render omit it. **And `perDay` buckets by calendar date** (`e.createdAt.slice(0,10)`, `route.ts:107`), **not day-of-week** — so closing item 7 needs a `byDayOfWeek` group, not just binding `perDay` through. The "half a day, not 1 day" estimate undersells it.
+
+**C. Confirmed accurate (items 1-15 statuses hold):**
+
+- Item 1 still rules-based (`getCartSuggestions` `upsell.ts:397`, `scorePairing` `:97`, 1,245-line composite engine, no ML); the **real LLM substrate now exists** (`ai/gateway.ts` Anthropic SDK + prompt caching, `agent.ts` `MAX_HOPS=8` + approval gates, `ai/tools/` role-gated registry) — confirmed newly-true.
+- Item 2 not shipped (no bundle thumbs-up/down; `FeedbackSurvey` is per-item ratings only). Item 3 half-shipped (enum + picker live; **join still absent** — 0 refund refs in `bundle-analytics/route.ts`). Item 4 Phase 1 only (`/admin/scheduled-bundles` + status PATCH live; **no Stripe Subscription / billingPortal / `STRIPE_SCHEDULE_WEBHOOK_SECRET`**; WhatsApp `confirm_and_pay` is one-shot). Item 5 captured-no-pivot (`BundleEvent.slotId` `store.ts:5588`). Item 6 not shipped (`CartUpsell` renders unconditionally beside `BundleLadder`). Item 9 manual proxy (sensitivity tornado over `computeSimulationActuals`; no auto-scheduler). Item 10 re-themed not thinned (full ~12-element cart stack present). Item 11 unchanged. Item 12 half-day (relational distributor ledger). Item 14 storage correct (`ingredientProducts` relational), no RFQ UI. Item 15 chain-wide recipes live (`getBaseSlug`), no yield-test UI.
+- **Item 13 — V8 brand commitment SHIPPED — confirmed:** parchment/terracotta tokens `themes/homepage/tokens.css:26-43`, Cormorant + Lora loaded across `(public)/*`; no `/mockups/cart.html` dependency remains.
+
+**D. New regressions beyond the 2026-05-29 Update:** rewards Rule-#1 finding confirmed (`generateReferralCode` `Math.random()` `growth-engine.ts:18`, called `rewards/page.tsx:292`; streak `:459`; challenge `:482`); the static-template **root is `getActiveChallenges()` `growth-engine.ts:126`** (no progress field). Adjacent: `simulateLiveActivity` (`growth-engine.ts:175,181-182`) is another `Math.random()` fake-data surface in the same module.
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

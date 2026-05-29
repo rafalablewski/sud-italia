@@ -699,3 +699,48 @@ The §3 "What is theatre" discipline this audit pioneered has a fresh instance t
 The four still-open §15 bullets are unchanged in substance: **plaintext password compare** (still the highest-leverage open security item), **no real test coverage** on payment/refund/RBAC, the **legacy `/kitchen/[slug]` board still polling** (KDS v2 + the new role-lens board are on SSE), and the **operator-attention-vs-trucks** existential risk. What changed is that the "the codebase is no longer the binding constraint" framing is now even more true — the storefront is premium-in-production, the AI is genuinely agentic, and the data layer is migrating to a shape that scales — which sharpens the §15 point that **the remaining bottlenecks are demand generation, security/tests hygiene, and operator focus, not missing features.** The one thing to fix this week is still **hash the admin password**; the one new thing to fix this month is **wire the rewards streak/challenge/referral surfaces to real data** before they become a credibility tell in the next diligence pass.
 
 — *Re-run lens: consolidated outside-in view, thirteen days later — 29 May 2026*
+
+---
+
+## 17. 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of every citation, ✓/✗/RESOLVED tag, and assertion in this document against current code. Per Rule #11 the body and dated updates are immutable; corrections are recorded here. `store.ts` is **11,105 lines** (was ~6K), so most cited line numbers drifted — symbols verified present at the new locations below.
+
+**A. Two substantive factual errors in the body (not just line drift):**
+
+1. **The "per-location scoped order mirror" claim is wrong — the mirror is GLOBAL.** §0.1 (PR#38 row), §4 (dual-write row), and §16 describe the order kv-mirror as scoped (`mirrorOrderToKvStoreScoped`, key `orders.kv:${slug}`). No such symbol/key exists. The current `mirrorOrderToKvStore` (`store.ts:1007`) uses a **global** `withLock("orders.json", …)`; the code comment at `store.ts:991-1006` documents that a Gemini PR#38 review **reverted** the scoped mirror to global to fix a race. The throughput conclusion still holds (the primary path is the lock-free normalized `INSERT`, and the mirror is `void` fire-and-forget), but the specific "per-location lock key on the mirror" assertion is false. *(Note: the §16 phrasing "global kv locks survive only on fire-and-forget mirror writes" is correct; it's §0.1/§4's "scoped" wording that's wrong.)*
+2. **`src/lib/dynamic-pricing.ts` does not exist.** §6 #4 says "the infrastructure for differential pricing exists (`src/lib/dynamic-pricing.ts` per capabilities)." No such file is in the repo; the capabilities page now states the engine is "not implemented — the tile renders an empty state" (`capabilities/page.tsx:366`). The §6 #4 parenthetical is a phantom-file citation.
+
+**B. Stale file:line pointers (symbol exists; line drifted):**
+
+| Audit citation | Current location |
+|---|---|
+| `idempotency.ts:129` (SHA-256) | `:137` (`createHash("sha256")`); TTL at `:116` |
+| `store.ts:182-199` `dualWriteSlot` | `:185-203` |
+| `store.ts:926` stale "kv source of truth" comment | `dualWriteOrder` `:948`, comment `:963` |
+| `store.ts:1186-1247` `createOrder` | begins `:1234` (`withLockScoped("orders", slug)` `:1259`) |
+| `store.ts:1204-1205` order mirror | `await dualWriteOrder` `:1255`, `void mirror…` `:1256` |
+| `store.ts:1244-1245` `consumeRecipeForOrder` | `:1299-1300` |
+| `calculateRecipeCalories/Nutrition` `:3537`/`:3587` | `:3890` / `:3940` |
+| `IngredientProduct` `types.ts:292` | `:296` |
+| `OrderTracker.tsx:107-112` 10s poll | `setInterval` at `:137` |
+| `KitchenOrderBoard.tsx:189` 10s poll | `:190` |
+| `upsell.ts:414-425` hardcoded 4-slot | slot-id consts `:378-394`; `getCartSuggestions` `:397` |
+| `upsell.ts:513` combo cap | `getActiveComboDeals` `:586` |
+| `menus/krakow.ts:125` `LTO_UNTIL=2026-06-30` | `PIZZAIOLO_LTO_UNTIL` `:12` (line 125 is now an item id) |
+| `menus/index.ts:19` `getCustomMenuItems` | imported `:6`, used `:76` |
+| `locks.ts` `163` (fallback counter) | `inProcessFallbacks` at `:135` and `:161` (not 163) |
+
+`admin-auth.ts:143-145` (plaintext compare), `locks.ts:170` (`lock.timeouts`), `upsell.ts:97` (`scorePairing`), and `webhook/route.ts` constructEvent verified essentially accurate.
+
+**C. Counts & specifics that drifted:**
+
+- **"154 API routes" → now 176** (`route.ts` files). The "2 of 154" rate-limit framing is "2 of 176" admin routes (`enforceRateLimit` is also on 3 public routes).
+- **§5 #2 / §16 "address autocomplete commented out (CartDrawer.tsx:609)"** — stale in specifics: CartDrawer is 1173 lines; the address field (`~:705-710`) is a plain `<input autoComplete="street-address">`, no commented-out block. Substance (no Google Places/Mapbox) holds.
+- **§5 UX strengths are pre-V8 and now false in specifics** (already flagged in §16): "Italian flag stripe + Georgia headings" → V8 Tuscany (Cormorant/Lora, `themes/homepage/tokens.css`); "nutrition bars in item drawer" → printed dotted-leader readout + hand-drawn `AllergenIcon.tsx`.
+
+**D. Confirmed accurate:** plaintext password (`admin-auth.ts:144`, `admin123` dev fallback `:140`, prod throw `:137`); exactly 2 `node:test` files, no runner/coverage; both 10s pollers; all §0.1 resolution artifacts present (`inventory-decrement.ts`, `par-purchase-orders.ts`, `forecast.ts`, `currency.ts`, `i18n.ts`, `locations-store.ts`, `labor-efficiency.ts`, `cohort-analytics.ts`, `referral-loop.ts`; `ratings.ts` and Wolt/Glovo mocks deleted; migration `0017` present); §16 new surfaces all present (`ai/*`, `whatsapp/*`, `concierge/*`, `kds-prediction.ts`, `pace-steering.ts`, the 9 new admin pages); §6 4-slot upsell rigid, tip default None, combo shows %+PLN; `AdminSimulation.tsx` 17,356 LOC, `AdminBusinessCosts.tsx` 903 LOC, `public/mockups/cart.html` present; `src/db/schema.ts` present.
+
+**E. New regressions beyond §16:** the rewards Rule-#1 finding is confirmed (`generateReferralCode` `Math.random()` `growth-engine.ts:18`; `getActiveChallenges` static array `:126`; `rewards/page.tsx:459/482/486`); plus an **additional fake-data instance** at `growth-engine.ts:181-182` (`simulateLiveActivity` fabricates `ordersInLastHour`/`currentlyPreparing`); and **broader palette drift** than §16 logged — `src/app/(public)/privacy/page.tsx` and `src/app/(public)/locations/[slug]/loading.tsx` are also still on `italia-*` tokens (in addition to `/review/[orderId]` and `/corporate/[slug]`).
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

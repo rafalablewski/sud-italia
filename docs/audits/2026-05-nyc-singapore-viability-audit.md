@@ -874,3 +874,38 @@ The V8 `/rewards` rebuild introduced **hardcoded display values** this diligence
 **The §0 verdict is unchanged: Sud Italia would not survive NYC or Singapore as-is.** Fifteen days of shipping closed half of the UX burn-down list and rebuilt the operational spine, but the seven binding constraints (aggregators, USD/SGD settlement, SOC 2, real test coverage, food photography, offline POS, MFA) are exactly where the 14 May audit left them. The §13 Phase 1–3 sequencing remains the right path; the operator is now meaningfully ahead on the *UX* and *ops* dimensions of Phase 1–4 and has not started the *channel* (Phase 3) or *enterprise-hardening* (Phase 5) work the two cities actually require.
 
 — *Re-run lens: same five auditors, fifteen days later — 29 May 2026*
+
+---
+
+## 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of every citation, status mark, and assertion against current code. Per Rule #11 the body and dated updates are immutable; corrections recorded here. `store.ts` is now 11,105 lines, so cited lines drifted.
+
+**A. Claims that have flipped (now wrong in the body):**
+
+1. **§1.3 (line 55) — "Allergen surfacing on tickets is false; the single most-cited capabilities claim is false."** **No longer true.** The KDS rewrite surfaces allergens on the ticket: `kds-ticket.ts:18` declares `allergens: string[]`, populated `:70` (`ci.menuItem.allergens ?? []`); `KdsTicketCard.tsx:116` dedupes, `:191` renders the allergen row. The raw `grep allergen AdminKDS.tsx` returns 0 only because the ticket UI moved into `kds/KdsTicketCard.tsx`. The audit's "every capabilities row needs a runtime probe" *process* critique still stands; its concrete evidence is dead.
+2. **§10.1 feature matrix (line 500) — "Refunds with reason codes ✗".** Now wired end-to-end: `REFUND_REASON_CODES` (`types.ts:417`), `OrderRefund.reasonCode` (`:446`), `z.enum` validation (`api-schemas.ts:145`), rendered in `AdminOrders.tsx:1126` + `mobile/RefundSheet.tsx:183`. (§10.2 #9 / §12.4 #2's "reason codes exist; manager-approval not enforced" is the accurate version; the bare matrix "✗" is wrong.)
+3. **"Item modifiers — `notes` string only / ✗"** (§5.2 line 269, §10.1 line 478, §4.1 #6, §3.1 #5). First-class modifier schema now exists: `ModifierOption`/`ModifierGroup`/`SelectedModifier` (`types.ts:117/132/145`), `MenuItem.modifierGroups` (`:189`), `CartItem.selectedModifiers` (`:354`), with live admin authoring (`ModifierEditor.tsx`, `ModifierInventory.tsx`). Correct nuance (only in the 2026-05-29 Update): schema + admin editor exist, **but no customer picker and no KDS modifier render**. The flat "notes string only" in those sections is outdated.
+
+**B. Stale file:line pointers (symbol exists; line drifted):**
+
+| Audit citation | Current location |
+|---|---|
+| `MenuItem.image` `types.ts:88` | `:159` (still never populated — 0 hits in menus) |
+| `IngredientProduct` `types.ts:292` | `:296`; `sugar/fatPerUnit` `:319`/`:321` (not 312-317); `Ingredient.activeProductId` `:255` (not 241) |
+| `calculateRecipeCalories/Nutrition` `:3537`/`:3587` | `:3890` / `:3940` |
+| `incrementSlotOrders store.ts:355-418` | opens `:375`; kv fallback `withLock("slots.json")` `:425` |
+| `nextStatus() AdminKDS.tsx:44-49` | now **imported** from `kds-board.tsx:39` (import at `AdminKDS.tsx:36`) |
+| `prepTone (AdminKDS.tsx:69-76)`, columns `:28-32` | `prepTone` **gone**; replaced by `remainingSlaSeconds` + `KDS_COLUMNS` in `kds-board.tsx:23-26` |
+| `CartItem` shape `store/cart.ts:5-30` | `CartItem` **imported** into `cart.ts:5`; interface at `types.ts:342` |
+| audio `.catch(()=>{})` "~line 133" | now dual chimes `AdminKDS.tsx:240` and `:262` (silent-swallow substance holds) |
+
+**C. Confirmed accurate (the §0 verdict + structural blockers hold):**
+
+- Five §1.2 Hard Truths as restated in the 2026-05-29 §1.2 re-verification (AI now genuinely has an LLM agent layer; lock further mitigated; no real third-party delivery; `MenuItem.image` empty; tests narrowly-false/materially-true). 
+- §1.4 risk rows 1/2/6/7/9 (lock TTL 10s, shared `ADMIN_PASSWORD`, in-process fallback, Stripe-only, no offline POS) and the display-only currency caveat. KDS rewrite (841 lines, role lenses, `analyzeTruck` prediction, dual chimes, hotkeys, `/api/admin/kds/floor-ops`), **no coursing**, **no list virtualization**. Aggregators: live Wolt/Glovo scaffolds (RPC bodies throw, real HMAC), `getAggregatorProvider` throws `AggregatorNotConfigured` (`:182-206`), mocks deleted; no Uber/DoorDash/Grab/foodpanda. Currency display-only; i18n pl/en/de/en-SG (**no Spanish** — confirms the NYC "no Spanish" point). 5-role RBAC + `withAdmin`, no `src/middleware.ts`, `ADMIN_PASSWORD` root + no MFA. Phone regex `/^[\d\s\-()]{7,}$/` unchanged (`CartDrawer.tsx:38`); SlotPicker still inside the drawer; SSE + `FALLBACK_POLL_MS=15_000`. `kodawari.ts` present; `data/ratings.ts` deleted; `StarRating` survives only in the survey. V8 storefront (`LocationHero`, `MenuItem`, `CompliancePills`, `ComplianceBanner`, `AllergenIcon`) all present.
+- §1.1 scorecard trajectory numbers are internal-to-the-doc (not falsifiable against code); the structural blockers they rest on all verify as still-open.
+
+**D. New regressions beyond the 2026-05-29 Update:** the rewards Rule-#1 finding confirmed (`generateReferralCode` `Math.random()` `growth-engine.ts:18` called per-render `rewards/page.tsx:292`; streak literal `:459`; challenge `width:"33%"`/`1-of-target` `:482/486`), with **`getActiveChallenges()` (`growth-engine.ts:126`) as the static-template root** of the fake bar.
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*

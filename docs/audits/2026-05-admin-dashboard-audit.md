@@ -732,7 +732,7 @@ Eight days from the 2026-05-21 updates. The admin surface kept growing and sever
 | **`/admin/regulatory-compliance`** | Per-location regulatory packs (EU / NYC / SG). | §1.1 compliance / §1.11 | `/api/admin/regulatory-compliance` |
 | **`/admin/alerts`** | Mobile alerts feed (new orders, slot/stock pressure). | §1.4 / §2.5 mobile | shell notifications |
 
-All 41 admin directories are wired to real data sources — **no cosmetic/mock-only pages found** — and every new page is registered in `/admin/capabilities` (cross-checked: business-costs, simulation, whatsapp, floor, menu-engineering, scheduled-bundles, currency, languages, regulatory-compliance, corporate, crm, pos, alerts all present). Rule #9 is being honoured.
+All 41 admin directories are wired to real data sources — **no cosmetic/mock-only pages found** — and every new page except `/admin/alerts` is registered in `/admin/capabilities` (cross-checked: business-costs, simulation, whatsapp, floor, menu-engineering, scheduled-bundles, currency, languages, regulatory-compliance, corporate, crm, pos all present; `/admin/alerts` has no dedicated entry — only a generic "Notifications inbox → /admin" row at `capabilities/page.tsx:134`, a Rule-#9 gap). Rule #9 is otherwise honoured.
 
 ### §1 gap-table movements
 
@@ -760,3 +760,39 @@ The 2026-05-21 #2 score was 64–68/100. With the real POS terminal, the agentic
 **Bottom line for this audit.** The "is this an admin tool for two trucks or an operating system for an industry?" question the original close posed is being answered, in code, in the direction of the latter — a real POS, an audited AI agent, multi-theme infrastructure, and a relational data spine are operating-system moves, not admin-tool moves. The honest counterweight is that the foundational hygiene this audit's §0 named (auth, tests, backups) is still open, and a fresh cosmetic-not-functional regression appeared on the rewards surface. The next decision is unchanged — pick the product — and the evidence now leans toward "operating system," which makes closing the hygiene gap more urgent, not less.
 
 — *Re-run lens: same admin-dashboard audit, seventeen days later — 29 May 2026*
+
+---
+
+## 2026-05-29 Verification Ledger (full claim-by-claim pass)
+
+A line-by-line re-verification of **every** citation, status tag, and assertion in this document against current code. Per Rule #11 the original body and the dated updates above are immutable snapshots — corrections are recorded here, not edited in place. `store.ts` grew from ~6K to **11,105 lines** since the audit, so many cited line numbers have drifted; the symbols still exist. Verified: 42 entries under `src/app/admin/` (40 page dirs + `layout.tsx` + `page.tsx`).
+
+**A. Stale file:line pointers (symbol exists; line drifted).** For readers following citations:
+
+| Audit citation | Current location |
+|---|---|
+| `calculateRecipeCalories` `store.ts:3537` (Update #2) | `store.ts:3890` |
+| `calculateRecipeNutrition` `store.ts:3587` (Update #2) | `store.ts:3940` |
+| `getRecipe` first-wins dedupe (Update #2) | `store.ts:3764` (dedupe `:3710`, `saveRecipe` `:3792`) |
+| `IngredientProduct` `types.ts:292` (Update #2) | `types.ts:296` (`activeProductId` `:255`) |
+
+All other cited symbols resolved to existing code: `getLaborCostInRange` (`store.ts:6744`), `getManualPointsTotal` (`:4715`), `Order.tipAmount` (`types.ts:522`), `Location.servesAlcohol` (`:15`), `StaffMember.dob` (`:724`), `OrderDispute`/`Order.dispute` (`:468`/`:519`), `CashSession`/`CashDrop` (`:826`/`:814`), `ComplianceItem` (`:871`), recall route, `variance.ts`, `jpk.ts`, `gdpr.ts`, `sentiment.ts` (`claude-haiku-4-5-20251001`), `scheduling-rules.ts`, dispute webhook (5 events), SSE, command palette.
+
+**B. Status tags / claims that have flipped or were over-stated:**
+
+1. **Nav is now 10 sections, not 9.** Both the 2026-05-21 update and §2.2 #1 say the sidebar groups into 9 sections. `nav.config.ts:92` adds a 10th — **"Core"** (POS / KDS / CRM / Concierge / WhatsApp). Role-based filtering is now real (`requiredRole` per item), which the original §2.2 #1 "role-based collapsing still ✗" no longer fully reflects.
+2. **`/admin/alerts` is not registered in the capabilities ledger** (corrected in the 2026-05-29 cross-check above). The page exists; only a generic "Notifications inbox → /admin" entry exists (`capabilities/page.tsx:134`). Rule-#9 gap.
+3. **Update #2 follow-up (1) — "capabilities kcal copy is stale" — is now FIXED.** `capabilities/page.tsx:123` reads `kcalPerUnit × quantity / yieldPortions (wasteFactor is excluded…)`. The flagged stale string is gone; a reader following the audit chronologically would wrongly expect it open.
+
+**C. Confirmed accurate (the spine of §0–§5 holds):**
+
+- §0 hard truths: `ai-engine.ts` is now only the `getChatResponse` FAQ matcher (header comment naming it keyword-rule lookup, dead heuristic exports deleted); **plaintext password compare intact** (`admin-auth.ts:144`); SSE on KDS v2 + admin orders, legacy `/kitchen/[slug]` still 10s polling (`KitchenOrderBoard.tsx:190`); `dualWriteOrder`/`withLockScoped` present.
+- §1 ✓ rows all backed by existing code (recall route + tray, variance, JPK_V7M `VAT_RATE=0.08`, GDPR export/delete, sentiment via Claude Haiku, scheduling-rules 48h/11h/under-18, cash entities, dispute webhook, tip reports, campaign triggers, cohort page, locations/manage).
+- §1.10 Data & AI — the real LLM layer is genuine: `ai/gateway.ts` (Anthropic SDK), `ai/agent.ts` (`MAX_HOPS=8`, approval gates `:19-21`), `ai/tools/registry.ts` (role-gated `listToolsForRole`, audit actor `claude:${userId}`), `ai/cost.ts`, `ai/forecast.ts` (Claude-backed, `source:"claude"|"ma"`). AdminAI H1 "Insights" + "No ML model is in the loop yet."
+- §1.11 RBAC: `getCurrentRole`/`getCurrentAdminUser`/`requireRole`/`hasRole`/`withAdmin` all present, per-route opt-in, **no `src/middleware.ts`** (confirmed absent), shared `ADMIN_PASSWORD` root path intact, no MFA.
+- POS/KDS: `AdminPos.tsx` 1,639 lines, `PosTab.sentKds` single boolean (no coursing fields, `types.ts:618` — "coursing dropped" confirmed), `kds-prediction.ts` 325 lines, KDS 1s recompute tick.
+- 2 `node:test` files only; no test script / vitest / jest. Persistence: Drizzle `src/db/schema.ts` present.
+
+**D. New regression not in the 2026-05-29 Update.** The V8 rewards Rule-#1 finding is fully confirmed (`rewards/page.tsx:459` streak "2", `:482-486` challenge "33% / 1-of-target", `generateReferralCode` `Math.random()` at `growth-engine.ts:18`) — and its **root is `getActiveChallenges()` returning a static hardcoded array** (`growth-engine.ts:126`) with no per-customer progress field, so the bar is structurally incapable of reflecting real progress. Additional adjacent instance: `simulateLiveActivity()` (`growth-engine.ts:175-182`) fabricates the live-ticker counts with `Math.random()`.
+
+— *Verification lens: exhaustive claim-by-claim pass — 29 May 2026*
