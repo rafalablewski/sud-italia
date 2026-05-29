@@ -2,7 +2,7 @@
 
 **Scope:** every place where data that should be Admin-managed (or already has a store API) is hardcoded in a consumer.
 **Source-of-truth decisions:** menu = code seed (`src/data/menus/*`); branding/theme = code; feature flags = `getSettings()` going forward, `process.env` only for secrets/bootstrap.
-**Status:** Phase 0 sweep complete. Phases 1–7 not started.
+**Status:** **Audit closed.** 13 of 17 findings resolved across Phases 0–4 + 7; 3 deferred-by-design (i18n + nav); 1 verified clean. See the closing summary at the bottom.
 
 ## Severity rubric
 
@@ -25,9 +25,9 @@
 | 9 | ~~Locations~~ | ~~server-side seed reads~~ | ~~`store.ts:6`, `kitchen-auth.ts:4`, `comms/dispatcher.ts:7`, `whatsapp/tools.ts:12`, `api/settings/upsell/route.ts:3`~~ | `getActiveLocationsAsync()` everywhere | — | ~~P1~~ | **DONE (Phase 3, 3b).** store.ts drops the seed alias entirely; isActiveLocationSlug + kitchen-auth.verifyKitchenCredentials + comms.locationNameFor all async; upsell route validates slug live on each call. Also touched cart-presence route + kitchen login route to await the now-async helpers (login also swapped to getLocationAsync). |
 | 10 | ~~Locations~~ | ~~hardcoded `{krakow, warszawa}` dropdowns in admin~~ | ~~`AdminCrm.tsx:252`, `AdminConcierge.tsx:62`, `WhatsAppSettingsDialog.tsx:308`, `AdminSellingShared.tsx:191`, `ModifierInventory.tsx:25`~~ | `getActiveLocations()` seed | — | ~~P1~~ | **DONE.** AdminSellingShared + ModifierInventory closed in Phase 2 (`a151b0b`); AdminCrm + AdminConcierge + WhatsAppSettingsDialog closed in Phase 3 (3c). New trucks auto-appear in every dropdown. |
 | 11 | ~~Menu~~ | ~~direct `krakowMenu` / `warszawaMenu` imports~~ | ~~`ModifierInventory.tsx:25-26`, `AdminSellingShared.tsx:191-192`~~ | `getActiveLocations()` + `getMenu(slug)` seed fallback; `ModifierInventory` also fetches `/api/admin/menu?location=` so runtime overrides surface | — | ~~P1~~ | **DONE (Phase 2).** AdminSellingShared LOCATIONS derived from `getActiveLocations()`; new active trucks pick up automatically. ModifierInventory was rendering static seed (latent bug); now reads live menu with seed fallback. |
-| 12 | Cart copy | static button strings ("Add to cart", "Pay", "Delivery", "Order now") | `CartDrawer.tsx:683/1025`, `ItemDetailDrawer.tsx:253`, `BundlesShowcase.tsx:195`, `AdminSlots.tsx:597/730` | hardcoded JSX text | i18n via `src/lib/i18n.ts` (needs Q3 answer) | P1 | Blocks localization. Defer to Phase 6 — depends on i18n adoption status. |
-| 13 | Layout | `NAV_LINKS` | `src/components/layout/Header.tsx:22` | hardcoded nav config | OK as code (structural, not data) | P2 | No fix — flag only if a CMS-driven menu is planned. |
-| 14 | Order UI | `STATUS_STEPS` (order tracker labels) | `src/components/order/OrderTracker.tsx:23` | hardcoded status labels | i18n strings | P2 | Defer to Phase 6 (i18n). |
+| 12 | Cart copy | static button strings ("Add to cart", "Pay", "Delivery", "Order now") | `CartDrawer.tsx:683/1025`, `ItemDetailDrawer.tsx:253`, `BundlesShowcase.tsx:195`, `AdminSlots.tsx:597/730` | hardcoded JSX text | i18n via `src/lib/i18n.ts` | P2 (was P1) | **Deferred-by-design.** Recon found `src/lib/i18n.ts` is scaffolded (68 keys × 4 locales) but adopted by zero components — only `LanguageSwitcher` reads its metadata for the dropdown. These strings are a **localisation** gap, not a silent-drift gap (one source, single language) — outside the audit's "admin = source of truth" charter. Picked up when the Singapore/DACH expansion the i18n module anticipates actually starts. |
+| 13 | Layout | `NAV_LINKS` | `src/components/layout/Header.tsx:22` | hardcoded nav config | OK as code (structural, not data) | P2 | **Deferred-by-design.** No CMS-driven nav planned. Operators don't ship new nav items between deploys; this is theme code. |
+| 14 | Order UI | `STATUS_STEPS` (order tracker labels) | `src/components/order/OrderTracker.tsx:23` | hardcoded status labels | i18n strings | P2 | **Deferred-by-design.** Same logic as #12 — labels are stable, single source, not admin-managed. Migrates with the broader i18n adoption when it happens. |
 | 15 | ~~Cart placeholder~~ | ~~`placeholder="0.00 zł"`~~ | ~~`src/components/cart/CartDrawer.tsx:1165`~~ | `formatPrice(0)` (resolves to the customer's display currency) | — | ~~P2~~ | **DONE (Phase 1, Step 1.2).** Placeholder + aria-label now currency-agnostic. Tip values still grosze on the cart store; this is display-only. |
 | 16 | Branding | hex colors in inline SVG illustrations | `CartUpsell.tsx`, `CartItem.tsx`, `FloatingCartButton.tsx`, `DeliveryProgress.tsx` | hex literals in `<path fill>` / `<circle fill>` | OK — illustrations are code-managed per Q4 | — | No fix. Documented in design-system doc as illustration tokens if not already. |
 | 17 | ~~Currency~~ | ~~inline `"PLN"` in JSON-LD~~ | ~~`src/app/(public)/locations/[slug]/page.tsx:104`~~ | `location.currency` (per-location transaction currency, scope-local) | — | ~~P2~~ | **DONE (Phase 1, Step 1.3).** Picked `location.currency` over a global settings read because schema.org `priceCurrency` is per-Offer and tracks the actual transaction currency for that location — future-ready when the Location type broadens beyond the `"PLN"` literal. Zero behavior change today. |
@@ -45,21 +45,21 @@
 | Server modules in client | grep for `@/lib/store`/`next/headers`/`@neondatabase/serverless` in `"use client"` files | only hit was `experiments-server.ts` (server file, name says so) ✅ |
 | `process.cwd()` / `fs` direct reads | Rule #2 | only `src/lib/store.ts:28` (`DATA_DIR` for the FS fallback) ✅ |
 
-## Open questions (defer)
+## Open questions — resolved
 
-- **Q3 (i18n):** items #12, #14 block until status is confirmed.
-- **Q5 (KDS deploy model):** not yet investigated — will surface in Phase 5.
-- **Q9 (email/SMS templates):** not yet investigated — Phase 7.
+- ~~**Q3 (i18n):**~~ resolved by recon — `src/lib/i18n.ts` is scaffolded but unadopted (only `LanguageSwitcher` uses it). Findings #12 and #14 reclassified as localisation-deferred.
+- ~~**Q5 (KDS deploy model):**~~ moot — the Phase 0 sweep surfaced no KDS-specific hardcoded data findings, so no Phase 5 work was needed. KDS deploy architecture remains a separate concern (out of audit scope).
+- ~~**Q9 (email/SMS templates):**~~ rolled into Phase 7 — `lib/comms/dispatcher.ts` and template helpers don't carry admin-editable copy today; `WaSettings` already covers the WhatsApp keyword/welcome/away text (see `WhatsAppSettingsDialog`), and Polish SMS template body is intentionally code-managed locale copy (see dispatcher's header comment). No further hardcoded-data findings.
 
-## Phase plan (recap)
+## Phase plan (final)
 
-- **Phase 1** — Money flow: pick off #5 (VAT) + #15/#17 (currency cosmetics).
-- **Phase 2** — Menu: only #11 to address; the rest already correct.
-- **Phase 3** — Locations: #8, #9, #10 — single-PR sweep.
-- **Phase 4** — Loyalty: #1, #2, #3, #4 — biggest fix, biggest schema change. Likely needs `/admin/capabilities` update (Rule #9). No theme code touched → no Rule #11 doc update.
-- **Phase 5** — KDS/POS: TBD (need Q5).
-- **Phase 6** — Copy/i18n: #12, #14 — Rule #11 doc updates expected.
-- **Phase 7** — Compliance/flags: #6, #7 (contact + social) + any leftover env flags.
+- **Phase 1** — Money flow: ✅ #5 (VAT) + #15 + #17.
+- **Phase 2** — Menu: ✅ #11.
+- **Phase 3** — Locations: ✅ #8, #9, #10.
+- **Phase 4** — Loyalty: ✅ #1, #2, #3, #4.
+- **Phase 5** — KDS/POS: skipped (no findings).
+- **Phase 6** — Copy/i18n: deferred (#12, #14 not silent-drift; await localisation initiative).
+- **Phase 7** — Compliance/flags: ✅ #6, #7.
 
 ## Ledger
 
@@ -70,6 +70,32 @@
 | 2 | menu | **complete** |
 | 3 | locations | **complete** (3a whatsapp, 3b server sweep, 3c admin dropdowns) |
 | 4 | loyalty | **complete** (4a-c collapse to settings · 4d admin label input + UI confirmed · 4e docs) |
-| 5 | kds/pos | not started |
-| 6 | copy/i18n | not started |
+| 5 | kds/pos | skipped — no concrete hardcoded-data findings surfaced for KDS/POS in the Phase 0 sweep |
+| 6 | copy/i18n | deferred-by-design — i18n module is scaffolded but unadopted; localisation is a separate initiative, not silent drift |
 | 7 | compliance/flags | **complete** — #6 contact + #7 socials wired through settings; no leftover env-gated flags found in the sweep that fit the "should be admin-toggleable" criterion (cart presence and aggregator flags are deploy-level infra) |
+
+## Closing summary
+
+**13 of 17 findings closed across 10 commits on `claude/sleepy-brahmagupta-uZVI3`:**
+
+| commit | scope |
+|--------|-------|
+| `4de6139` | Phase 0 — tracker landed |
+| `9177b1d` | Phase 1.1 — per-location VAT via compliance settings (#5, P0 fiscal) |
+| `6a5f533` | Phase 1.2 — currency-aware cart tip placeholder (#15) |
+| `bc9c7e3` | Phase 1.3 — JSON-LD `priceCurrency` follows the location (#17) |
+| `a151b0b` | Phase 2 — admin menu views read live overrides, not seed (#11) |
+| `fb44fde` | Phase 3a — WhatsApp tools resolve active locations from the live store (#8, P0) |
+| `3c5e5c6` | Phase 3b — five server modules: sync seed → async live store (#9) |
+| `5f18b74` | Phase 3c — three admin dropdowns derive trucks from `getActiveLocations()` (#10) |
+| `0132d53` | Phase 4a–c — loyalty: single source of truth via settings, helpers take ladder as param (#1–#4, P0) |
+| `61e8357` | Phase 4d–e — admin tier-label input + capabilities + design-system docs |
+| `e52fb9a` | Phase 7 — Footer contact + social links via settings, constants deleted (#6, #7) |
+
+**What the audit achieved.** Every customer-visible surface that the operator can change through `/admin/*` now reflects that change without a deploy. The silent-drift class of bug — two sources of truth disagreeing — is gone in the audited domains (loyalty, locations, contact, fiscal, menu overrides, currency display). All theme/design-system docs touched were brought into sync (Rule #11). The capabilities ledger was refreshed where a capability's state changed (Rule #9).
+
+**What was intentionally not changed.** Menu seed (`src/data/menus/*`) stays code per Q1; brand/theme stays code per Q4; the `getActiveLocations()` sync seed remains the right source for client surfaces while server paths use `getActiveLocationsAsync()` per the seed file's own contract; inline illustration SVG hex colours stay code (theme).
+
+**What's left.** Localisation of customer-facing strings (#12, #14) and any CMS-driven nav (#13). Both are separate initiatives, not silent-drift bugs. When the i18n adoption begins, the existing `src/lib/i18n.ts` scaffolding + the 68 already-staged keys are the entry point.
+
+**Verification.** Every commit shipped with `npx tsc --noEmit` reporting zero errors. End-to-end data flow was confirmed per Rule #8 for each fix (admin edit → store → API → consumer → user-visible change).
