@@ -1219,13 +1219,18 @@ body {
    Slim italic-Cormorant quote between Bundles and Loyalty. Not a
    `.v8-ps` block — V8 deliberately strips the eyebrow / title chrome
    and lets the quote land alone on a soft terracotta radial wash, the
-   way a hand-printed menu inserts its founder's voice. Tighter
-   vertical rhythm (64px padding both sides) than the standard `.v8-ps`.
+   way a hand-printed menu inserts its founder's voice. Zero vertical
+   padding — the strip's height is exactly the quote + citation, and
+   the previous `.v8-ps` section's bottom padding + the next
+   `.v8-ps.v8-ps-dark` section's top padding own the rhythm on both
+   sides. Earlier builds shipped `padding: 64px 0`, which stacked into
+   the neighbours' padding to read as a ~150px dead band — V8 polish
+   zeroed it.
    Markup in src/components/landing/AboutSection.tsx. */
 
 .v8-famiglia {
   text-align: center;
-  padding: 64px 0;
+  padding: 0;
   background: radial-gradient(at 50% 50%, rgba(184, 92, 56, 0.06), transparent 70%);
 }
 

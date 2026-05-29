@@ -477,9 +477,13 @@ existing LayoutGate wiring don't churn — the export stays
 
 - **No `.v8-ps` chrome.** Deliberately strips the eyebrow / title /
   subtitle the other sections use. Uses a bespoke `.v8-famiglia`
-  class with tighter 64px vertical rhythm + a soft terracotta radial
+  class with **zero vertical padding** + a soft terracotta radial
   wash (`radial-gradient(at 50% 50%, rgba(184,92,56,0.06),
-  transparent 70%)`).
+  transparent 70%)`). The strip's height is exactly the quote +
+  citation; the surrounding `.v8-ps` / `.v8-ps-dark` sections' own
+  56/80px ≥md padding owns the rhythm above and below — the
+  earlier `64px top + bottom` stacked with those neighbours into a
+  dead band V8 polish flagged and zeroed.
 - **The pull-quote** — italic Cormorant 28 / 36px ≥md, espresso,
   max-width 720px, centred. Wrapped in translucent oxblood curly-
   quote pseudo-elements at 60px (`\201C` / `\201D`) — screen

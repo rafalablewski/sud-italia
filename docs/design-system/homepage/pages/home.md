@@ -241,8 +241,13 @@ Famiglia strip.
 - **Section is NOT a `.v8-ps` block.** Deliberately strips the
   eyebrow / title / subtitle chrome — V8 lets the quote land alone
   the way a hand-printed menu inserts its founder's voice between
-  the day's bundles and the loyalty pitch. Tighter vertical rhythm
-  (`64px` top + bottom, vs `.v8-ps` 56/80px).
+  the day's bundles and the loyalty pitch. **Zero vertical padding**
+  — the strip's height is exactly the quote + citation. The previous
+  `.v8-ps` section's bottom padding and the next `.v8-ps-dark`
+  section's top padding (`56/80px ≥md` on both sides) own all the
+  rhythm. Earlier builds shipped `64px top + bottom` here, which
+  stacked into the neighbours to read as a ~150px dead band under
+  the citation — V8 polish zeroed it.
 - **Background** is a single soft terracotta radial wash centred on
   the section box (`radial-gradient(at 50% 50%, rgba(184,92,56,
   0.06), transparent 70%)`). No alt-paper band, no tricolore, no
