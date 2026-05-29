@@ -9,9 +9,9 @@ import {
   type UpsellConfig,
 } from "@/lib/upsell";
 import { getItemDetails } from "@/data/kodawari";
-import { ItemDetailDrawer } from "./ItemDetailDrawer";
 import { CompliancePills } from "./CompliancePills";
 import { useCartStore } from "@/store/cart";
+import { useCartUIStore } from "@/store/cart-ui";
 import { useState, useEffect } from "react";
 
 // V8 Trattoria menu item card.
@@ -106,8 +106,8 @@ export function MenuItemCard({
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const cartItems = useCartStore((s) => s.items);
+  const setDetailItem = useCartUIStore((s) => s.setDetailItem);
   const [justAdded, setJustAdded] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
 
   const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
   const quantity = cartItem?.quantity ?? 0;
@@ -263,7 +263,7 @@ export function MenuItemCard({
                   className="v8-mi-meta-details"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDetailOpen(true);
+                    setDetailItem({ item, locationSlug, popularThisWeek });
                   }}
                 >
                   Details <span className="bi-sec">· dettagli</span>
@@ -329,15 +329,6 @@ export function MenuItemCard({
         )}
       </div>
 
-      {details && (
-        <ItemDetailDrawer
-          item={item}
-          locationSlug={locationSlug}
-          open={detailOpen}
-          onClose={() => setDetailOpen(false)}
-          popularThisWeek={popularThisWeek}
-        />
-      )}
     </article>
   );
 }

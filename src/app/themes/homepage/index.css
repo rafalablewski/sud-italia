@@ -4543,3 +4543,500 @@ body.v8-cart-open .v8-cart-toast { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   .v8-cart-toast { transition: opacity 0.01ms; transform: translate(-50%, 0); }
 }
+
+/* ============================================================================
+   V8 Trattoria — Item-detail drawer (Step 13)
+   ============================================================================
+   The portalled per-dish info drawer that opens from each menu card's
+   "Details" button. Same paper-sheet vocabulary as the cart drawer so the
+   menu → detail → cart flow reads as one editorial spread. Selectors
+   namespaced under .v8-detail-* so the detail styling can't leak into
+   the cart drawer's own .v8-cart-* family.
+   ========================================================================== */
+
+body.v8-detail-open { overflow: hidden; }
+
+.v8-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(45, 24, 16, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.v8-detail-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.v8-detail-sheet {
+  position: fixed;
+  z-index: 105;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: 460px;
+  height: 92vh;
+  max-height: 92vh;
+  background: var(--color-parchment);
+  border-radius: 18px 18px 0 0;
+  border: 1px solid var(--color-line);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 -30px 80px -20px rgba(61, 40, 23, 0.5);
+  overflow: hidden;
+  transform: translate(-50%, 100%);
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+.v8-detail-sheet.is-open { transform: translate(-50%, 0); }
+
+@media (min-width: 768px) {
+  .v8-detail-sheet {
+    max-width: 520px;
+    bottom: 20px;
+    height: calc(100vh - 40px);
+    max-height: calc(100vh - 40px);
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v8-detail-overlay,
+  .v8-detail-sheet { transition: none; }
+}
+
+.v8-detail-grip {
+  position: relative;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: var(--color-parchment);
+  border-bottom: 1px solid var(--color-line-soft);
+  flex: 0 0 auto;
+}
+.v8-detail-grip::before {
+  content: "";
+  width: 44px;
+  height: 4px;
+  background: var(--color-line);
+  border-radius: 4px;
+}
+
+.v8-detail-top {
+  flex: 0 0 auto;
+  padding: 18px 20px 14px;
+  background: linear-gradient(180deg, var(--color-parchment) 0%, rgba(248, 239, 222, 0.92) 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.v8-detail-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v8-detail-top-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.v8-detail-top-title h2 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+  margin: 0;
+  color: var(--color-espresso);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v8-detail-top-sub {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+.v8-detail-basil {
+  display: inline-block;
+  transition: transform 0.6s ease;
+}
+.v8-detail-top:hover .v8-detail-basil { transform: rotate(-6deg); }
+
+.v8-detail-close {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-espresso);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.25s ease;
+}
+.v8-detail-close:hover {
+  background: var(--color-parchment-deep);
+  transform: rotate(90deg);
+}
+
+.v8-detail-tricolore {
+  height: 3px;
+  flex: 0 0 3px;
+  background: linear-gradient(90deg,
+    var(--color-italy-green) 0 33.3%,
+    var(--color-italy-white) 33.3% 66.6%,
+    var(--color-italy-red) 66.6% 100%);
+  opacity: 0.85;
+}
+
+.v8-detail-scroll {
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+.v8-detail-scroll::-webkit-scrollbar { width: 6px; }
+.v8-detail-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 100px;
+}
+
+/* Hero row — dish glyph + name + description + callouts */
+.v8-detail-hero {
+  padding: 22px 20px 14px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.v8-detail-illus {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  color: var(--color-terracotta-dark);
+}
+.v8-detail-hero-body {
+  flex: 1;
+  min-width: 0;
+}
+.v8-detail-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+}
+.v8-detail-desc {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.v8-detail-callout {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(201, 162, 62, 0.10);
+  border: 1px solid rgba(201, 162, 62, 0.35);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-espresso);
+  line-height: 1.4;
+}
+.v8-detail-callout em {
+  font-style: italic;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--color-ochre);
+}
+.v8-detail-callout.is-limited {
+  background: rgba(122, 43, 43, 0.07);
+  border-color: rgba(122, 43, 43, 0.30);
+  color: var(--color-oxblood);
+}
+.v8-detail-callout.is-limited em {
+  color: var(--color-oxblood);
+}
+
+/* Meta row — price + prep time + calories editorial line */
+.v8-detail-meta {
+  margin: 0 20px;
+  padding: 12px 0;
+  border-top: 1px dashed var(--color-line);
+  border-bottom: 1px dashed var(--color-line);
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.v8-detail-meta-price {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--color-oxblood);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-detail-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+}
+.v8-detail-meta-num {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-espresso);
+  font-size: 16px;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-detail-meta-unit {
+  font-style: italic;
+}
+
+/* Generic detail section — uppercase Cormorant title + editorial hairline */
+.v8-detail-section {
+  padding: 18px 20px;
+}
+.v8-detail-section-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--color-espresso-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px 0;
+}
+.v8-detail-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-line) 0%, transparent 90%);
+}
+.v8-detail-section-it {
+  font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+  color: var(--color-muted);
+}
+
+/* Allergens */
+.v8-detail-allergens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.v8-detail-allergen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(122, 43, 43, 0.06);
+  border: 1px solid rgba(122, 43, 43, 0.25);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-oxblood);
+}
+.v8-detail-allergen-glyph {
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1;
+}
+.v8-detail-no-allergens {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(74, 124, 89, 0.08);
+  border: 1px solid rgba(74, 124, 89, 0.30);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-basil-deep);
+  line-height: 1.35;
+}
+.v8-detail-no-allergens em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Nutrition bars */
+.v8-detail-nutrition {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v8-detail-bar {
+  font-family: var(--font-body);
+}
+.v8-detail-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.v8-detail-bar-label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-espresso);
+}
+.v8-detail-bar-it {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  margin-left: 2px;
+}
+.v8-detail-bar-val {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-ink);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-detail-bar-rail {
+  height: 6px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.v8-detail-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.v8-detail-bar-fill.is-ochre { background: var(--color-ochre); }
+.v8-detail-bar-fill.is-ochre-light { background: var(--color-ochre-light); }
+.v8-detail-bar-fill.is-terracotta { background: var(--color-terracotta); }
+.v8-detail-bar-fill.is-oxblood { background: var(--color-oxblood); }
+.v8-detail-bar-fill.is-basil { background: var(--color-basil); }
+.v8-detail-bar-fill.is-espresso { background: var(--color-espresso); }
+
+/* Sourcing — italic quote in a parchment-deep paper card */
+.v8-detail-sourcing {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--color-espresso);
+  line-height: 1.5;
+}
+.v8-detail-sourcing-mark {
+  flex: 0 0 22px;
+  margin-top: 2px;
+}
+.v8-detail-sourcing p {
+  margin: 0;
+}
+
+.v8-detail-foot {
+  text-align: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--color-muted);
+  padding: 6px 20px 18px;
+}
+
+/* Sticky pay bar inside the detail sheet */
+.v8-detail-paybar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  background: linear-gradient(180deg, var(--color-parchment) 0%, #F2E2C2 100%);
+  border-top: 1px solid var(--color-line);
+  box-shadow: 0 -12px 30px -16px rgba(61, 40, 23, 0.35);
+}
+.v8-detail-paybar-tricolore {
+  height: 3px;
+  background: linear-gradient(90deg,
+    var(--color-italy-green) 0 33.3%,
+    var(--color-italy-white) 33.3% 66.6%,
+    var(--color-italy-red) 66.6% 100%);
+}
+.v8-detail-paybar-inner {
+  padding: 14px 18px 18px;
+}
+.v8-detail-pay-cta {
+  width: 100%;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  box-shadow: var(--shadow-cta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  min-height: 52px;
+}
+.v8-detail-pay-cta:hover:not(:disabled) {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -10px rgba(184, 92, 56, 0.65);
+}
+.v8-detail-pay-cta:disabled {
+  background: var(--color-muted);
+  border-color: var(--color-espresso-soft);
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+  transform: none;
+}
+.v8-detail-pay-cta .it {
+  font-style: italic;
+  font-weight: 500;
+  opacity: 0.92;
+}
+.v8-detail-pay-cta .num {
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}

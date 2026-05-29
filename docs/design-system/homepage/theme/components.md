@@ -646,8 +646,8 @@ countdown, compliance pills — only the markup changed.
     the item entirely.
 
 - **Detail drawer** — `<ItemDetailDrawer />` opens via the Details
-  button. Existing component, not yet V8-styled (its drawer surface
-  is Step 11+ territory).
+  button. V8 paper-card vocabulary as of Step 13 — see the dedicated
+  entry below for the full chrome breakdown.
 
 ### `<CartDrawer />` — `src/components/cart/CartDrawer.tsx`
 
@@ -774,6 +774,71 @@ slides up from the bottom of the viewport.
   items used to compute the seed flow through `useCartUIStore`
   (seeded by `<MenuItemsRegistrar />` on the location page). Pages
   without a location see the toast title without a seed line.
+
+### `<ItemDetailDrawer />` — `src/components/location/ItemDetailDrawer.tsx`
+
+V8 per-dish info drawer that opens from the "Details · dettagli"
+button on each menu card.
+
+- Builds its own portalled sheet under `.v8-detail-*` (mirrors the
+  cart drawer vocabulary so the menu → detail → cart flow reads as
+  one editorial spread). The selectors stay namespaced under
+  `.v8-detail-*` so the detail styling can't leak into the cart's
+  `.v8-cart-*` family.
+- Sheet sizes to 92vh on mobile (slightly slimmer than the cart
+  drawer's 96vh — the detail surface is less info-dense, so the
+  underlying menu stays visible past the top) and the same
+  `calc(100vh - 40px)` side-drawer treatment on desktop.
+- **Sticky header** — basil sprig SVG + italic Cormorant 22px item
+  name (ellipses on overflow) + "— dettagli" sublabel + line-bordered
+  close-X that rotates 90° on hover, mirroring the cart drawer
+  affordance.
+- **Hero block** — 96×96 parchment-deep `.v8-detail-illus` tile with
+  a per-category dish glyph (pizza / pasta / dessert / drinks / coffee
+  / antipasto / default tomato), italic Cormorant 26px `.v8-detail-name`,
+  italic Lora `.v8-detail-desc`. Limited-rotation items add an oxblood
+  `.v8-detail-callout.is-limited` strip; popular-this-week items add
+  an ochre `.v8-detail-callout` strip.
+- **Meta row** — dashed-hairline-bordered `.v8-detail-meta` with the
+  oxblood Cormorant 26px tabular price + "Nm · in cottura" prep time
+  + tabular calorie count.
+- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen` chip
+  row when present. Empty allergens collapse to a basil-deep
+  `.v8-detail-no-allergens` line ("Senza allergeni maggiori — no major
+  allergens reported.") with a hand-drawn basil-leaf SVG.
+- **Valori nutrizionali · nutrition** — `.v8-detail-bar` rows with
+  bilingual italic Lora labels (Calories · calorie, Protein · proteine,
+  Carbohydrates · carboidrati, Fat · grassi, Fiber · fibra, Sodium ·
+  sodio) and progress fills tinted per-nutrient (`.is-ochre`,
+  `.is-terracotta`, `.is-ochre-light`, `.is-oxblood`, `.is-basil`,
+  `.is-espresso`).
+- **Provenienza · sourcing** — parchment-deep `.v8-detail-sourcing`
+  paper card with a basil-sprig mark + italic Lora quote from the
+  Kodawari sourcing copy.
+- **Footer flourish** — italic Cormorant "Un piatto fatto bene · a dish
+  done well." closing line.
+- **Sticky paybar** — terracotta Cormorant "Add to cart · aggiungi
+  al carrello + [price]" CTA with the same shadow + hover lift as the
+  cart drawer's pay CTA. Tap adds the item via `useCartStore.addItem`
+  + closes the drawer (the layout-level `<FloatingCartButton />` +
+  `<AddToCartToast />` take over the post-add feedback). Disabled
+  state when the item is sold out or the location slug is missing.
+- ESC key closes; backdrop click closes; rotating × button closes.
+  `body.v8-detail-open` is toggled while open so the body scrolls
+  inside the sheet, not behind it.
+
+**Single-mount surface.** Lives at `(public)/layout.tsx` exactly once.
+Opens via `useCartUIStore.setDetailItem({ item, locationSlug,
+popularThisWeek })`. The location slug travels in the payload so the
+Add-to-cart CTA can attribute the first-ever item to the right
+location (the cart store only learns its slug after the first item
+lands — without this, the detail Add CTA would be permanently
+disabled for an empty cart on first visit).
+
+The previous N-drawer-per-menu-page setup (one mounted
+`<ItemDetailDrawer />` per `<MenuItem />` with its own local open
+state) is now a single instance — for a Kraków menu of 35 dishes,
+that drops 35 portalled drawers + 35 useEffect chains from the DOM.
 
 ### `<DeliveryProgress />` — `src/components/cart/DeliveryProgress.tsx`
 
@@ -976,26 +1041,27 @@ tests might still import them.
 
 ### Cart family — all V8
 
-After Steps 11, 11 follow-up, and 12, every component in
-`src/components/cart/` reads as one paper-card vocabulary:
+After Steps 11, 11 follow-up, 12, and 13, every drawer-style surface
+in the storefront reads as one paper-card vocabulary:
 
-| Component                | Status       | Selectors                  |
-| ------------------------ | ------------ | -------------------------- |
-| `<CartDrawer />`         | V8 (Step 11) | `.v8-cart-*` shell         |
-| `<CartItem />`           | V8 (Step 11) | `.v8-cart-item-*`          |
-| `<CartUpsell />`         | V8 (Step 11) | `.v8-cart-pairs-*`         |
-| `<DeliveryProgress />`   | V8 (Step 11) | `.v8-cart-delivery-*`      |
+| Component                | Status        | Selectors                    |
+| ------------------------ | ------------- | ---------------------------- |
+| `<CartDrawer />`         | V8 (Step 11)  | `.v8-cart-*` shell           |
+| `<CartItem />`           | V8 (Step 11)  | `.v8-cart-item-*`            |
+| `<CartUpsell />`         | V8 (Step 11)  | `.v8-cart-pairs-*`           |
+| `<DeliveryProgress />`   | V8 (Step 11)  | `.v8-cart-delivery-*`        |
 | `<LoyaltyEarnPreview />` | V8 (Step 11+) | `.v8-cart-loyalty-preview-*` |
-| `<CorporateOrderBanner />` | V8 (Step 11+) | `.v8-cart-corp-*`        |
-| `<TierPerkBanner />`     | V8 (Step 11+) | `.v8-cart-perk-*`          |
-| `<TodBanner />`          | V8 (Step 11+) | `.v8-cart-tod-*`           |
-| `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`         |
-| `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`     |
-| `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`        |
-| `<FloatingCartButton />` | V8 (Step 12) | `.v8-float-cart`           |
-| `<AddToCartToast />`     | V8 (Step 12) | `.v8-cart-toast`           |
-| `<MenuItemsRegistrar />` | n/a (bridge) | —                          |
-| `<AbandonedCartBanner />` | pre-V8 (low priority) | `.fixed top-20 …`  |
+| `<CorporateOrderBanner />` | V8 (Step 11+) | `.v8-cart-corp-*`          |
+| `<TierPerkBanner />`     | V8 (Step 11+) | `.v8-cart-perk-*`            |
+| `<TodBanner />`          | V8 (Step 11+) | `.v8-cart-tod-*`             |
+| `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`           |
+| `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`       |
+| `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`          |
+| `<FloatingCartButton />` | V8 (Step 12)  | `.v8-float-cart`             |
+| `<AddToCartToast />`     | V8 (Step 12)  | `.v8-cart-toast`             |
+| `<ItemDetailDrawer />`   | V8 (Step 13)  | `.v8-detail-*`               |
+| `<MenuItemsRegistrar />` | n/a (bridge)  | —                            |
+| `<AbandonedCartBanner />` | pre-V8 (low priority) | `.fixed top-20 …`   |
 
 `<AbandonedCartBanner />` is the only remaining pre-V8 surface in the
 cart family. It only renders 30s after the customer goes idle with

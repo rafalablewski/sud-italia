@@ -9,6 +9,7 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { AddToCartToast } from "@/components/cart/AddToCartToast";
+import { ItemDetailDrawer } from "@/components/location/ItemDetailDrawer";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CustomerProvider } from "@/store/customer";
 
@@ -75,15 +76,17 @@ export default function PublicLayout({
         <LayoutGate flag="showChatWidget">
           <ChatWidget />
         </LayoutGate>
-        {/* Single-mount cart drawer (Step 11 follow-up) — every trigger
-            (CartButton, FloatingCartButton, AbandonedCartBanner, …)
-            opens this one instance via useCartUIStore.setDrawerOpen.
-            FloatingCartButton + AddToCartToast (Step 12) live here too
-            so they're available chain-wide and share the same
-            useCartUIStore state. */}
+        {/* Single-mount cart family. Every trigger surface
+            (CartButton, FloatingCartButton, AbandonedCartBanner, the
+            "Details" button on a menu card) opens these instances via
+            useCartUIStore.setDrawerOpen / setDetailItem instead of
+            mounting its own copy. ItemDetailDrawer (Step 13) joins
+            CartDrawer + FloatingCartButton + AddToCartToast (Steps 11,
+            11+, 12) at the layout level. */}
         <CartDrawer />
         <FloatingCartButton />
         <AddToCartToast />
+        <ItemDetailDrawer />
         <AbandonedCartBanner />
         <CartPresenceSync />
       </div>
