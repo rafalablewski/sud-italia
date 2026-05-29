@@ -712,3 +712,51 @@ The opportunity is real: a Polish-market-deep, food-truck-native, AI-copilot-fir
 The next decision is not which feature to build next. The next decision is whether this is **an admin tool for two trucks** or **an operating system for an industry**. Those are different products, different orgs, and different fundraising stories. Pick one before the next sprint.
 
 — *End of audit.*
+
+---
+
+## 2026-05-29 Update — a real POS terminal, a genuine LLM agent layer, and the storefront rebuild
+
+Eight days from the 2026-05-21 updates. The admin surface kept growing and several long-standing ✗ rows in §1 moved. The headline operator-facing additions: a **real server-backed POS Tabs terminal**, an **agentic Claude copilot with audited tool use**, a **three-theme design system + Layout/Themes admin tabs**, and new **Floor / Menu-engineering / CRM / Currency / Languages / Regulatory-compliance / Alerts** pages — all wired to real data and all registered in the capabilities ledger.
+
+### New top-level admin pages since the 2026-05-21 update
+
+| New page | What it does | Audit row it touches | Backing |
+|---|---|---|---|
+| **`/admin/pos`** | Per-location "Tabs" terminal — dine-in/takeout/delivery, table assignment + covers (over-capacity warnings), park/unpark, multi-tab, combo attach, **server-authoritative pricing** (till sends ids+qty only), pace-steering integration. | §1.2 "Native POS terminal mode" | `/api/admin/pos/{tabs,orders}` |
+| **`/admin/floor`** | Tables + reservations per location, with double-booking conflict detection (`src/lib/floor.ts`). | §1.2 "QR table / location ordering with table state machine" | `/api/admin/floor/{tables,reservations}` |
+| **`/admin/menu-engineering`** | Standalone Boston matrix (Stars / Plowhorses / Puzzles / Dogs). | §1.10 "AI menu engineering" | `/api/admin/menu-engineering` |
+| **`/admin/concierge`** | Agent-commerce capability config (MCP + WhatsApp), allergen matrix. | §1.10 "AI Copilot" / §1.11 platform | `getConciergeSettings` |
+| **`/admin/crm`** | Regulars book, notes, points, consent, manual send (split from customers). | §1.8 CRM & Growth | `/api/admin/crm` |
+| **`/admin/currency`**, **`/admin/languages`** | Multi-currency display (PLN/USD/SGD/EUR) + multi-language UI (pl/en/de/en-SG) config. | §1.11 platform / i18n | `/api/admin/{currency,languages}` |
+| **`/admin/regulatory-compliance`** | Per-location regulatory packs (EU / NYC / SG). | §1.1 compliance / §1.11 | `/api/admin/regulatory-compliance` |
+| **`/admin/alerts`** | Mobile alerts feed (new orders, slot/stock pressure). | §1.4 / §2.5 mobile | shell notifications |
+
+All 41 admin directories are wired to real data sources — **no cosmetic/mock-only pages found** — and every new page is registered in `/admin/capabilities` (cross-checked: business-costs, simulation, whatsapp, floor, menu-engineering, scheduled-bundles, currency, languages, regulatory-compliance, corporate, crm, pos, alerts all present). Rule #9 is being honoured.
+
+### §1 gap-table movements
+
+- **§1.2 "Native POS terminal mode" — ✗ → 🟡.** A real server-backed POS Tabs terminal now exists (`AdminPos.tsx`, 1,639 lines) with tables, covers, channels, and server-side price resolution. Still ✗: offline-first sync, receipt-printer/cash-drawer driver, and **coursing / hold-fire / drag-to-recourse** (an interim coursing implementation was built mid-May then **dropped in the POS/KDS rewrite** — the current `PosTab` carries a single `sentKds` boolean and sends the whole tab at once).
+- **§1.3 Kitchen Systems.** KDS rewritten with **role lenses** (owner Fleet / manager floor / kitchen chef strip), a **prediction engine** (`kds-prediction.ts`, per-station FIFO queue, at-risk flagging), SLA countdown + dual chimes, hotkeys + recall, live floor-ops 86. "Item-86 propagation" is live on the floor-ops feed. Still ✗: batch routing, CV quality control, hardware bump bar, coursing. Scaling note: the KDS board has **no list virtualization** and runs a 1-second full recompute over the active set — fine at realistic active depth, a stress point at literal 300 concurrently-active tickets.
+- **§1.10 Data & AI — the brutal section moves the most.** A genuine agentic Claude layer now exists: `src/lib/ai/gateway.ts` (Anthropic SDK, prompt caching, effort/thinking), `src/lib/ai/agent.ts` (tool-use loop ≤8 hops with **operator-approval gates on mutating tools**), `src/lib/ai/tools/registry.ts` (**role-gated, every execution audit-logged** as `actor='claude:${userId}'`), `cost.ts` (daily budget). This moves the "**AI Copilot in admin**" and "**Autonomous recommendations engine that *acts* (approval-gated)**" rows from ✗ toward 🟡/✓, and the WhatsApp/concierge layers add a conversational commerce surface with real Stripe pay-in-chat. "Demand forecast" is Claude-backed (§0.1); **anomaly detection is still heuristic**; "RAG chatbot" is still a keyword FAQ matcher (`ai-engine.ts`).
+- **§1.5 Inventory / §1.11.** Recipes are chain-wide (base-slug keyed) and ingredient costs are per-distributor (`IngredientProduct`), now **normalized Drizzle tables** read relational-first — the storage shape for "Supplier bidding / RFQ" (§1.5 row 4) is correct, UI pending. RBAC matured: 5-role rank table + `withAdmin()` wrapper (declares `roles` + `locationParam`) + **per-location session scope enforced server-side**. Still opt-in per route (no central `src/middleware.ts`), still single shared `ADMIN_PASSWORD` root, still no MFA, and **no UI for an N-of-M regional scope** (token supports a comma list; users page only assigns one slug or "All").
+
+### §2 UX — design system + the storefront rebuild
+
+A **three-theme design system** (Core / Admin / Homepage) landed under `src/app/themes/`, isolated via per-route-group CSS imports + per-theme fonts, with `docs/design-system/` and a new CLAUDE.md **Rule #11**. Admin Settings gained a **Themes inspector** tab and a **Layout tab** of storefront visibility toggles (`LayoutGate`, persisted immediately per Rule #7). The customer storefront was rebuilt to production as the **V8 Tuscany trattoria** (parchment/serif). §2.1 "real-time feedback" remains ✓ (SSE on orders + KDS). §2.1 "information density / mobile workflow / empty states" rows are unchanged.
+
+### New finding — Rule-#1 regressions on the V8 rewards surface
+
+Consistent with this audit's discipline of flagging cosmetic-not-functional surfaces: the V8 `/rewards` rebuild ships a loyalty **streak** (hardcoded "2"), a **weekly challenge** (hardcoded "33% / 1-of-target"), and a customer-facing **referral code generated with `Math.random()`** each render (`src/app/(public)/rewards/page.tsx`) — none wired to the real `referral-loop.ts` persistence. These violate CLAUDE.md Rule #1 and should be wired to real data. Two storefront surfaces (`/review/[orderId]`, `/corporate/[slug]`) also remain on the pre-V8 `italia-*` palette — design-system drift under the new Rule #11.
+
+### Tests / CI
+
+The §1.11 CI row (✓ partial — `tsc`/eslint/build) is unchanged. The "Still ✗: unit tests, Playwright smoke, contract tests on `store.ts`" caveat is now narrowly improved: **2 real `node:test` files exist** (`floor.test.ts`, `pace-steering.test.ts`, 11 assertions, passing) — but with **no vitest/jest, no `test` script, no config**, and **no coverage of checkout/refund/RBAC**. Effectively still no suite.
+
+### Sophistication score (§5.1)
+
+The 2026-05-21 #2 score was 64–68/100. With the real POS terminal, the agentic LLM layer (audited, approval-gated tool use), the relational data migration on hot paths, the three-theme design system, and the V8 storefront in production, it sits at roughly **68–72/100** — entering the bottom of the investor-grade band. The ceiling is still the same non-documentation blockers: plaintext admin password, no MFA, no real test coverage on payment/refund/RBAC, no offline-first POS, no third-party-delivery integration in production, no real food photography, no Neon backup/restore runbook, no staging env.
+
+**Bottom line for this audit.** The "is this an admin tool for two trucks or an operating system for an industry?" question the original close posed is being answered, in code, in the direction of the latter — a real POS, an audited AI agent, multi-theme infrastructure, and a relational data spine are operating-system moves, not admin-tool moves. The honest counterweight is that the foundational hygiene this audit's §0 named (auth, tests, backups) is still open, and a fresh cosmetic-not-functional regression appeared on the rewards surface. The next decision is unchanged — pick the product — and the evidence now leans toward "operating system," which makes closing the hygiene gap more urgent, not less.
+
+— *Re-run lens: same admin-dashboard audit, seventeen days later — 29 May 2026*

@@ -1232,3 +1232,53 @@ Of the eight levers in §0.1's "Where the money is" table, the substrate moves a
 The PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The cost-of-getting-it-wrong is **smaller** today than a week ago, because the operator's path from "I want to switch mozzarella suppliers" to "every bundle's True CM1 updates" is one click rather than a multi-row recipe edit.
 
 — *Substrate lens: same audit, structural unblock — 21 May 2026 (pm)*
+
+---
+
+## 2026-05-29 Update — the premium surface this audit kept asking for shipped; the three single-day revenue items did not
+
+Eight days on. The headline is that the **§1.5 "emoji-on-gradient menu" conversion killer — the single most-repeated complaint in this audit family — was addressed at the brand-frame level by shipping the V8 Tuscany storefront to production.** Two of the audit's three single-day un-shipped items (food photography, post-order single-tap espresso upsell) are still un-shipped; the third (address autocomplete) is still commented out. And the retention surface this audit's §5 designs grew real UI — but with two hardcoded values that violate the project's no-fake-data rule.
+
+### §1.5 "Hidden Conversion Killers" — the brand frame closed; the photography gap did not
+
+Every prior update called the Tuscany direction "a mockup at `/mockups/cart.html`, not in production." That is now false. The live storefront is rebuilt on the V8 theme (parchment/terracotta/basil/oxblood/ochre in `src/app/themes/homepage/tokens.css`; Cormorant Garamond + Lora; paper-grain canvas; full-bleed menu band; editorial per-item cards). The "premium frame, empty content" critique splits cleanly now:
+
+- ✅ **Premium frame** — delivered. The serif-on-parchment trattoria reads as a craft restaurant, not a Squarespace prototype. The §8 "psychological design — trust / craft" principle is materially better served.
+- ❌ **Empty content** — the emoji is gone from the *frame*, but **real food photography is still missing** (`MenuItem.image` still unpopulated; the V8 cards lean on serif type + paper texture). This was, and remains, the single highest-ROI un-shipped change in this audit. PLN ~5,000, one day, +5–15% AOV. Re-stated here because the brand rebuild makes its absence *more* conspicuous, not less.
+
+### §2 Advanced Upsell — the sequence survived the rebuild, re-themed in place
+
+The §2.1 cart-upsell design-spec surfaces are all still live (verified by source, re-themed V8): `AddToCartToast` (post-add seed), `CartUpsell` ("Pairs beautifully with —", `CartDrawer.tsx:645`), `DeliveryProgress` (per-segment threshold bar, `:650`), `TodBanner` (five hour-window variants, `:568`), `TierPerkBanner` (`:614`). The §2.4 margin-optimised ranking still drives `getCartSuggestions` (`src/lib/upsell.ts`). **The §2.1 `T+pay` row (Apple Pay primary) is still ⏳** — checkout is still the Stripe redirect; no Payment Request API.
+
+The one item this audit's §2.2 taxonomy marked ✅ "post-Add toast" is intact; the **post-order single-tap espresso upsell** (called out in the body and the 2026-05-21 net read as +6–12% on confirmed orders) is **still ⏳** — the confirmation page (`order-confirmation/page.tsx`) shows a comeback/FOMO + "Order again" block but no add-an-item prompt.
+
+### §0.2 Three Plays — re-verified
+
+| # | Play | Status 2026-05-29 |
+|---|---|---|
+| 1 | Espresso prompt + bundle math + decoy anchor in cart | ✅ Shipped (unchanged), now on the V8 surface. |
+| 2 | Subscription / corporate lunch pass | 🟡 Phase 1 unchanged (`/admin/scheduled-bundles` queue + `/admin/corporate` invoice cron). **New adjacent commerce surface:** the WhatsApp LLM bot (`src/lib/whatsapp/`) now does real Stripe **pay-in-chat** (`confirm_and_pay` → Stripe Checkout link) — a third ordering channel, though still one-shot, not the recurring auto-rebill Phase 2 needs. |
+| 3 | Habit loop: variable-ratio reward + streak + DOB + "next order pre-loaded" | 🟡→⚠ **Partially built, partly faked.** The V8 `/rewards` page now *renders* a streak and a weekly challenge — but the **streak is a hardcoded "2"** and the **challenge progress is a hardcoded "33% / 1-of-target"** (`src/app/(public)/rewards/page.tsx`). The variable-ratio mechanic and DOB-driven triggers are still ⏳. This is the §0.2 Play 3 surface finally getting pixels, but with placeholder data — see the Rule-#1 flag below. |
+
+### §5 Loyalty & Retention — the dopamine-loop surface is real UI now, but two values are fake
+
+This audit's §5.2/§5.3 designs (streak, challenge ladder, tiered roadmap, referral give-get) now have a dedicated four-tab V8 `/rewards` dashboard. **What's real:** tier card + spendable/tier points (derived from real `ordersCount`/`points`), tier roadmap, family wallet (`FamilyWalletPanel` wired to `/api/customer/wallet/*`), achievements (`getEarnedAchievements` derives from real order data), phone-only auto-enrolment. **What's fake (Rule #1 violation — flag for fix):**
+
+- **Streak** is a literal "2" ("2 Week streak"), not computed from order recency.
+- **Weekly challenge** progress is a literal "33%" / "1-of-target", not derived.
+- **Referral code** shown to the customer comes from `generateReferralCode()` which uses `Math.random()` (`src/lib/growth-engine.ts`), so it regenerates every render and is **not** the persisted owner code (the real persistence is `src/lib/referral-loop.ts` — Drizzle-backed `referralCodes`/`referralRedemptions`). The customer can't reliably share a stable code; the give-get loop §6.2 depends on is undermined by the UI surfacing a throwaway code.
+
+These are exactly the "cosmetic implementation pretending to function" failures CLAUDE.md Rule #1 forbids. The §5 dopamine loop is the highest-leverage retention surface in this audit; shipping it with placeholder streak/challenge/referral values is worse than not shipping the widgets, because a returning customer who notices their streak never moves loses trust in the whole program.
+
+### Other movements relevant to this audit's economics
+
+- **Tip default is still "None"** — the §0.1 "tip pool capture" lever (+PLN 18k) is still un-pulled. `TipPicker` presets 0/10/15/20% with "0 — no thanks" preselected (`CartDrawer.tsx`); no default tip, no named-pizzaiolo framing.
+- **The §0.1 table is now reproducible against real orders.** `/admin/simulation` layers scenarios over `computeSimulationActuals` (`store.ts:10336`) — menu-mix-weighted COGS from actual line items, cohort retention, per-channel CM1, sensitivity tornado. The PLN 240–320k EBITDA delta is checkable against the trailing-90-day order book, not just modelled.
+- **Persistence migrated to relational Drizzle tables** (orders/recipes/ingredients/ingredientProducts/customers/loyalty) with dual-write + lazy backfill — the cost basis behind every §10/§4 number is now indexed and distributor-traceable.
+- **A real Anthropic LLM layer landed** (`src/lib/ai/` gateway+forecast+agent+tools) — relevant to the §2 "per-customer personalised upsell" aspiration; the inference plumbing now exists.
+
+### Net read
+
+The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The brand-frame half of the §1.5 conversion-killer complaint is **closed** (V8 live); the photography half is **still open**. Of the audit's three explicitly-named single-day revenue items — food photography, address autocomplete, post-order single-tap espresso upsell — **all three remain un-shipped after fourteen days.** The eight days of work went into the storefront rebuild, the three-theme design-system split, the data-layer migration, and the LLM layer. The §5 retention surface finally has UI, but it ships with hardcoded streak/challenge/referral values that must be wired to real data before the dopamine loop earns the trust the audit's §8 demands. The work-vs-revenue ratio on the three single-day items has, if anything, worsened — the premium surface now sits above an emoji-free but photo-free menu and a streak counter that doesn't count.
+
+— *Re-run lens: same growth/psychology audit, fifteen days later — 29 May 2026*

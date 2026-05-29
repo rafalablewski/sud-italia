@@ -247,3 +247,36 @@ A second batch of commits today (PR #61 + the recipes sequence on the same branc
 
 The audit's PLN ~261k/truck subtotal stands. Today's batch moves the model from "modellable" to "modellable with audit trail" — every cost basis now has a distributor + SKU + timestamp behind it. That is the right substrate for the per-bundle margin enforcement (next-steps #3) to ship on a half-day budget rather than a multi-day budget.
 
+---
+
+## 2026-05-29 Update — the bundle ladder now lives on the V8 storefront; the "next steps" are still open
+
+Eight days on. No new bundle *economics* shipped, but the surface the ladder renders on was rebuilt, the cost substrate moved from JSON to a relational store, and the simulation that models this audit's hypotheses now reads **real-order actuals** rather than a typed 100-orders/day baseline. The five "Next steps" are re-verified below — all five remain ✗.
+
+**1 — The brand-direction decision this audit's surfaces waited on was made: V8 shipped to production.** Every prior update (and the elite-QSR doc's item #13) called the Tuscany trattoria look "a mockup at `/mockups/cart.html`, no adoption decision made." That is now false. The storefront is fully rebuilt on the V8 "Tuscany" theme — parchment/terracotta/basil/oxblood/ochre tokens live in `src/app/themes/homepage/tokens.css`, Cormorant Garamond + Lora typography, paper-grain canvas. The bundle surfaces this audit shipped survived the rebuild and were re-themed in place:
+
+- **`BundlesShowcase`** still renders on the homepage (`src/app/(public)/page.tsx`), now gated behind a `showBundlesShowcase` Layout toggle (`/admin/settings → Layout`). Bundle cards now lead with **marketing names** rather than composition strings (commit "V8 bundle card headlines — use marketing names, not composition strings") — a small but real improvement on the "what's the deal?" legibility this section was built for.
+- **`BundleLadder`** still renders in the cart drawer (`src/components/cart/CartDrawer.tsx:617`), reading `DEFAULT_BUNDLES` from `src/lib/bundles.ts`. The decoy/anchor ladders (Lunch Solo→Lunch+→Big-Lunch decoy, the parallel Pizza-led ladder, Family/Family Feast/Feast Deluxe, the late-night Slice→Late-Party ladder, the delivery-only Pantry Pack) are all intact, and `appliedBundleId` + `appliedBundlePriceGrosze` still flow to checkout and are server-validated (`cartSatisfiesBundle`). The economics are unchanged; the presentation is now the editorial trattoria this audit's companion docs argued for.
+- **`ComboDealBanner`** + **`CartUpsell`** + **`DeliveryProgress`** + **`TodBanner`** + **`TierPerkBanner`** all still render in the cart (re-themed). Combo savings still show **both** the `−N%` and the PLN amount (`CartDrawer.tsx:924-930`), per the audit's "show PLN not %" guidance.
+
+**2 — The cost substrate moved from typed JSON to a relational store with real-order actuals.** Two structural changes strengthen this audit's "modellable with audit trail" claim:
+
+- Recipes / ingredients / ingredient-products are now **normalized Drizzle tables** (`@/db/schema`), read relational-first with the JSON blob kept only as a lazy-backfill mirror (`src/lib/store.ts` `getRecipe`/`dualWriteRecipe`/`resolveActiveProducts`). The per-distributor active-offering cost chain this audit's Update #2 introduced is now indexed, not a full-document read-modify-write.
+- The simulation that reproduces this audit's PLN ~261k/truck table now layers scenarios over **`computeSimulationActuals(windowDays)`** (`store.ts:10336`), which reads real orders over an indexed window and computes **menu-mix-weighted COGS from actual line items + modifier deltas** — explicitly "the honest replacement for the operator's flat cogsPct guess." So "Next step #1 — instrument and measure" is now partly self-service: the operator can run the bundle hypotheses against the trailing 30/90-day order book inside `/admin/simulation` instead of against a hand-set baseline.
+
+**The five "Next steps" — re-verified, all still ✗:**
+
+| # | Next step | Status 2026-05-29 |
+|---|---|---|
+| 1 | Instrument and measure (30-day window) | 🟡 The simulation now reads real-order actuals (menu-mix COGS, cohort retention, per-channel CM1), so the hypotheses are checkable against the real order book. A dedicated **A/B experiment ledger** to attribute the lift to each lever still does not exist — measurement is observational, not experimental. |
+| 2 | **Per-item modifier picker on the customer menu page** | ❌ **Still ✗.** Verified by source: `ModifierGroup` / `SelectedModifier` schema + `effectiveUnitPrice`/`effectiveUnitCost` cart math + the admin modifier editor all exist, but neither `MenuItem` (`src/components/location/MenuItem.tsx`) nor `ItemDetailDrawer` renders a modifier picker. The customer still cannot pick crust / toppings. The V8 rebuild re-skinned both cards without adding the picker. This is the single highest-value un-shipped item this audit named. |
+| 3 | Per-bundle margin floor enforcement at admin save-time | ❌ **Still ✗.** The low-margin alert still fires post-order; no save-time guard. The per-distributor cost ledger (now relational) keeps the half-day-effort estimate valid. |
+| 4 | A/B test the espresso reprice | ❌ **Still ✗.** No live experiment ledger. |
+| 5 | Zone-based delivery surcharge | ❌ **Still ✗.** Flat 7 zł still applies; no postcode→zone mapper. |
+
+**One regression worth flagging for the revenue/bundle reader.** The V8 `/rewards` rebuild introduced two **hardcoded display values that violate CLAUDE.md Rule #1** (no fake data): the loyalty **streak is a literal "2"** and the **weekly-challenge progress bar is a literal "33% / 1-of-target"** (`src/app/(public)/rewards/page.tsx`), and `generateReferralCode()` uses `Math.random()` so the *displayed* referral code regenerates each render and is not the persisted owner code (the real persistence is `src/lib/referral-loop.ts`). None of these are bundle mechanics, but they sit on the same retention surface the bundle ladder feeds, and they're the kind of cosmetic-not-functional drift this audit family exists to catch. Worth a fix pass.
+
+**Net read.** The bundle architecture this audit shipped is intact, now rendered on the premium surface its companion docs called for, and now backed by a relational cost store + real-order simulation. The PLN ~261k/truck recovery hypothesis is unchanged and more checkable than before. But the four discrete build items (modifier picker, save-time margin gate, espresso A/B, zone surcharge) that were ✗ on 2026-05-21 are **all still ✗** on 2026-05-29 — the eight days of shipping went into the storefront rebuild and the data-layer migration, not into closing this audit's open list.
+
+— *Re-run lens: same revenue/menu-engineering audit, fourteen days later — 29 May 2026*
+

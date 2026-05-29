@@ -641,3 +641,61 @@ Keep doing these. Stop doing the other 25.
 ---
 
 *Audit ends. The next move is yours.*
+
+---
+
+## 16. 2026-05-29 Update — storefront rebuild, a real LLM layer, and a relational migration
+
+Thirteen days from the 2026-05-16 resolution log. The three big movements since: the customer storefront was **rebuilt to production as the V8 Tuscany trattoria**, a **genuine Anthropic-LLM agent layer** landed in the admin, and the **persistence layer began migrating from JSON-blob-in-Postgres to normalized Drizzle relational tables**. None of the four still-open §15 bullets (plaintext password / zero real tests / legacy-board polling / operator-attention-vs-trucks) is fully closed; two move materially.
+
+### §5 UX/UI — this section is now substantially stale and should be re-read
+
+The §5 "Strengths" list described the *pre-V8* storefront and is now out of date:
+
+- "Premium tone done right — **Italian flag stripe + Georgia headings**" → the production storefront is now the **V8 Tuscany theme**: parchment/terracotta/basil/oxblood/ochre tokens (`src/app/themes/homepage/tokens.css`), **Cormorant Garamond + Lora** typography, paper-grain canvas. The flag stripe and Georgia headings are gone.
+- "**Item detail drawer has nutrition bars**, allergen matrix, sourcing provenance" → the nutrition **bars were deliberately removed** for a printed-menu dotted-leader readout, and allergens are now **hand-drawn SVG line icons** (`src/components/location/AllergenIcon.tsx`). The drawer is still rich; the specific "nutrition bars" claim is false now.
+- `CartDrawer.tsx` and `ItemDetailDrawer` still exist at the cited paths — V8 re-themed them in place rather than relocating, so most file references survive.
+
+§5 "Weaknesses" re-verified: **#1 no real food photography — still true** (V8 replaced emoji with serif-on-parchment, but `MenuItem.image` is still empty; this remains the single highest-ROI non-engineering fix). **#2 address autocomplete still commented out — still true.** #4 (no free-delivery callout off-cart), #5 (no social proof), #6 (referral CTA not prominent) — all still true; in fact the referral surface that did ship on `/rewards` uses a `Math.random()` code (see new finding below).
+
+### §6 Revenue Optimization — re-verified, the high-leverage items are unmoved
+
+- **#1 the 4-slot upsell is rigid** → **still true.** `getCartSuggestions` (`src/lib/upsell.ts`) still surfaces a fixed 4-slot panel (espresso → tiramisù → garlic bread → limonata).
+- **#2 no post-order upsell** → **still true.** The confirmation page shows a comeback/FOMO + "Order again" block but no single-tap add-an-item.
+- **#3 tip default is "None"** → **still true.** `TipPicker` presets 0/10/15/20% with "0 — no thanks" preselected.
+- **#7 "weekly usual" outside checkout** → still gated to bundle carts in the drawer (no dedicated page).
+- **#8 combo savings shown as %** → improved: the cart now shows both `−N%` and the PLN amount.
+- **#9 no A/B experiment ledger / #10 no cohort personalization** → cohort/RFM segmentation exists (PR #38) and the simulation reads real-order actuals, but there's still no live experiment ledger and personalized upsell still doesn't read the segments.
+
+### §4 / §1.10 Technology & Data-AI — two structural shifts
+
+- **Real LLM layer (contradicts the "AI is heuristic" framing in §1 and §3).** Beyond the Claude-backed forecast noted in §0.1, there is now an **agentic admin copilot**: `src/lib/ai/gateway.ts` (Anthropic SDK, prompt caching, effort/thinking config), `src/lib/ai/agent.ts` (tool-use loop ≤8 hops, mutating tools gated behind operator-approval preview cards), `src/lib/ai/tools/registry.ts` (role-gated, every execution audit-logged as `actor='claude:${userId}'`), `cost.ts` (daily budget gate). Plus the WhatsApp LLM ordering bot (`src/lib/whatsapp/`) with **real Stripe pay-in-chat** and a concierge/MCP capability layer (`src/lib/concierge/capabilities.ts`). The §1 anomaly detector is still heuristic; the rest of the "AI" framing is now genuinely AI.
+- **Persistence migrating to relational Drizzle.** The §4 "`kv_store` single-row JSONB, `orders.json` becomes O(N) on every write" finding is now **half-resolved**: orders/recipes/ingredients/ingredientProducts/customers/loyalty/KDS-tickets are normalized Drizzle tables read relational-first, with the kv blob kept as a lazy-backfill mirror (`store.ts:19-23`, now 11,105 lines). The O(N) full-document rewrite survives only on the un-migrated long tail (slots fallback, mirrors). The §4 "no row-level transactions for order create" and "self-bootstrapping DDL" findings still stand.
+- **Tests: "zero" is now narrowly false.** Two real `node:test` files exist (`floor.test.ts`, `pace-steering.test.ts`, 11 assertions, passing). But there's **no vitest/jest, no `test` script, no config**, and **no coverage of checkout/refund/slot/RBAC** — the four tests §11 Week-2 asked for are still not written. §15's "zero tests / malpractice" bullet stands in substance.
+
+### §3 Operational — KDS/POS rewrite + new ops surfaces
+
+The KDS and POS were rewritten since the audit. KDS now has **role lenses** (owner Fleet / manager floor / kitchen chef strip), a real **prediction engine** (`kds-prediction.ts`), **pace-steering** (`pace-steering.ts`, POS-facing demand steering), SLA countdown, hotkeys, recall, and live floor-ops 86. A real server-backed **POS Tabs terminal** (`/admin/pos`) now exists (tables, covers, channels, server-authoritative pricing) — partially answering the long-standing "no native POS terminal" gap, though still no offline-first mode, no receipt-printer/cash-drawer driver, and **no coursing** (an interim Starters/Mains/Dessert + kitchen-timing + drag-to-recourse feature was built mid-May, then dropped in the POS/KDS rewrite). New real admin surfaces since 2026-05-21: `/admin/floor` (tables + reservations), `/admin/menu-engineering` (standalone Boston-matrix), `/admin/concierge`, `/admin/crm`, `/admin/currency`, `/admin/languages`, `/admin/regulatory-compliance`, `/admin/alerts` — all wired to real data and all registered in the capabilities ledger.
+
+### Design system — a new doctrine landed (CLAUDE.md Rule #11)
+
+The codebase split into **three independent themes** (Core / Admin / Homepage) under `src/app/themes/{core,admin,homepage}/`, isolated via per-route-group CSS imports + per-theme `next/font` loading, with a `docs/design-system/` tree, an admin Settings **Themes inspector**, and a **Layout tab** of storefront visibility toggles read at runtime by `LayoutGate`. CLAUDE.md gained **Rule #11** ("design-system docs ship with the code"). This is a meaningful maturity step for a multi-surface product and a new axis these audits should track going forward.
+
+### New finding — Rule-#1 (no fake data) regressions on the V8 rewards surface
+
+The §3 "What is theatre" discipline this audit pioneered has a fresh instance to log: the V8 `/rewards` rebuild ships UI for a loyalty **streak** (hardcoded literal "2") and a **weekly challenge** (hardcoded "33% / 1-of-target") in `src/app/(public)/rewards/page.tsx`, and the customer-facing **referral code** is generated with `Math.random()` each render rather than read from the persisted `referral-loop.ts` owner code. These are cosmetic-not-functional surfaces — exactly the pattern CLAUDE.md Rule #1 forbids and this audit's §3 table exists to catch. They belong on the "theatre" list until wired to real data. (Two storefront surfaces, `/review/[orderId]` and `/corporate/[slug]`, also remain on the pre-V8 `italia-*` palette — design-system drift under the new Rule #11.)
+
+### Scorecard movement (§2)
+
+| Dimension | Post 2026-05-21 | 2026-05-29 | Why |
+|---|---:|---:|---|
+| UX / UI sophistication | 7.5 | **8** | V8 trattoria shipped to production — a coherent premium surface, not a mockup. Capped by missing food photography + two non-V8 legacy surfaces + fake rewards values. |
+| Operational sophistication | 8.7 | **8.8** | KDS/POS rewrite + floor/reservations + real LLM ops agent; coursing dropped, offline POS still absent. |
+| Systems maturity | 5 | **5.5** | Relational migration on hot paths + a real (if tiny) test suite + a three-theme design system; plaintext password + thin coverage hold it down. |
+| Investor readiness | 6.5–7 | **7** | Real agentic LLM + relational data layer + real-order-backed simulation; the security/tests floor is unchanged. |
+
+### Net effect on the §15 verdict
+
+The four still-open §15 bullets are unchanged in substance: **plaintext password compare** (still the highest-leverage open security item), **no real test coverage** on payment/refund/RBAC, the **legacy `/kitchen/[slug]` board still polling** (KDS v2 + the new role-lens board are on SSE), and the **operator-attention-vs-trucks** existential risk. What changed is that the "the codebase is no longer the binding constraint" framing is now even more true — the storefront is premium-in-production, the AI is genuinely agentic, and the data layer is migrating to a shape that scales — which sharpens the §15 point that **the remaining bottlenecks are demand generation, security/tests hygiene, and operator focus, not missing features.** The one thing to fix this week is still **hash the admin password**; the one new thing to fix this month is **wire the rewards streak/challenge/referral surfaces to real data** before they become a credibility tell in the next diligence pass.
+
+— *Re-run lens: consolidated outside-in view, thirteen days later — 29 May 2026*

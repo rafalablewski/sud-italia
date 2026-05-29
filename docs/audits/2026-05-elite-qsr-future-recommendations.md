@@ -209,3 +209,37 @@ A second batch of commits today (PR #61 + the recipes sequence) doesn't tick off
 ### Net read on A → A+
 
 The customer-facing flywheel half (items 1–10) is unchanged in spec but cleaner in supporting data. Items 14 + 15 are new and operator-side; both are direct expressions of the elite-QSR pattern (Toast's RFQ, Domino's chain-wide recipe consistency) that the original list under-weighted because the data shape couldn't support them a week ago. With items 1, 2, 4 still the headline "self-improving stack" work, items 12 + 14 + 15 are now the highest-value operator-side adds at the lowest effort.
+
+---
+
+## 2026-05-29 Update — item 13 shipped; a real LLM substrate now underpins item 1; the rest hold
+
+Eight days on. The big movement is **item 13 — the V8 brand-direction commitment is no longer pending; it shipped to production** — and the arrival of a genuine Anthropic-LLM layer that changes the build path for item 1. The ten original items are otherwise unchanged in status; one new Rule-#1 regression surfaced on the retention surface that this doc's flywheel feeds.
+
+**Item 13 — Brand direction commitment → ✅ SHIPPED.** The V8 Tuscany trattoria look is the live storefront, not a `/mockups/cart.html` proposal. Parchment/terracotta/basil/oxblood/ochre tokens are in `src/app/themes/homepage/tokens.css`; Cormorant Garamond + Lora are loaded per-route; the bundle cards, cart drawer, menu cards, and rewards page are all rebuilt on it. This was the "0 days to decide, 1 sprint to ship" item — both happened. Its downstream effects on items 6 and 10 (how the cart-upsell sequence reads on the page) are now live questions, not hypotheticals.
+
+**Item 1 — Per-customer ML upsell scoring.** Still rules-based in `getCartSuggestions` + `scorePairing` (`src/lib/upsell.ts`, now a 1,245-line composite-weight engine). **But the substrate changed twice over:** (a) RFM segmentation shipped earlier (PR #38), and (b) a real **agentic LLM layer now exists** — `src/lib/ai/gateway.ts` (Anthropic SDK with prompt caching), `src/lib/ai/agent.ts` (tool-use loop, ≤8 hops, operator-approval gates), `src/lib/ai/tools/` (role-gated, audit-logged tools incl. `query-customers`, `query-orders`, `analytics`). The remaining work is unchanged in *spec* (wire the segment bucket + history features into the ranker, ship as an A/B variant) but the inference plumbing the original estimate assumed you'd build from scratch is now partly in place. Sprint estimate holds; the build is cheaper.
+
+**Items 2–12 — re-verified status:**
+
+| # | Item | Status 2026-05-29 |
+|---|---|---|
+| 2 | Voice-of-customer feedback on bundle apply | ⏳ Still not shipped. `FeedbackSurvey` collects per-item ratings post-order, but there is no thumbs-up/down on the *bundle* and `BundleAnalyticsCard` doesn't surface it. |
+| 3 | Refund × bundle correlation | 🟡 Unchanged — `OrderRefund.reasonCode` enum + admin reason-picker live; the analytics **join** (refund-rate per bundle / per A/B variant) still not rendered. The cost-snapshot prerequisite flagged in Update #2 still applies. |
+| 4 | Stripe Subscription auto-rebill | 🟡 Unchanged — `/admin/scheduled-bundles` queue + approval is live; Stripe Subscription create + webhook + payment-failure auto-pause still ⏳. (Note: the WhatsApp channel now has real Stripe pay-in-chat via `confirm_and_pay`, but that's one-shot checkout, not recurring billing.) |
+| 5 | Slot-capacity × bundle pivot | ⏳ Still not shipped. |
+| 6 | "Bundle is the path" — hide cross-sell chips when bundle showable | ⏳ **Still not shipped — re-confirmed by source.** In the V8 cart drawer the combo banner is suppressed when a bundle is showable, but `CartUpsell` chips (`CartDrawer.tsx:645`) still render alongside `BundleLadder` (`:617`). Half-day fix; still a quick win, now on the V8 surface. |
+| 7 | Per-day-of-week bundle conversion | 🟡 Unchanged — `perDay` computed server-side; the client interface + `BundleAnalyticsCard` panel still not bound. |
+| 8 | Drone/robot delivery × bundle weight | ⏳ Out of scope; still 2027+. |
+| 9 | Continuous elasticity loop | ⏳ Still not shipped. The simulation's sensitivity tornado is still the manual proxy; now it runs over **real-order actuals** (`computeSimulationActuals`, `store.ts:10336`) rather than a typed baseline, which sharpens the manual read — but the auto-scheduler/bandit is still 1–2 sprints. |
+| 10 | Refresh the customer-side promo overload | ⏳ Still not shipped — re-confirmed. The V8 cart still stacks TodBanner + loyalty line + TierPerkBanner + BundleLadder + ComboDealBanner + CartUpsell + DeliveryProgress + fulfillment selector + slot picker + TipPicker + LoyaltyEarnPreview + (bundle-gated) weekly-usual opt-in + pay bar. The rebuild re-themed the stack; it did not thin it. The "one algorithmically-chosen card" still isn't built. |
+| 11 | Wire simulation bundle-economics → live ladder | ⏳ Unchanged. Simulation reads, doesn't write to the ladder. |
+| 12 | Cost-ledger-driven bundle gating | 🟡 Unchanged — half-day effort; the cost ledger is now relational + distributor-specific, keeping the estimate. |
+| 14 | Per-distributor RFQ workflow | ⏳ Storage still correct (now relational `ingredientProducts`); workflow UI still to build. |
+| 15 | Chain-wide recipe + yield-test entity | ⏳ Chain-wide recipes confirmed live (base-slug keyed, relational); yield-test capture UI still to build. |
+
+**New regression on the flywheel's retention surface.** The V8 `/rewards` rebuild ships UI for two of this doc's "self-improving" signals — a **streak** and a **weekly challenge** — but both are **hardcoded display values** (streak literal "2"; challenge bar literal "33% / 1-of-target" in `src/app/(public)/rewards/page.tsx`), and the referral code shown to the customer is generated with `Math.random()` each render rather than read from the persisted `referral-loop.ts` owner code. These are exactly the *fake-not-functional* anti-patterns CLAUDE.md Rule #1 forbids, on the very surface items 2/4 want to instrument. They should be wired to real data before any of the feedback-loop items (2, 3) build on top of them — otherwise the flywheel measures fiction.
+
+**Net read on A → A+.** Item 13 closing (V8 live) and the real LLM layer landing both move the operator-side substrate; the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps an elite operator would point at, now on a more premium surface. The headline self-improving-stack work (1, 2, 4) is still the right Q3 priority, and the new precondition is "make the rewards streak/challenge/referral surfaces real before instrumenting them."
+
+— *Re-run lens: same planning audit, fourteen days later — 29 May 2026*
