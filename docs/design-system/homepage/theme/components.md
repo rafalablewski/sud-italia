@@ -968,13 +968,70 @@ count, and admin config.
 
 ## Loyalty components
 
-### `<LoyaltyCard />` — `src/components/loyalty/LoyaltyCard.tsx`
+All V8 as of Step 15. The `/rewards` surface lives at
+`src/app/(public)/rewards/page.tsx`; see
+[`../pages/loyalty.md`](../pages/loyalty.md) for the full
+section-by-section contract. The component-level entries below cover
+the rendering details.
 
-The rewards-page centrepiece.
+### Rewards page sections — `.v8-rewards-*`
 
-- `pub-card` styling, extra-generous 32px interior padding.
-- Tier badge top, balance numeral 36px Lora 700, progress bar
-  underneath, perks list at the bottom.
+The page renders three internal sub-components inline:
+
+- `<SignInSection />` — unauthenticated state. Basil-tinted star mark
+  + italic Cormorant *Soci e amici* headline + phone input with +48
+  prefix capsule + terracotta "Sign in" CTA. A "Nuovo qui?" card
+  fades in below when the phone isn't recognised, with a basil
+  "Join · iscriviti" CTA for phone-only auto-enrolment.
+- `<ProfileSection />` — paper card with editable First name / Last
+  name / Nickname / Phone fields. The Edit affordance flips it into
+  a form with parchment-cream `.v8-rewards-input`s + terracotta
+  "Save · salva" CTA.
+- `<LoyaltyCardSection />` — paper card with a parchment-deep dashed
+  inner card holding a 5×5 SVG "QR" placeholder (`.v8-rewards-loyalty-qr`
+  + "SI" center monogram) + italic Lora "Show at pickup · mostra al
+  ritiro" + an espresso "Add to Apple Wallet" disabled CTA with an
+  ochre "Soon" ribbon.
+
+### Tier card — `.v8-rewards-tier`
+
+The visual centrepiece + permanent header. Espresso paper card with
+parchment text, ochre/terracotta radial washes (via `::before` /
+`::after`), top row (44px avatar + nickname + phone + sign-out), body
+row (56px italic Cormorant ochre tabular point count + tier pill +
+multiplier), tier-progress hairline rail with an ochre→terracotta-soft
+gradient fill, and a 3-cell stats row (Orders · Multiplier · Week
+streak). Platinum collapses the progress section.
+
+### Tabs — `.v8-rewards-tabs` / `.v8-rewards-tab`
+
+Horizontal-scroll pill row. Each tab carries italic Cormorant label +
+italic Lora Italian sublabel (`Overview · panoramica`,
+`Rewards · premi`, `Achievements · traguardi`, `Offers · offerte`).
+Active tab flips to terracotta fill + parchment text with a soft drop.
+
+### `<FamilyWalletPanel />` — `src/components/loyalty/FamilyWalletPanel.tsx`
+
+V8 family wallet panel. `.v8-rewards-wallet` paper card with three
+states: no wallet (basil "Create family wallet · crea famiglia" CTA),
+pending invite (ochre confirm-code panel with italic Cormorant
+*Invito in attesa*), active (2-up stat tiles for Pool earned ·
+accumulati + Available · disponibili, members list with crown glyph
+for the head + remove chip for head-only, terracotta italic
+"Invite · invita" form, member-only "Leave this wallet" link).
+Every business behaviour preserved verbatim
+(`/api/customer/wallet/create / invite / confirm / remove / leave`,
+dev-mode invite-code surfacing, refresh via `identify()` after every
+mutation).
+
+### `LoyaltyCard.tsx` — orphaned
+
+`src/components/loyalty/LoyaltyCard.tsx` is dead code. It used to
+be the rewards-page centrepiece but `LoyaltySection.tsx` (the
+location-page loyalty pitch) explicitly notes it was replaced
+(`// previous version rendered the interactive <LoyaltyCard />`).
+`/rewards` renders an inline `<LoyaltyCardSection />` instead.
+Queued for the Step H orphan-cleanup pass.
 
 ## Order-confirmation components
 
@@ -1100,6 +1157,12 @@ ones with confidence.
 - `src/components/location/MenuItemImage.tsx` — pre-V8 thumbnail
   with category-gradient emoji fallback. V8 item card inlines the
   per-category SVG sketch in `.v8-mi-illus` instead.
+- `src/components/loyalty/LoyaltyCard.tsx` — used to be the rewards-
+  page centrepiece. As of Step 15 `/rewards` renders an inline
+  `<LoyaltyCardSection />` instead; `LoyaltySection.tsx` (the
+  location-page loyalty pitch) also explicitly notes it was
+  replaced. Last documented importer was the old `/rewards` page;
+  unreferenced now.
 
 Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
 before removing — admin-facing surfaces (operator previews) or

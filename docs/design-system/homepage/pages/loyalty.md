@@ -3,105 +3,198 @@
 ← back to [Homepage README](../README.md)
 
 The customer-facing loyalty surface — wallet, tier ladder, redemption,
-challenges, referral. Lives at `/rewards` in
+challenges, referral, family wallet. Lives at `/rewards` in
 `src/app/(public)/rewards/page.tsx`. Reads from `useCustomer()` for
 identity + points; reads `TIER_CONFIG` / `TIER_THRESHOLDS` / `REWARDS`
 from `src/lib/loyalty.ts` as the source of truth.
+
+V8 since Step 15 — all selectors live under `.v8-rewards-*` in
+`themes/homepage/index.css`.
 
 ## The page contract
 
 The rewards page is the **value-of-the-relationship surface**. It
 answers three customer questions:
 
-1. **What am I getting for being a regular?** (Tier + perks card.)
+1. **What am I getting for being a regular?** (Tier card + perks.)
 2. **What's the next thing I can redeem?** (Rewards grid with points
    required vs balance.)
-3. **How do I earn more?** (Challenges + referral.)
+3. **How do I earn more?** (Challenges + referral + family wallet.)
 
 It is not a marketing surface. The customer is already opted in;
 selling them the programme again is condescending.
 
 ## Section-by-section
 
-### Unauthenticated state (no `customer.points`)
+### Sign-in screen (unauthenticated)
 
 When `useCustomer()` returns no record yet — typically a visitor who
-landed here from a marketing link without having ordered.
+landed here from a marketing link, a footer link, or the cart drawer's
+loyalty-invite chip.
 
-- **Headline:** "Earn rewards on every order" (Cormorant Garamond 700, 30px).
-- **Sub-line:** "1 point per złoty. Free pizzas, drinks, and
-  surprises. No app needed — just your phone number."
-- **The "How points attach" explainer card** (rendered by
-  `LoyaltyCard.tsx`):
-  - "1 pt / 1 PLN" — earn rate.
-  - "Earn points on every order" — clarity.
-  - The tier ladder preview (Bronze → Silver → Gold → Platinum) as
-    badges, no specific thresholds yet (avoids overwhelming a
-    pre-customer).
-- **Primary CTA:** `Start ordering` → links to the landing's
-  locations grid. No "Sign up" — there's nothing to sign up *to*.
+- `.v8-rewards-signin-mark` — basil-tinted 88px circle with a filled
+  Star SVG.
+- `.v8-rewards-signin-h1` — italic Cormorant 38px *Soci e amici*
+  headline (terracotta italic emphasis on the Italian phrase).
+- `.v8-rewards-signin-sub` — italic Cormorant 17px sub-line:
+  "Sud Italia Rewards — earn points, unlock perks, share with the
+  famiglia."
+- `.v8-rewards-signin-row` — phone input row: `.v8-rewards-signin-prefix`
+  +48 capsule + parchment-cream `.v8-rewards-signin-input` + terracotta
+  italic `.v8-rewards-signin-cta` "Sign in" button.
+- When the phone isn't recognised after 300ms, `.v8-rewards-signin-card`
+  fades in with the italic Cormorant "Nuovo qui?" prompt and a basil
+  `Join · iscriviti` CTA — phone-only auto-enrolment, no password.
+- `.v8-rewards-signin-hint` — italic Lora muted "Just your phone
+  number — no password, no email required."
 
-### Authenticated state (`customer.points >= 0`)
+### Dashboard (authenticated)
 
-The four-block layout.
+The signed-in surface is the tier card + 4 tabs (Overview · panoramica
+/ Rewards · premi / Achievements · traguardi / Offers · offerte).
 
-#### Tier + perks card
+#### Tier card — `.v8-rewards-tier`
 
-The visual centrepiece.
+The visual centrepiece + permanent header across all four tabs.
 
-- **Tier badge** (Bronze / Silver / Gold / Platinum) at the top —
-  uses `TIER_CONFIG[tier]` for label + colour. Bronze and Gold both
-  read as warm metallics; the tier *label* disambiguates (matches the
-  admin loyalty section's tone choice).
-- **Balance:** "{points} pts" — Lora 700, 36px, tabular, with the
-  unit at 14px trailing.
-- **Progress to next tier:** a horizontal progress bar with the copy
-  `{toNext} pts to {nextTierLabel}` — uses `pointsToNextTier()`.
-- **Tier perks list:** 3–5 perks (free delivery, birthday treat,
-  priority slots, surprise tastings) — read from `TIER_CONFIG[tier].perks`.
-- **Platinum** has no `nextTier` — progress bar hides; "You're at
-  the top — enjoy the platinum perks" replaces the progress copy.
+- **Espresso paper card** (`#3D2817` background with parchment text +
+  ochre accents + ochre/terracotta radial washes via the `::before`
+  and `::after` pseudo-elements). The **one** dark surface on the
+  storefront besides the LiveTicker — used here to mark the "card"
+  metaphor as something the customer carries.
+- **Top row** (`.v8-rewards-tier-top`): 44px round avatar circle
+  (rgba parchment fill, ochre-light user glyph) + italic Cormorant
+  nickname or name + tabular phone + italic ghost "Sign out" link
+  in the top-right.
+- **Body** (`.v8-rewards-tier-body`):
+  - Left: 56px italic Cormorant ochre point count (tabular), italic
+    Lora "punti — tier points earned" sublabel, italic Lora "Available
+    to spend: {N} pts" line with the spendable value in Cormorant 600.
+  - Right: `.v8-rewards-tier-pill` ochre rounded badge with the
+    crown SVG + tier name + italic "famiglia" suffix + italic
+    Lora "Nx multiplier" line beneath.
+- **Progress to next tier** (`.v8-rewards-tier-progress`): hairline
+  rail with an ochre→terracotta gradient fill. Labels above the rail:
+  current tier on the left, italic Cormorant "{toNext} pts to {next}"
+  on the right.
+- **Stats row** (`.v8-rewards-tier-stats`) — 3-cell grid of
+  semi-transparent stat tiles (Orders / Multiplier / Week streak).
+- Platinum collapses the progress section ("at the top" implicit).
 
-#### Rewards grid — "Redeem your points"
+#### Tabs — `.v8-rewards-tabs`
 
-- Cards from `REWARDS`, each: title, description, points required,
-  redeem button.
-- **Affordability state per reward:**
-  - Affordable (`balance >= cost`): full colour, `Redeem` button
-    primary.
-  - Within reach (`balance >= cost * 0.7`): full colour, button shows
-    `{cost - balance} pts to go`.
-  - Distant (`balance < cost * 0.7`): muted, button shows
-    `{cost} pts`.
-- **Redemption flow:** confirmation dialog (portalled, per the admin
-  + storefront portal rule), then API call, then a celebratory
-  `delivery-unlock` keyframe on the affected card and a toast.
-- **Categories:** items (free pizza / drink / dessert), experiences
-  (chef tasting), perks (skip-the-line, named drink). Cards are
-  not paginated — the full list fits.
+Horizontal-scroll pill row. Each `.v8-rewards-tab` is a parchment pill
+with italic Cormorant label + italic Lora Italian sublabel
+(`Overview · panoramica`, `Rewards · premi`, `Achievements · traguardi`,
+`Offers · offerte`). Active tab flips to terracotta fill + parchment
+text with a soft drop-shadow.
 
-#### Challenges section
+#### Overview tab
 
-The active-engagement layer.
+The "what's going on with my account" view.
 
-- Active challenges (read from a `/api/customer/challenges` endpoint,
-  or `loyaltySettings.challenges`): "Order 3 times this month",
-  "Try a new pizza", "Bring a friend".
-- Each challenge: title, progress (n / target), points reward, expiry.
-- Progress visual: the same hairline progress bar pattern as the tier
-  ladder.
-- **Earned challenges** show as completed with the points already
-  credited; visible for a week then archived.
+- `<FamilyWalletPanel />` (see below).
+- Two-column grid (collapses to 1 on mobile):
+  - **Profile card** (`.v8-rewards-card` with `<User />` glyph) —
+    2-col field grid (First name / Last name / Nickname / Phone). The
+    Edit link flips it into a form with parchment-cream inputs and a
+    terracotta "Save · salva" CTA.
+  - **Loyalty card** (`.v8-rewards-card` with `<Sparkles />`) —
+    parchment-deep dashed card with a 5×5 SVG QR placeholder
+    (`.v8-rewards-loyalty-qr` + center "SI" monogram) + italic Lora
+    "Show at pickup · mostra al ritiro" + an espresso "Add to Apple
+    Wallet" disabled CTA with an ochre "Soon" ribbon.
+- `.v8-rewards-streak` — terracotta-ochre tinted card with a
+  flame-gradient icon tile + italic Cormorant "2-week streak · due
+  settimane" + italic Lora "Order again this week to keep it going.
+  **3 weeks = +30 bonus pts.**"
+- **Weekly challenges** (`.v8-rewards-challenges`) — 3-up grid of
+  parchment cards (1-up on mobile). Each `.v8-rewards-challenge` has
+  the italic Cormorant title + oxblood clock chip ("Nd"), italic
+  Lora description, terracotta progress rail
+  (`.v8-rewards-challenge-rail` + `-fill`), and a foot row with
+  "n / N" on the left + ochre "+N pts" reward on the right.
+- **Referral card** (`.v8-rewards-referral`) — basil-tinted paper
+  card with italic Cormorant "Refer friends · invita gli amici"
+  headline (oxblood italic accent), the dashed-border
+  `.v8-rewards-referral-code` (Cormorant 22px tracking 2.8px), a
+  copy chip that flips basil when clicked, and a terracotta italic
+  "Share with friends · condividi" CTA.
+- **Tier roadmap** (`.v8-rewards-roadmap`) — 4-up grid of
+  `.v8-rewards-tier-tile` paper cards. Active tier gets the
+  ochre-fill name pill + "Current · attuale" green sublabel + the
+  ochre→terracotta-soft tile background. Locked tiers dim to 55%.
+  Each tile lists the multiplier, the unlock threshold, and the
+  tier's perks with basil check glyphs.
 
-#### Referral block
+#### Rewards tab
 
-- "Share your link, earn together" headline.
-- Personal referral link (`/r/{code}`) with a copy-to-clipboard
-  button + native share button.
-- The reward: "You and your friend both earn N points on their first
-  order".
-- **Earned referrals counter** at the bottom: "{count} friends joined
-  through you".
+- `.v8-rewards-balance` — ochre paper hero card with a 38px italic
+  Cormorant point count + spendable-balance line.
+- `.v8-rewards-grid` — 2-up paper grid of redeemable rewards. Each
+  `.v8-rewards-reward` has the ticket-icon ochre tile + tabular cost
+  + italic Cormorant name + italic Lora description. Affordable
+  rewards get an ochre `Redeem now · riscatta` CTA; locked rewards
+  collapse to a muted "Need N more pts" line with a lock glyph + the
+  `.is-locked` opacity tweak.
+- Affordability is read off `customer.spendablePoints`; the redeem
+  CTA POSTs to `/api/customer/wallet/redeem` then re-`identify()`s to
+  pull the new balance.
+
+#### Achievements tab
+
+- Two `.v8-rewards-section-title` blocks: **Unlocked · conquistati (N)**
+  and **Locked · bloccati (N)**.
+- `.v8-rewards-achievements` 2-up grid of `.v8-rewards-achievement`
+  rows. Unlocked rows are ochre-tinted with the full-colour emoji
+  glyph + name + description + ochre "+N pts earned" badge. Locked
+  rows flip to `.is-locked`: parchment-deep with the emoji
+  desaturated 70% and the points line reading "+N pts" (still
+  earnable).
+
+#### Offers tab
+
+- **Combo deals** (`.v8-rewards-combos`) — 3-up grid of paper cards.
+  Each `.v8-rewards-combo` has the italic Cormorant deal name + the
+  ochre `−12%` chip + italic Lora description + italic
+  category-list "Add X + Y + Z — applies automatically."
+- **Tier perks** (`.v8-rewards-perks-card`) — paper card with the
+  current tier badge + per-perk basil check rows + a dashed
+  hairline "Reach {next}" block listing the next-tier perks as
+  muted locked rows.
+- **Refer-for-discount** (`.v8-rewards-refer-card`) — basil-ochre
+  tinted hero card with an oxblood heart glyph in a parchment
+  circle, italic Cormorant "Give X PLN, get Y pts" headline (oxblood
+  italic emphasis), italic Lora sub, terracotta "Share code ·
+  condividi" CTA.
+
+### Family wallet — `<FamilyWalletPanel />`
+
+Lives at the top of the Overview tab. Three states (all under
+`.v8-rewards-wallet`):
+
+- **No wallet** — basil-tinted "Create family wallet · crea
+  famiglia" CTA. POSTs to `/api/customer/wallet/create`.
+- **Wallet exists, myStatus = "pending"** — ochre confirm-code
+  panel: italic Cormorant "Invito in attesa — you have a pending
+  invite" + 6-digit input + espresso italic "Confirm · conferma"
+  CTA. POSTs to `/api/customer/wallet/confirm`.
+- **Wallet exists, myStatus = "active"** —
+  - 2-up stats: `.v8-rewards-wallet-stat` "Pool earned · accumulati"
+    (ochre italic) + "Available · disponibili" (espresso italic).
+  - Members list — each `.v8-rewards-wallet-member` shows the crown
+    glyph for the head, the phone in tabular Cormorant, a "pending"
+    chip when applicable, the contributed-points value on the right,
+    and (head only) an oxblood-on-hover remove chip with the
+    UserMinus icon.
+  - Head sees `.v8-rewards-wallet-invite` — a 6-digit phone input +
+    terracotta italic "Invite · invita" CTA. POSTs to
+    `/api/customer/wallet/invite`.
+  - Members see a quiet underline "Leave this wallet · lascia" link.
+
+Every business behaviour is preserved verbatim (create / invite /
+confirm / remove / leave APIs, dev-mode invite-code surfacing,
+refresh via `identify()` after every mutation).
 
 ## The rules unique to the loyalty page
 
@@ -123,10 +216,13 @@ The active-engagement layer.
 
 ## Mobile
 
-- Single column. Tier card collapses to a compact summary; tap to
-  expand the perks list.
-- Rewards grid is 1 column at `< 480px`, 2 at tablet.
-- Bottom-sticky `Share my link` button when on the referral block.
+- Single column. Tabs scroll horizontally; the tier card stacks the
+  points and the badge vertically below ~640px (handled by the flex
+  layout — no media query needed).
+- Two-column Overview blocks (Profile + Loyalty card) collapse to
+  one column under 768px.
+- Rewards / Combos / Roadmap grids are 1-up at base, 2-up or 3-up
+  at ≥640px.
 
 ## What loyalty is not
 
@@ -136,8 +232,8 @@ The active-engagement layer.
 - It is **not** account management. There's no account to manage —
   identity is the cookie, history is the order log.
 - It is **not** a tier-comparison shopping experience. The customer
-  sees their own tier + the next one; the full tier matrix isn't a
-  marketing artefact here.
+  sees their own tier + the next one; the full tier matrix is
+  reference, not a marketing artefact.
 - It is **not** a place to upsell. Points + tiers are the upsell, in
   the form of "stay engaged → unlock perks". Direct CTAs to order
   more are out of place.

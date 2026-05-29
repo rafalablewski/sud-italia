@@ -12,6 +12,18 @@ function formatInvitePhone(raw: string): string {
   return raw.trim();
 }
 
+/**
+ * V8 family wallet panel. Lives at the top of the /rewards Overview
+ * tab. Three states:
+ *   - No wallet → basil-tinted "Create family wallet" CTA.
+ *   - Wallet exists, myStatus = "pending" → ochre confirm-code panel.
+ *   - Wallet exists, myStatus = "active" → pool / spendable stats grid
+ *     + member roster + invite (head only) / leave (member only).
+ *
+ * Every business behaviour stays: /api/customer/wallet/create / invite
+ * / confirm / remove / leave, dev-mode invite code surfacing, refresh
+ * via identify() after every mutation.
+ */
 export function FamilyWalletPanel() {
   const { customer, identify } = useCustomer();
   const [inviteInput, setInviteInput] = useState("");
@@ -145,38 +157,30 @@ export function FamilyWalletPanel() {
   if (!customer) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <Users className="h-5 w-5 text-italia-gold" />
-        <h2 className="font-heading font-bold text-lg text-italia-dark">
-          Family wallet
+    <div className="v8-rewards-wallet">
+      <div className="v8-rewards-card-head" style={{ marginBottom: 4 }}>
+        <h2 className="v8-rewards-card-title">
+          <Users className="h-5 w-5" aria-hidden />
+          Family wallet <span className="v8-rewards-section-it">· famiglia condivisa</span>
         </h2>
       </div>
-      <p className="text-sm text-italia-gray mb-4">
-        Up to {WALLET_MAX_PHONES} numbers share one points pool. Each person checks out with their own
-        phone; points go to the pool after they confirm the invite.
+      <p className="v8-rewards-wallet-sub">
+        Up to {WALLET_MAX_PHONES} numbers share one points pool. Each person checks out with their own phone; points join the pool once they confirm the invite.
       </p>
 
       {!wallet && (
-        <div className="space-y-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={handleCreate}
-            className="w-full px-4 py-3 rounded-xl bg-italia-gold text-white font-semibold hover:bg-italia-gold-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Create family wallet
-          </button>
-        </div>
+        <button type="button" disabled={busy} onClick={handleCreate} className="v8-rewards-wallet-create">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Create family wallet · crea famiglia
+        </button>
       )}
 
       {wallet && wallet.myStatus === "pending" && (
-        <div className="space-y-3 rounded-xl border border-amber-200/80 bg-amber-50/90 p-4">
-          <p className="text-sm font-medium text-italia-dark">
-            You have a pending invite. Enter the 6-digit code you received.
+        <div className="v8-rewards-wallet-pending">
+          <p>
+            <em>Invito in attesa</em> — you have a pending invite. Enter the 6-digit code you received.
           </p>
-          <div className="flex gap-2">
+          <div className="v8-rewards-wallet-confirm-row">
             <input
               type="text"
               inputMode="numeric"
@@ -184,95 +188,84 @@ export function FamilyWalletPanel() {
               placeholder="Code"
               value={confirmCode}
               onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, ""))}
-              className="pub-input flex-1 min-h-[44px] text-base"
+              className="v8-rewards-input"
+              style={{ flex: 1, fontFamily: "var(--font-heading)", letterSpacing: 4 }}
             />
             <button
               type="button"
               disabled={busy || confirmCode.length < 4}
               onClick={handleConfirm}
-              className="px-4 py-2 rounded-xl bg-italia-dark text-white font-semibold text-sm disabled:opacity-40"
+              className="v8-rewards-wallet-confirm-cta"
             >
-              Confirm
+              Confirm · conferma
             </button>
           </div>
         </div>
       )}
 
       {wallet && wallet.myStatus === "active" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 text-center text-sm">
-            <div className="rounded-xl bg-italia-cream/80 p-3">
-              <p className="text-italia-gray text-xs">Pool earned</p>
-              <p className="font-heading font-bold text-italia-gold text-lg">
-                {wallet.poolEarned.toLocaleString()} pts
-              </p>
+        <>
+          <div className="v8-rewards-wallet-stats">
+            <div className="v8-rewards-wallet-stat">
+              <div className="v8-rewards-wallet-stat-label">Pool earned · accumulati</div>
+              <div className="v8-rewards-wallet-stat-num is-ochre">{wallet.poolEarned.toLocaleString()} pts</div>
             </div>
-            <div className="rounded-xl bg-italia-cream/80 p-3">
-              <p className="text-italia-gray text-xs">Available to spend</p>
-              <p className="font-heading font-bold text-italia-dark text-lg">
-                {wallet.spendablePool.toLocaleString()} pts
-              </p>
+            <div className="v8-rewards-wallet-stat">
+              <div className="v8-rewards-wallet-stat-label">Available · disponibili</div>
+              <div className="v8-rewards-wallet-stat-num is-espresso">{wallet.spendablePool.toLocaleString()} pts</div>
             </div>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold text-italia-gray mb-2">Members</p>
-            <ul className="space-y-2">
-              {wallet.members.map((m) => (
-                <li
-                  key={m.phone}
-                  className="flex items-center justify-between gap-2 text-sm rounded-lg border border-gray-100 px-3 py-2"
-                >
-                  <span className="flex items-center gap-2 min-w-0">
-                    {m.isHead ? (
-                      <span className="flex-shrink-0" title="Wallet owner">
-                        <Crown className="h-4 w-4 text-italia-gold" aria-hidden />
-                      </span>
-                    ) : null}
-                    <span className="truncate font-mono text-xs">{m.phone}</span>
-                    {m.status === "pending" ? (
-                      <span className="text-[10px] uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
-                        pending
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-italia-gold-dark font-semibold flex-shrink-0">
-                    {m.contributedPoints.toLocaleString()} pts
-                  </span>
-                  {wallet.role === "head" && !m.isHead ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleRemove(m.phone)}
-                      className="p-1.5 rounded-lg text-italia-gray hover:bg-red-50 hover:text-italia-red"
-                      aria-label="Remove member"
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+          <div className="v8-rewards-wallet-members-label">
+            Members · <em style={{ fontFamily: "var(--font-body)", fontWeight: 400 }}>membri</em>
           </div>
+          {wallet.members.map((m) => (
+            <div key={m.phone} className="v8-rewards-wallet-member">
+              <div className="v8-rewards-wallet-member-left">
+                {m.isHead && <Crown className="h-4 w-4" aria-label="Wallet owner" />}
+                <span className="v8-rewards-wallet-member-phone">{m.phone}</span>
+                {m.status === "pending" && (
+                  <span className="v8-rewards-wallet-member-pending">pending</span>
+                )}
+              </div>
+              <span className="v8-rewards-wallet-member-pts">
+                {m.contributedPoints.toLocaleString()} pts
+              </span>
+              {wallet.role === "head" && !m.isHead && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleRemove(m.phone)}
+                  className="v8-rewards-wallet-member-remove"
+                  aria-label="Remove member"
+                >
+                  <UserMinus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
 
           {wallet.role === "head" && wallet.members.length < WALLET_MAX_PHONES && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-italia-gray">Invite another number</p>
-              <div className="flex gap-2">
+            <div className="v8-rewards-wallet-invite">
+              <div className="v8-rewards-wallet-invite-label">
+                Invite another number · invita un&apos;altra persona
+              </div>
+              <div className="v8-rewards-wallet-invite-row">
                 <input
                   type="tel"
                   placeholder="+48 …"
                   value={inviteInput}
                   onChange={(e) => setInviteInput(e.target.value)}
-                  className="pub-input flex-1 min-h-[44px] text-sm"
+                  className="v8-rewards-input"
+                  style={{ flex: 1 }}
                 />
                 <button
                   type="button"
                   disabled={busy}
                   onClick={handleInvite}
-                  className="px-4 py-2 rounded-xl bg-italia-red text-white font-semibold text-sm disabled:opacity-40"
+                  className="v8-rewards-wallet-invite-cta"
                 >
-                  Invite
+                  Invite · invita
                 </button>
               </div>
             </div>
@@ -283,19 +276,15 @@ export function FamilyWalletPanel() {
               type="button"
               disabled={busy}
               onClick={handleLeave}
-              className="text-sm text-italia-gray underline hover:text-italia-red"
+              className="v8-rewards-wallet-leave"
             >
-              Leave this wallet
+              Leave this wallet · lascia
             </button>
           )}
-        </div>
+        </>
       )}
 
-      {msg && (
-        <p className="mt-3 text-sm text-italia-dark bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-          {msg}
-        </p>
-      )}
+      {msg && <p className="v8-rewards-wallet-msg">{msg}</p>}
     </div>
   );
 }
