@@ -28,8 +28,7 @@ import { Star, Clock, Check, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { SlotPicker } from "./SlotPicker";
-import { krakowMenu } from "@/data/menus/krakow";
-import { warszawaMenu } from "@/data/menus/warszawa";
+import { getMenu } from "@/data/menus";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
@@ -348,15 +347,13 @@ export function CartDrawer() {
     }
   }, [loyaltyCustomer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Resolve menu items — use prop if available, otherwise look up by location
+  // Resolve menu items — use prop if available, otherwise fall back to
+  // the seed catalogue for the cart's location. A new active truck is
+  // picked up automatically via getMenu(slug) instead of a hardcoded
+  // {krakow, warszawa} map.
   const resolvedMenuItems = useMemo(() => {
     if (allMenuItems.length > 0) return allMenuItems;
-    // Fallback: load from hardcoded menus based on cart's location
-    const menus: Record<string, import("@/data/types").MenuItem[]> = {
-      krakow: krakowMenu,
-      warszawa: warszawaMenu,
-    };
-    return locationSlug ? menus[locationSlug] || [] : [];
+    return locationSlug ? getMenu(locationSlug) : [];
   }, [allMenuItems, locationSlug]);
 
   // Cross-sell suggestions — always have menu items to work with now.

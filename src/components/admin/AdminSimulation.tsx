@@ -34,7 +34,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { krakowMenu } from "@/data/menus/krakow";
+import { getMenu } from "@/data/menus";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,
@@ -15535,8 +15535,10 @@ function computeSimulatedMenuEngineering(
     panini: monthlyOrders * 0.04, // light tail
   };
 
-  // Group menu items by category, separating delivery-only.
-  const available = krakowMenu.filter((item) => item.available);
+  // Group menu items by category, separating delivery-only. The simulation
+  // is pinned to the Kraków catalogue (the legacy demo baseline); switching
+  // trucks is a separate feature.
+  const available = getMenu("krakow").filter((item) => item.available);
   const dineInItems = available.filter((item) => !item.deliveryOnly);
   const deliveryItems = available.filter((item) => item.deliveryOnly);
 
