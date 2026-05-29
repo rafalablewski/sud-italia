@@ -102,6 +102,12 @@ Re-running the audit with a deeper look at modules underweighted in Phase 0 turn
 | `0132d53` | Phase 4a–c — loyalty: single source of truth via settings, helpers take ladder as param (#1–#4, P0) |
 | `61e8357` | Phase 4d–e — admin tier-label input + capabilities + design-system docs |
 | `e52fb9a` | Phase 7 — Footer contact + social links via settings, constants deleted (#6, #7) |
+| `4743fa7` | initial close-out (later extended by Phase 8 + Option 3) |
+| `9e15e42` | Phase 8a — `REFERRAL_REWARD` const → settings; dead `ReferralCard.tsx` deleted (#18, P0) |
+| `59d9b0e` | Phase 8b — delivery fee threaded through `AppSettings.deliveryFee` (#19, P0) |
+| `3c3d6bd` | Phase 8c — dead `SPEED_GUARANTEE` const removed (#20) |
+| `25deb24` | Option 3 — eslint `no-restricted-imports` rule + `tests/audit-regression.test.ts` (`npm test`) + 3 catches on first run (#21) |
+| `2a879ea` | Phase 8 doc backfill — capabilities (Referral codes, Free-delivery bar) + checkout.md Rule #11 |
 
 **What the audit achieved.** Every customer-visible surface that the operator can change through `/admin/*` now reflects that change without a deploy. The silent-drift class of bug — two sources of truth disagreeing — is gone in the audited domains (loyalty, locations, contact, fiscal, menu overrides, currency display). All theme/design-system docs touched were brought into sync (Rule #11). The capabilities ledger was refreshed where a capability's state changed (Rule #9).
 
