@@ -9,7 +9,7 @@ import {
   updateOrderStatus,
   type WaSession,
 } from "@/lib/store";
-import { locations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import type { MenuItem, FulfillmentType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -38,8 +38,10 @@ import { logger } from "@/lib/logger";
  * out so the LLM's final text isn't redundant.
  */
 
-const ACTIVE_LOCATIONS = ["krakow", "warszawa"] as const;
-type ActiveLocation = (typeof ACTIVE_LOCATIONS)[number];
+/** Active-truck membership is resolved from the live locations store
+ *  on every call so adding a truck in /admin/locations is picked up
+ *  by the bot without a redeploy. The list is small (≤ tens) and the
+ *  store caches in-process, so the per-tool fetch is cheap. */
 
 export interface ToolContext {
   /** Customer's E.164 PL phone — the session key. */
@@ -66,8 +68,9 @@ export interface ToolResult {
 
 // ---- helpers ------------------------------------------------------------
 
-function locationName(slug: string): string {
-  return locations.find((l) => l.slug === slug)?.name ?? slug;
+async function locationName(slug: string): Promise<string> {
+  const list = await getActiveLocationsAsync();
+  return list.find((l) => l.slug === slug)?.name ?? slug;
 }
 
 function pln(grosze: number): string {
@@ -292,8 +295,10 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
 
 // ---- tool execution -----------------------------------------------------
 
-function isActiveLocation(slug: unknown): slug is ActiveLocation {
-  return typeof slug === "string" && (ACTIVE_LOCATIONS as readonly string[]).includes(slug);
+async function isActiveLocation(slug: unknown): Promise<boolean> {
+  if (typeof slug !== "string") return false;
+  const list = await getActiveLocationsAsync();
+  return list.some((l) => l.slug === slug);
 }
 
 export async function executeTool(
@@ -351,16 +356,18 @@ export async function executeTool(
 }
 
 async function tool_setLocation(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
-  const slug = input.locationSlug;
-  if (!isActiveLocation(slug)) {
-    return { ok: false, text: "locationSlug must be 'krakow' or 'warszawa'." };
+  const slugRaw = input.locationSlug;
+  if (typeof slugRaw !== "string" || !(await isActiveLocation(slugRaw))) {
+    const known = (await getActiveLocationsAsync()).map((l) => l.slug);
+    return { ok: false, text: `locationSlug must be one of: ${known.join(", ")}.` };
   }
+  const slug: string = slugRaw;
   if (ctx.session.locationSlug && ctx.session.locationSlug !== slug) {
     // Switching location wipes the cart — items aren't comparable across menus.
     ctx.session.cartItems = [];
   }
   ctx.session.locationSlug = slug;
-  return { ok: true, text: `Location pinned: ${locationName(slug)}.` };
+  return { ok: true, text: `Location pinned: ${await locationName(slug)}.` };
 }
 
 async function tool_searchMenu(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
@@ -389,7 +396,7 @@ async function tool_searchMenu(input: Record<string, unknown>, ctx: ToolContext)
     ok: true,
     text:
       trimmed.length === 0
-        ? `No items match in ${locationName(slug)}.`
+        ? `No items match in ${await locationName(slug)}.`
         : `Found ${trimmed.length} matching item(s):\n${trimmed
             .map((i) => `- ${i.id}: ${i.name} — ${i.priceDisplay}`)
             .join("\n")}`,
@@ -410,7 +417,7 @@ async function tool_addToCart(input: Record<string, unknown>, ctx: ToolContext):
   const menu = await getAvailableMenu(slug);
   const item = menu.find((m) => m.id === menuItemId);
   if (!item) {
-    return { ok: false, text: `Item ${menuItemId} is not on the ${locationName(slug)} menu right now.` };
+    return { ok: false, text: `Item ${menuItemId} is not on the ${await locationName(slug)} menu right now.` };
   }
   const existing = ctx.session.cartItems.findIndex(
     (c) => c.menuItem.id === item.id && (c.notes ?? "") === notes,
@@ -516,7 +523,7 @@ async function tool_listSlots(input: Record<string, unknown>, ctx: ToolContext):
     "Wybierz",
     [
       {
-        title: locationName(session.locationSlug).slice(0, 24),
+        title: (await locationName(session.locationSlug)).slice(0, 24),
         rows: available.map((s) => ({
           id: `slot:${s.id}`,
           title: s.time,

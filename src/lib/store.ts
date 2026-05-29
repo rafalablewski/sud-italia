@@ -8570,7 +8570,9 @@ export async function deletePushSubscription(endpoint: string): Promise<boolean>
 export interface WaSession {
   /** Canonical E.164 PL phone (the key). */
   phone: string;
-  locationSlug: "krakow" | "warszawa" | null;
+  /** Active-location slug (validated against the live locations store
+   *  at tool time — see whatsapp/tools.ts isActiveLocation). */
+  locationSlug: string | null;
   cartItems: import("@/data/types").CartItem[];
   fulfillmentType: import("@/data/types").FulfillmentType | null;
   slotId: string | null;
