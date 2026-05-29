@@ -49,6 +49,15 @@ export async function GET(req: NextRequest) {
         pointsCost: r.pointsCost,
         description: r.description,
       })),
+      /** Active referral mechanics — only shipped when the operator
+       *  has the programme turned on, so customer surfaces render
+       *  the Give/Get card from a single source of truth. */
+      referral: settings.referral.active
+        ? {
+            referrerPoints: settings.referral.referrerPoints,
+            refereeDiscountGrosze: settings.referral.refereeDiscountGrosze,
+          }
+        : null,
     },
     speedGuarantee: {
       active: settings.speedGuarantee.active,

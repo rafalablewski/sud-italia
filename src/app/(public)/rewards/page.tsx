@@ -14,7 +14,6 @@ import {
   getActiveChallenges,
   generateReferralCode,
   getEarnedAchievements,
-  REFERRAL_REWARD,
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
 import { FamilyWalletPanel } from "@/components/loyalty/FamilyWalletPanel";
@@ -323,11 +322,16 @@ function RewardsDashboard() {
     } catch {}
   };
 
+  const refereeDiscountPLN = loyalty.referral
+    ? Math.floor(loyalty.referral.refereeDiscountGrosze / 100)
+    : 0;
+  const referrerPoints = loyalty.referral?.referrerPoints ?? 0;
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `Get ${REFERRAL_REWARD.refereeDiscountPLN} PLN off at Sud Italia!`,
-        text: `Use my code ${referralCode} for ${REFERRAL_REWARD.refereeDiscountPLN} PLN off your first order at Sud Italia!`,
+        title: `Get ${refereeDiscountPLN} PLN off at Sud Italia!`,
+        text: `Use my code ${referralCode} for ${refereeDiscountPLN} PLN off your first order at Sud Italia!`,
         url: `https://suditalia.pl?ref=${referralCode}`,
       }).catch(() => {});
     }
@@ -503,13 +507,14 @@ function RewardsDashboard() {
             ))}
           </div>
 
+          {loyalty.referral && (
           <div className="v8-rewards-referral">
             <h2 className="v8-rewards-referral-h2">
               <Share2 className="h-5 w-5" aria-hidden />
               Refer friends <em>· invita gli amici</em>
             </h2>
             <p className="v8-rewards-referral-sub">
-              Share your code. Your friend gets <strong>{REFERRAL_REWARD.refereeDiscountPLN} PLN off</strong>, you get <strong>{REFERRAL_REWARD.referrerPoints} bonus pts</strong>.
+              Share your code. Your friend gets <strong>{refereeDiscountPLN} PLN off</strong>, you get <strong>{referrerPoints} bonus pts</strong>.
             </p>
             <div className="v8-rewards-referral-row">
               <div className="v8-rewards-referral-code">{referralCode}</div>
@@ -526,6 +531,7 @@ function RewardsDashboard() {
               <Share2 className="h-4 w-4" /> Share with friends · condividi
             </button>
           </div>
+          )}
 
           <h2 className="v8-rewards-section-title">
             <Crown className="h-5 w-5" aria-hidden style={{ color: "var(--color-ochre)" }} />
@@ -712,12 +718,13 @@ function RewardsDashboard() {
             )}
           </div>
 
+          {loyalty.referral && (
           <div className="v8-rewards-refer-card">
             <div className="v8-rewards-refer-card-icon" aria-hidden="true">
               <Heart className="h-7 w-7" fill="currentColor" fillOpacity="0.25" />
             </div>
             <h3 className="v8-rewards-refer-card-h3">
-              Give <em>{REFERRAL_REWARD.refereeDiscountPLN} PLN</em>, get <em>{REFERRAL_REWARD.referrerPoints} pts</em>
+              Give <em>{refereeDiscountPLN} PLN</em>, get <em>{referrerPoints} pts</em>
             </h3>
             <p className="v8-rewards-refer-card-sub">
               Share your referral code with friends. They save, you earn.
@@ -726,6 +733,7 @@ function RewardsDashboard() {
               <Share2 className="h-4 w-4" /> Share code · condividi
             </button>
           </div>
+          )}
         </>
       )}
     </div>

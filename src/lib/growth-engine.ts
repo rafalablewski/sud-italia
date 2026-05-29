@@ -19,12 +19,10 @@ export function generateReferralCode(name: string): string {
   return `SUD-${clean}-${random}`;
 }
 
-export const REFERRAL_REWARD = {
-  referrerPoints: 100,   // points for the person who refers
-  refereeDiscount: 1000, // 10 PLN off first order for the new customer
-  referrerDiscountPLN: 10,
-  refereeDiscountPLN: 10,
-};
+// Referral reward values (referrerPoints + refereeDiscountGrosze) live
+// on `LoyaltySettings.referral` — edit at /admin/growth → Referrals,
+// consumed by customer surfaces via /api/settings/public so admin
+// changes land without a deploy.
 
 // --- Gamification Engine ---
 

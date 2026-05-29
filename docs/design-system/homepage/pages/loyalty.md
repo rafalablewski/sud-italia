@@ -124,7 +124,11 @@ The "what's going on with my account" view.
   headline (oxblood italic accent), the dashed-border
   `.v8-rewards-referral-code` (Cormorant 22px tracking 2.8px), a
   copy chip that flips basil when clicked, and a terracotta italic
-  "Share with friends · condividi" CTA.
+  "Share with friends · condividi" CTA. The PLN-off + bonus-points
+  numbers come from `loyalty.referral` on the public-settings
+  payload (`{ referrerPoints, refereeDiscountGrosze }`); the entire
+  card hides itself when the operator sets `referral.active = false`
+  in `/admin/growth → Referrals` — there's no static fallback copy.
 - **Tier roadmap** (`.v8-rewards-roadmap`) — 4-up grid of
   `.v8-rewards-tier-tile` paper cards. Active tier gets the
   ochre-fill name pill + "Current · attuale" green sublabel + the

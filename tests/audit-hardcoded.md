@@ -4,7 +4,17 @@
 **Source-of-truth decisions:** menu = code seed (`src/data/menus/*`); branding/theme = code; feature flags = `getSettings()` going forward, `process.env` only for secrets/bootstrap.
 **Status:** **Audit closed.** 13 of 17 findings resolved across Phases 0–4 + 7; 3 deferred-by-design (i18n + nav); 1 verified clean. See the closing summary at the bottom.
 
-## Severity rubric
+## Phase 8 — second sweep (post-close-out)
+
+Re-running the audit with a deeper look at modules underweighted in Phase 0 turned up three more findings:
+
+| # | area | symbol | file:line | should-be | sev | note |
+|---|------|--------|-----------|-----------|-----|------|
+| 18 | ~~Loyalty~~ | ~~`REFERRAL_REWARD`~~ | ~~`src/lib/growth-engine.ts:22`~~ | `getLoyaltySettings().referral` (exposed on `/api/settings/public` as `loyalty.referral`, `null` when disabled) | ~~P0~~ | **DONE (Phase 8a).** Same silent-drift shape as #1–#4. The values + active toggle were already operator-editable at /admin/growth → Referrals; only the customer surfaces were stuck on the const. /rewards now hides both referral surfaces when `referral.active = false`. ReferralCard.tsx deleted (was dead code — never imported anywhere). |
+| 19 | Pricing | `DELIVERY_FEE_GROSZE = 700` | `src/lib/upsell.ts:801` | `getSettings().deliveryFee` | P0 | `computeDeliveryFee()` returns the hardcoded 700 grosze regardless of the operator's `/admin/settings → Delivery fee` value. The settings field is displayed but never consumed at checkout. Charging customers the wrong amount. |
+| 20 | Loyalty | `SPEED_GUARANTEE` const | `src/lib/growth-engine.ts:190` | delete (settings already wins) | P2 | Zero consumers — dead code. `LoyaltySettings.speedGuarantee` is the canonical shape. |
+
+
 
 - **P0** — admin change has zero effect on the customer, or two sources of truth disagree silently.
 - **P1** — admin change requires a deploy; or a server route uses the seed where it should use the live store.

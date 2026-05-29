@@ -24,6 +24,11 @@ export interface PublicLoyaltyReward {
   description: string;
 }
 
+export interface PublicLoyaltyReferral {
+  referrerPoints: number;
+  refereeDiscountGrosze: number;
+}
+
 export interface PublicLoyaltySettings {
   tiers: {
     bronze: PublicLoyaltyTier;
@@ -32,6 +37,9 @@ export interface PublicLoyaltySettings {
     platinum: PublicLoyaltyTier;
   };
   rewards: PublicLoyaltyReward[];
+  /** Null when the operator has the referral programme disabled —
+   *  customer surfaces should hide the Give/Get card in that case. */
+  referral: PublicLoyaltyReferral | null;
 }
 
 export interface PublicSettings {
