@@ -4,8 +4,12 @@ import { Header } from "@/components/layout/Header";
 import { LiveTicker } from "@/components/layout/LiveTicker";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
+import { AbandonedCartBanner } from "@/components/cart/AbandonedCartBanner";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
+import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
+import { AddToCartToast } from "@/components/cart/AddToCartToast";
+import { ItemDetailDrawer } from "@/components/location/ItemDetailDrawer";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CustomerProvider } from "@/store/customer";
 
@@ -72,7 +76,18 @@ export default function PublicLayout({
         <LayoutGate flag="showChatWidget">
           <ChatWidget />
         </LayoutGate>
-        <AbandonedCartWrapper />
+        {/* Single-mount cart family. Every trigger surface
+            (CartButton, FloatingCartButton, AbandonedCartBanner, the
+            "Details" button on a menu card) opens these instances via
+            useCartUIStore.setDrawerOpen / setDetailItem instead of
+            mounting its own copy. ItemDetailDrawer (Step 13) joins
+            CartDrawer + FloatingCartButton + AddToCartToast (Steps 11,
+            11+, 12) at the layout level. */}
+        <CartDrawer />
+        <FloatingCartButton />
+        <AddToCartToast />
+        <ItemDetailDrawer />
+        <AbandonedCartBanner />
         <CartPresenceSync />
       </div>
     </CustomerProvider>

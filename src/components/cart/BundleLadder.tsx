@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, ChevronDown, Users } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import {
@@ -24,47 +23,31 @@ import { BundleComposerSheet } from "./BundleComposerSheet";
 
 interface BundleLadderProps {
   allMenuItems: MenuItem[];
-  /** Admin-configured bundle list (LocationUpsellConfig.bundles). When
-   *  unset / empty, DEFAULT_BUNDLES from src/lib/bundles.ts wins. */
   configBundles?: BundleTier[] | null;
-  /** Admin-configured availability rules (LocationUpsellConfig.bundleRules).
-   *  When unset, DEFAULT_BUNDLE_RULES wins (lunch 11–14, family minMainItems 5). */
   configRules?: Partial<BundleAvailabilityRules> | null;
-  /** Optional A/B experiment configured for this location. When set + the
-   *  customer's phone hashes to a variant with bundle overrides, the
-   *  override is applied client-side BEFORE pricing so the cart shows
-   *  exactly what the server will charge. */
   configExperiment?: Experiment | null;
-  /** Cart fulfillment type — drives channel-aware bundle filtering
-   *  (audit §3). Delivery-exclusive bundles only render when this is
-   *  "delivery"; dine-in-only bundles only render otherwise. */
   fulfillmentType?: FulfillmentType;
-  /** Active combo discount (grosze). When > 0 the bundle CTA shows the
-   *  *incremental* savings ("save X more than your current Italian
-   *  Classic 10%") so the customer doesn't feel like applying the
-   *  bundle silently kills their combo — it's a net-better trade. */
   activeComboSavings?: number;
   activeComboName?: string | null;
 }
 
 /**
- * Bundle ladder (audit §3.2) — surfaces the Lunch tier or Family Feast tier
- * above the per-item suggestions in the cart drawer. Two ladders, two
- * different gates:
+ * Bundle ladder (audit §3.2) — V8 reskin.
  *
- *   Lunch  — hour-gated. Only renders during the configured lunch window
- *            (default 11–14). Outside the window, returns null (no chrome).
+ * Three ladders (Lunch, Family Feast, Late dinner), each with its own
+ * gate; the customer can switch which one is showing via the
+ * `.v8-cart-ladder-switch` chip when more than one qualifies. The
+ * primary CTA is rendered as a full-width paper tile
+ * (`.v8-cart-ladder-primary`) — McDonald's "Make it a Meal" pattern —
+ * with secondary tiers as smaller paper chips below
+ * (`.v8-cart-ladder-chip`). The family-feast hint, when the cart is
+ * just shy of the threshold, lands as `.v8-cart-ladder-hint`.
  *
- *   Family — quantity-gated. Only renders once the cart has ≥ minMainItems
- *            (default 5) pizzas + pastas. When the cart is within
- *            `hintWithin` of the threshold, renders a one-line hint
- *            ("Add 1 more pizza or pasta to unlock the Family Feast")
- *            instead of the full ladder so we nudge without clutter.
- *
- * Tap a tier → cart's items are replaced with the bundle's resolved
- * composition (preferring whatever the customer already added) and the
- * subtotal locks to the bundle price. Adding/removing any line breaks the
- * lock — handled inside the cart store.
+ * Every audit-tied wiring is preserved: A/B variant resolution via
+ * SHA-256 hashed phone, funnel beaconing (impression / composer_opened /
+ * composer_abandoned), dynamic-bundle pricing, member-only gating,
+ * lunch hour gating, family minMains gating, late-night window gating,
+ * composer-sheet handoff.
  */
 export function BundleLadder({
   allMenuItems,
@@ -82,8 +65,6 @@ export function BundleLadder({
   const clearBundle = useCartStore((s) => s.clearBundle);
   const { customer } = useCustomer();
 
-  // Resolve A/B variant once per customer/experiment combo. SHA-256 hashed
-  // so server reproduces it at checkout — same discount %s on both sides.
   const [variantApply, setVariantApply] = useState<((b: BundleTier) => BundleTier) | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
   useEffect(() => {
@@ -107,7 +88,6 @@ export function BundleLadder({
     () => {
       const raw = resolveBundles(configBundles ?? null, new Date(), fulfillmentType);
       const filtered = variantApply ? raw.map(variantApply) : raw;
-      // Hide member-only bundles from anonymous carts (audit §3).
       return filtered.filter((b) => !b.membersOnly || !!customer?.phone);
     },
     [configBundles, variantApply, fulfillmentType, customer?.phone],
@@ -120,44 +100,27 @@ export function BundleLadder({
 
   const hasLunch = allBundles.some((b) => b.mealPeriod === "lunch");
   const hasFamily = allBundles.some((b) => b.mealPeriod === "family");
-
   const hasLateNight = allBundles.some((b) => b.mealPeriod === "lateNight");
 
-  // Recompute the local hour every minute so a customer who lingers in the
-  // drawer sees the lunch ladder appear at 11:00 and disappear at 14:00.
-  // One-minute resolution is plenty — the hour gate switches on the hour.
   const [hour, setHour] = useState(() => new Date().getHours());
   useEffect(() => {
     const i = setInterval(() => setHour(new Date().getHours()), 60_000);
     return () => clearInterval(i);
   }, []);
 
-  // Decide what each ladder should do given current cart shape + hour.
   const lunchAvailability = useMemo(
-    () =>
-      hasLunch
-        ? resolveBundleAvailability("lunch", items, rules, hour)
-        : { kind: "hidden" as const },
+    () => hasLunch ? resolveBundleAvailability("lunch", items, rules, hour) : { kind: "hidden" as const },
     [hasLunch, items, rules, hour],
   );
   const familyAvailability = useMemo(
-    () =>
-      hasFamily
-        ? resolveBundleAvailability("family", items, rules, hour)
-        : { kind: "hidden" as const },
+    () => hasFamily ? resolveBundleAvailability("family", items, rules, hour) : { kind: "hidden" as const },
     [hasFamily, items, rules, hour],
   );
   const lateNightAvailability = useMemo(
-    () =>
-      hasLateNight
-        ? resolveBundleAvailability("lateNight", items, rules, hour)
-        : { kind: "hidden" as const },
+    () => hasLateNight ? resolveBundleAvailability("lateNight", items, rules, hour) : { kind: "hidden" as const },
     [hasLateNight, items, rules, hour],
   );
 
-  // User's preferred ladder when multiple are available — drives the
-  // header switcher. Effective period intersects preference with what
-  // actually qualifies, so the user's choice survives availability flips.
   const [preferredPeriod, setPreferredPeriod] = useState<BundleMealPeriod>("family");
 
   const period: BundleMealPeriod | null = (() => {
@@ -167,8 +130,6 @@ export function BundleLadder({
     if (preferredPeriod === "family" && familyOk) return "family";
     if (preferredPeriod === "lunch" && lunchOk) return "lunch";
     if (preferredPeriod === "lateNight" && lateOk) return "lateNight";
-    // Late-night dominates when in-window (it's a tight one-tap deal);
-    // otherwise family beats lunch when both qualify.
     if (lateOk) return "lateNight";
     if (familyOk) return "family";
     if (lunchOk) return "lunch";
@@ -178,10 +139,6 @@ export function BundleLadder({
   const showLadder = period !== null;
   const showFamilyHint = familyAvailability.kind === "hint";
 
-  // Filter to the currently shown period AND only bundles whose composition
-  // resolves at this location AND whose dynamic gates (minMains) are met by
-  // the current cart — Feast Deluxe stays hidden until the cart has enough
-  // mains to make it viable.
   const visibleBundles = useMemo(() => {
     if (!period || allMenuItems.length === 0) return [];
     return allBundles
@@ -194,14 +151,8 @@ export function BundleLadder({
       });
   }, [allBundles, allMenuItems, period, items]);
 
-  // Composer-sheet state — taps don't auto-apply; they open the picker
-  // so the customer can swap defaults (Domino's Mix & Match × McDonald's
-  // Make-it-a-Meal). Re-tapping an already-applied bundle clears it.
   const [composerBundle, setComposerBundle] = useState<BundleTier | null>(null);
 
-  // Funnel telemetry — fire once per (period, bundle id set, location)
-  // combination so an idle drawer doesn't repeatedly log the same view.
-  // Uses sendBeacon for fire-and-forget submission that survives unload.
   const sentImpressionsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!locationSlug || !period) return;
@@ -229,7 +180,7 @@ export function BundleLadder({
           });
         }
       } catch {
-        // Funnel beaconing is best-effort.
+        // best-effort
       }
     }
   }, [visibleBundles, locationSlug, period, customer?.phone, variantId]);
@@ -260,7 +211,6 @@ export function BundleLadder({
     }
   };
 
-  // No ladder + no hint → render nothing.
   if (!locationSlug) return null;
   if (!showLadder && !showFamilyHint) return null;
 
@@ -269,9 +219,6 @@ export function BundleLadder({
       clearBundle();
       return;
     }
-    // Open the composer so the customer can review/swap add-on choices
-    // before locking. Fixed-bundle taps still open the sheet for parity —
-    // they can confirm in one tap if they don't want to change anything.
     sendFunnel("composer_opened", bundle.id);
     setComposerBundle(bundle);
   };
@@ -286,10 +233,6 @@ export function BundleLadder({
     applyBundle(composerBundle.id, priceGrosze, lines, locationSlug);
   };
 
-  // When the hint fires, surface the cheapest family tier's savings so the
-  // copy can read "Save 19 zł — add 1 more pizza or pasta". Dynamic tiers
-  // need cart context to price; we use the current cart so the copy still
-  // reflects what the customer would unlock.
   const familyMinSavings =
     showFamilyHint && allBundles.length > 0
       ? Math.min(
@@ -304,9 +247,6 @@ export function BundleLadder({
       (a) => a.kind === "show",
     ).length;
 
-  // Loss-aversion framing — derived from the largest tier's refPrice
-  // (the "Without the bundle you'd pay X" anchor). Picks the max so the
-  // header copy reflects the biggest available à-la-carte total.
   const topTierPricing = (() => {
     let best: { priceGrosze: number; refPriceGrosze: number; savings: number; mainsCount: number } | null = null;
     for (const b of visibleBundles) {
@@ -317,9 +257,6 @@ export function BundleLadder({
     return best;
   })();
 
-  // Pick the *default-pushed* tier as the primary CTA target. Falls back
-  // to anchor, then highest-savings tier. McDonald's-style "Make it a
-  // Family Feast" pattern frames non-bundling as the deviant choice.
   const primaryTier =
     visibleBundles.find((b) => b.isDefault) ??
     visibleBundles.find((b) => b.isAnchor) ??
@@ -337,10 +274,14 @@ export function BundleLadder({
   const primaryIsApplied =
     primaryTier !== undefined && appliedBundleId === primaryTier.id;
 
+  const periodLabel = period === "lunch"
+    ? { en: "Lunch", it: "il pranzo" }
+    : period === "family"
+      ? { en: "Family feast", it: "festa di famiglia" }
+      : { en: "Late dinner", it: "la cena tardi" };
+
   return (
-    <div className="px-5 mt-3 space-y-2">
-      {/* Family-feast nudge — only when within hintWithin items of the
-          minimum, and only when the full family ladder isn't already showing. */}
+    <>
       {showFamilyHint && familyAvailability.kind === "hint" && (
         <FamilyHint
           needed={familyAvailability.needed}
@@ -350,24 +291,16 @@ export function BundleLadder({
       )}
 
       {showLadder && visibleBundles.length > 0 && primaryTier && primaryPricing && (
-        <>
-          <div className="flex items-baseline justify-between">
-            <p className="flex items-center gap-2 text-xs font-semibold text-italia-gray uppercase tracking-wide">
-              <Sparkles className="h-4 w-4 text-italia-gold" />
-              Make it a bundle
-              {topTierPricing && topTierPricing.savings > 0 && (
-                <span className="text-italia-gold-dark normal-case font-medium tracking-normal">
-                  {" "}
-                  · without it you&rsquo;d pay {formatPrice(topTierPricing.refPriceGrosze)}
-                </span>
-              )}
-            </p>
+        <div className="v8-cart-ladder">
+          <div className="v8-cart-ladder-head">
+            <div className="v8-cart-ladder-title">
+              {periodLabel.en} <span className="v8-cart-ladder-it">· {periodLabel.it}</span>
+            </div>
             {availableShown > 1 && (
               <button
                 type="button"
                 onClick={() =>
                   setPreferredPeriod((p) => {
-                    // Cycle through the available periods in order.
                     const order: BundleMealPeriod[] = ["family", "lunch", "lateNight"];
                     const visible = order.filter((per) =>
                       per === "lunch"
@@ -380,19 +313,21 @@ export function BundleLadder({
                     return visible[(idx + 1) % visible.length] ?? p;
                   })
                 }
-                className="inline-flex items-center gap-0.5 text-[11px] font-medium text-italia-red"
+                className="v8-cart-ladder-switch"
               >
-                {period === "lunch" ? "Lunch" : period === "family" ? "Family" : "Late dinner"}
-                <ChevronDown className="h-3 w-3" />
+                switch ↻
               </button>
             )}
           </div>
 
-          {/* Primary CTA — McDonald's "Make it a Meal" pattern. Default-pushed
-              tier (red Most-picked badge) is rendered as a full-width tile so
-              non-bundling reads as the deviant choice. Tap opens the composer
-              sheet so the customer can swap defaults rather than getting
-              cheapest-only. */}
+          {topTierPricing && topTierPricing.savings > 0 && (
+            <div className="v8-cart-ladder-sub">
+              À la carte you&apos;d pay{" "}
+              <span className="num">{formatPrice(topTierPricing.refPriceGrosze)}</span> —
+              cross a threshold and share a feast with la famiglia.
+            </div>
+          )}
+
           <PrimaryBundleCTA
             bundle={primaryTier}
             pricing={primaryPricing}
@@ -403,12 +338,9 @@ export function BundleLadder({
             activeComboName={activeComboName}
           />
 
-          {/* Smaller comparison row: the entry tier + decoy stay visible so
-              the customer perceives the ladder, but they don't compete with
-              the primary CTA for attention. */}
           {compareTiers.length > 0 && (
             <div
-              className="grid gap-2"
+              className="v8-cart-ladder-chips"
               style={{ gridTemplateColumns: `repeat(${Math.min(compareTiers.length, 2)}, minmax(0, 1fr))` }}
             >
               {compareTiers.map((bundle) => (
@@ -419,12 +351,11 @@ export function BundleLadder({
                   menuItems={allMenuItems}
                   applied={appliedBundleId === bundle.id}
                   onApply={() => handleApply(bundle)}
-                  compact
                 />
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
       <BundleComposerSheet
@@ -437,7 +368,7 @@ export function BundleLadder({
         customerPhone={customer?.phone ?? null}
         onApply={handleComposerApply}
       />
-    </div>
+    </>
   );
 }
 
@@ -461,19 +392,7 @@ function PrimaryBundleCTA({
   activeComboName,
 }: PrimaryCTAProps) {
   const perPerson = mainsCount > 0 ? Math.round(pricing.priceGrosze / mainsCount) : 0;
-  // Per-person framing only kicks in at ≥3 mains so a 2-person bundle
-  // doesn't get awkward maths. Family Feast at 3 mains ≈ 40 PLN per
-  // person carries the cinema-combo "deal-for-everyone" psychology.
   const showPerPerson = mainsCount >= 3 && perPerson > 0;
-
-  // Combo × Bundle clarity (user-asked scenario): when a combo deal is
-  // already saving the customer some PLN, the bundle's "save X" copy
-  // would over-promise — applying the bundle replaces the combo, so the
-  // *net* benefit to the customer is bundle savings MINUS combo savings.
-  // We show the bundle's full save (it's still the real à-la-carte gap)
-  // but also surface the honest "extra you save by upgrading" so the
-  // customer doesn't feel cheated when the 10% Italian Classic badge
-  // silently disappears on bundle apply.
   const incrementalVsCombo =
     activeComboSavings > 0 ? Math.max(0, pricing.savings - activeComboSavings) : 0;
 
@@ -481,63 +400,47 @@ function PrimaryBundleCTA({
     <button
       type="button"
       onClick={onApply}
-      className={`w-full rounded-xl border p-3 transition-all text-left animate-fade-in ${
-        applied
-          ? "border-italia-green/40 bg-italia-green/5 cursor-default"
-          : "border-italia-red/40 bg-gradient-to-r from-italia-red/10 to-italia-gold/10 hover:border-italia-red hover:shadow-md cursor-pointer"
-      }`}
+      className={`v8-cart-ladder-primary${applied ? " is-applied" : ""}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                applied
-                  ? "bg-italia-green text-white"
-                  : "bg-italia-red text-white"
-              }`}
-            >
-              {applied ? "Applied" : "Most picked"}
+      <div className="v8-cart-ladder-primary-head">
+        <span className={`v8-cart-ladder-badge${applied ? " is-applied" : ""}`}>
+          {applied ? "Applied · attivato" : "Most picked · il preferito"}
+        </span>
+        <span className="v8-cart-ladder-primary-name">
+          Make it a <em>{bundle.tier}</em>
+        </span>
+      </div>
+      <div className="v8-cart-ladder-primary-body">
+        <div className="v8-cart-ladder-primary-desc">
+          {bundle.description}
+          {showPerPerson && (
+            <span className="v8-cart-ladder-primary-perperson">
+              {" · "}<span className="num">{formatPrice(perPerson)}</span> per person
             </span>
-            <span className="font-heading font-bold text-sm text-italia-dark">
-              Make it a {bundle.tier}
-            </span>
-          </div>
-          <p className="text-xs text-italia-gray mt-0.5 leading-snug">
-            {bundle.description}
-            {showPerPerson && (
-              <span className="text-italia-gold-dark font-semibold">
-                {" "}· {formatPrice(perPerson)} per person
-              </span>
-            )}
-          </p>
-          {!applied && incrementalVsCombo > 0 && activeComboName && (
-            <p className="text-[11px] text-italia-green-dark font-semibold mt-1 leading-snug">
-              +{formatPrice(incrementalVsCombo)} more than your current {activeComboName}
-            </p>
-          )}
-          {!applied && activeComboSavings > 0 && (
-            <p className="text-[10px] text-italia-gray mt-0.5 leading-snug italic">
-              Replaces the active {activeComboName ?? "combo deal"}.
-            </p>
           )}
         </div>
-        <div className="flex-shrink-0 text-right">
-          <div className="font-heading text-lg font-bold text-italia-red">
-            {formatPrice(pricing.priceGrosze)}
-          </div>
+        <div className="v8-cart-ladder-primary-price">
+          <div className="v8-cart-ladder-primary-now num">{formatPrice(pricing.priceGrosze)}</div>
           {pricing.refPriceGrosze > pricing.priceGrosze && (
-            <div className="text-[10px] text-italia-gray line-through leading-tight">
-              {formatPrice(pricing.refPriceGrosze)}
-            </div>
+            <div className="v8-cart-ladder-primary-ref num">{formatPrice(pricing.refPriceGrosze)}</div>
           )}
           {pricing.savings > 0 && (
-            <div className="text-[10px] font-bold text-italia-green-dark uppercase tracking-wider mt-0.5">
-              Save {formatPrice(pricing.savings)}
+            <div className="v8-cart-ladder-primary-save">
+              Save <span className="num">{formatPrice(pricing.savings)}</span>
             </div>
           )}
         </div>
       </div>
+      {!applied && incrementalVsCombo > 0 && activeComboName && (
+        <div className="v8-cart-ladder-primary-incremental">
+          +<span className="num">{formatPrice(incrementalVsCombo)}</span> more than your current {activeComboName}
+        </div>
+      )}
+      {!applied && activeComboSavings > 0 && (
+        <div className="v8-cart-ladder-primary-replaces">
+          Replaces the active {activeComboName ?? "combo deal"}.
+        </div>
+      )}
     </button>
   );
 }
@@ -548,25 +451,15 @@ interface ChipProps {
   menuItems: MenuItem[];
   applied: boolean;
   onApply: () => void;
-  /** When true, render in compact comparison-row styling (smaller text,
-   *  no Most-picked/Best-value badges — those are reserved for the
-   *  primary CTA above). Used for the entry tier + decoy when the
-   *  default-pushed tier is the primary CTA. */
-  compact?: boolean;
 }
 
-function BundleChip({ bundle, cartItems, menuItems, applied, onApply, compact = false }: ChipProps) {
+function BundleChip({ bundle, cartItems, menuItems, applied, onApply }: ChipProps) {
   const pricing = computeBundlePrice(bundle, cartItems, menuItems);
   const priceGrosze = pricing?.priceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.priceGrosze);
   const refPriceGrosze = pricing?.refPriceGrosze ?? (isDynamicBundle(bundle) ? 0 : bundle.refPriceGrosze);
   const savings = pricing?.savings ?? 0;
   const showRef = refPriceGrosze > priceGrosze;
 
-  // Dynamic-tier description: replace "Your mains" prefix with the actual
-  // count + noun so a 3-margherita cart sees "3 pizzas + 2 antipasti +
-  // 4 drinks + tiramisù". Derives the noun from the cart, not the bundle
-  // config, so a mixed pizza+pasta cart reads "mains" while a pure-pizza
-  // cart reads "pizzas".
   const description = (() => {
     if (!isDynamicBundle(bundle) || !pricing) return bundle.description;
     const n = pricing.mainsCount;
@@ -584,84 +477,29 @@ function BundleChip({ bundle, cartItems, menuItems, applied, onApply, compact = 
     return bundle.description.replace(/^Your mains/i, `${n} ${noun}`);
   })();
 
-  // Visual ladder roles are defined on the bundle. Compact mode is used
-  // for the secondary comparison row when a default-pushed tier carries
-  // the primary CTA above — we drop the red/gold badges there so they
-  // don't compete with the primary CTA's "Most picked" treatment.
-  const baseClass = (() => {
-    if (applied) {
-      return "border-italia-green/40 bg-italia-green/5";
-    }
-    if (compact) {
-      // Decoy stays slightly muted to do its dominance-heuristic job.
-      return bundle.isDecoy
-        ? "border-gray-200 bg-white opacity-85 hover:border-italia-gold/40"
-        : "border-gray-200 bg-white hover:border-italia-gold/40";
-    }
-    if (bundle.isDefault) {
-      return "border-italia-red/40 bg-italia-red/5 hover:border-italia-red";
-    }
-    if (bundle.isAnchor) {
-      return "border-italia-gold/40 bg-[linear-gradient(135deg,rgba(184,146,46,0.06)_0%,rgba(184,146,46,0.02)_100%)] hover:border-italia-gold";
-    }
-    if (bundle.isDecoy) {
-      return "border-gray-200 bg-white opacity-90 hover:border-italia-gold/40";
-    }
-    return "border-gray-200 bg-white hover:border-italia-gold/40";
-  })();
+  const classes = [
+    "v8-cart-ladder-chip",
+    applied ? "is-applied" : "",
+    bundle.isDecoy && !applied ? "is-decoy" : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <button
-      type="button"
-      onClick={onApply}
-      className={`relative text-left rounded-xl border p-2.5 transition-all animate-fade-in ${baseClass} ${
-        applied ? "cursor-default" : "cursor-pointer hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0"
-      }`}
-    >
-      {!applied && !compact && bundle.isDefault && (
-        <span className="absolute -top-2 left-2.5 px-2 py-0.5 rounded-full bg-italia-red text-white text-[9px] font-bold uppercase tracking-wider">
-          Most picked
-        </span>
-      )}
-      {!applied && !compact && !bundle.isDefault && bundle.isAnchor && (
-        <span className="absolute -top-2 left-2.5 px-2 py-0.5 rounded-full bg-italia-gold-dark text-white text-[9px] font-bold uppercase tracking-wider">
-          Best value
-        </span>
-      )}
-      {applied && (
-        <span className="absolute top-1.5 right-2 text-[10px] font-bold uppercase tracking-wider text-italia-green-dark">
-          Applied
-        </span>
-      )}
-
-      <div className="text-[10px] font-bold uppercase tracking-wider text-italia-gray mt-0.5">
-        {bundle.tier}
-      </div>
-      <div className="font-heading text-sm font-semibold text-italia-dark leading-tight mt-0.5">
-        {bundle.name}
-      </div>
-      <div className="text-[11px] text-italia-gray leading-snug mt-1 min-h-[28px]">
-        {description}
-      </div>
-      <div className="flex items-baseline gap-1.5 mt-1.5">
-        <span
-          className={`text-base font-bold ${
-            applied ? "text-italia-green-dark" : "text-italia-red"
-          }`}
-        >
-          {formatPrice(priceGrosze)}
-        </span>
+    <button type="button" onClick={onApply} className={classes}>
+      <div className="v8-cart-ladder-chip-tier">{bundle.tier}</div>
+      <div className="v8-cart-ladder-chip-name">{bundle.name}</div>
+      <div className="v8-cart-ladder-chip-desc">{description}</div>
+      <div className="v8-cart-ladder-chip-price">
+        <span className="v8-cart-ladder-chip-now num">{formatPrice(priceGrosze)}</span>
         {showRef && (
-          <span className="text-[10px] text-italia-gray line-through">
-            {formatPrice(refPriceGrosze)}
-          </span>
+          <span className="v8-cart-ladder-chip-ref num">{formatPrice(refPriceGrosze)}</span>
         )}
       </div>
       {savings > 0 && (
-        <div className="text-[10px] font-bold uppercase tracking-wider text-italia-green-dark mt-0.5">
-          Save {formatPrice(savings)}
+        <div className="v8-cart-ladder-chip-save">
+          Save <span className="num">{formatPrice(savings)}</span>
         </div>
       )}
+      {applied && <div className="v8-cart-ladder-chip-applied">Applied</div>}
     </button>
   );
 }
@@ -672,29 +510,29 @@ interface FamilyHintProps {
   minSavings: number;
 }
 
-/**
- * One-line nudge that appears when the cart is `hintWithin` items short of
- * the Family Feast threshold — the full ladder stays hidden, but we tell
- * the customer how close they are.
- */
 function FamilyHint({ needed, mainItems, minSavings }: FamilyHintProps) {
   const noun = needed === 1 ? "pizza or pasta" : "pizzas or pastas";
   return (
-    <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-italia-gold/30 bg-italia-gold/5">
-      <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-italia-gold/15 text-italia-gold-dark inline-flex items-center justify-center">
-        <Users className="h-4 w-4" />
+    <div className="v8-cart-ladder-hint" role="status">
+      <span className="v8-cart-ladder-hint-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="5.5" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+          <circle cx="12.5" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M1.5 15 C 1.5 11.5, 3.5 10, 5.5 10 C 7.5 10, 9.5 11.5, 9.5 15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M8.5 15 C 8.5 11.5, 10.5 10, 12.5 10 C 14.5 10, 16.5 11.5, 16.5 15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
       </span>
-      <p className="flex-1 text-xs text-italia-dark leading-snug">
+      <div>
         Add{" "}
-        <span className="font-semibold">{needed} more {noun}</span>
-        {" "}to unlock the Family Feast bundle
+        <em>
+          <span className="num">{needed}</span> more {noun}
+        </em>{" "}
+        to unlock <em>Festa di famiglia</em>
         {minSavings > 0 && (
-          <span className="text-italia-gold-dark font-semibold">
-            {" "}— save up to {formatPrice(minSavings)}
-          </span>
+          <> — save up to <span className="num">{formatPrice(minSavings)}</span></>
         )}
-        <span className="text-italia-gray"> · {mainItems} of needed total</span>
-      </p>
+        <span className="v8-cart-ladder-hint-progress"> · <span className="num">{mainItems}</span> in cart</span>
+      </div>
     </div>
   );
 }

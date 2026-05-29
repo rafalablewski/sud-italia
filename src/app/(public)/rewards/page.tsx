@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Container } from "@/components/ui/Container";
 import { useCustomer } from "@/store/customer";
 import {
   TIER_CONFIG,
@@ -32,7 +31,6 @@ import {
   Lock,
   Sparkles,
   Flame,
-  ChevronRight,
   Crown,
   Ticket,
   Percent,
@@ -42,13 +40,15 @@ import {
   LogOut,
   User,
   Heart,
-  Zap,
 } from "lucide-react";
-
 
 function daysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
 }
+
+// QR placeholder cell map (5×5 grid; matches the previous component's
+// pattern so the placeholder reads as a "QR code" without being one).
+const QR_CELLS = new Set([0, 1, 2, 4, 5, 6, 10, 12, 14, 18, 19, 20, 22, 23, 24]);
 
 function SignInSection() {
   const { identify } = useCustomer();
@@ -77,60 +77,61 @@ function SignInSection() {
   };
 
   return (
-    <div className="max-w-md mx-auto text-center py-10">
-      <div className="w-20 h-20 bg-italia-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
-        <Star className="h-10 w-10 text-italia-gold" />
-      </div>
-      <h1 className="text-3xl font-heading font-bold text-italia-dark mb-2">
-        Sud Italia Rewards
-      </h1>
-      <p className="text-italia-gray mb-8">
-        Earn points, unlock rewards, and get exclusive offers. Enter your phone number to sign in or join for free.
-      </p>
-
-      <div className="flex gap-2 max-w-sm mx-auto mb-3">
-        <div className="flex items-center gap-0 flex-1">
-          <span className="inline-flex items-center px-3 min-h-[48px] rounded-l-xl border-y-[1.5px] border-l-[1.5px] border-r-0 border-[#e5e7eb] bg-gray-50 text-sm font-medium text-italia-gray select-none">
-            +48
-          </span>
-          <input
-            type="tel"
-            placeholder="Phone number"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setNotFound(false); }}
-            onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
-            className="pub-input min-h-[48px] text-base rounded-l-none flex-1"
-          />
+    <div className="v8-rewards-page">
+      <div className="v8-rewards-signin">
+        <div className="v8-rewards-signin-mark" aria-hidden="true">
+          <Star className="h-10 w-10" fill="currentColor" fillOpacity="0.25" />
         </div>
-        <button
-          onClick={handleSignIn}
-          disabled={checking || phone.replace(/\D/g, "").length < 7}
-          className="px-5 py-2 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors text-sm min-h-[48px] flex items-center gap-2 disabled:opacity-40"
-        >
-          <LogIn className="h-4 w-4" />
-          {checking ? "..." : "Sign in"}
-        </button>
-      </div>
+        <h1 className="v8-rewards-signin-h1">
+          <em>Soci e amici</em>
+        </h1>
+        <p className="v8-rewards-signin-sub">
+          Sud Italia Rewards — earn points, unlock perks, share with the famiglia. Enter your phone to sign in or join (free).
+        </p>
 
-      {notFound && (
-        <div className="mt-4 p-4 bg-white rounded-2xl border border-gray-100 max-w-sm mx-auto animate-fade-in">
-          <p className="text-sm text-italia-dark mb-3">
-            New here? Join rewards — it&apos;s completely free!
-          </p>
+        <div className="v8-rewards-signin-row">
+          <div className="v8-rewards-signin-phone">
+            <span className="v8-rewards-signin-prefix" aria-hidden="true">+48</span>
+            <input
+              type="tel"
+              placeholder="512 ··· ···"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setNotFound(false); }}
+              onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
+              className="v8-rewards-signin-input"
+              aria-label="Phone number"
+            />
+          </div>
           <button
-            onClick={handleSignUp}
-            disabled={checking}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-italia-green text-white font-semibold rounded-xl hover:bg-italia-green-dark transition-colors"
+            onClick={handleSignIn}
+            disabled={checking || phone.replace(/\D/g, "").length < 7}
+            className="v8-rewards-signin-cta"
           >
-            <UserPlus className="h-4 w-4" />
-            Join Rewards Program
+            <LogIn className="h-4 w-4" />
+            {checking ? "…" : "Sign in"}
           </button>
         </div>
-      )}
 
-      <p className="text-xs text-italia-gray/60 mt-4">
-        Just your phone number — no password, no email required
-      </p>
+        {notFound && (
+          <div className="v8-rewards-signin-card">
+            <p>
+              <em>Nuovo qui?</em> Join Soci e amici — completely free.
+            </p>
+            <button
+              onClick={handleSignUp}
+              disabled={checking}
+              className="v8-rewards-signin-join"
+            >
+              <UserPlus className="h-4 w-4" />
+              Join · iscriviti
+            </button>
+          </div>
+        )}
+
+        <p className="v8-rewards-signin-hint">
+          Just your phone number — no password, no email required.
+        </p>
+      </div>
     </div>
   );
 }
@@ -162,66 +163,40 @@ function ProfileSection() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading font-bold text-lg text-italia-dark flex items-center gap-2">
-          <User className="h-5 w-5 text-italia-gray" />
-          My Profile
+    <div className="v8-rewards-card">
+      <div className="v8-rewards-card-head">
+        <h2 className="v8-rewards-card-title">
+          <User className="h-5 w-5" aria-hidden />
+          My profile <span className="v8-rewards-section-it">· il profilo</span>
         </h2>
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="text-xs font-medium text-italia-red hover:text-italia-red-dark transition-colors"
-          >
-            Edit
-          </button>
-        )}
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-italia-green font-medium">
+        {saved ? (
+          <span className="v8-rewards-profile-saved">
             <Check className="h-3 w-3" /> Saved
           </span>
-        )}
+        ) : !editing ? (
+          <button onClick={() => setEditing(true)} className="v8-rewards-profile-edit">
+            Edit · modifica
+          </button>
+        ) : null}
       </div>
 
       {editing ? (
-        <div className="space-y-3">
+        <div className="v8-rewards-profile-form">
           <div>
-            <label className="text-xs text-italia-gray block mb-1">First name</label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="pub-input min-h-[44px] text-sm"
-              placeholder="First name"
-            />
+            <label className="v8-rewards-input-label">First name</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="v8-rewards-input" placeholder="First name" />
           </div>
           <div>
-            <label className="text-xs text-italia-gray block mb-1">Last name</label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="pub-input min-h-[44px] text-sm"
-              placeholder="Last name"
-            />
+            <label className="v8-rewards-input-label">Last name</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="v8-rewards-input" placeholder="Last name" />
           </div>
           <div>
-            <label className="text-xs text-italia-gray block mb-1">Nickname</label>
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="pub-input min-h-[44px] text-sm"
-              placeholder="What should we call you?"
-            />
+            <label className="v8-rewards-input-label">Nickname · soprannome</label>
+            <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className="v8-rewards-input" placeholder="What should we call you?" />
           </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors text-sm disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Save"}
+          <div className="v8-rewards-form-actions">
+            <button onClick={handleSave} disabled={saving} className="v8-rewards-save-cta">
+              {saving ? "Saving…" : "Save · salva"}
             </button>
             <button
               onClick={() => {
@@ -230,29 +205,29 @@ function ProfileSection() {
                 setLastName(customer.lastName || "");
                 setNickname(customer.nickname || "");
               }}
-              className="px-4 py-2.5 text-sm text-italia-gray hover:text-italia-dark transition-colors"
+              className="v8-rewards-cancel-btn"
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="v8-rewards-profile-grid">
           <div>
-            <p className="text-[11px] text-italia-gray">First name</p>
-            <p className="text-sm font-medium text-italia-dark">{customer.name}</p>
+            <div className="v8-rewards-profile-field-label">First name</div>
+            <div className="v8-rewards-profile-field-val">{customer.name}</div>
           </div>
           <div>
-            <p className="text-[11px] text-italia-gray">Last name</p>
-            <p className="text-sm font-medium text-italia-dark">{customer.lastName || "—"}</p>
+            <div className="v8-rewards-profile-field-label">Last name</div>
+            <div className="v8-rewards-profile-field-val">{customer.lastName || "—"}</div>
           </div>
           <div>
-            <p className="text-[11px] text-italia-gray">Nickname</p>
-            <p className="text-sm font-medium text-italia-dark">{customer.nickname || "—"}</p>
+            <div className="v8-rewards-profile-field-label">Nickname</div>
+            <div className="v8-rewards-profile-field-val">{customer.nickname || "—"}</div>
           </div>
           <div>
-            <p className="text-[11px] text-italia-gray">Phone</p>
-            <p className="text-sm font-medium text-italia-dark">{customer.phone}</p>
+            <div className="v8-rewards-profile-field-label">Phone</div>
+            <div className="v8-rewards-profile-field-val num">{customer.phone}</div>
           </div>
         </div>
       )}
@@ -261,57 +236,41 @@ function ProfileSection() {
 }
 
 function LoyaltyCardSection() {
-  const { customer } = useCustomer();
-  if (!customer) return null;
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-      <h2 className="font-heading font-bold text-lg text-italia-dark flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-italia-gold" />
-        Loyalty Card
-      </h2>
+    <div className="v8-rewards-card">
+      <div className="v8-rewards-card-head">
+        <h2 className="v8-rewards-card-title">
+          <Sparkles className="h-5 w-5" aria-hidden />
+          Loyalty card <span className="v8-rewards-section-it">· tessera</span>
+        </h2>
+      </div>
 
-      {/* QR Code Placeholder */}
-      <div className="flex flex-col items-center py-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-        <div className="w-32 h-32 bg-white rounded-lg border border-gray-200 flex items-center justify-center mb-3 relative">
-          <div className="grid grid-cols-5 gap-[3px]">
+      <div className="v8-rewards-loyalty-card">
+        <div className="v8-rewards-loyalty-qr">
+          <div className="v8-rewards-loyalty-qr-grid">
             {Array.from({ length: 25 }).map((_, i) => (
               <div
                 key={i}
-                className={`w-4 h-4 rounded-sm ${
-                  [0,1,2,4,5,6,10,12,14,18,19,20,22,23,24].includes(i)
-                    ? "bg-italia-dark"
-                    : "bg-gray-100"
-                }`}
+                className={`v8-rewards-loyalty-qr-cell${QR_CELLS.has(i) ? " is-on" : ""}`}
               />
             ))}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <span className="text-[10px] font-bold text-italia-red">SI</span>
-            </div>
+          <div className="v8-rewards-loyalty-qr-center" aria-hidden="true">
+            <span>SI</span>
           </div>
         </div>
-        <p className="text-xs text-italia-gray font-medium">
-          Show at pickup to earn points
+        <p className="v8-rewards-loyalty-help">
+          Show at pickup · <em>mostra al ritiro</em>
         </p>
-        <p className="text-[10px] text-italia-gray/50 mt-1">
-          QR scanning — coming soon
-        </p>
+        <p className="v8-rewards-loyalty-soon">QR scanning — coming soon · presto</p>
       </div>
 
-      {/* Apple Wallet Placeholder */}
-      <button
-        disabled
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white font-medium rounded-xl opacity-60 cursor-not-allowed relative"
-      >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+      <button disabled className="v8-rewards-wallet-btn">
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
         </svg>
         Add to Apple Wallet
-        <span className="absolute -top-2 -right-2 px-2 py-0.5 text-[10px] font-bold bg-italia-gold text-white rounded-full">
-          Soon
-        </span>
+        <span className="v8-rewards-wallet-soon">Soon</span>
       </button>
     </div>
   );
@@ -335,6 +294,14 @@ function RewardsDashboard() {
   const earnedIds = getEarnedAchievements(customer);
   const earned = ACHIEVEMENTS.filter((a) => earnedIds.has(a.id));
   const locked = ACHIEVEMENTS.filter((a) => !earnedIds.has(a.id));
+
+  const tierProgressPct = nextTier
+    ? Math.min(
+        ((customer.points - TIER_THRESHOLDS[tier]) /
+          (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) * 100,
+        100,
+      )
+    : 100;
 
   const handleCopyCode = async () => {
     try {
@@ -374,408 +341,381 @@ function RewardsDashboard() {
   };
 
   const tabs = [
-    { id: "overview" as const, label: "Overview", icon: Star },
-    { id: "rewards" as const, label: "Rewards", icon: Gift },
-    { id: "achievements" as const, label: "Achievements", icon: Trophy },
-    { id: "offers" as const, label: "Offers", icon: Percent },
+    { id: "overview" as const, label: "Overview", italian: "panoramica", icon: Star },
+    { id: "rewards" as const, label: "Rewards", italian: "premi", icon: Gift },
+    { id: "achievements" as const, label: "Achievements", italian: "traguardi", icon: Trophy },
+    { id: "offers" as const, label: "Offers", italian: "offerte", icon: Percent },
   ];
 
   return (
-    <div className="py-6 md:py-10">
-      <Container>
-        {/* Header with tier card */}
-        <div className="bg-gradient-to-br from-italia-dark to-[#2a1a0a] rounded-3xl p-6 md:p-8 text-white mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-italia-gold/10 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-italia-red/10 blur-2xl" />
+    <div className="v8-rewards-page">
+      {/* Tier card */}
+      <div className="v8-rewards-tier">
+        <div className="v8-rewards-tier-top">
+          <div className="v8-rewards-tier-who">
+            <div className="v8-rewards-tier-avatar" aria-hidden="true">
+              <User className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="v8-rewards-tier-name">
+                {customer.nickname || customer.name}
+              </div>
+              <div className="v8-rewards-tier-phone">{customer.phone}</div>
+            </div>
+          </div>
+          <button onClick={logout} className="v8-rewards-tier-signout">
+            <LogOut className="h-3 w-3" /> Sign out
+          </button>
+        </div>
 
-          <div className="relative z-10">
-            {/* User info + sign out */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                  <User className="h-6 w-6 text-white/80" />
+        <div className="v8-rewards-tier-body">
+          <div className="v8-rewards-tier-points">
+            <div className="v8-rewards-tier-points-num">
+              {customer.points.toLocaleString()}
+            </div>
+            <div className="v8-rewards-tier-points-label">
+              <em>punti</em> — tier points earned
+            </div>
+            <div className="v8-rewards-tier-points-spendable">
+              Available to spend:{" "}
+              <strong>{customer.spendablePoints.toLocaleString()} pts</strong>
+            </div>
+          </div>
+          <div>
+            <span className="v8-rewards-tier-pill">
+              <Crown className="h-4 w-4" />
+              {tierConfig.label} <em style={{ opacity: 0.7 }}>· famiglia</em>
+            </span>
+            <div className="v8-rewards-tier-mult">{tierConfig.multiplier}× multiplier</div>
+          </div>
+        </div>
+
+        {nextTier && (
+          <div className="v8-rewards-tier-progress">
+            <div className="v8-rewards-tier-progress-row">
+              <span>{tierConfig.label}</span>
+              <span>
+                <strong>{toNext}</strong> pts to {TIER_CONFIG[nextTier].label}
+              </span>
+            </div>
+            <div className="v8-rewards-tier-rail">
+              <div className="v8-rewards-tier-fill" style={{ width: `${tierProgressPct}%` }} />
+            </div>
+          </div>
+        )}
+
+        <div className="v8-rewards-tier-stats">
+          <div className="v8-rewards-tier-stat">
+            <div className="v8-rewards-tier-stat-num">{customer.ordersCount}</div>
+            <div className="v8-rewards-tier-stat-label">Orders · ordini</div>
+          </div>
+          <div className="v8-rewards-tier-stat">
+            <div className="v8-rewards-tier-stat-num">{tierConfig.multiplier}×</div>
+            <div className="v8-rewards-tier-stat-label">Multiplier</div>
+          </div>
+          <div className="v8-rewards-tier-stat">
+            <div className="v8-rewards-tier-stat-num">
+              2 <Flame className="h-4 w-4" />
+            </div>
+            <div className="v8-rewards-tier-stat-label">Week streak</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="v8-rewards-tabs" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`v8-rewards-tab${activeTab === t.id ? " is-on" : ""}`}
+          >
+            <t.icon className="h-4 w-4" />
+            <span>{t.label}</span>
+            <span className="v8-rewards-tab-it">· {t.italian}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* === OVERVIEW TAB === */}
+      {activeTab === "overview" && (
+        <>
+          <FamilyWalletPanel />
+
+          <div className="v8-rewards-two-col">
+            <ProfileSection />
+            <LoyaltyCardSection />
+          </div>
+
+          <div className="v8-rewards-streak">
+            <span className="v8-rewards-streak-icon" aria-hidden="true">
+              <Flame className="h-7 w-7" />
+            </span>
+            <div>
+              <div className="v8-rewards-streak-title">
+                2-week streak · <em>due settimane</em>
+              </div>
+              <div className="v8-rewards-streak-sub">
+                Order again this week to keep it going. <strong>3 weeks = +30 bonus pts.</strong>
+              </div>
+            </div>
+          </div>
+
+          <h2 className="v8-rewards-section-title">
+            <Target className="h-5 w-5" aria-hidden />
+            Weekly challenges <span className="v8-rewards-section-it">· sfide della settimana</span>
+          </h2>
+          <div className="v8-rewards-challenges" style={{ marginBottom: 22 }}>
+            {challenges.map((ch) => (
+              <div key={ch.id} className="v8-rewards-challenge">
+                <div className="v8-rewards-challenge-head">
+                  <div className="v8-rewards-challenge-title">{ch.title}</div>
+                  <span className="v8-rewards-challenge-clock">
+                    <Clock className="h-3 w-3" /> {daysUntil(ch.expiresAt)}d
+                  </span>
                 </div>
-                <div>
-                  <h1 className="text-xl font-heading font-bold">
-                    {customer.nickname || customer.name}
-                  </h1>
-                  <p className="text-sm text-white/50">{customer.phone}</p>
+                <div className="v8-rewards-challenge-desc">{ch.description}</div>
+                <div className="v8-rewards-challenge-rail">
+                  <div className="v8-rewards-challenge-fill" style={{ width: "33%" }} />
+                </div>
+                <div className="v8-rewards-challenge-foot">
+                  <span>
+                    1 / <span className="num">{ch.target}</span>
+                  </span>
+                  <strong>+{ch.rewardPoints} pts</strong>
                 </div>
               </div>
-              <button onClick={logout} className="text-xs text-white/40 hover:text-white flex items-center gap-1">
-                <LogOut className="h-3 w-3" /> Sign out
+            ))}
+          </div>
+
+          <div className="v8-rewards-referral">
+            <h2 className="v8-rewards-referral-h2">
+              <Share2 className="h-5 w-5" aria-hidden />
+              Refer friends <em>· invita gli amici</em>
+            </h2>
+            <p className="v8-rewards-referral-sub">
+              Share your code. Your friend gets <strong>{REFERRAL_REWARD.refereeDiscountPLN} PLN off</strong>, you get <strong>{REFERRAL_REWARD.referrerPoints} bonus pts</strong>.
+            </p>
+            <div className="v8-rewards-referral-row">
+              <div className="v8-rewards-referral-code">{referralCode}</div>
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                className={`v8-rewards-referral-copy${copiedCode ? " is-copied" : ""}`}
+                aria-label="Copy referral code"
+              >
+                {copiedCode ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
               </button>
             </div>
+            <button type="button" onClick={handleShare} className="v8-rewards-referral-share">
+              <Share2 className="h-4 w-4" /> Share with friends · condividi
+            </button>
+          </div>
 
-            {/* Points + tier */}
-            <div className="flex items-end justify-between mb-4">
-              <div>
-                <p className="text-4xl md:text-5xl font-heading font-bold text-italia-gold">
-                  {customer.points.toLocaleString()}
-                </p>
-                <p className="text-sm text-white/50 mt-1">points earned (tier)</p>
-                <p className="text-xs text-white/40 mt-0.5">
-                  Available to spend:{" "}
-                  <span className="text-white/70 font-semibold">
-                    {customer.spendablePoints.toLocaleString()} pts
-                  </span>
-                </p>
-              </div>
-              <div className="text-right">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${tierConfig.color}`}>
-                  <Crown className="h-4 w-4" />
-                  {tierConfig.label} Tier
-                </span>
-                <p className="text-xs text-white/40 mt-1">{tierConfig.multiplier}x points multiplier</p>
-              </div>
+          <h2 className="v8-rewards-section-title">
+            <Crown className="h-5 w-5" aria-hidden style={{ color: "var(--color-ochre)" }} />
+            Tier roadmap <span className="v8-rewards-section-it">· la famiglia</span>
+          </h2>
+          <div className="v8-rewards-roadmap">
+            {(["bronze", "silver", "gold", "platinum"] as LoyaltyTier[]).map((t) => {
+              const cfg = TIER_CONFIG[t];
+              const isActive = t === tier;
+              const isUnlocked = customer.points >= TIER_THRESHOLDS[t];
+              const classes = [
+                "v8-rewards-tier-tile",
+                isActive ? "is-active" : "",
+                !isUnlocked && !isActive ? "is-locked" : "",
+              ].filter(Boolean).join(" ");
+              return (
+                <div key={t} className={classes}>
+                  <div className="v8-rewards-tier-tile-head">
+                    <span className="v8-rewards-tier-tile-name">
+                      <Crown className="h-3 w-3" />
+                      {cfg.label}
+                    </span>
+                    {isActive && <span className="v8-rewards-tier-tile-current">Current · attuale</span>}
+                  </div>
+                  <div className="v8-rewards-tier-tile-mult">{cfg.multiplier}× pts</div>
+                  <div className="v8-rewards-tier-tile-sub">
+                    <span className="num">{TIER_THRESHOLDS[t]}</span> pts to unlock
+                  </div>
+                  <div className="v8-rewards-tier-tile-perks">
+                    {cfg.perks.map((p, i) => (
+                      <div key={i} className="v8-rewards-tier-tile-perk">
+                        <Check className="h-3 w-3" /> {p}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* === REWARDS TAB === */}
+      {activeTab === "rewards" && (
+        <>
+          <div className="v8-rewards-balance">
+            <div className="v8-rewards-balance-label">
+              Your balance <em>· il tuo saldo</em>
             </div>
+            <div className="v8-rewards-balance-num">{customer.points.toLocaleString()} pts</div>
+            <div className="v8-rewards-balance-sub">
+              Available to spend: <strong>{customer.spendablePoints.toLocaleString()} pts</strong>
+            </div>
+          </div>
 
-            {/* Progress to next tier */}
+          <div className="v8-rewards-grid">
+            {REWARDS.map((reward) => {
+              const canRedeem = customer.spendablePoints >= reward.pointsCost;
+              return (
+                <div key={reward.id} className={`v8-rewards-reward${canRedeem ? "" : " is-locked"}`}>
+                  <div className="v8-rewards-reward-top">
+                    <span className="v8-rewards-reward-icon" aria-hidden>
+                      <Ticket className="h-5 w-5" />
+                    </span>
+                    <span className="v8-rewards-reward-cost num">{reward.pointsCost} pts</span>
+                  </div>
+                  <div className="v8-rewards-reward-name">{reward.name}</div>
+                  <div className="v8-rewards-reward-desc">{reward.description}</div>
+                  {canRedeem ? (
+                    <button
+                      type="button"
+                      disabled={redeemingId === reward.id}
+                      onClick={() => handleRedeem(reward.id)}
+                      className="v8-rewards-reward-cta"
+                    >
+                      {redeemingId === reward.id ? "Redeeming…" : "Redeem now · riscatta"}
+                    </button>
+                  ) : (
+                    <div className="v8-rewards-reward-locked">
+                      <Lock className="h-4 w-4" />
+                      Need <span className="num" style={{ fontWeight: 600 }}>{Math.max(0, reward.pointsCost - customer.spendablePoints)}</span> more pts
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* === ACHIEVEMENTS TAB === */}
+      {activeTab === "achievements" && (
+        <>
+          <h2 className="v8-rewards-section-title">
+            <Trophy className="h-5 w-5" aria-hidden style={{ color: "var(--color-ochre)" }} />
+            Unlocked <span className="v8-rewards-section-it">· conquistati ({earned.length})</span>
+          </h2>
+          {earned.length > 0 ? (
+            <div className="v8-rewards-achievements" style={{ marginBottom: 22 }}>
+              {earned.map((a) => (
+                <div key={a.id} className="v8-rewards-achievement">
+                  <span className="v8-rewards-achievement-glyph">{a.emoji}</span>
+                  <div className="v8-rewards-achievement-body">
+                    <div className="v8-rewards-achievement-name">{a.name}</div>
+                    <div className="v8-rewards-achievement-desc">{a.description}</div>
+                    <div className="v8-rewards-achievement-pts">+{a.pointsReward} pts earned</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="v8-rewards-empty" style={{ marginBottom: 22 }}>
+              Place your first order to start unlocking achievements.
+            </div>
+          )}
+
+          <h2 className="v8-rewards-section-title">
+            <Lock className="h-5 w-5" aria-hidden style={{ color: "var(--color-muted)" }} />
+            Locked <span className="v8-rewards-section-it">· bloccati ({locked.length})</span>
+          </h2>
+          <div className="v8-rewards-achievements">
+            {locked.map((a) => (
+              <div key={a.id} className="v8-rewards-achievement is-locked">
+                <span className="v8-rewards-achievement-glyph">{a.emoji}</span>
+                <div className="v8-rewards-achievement-body">
+                  <div className="v8-rewards-achievement-name">{a.name}</div>
+                  <div className="v8-rewards-achievement-desc">{a.description}</div>
+                  <div className="v8-rewards-achievement-pts">+{a.pointsReward} pts</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* === OFFERS TAB === */}
+      {activeTab === "offers" && (
+        <>
+          <h2 className="v8-rewards-section-title">
+            <Percent className="h-5 w-5" aria-hidden />
+            Combo deals <span className="v8-rewards-section-it">· i combo</span>
+          </h2>
+          <div className="v8-rewards-combos" style={{ marginBottom: 22 }}>
+            {COMBO_DEALS.map((deal) => (
+              <div key={deal.id} className="v8-rewards-combo">
+                <div className="v8-rewards-combo-head">
+                  <div className="v8-rewards-combo-name">{deal.name}</div>
+                  <span className="v8-rewards-combo-tag">−{deal.discountPercent}%</span>
+                </div>
+                <div className="v8-rewards-combo-desc">{deal.description}</div>
+                <div className="v8-rewards-combo-cats">
+                  Add {deal.categories.join(" + ")} — applies automatically.
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <h2 className="v8-rewards-section-title">
+            <Sparkles className="h-5 w-5" aria-hidden style={{ color: "var(--color-ochre)" }} />
+            Your tier perks <span className="v8-rewards-section-it">· i tuoi vantaggi</span>
+          </h2>
+          <div className="v8-rewards-perks-card" style={{ marginBottom: 18 }}>
+            <span className="v8-rewards-tier-tile-name" style={{ marginBottom: 12, display: "inline-flex" }}>
+              <Crown className="h-3 w-3" /> {tierConfig.label}
+            </span>
+            <div>
+              {tierConfig.perks.map((perk, i) => (
+                <div key={i} className="v8-rewards-perk-line">
+                  <Check className="h-4 w-4" /> {perk}
+                </div>
+              ))}
+            </div>
             {nextTier && (
-              <div>
-                <div className="flex items-center justify-between text-xs text-white/40 mb-1.5">
-                  <span>{tierConfig.label}</span>
-                  <span>{toNext} pts to {TIER_CONFIG[nextTier].label}</span>
+              <div className="v8-rewards-next-tier">
+                <div className="v8-rewards-next-tier-label">
+                  Reach <strong>{TIER_CONFIG[nextTier].label}</strong> (<span className="num">{toNext}</span> more pts) to unlock:
                 </div>
-                <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-italia-gold to-italia-red rounded-full transition-all duration-700"
-                    style={{
-                      width: `${Math.min(
-                        ((customer.points - TIER_THRESHOLDS[tier]) /
-                          (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) * 100,
-                        100
-                      )}%`,
-                    }}
-                  />
-                </div>
+                {TIER_CONFIG[nextTier].perks.map((perk, i) => (
+                  <div key={i} className="v8-rewards-perk-line is-locked">
+                    <Lock className="h-3 w-3" /> {perk}
+                  </div>
+                ))}
               </div>
             )}
-
-            {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-3 mt-6">
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold">{customer.ordersCount}</p>
-                <p className="text-[11px] text-white/40">Orders</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold">{tierConfig.multiplier}x</p>
-                <p className="text-[11px] text-white/40">Multiplier</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold flex items-center justify-center gap-1">
-                  2 <Flame className="h-4 w-4 text-orange-400" />
-                </p>
-                <p className="text-[11px] text-white/40">Week Streak</p>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === t.id
-                  ? "bg-italia-red text-white shadow-sm"
-                  : "text-italia-gray bg-white border border-gray-100 hover:bg-gray-50"
-              }`}
-            >
-              <t.icon className="h-4 w-4" />
-              {t.label}
+          <div className="v8-rewards-refer-card">
+            <div className="v8-rewards-refer-card-icon" aria-hidden="true">
+              <Heart className="h-7 w-7" fill="currentColor" fillOpacity="0.25" />
+            </div>
+            <h3 className="v8-rewards-refer-card-h3">
+              Give <em>{REFERRAL_REWARD.refereeDiscountPLN} PLN</em>, get <em>{REFERRAL_REWARD.referrerPoints} pts</em>
+            </h3>
+            <p className="v8-rewards-refer-card-sub">
+              Share your referral code with friends. They save, you earn.
+            </p>
+            <button type="button" onClick={handleShare} className="v8-rewards-referral-share" style={{ maxWidth: 280, margin: "0 auto" }}>
+              <Share2 className="h-4 w-4" /> Share code · condividi
             </button>
-          ))}
-        </div>
-
-        {/* === OVERVIEW TAB === */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <FamilyWalletPanel />
-
-            {/* Profile + Loyalty Card */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <ProfileSection />
-              <LoyaltyCardSection />
-            </div>
-
-            {/* Streak */}
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border border-orange-200/30 p-5 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white flex-shrink-0">
-                <Flame className="h-7 w-7" />
-              </div>
-              <div className="flex-1">
-                <p className="font-heading font-bold text-xl text-italia-dark flex items-center gap-2">
-                  2 week streak! 🔥
-                </p>
-                <p className="text-sm text-italia-gray">
-                  Order again this week to keep it going. 3-week streak = +30 bonus points!
-                </p>
-              </div>
-            </div>
-
-            {/* Weekly challenges */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3 flex items-center gap-2">
-                <Target className="h-5 w-5 text-italia-red" />
-                Weekly Challenges
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {challenges.map((ch) => (
-                  <div key={ch.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-sm text-italia-dark">{ch.title}</h3>
-                      <span className="flex items-center gap-1 text-[10px] text-italia-red font-medium">
-                        <Clock className="h-3 w-3" />
-                        {daysUntil(ch.expiresAt)}d
-                      </span>
-                    </div>
-                    <p className="text-xs text-italia-gray mb-3">{ch.description}</p>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1.5">
-                      <div className="h-full bg-italia-red rounded-full" style={{ width: "33%" }} />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-italia-gray">1 / {ch.target}</span>
-                      <span className="font-bold text-italia-gold-dark">+{ch.rewardPoints} pts</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Referral */}
-            <div className="bg-gradient-to-br from-italia-red/5 to-purple-50 rounded-2xl border border-italia-red/15 p-5">
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-1 flex items-center gap-2">
-                <Share2 className="h-5 w-5 text-italia-red" />
-                Refer Friends — Earn {REFERRAL_REWARD.referrerPoints} Points
-              </h2>
-              <p className="text-sm text-italia-gray mb-4">
-                Share your code. Your friend gets {REFERRAL_REWARD.refereeDiscountPLN} PLN off, you get {REFERRAL_REWARD.referrerPoints} bonus points.
-              </p>
-              <div className="flex gap-2 mb-3">
-                <div className="flex-1 bg-white rounded-xl border-2 border-dashed border-italia-red/20 px-4 py-3 text-center">
-                  <span className="font-mono font-bold text-lg text-italia-dark tracking-wider">{referralCode}</span>
-                </div>
-                <button onClick={handleCopyCode} className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${copiedCode ? "bg-italia-green text-white" : "bg-gray-100 text-italia-gray hover:bg-gray-200"}`}>
-                  {copiedCode ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
-                </button>
-              </div>
-              <button onClick={handleShare} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors active:scale-[0.98]">
-                <Share2 className="h-4 w-4" /> Share with Friends
-              </button>
-            </div>
-
-            {/* Tier roadmap */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3 flex items-center gap-2">
-                <Crown className="h-5 w-5 text-italia-gold" />
-                Tier Roadmap
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(["bronze", "silver", "gold", "platinum"] as LoyaltyTier[]).map((t) => {
-                  const cfg = TIER_CONFIG[t];
-                  const isActive = t === tier;
-                  const isUnlocked = customer.points >= TIER_THRESHOLDS[t];
-                  return (
-                    <div key={t} className={`rounded-2xl p-4 border transition-all ${isActive ? "bg-italia-gold/5 border-italia-gold/30 shadow-sm" : isUnlocked ? "bg-white border-gray-100" : "bg-gray-50 border-gray-100 opacity-60"}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${cfg.color}`}>{cfg.label}</span>
-                        {isActive && <span className="text-[10px] text-italia-green font-bold">CURRENT</span>}
-                      </div>
-                      <p className="text-sm font-bold text-italia-dark">{cfg.multiplier}x points</p>
-                      <p className="text-xs text-italia-gray mt-0.5">{TIER_THRESHOLDS[t]} pts to unlock</p>
-                      <div className="mt-2 space-y-1">
-                        {cfg.perks.map((p, i) => (
-                          <p key={i} className="text-[10px] text-italia-gray flex items-center gap-1">
-                            <Check className="h-3 w-3 text-italia-green flex-shrink-0" /> {p}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
-        )}
-
-        {/* === REWARDS TAB === */}
-        {activeTab === "rewards" && (
-          <div className="space-y-6">
-            <div className="bg-italia-cream rounded-2xl p-4 text-center">
-              <p className="text-sm text-italia-gray">Your balance (tier)</p>
-              <p className="text-3xl font-heading font-bold text-italia-gold">{customer.points.toLocaleString()} pts</p>
-              <p className="text-xs text-italia-gray mt-1">
-                Available to spend:{" "}
-                <span className="font-semibold text-italia-dark">{customer.spendablePoints.toLocaleString()} pts</span>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {REWARDS.map((reward) => {
-                const canRedeem = customer.spendablePoints >= reward.pointsCost;
-                return (
-                  <div key={reward.id} className={`rounded-2xl border p-5 transition-all ${canRedeem ? "bg-white border-italia-gold/30 shadow-sm" : "bg-gray-50 border-gray-100"}`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-italia-gold/10 flex items-center justify-center">
-                        <Ticket className="h-5 w-5 text-italia-gold" />
-                      </div>
-                      <span className="text-lg font-bold text-italia-gold">{reward.pointsCost} pts</span>
-                    </div>
-                    <h3 className="font-heading font-semibold text-italia-dark text-lg mb-1">{reward.name}</h3>
-                    <p className="text-sm text-italia-gray mb-4">{reward.description}</p>
-                    {canRedeem ? (
-                      <button
-                        type="button"
-                        disabled={redeemingId === reward.id}
-                        onClick={() => handleRedeem(reward.id)}
-                        className="w-full px-4 py-2.5 bg-italia-gold text-white font-semibold rounded-xl hover:bg-italia-gold-dark transition-colors disabled:opacity-50"
-                      >
-                        {redeemingId === reward.id ? "Redeeming…" : "Redeem Now"}
-                      </button>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 text-sm text-italia-gray py-2.5">
-                        <Lock className="h-4 w-4" />
-                        Need {Math.max(0, reward.pointsCost - customer.spendablePoints)} more pts
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* === ACHIEVEMENTS TAB === */}
-        {activeTab === "achievements" && (
-          <div className="space-y-6">
-            {/* Earned */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3">
-                Unlocked ({earned.length})
-              </h2>
-              {earned.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {earned.map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 p-4 bg-italia-gold/5 rounded-2xl border border-italia-gold/20">
-                      <span className="text-3xl">{a.emoji}</span>
-                      <div>
-                        <p className="font-semibold text-italia-dark">{a.name}</p>
-                        <p className="text-xs text-italia-gray">{a.description}</p>
-                        <p className="text-xs font-bold text-italia-gold mt-1">+{a.pointsReward} pts earned</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-italia-gray">Place your first order to start unlocking achievements!</p>
-              )}
-            </div>
-
-            {/* Locked */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3">
-                Locked ({locked.length})
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {locked.map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl opacity-70">
-                    <span className="text-2xl grayscale">{a.emoji}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-italia-dark">{a.name}</p>
-                      <p className="text-xs text-italia-gray">{a.description}</p>
-                      <p className="text-[11px] text-italia-gold-dark mt-0.5">+{a.pointsReward} pts</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* === OFFERS TAB === */}
-        {activeTab === "offers" && (
-          <div className="space-y-6">
-            {/* Active combos */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3 flex items-center gap-2">
-                <Percent className="h-5 w-5 text-italia-red" />
-                Combo Deals
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {COMBO_DEALS.map((deal) => (
-                  <div key={deal.id} className="bg-white rounded-2xl border border-gray-100 p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-heading font-semibold text-italia-dark">{deal.name}</h3>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-italia-red/10 text-italia-red">
-                        -{deal.discountPercent}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-italia-gray mb-3">{deal.description}</p>
-                    <p className="text-xs text-italia-gray">
-                      Add {deal.categories.join(" + ")} to your cart — discount applies automatically
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tier perks */}
-            <div>
-              <h2 className="font-heading font-bold text-lg text-italia-dark mb-3 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-italia-gold" />
-                Your Tier Perks
-              </h2>
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${tierConfig.color}`}>
-                    <Crown className="h-3 w-3 inline mr-1" />{tierConfig.label}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {tierConfig.perks.map((perk, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-italia-dark">
-                      <Check className="h-4 w-4 text-italia-green flex-shrink-0" />
-                      {perk}
-                    </div>
-                  ))}
-                </div>
-                {nextTier && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs text-italia-gray">
-                      Reach <strong>{TIER_CONFIG[nextTier].label}</strong> ({toNext} more pts) to unlock:
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {TIER_CONFIG[nextTier].perks.map((perk, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-italia-gray">
-                          <Lock className="h-3 w-3 text-italia-gray/50 flex-shrink-0" />
-                          {perk}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Refer for discount */}
-            <div className="bg-gradient-to-r from-italia-green/5 to-italia-cream rounded-2xl border border-italia-green/15 p-5 text-center">
-              <Heart className="h-8 w-8 text-italia-red mx-auto mb-2" />
-              <h3 className="font-heading font-bold text-lg text-italia-dark mb-1">
-                Give {REFERRAL_REWARD.refereeDiscountPLN} PLN, Get {REFERRAL_REWARD.referrerPoints} Points
-              </h3>
-              <p className="text-sm text-italia-gray mb-3">
-                Share your referral code with friends. They save, you earn.
-              </p>
-              <button onClick={handleShare} className="px-6 py-3 bg-italia-red text-white font-semibold rounded-xl hover:bg-italia-red-dark transition-colors inline-flex items-center gap-2">
-                <Share2 className="h-4 w-4" /> Share Code
-              </button>
-            </div>
-          </div>
-        )}
-      </Container>
+        </>
+      )}
     </div>
   );
 }
@@ -784,7 +724,7 @@ export default function RewardsPage() {
   const { customer, loading } = useCustomer();
 
   if (loading) {
-    return <div className="py-32 text-center text-italia-gray">Loading...</div>;
+    return <div className="v8-rewards-loading">Loading…</div>;
   }
 
   return customer ? <RewardsDashboard /> : <SignInSection />;

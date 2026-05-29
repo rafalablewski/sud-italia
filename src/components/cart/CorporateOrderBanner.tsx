@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2 } from "lucide-react";
 
 import { useCustomer } from "@/store/customer";
 
@@ -28,14 +27,14 @@ const DAY_NAMES = [
 ];
 
 /**
- * "Ordering with [company]" banner (audit §3.4) — shown in the cart drawer
- * when the active wallet is productised as a Sud Italia Corporate account.
- * The banner self-hides for solo customers and for family wallets without a
- * corporate config, so it doesn't add chrome to the existing flow.
+ * "Ordering with [company]" banner (audit §3.4) — shown in the V8 cart
+ * drawer when the active wallet is productised as a Sud Italia Corporate
+ * account. Self-hides for solo customers and family wallets without a
+ * corporate config.
  *
- * The banner reads the corporate slug off the customer's wallet (only `id`
- * is stored client-side), then resolves the public rollup so we can show
- * employee count + auto-pre-order copy without leaking PII.
+ * V8 styling: ochre paper card (.v8-cart-corp) — italic Cormorant
+ * "Sud Italia per le aziende" eyebrow, italic "Ordering with [name]"
+ * headline in Cormorant 17px, italic Lora rollup line.
  */
 export function CorporateOrderBanner() {
   const { customer } = useCustomer();
@@ -67,39 +66,28 @@ export function CorporateOrderBanner() {
   const preorderCopy = formatPreorder(rollup.autoPreorderDay, rollup.autoPreorderTime);
 
   return (
-    <div className="px-5 mt-3">
-      <div
-        className="flex items-start gap-3 p-3 rounded-xl border border-italia-gold/30"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(184,146,46,0.10) 0%, rgba(0,140,69,0.06) 100%)",
-        }}
-      >
-        <span
-          className="flex-shrink-0 w-9 h-9 rounded-lg inline-flex items-center justify-center text-white"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--color-italia-gold) 0%, var(--color-italia-green) 100%)",
-            boxShadow: "0 2px 6px rgba(184,146,46,0.30)",
-          }}
-        >
-          <Building2 className="h-5 w-5" />
-        </span>
-        <div className="flex-1 min-w-0 leading-snug">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-italia-gold-dark">
-            Sud Italia Corporate
-          </p>
-          <p className="text-sm font-semibold text-italia-dark mt-0.5">
-            Ordering with <span className="font-bold">{rollup.name}</span>
-            {!isHead && <span className="text-italia-gray font-normal"> · billed to the company card</span>}
-          </p>
-          <p className="text-xs text-italia-gray mt-0.5">
-            {rollup.memberCount} employee{rollup.memberCount === 1 ? "" : "s"}
-            {preorderCopy && <span> · {preorderCopy}</span>}
-            {isHead && (
-              <span> · {rollup.headBonusPoints} pts head bonus this month</span>
-            )}
-          </p>
+    <div className="v8-cart-corp">
+      <span className="v8-cart-corp-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+          <rect x="5" y="9" width="22" height="16" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M5 14 L27 14" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M12 9 L12 6 L20 6 L20 9" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      </span>
+      <div className="v8-cart-corp-body">
+        <div className="v8-cart-corp-kicker">
+          Sud Italia for businesses <span className="v8-cart-corp-it">· per le aziende</span>
+        </div>
+        <div className="v8-cart-corp-title">
+          Ordering with <em>{rollup.name}</em>
+          {!isHead && <span className="v8-cart-corp-soft"> · billed to the company card</span>}
+        </div>
+        <div className="v8-cart-corp-sub">
+          <span className="num">{rollup.memberCount}</span> employee{rollup.memberCount === 1 ? "" : "s"}
+          {preorderCopy && <span> · {preorderCopy}</span>}
+          {isHead && (
+            <span> · <span className="num">{rollup.headBonusPoints}</span> pts head bonus this month</span>
+          )}
         </div>
       </div>
     </div>

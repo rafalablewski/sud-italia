@@ -169,12 +169,11 @@ filter the grid in place.
 - **Empty state** (`.v8-menu-empty`) — italic Cormorant muted line,
   with a clear-search affordance if the user is searching.
 
-The pre-V8 MenuSection imported `<SpeedGuarantee />`,
+The pre-V8 MenuSection composed `<SpeedGuarantee />`,
 `<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`.
-Those components are still in the repo (other surfaces might use
-them) but the V8 menu inlines bespoke blocks instead — keeping the
-markup auditable against the mockup without coordinating restyles
-across 5 components.
+All four were deleted in Step H once the V8 menu inlined bespoke
+blocks for the same chrome — keeping the markup auditable against
+the mockup without coordinating restyles across separate components.
 
 `<ReorderSection />` (returning-customer rail) and
 `<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card
@@ -182,20 +181,30 @@ when active — V8's mockup doesn't ship them but they're valuable
 existing features. They sit outside the V8 wrapper so the menu
 card stays clean.
 
-### Item detail drawer
+### Item detail drawer — `<ItemDetailDrawer />`
 
-Tapping any item opens a portalled side drawer with:
+Tapping the **Details · dettagli** link on any menu card opens the V8
+portalled detail drawer (`.v8-detail-*` selector family). See the
+dedicated entry in
+[`../theme/components.md`](../theme/components.md#-itemdetaildrawer-----srccomponentslocationitemdetaildrawertsx)
+for the full chrome breakdown; the sections it surfaces are:
 
-- Full description, allergens, dietary tags, ingredients (read from
-  the chain-wide recipe).
-- Modifiers (size / crust / extra toppings) with per-modifier price
-  delta.
-- Quantity stepper.
-- `Add to cart` primary button (sticky bottom on mobile so it stays
-  thumb-reachable).
-- `Cross-sell rail` below: "Pairs with espresso, dessert" — per
-  `src/lib/upsell.ts :: getCartSuggestions` (CLAUDE rule: pizza /
-  pasta always suggest espresso + dessert).
+- Hero — dish glyph + italic Cormorant name + italic Lora description
+- Meta — oxblood price + prep time + calories editorial row
+- Allergens · allergeni — oxblood chip row or basil "no major
+  allergens · senza allergeni maggiori" line
+- Valori nutrizionali · nutrition — Cormorant-labelled bilingual bars
+  for calories / protein / carbs / fat / fiber / sodium
+- Provenienza · sourcing — italic Lora ingredient-origin quote in a
+  parchment-deep paper card
+- Sticky paybar — terracotta "Add to cart · aggiungi al carrello +
+  [price]" CTA
+
+**Single-mount** since Step 13 — the drawer lives once at the layout
+level and opens via `useCartUIStore.setDetailItem({ item,
+locationSlug, popularThisWeek })`. The previous setup mounted one
+drawer per menu card, so a 35-dish Kraków menu used to portal 35
+drawer instances; this is now one.
 
 ### Location info — `<LocationInfo />`
 

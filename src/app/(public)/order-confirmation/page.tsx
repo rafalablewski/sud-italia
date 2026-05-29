@@ -3,8 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { Container } from "@/components/ui/Container";
-import { Button } from "@/components/ui/Button";
 import { OrderTracker } from "@/components/order/OrderTracker";
 import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
@@ -48,173 +46,142 @@ function OrderConfirmationContent() {
   const customerName = customer?.name || "Customer";
 
   return (
-    <section className="py-10 md:py-16">
-      <Container>
-        <div className="max-w-lg mx-auto">
-          {/* Animated success header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-italia-green/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-in">
-              <CheckCircle className="h-10 w-10 text-italia-green" />
-            </div>
+    <section className="v8-order-page">
+      {/* Success header — basil-tinted check mark + italic Cormorant
+          "Order confirmed" / italic "Grazie!" / order ID pill. */}
+      <div className="v8-order-success">
+        <div className="v8-order-success-mark" aria-hidden="true">
+          <CheckCircle className="h-9 w-9" />
+        </div>
+        <h1 className="v8-order-success-h1">Order confirmed</h1>
+        <p className="v8-order-success-sub">
+          <em>Grazie!</em> Thank you for your order.
+        </p>
+        {orderId && (
+          <p className="v8-order-success-id">
+            <span className="v8-order-success-id-label">#</span>
+            <span>{orderId}</span>
+          </p>
+        )}
+      </div>
 
-            <h1 className="text-3xl sm:text-4xl font-heading font-bold text-italia-dark mb-3 animate-fade-in">
-              Order Confirmed!
-            </h1>
+      {/* Live order tracker — paper card with the editorial 3-step
+          stepper + estimated time + order summary. */}
+      {orderId && locationSlug && (
+        <div className="v8-order-tracker">
+          <OrderTracker orderId={orderId} locationSlug={locationSlug} />
+        </div>
+      )}
 
-            <p className="text-italia-gray text-lg mb-2 animate-fade-in">
-              Thank you for your order
-            </p>
+      {/* Audit §3 — Web push opt-in. Only surfaces when VAPID is
+          configured server-side and the browser supports push. */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
+        <LayoutGate flag="showPushOptIn">
+          <PushOptInButton phone={customer?.phone} />
+        </LayoutGate>
+      </div>
 
-            {orderId && (
-              <p className="text-sm text-italia-gray mb-2 animate-fade-in">
-                Order ID:{" "}
-                <span className="font-mono font-semibold text-italia-dark">
-                  {orderId}
-                </span>
-              </p>
-            )}
+      {/* Pickup location card */}
+      {location && (
+        <div className="v8-order-card v8-order-pickup">
+          <div className="v8-order-pickup-label">
+            Pick up at <span className="v8-order-section-it">· ritira qui</span>
           </div>
-
-          {/* Live order tracker */}
-          {orderId && locationSlug && (
-            <div className="mb-8 animate-slide-up">
-              <OrderTracker orderId={orderId} locationSlug={locationSlug} />
-            </div>
-          )}
-
-          {/* Audit §3 — Web push opt-in. Surfaces only when VAPID is
-              configured server-side and the browser supports push. */}
-          <div className="mb-8 flex justify-center animate-slide-up">
-            <LayoutGate flag="showPushOptIn">
-              <PushOptInButton phone={customer?.phone} />
-            </LayoutGate>
+          <div className="v8-order-pickup-name">
+            <MapPin className="h-5 w-5" aria-hidden />
+            <span>{location.name}</span>
           </div>
+          <div className="v8-order-pickup-address">{location.address}</div>
+        </div>
+      )}
 
-          {/* Pickup location */}
-          {location && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-8 animate-slide-up">
-              <h3 className="font-heading font-semibold text-lg text-italia-dark mb-2">
-                Pick up your order at
-              </h3>
-              <div className="flex items-center justify-center gap-2 text-italia-gray">
-                <MapPin className="h-4 w-4 text-italia-red" />
-                <span>{location.name}</span>
-              </div>
-              <p className="text-sm text-italia-gray mt-1">
-                {location.address}
-              </p>
+      {/* Loyalty points earned */}
+      <LoyaltyPointsEarned
+        pointsEarned={pointsEarned}
+        totalPoints={totalPoints}
+        tierName={tierName.charAt(0).toUpperCase() + tierName.slice(1)}
+      />
+
+      {/* Honest FOMO — come back for limited-time items + invite friends */}
+      {location && (
+        <div className="v8-order-comeback">
+          <span className="v8-order-comeback-icon" aria-hidden="true">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div className="v8-order-comeback-body">
+            <div className="v8-order-comeback-title">
+              Seasonal specials go fast{" "}
+              <span className="v8-order-section-it">· stagionali</span>
             </div>
-          )}
-
-          {/* Loyalty points earned — calculated from real order data */}
-          <div className="mb-6">
-            <LoyaltyPointsEarned
-              pointsEarned={pointsEarned}
-              totalPoints={totalPoints}
-              tierName={tierName.charAt(0).toUpperCase() + tierName.slice(1)}
-            />
-          </div>
-
-          {/* Honest FOMO: next order + referrals (no fake stats) */}
-          {location && (
-            <div className="mb-6 rounded-2xl border border-italia-gold/25 bg-gradient-to-br from-italia-gold/8 to-italia-red/5 p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/80 border border-italia-gold/20 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-italia-gold-dark" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-italia-dark">
-                    Limited-time menu items go fast
-                  </p>
-                  <p className="text-xs text-italia-gray mt-1 leading-relaxed">
-                    Seasonal specials rotate — grab them on your next order before they&apos;re gone.
-                  </p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-sm">
-                    <Link
-                      href={`/locations/${location.slug}#menu`}
-                      className="font-semibold text-italia-red hover:underline"
-                    >
-                      Browse menu
-                    </Link>
-                    <span className="text-italia-gray hidden sm:inline">·</span>
-                    <Link
-                      href="/rewards"
-                      className="inline-flex items-center gap-1 font-semibold text-italia-green hover:underline"
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      Invite friends — earn points
-                    </Link>
-                  </div>
-                </div>
-              </div>
+            <div className="v8-order-comeback-sub">
+              Limited-rotation dishes leave the board without warning — grab them on your next visit.
             </div>
-          )}
-
-          {/* Customer milestone */}
-          <div className="mb-6">
-            <CustomerMilestone orderCount={orderCount} customerName={customerName} />
-          </div>
-
-          {/* Feedback survey (Omotenashi + Kaizen) */}
-          {orderId && (
-            <div className="mb-6">
-              <LayoutGate flag="showFeedbackSurvey">
-                <FeedbackSurvey orderId={orderId} />
-              </LayoutGate>
-            </div>
-          )}
-
-          {/* Shareable review link */}
-          {orderId && (
-            <div className="mb-8 text-center">
-              <p className="text-xs text-italia-gray flex items-center justify-center gap-1.5">
-                <Link2 className="h-3 w-3" />
-                Review later:{" "}
-                <Link
-                  href={`/review/${orderId}`}
-                  className="text-italia-red font-medium hover:underline"
-                >
-                  suditalia.pl/review/{orderId}
-                </Link>
-              </p>
-            </div>
-          )}
-
-          {/* Share & actions */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center animate-slide-up">
-            {location && (
-              <Link href={`/locations/${location.slug}`}>
-                <Button variant="outline">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Order Again
-                </Button>
+            <div className="v8-order-comeback-links">
+              <Link href={`/locations/${location.slug}#menu`} className="v8-order-comeback-link">
+                Browse menu · <em>il menù</em>
               </Link>
-            )}
-            <Button
-              variant="ghost"
-              onClick={async () => {
-                const shareData = {
-                  title: "My Sud Italia Order",
-                  text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}!`,
-                  url: window.location.href,
-                };
-                if (navigator.share) {
-                  navigator.share(shareData).catch(() => {});
-                } else {
-                  await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-                  (document.activeElement as HTMLElement)?.blur();
-                }
-              }}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Share Order
-            </Button>
-            <Link href="/">
-              <Button variant="ghost">Back to Home</Button>
-            </Link>
+              <Link href="/rewards" className="v8-order-comeback-link is-basil">
+                <Users className="h-3.5 w-3.5" />
+                Invite friends · <em>invita gli amici</em>
+              </Link>
+            </div>
           </div>
         </div>
-      </Container>
+      )}
+
+      {/* Customer milestone */}
+      <CustomerMilestone orderCount={orderCount} customerName={customerName} />
+
+      {/* Feedback survey (Omotenashi + Kaizen) */}
+      {orderId && (
+        <div style={{ marginBottom: 22 }}>
+          <LayoutGate flag="showFeedbackSurvey">
+            <FeedbackSurvey orderId={orderId} />
+          </LayoutGate>
+        </div>
+      )}
+
+      {/* Shareable review link */}
+      {orderId && (
+        <p className="v8-order-review-link">
+          <Link2 className="h-3 w-3" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          Review later:{" "}
+          <Link href={`/review/${orderId}`}>suditalia.pl/review/{orderId}</Link>
+        </p>
+      )}
+
+      {/* Share & actions */}
+      <div className="v8-order-actions">
+        {location && (
+          <Link href={`/locations/${location.slug}`} className="v8-order-action is-primary">
+            <ArrowLeft className="h-4 w-4" />
+            Order again · ordina ancora
+          </Link>
+        )}
+        <button
+          type="button"
+          className="v8-order-action is-ghost"
+          onClick={async () => {
+            const shareData = {
+              title: "My Sud Italia Order",
+              text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}!`,
+              url: window.location.href,
+            };
+            if (navigator.share) {
+              navigator.share(shareData).catch(() => {});
+            } else {
+              await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+              (document.activeElement as HTMLElement)?.blur();
+            }
+          }}
+        >
+          <Share2 className="h-4 w-4" />
+          Share · condividi
+        </button>
+        <Link href="/" className="v8-order-action is-ghost">
+          Back home · alla casa
+        </Link>
+      </div>
     </section>
   );
 }
@@ -223,7 +190,9 @@ export default function OrderConfirmationPage() {
   return (
     <Suspense
       fallback={
-        <div className="py-32 text-center text-italia-gray">Loading...</div>
+        <div className="v8-order-page" style={{ textAlign: "center", color: "var(--color-muted)", fontStyle: "italic" }}>
+          Loading…
+        </div>
       }
     >
       <OrderConfirmationContent />

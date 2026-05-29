@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Medal, X } from "lucide-react";
 
 import { useCartStore } from "@/store/cart";
 import { useCustomer } from "@/store/customer";
@@ -21,14 +20,16 @@ const PERK_LINE_PREFIX = "perk-gold-";
 /**
  * Gold-tier comp'd perk banner — audit §2.2 row 6.
  *
- * Only renders for Gold / Platinum members. Offers a comp'd antipasto (the
- * pesto bruschetta when available, otherwise the first antipasto on the
- * menu). The CTA toggles a price-0 line in the cart; tapping the × pulls
- * the line back out. Same one-tap-add / explicit-× pattern as
- * "Complete your meal."
+ * Only renders for Gold / Platinum members. Offers a comp'd antipasto
+ * (pesto bruschetta when available, otherwise the first antipasto on the
+ * menu). The CTA toggles a price-0 line in the cart; tapping × pulls it
+ * back out. Same one-tap-add / explicit-× pattern as the V8 cross-sell rail.
  *
- * When no antipasto is in stock today the banner self-hides — no point
- * advertising a perk we can't fulfil.
+ * V8 styling: `.v8-cart-perk` ochre paper card with an editorial star
+ * SVG + italic Cormorant tier name (Famiglia Oro / Platino) + italic
+ * Lora copy "A complimentary antipasto della casa on us — added at
+ * the truck." Adopted state flips to basil-deep "Added to the table"
+ * with a circular × in the corner.
  */
 export function TierPerkBanner({ allMenuItems }: TierPerkBannerProps) {
   const { customer } = useCustomer();
@@ -57,73 +58,63 @@ export function TierPerkBanner({ allMenuItems }: TierPerkBannerProps) {
   if (tier !== "gold" && tier !== "platinum") return null;
   if (!compCandidate || !locationSlug) return null;
 
+  const tierLabel = tier === "platinum" ? "Famiglia Platino" : "Famiglia Oro";
+
   const toggle = () => {
     if (applied && compLine) {
       removeItem(compLine.menuItem.id);
       return;
     }
-    // Inject a synthetic line with price 0 and a marker id so we can clean
-    // it up without disturbing the customer's real items.
     const compItem: MenuItem = {
       ...compCandidate,
       id: `${PERK_LINE_PREFIX}${compCandidate.id}`,
-      name: `${compCandidate.name} (Gold perk · comp'd)`,
+      name: `${compCandidate.name} (${tierLabel} perk · comp'd)`,
       price: 0,
     };
     addItem(compItem, locationSlug);
   };
 
   return (
-    <div className="px-5 mt-3">
-      <div
-        className={`p-3 rounded-xl border flex items-center gap-3 ${
-          applied
-            ? "bg-italia-green/5 border-italia-green/30"
-            : "bg-italia-gold/5 border-italia-gold/40 bg-[linear-gradient(135deg,rgba(184,146,46,0.10)_0%,rgba(184,146,46,0.04)_100%)] hover:border-italia-gold cursor-pointer"
-        }`}
-        onClick={() => {
-          if (!applied) toggle();
-        }}
-      >
-        <span
-          className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-            applied
-              ? "bg-italia-green/10 text-italia-green"
-              : "bg-italia-gold/18 text-italia-gold-dark"
-          }`}
-        >
-          <Medal className="h-5 w-5" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-italia-dark">
-            {applied
-              ? `${compCandidate.name} added — on the house`
-              : `Make it a ${tier === "platinum" ? "Platinum" : "Gold"}-tier order`}
-          </p>
-          <p className="text-[11px] text-italia-gray mt-0.5 leading-snug">
-            {applied
-              ? "Tap × to remove the comp."
-              : `+ ${compCandidate.name} on the house · ${tier} perk`}
-          </p>
+    <div
+      className={`v8-cart-perk${applied ? " is-on" : ""}`}
+      role={applied ? undefined : "button"}
+      tabIndex={applied ? undefined : 0}
+      onClick={() => { if (!applied) toggle(); }}
+      onKeyDown={(e) => {
+        if (!applied && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          toggle();
+        }
+      }}
+    >
+      <span className="v8-cart-perk-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 2 L10.5 6.5 L15 7 L11.5 10 L12.5 14.5 L9 12 L5.5 14.5 L6.5 10 L3 7 L7.5 6.5 Z"
+                stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="currentColor" fillOpacity="0.3" />
+        </svg>
+      </span>
+      <div className="v8-cart-perk-body">
+        <div className="v8-cart-perk-title">{tierLabel}</div>
+        <div className="v8-cart-perk-sub">
+          {applied
+            ? <>{compCandidate.name} <em>added to the table</em> — on us.</>
+            : <>A complimentary <em>{compCandidate.name}</em> — on us, added at the truck.</>}
         </div>
-        {applied ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggle();
-            }}
-            aria-label="Remove perk"
-            className="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-md border border-gray-200 bg-white text-italia-dark hover:bg-italia-red hover:text-white hover:border-italia-red transition-colors"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ) : (
-          <span className="flex-shrink-0 text-xs font-semibold text-italia-gold-dark bg-italia-gold/15 px-2.5 py-1.5 rounded-md">
-            Add free
-          </span>
-        )}
       </div>
+      {applied ? (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); toggle(); }}
+          aria-label="Remove perk"
+          className="v8-cart-perk-remove"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      ) : (
+        <span className="v8-cart-perk-cta">Add · aggiungi</span>
+      )}
     </div>
   );
 }

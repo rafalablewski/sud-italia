@@ -486,16 +486,6 @@ the location-pages route).
   operator retunes the formula, the homepage pitch needs an update
   too. Same trade-off bundles take.
 
-### `<CTASection />` — kept in repo, not on landing
-
-The V8 homepage closes with the Soci rail above and does NOT use a
-separate red-gradient closing CTA. `CTASection.tsx` is intentionally
-left in the repo (not imported from `(public)/page.tsx`) in case a
-future surface needs the red-gradient closing block — but adding it
-back to the landing would re-introduce the 2010s SaaS pattern V8
-explicitly strips. See the `(public)/page.tsx` header comment for
-the rationale.
-
 ## Menu / cart components (in `src/components/cart/`, `src/components/location/`)
 
 ### `<LocationHero />` — `src/components/location/LocationHero.tsx`
@@ -543,11 +533,11 @@ and the items grid. Full layout spec in
   active tab fills terracotta with an ochre-light count chip.
 - **Inline V8 blocks** — `.v8-guarantee`, `.v8-combos` /
   `.v8-combo-card` / `.v8-wax-seal`, `.v8-surprise`, `.v8-live-act`.
-  These replace the imported `<SpeedGuarantee />`,
-  `<ComboDealsPreview />`, `<SurpriseMe />`, `<LiveActivityBar />`,
-  `<MenuCategoryNav />` markup that the pre-V8 MenuSection used —
-  the components stay in the repo for any other surface that needs
-  them, but the V8 menu uses inline bespoke blocks for fidelity.
+  These inline bespoke blocks replace the pre-V8 `<SpeedGuarantee />`,
+  `<ComboDealsPreview />`, `<SurpriseMe />`, and `<MenuCategoryNav />`
+  components — all deleted in Step H. `<LiveActivityBar />` stays in
+  the repo because it's still mounted on `/locations/[slug]` (just
+  not inside MenuSection).
 - **Wax-seal** — a CSS-only circle: oxblood radial gradient + inset
   shadows + dashed inner ring at 6px inset + `rotate(-8deg)`. Holds
   the discount percent (`−10%`) in italic Cormorant. Adjacent to
@@ -557,9 +547,7 @@ and the items grid. Full layout spec in
   Click picks a random available item and prefills the search
   field with its name (`setSearchQuery(random.name)`), repurposing
   the existing filter logic so the picker doesn't need a separate
-  selection store. Existing `<SurpriseMe />` component (which has a
-  fancier spinner-reveal UX) is left in the repo for a future
-  surface.
+  selection store.
 - **Per-location live activity** — re-introduced inside the menu
   wrapper (after Step 8 removed it from the location-page chrome
   to fix a duplicate-ticker-band finding). Pulsing basil pip +
@@ -630,8 +618,9 @@ countdown, compliance pills — only the markup changed.
     drawer). Only renders when `getItemDetails(item.id)` has
     something to show.
   - `<CompliancePills />` — regulatory disclosure pill row (kcal,
-    Nutri-Grade, halal, pork, alcohol, etc.) kept as the existing
-    component since the inline-pill format already fits.
+    Nutri-Grade, halal, contains-pork, contains-alcohol). V8 chrome
+    as of Step 16 — see the dedicated entry under "Polish components"
+    below.
 
 - **Foot** (`.v8-mi-foot`) — dashed-line separator above, flex
   row with price on the left and add-action on the right:
@@ -646,61 +635,461 @@ countdown, compliance pills — only the markup changed.
     the item entirely.
 
 - **Detail drawer** — `<ItemDetailDrawer />` opens via the Details
-  button. Existing component, not yet V8-styled (its drawer surface
-  is Step 11+ territory).
+  button. V8 paper-card vocabulary as of Step 13 — see the dedicated
+  entry below for the full chrome breakdown.
 
 ### `<CartDrawer />` — `src/components/cart/CartDrawer.tsx`
 
-The full checkout drawer (see [`../pages/checkout.md`](../pages/checkout.md)
-for flow contract).
+The V8 Trattoria checkout drawer (see [`../pages/checkout.md`](../pages/checkout.md)
+for the full surface contract).
 
-- Built on `<Sheet />`.
-- Stages flow within the same surface — no page navigation.
-- Bottom-sticky footer with the running total + primary `Continue`
-  CTA.
+- **Builds its own portalled sheet** — does not compose `<Sheet />`.
+  The V8 paper-card vocabulary needs to extend edge-to-edge inside the
+  drawer (gripped header, basil sprig + italic Italian sublabel,
+  Italian-flag tricolore strip, parchment scroll region, sticky
+  paybar with a tricolore band of its own). The shell selectors live
+  under `.v8-cart-*` — `.v8-cart-overlay`, `.v8-cart-sheet`,
+  `.v8-cart-grip`, `.v8-cart-top`, `.v8-cart-tricolore`,
+  `.v8-cart-scroll`, `.v8-cart-paybar`. See `themes/homepage/index.css`.
+- Portalled to `document.body` per Rule 4. `body.v8-cart-open` toggles
+  while open so the floating cart pill / nav can fade out without
+  rolling their own state.
+- **Single-mount** (Step 11 follow-up). Lives at `(public)/layout.tsx`
+  exactly once and reads open state + active-location menu items from
+  `useCartUIStore`. Every trigger surface (top-nav `<CartButton />`,
+  mobile `<FloatingCartButton />`, `<AbandonedCartBanner />`) opens
+  this one instance; no more 3× duplicated effects (slot polling,
+  upsell-config refetch, attach-history fetch, compliance lookup).
+- Stages still flow within the same surface — no page navigation.
+- Sticky paybar with the running total + bilingual `Pay · procedi
+  · 46,51 zł` CTA (terracotta) + outline trash chip for `Clear cart`.
+
+### `<MenuItemsRegistrar />` — `src/components/cart/MenuItemsRegistrar.tsx`
+
+The bridge that lets the layout-level `<CartDrawer />` see the live
+menu of whichever location page is currently mounted. Rendered once
+on `/locations/[slug]/page.tsx`, it calls
+`useCartUIStore.setMenuItems(menuItems)` on mount and clears the
+store on unmount. Returns `null`.
+
+Without this the drawer would fall back to the hardcoded
+`krakowMenu` / `warszawaMenu` arrays — which miss admin overrides
+(price changes, item-86 toggles, badges) and break the cross-sell
+rail + bundle ladder + tier perk for the current location.
+
+### `<CartItem />` — `src/components/cart/CartItem.tsx`
+
+V8 paper-card line item rendered inside the drawer's `.v8-cart-items`
+rail.
+
+- `.v8-cart-item-illus` — 64×64 parchment-deep tile with an inline
+  pencil-sketched glyph per `menuItem.category` (pizza, pasta,
+  dessert, drinks, coffee, antipasti, panini). Glyphs are inline SVGs
+  in the same file (`DishGlyph` helper) so no asset pipeline is needed.
+- `.v8-cart-item-name` — italic Cormorant 20px espresso.
+- `.v8-cart-item-price` — Cormorant 600 tabular ink (line total).
+- `.v8-cart-item-origin` — Lora italic muted, prints
+  `menuItem.description` so the cart row still tells the sourcing
+  story.
+- `.v8-cart-qty` — terracotta-tinted pill stepper (`− 1 +`).
+  Decrement at 1 removes the line (preserved behaviour).
+- `.v8-cart-item-action` — italic text buttons `note · nota` +
+  `remove · rimuovi`. Note panel opens below the row via
+  `.v8-cart-note` parchment-cream textarea (140-char cap, counter
+  on the right of the foot).
+- `data-soldout="true"` dims the row to 60% opacity and adds an
+  italic "Sold out · esaurita — remove to continue" line.
+
+### `<CartUpsell />` — `src/components/cart/CartUpsell.tsx`
+
+"Pairs beautifully with —" sommelier-style cross-sell rail.
+
+- `.v8-cart-pairs-kicker` "Tonight's pairing · l'abbinamento di
+  stasera", `.v8-cart-pairs-title` italic Cormorant 22px headline,
+  italic Lora sub.
+- `.v8-cart-pair` rows: 56×56 illus tile (basil-deep glyph per
+  category) + italic name + italic Lora "reason" copy + tabular
+  price + terracotta italic `+ Add · aggiungi` text button.
+- Once added, the button flips to basil-deep `added · aggiunto ×N`
+  and stays tappable for another increment (audit §2.2 chip behaviour).
+- Wired through `getCartSuggestions()` with the same `PairingContext`
+  ranking (hour-of-day + per-customer attach history).
 
 ### `<FloatingCartButton />` — `src/components/cart/FloatingCartButton.tsx`
 
-The persistent in-thumb-reach order surface.
+The V8 "Il tuo carrello" floating pill — bottom-right on every
+storefront route.
 
-- Fixed bottom-right desktop, bottom-centre mobile (24px gutter from
-  edge).
-- `bg-italia-red text-white rounded-full`
-- The **one** brand-tinted shadow on the storefront:
-  `box-shadow: 0 4px 16px rgba(154,39,66,0.15)`.
+- `.v8-float-cart` parchment-cream pill with the bag SVG +
+  "Cart · il tuo carrello" italic bilingual label + a
+  `.v8-float-cart-count` terracotta count badge inside. On hover the
+  whole pill flips to terracotta fill + parchment text + parchment
+  count badge.
+- `data-bump="true"` toggles for ~360ms whenever the cart count
+  increases — fires the `v8-float-cart-bump` keyframe so the pill
+  scales up momentarily as a micro-feedback for items landing while
+  the drawer is closed.
+- `body.v8-cart-open` (toggled by `<CartDrawer />`) fades the pill to
+  opacity 0 + a 20px downward translate so the two surfaces don't
+  fight for attention.
 - Renders nothing when the cart is empty (don't tease an empty cart).
+- Single-mount surface: lives at `(public)/layout.tsx`. Every
+  storefront page sees the same pill instance. No props.
+- Opens the layout-level `<CartDrawer />` via
+  `useCartUIStore.setDrawerOpen(true)`.
 
-### `<DeliveryProgress />`
+### `<AddToCartToast />` — `src/components/cart/AddToCartToast.tsx`
 
-The shimmer-sweep-unlock micro-flow for free delivery.
+The V8 audit §2.1 T+0 "item added" toast — espresso paper card that
+slides up from the bottom of the viewport.
 
-- Below threshold: shimmer crawls across a hairline progress bar
-  (`--animate-delivery-shimmer`).
-- At threshold: one-shot sweep + the medallion award
-  (`--animate-delivery-sweep` + `--animate-delivery-medallion`).
-- Unlock card pop: `--animate-delivery-unlock`.
+- `.v8-cart-toast` espresso fill with parchment text + a gold star
+  glyph on the left. Italic Cormorant title
+  `<em>Margherita</em> added · aggiunto al carrello` +
+  italic Lora seed line `Customers usually add an espresso.` The seed
+  comes from `getCartSuggestions()` — the same upsell rules the
+  cart drawer uses, so the toast and the drawer always agree on
+  what to recommend.
+- Slides up via `transform: translate(-50%, 20px) → translate(-50%, 0)`
+  + opacity 0 → 1 on the `.is-show` class. Auto-dismisses in 4s.
+- `body.v8-cart-open` fades the toast to opacity 0 — no point
+  surfacing a toast above an open drawer.
+- Portalled to `document.body` per Rule 4.
+- Subscribes to `useCartStore` and fires on every quantity increase
+  (new line OR existing line incremented). The previous-quantity
+  map is primed on mount so items already in the persisted cart on
+  page load don't fire a toast.
+- Single-mount surface: lives at `(public)/layout.tsx`. The menu
+  items used to compute the seed flow through `useCartUIStore`
+  (seeded by `<MenuItemsRegistrar />` on the location page). Pages
+  without a location see the toast title without a seed line.
+
+### `<ItemDetailDrawer />` — `src/components/location/ItemDetailDrawer.tsx`
+
+V8 per-dish info drawer that opens from the "Details · dettagli"
+button on each menu card.
+
+- Builds its own portalled sheet under `.v8-detail-*` (mirrors the
+  cart drawer vocabulary so the menu → detail → cart flow reads as
+  one editorial spread). The selectors stay namespaced under
+  `.v8-detail-*` so the detail styling can't leak into the cart's
+  `.v8-cart-*` family.
+- Sheet sizes to 92vh on mobile (slightly slimmer than the cart
+  drawer's 96vh — the detail surface is less info-dense, so the
+  underlying menu stays visible past the top) and the same
+  `calc(100vh - 40px)` side-drawer treatment on desktop.
+- **Sticky header** — basil sprig SVG + italic Cormorant 22px item
+  name (ellipses on overflow) + "— dettagli" sublabel + line-bordered
+  close-X that rotates 90° on hover, mirroring the cart drawer
+  affordance.
+- **Hero block** — 96×96 parchment-deep `.v8-detail-illus` tile with
+  a per-category dish glyph (pizza / pasta / dessert / drinks / coffee
+  / antipasto / default tomato), italic Cormorant 26px `.v8-detail-name`,
+  italic Lora `.v8-detail-desc`. Limited-rotation items add an oxblood
+  `.v8-detail-callout.is-limited` strip; popular-this-week items add
+  an ochre `.v8-detail-callout` strip.
+- **Meta row** — dashed-hairline-bordered `.v8-detail-meta` with the
+  oxblood Cormorant 26px tabular price + "Nm · in cottura" prep time
+  + tabular calorie count.
+- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen` chip
+  row when present. Empty allergens collapse to a basil-deep
+  `.v8-detail-no-allergens` line ("Senza allergeni maggiori — no major
+  allergens reported.") with a hand-drawn basil-leaf SVG.
+- **Valori nutrizionali · nutrition** — `.v8-detail-bar` rows with
+  bilingual italic Lora labels (Calories · calorie, Protein · proteine,
+  Carbohydrates · carboidrati, Fat · grassi, Fiber · fibra, Sodium ·
+  sodio) and progress fills tinted per-nutrient (`.is-ochre`,
+  `.is-terracotta`, `.is-ochre-light`, `.is-oxblood`, `.is-basil`,
+  `.is-espresso`).
+- **Provenienza · sourcing** — parchment-deep `.v8-detail-sourcing`
+  paper card with a basil-sprig mark + italic Lora quote from the
+  Kodawari sourcing copy.
+- **Footer flourish** — italic Cormorant "Un piatto fatto bene · a dish
+  done well." closing line.
+- **Sticky paybar** — terracotta Cormorant "Add to cart · aggiungi
+  al carrello + [price]" CTA with the same shadow + hover lift as the
+  cart drawer's pay CTA. Tap adds the item via `useCartStore.addItem`
+  + closes the drawer (the layout-level `<FloatingCartButton />` +
+  `<AddToCartToast />` take over the post-add feedback). Disabled
+  state when the item is sold out or the location slug is missing.
+- ESC key closes; backdrop click closes; rotating × button closes.
+  `body.v8-detail-open` is toggled while open so the body scrolls
+  inside the sheet, not behind it.
+
+**Single-mount surface.** Lives at `(public)/layout.tsx` exactly once.
+Opens via `useCartUIStore.setDetailItem({ item, locationSlug,
+popularThisWeek })`. The location slug travels in the payload so the
+Add-to-cart CTA can attribute the first-ever item to the right
+location (the cart store only learns its slug after the first item
+lands — without this, the detail Add CTA would be permanently
+disabled for an empty cart on first visit).
+
+The previous N-drawer-per-menu-page setup (one mounted
+`<ItemDetailDrawer />` per `<MenuItem />` with its own local open
+state) is now a single instance — for a Kraków menu of 35 dishes,
+that drops 35 portalled drawers + 35 useEffect chains from the DOM.
+
+### `<DeliveryProgress />` — `src/components/cart/DeliveryProgress.tsx`
+
+V8 free-delivery shimmer-sweep-unlock micro-flow.
+
+- Below threshold: `.v8-cart-delivery` italic Cormorant
+  "Consegna a casa — N% verso la gratuità" headline +
+  `.v8-cart-delivery-rail` terracotta rail + `.v8-cart-delivery-fill`
+  terracotta gradient + `.v8-cart-delivery-shimmer` running
+  `--animate-delivery-shimmer` + `.v8-cart-cyclist` SVG that rides
+  the fill (`left: {pct}%`).
+- At threshold: `.v8-cart-delivery.is-unlocked` gold→basil-tinted
+  card + `.v8-cart-delivery-medallion` with the gold-to-basil radial
+  + the one-shot `.v8-cart-delivery-sweep` overlay. Uses the same
+  `--animate-delivery-unlock` / `--animate-delivery-sweep` /
+  `--animate-delivery-medallion` keyframes declared in Step 1.
+
+### `<LoyaltyEarnPreview />` — `src/components/cart/LoyaltyEarnPreview.tsx`
+
+Italic Lora "You'll earn N points · N punti" line shown inside the
+paybar foot. Filled ochre star + Cormorant 600 ochre-dark tabular
+count. Server is the source of truth for the actual number; this
+preview uses the bronze multiplier and is intentionally cosmetic.
+
+### `<CorporateOrderBanner />` — `src/components/cart/CorporateOrderBanner.tsx`
+
+"Sud Italia per le aziende" rollup card (audit §3.4) — shown when the
+active wallet is a productised corporate account.
+
+- `.v8-cart-corp` ochre paper card with the building-block SVG on the
+  left + Cormorant kicker ("Sud Italia for businesses · per le
+  aziende") + italic Cormorant headline "Ordering with [name]" +
+  italic Lora rollup line (employee count, optional auto-preorder
+  copy, optional head-of-wallet bonus).
+- Self-hides for solo customers and family wallets without a
+  corporate config.
+
+### `<TierPerkBanner />` — `src/components/cart/TierPerkBanner.tsx`
+
+Famiglia Oro / Famiglia Platino complimentary antipasto toggle (audit
+§2.2 row 6).
+
+- `.v8-cart-perk` ochre paper card with the star SVG + italic
+  Cormorant tier name + italic Lora copy "A complimentary *antipasto
+  della casa* on us — added at the truck." + italic Cormorant
+  "Add · aggiungi" CTA on the right.
+- Toggled state (`.is-on`) flips to a basil-deep "added to the
+  table" headline with a round line-bordered × in the corner.
+- Adds a price-0 line tagged with `perk-gold-` prefix so the cart
+  store can find + remove it without disturbing real paid lines.
+
+### `<TodBanner />` — `src/components/cart/TodBanner.tsx`
+
+Time-of-day pairing card (audit §2.3). Five variants — morning
+(basil), lunch (ochre), afternoon "l'aperitivo" (ochre), dinner
+(terracotta), late (espresso night palette).
+
+- `.v8-cart-tod.is-{variant}` paper card with a hand-drawn variant
+  glyph on the left (sun / plate / wine glass / table-and-knife /
+  moon) + italic Cormorant variant title + italian italic phrase +
+  italic Lora sub.
+- CTA is the standard ochre Cormorant pill; on `.is-late` it flips
+  to terracotta so it reads on the espresso background.
+- Re-evaluates the active window every minute so a customer who
+  lingers in the drawer doesn't sit at "Lunch combo" past 13:00.
+
+### `<ComboDealBanner />` — `src/components/cart/ComboDealBanner.tsx`
+
+Italian Classic / Pasta Combo / etc. percent deals.
+
+- `.v8-cart-combo` espresso paper card with a hand-drawn wood-fired-
+  oven glyph + italic Cormorant deal name + italic Lora copy + ochre
+  `−12%` chip on the right + hairline progress rail underneath.
+- While the deal is incomplete the card becomes a button — tap adds
+  the missing items (cheapest in each missing category, or the missing
+  required suffixes) and unlocks the discount in one go.
+- Applied state flips to basil-tinted `.is-complete` card with the
+  basil-deep italic "applied · attivato — saving X zł" headline.
+
+### `<SlotPicker />` — `src/components/cart/SlotPicker.tsx`
+
+Date strip + slot grid in the V8 paper-card vocabulary.
+
+- `.v8-cart-days` horizontal scroll of day pills (Today · oggi /
+  Tomorrow · domani / formatted dates). Active day flips to
+  terracotta fill.
+- `.v8-cart-slots` 3-up grid of slot tiles. Each tile is a paper
+  pill with the time on top (Cormorant 600 tabular) + italic Lora
+  scarcity line below (bilingual: "Only 2 left · ultimi 2",
+  "Last spot · ultimo!", "N slots · liberi"). Critical slots tint
+  oxblood, low-stock slots tint ochre.
+- `.v8-cart-slots-empty` — parchment-deep dashed card with italic
+  Cormorant "Fully booked today · pieno" + terracotta italic
+  day-rollover link.
+- `.v8-cart-slots-skel` — 6-tile shimmer skeleton with the
+  parchment → parchment-deep gradient.
+
+### `<BundleLadder />` — `src/components/cart/BundleLadder.tsx`
+
+Make-it-a-bundle paper card (audit §3.2). Surfaces Lunch / Family
+Feast / Late dinner ladders depending on time-of-day, mainItems
+count, and admin config.
+
+- `.v8-cart-ladder` paper card with italic Cormorant period title +
+  italian phrase + a `.v8-cart-ladder-switch` chip to cycle when
+  more than one period qualifies. Sub copy reads "À la carte you'd
+  pay X — cross a threshold and share a feast with la famiglia."
+- `.v8-cart-ladder-primary` full-width paper tile for the
+  default-pushed tier (the McDonald's "Make it a Meal" pattern):
+  italic Cormorant "Most picked · il preferito" badge + headline
+  "Make it a *Family*", italic Lora description with per-person
+  framing (kicks in at ≥3 mains), tabular oxblood now-price with the
+  à-la-carte strikethrough above and basil-deep "Save X" below.
+- `.v8-cart-ladder-chip` paper tiles for the secondary tiers, grid
+  layout (1- or 2-up). Decoy tier dims to 85% opacity.
+- `.v8-cart-ladder-hint` ochre paper strip with the silhouette icon —
+  fires when the cart is within `hintWithin` mains of the Family
+  Feast threshold; copy: "Add N more pizzas or pastas to unlock
+  *Festa di famiglia* — save up to X."
+- Combo × Bundle clarity: when a combo deal is already active the
+  primary CTA shows the *incremental* basil-deep savings alongside a
+  muted "Replaces the active [combo name]" italic line so the
+  customer understands the trade.
+- Composer-sheet handoff, A/B variant resolution (SHA-256 hashed
+  phone), and funnel beaconing (impression / composer_opened /
+  composer_abandoned) all preserved.
 
 ## Loyalty components
 
-### `<LoyaltyCard />` — `src/components/loyalty/LoyaltyCard.tsx`
+All V8 as of Step 15. The `/rewards` surface lives at
+`src/app/(public)/rewards/page.tsx`; see
+[`../pages/loyalty.md`](../pages/loyalty.md) for the full
+section-by-section contract. The component-level entries below cover
+the rendering details.
 
-The rewards-page centrepiece.
+### Rewards page sections — `.v8-rewards-*`
 
-- `pub-card` styling, extra-generous 32px interior padding.
-- Tier badge top, balance numeral 36px Lora 700, progress bar
-  underneath, perks list at the bottom.
+The page renders three internal sub-components inline:
 
-## Order tracker
+- `<SignInSection />` — unauthenticated state. Basil-tinted star mark
+  + italic Cormorant *Soci e amici* headline + phone input with +48
+  prefix capsule + terracotta "Sign in" CTA. A "Nuovo qui?" card
+  fades in below when the phone isn't recognised, with a basil
+  "Join · iscriviti" CTA for phone-only auto-enrolment.
+- `<ProfileSection />` — paper card with editable First name / Last
+  name / Nickname / Phone fields. The Edit affordance flips it into
+  a form with parchment-cream `.v8-rewards-input`s + terracotta
+  "Save · salva" CTA.
+- `<LoyaltyCardSection />` — paper card with a parchment-deep dashed
+  inner card holding a 5×5 SVG "QR" placeholder (`.v8-rewards-loyalty-qr`
+  + "SI" center monogram) + italic Lora "Show at pickup · mostra al
+  ritiro" + an espresso "Add to Apple Wallet" disabled CTA with an
+  ochre "Soon" ribbon.
+
+### Tier card — `.v8-rewards-tier`
+
+The visual centrepiece + permanent header. Espresso paper card with
+parchment text, ochre/terracotta radial washes (via `::before` /
+`::after`), top row (44px avatar + nickname + phone + sign-out), body
+row (56px italic Cormorant ochre tabular point count + tier pill +
+multiplier), tier-progress hairline rail with an ochre→terracotta-soft
+gradient fill, and a 3-cell stats row (Orders · Multiplier · Week
+streak). Platinum collapses the progress section.
+
+### Tabs — `.v8-rewards-tabs` / `.v8-rewards-tab`
+
+Horizontal-scroll pill row. Each tab carries italic Cormorant label +
+italic Lora Italian sublabel (`Overview · panoramica`,
+`Rewards · premi`, `Achievements · traguardi`, `Offers · offerte`).
+Active tab flips to terracotta fill + parchment text with a soft drop.
+
+### `<FamilyWalletPanel />` — `src/components/loyalty/FamilyWalletPanel.tsx`
+
+V8 family wallet panel. `.v8-rewards-wallet` paper card with three
+states: no wallet (basil "Create family wallet · crea famiglia" CTA),
+pending invite (ochre confirm-code panel with italic Cormorant
+*Invito in attesa*), active (2-up stat tiles for Pool earned ·
+accumulati + Available · disponibili, members list with crown glyph
+for the head + remove chip for head-only, terracotta italic
+"Invite · invita" form, member-only "Leave this wallet" link).
+Every business behaviour preserved verbatim
+(`/api/customer/wallet/create / invite / confirm / remove / leave`,
+dev-mode invite-code surfacing, refresh via `identify()` after every
+mutation).
+
+## Order-confirmation components
+
+All V8 as of Step 14 — selector family `.v8-order-*` in
+`themes/homepage/index.css`. See
+[`../pages/order.md`](../pages/order.md) for the section-by-section
+contract; the entries below cover the rendering details.
 
 ### `<OrderTracker />` — `src/components/order/OrderTracker.tsx`
 
-The polling live-status display on the order-confirmation page.
+The polling live-status display.
 
-- 5-step horizontal pill row (stacks vertical < 480px).
-- Current step: `bg-italia-red text-white`.
-- Completed: `bg-italia-green/10 text-italia-green`.
-- Future: `bg-italia-light-gray text-italia-gray`.
-- ETA copy below the strip.
+- **Vertical editorial stepper** — `.v8-order-tracker-steps` with
+  three visible steps (Confirmed · confermato → Preparing · in
+  preparazione → Ready · pronto). 48px dots:
+  parchment-deep / basil-fill / terracotta-fill for
+  future / completed / active. The active step pulses via
+  `@keyframes v8-order-step-pulse`; a `.is-pending` active step
+  swaps to ochre so the customer knows the truck hasn't confirmed yet.
+  A dashed-line vertical rail (`.v8-order-tracker-rail`) connects the
+  dots; a basil rail fill grows in height as steps complete.
+- **Live tracking row** at the top — basil-deep pulsing dot
+  (`@keyframes v8-order-ping`) + italic "Live tracking · in diretta"
+  + a refresh chip. Flips to oxblood when the order is `cancelled`.
+- **ETA card** — terracotta-tinted paper with a clock SVG + uppercase
+  "ESTIMATED · STIMATO" + oxblood italic Cormorant 22px time value.
+- **Order summary** card — `.v8-order-summary` with the bilingual
+  "Your order · il tuo ordine" title, the fulfilment mode chip,
+  per-line items, and a dashed-hairline total in oxblood Cormorant 22px
+  tabular.
+- Polls every 10s via `/api/orders?orderId=...`. `lastUpdated` is
+  guarded with `suppressHydrationWarning` + a null initial state so
+  the SSR'd HTML doesn't disagree with the hydrated client about
+  which second it is.
+
+### `<LoyaltyPointsEarned />` — `src/components/order/LoyaltyPointsEarned.tsx`
+
+`.v8-order-loyalty` ochre paper card with a 38px italic Cormorant
+`+N` count, bilingual "points earned · punti guadagnati" suffix,
+"Balance: 47 pts · Bronze" line (the tier name italic oxblood), and
+a small italic-Lora footer reminding the customer the points are
+credited to the phone on the order.
+
+### `<CustomerMilestone />` — `src/components/order/CustomerMilestone.tsx`
+
+`.v8-order-milestone` round-number recognition card. 56px
+parchment-circle holds the milestone icon (Star / Trophy / Gift /
+PartyPopper for 1 / 5 / 10 / 25 / 50 lifetime orders); italic
+Cormorant `<em>Bravo,</em> {firstName}!` headline; bilingual italic
+body copy. Pop-in keyframe (`v8-order-pop`) on mount.
+
+### `<PushOptInButton />` — `src/components/order/PushOptInButton.tsx`
+
+- `.v8-order-push` — ochre-bordered paper pill: italic Cormorant
+  "Notify me when ready · avvisami" with a Bell glyph. Error state
+  flips the border to oxblood + swaps to BellOff.
+- `.v8-order-push-confirmed` — basil-tinted strip when already
+  subscribed: "You'll get a push when your order is ready · *quando
+  è pronto*".
+- Hides entirely when VAPID is unconfigured, the browser doesn't
+  support push, or the customer denied permission.
+
+### `<FeedbackSurvey />` — `src/components/order/FeedbackSurvey.tsx`
+
+Three-step wizard rendered inside `.v8-order-card` +
+`.v8-order-feedback*`.
+
+- Step 1 (items): one `.v8-order-feedback-row` per ordered dish with
+  a StarRating; rated rows flip to basil-tinted `.is-rated`.
+- Step 2 (overall): three categories (Speed · velocità / Service ·
+  servizio / Value · valore) with emoji glyph + label + StarRating,
+  free-text textarea, terracotta "Almost done · quasi fatto" CTA.
+- Step 3 (email): optional input + terracotta Submit CTA with
+  paper-airplane glyph. Skip link underneath when blank.
+- Thank-you state — basil-tinted check mark + "Grazie!" headline +
+  ochre "+10 loyalty points · punti aggiunti" callout.
+- Submission posts `/api/feedback` fire-and-forget; failure swallowed
+  so the customer always reaches thank-you.
 
 ## What this component set is not
 
@@ -723,32 +1112,120 @@ storefront** — type-first cards, brand-red CTAs, cream-and-white
 cards, the delight moments (sheet, toast, delivery shimmer, tier-up
 bounce).
 
-## Pre-V8 components retained but unused
+## Polish components — Step 16
 
-The V8 port (Steps 1-10) folded several pre-V8 sub-components into
-inline V8 chrome inside their parent component. The originals stay
-in the repo for any other surface that might want to import them,
-but the V8 storefront no longer renders them. Listed here so a
-future cleanup commit can grep importers and remove the truly dead
-ones with confidence.
+Two small surfaces that were the last pre-V8 chrome inside V8 parent
+components.
 
-- `src/components/landing/CTASection.tsx` — pre-V8 red-gradient
-  "Hungry? Order Now!" closing block. V8 closes with the Soci
-  rail; CTASection is no longer imported by `(public)/page.tsx`.
-- `src/components/location/SpeedGuarantee.tsx` — pre-V8 15-minute
-  guarantee banner. V8 menu chrome inlines `.v8-guarantee` instead.
-- `src/components/location/ComboDealsPreview.tsx` — pre-V8 combo
-  deals preview. V8 menu chrome inlines `.v8-combos` /
-  `.v8-combo-card` instead.
-- `src/components/location/SurpriseMe.tsx` — pre-V8 spinner-reveal
-  surprise picker. V8 menu chrome inlines the `.v8-surprise` pill
-  with a scroll-and-highlight picker instead.
-- `src/components/location/MenuCategoryNav.tsx` — pre-V8 category
-  pill nav. V8 menu chrome inlines `.v8-cat-tabs` instead.
-- `src/components/location/MenuItemImage.tsx` — pre-V8 thumbnail
-  with category-gradient emoji fallback. V8 item card inlines the
-  per-category SVG sketch in `.v8-mi-illus` instead.
+### `<NotifyMeForm />` — `src/components/landing/NotifyMeForm.tsx`
 
-Re-check with `grep -rln "<COMPONENT_NAME" src --include="*.tsx"`
-before removing — admin-facing surfaces (operator previews) or
-tests might still import them.
+Email signup pill that lives inside `.v8-loc-notify` on closed-
+location cards in the landing's LocationsGrid (today: Wrocław).
+
+- `.v8-notify` — flex row with a `.v8-notify-input-wrap` parchment-
+  cream email input (Bell glyph absolute-positioned on the left at
+  `left: 12px`) + an ochre `.v8-notify-cta` italic Cormorant
+  "Notify · avvisami" button.
+- `.v8-notify-confirmed` — basil-tinted post-submit pill with a
+  check glyph + italic Cormorant "*Ti avviseremo* — we'll let you
+  know." Email is logged to the console as a `[Notify Me]` marker
+  (TODO comment in source); a one-line POST to a future
+  `/api/notify-me` endpoint is the only change to wire it up.
+
+### `<CompliancePills />` — `src/components/location/CompliancePills.tsx`
+
+Regulatory disclosure chip row under each menu item card.
+
+- `.v8-comp-pills` — flex-wrap container.
+- `.v8-comp-pill` — italic Cormorant 600 11px chip, 999px radius,
+  font-feature `tnum + lnum` so the kcal number reads as tabular.
+  Variants:
+  - `.is-kcal` — parchment-deep editorial chip with an ochre stamp
+    SVG (oxygen-droplet glyph) + `{N} kcal`. Fires when the truck is
+    NYC zone or the operator opted into kcal disclosure +
+    `item.nutrition?.calories` is set.
+  - `.is-halal` / `.is-nonhalal` — basil-tinted ✓ Halal chip /
+    oxblood-tinted Non-halal chip. Fires on SG trucks.
+  - `.is-pork` — terracotta-tinted "🐷 Contains pork" chip.
+  - `.is-alc` — ochre-tinted "🍷 Contains alcohol" chip.
+- `.v8-comp-grade` — 22px circular medallion for SG NEA Nutri-Grade.
+  The regulatory A/B/C/D colour signal is preserved but re-tinted
+  through the V8 palette so it stays unambiguous while still
+  reading editorial: `.is-A` basil-deep, `.is-B` basil, `.is-C`
+  terracotta, `.is-D` oxblood.
+
+Renders nothing on EU/PL trucks unless the operator opts into kcal
+disclosure (settings.json → `compliance.byLocation[slug].calorieDisclosureRequired`).
+
+## Pre-V8 orphan cleanup — Step H
+
+Seven pre-V8 components were folded into inline V8 chrome by Steps
+1-15 and then deleted in Step H once a final grep confirmed no live
+importers. Listed here as a historical record so an archaeology dive
+into the git log knows where the markup went:
+
+| Deleted file                                          | Replaced by                                         |
+| ----------------------------------------------------- | --------------------------------------------------- |
+| `src/components/landing/CTASection.tsx`               | the V8 Soci rail closes the landing instead         |
+| `src/components/location/SpeedGuarantee.tsx`          | inline `.v8-guarantee` in `MenuSection.tsx`         |
+| `src/components/location/ComboDealsPreview.tsx`       | inline `.v8-combos` / `.v8-combo-card` in `MenuSection.tsx` |
+| `src/components/location/SurpriseMe.tsx`              | inline `.v8-surprise` pill with scroll-and-highlight in `MenuSection.tsx` |
+| `src/components/location/MenuCategoryNav.tsx`         | inline `.v8-cat-tabs` in `MenuSection.tsx`          |
+| `src/components/location/MenuItemImage.tsx`           | inline per-category SVG sketch (`.v8-mi-illus`) in `MenuItem.tsx` |
+| `src/components/loyalty/LoyaltyCard.tsx`              | inline `<LoyaltyCardSection />` in `rewards/page.tsx` |
+
+### Cart family — all V8
+
+After Steps 11, 11 follow-up, 12, and 13, every drawer-style surface
+in the storefront reads as one paper-card vocabulary:
+
+| Component                | Status        | Selectors                    |
+| ------------------------ | ------------- | ---------------------------- |
+| `<CartDrawer />`         | V8 (Step 11)  | `.v8-cart-*` shell           |
+| `<CartItem />`           | V8 (Step 11)  | `.v8-cart-item-*`            |
+| `<CartUpsell />`         | V8 (Step 11)  | `.v8-cart-pairs-*`           |
+| `<DeliveryProgress />`   | V8 (Step 11)  | `.v8-cart-delivery-*`        |
+| `<LoyaltyEarnPreview />` | V8 (Step 11+) | `.v8-cart-loyalty-preview-*` |
+| `<CorporateOrderBanner />` | V8 (Step 11+) | `.v8-cart-corp-*`          |
+| `<TierPerkBanner />`     | V8 (Step 11+) | `.v8-cart-perk-*`            |
+| `<TodBanner />`          | V8 (Step 11+) | `.v8-cart-tod-*`             |
+| `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`           |
+| `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`       |
+| `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`          |
+| `<FloatingCartButton />` | V8 (Step 12)  | `.v8-float-cart`             |
+| `<AddToCartToast />`     | V8 (Step 12)  | `.v8-cart-toast`             |
+| `<ItemDetailDrawer />`   | V8 (Step 13)  | `.v8-detail-*`               |
+| `<MenuItemsRegistrar />` | n/a (bridge)  | —                            |
+| `<AbandonedCartBanner />` | V8 (Step 17, polish) | `.v8-abandoned-*`    |
+
+Every component in the cart family is V8 — no exceptions.
+
+### `<AbandonedCartBanner />` — `src/components/cart/AbandonedCartBanner.tsx`
+
+The 30-second "still hungry?" nudge that surfaces when a customer
+goes idle with items in their cart. Lives at the layout level (Step
+11+ single-mount) and reads from `useCartStore.items` to decide
+whether to schedule the timer.
+
+- `.v8-abandoned` — fixed top-center paper card, sized
+  `min(440px, 100% - 32px)`. Slides in via the dedicated
+  `v8-abandoned-slide` keyframe (opacity + 16px translate-y over
+  400ms cubic-bezier). Anchored under the sticky nav at
+  `top: calc(var(--v8-nav-height) + 12px)` so it clears the
+  header on every viewport.
+- `.v8-abandoned-illus` — 38px parchment-deep circle with a
+  basil-sprig-over-tomato glyph (the same hand-sketched vocabulary
+  the cart items + detail drawer use).
+- `.v8-abandoned-title` — italic Cormorant 15px "Still hungry?
+  · *hai ancora fame?*" with the Italian phrase in muted italic.
+- `.v8-abandoned-sub` — italic Lora 12px "**N** items waiting in
+  your cart · *in attesa*" — tabular item count in Cormorant 600.
+- `.v8-abandoned-cta` — terracotta italic Cormorant
+  "Continue · continua →". Opens the layout-level `<CartDrawer />`
+  via `useCartUIStore.setDrawerOpen`.
+- `.v8-abandoned-dismiss` — line-bordered round × button; hover
+  flips to oxblood. Sets `dismissed = true` so the banner stays
+  hidden for the rest of the session.
+- `body.v8-cart-open` fades the banner to opacity 0 + drops
+  pointer events — no nagging while the drawer is up.
+- `prefers-reduced-motion` disables the slide animation.

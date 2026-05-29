@@ -21,26 +21,46 @@ interface OrderTrackerProps {
 type TrackerStatus = "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
 
 const STATUS_STEPS = [
-  { key: "confirmed", label: "Confirmed", icon: CheckCircle, description: "Restaurant confirmed your order" },
-  { key: "preparing", label: "Preparing", icon: ChefHat, description: "Our chef is making your food" },
-  { key: "ready", label: "Ready", icon: ShoppingBag, description: "Your order is ready!" },
+  {
+    key: "confirmed",
+    label: "Confirmed",
+    italian: "confermato",
+    icon: CheckCircle,
+    description: "Restaurant confirmed your order.",
+  },
+  {
+    key: "preparing",
+    label: "Preparing",
+    italian: "in preparazione",
+    icon: ChefHat,
+    description: "Our pizzaiolo is making your food.",
+  },
+  {
+    key: "ready",
+    label: "Ready",
+    italian: "pronto",
+    icon: ShoppingBag,
+    description: "Your order is hot and ready.",
+  },
 ] as const;
 
-/** Step 0 is shared: pending = payment/order logged, not yet confirmed in admin. */
 function getFirstStepCopy(status: TrackerStatus): {
   label: string;
+  italian: string;
   description: string;
   Icon: typeof CheckCircle;
 } {
   if (status === "pending") {
     return {
       label: "Awaiting confirmation",
+      italian: "in attesa",
       description: "We have your order — the restaurant will confirm it shortly.",
       Icon: Clock,
     };
   }
   return {
     label: STATUS_STEPS[0].label,
+    italian: STATUS_STEPS[0].italian,
     description: STATUS_STEPS[0].description,
     Icon: STATUS_STEPS[0].icon,
   };
@@ -79,11 +99,15 @@ function getEstimatedTime(status: TrackerStatus): string {
   }
 }
 
-export function OrderTracker({ orderId, locationSlug }: OrderTrackerProps) {
+export function OrderTracker({ orderId }: OrderTrackerProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  // `lastUpdated` is rendered as a locale time string. Guarding on a
+  // mounted flag means we don't ship a date string from SSR (which the
+  // client would then re-render in a slightly different second,
+  // tripping React's hydration mismatch detector).
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -104,10 +128,13 @@ export function OrderTracker({ orderId, locationSlug }: OrderTrackerProps) {
     }
   }, [orderId]);
 
-  // Poll every 10 seconds for status updates
+  // Poll every 10 seconds for status updates. Polling continues until
+  // the component unmounts; on terminal states (completed / cancelled)
+  // the API just keeps returning the same data, which is cheap and
+  // keeps the code path simple.
   useEffect(() => {
     fetchOrder();
-    const interval = setInterval(fetchOrder, 10000);
+    const interval = setInterval(fetchOrder, 10_000);
     return () => clearInterval(interval);
   }, [fetchOrder]);
 
@@ -117,176 +144,144 @@ export function OrderTracker({ orderId, locationSlug }: OrderTrackerProps) {
   const isCancelled = status === "cancelled";
   const firstStepCopy = getFirstStepCopy(status);
 
+  const railFillPct =
+    Math.min(Math.max(currentStep, 0) / Math.max(STATUS_STEPS.length - 1, 1), 1) * 100;
+
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Live status indicator */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <span className="relative flex h-3 w-3">
-          {!isCancelled ? (
-            <>
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-italia-green opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-italia-green" />
-            </>
-          ) : (
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
-          )}
-        </span>
-        <span
-          className={`text-sm font-medium ${isCancelled ? "text-red-600" : "text-italia-green"}`}
-        >
-          {isCancelled ? "Order cancelled" : "Live tracking"}
-        </span>
+    <div>
+      {/* Live status indicator + refresh button */}
+      <div
+        className={`v8-order-tracker-status${isCancelled ? " is-cancelled" : ""}`}
+        role="status"
+      >
+        <span className="v8-order-tracker-pulse" aria-hidden="true" />
+        <em>{isCancelled ? "Order cancelled · annullato" : "Live tracking · in diretta"}</em>
         <button
+          type="button"
           onClick={fetchOrder}
-          className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          className="v8-order-tracker-refresh"
           title="Refresh"
+          aria-label="Refresh status"
         >
-          <RefreshCw className="h-3.5 w-3.5 text-italia-gray" />
+          <RefreshCw className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {isCancelled ? (
-        <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-center text-sm text-red-800">
-          This order is no longer active. If you were charged in error, please contact the restaurant.
+        <div className="v8-order-tracker-cancelled" role="alert">
+          This order is <em>no longer active</em>. If you were charged in error, contact the restaurant.
         </div>
       ) : loading && !order ? (
-        <p className="text-center text-sm text-italia-gray py-10 mb-6">
-          Loading order status…
-        </p>
+        <p className="v8-order-tracker-loading">Loading order status…</p>
       ) : error && !order ? (
-        <p className="text-center text-sm text-red-600 py-10 mb-6">
+        <p className="v8-order-tracker-error">
           Couldn&apos;t load this order. Tap refresh to try again.
         </p>
       ) : (
         <>
-          {/* Progress steps */}
-          <div className="relative mb-8">
-            {/* Connection line */}
-            <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gray-200" />
+          {/* Editorial stepper — basil dots when complete, terracotta when active */}
+          <div className="v8-order-tracker-steps">
+            <div className="v8-order-tracker-rail" aria-hidden="true" />
             <div
-              className="absolute left-6 top-8 w-0.5 bg-italia-green transition-all duration-1000 ease-out"
-              style={{
-                height: `${Math.min(Math.max(currentStep, 0) / (STATUS_STEPS.length - 1), 1) * 100}%`,
-                maxHeight: "calc(100% - 4rem)",
-              }}
+              className="v8-order-tracker-rail-fill"
+              aria-hidden="true"
+              style={{ height: `calc(${railFillPct}% - 0px)` }}
             />
-
-            <div className="space-y-6">
-              {STATUS_STEPS.map((step, i) => {
-                const isCompleted =
-                  i < currentStep || (i === currentStep && status === "completed");
-                const isActive = i === currentStep && status !== "completed";
-                const pendingHold = status === "pending" && isActive && i === 0;
-                const label = i === 0 ? firstStepCopy.label : step.label;
-                const description = i === 0 ? firstStepCopy.description : step.description;
-                const StepIcon = i === 0 ? firstStepCopy.Icon : step.icon;
-
-                return (
-                  <div key={step.key} className="flex items-start gap-4 relative">
-                    <div
-                      className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 transition-all duration-500 ${
-                        isCompleted
-                          ? "bg-italia-green text-white shadow-md shadow-italia-green/20"
-                          : isActive
-                            ? pendingHold
-                              ? "bg-amber-100 text-amber-800 shadow-md shadow-amber-200/50 animate-pulse-soft"
-                              : "bg-italia-green text-white shadow-lg shadow-italia-green/30 animate-pulse-soft"
-                            : "bg-gray-100 text-gray-400"
-                      }`}
-                    >
-                      <StepIcon className="h-5 w-5" />
+            {STATUS_STEPS.map((step, i) => {
+              const isCompleted =
+                i < currentStep || (i === currentStep && status === "completed");
+              const isActive = i === currentStep && status !== "completed";
+              const pendingHold = status === "pending" && isActive && i === 0;
+              const label = i === 0 ? firstStepCopy.label : step.label;
+              const italian = i === 0 ? firstStepCopy.italian : step.italian;
+              const description = i === 0 ? firstStepCopy.description : step.description;
+              const StepIcon = i === 0 ? firstStepCopy.Icon : step.icon;
+              const classes = [
+                "v8-order-step",
+                isCompleted ? "is-completed" : "",
+                isActive ? "is-active" : "",
+                pendingHold ? "is-pending" : "",
+              ].filter(Boolean).join(" ");
+              return (
+                <div key={step.key} className={classes}>
+                  <span className="v8-order-step-dot" aria-hidden="true">
+                    <StepIcon className="h-5 w-5" />
+                  </span>
+                  <div className="v8-order-step-body">
+                    <div className="v8-order-step-label">
+                      {label} <span className="v8-order-step-it">· {italian}</span>
+                      {isActive && (
+                        <span className="v8-order-step-current">Current</span>
+                      )}
                     </div>
-                    <div className="pt-1.5">
-                      <p
-                        className={`font-semibold text-sm ${
-                          isCompleted || isActive
-                            ? "text-italia-dark"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {label}
-                        {isActive && (
-                          <span
-                            className={`ml-2 text-xs font-normal ${
-                              pendingHold ? "text-amber-700" : "text-italia-green"
-                            }`}
-                          >
-                            Current
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-italia-gray mt-0.5">
-                        {description}
-                      </p>
-                    </div>
+                    <div className="v8-order-step-desc">{description}</div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Estimated time card */}
-          <div className="bg-gradient-to-r from-italia-cream to-white rounded-2xl p-4 border border-italia-gold/15">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-italia-red/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-italia-red" />
+          <div className="v8-order-tracker-eta">
+            <span className="v8-order-tracker-eta-icon" aria-hidden="true">
+              <Clock className="h-5 w-5" />
+            </span>
+            <div className="v8-order-tracker-eta-body">
+              <div className="v8-order-tracker-eta-label">
+                Estimated · stimato
               </div>
-              <div>
-                <p className="text-xs text-italia-gray font-medium">
-                  Estimated time
-                </p>
-                <p className="text-lg font-heading font-bold text-italia-red">
-                  {estimatedTime}
-                </p>
-              </div>
+              <div className="v8-order-tracker-eta-val">{estimatedTime}</div>
             </div>
           </div>
         </>
       )}
 
-      {/* Order details */}
+      {/* Order summary */}
       {order && (
-        <div className="mt-4 p-4 bg-white rounded-2xl border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-italia-gray font-medium uppercase tracking-wide">
-              Order summary
-            </p>
-            <div className="flex items-center gap-1.5 text-xs text-italia-gray">
+        <div className="v8-order-summary">
+          <div className="v8-order-summary-head">
+            <span className="v8-order-section-title" style={{ margin: 0 }}>
+              Your order <span className="v8-order-section-it">· il tuo ordine</span>
+            </span>
+            <span className="v8-order-summary-mode">
               <FulfillmentIcon type={order.fulfillmentType} className="h-3.5 w-3.5" />
               {fulfillmentLabel(order.fulfillmentType)}
               {order.fulfillmentType === "dine-in" && order.partySize
                 ? ` · ${formatPartySize(order.partySize)}`
                 : ""}
-            </div>
+            </span>
           </div>
-          <div className="space-y-2">
+          <div>
             {order.items.map((ci) => (
-              <div
-                key={ci.menuItem.id}
-                className="flex items-center justify-between text-sm"
-              >
-                <span className="text-italia-dark">
-                  {ci.quantity}x {ci.menuItem.name}
+              <div key={ci.menuItem.id} className="v8-order-summary-line">
+                <span className="v8-order-summary-line-name">
+                  <span className="num">{ci.quantity}×</span>
+                  {ci.menuItem.name}
                 </span>
-                <span className="text-italia-gray font-medium">
+                <span className="v8-order-summary-line-val">
                   {formatPrice(ci.menuItem.price * ci.quantity)}
                 </span>
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-100 mt-3 pt-3 flex items-center justify-between">
-            <span className="font-semibold text-italia-dark">Total</span>
-            <span className="font-bold text-italia-red">
+          <div className="v8-order-summary-total">
+            <span className="v8-order-summary-total-label">
+              Total <span className="v8-order-section-it">· totale</span>
+            </span>
+            <span className="v8-order-summary-total-val">
               {formatPrice(order.totalAmount)}
             </span>
           </div>
         </div>
       )}
 
-      {/* Last updated */}
-      <p className="text-center text-[10px] text-italia-gray/60 mt-4">
-        Last updated: {lastUpdated.toLocaleTimeString()}
-      </p>
+      {/* Last updated — client-only so the SSR'd HTML doesn't disagree
+          with the hydrated render about which second it is. */}
+      {lastUpdated && (
+        <p className="v8-order-tracker-updated" suppressHydrationWarning>
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </p>
+      )}
     </div>
   );
 }

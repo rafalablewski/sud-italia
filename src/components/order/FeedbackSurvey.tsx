@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { StarRating } from "@/components/rating/StarRating";
-import { Button } from "@/components/ui/Button";
-import { Heart, Send, CheckCircle, MessageSquare, Mail, Star, ChevronDown, ChevronUp } from "lucide-react";
+import { Heart, Send, CheckCircle, MessageSquare, Mail } from "lucide-react";
 
 interface OrderItem {
   name: string;
@@ -18,11 +17,20 @@ interface FeedbackSurveyProps {
 type FeedbackStep = "items" | "overall" | "email" | "thanks";
 
 const OVERALL_CATEGORIES = [
-  { id: "speed", label: "Speed", emoji: "⚡" },
-  { id: "service", label: "Service", emoji: "😊" },
-  { id: "value", label: "Value for Money", emoji: "💰" },
+  { id: "speed", label: "Speed", italian: "velocità", emoji: "⚡" },
+  { id: "service", label: "Service", italian: "servizio", emoji: "😊" },
+  { id: "value", label: "Value", italian: "valore", emoji: "💰" },
 ];
 
+/**
+ * V8 post-order feedback wizard. Three steps inside the same paper
+ * card: rate each dish → overall categories + free-text → optional
+ * email for receipt + offers. Submission is fire-and-forget; failure
+ * doesn't block the thank-you screen.
+ *
+ * Audit ties: feeds `/api/feedback` which the admin Feedback surface
+ * consumes; +10 loyalty points credited server-side on submission.
+ */
 export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps) {
   const [step, setStep] = useState<FeedbackStep>("items");
   const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
@@ -32,7 +40,6 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
   const [submitting, setSubmitting] = useState(false);
   const [fetchedItems, setFetchedItems] = useState<OrderItem[]>(orderItems);
 
-  // If no items passed, fetch them from the order API
   useEffect(() => {
     if (fetchedItems.length > 0) return;
     fetch(`/api/orders?orderId=${orderId}`)
@@ -75,7 +82,7 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
         }),
       });
     } catch {
-      // Silently fail — don't block the thank you screen
+      // Silently fail — don't block the thank-you screen
     }
     setStep("thanks");
     setSubmitting(false);
@@ -83,22 +90,25 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
 
   if (step === "thanks") {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center animate-scale-in">
-        <div className="w-14 h-14 bg-italia-green/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <CheckCircle className="h-7 w-7 text-italia-green" />
+      <div className="v8-order-card v8-order-feedback-thanks">
+        <div className="v8-order-feedback-thanks-mark" aria-hidden="true">
+          <CheckCircle className="h-6 w-6" />
         </div>
-        <h3 className="font-heading font-bold text-lg text-italia-dark mb-1">
-          Thank you for your review!
+        <h3 className="v8-order-feedback-thanks-h3">
+          <em>Grazie!</em> Thank you for your review.
         </h3>
-        <p className="text-sm text-italia-gray">
+        <p className="v8-order-feedback-thanks-sub">
           Your feedback helps us make every dish better.
         </p>
-        <p className="text-xs text-italia-gold-dark font-medium mt-3">
-          +10 loyalty points added to your account
+        <p className="v8-order-feedback-thanks-pts">
+          +10 loyalty points <em>· punti aggiunti</em>
         </p>
         {email && (
-          <p className="text-xs text-italia-green mt-2">
-            We&apos;ll send your receipt and points updates to {email}
+          <p
+            className="v8-order-feedback-thanks-sub"
+            style={{ marginTop: 8, color: "var(--color-basil-deep)" }}
+          >
+            Receipt + updates will arrive at {email}.
           </p>
         )}
       </div>
@@ -106,34 +116,25 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 animate-slide-up">
-      {/* Step 1: Rate each dish you ordered */}
+    <div className="v8-order-card v8-order-feedback">
       {step === "items" && (
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Heart className="h-5 w-5 text-italia-red" />
-            <h3 className="font-heading font-semibold text-lg text-italia-dark">
-              Rate your dishes
+        <>
+          <div className="v8-order-feedback-head">
+            <Heart className="h-5 w-5" aria-hidden />
+            <h3 className="v8-order-feedback-title">
+              Rate your dishes <span className="v8-order-section-it">· vota i piatti</span>
             </h3>
           </div>
-          <p className="text-xs text-italia-gray mb-4">
-            Tap the stars for each item you ordered
-          </p>
+          <p className="v8-order-feedback-sub">Tap the stars for each item you ordered.</p>
 
           {fetchedItems.length > 0 ? (
-            <div className="space-y-3 mb-4">
+            <div className="v8-order-feedback-rows">
               {fetchedItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
-                    itemRatings[item.id]
-                      ? "bg-italia-green/[0.03] border-italia-green/20"
-                      : "bg-gray-50 border-gray-100"
-                  }`}
+                  className={`v8-order-feedback-row${itemRatings[item.id] ? " is-rated" : ""}`}
                 >
-                  <span className="text-sm font-medium text-italia-dark">
-                    {item.name}
-                  </span>
+                  <span className="v8-order-feedback-row-name">{item.name}</span>
                   <StarRating
                     rating={itemRatings[item.id] || 0}
                     interactive
@@ -143,40 +144,45 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
               ))}
             </div>
           ) : (
-            <div className="py-6 text-center">
-              <p className="text-sm text-italia-gray">Loading your order items...</p>
-            </div>
+            <div className="v8-order-feedback-empty">Loading your order items…</div>
           )}
 
-          <Button
+          <button
+            type="button"
             onClick={() => setStep("overall")}
             disabled={!allItemsRated}
-            className="w-full min-h-[48px]"
+            className="v8-order-feedback-cta"
           >
-            {allItemsRated ? "Next — Rate your experience" : "Rate all items to continue"}
-          </Button>
-        </div>
+            {allItemsRated ? (
+              <>
+                Next <span className="it">· avanti</span>
+              </>
+            ) : (
+              "Rate all items to continue"
+            )}
+          </button>
+        </>
       )}
 
-      {/* Step 2: Overall experience + comment */}
       {step === "overall" && (
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <MessageSquare className="h-5 w-5 text-italia-red" />
-            <h3 className="font-heading font-semibold text-italia-dark">
-              Overall experience
+        <>
+          <div className="v8-order-feedback-head">
+            <MessageSquare className="h-5 w-5" aria-hidden />
+            <h3 className="v8-order-feedback-title">
+              Overall experience <span className="v8-order-section-it">· l&apos;esperienza</span>
             </h3>
           </div>
-          <p className="text-xs text-italia-gray mb-4">
-            Quick ratings — all optional
-          </p>
+          <p className="v8-order-feedback-sub">Quick ratings — all optional.</p>
 
-          <div className="space-y-3 mb-4">
+          <div className="v8-order-feedback-rows">
             {OVERALL_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="flex items-center justify-between">
-                <span className="text-sm text-italia-dark flex items-center gap-2">
-                  <span>{cat.emoji}</span>
-                  {cat.label}
+              <div
+                key={cat.id}
+                className={`v8-order-feedback-row${overallRatings[cat.id] ? " is-rated" : ""}`}
+              >
+                <span className="v8-order-feedback-row-name">
+                  <span className="glyph" aria-hidden>{cat.emoji}</span>
+                  {cat.label} <span className="v8-order-section-it">· {cat.italian}</span>
                 </span>
                 <StarRating
                   rating={overallRatings[cat.id] || 0}
@@ -190,67 +196,70 @@ export function FeedbackSurvey({ orderId, orderItems = [] }: FeedbackSurveyProps
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Anything else you'd like to tell us? (optional)"
-            className="pub-input min-h-[72px] resize-none text-sm mb-4"
+            placeholder="Anything else you'd like to tell us? · qualcos'altro?"
+            className="v8-order-feedback-textarea"
             rows={3}
           />
 
-          <Button
+          <button
+            type="button"
             onClick={() => setStep("email")}
-            className="w-full min-h-[48px]"
+            className="v8-order-feedback-cta"
           >
-            Almost done!
-          </Button>
-        </div>
+            Almost done <span className="it">· quasi fatto</span>
+          </button>
+        </>
       )}
 
-      {/* Step 3: Optional email — the moment of delight */}
       {step === "email" && (
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Mail className="h-5 w-5 text-italia-green" />
-            <h3 className="font-heading font-semibold text-italia-dark">
-              Want your receipt by email?
+        <>
+          <div className="v8-order-feedback-head">
+            <Mail className="h-5 w-5" aria-hidden />
+            <h3 className="v8-order-feedback-title">
+              Receipt by email? <span className="v8-order-section-it">· ricevuta via email</span>
             </h3>
           </div>
-          <p className="text-xs text-italia-gray mb-4">
-            We&apos;ll also send you points updates and exclusive offers. No spam — ever.
+          <p className="v8-order-feedback-sub">
+            We&apos;ll also send points updates and seasonal openings. No spam — ever.
           </p>
 
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com (optional)"
-            className="pub-input min-h-[44px] text-base mb-4"
+            placeholder="ale@esempio.it (optional)"
+            className="v8-order-feedback-input"
           />
 
-          <div className="space-y-2">
-            <Button
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="v8-order-feedback-cta"
+          >
+            {submitting ? (
+              "Submitting…"
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                <span>
+                  {email.trim() ? "Submit + send receipt" : "Submit review"}
+                </span>
+                <span className="it">· invia</span>
+              </>
+            )}
+          </button>
+          {!email.trim() && (
+            <button
+              type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full min-h-[48px]"
+              className="v8-order-feedback-skip"
             >
-              {submitting ? (
-                "Submitting..."
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  {email.trim() ? "Submit & Send Receipt" : "Submit Review"}
-                </>
-              )}
-            </Button>
-            {!email.trim() && (
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full text-sm text-italia-gray hover:text-italia-dark transition-colors py-2"
-              >
-                Skip — just submit my review
-              </button>
-            )}
-          </div>
-        </div>
+              Skip — just submit my review
+            </button>
+          )}
+        </>
       )}
     </div>
   );
