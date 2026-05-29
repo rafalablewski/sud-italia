@@ -976,17 +976,83 @@ The rewards-page centrepiece.
 - Tier badge top, balance numeral 36px Lora 700, progress bar
   underneath, perks list at the bottom.
 
-## Order tracker
+## Order-confirmation components
+
+All V8 as of Step 14 — selector family `.v8-order-*` in
+`themes/homepage/index.css`. See
+[`../pages/order.md`](../pages/order.md) for the section-by-section
+contract; the entries below cover the rendering details.
 
 ### `<OrderTracker />` — `src/components/order/OrderTracker.tsx`
 
-The polling live-status display on the order-confirmation page.
+The polling live-status display.
 
-- 5-step horizontal pill row (stacks vertical < 480px).
-- Current step: `bg-italia-red text-white`.
-- Completed: `bg-italia-green/10 text-italia-green`.
-- Future: `bg-italia-light-gray text-italia-gray`.
-- ETA copy below the strip.
+- **Vertical editorial stepper** — `.v8-order-tracker-steps` with
+  three visible steps (Confirmed · confermato → Preparing · in
+  preparazione → Ready · pronto). 48px dots:
+  parchment-deep / basil-fill / terracotta-fill for
+  future / completed / active. The active step pulses via
+  `@keyframes v8-order-step-pulse`; a `.is-pending` active step
+  swaps to ochre so the customer knows the truck hasn't confirmed yet.
+  A dashed-line vertical rail (`.v8-order-tracker-rail`) connects the
+  dots; a basil rail fill grows in height as steps complete.
+- **Live tracking row** at the top — basil-deep pulsing dot
+  (`@keyframes v8-order-ping`) + italic "Live tracking · in diretta"
+  + a refresh chip. Flips to oxblood when the order is `cancelled`.
+- **ETA card** — terracotta-tinted paper with a clock SVG + uppercase
+  "ESTIMATED · STIMATO" + oxblood italic Cormorant 22px time value.
+- **Order summary** card — `.v8-order-summary` with the bilingual
+  "Your order · il tuo ordine" title, the fulfilment mode chip,
+  per-line items, and a dashed-hairline total in oxblood Cormorant 22px
+  tabular.
+- Polls every 10s via `/api/orders?orderId=...`. `lastUpdated` is
+  guarded with `suppressHydrationWarning` + a null initial state so
+  the SSR'd HTML doesn't disagree with the hydrated client about
+  which second it is.
+
+### `<LoyaltyPointsEarned />` — `src/components/order/LoyaltyPointsEarned.tsx`
+
+`.v8-order-loyalty` ochre paper card with a 38px italic Cormorant
+`+N` count, bilingual "points earned · punti guadagnati" suffix,
+"Balance: 47 pts · Bronze" line (the tier name italic oxblood), and
+a small italic-Lora footer reminding the customer the points are
+credited to the phone on the order.
+
+### `<CustomerMilestone />` — `src/components/order/CustomerMilestone.tsx`
+
+`.v8-order-milestone` round-number recognition card. 56px
+parchment-circle holds the milestone icon (Star / Trophy / Gift /
+PartyPopper for 1 / 5 / 10 / 25 / 50 lifetime orders); italic
+Cormorant `<em>Bravo,</em> {firstName}!` headline; bilingual italic
+body copy. Pop-in keyframe (`v8-order-pop`) on mount.
+
+### `<PushOptInButton />` — `src/components/order/PushOptInButton.tsx`
+
+- `.v8-order-push` — ochre-bordered paper pill: italic Cormorant
+  "Notify me when ready · avvisami" with a Bell glyph. Error state
+  flips the border to oxblood + swaps to BellOff.
+- `.v8-order-push-confirmed` — basil-tinted strip when already
+  subscribed: "You'll get a push when your order is ready · *quando
+  è pronto*".
+- Hides entirely when VAPID is unconfigured, the browser doesn't
+  support push, or the customer denied permission.
+
+### `<FeedbackSurvey />` — `src/components/order/FeedbackSurvey.tsx`
+
+Three-step wizard rendered inside `.v8-order-card` +
+`.v8-order-feedback*`.
+
+- Step 1 (items): one `.v8-order-feedback-row` per ordered dish with
+  a StarRating; rated rows flip to basil-tinted `.is-rated`.
+- Step 2 (overall): three categories (Speed · velocità / Service ·
+  servizio / Value · valore) with emoji glyph + label + StarRating,
+  free-text textarea, terracotta "Almost done · quasi fatto" CTA.
+- Step 3 (email): optional input + terracotta Submit CTA with
+  paper-airplane glyph. Skip link underneath when blank.
+- Thank-you state — basil-tinted check mark + "Grazie!" headline +
+  ochre "+10 loyalty points · punti aggiunti" callout.
+- Submission posts `/api/feedback` fire-and-forget; failure swallowed
+  so the customer always reaches thank-you.
 
 ## What this component set is not
 

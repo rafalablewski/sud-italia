@@ -1,6 +1,6 @@
 "use client";
 
-import { Star, Sparkles } from "lucide-react";
+import { Star } from "lucide-react";
 
 interface LoyaltyPointsEarnedProps {
   pointsEarned: number;
@@ -8,32 +8,34 @@ interface LoyaltyPointsEarnedProps {
   tierName: string;
 }
 
+/**
+ * V8 "+N points earned" ochre paper card shown on the
+ * order-confirmation page after a successful checkout. The number is
+ * computed client-side from the order total (1 pt / PLN) for display
+ * only — the server credits the canonical balance off the actual
+ * receipt.
+ */
 export function LoyaltyPointsEarned({
   pointsEarned,
   totalPoints,
   tierName,
 }: LoyaltyPointsEarnedProps) {
   return (
-    <div className="bg-gradient-to-r from-italia-gold/10 to-italia-red/5 rounded-2xl border border-italia-gold/20 p-4 text-center animate-slide-up">
-      <div className="flex items-center justify-center gap-2 mb-1">
-        <Star className="h-5 w-5 text-italia-gold fill-italia-gold" />
-        <span className="text-2xl font-heading font-bold text-italia-gold-dark">
-          +{pointsEarned}
+    <div className="v8-order-loyalty">
+      <div className="v8-order-loyalty-row">
+        <Star className="h-6 w-6" fill="currentColor" aria-hidden />
+        <span className="v8-order-loyalty-num">+{pointsEarned}</span>
+        <span className="v8-order-loyalty-suffix">
+          points earned <em>· punti guadagnati</em>
         </span>
-        <span className="text-sm font-medium text-italia-gray">points earned</span>
       </div>
-      <p className="text-xs text-italia-gray">
-        Total balance:{" "}
-        <span className="font-semibold text-italia-dark">{totalPoints} pts</span>
-        {" "}&middot;{" "}
-        <span className="inline-flex items-center gap-0.5">
-          <Sparkles className="h-3 w-3 text-italia-gold" />
-          {tierName}
-        </span>
-      </p>
-      <p className="text-[11px] text-italia-gray/70 mt-1">
+      <div className="v8-order-loyalty-balance">
+        Balance: <strong>{totalPoints}</strong> pts ·{" "}
+        <span className="v8-order-loyalty-tier">{tierName}</span>
+      </div>
+      <div className="v8-order-loyalty-foot">
         Credited to the phone number on this order — same number, same balance.
-      </p>
+      </div>
     </div>
   );
 }

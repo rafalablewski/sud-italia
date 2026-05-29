@@ -5040,3 +5040,1000 @@ body.v8-detail-open { overflow: hidden; }
 .v8-detail-pay-cta .num {
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
+
+/* ============================================================================
+   V8 Trattoria — Order confirmation (Step 14)
+   ============================================================================
+   /order-confirmation post-checkout page. Same paper-card editorial
+   vocabulary as the cart drawer but laid out on the page canvas (not in
+   a portalled sheet). Selectors namespaced .v8-order-* so the styling
+   stays scoped to this surface.
+   ========================================================================== */
+
+.v8-order-page {
+  padding: 48px 18px 80px;
+  max-width: 580px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+@media (min-width: 768px) {
+  .v8-order-page {
+    padding: 72px 24px 96px;
+  }
+}
+
+/* Editorial section title — uppercase Cormorant 600 with line-soft
+   hairline trailing off to the right. Mirrors .v8-cart-section-title. */
+.v8-order-section-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--color-espresso-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px 0;
+}
+.v8-order-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-line) 0%, transparent 90%);
+}
+.v8-order-section-it {
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12.5px;
+  color: var(--color-muted);
+}
+
+/* ------------------------------------------------------------------
+   Success header — basil sprig + italic Cormorant "Order confirmed
+   · ordine confermato" + italic Lora "Grazie!" + tabular order ID.
+   ------------------------------------------------------------------ */
+.v8-order-success {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.v8-order-success-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.30);
+  color: var(--color-basil);
+  margin-bottom: 18px;
+  animation: v8-order-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes v8-order-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.v8-order-success-h1 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 36px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+  margin: 0 0 6px;
+}
+.v8-order-success-sub {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--color-muted);
+  margin: 0 0 12px;
+}
+.v8-order-success-sub em {
+  font-style: italic;
+  color: var(--color-terracotta);
+  font-weight: 600;
+}
+.v8-order-success-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--color-espresso);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-order-success-id-label {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------------
+   Generic editorial paper card. Used by pickup, summary, milestone,
+   limited-time, share blocks.
+   ------------------------------------------------------------------ */
+.v8-order-card {
+  background: var(--color-parchment);
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-paper);
+  padding: 18px;
+  margin-bottom: 18px;
+  font-family: var(--font-body);
+}
+
+/* ------------------------------------------------------------------
+   OrderTracker — editorial live-status surface.
+   ------------------------------------------------------------------ */
+.v8-order-tracker {
+  margin-bottom: 22px;
+}
+.v8-order-tracker-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-basil-deep);
+  margin-bottom: 18px;
+}
+.v8-order-tracker-status.is-cancelled { color: var(--color-oxblood); }
+.v8-order-tracker-pulse {
+  position: relative;
+  display: inline-flex;
+  width: 10px;
+  height: 10px;
+}
+.v8-order-tracker-pulse::before,
+.v8-order-tracker-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--color-basil);
+}
+.v8-order-tracker-pulse::before {
+  animation: v8-order-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.65;
+}
+.v8-order-tracker-status.is-cancelled .v8-order-tracker-pulse::before,
+.v8-order-tracker-status.is-cancelled .v8-order-tracker-pulse::after {
+  background: var(--color-oxblood);
+}
+@keyframes v8-order-ping {
+  0%   { transform: scale(1); opacity: 0.65; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.v8-order-tracker-refresh {
+  margin-left: 4px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.v8-order-tracker-refresh:hover {
+  border-color: var(--color-terracotta-soft);
+  color: var(--color-terracotta);
+}
+
+.v8-order-tracker-steps {
+  position: relative;
+  padding: 4px 0;
+}
+.v8-order-tracker-rail {
+  position: absolute;
+  left: 23px;
+  top: 40px;
+  bottom: 40px;
+  width: 1px;
+  background: var(--color-line-soft);
+  border-style: dashed;
+}
+.v8-order-tracker-rail-fill {
+  position: absolute;
+  left: 23px;
+  top: 40px;
+  width: 2px;
+  background: var(--color-basil);
+  transition: height 0.8s ease-out;
+  border-radius: 1px;
+}
+
+.v8-order-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 0;
+  position: relative;
+  z-index: 1;
+}
+.v8-order-step-dot {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  transition: all 0.4s ease;
+}
+.v8-order-step.is-completed .v8-order-step-dot {
+  background: var(--color-basil);
+  border-color: var(--color-basil-deep);
+  color: var(--color-parchment);
+  box-shadow: 0 4px 12px -4px rgba(74, 124, 89, 0.45);
+}
+.v8-order-step.is-active .v8-order-step-dot {
+  background: var(--color-terracotta);
+  border-color: var(--color-terracotta-dark);
+  color: var(--color-parchment);
+  box-shadow: 0 6px 16px -6px rgba(184, 92, 56, 0.6);
+  animation: v8-order-step-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.v8-order-step.is-active.is-pending .v8-order-step-dot {
+  background: var(--color-ochre);
+  border-color: #B58F36;
+  color: var(--color-espresso);
+}
+@keyframes v8-order-step-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.v8-order-step-body {
+  padding-top: 6px;
+  min-width: 0;
+}
+.v8-order-step-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--color-muted);
+  line-height: 1.15;
+}
+.v8-order-step.is-completed .v8-order-step-label,
+.v8-order-step.is-active .v8-order-step-label {
+  color: var(--color-espresso);
+}
+.v8-order-step-it {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-left: 4px;
+}
+.v8-order-step-current {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.v8-order-step.is-pending .v8-order-step-current {
+  background: var(--color-ochre);
+  color: var(--color-espresso);
+}
+.v8-order-step-desc {
+  margin-top: 3px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.v8-order-tracker-eta {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.08), rgba(201, 162, 62, 0.06));
+  border: 1px solid rgba(184, 92, 56, 0.30);
+  border-radius: var(--r-md);
+}
+.v8-order-tracker-eta-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-soft);
+  color: var(--color-terracotta);
+}
+.v8-order-tracker-eta-body {
+  line-height: 1.2;
+}
+.v8-order-tracker-eta-label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-espresso-soft);
+}
+.v8-order-tracker-eta-val {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-oxblood);
+}
+
+.v8-order-tracker-updated {
+  text-align: center;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--color-muted);
+  opacity: 0.7;
+  margin-top: 10px;
+}
+
+.v8-order-tracker-cancelled {
+  padding: 14px 16px;
+  background: rgba(122, 43, 43, 0.06);
+  border: 1px solid var(--color-oxblood);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-oxblood);
+  text-align: center;
+  line-height: 1.45;
+}
+.v8-order-tracker-cancelled em {
+  font-style: italic;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
+.v8-order-tracker-loading,
+.v8-order-tracker-error {
+  text-align: center;
+  padding: 30px 16px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.v8-order-tracker-error {
+  color: var(--color-oxblood);
+}
+
+/* Order summary card lives inside the tracker block */
+.v8-order-summary {
+  margin-top: 16px;
+  padding: 16px 18px;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+}
+.v8-order-summary-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-bottom: 10px;
+}
+.v8-order-summary-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-espresso);
+}
+.v8-order-summary-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-espresso);
+}
+.v8-order-summary-line-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-espresso);
+}
+.v8-order-summary-line-name .num {
+  color: var(--color-terracotta-dark);
+  margin-right: 4px;
+}
+.v8-order-summary-line-val {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-ink);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-order-summary-total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-line);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.v8-order-summary-total-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-espresso);
+}
+.v8-order-summary-total-val {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-oxblood);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* ------------------------------------------------------------------
+   PushOptInButton — ochre opt-in pill or basil confirmation line.
+   ------------------------------------------------------------------ */
+.v8-order-push {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-ochre);
+  border-radius: var(--r-md);
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-espresso);
+  cursor: pointer;
+  box-shadow: 0 4px 12px -6px rgba(201, 162, 62, 0.5);
+  transition: all 0.2s;
+}
+.v8-order-push:hover:not(:disabled) {
+  background: rgba(201, 162, 62, 0.10);
+  transform: translateY(-1px);
+}
+.v8-order-push:disabled { opacity: 0.7; cursor: wait; }
+.v8-order-push .v8-order-push-icon { color: var(--color-ochre); }
+.v8-order-push.is-error { border-color: var(--color-oxblood); }
+.v8-order-push.is-error .v8-order-push-icon { color: var(--color-oxblood); }
+.v8-order-push-confirmed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(74, 124, 89, 0.08);
+  border: 1px solid rgba(74, 124, 89, 0.30);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-basil-deep);
+}
+
+/* ------------------------------------------------------------------
+   LoyaltyPointsEarned — ochre paper card with big +N count.
+   ------------------------------------------------------------------ */
+.v8-order-loyalty {
+  text-align: center;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.14), rgba(184, 92, 56, 0.08));
+  border: 1px solid rgba(201, 162, 62, 0.40);
+  border-radius: var(--r-md);
+  margin-bottom: 18px;
+  font-family: var(--font-body);
+}
+.v8-order-loyalty-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.v8-order-loyalty-row svg {
+  color: var(--color-ochre);
+  align-self: center;
+}
+.v8-order-loyalty-num {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 38px;
+  color: var(--color-ochre);
+  line-height: 1;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-order-loyalty-suffix {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--color-espresso);
+}
+.v8-order-loyalty-balance {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-espresso-soft);
+}
+.v8-order-loyalty-balance strong {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--color-espresso);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-order-loyalty-tier {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-oxblood);
+  font-weight: 600;
+}
+.v8-order-loyalty-foot {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--color-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------
+   Pickup card.
+   ------------------------------------------------------------------ */
+.v8-order-pickup {
+  text-align: center;
+}
+.v8-order-pickup-label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--color-espresso-soft);
+}
+.v8-order-pickup-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--color-espresso);
+  margin: 6px 0 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.v8-order-pickup-name svg { color: var(--color-terracotta); }
+.v8-order-pickup-address {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------------
+   Limited-time "come back" callout.
+   ------------------------------------------------------------------ */
+.v8-order-comeback {
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.06), rgba(201, 162, 62, 0.06));
+  border: 1px solid rgba(201, 162, 62, 0.35);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  font-family: var(--font-body);
+  margin-bottom: 18px;
+}
+.v8-order-comeback-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-line);
+  color: var(--color-ochre);
+}
+.v8-order-comeback-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+}
+.v8-order-comeback-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-espresso);
+  line-height: 1.15;
+}
+.v8-order-comeback-sub {
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 3px;
+}
+.v8-order-comeback-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 13.5px;
+}
+.v8-order-comeback-link {
+  color: var(--color-terracotta);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.v8-order-comeback-link.is-basil {
+  color: var(--color-basil-deep);
+  border-bottom-color: var(--color-basil);
+}
+.v8-order-comeback-link:hover { color: var(--color-terracotta-dark); border-bottom-color: var(--color-terracotta-dark); }
+.v8-order-comeback-link.is-basil:hover { color: var(--color-basil); }
+
+/* ------------------------------------------------------------------
+   CustomerMilestone — round-number recognition card.
+   ------------------------------------------------------------------ */
+.v8-order-milestone {
+  text-align: center;
+  padding: 22px 20px;
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.12), rgba(122, 43, 43, 0.05));
+  border: 1px solid rgba(201, 162, 62, 0.40);
+  border-radius: var(--r-md);
+  margin-bottom: 18px;
+  font-family: var(--font-body);
+  animation: v8-order-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.v8-order-milestone-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-ochre);
+  color: var(--color-ochre);
+  box-shadow: 0 6px 16px -8px rgba(201, 162, 62, 0.6);
+  margin-bottom: 12px;
+}
+.v8-order-milestone-h3 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+  margin: 0 0 4px;
+}
+.v8-order-milestone-h3 em {
+  font-style: italic;
+  color: var(--color-oxblood);
+}
+.v8-order-milestone-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+.v8-order-milestone-count {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-ochre);
+}
+
+/* ------------------------------------------------------------------
+   FeedbackSurvey — 3-step wizard inside a paper card.
+   ------------------------------------------------------------------ */
+.v8-order-feedback {
+  font-family: var(--font-body);
+}
+.v8-order-feedback-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--color-terracotta);
+}
+.v8-order-feedback-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--color-espresso);
+  line-height: 1.1;
+}
+.v8-order-feedback-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-bottom: 16px;
+}
+.v8-order-feedback-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.v8-order-feedback-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-parchment-deep);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--r-md);
+  transition: background 0.2s, border-color 0.2s;
+}
+.v8-order-feedback-row.is-rated {
+  background: rgba(74, 124, 89, 0.06);
+  border-color: rgba(74, 124, 89, 0.30);
+}
+.v8-order-feedback-row-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-espresso);
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.v8-order-feedback-row-name .glyph { font-style: normal; font-size: 18px; }
+.v8-order-feedback-empty {
+  text-align: center;
+  padding: 24px 8px;
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.v8-order-feedback-textarea {
+  width: 100%;
+  background: #FBF4E1;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink);
+  min-height: 72px;
+  resize: vertical;
+  margin-bottom: 14px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.v8-order-feedback-textarea::placeholder {
+  color: var(--color-muted);
+  font-style: italic;
+}
+.v8-order-feedback-textarea:focus {
+  outline: none;
+  border-color: var(--color-terracotta);
+  background: #FDF8E8;
+}
+.v8-order-feedback-input {
+  width: 100%;
+  background: #FBF4E1;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--color-ink);
+  margin-bottom: 14px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.v8-order-feedback-input::placeholder {
+  color: var(--color-muted);
+  font-style: italic;
+}
+.v8-order-feedback-input:focus {
+  outline: none;
+  border-color: var(--color-terracotta);
+  background: #FDF8E8;
+}
+.v8-order-feedback-cta {
+  width: 100%;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 13px 16px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-cta);
+  transition: all 0.2s;
+}
+.v8-order-feedback-cta:hover:not(:disabled) {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+}
+.v8-order-feedback-cta:disabled {
+  background: var(--color-muted);
+  border-color: var(--color-espresso-soft);
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+  transform: none;
+}
+.v8-order-feedback-cta .it { font-style: italic; font-weight: 500; opacity: 0.92; }
+.v8-order-feedback-skip {
+  margin-top: 8px;
+  background: none;
+  border: 0;
+  width: 100%;
+  padding: 8px 0;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.v8-order-feedback-skip:hover { color: var(--color-espresso); }
+.v8-order-feedback-thanks {
+  text-align: center;
+  padding: 22px;
+  font-family: var(--font-body);
+}
+.v8-order-feedback-thanks-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(74, 124, 89, 0.10);
+  border: 1px solid rgba(74, 124, 89, 0.30);
+  color: var(--color-basil-deep);
+  margin-bottom: 10px;
+}
+.v8-order-feedback-thanks-h3 {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--color-espresso);
+  margin: 0 0 4px;
+}
+.v8-order-feedback-thanks-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.v8-order-feedback-thanks-pts {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-ochre);
+  margin-top: 10px;
+}
+
+/* ------------------------------------------------------------------
+   Share + actions footer.
+   ------------------------------------------------------------------ */
+.v8-order-review-link {
+  text-align: center;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: 18px;
+}
+.v8-order-review-link a {
+  color: var(--color-terracotta);
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  text-decoration: none;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-order-review-link a:hover { color: var(--color-terracotta-dark); }
+.v8-order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .v8-order-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+.v8-order-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  background: transparent;
+  text-decoration: none;
+}
+.v8-order-action.is-primary {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+  box-shadow: var(--shadow-cta);
+}
+.v8-order-action.is-primary:hover {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+}
+.v8-order-action.is-ghost {
+  background: transparent;
+  color: var(--color-espresso);
+  border-color: var(--color-line);
+}
+.v8-order-action.is-ghost:hover {
+  background: var(--color-parchment-deep);
+  border-color: var(--color-terracotta-soft);
+  color: var(--color-terracotta-dark);
+}

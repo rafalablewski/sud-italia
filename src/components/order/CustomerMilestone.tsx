@@ -7,34 +7,62 @@ interface CustomerMilestoneProps {
   customerName: string;
 }
 
-const MILESTONES: Record<number, { message: string; icon: React.ElementType; color: string }> = {
-  1: { message: "Welcome to the Sud Italia family!", icon: Star, color: "text-italia-gold" },
-  5: { message: "5 orders! You're becoming a regular!", icon: Trophy, color: "text-amber-500" },
-  10: { message: "10 orders! You're a true fan! Here's a free dessert on us.", icon: Gift, color: "text-italia-red" },
-  25: { message: "25 orders! You're a VIP! Enjoy a complimentary pizza.", icon: PartyPopper, color: "text-purple-500" },
-  50: { message: "50 orders! You're legendary! Gold status unlocked.", icon: Trophy, color: "text-italia-gold" },
+const MILESTONES: Record<
+  number,
+  { en: string; it: string; icon: React.ElementType }
+> = {
+  1: {
+    en: "Welcome to la famiglia.",
+    it: "benvenuto alla famiglia",
+    icon: Star,
+  },
+  5: {
+    en: "5 orders — you're becoming a regular.",
+    it: "cinque visite, ci sei",
+    icon: Trophy,
+  },
+  10: {
+    en: "10 orders — a true fan. A dessert is on us, next visit.",
+    it: "dolce della casa",
+    icon: Gift,
+  },
+  25: {
+    en: "25 orders — VIP. A pizza is on us, next visit.",
+    it: "pizza della casa",
+    icon: PartyPopper,
+  },
+  50: {
+    en: "50 orders — legendary. Famiglia Oro unlocked.",
+    it: "famiglia oro",
+    icon: Trophy,
+  },
 };
 
+/**
+ * V8 round-number recognition card on the order-confirmation page.
+ * Fires for 1 / 5 / 10 / 25 / 50 lifetime orders. Quiet, non-intrusive —
+ * one card, no modals.
+ */
 export function CustomerMilestone({ orderCount, customerName }: CustomerMilestoneProps) {
   const milestone = MILESTONES[orderCount];
   if (!milestone) return null;
 
   const Icon = milestone.icon;
+  const firstName = customerName.split(" ")[0] || customerName;
 
   return (
-    <div className="bg-gradient-to-r from-italia-gold/5 to-italia-red/5 rounded-2xl border border-italia-gold/20 p-5 text-center animate-bounce-in">
-      <div className={`w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center mx-auto mb-3 ${milestone.color}`}>
+    <div className="v8-order-milestone">
+      <div className="v8-order-milestone-mark" aria-hidden="true">
         <Icon className="h-7 w-7" />
       </div>
-      <h3 className="font-heading font-bold text-lg text-italia-dark mb-1">
-        Congratulations, {customerName}!
+      <h3 className="v8-order-milestone-h3">
+        <em>Bravo,</em> {firstName}!
       </h3>
-      <p className="text-sm text-italia-gray">
-        {milestone.message}
+      <p className="v8-order-milestone-sub">
+        {milestone.en}{" "}
+        <em style={{ color: "var(--color-muted)" }}>· {milestone.it}</em>
       </p>
-      <p className="text-xs text-italia-gold-dark font-semibold mt-2">
-        Order #{orderCount}
-      </p>
+      <span className="v8-order-milestone-count">Order N° {orderCount}</span>
     </div>
   );
 }

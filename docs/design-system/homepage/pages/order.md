@@ -8,16 +8,23 @@ in `src/app/(public)/order-confirmation/page.tsx`. The visitor lands
 here from the cart drawer's Stripe success; they may also return to
 this URL via the order receipt link or push notification.
 
-| Block                          | Component                                                  |
-| ------------------------------ | ---------------------------------------------------------- |
-| Success header                 | inline (CheckCircle icon + "Order confirmed")              |
-| Order tracker (live status)    | `src/components/order/OrderTracker.tsx`                    |
-| Loyalty points earned          | `src/components/order/LoyaltyPointsEarned.tsx`             |
-| Customer milestone             | `src/components/order/CustomerMilestone.tsx`               |
-| Push opt-in                    | `src/components/order/PushOptInButton.tsx`                 |
-| Feedback survey                | `src/components/order/FeedbackSurvey.tsx`                  |
-| Share / referral               | inline (`Share2` / `Link2` icons + copy)                   |
-| Continue browsing CTA          | inline `ArrowLeft` link back to the location               |
+V8 since Step 14 — all selectors live under `.v8-order-*` in
+`themes/homepage/index.css`.
+
+| Block                          | Component                                                  | V8 selector(s)                              |
+| ------------------------------ | ---------------------------------------------------------- | ------------------------------------------- |
+| Page canvas                    | inline                                                     | `.v8-order-page`                            |
+| Success header                 | inline (basil-tinted check + italic Cormorant headline)    | `.v8-order-success`, `.v8-order-success-mark`, `.v8-order-success-id` |
+| Order tracker (live status)    | `src/components/order/OrderTracker.tsx`                    | `.v8-order-tracker`, `.v8-order-step`, `.v8-order-tracker-eta` |
+| Order summary                  | (inside `OrderTracker`)                                    | `.v8-order-summary`                         |
+| Pickup location                | inline                                                     | `.v8-order-pickup`                          |
+| Loyalty points earned          | `src/components/order/LoyaltyPointsEarned.tsx`             | `.v8-order-loyalty`                         |
+| Limited-time come-back card    | inline                                                     | `.v8-order-comeback`                        |
+| Customer milestone             | `src/components/order/CustomerMilestone.tsx`               | `.v8-order-milestone`                       |
+| Push opt-in                    | `src/components/order/PushOptInButton.tsx`                 | `.v8-order-push`, `.v8-order-push-confirmed`|
+| Feedback survey                | `src/components/order/FeedbackSurvey.tsx`                  | `.v8-order-feedback*`                       |
+| Share / referral               | inline (`Share2` / `Link2` icons + copy)                   | `.v8-order-review-link`, `.v8-order-action` |
+| Continue browsing CTA          | inline `ArrowLeft` link back to the location               | `.v8-order-action.is-primary`               |
 
 ## The page contract
 
@@ -38,85 +45,147 @@ make the wait feel handled.
 
 ### Success header
 
-- `CheckCircle` icon in `text-italia-green`, large.
-- Headline: "Order confirmed" (Cormorant Garamond 600, 28px).
-- Sub-line: "We'll have your order ready by {ETA}" — pulled from
-  `OrderTracker`'s `getEstimatedTime(status)`.
-- Order number prominently: `#{orderId}` (Lora 700, 22px, tabular).
-  **Same number** appears on the POS tab, the KDS ticket, the receipt
-  (canonical-orders rule — one order = one number).
+- `.v8-order-success-mark` — basil-tinted 76px circle with the
+  CheckCircle SVG, pop-in animation (`@keyframes v8-order-pop` —
+  custom keyframe declared in `themes/homepage/index.css` alongside
+  the success block).
+- `.v8-order-success-h1` — italic Cormorant 36px "Order confirmed"
+  headline.
+- `.v8-order-success-sub` — italic Cormorant 17px sub-line with the
+  terracotta italic *"Grazie!"* emphasis: "Grazie! Thank you for
+  your order."
+- `.v8-order-success-id` — order number in a parchment-deep pill
+  (Cormorant 600 13.5px tabular). **Same number** appears on the POS
+  tab, the KDS ticket, the receipt (canonical-orders rule — one
+  order = one number).
 
 ### Order tracker — `<OrderTracker />`
 
 The live, polling status display.
 
-- **Five steps:** `pending` → `confirmed` → `preparing` →
-  `ready` (pickup) or `out-for-delivery` (delivery) → `completed`.
-- **Progress strip:** horizontal pill row, current step highlighted
-  brand-red, completed steps in success-green, future steps in
-  muted-grey.
-- **Step copy** is friendly + factual — "We've got your order" /
-  "Your pizza is in the oven" / "Hot and ready for pickup" — never
-  jargon like "queued for fulfilment".
-- **Polling:** every 10s via `/api/orders/{id}` (`useEffect` in
-  `OrderTracker.tsx`). Stops polling at `completed`.
-- **Estimated time** updates as the status advances —
-  `getEstimatedTime(status)` returns the remaining-time line.
-- **Delivery driver location** (when status is `out-for-delivery` +
-  the driver app is integrated) shows in a small map below.
+- **Three visible steps** + the `pending → completed` terminal states.
+  The visible steps are rendered as a vertical editorial stack
+  inside `.v8-order-tracker-steps`:
+  - Step dots (`.v8-order-step-dot`) are 48px circles. Future steps
+    sit on parchment-deep with muted-brown text; completed steps flip
+    to basil-fill + parchment glyph with a basil drop-shadow; the
+    active step is terracotta-fill with a pulsing scale animation
+    (`@keyframes v8-order-step-pulse`); a `.is-pending` active step
+    (status hasn't been confirmed yet) tints ochre instead of
+    terracotta so the customer can read "we have your order, we're
+    waiting for the truck."
+  - Each step carries a bilingual italic Cormorant label
+    (`Confirmed · confermato`, `Preparing · in preparazione`,
+    `Ready · pronto`) + an italic Lora description (`"Our pizzaiolo
+    is making your food."`). The active step adds a tiny `Current`
+    pill (`.v8-order-step-current`) in terracotta — ochre when the
+    pending hold is active.
+  - A dashed-line vertical rail (`.v8-order-tracker-rail`) connects
+    the dots; a basil fill (`.v8-order-tracker-rail-fill`) grows in
+    height as steps complete.
+- **Live tracking row** at the top of the tracker
+  (`.v8-order-tracker-status`) — basil-deep pulsing dot
+  (`@keyframes v8-order-ping`) + italic "Live tracking · in diretta"
+  + a refresh chip. The dot + label both swap to oxblood when the
+  order is `cancelled` (`.is-cancelled`).
+- **Estimated time card** (`.v8-order-tracker-eta`) — terracotta-
+  tinted paper card with a clock SVG, the editorial "ESTIMATED ·
+  STIMATO" uppercase Cormorant label, and the time value in oxblood
+  italic Cormorant 22px ("10-15 min", "Ready now!").
+- **Order summary** (`.v8-order-summary`) — paper card with the
+  bilingual "Your order · il tuo ordine" title, the fulfilment chip
+  (`.v8-order-summary-mode`) with the icon + label + party-size suffix,
+  one row per line item, and the dashed-hairline total line with
+  the oxblood Cormorant 22px tabular total.
+- **Polling:** every 10s via `/api/orders?orderId=...`. Polling
+  continues for the lifetime of the mount; the API is cheap and a
+  terminal-state response just keeps returning the same data.
+- **Last-updated stamp** (`.v8-order-tracker-updated`) — small italic
+  Lora muted line that only renders client-side (`suppressHydrationWarning`
+  guard + null initial state) so the SSR'd HTML doesn't disagree with
+  the hydrated render about which second it is.
 
 ### Loyalty points earned — `<LoyaltyPointsEarned />`
 
 The "by the way you earned points" surface.
 
-- "You earned {N} points on this order" with the running balance and
-  the tier-progress line ("8 points to Silver").
-- If the order crosses a tier boundary, the component fires a
-  one-shot `delivery-unlock` animation (per `themes/homepage/index.css`
-  keyframes) — the same celebratory pattern used for free-delivery
-  unlocks.
-- **First-order earners** get a slightly different copy: "Welcome to
-  the family — your first {N} points are in".
+- `.v8-order-loyalty` — ochre paper card with a 38px italic Cormorant
+  `+N` count, bilingual italic "points earned · punti guadagnati"
+  suffix, balance + tier line below ("Balance: 47 pts · Bronze" with
+  the tier in oxblood italic), small italic Lora footer reminding
+  the customer the points are credited to the phone on the order.
+- Display only — the server is the source of truth for the credited
+  balance.
 
 ### Customer milestone — `<CustomerMilestone />`
 
-Quiet, non-intrusive recognition.
+Quiet, non-intrusive recognition. Triggers on 1st / 5th / 10th /
+25th / 50th lifetime orders.
 
-- Triggers on round-number orders (5th, 10th, 25th, 50th, 100th) per
-  the customer's lifetime count.
-- "Your 10th order with us 🎉" (the one emoji exception on the
-  storefront — *celebration only*, not status).
-- Optional one-liner from the chef as a callback.
+- `.v8-order-milestone` — ochre paper card with the same pop-in
+  keyframe as the success mark. 56px parchment-circle holds the
+  milestone icon (Star / Trophy / Gift / PartyPopper); italic
+  Cormorant `<em>Bravo,</em> {firstName}!` headline; bilingual
+  italic body copy with the Italian phrase in muted italic
+  (`"5 orders — you're becoming a regular." · cinque visite, ci sei`);
+  ochre "ORDER N° X" uppercase Cormorant footer.
 
 ### Push opt-in — `<PushOptInButton />`
 
-- Inline, non-modal. "Get a push when your order is ready" button.
-- One-tap subscribes via the service worker (`ServiceWorkerRegistrar`
-  in root layout). Browser-native permission prompt.
-- **Already opted in?** Component renders nothing. Don't nag.
+- `.v8-order-push` — ochre-bordered paper pill: italic Cormorant
+  "Notify me when ready · avvisami" with a Bell glyph. Error state
+  flips the border to oxblood + swaps the glyph to BellOff.
+- Already-subscribed state renders `.v8-order-push-confirmed`
+  instead — a basil-tinted strip: "You'll get a push when your order
+  is ready · *quando è pronto*".
+- Hides entirely when VAPID isn't configured, the browser doesn't
+  support push, or the customer has denied permission.
 
 ### Feedback survey — `<FeedbackSurvey />`
 
-- Renders only after status reaches `completed`. Never before the
-  order has actually been delivered / picked up.
-- 5-star rating + optional text. 1–2 stars surfaces an additional
-  "what went wrong?" field — the result feeds the admin Feedback
-  surface ([`../admin/sections/customers.md`](../../admin/sections/customers.md)).
-- Submission is fire-and-forget — no confirmation modal, just a small
-  "Thanks for the feedback" inline.
+- Renders inside `.v8-order-card` + `.v8-order-feedback*` — a 3-step
+  wizard inside a single paper card:
+  - **Step 1 (items)**: italic Cormorant "Rate your dishes · vota i
+    piatti", a parchment-deep `.v8-order-feedback-row` per ordered
+    dish with the dish name + a `StarRating`. Rated rows flip to
+    basil-tinted `.is-rated`. Terracotta "Next · avanti" CTA disabled
+    until every row is rated.
+  - **Step 2 (overall)**: italic Cormorant "Overall experience ·
+    l'esperienza", three categories (Speed · velocità / Service ·
+    servizio / Value · valore) each with an emoji glyph + label +
+    StarRating, a free-text textarea in parchment cream, terracotta
+    "Almost done · quasi fatto" CTA.
+  - **Step 3 (email)**: italic Cormorant "Receipt by email? · ricevuta
+    via email", optional input + terracotta Submit CTA with the
+    paper-airplane glyph + bilingual "invia" suffix. A small muted
+    "Skip — just submit my review" link sits underneath when the
+    email is blank.
+- Submission posts to `/api/feedback` fire-and-forget; failure is
+  swallowed so the customer always reaches the thank-you screen.
+- **Thank-you state** (`.v8-order-feedback-thanks`) — basil-tinted
+  check mark + italic Cormorant "Grazie! Thank you for your review."
+  + ochre "+10 loyalty points · punti aggiunti" callout.
+- The submission feeds the admin Feedback surface
+  ([`../admin/sections/customers.md`](../../admin/sections/customers.md)).
+
+### Limited-time come-back — inline
+
+`.v8-order-comeback` — italic Cormorant "Seasonal specials go fast ·
+stagionali" callout with two italic terracotta + basil text links
+("Browse menu · *il menù*" / "Invite friends · *invita gli amici*").
+The only retention nudge on the page; honors the "no upsells after
+success" rule because both links go to surfaces the customer would
+visit anyway (the menu + the rewards page).
 
 ### Share / referral
 
-- Two inline buttons: `Share2` (native share API) + `Link2` (copy
-  link with the referral code embedded).
-- The referral link goes to `/r/{code}` which redirects to the
-  landing with a banner crediting the referrer + offering the new
-  visitor a small welcome perk (configured per loyalty settings).
-
-### Continue browsing CTA
-
-- Footer link: `← Back to {city} menu`. The only navigation out of
-  the order surface besides the global header.
+- `.v8-order-review-link` — small italic Lora "Review later:
+  suditalia.pl/review/{id}" line with the link in terracotta italic
+  (tabular).
+- `.v8-order-actions` — flex row (column on mobile) of
+  `.v8-order-action` buttons: terracotta primary "Order again ·
+  ordina ancora" pointing back to the location, two parchment ghost
+  buttons "Share · condividi" + "Back home · alla casa".
 
 ## The rules unique to the order page
 
