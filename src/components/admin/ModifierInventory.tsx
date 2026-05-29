@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import type { MenuItem, ModifierGroup } from "@/data/types";
-import { getMenu } from "@/data/menus";
+import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 

@@ -127,6 +127,7 @@ async function recomputeQuote(session: WaSession): Promise<{
       cust
         ? { ordersCount: cust.orderCount, tier: calculateTier(cust.loyaltyPointsBalance, loyalty.tiers) }
         : null,
+      appSettings.deliveryThresholds ?? null,
     );
     deliveryFee = computeDeliveryFee(afterDiscount, "delivery", threshold, appSettings.deliveryFee);
     afterDiscount += deliveryFee;

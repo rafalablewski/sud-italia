@@ -97,10 +97,15 @@ export const GET = withAdmin({}, async (req) => {
   // (admin search across the live catalogue, not the static seed).
   const locations = await getActiveLocationsAsync();
   const menus = await Promise.all(
-    locations.map(async (loc) => ({
-      slug: loc.slug,
-      items: await getMenuWithOverrides(loc.slug),
-    })),
+    locations.map(async (loc) => {
+      try {
+        return { slug: loc.slug, items: await getMenuWithOverrides(loc.slug) };
+      } catch {
+        // One truck failing (e.g. transient DB blip on overrides) shouldn't
+        // collapse the whole admin search — return empty for that truck.
+        return { slug: loc.slug, items: [] };
+      }
+    }),
   );
   const menuHits = menus
     .flatMap(({ slug, items }) =>

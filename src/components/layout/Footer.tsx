@@ -23,9 +23,13 @@ export async function Footer() {
   const locations = getActiveLocations();
   const settings = await getSettings();
   const year = new Date().getFullYear();
-  const contactEmail = settings.businessEmail.trim();
-  const contactPhone = settings.businessPhone.trim();
-  const social = settings.socialLinks;
+  // Defensive guards: a legacy saved row may pre-date a field, in which
+  // case `mergeSettings` does fill in the DEFAULT, but a partial
+  // socialLinks object (e.g. saved as `{}` before this shape existed)
+  // would override the default to an empty object with no nested keys.
+  const contactEmail = (settings.businessEmail ?? "").trim();
+  const contactPhone = (settings.businessPhone ?? "").trim();
+  const social = settings.socialLinks ?? { instagram: "", facebook: "", tiktok: "" };
 
   return (
     <footer className="v8-pfoot">

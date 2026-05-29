@@ -28,7 +28,7 @@ import { Star, Clock, Check, Trash2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { SlotPicker } from "./SlotPicker";
-import { getMenu } from "@/data/menus";
+import { getMenu } from "@/data/menus/seed";
 import { useCustomer } from "@/store/customer";
 import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";

@@ -462,7 +462,12 @@ export function AdminRegulatoryCompliance() {
                           onChange={(e) =>
                             setActive({
                               ...active,
-                              vatRateBps: Number(e.target.value) || 0,
+                              // Empty input = clear the override and fall back
+                              // to the resolved default (800 = 8%). Otherwise
+                              // parse as int; 0 is a legitimate value (e.g. a
+                              // zero-VAT zone) so we don't collapse falsy.
+                              vatRateBps:
+                                e.target.value === "" ? undefined : Number(e.target.value) || 0,
                             })
                           }
                         />

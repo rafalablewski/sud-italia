@@ -34,7 +34,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { getMenu } from "@/data/menus";
+import { getMenu } from "@/data/menus/seed";
 import type {
   BusinessCostCategory,
   BusinessCostPayrollRole,

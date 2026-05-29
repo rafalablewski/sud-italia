@@ -11,7 +11,7 @@ import {
   ChevronRight,
   RotateCcw,
 } from "lucide-react";
-import { getMenu } from "@/data/menus";
+import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES } from "@/lib/bundles";
