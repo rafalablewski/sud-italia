@@ -1617,6 +1617,68 @@ body {
    sits right under the sub). */
 .v8-menu-card .v8-ps-head { margin-bottom: 18px; }
 
+/* ============================
+   V8 Trattoria — location-page loading skeleton
+   ============================
+   Used by src/app/(public)/locations/[slug]/loading.tsx. The skeleton
+   reuses the real page's structural classes (`.v8-back-chip-wrap`,
+   `.v8-loc-hero`, `.v8-menu-card`) so the parchment ground is
+   identical from first paint — no "flash of the old dark hero"
+   during the route transition. Skeleton blocks (`.v8-skel`) carry a
+   terracotta-tinted shimmer so the wait reads as part of the V8
+   surface, not a generic gray placeholder. */
+
+.v8-loc-loading {
+  background: var(--color-parchment);
+  min-height: 100vh;
+}
+
+.v8-skel {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(184, 92, 56, 0.06) 0%,
+    rgba(184, 92, 56, 0.14) 50%,
+    rgba(184, 92, 56, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: v8-skel-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes v8-skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.v8-skel-chip      { width: 96px;  height: 28px; border-radius: 999px; }
+.v8-skel-illus     { width: 100%; max-width: 360px; height: 132px; margin: 0 auto 12px; border-radius: 10px; }
+.v8-skel-tricolore { width: 80px;  height: 3px;  margin: 4px auto 14px; border-radius: 2px; }
+.v8-skel-h1        { width: 60%;  max-width: 280px; height: 44px; margin: 8px auto 12px; border-radius: 6px; }
+.v8-skel-sub       { width: 75%;  max-width: 420px; height: 16px; margin: 0 auto 18px; }
+.v8-skel-status    { width: 200px; height: 28px; margin: 0 auto; border-radius: 999px; }
+
+.v8-skel-eyebrow   { width: 160px; height: 12px; margin: 4px auto 14px; }
+.v8-skel-title     { width: 60%; max-width: 320px; height: 32px; margin: 0 auto 20px; border-radius: 6px; }
+.v8-skel-search    { width: 100%; max-width: 720px; height: 44px; margin: 0 auto 22px; border-radius: 999px; }
+
+.v8-skel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 768px) {
+  .v8-skel-h1   { height: 56px; max-width: 360px; }
+  .v8-skel-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+}
+.v8-skel-card { height: 132px; border-radius: 12px; }
+
+/* Respect users who've asked for reduced motion — kill the shimmer
+   and let the skeleton sit static at the mid-tint. */
+@media (prefers-reduced-motion: reduce) {
+  .v8-skel { animation: none; background: rgba(184, 92, 56, 0.1); }
+}
+
 /* ---- Menu search input -------------------------------------------- */
 .v8-menu-search {
   display: flex;

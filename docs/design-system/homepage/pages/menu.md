@@ -233,6 +233,36 @@ The persistent in-thumb-reach order surface.
 - **`AddToCartToast`** fires on add — a 3-second toast confirming
   "Margherita added" with a `View cart` link in the toast itself.
 
+### Loading skeleton — `loading.tsx`
+
+`src/app/(public)/locations/[slug]/loading.tsx` is the route's
+suspense fallback — what Next renders during the server-side fetch
+before `<LocationPage />` hydrates.
+
+- **Mirrors the real page's structure** by reusing the same V8
+  classes (`.v8-back-chip-wrap`, `.v8-loc-hero`, `.v8-menu-card`)
+  so the parchment background, hero proportions, and menu-card glass
+  are identical between skeleton and final paint. The route
+  transition reads as one continuous parchment surface — no theme
+  jump.
+- **Skeleton blocks (`.v8-skel`)** are terracotta-tinted (the
+  `rgba(184, 92, 56, 0.06–0.14)` shimmer band V8's accent layer uses
+  elsewhere), not generic gray. Shimmer animation: a 1.4s
+  ease-in-out 200%-wide gradient sweep (`@keyframes
+  v8-skel-shimmer`). Honours `prefers-reduced-motion` by killing the
+  sweep and sitting at the mid-tint.
+- **Shape per slot:** chip → hero illustration → tricolore → name →
+  sub → status pill → menu eyebrow → title → search bar → 2-column
+  grid of four card placeholders. The skeleton hero is centred and
+  short (`.v8-loc-hero` ground), not a full-bleed dark photo block.
+- **Why this matters.** Pre-V8 builds shipped a `bg-italia-dark`
+  `h-72 md:h-96` hero placeholder + `bg-gray-{100,200}` card
+  blocks, which flashed as a dark espresso slab over light gray
+  inside the new V8 layout chrome before the route hydrated — the
+  "old theme flash" V8 polish flagged. If you ever rewrite the
+  skeleton, keep it on the same classes the live page uses, or the
+  flash comes back.
+
 ## The rules unique to the menu
 
 1. **Read the menu via `getMenuWithOverrides(slug)`.** Never read raw
