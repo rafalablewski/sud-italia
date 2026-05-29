@@ -921,10 +921,24 @@ button on each menu card.
 - **Meta row** — dashed-hairline-bordered `.v8-detail-meta` with the
   oxblood Cormorant 26px tabular price + "Nm · in cottura" prep time
   + tabular calorie count.
-- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen` chip
-  row when present. Empty allergens collapse to a basil-deep
-  `.v8-detail-no-allergens` line ("Senza allergeni maggiori — no major
-  allergens reported.") with a hand-drawn basil-leaf SVG.
+- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen`
+  chip row when present. Each chip carries a hand-drawn line SVG
+  glyph from `<AllergenIcon />`
+  (`src/components/location/AllergenIcon.tsx`) — one per allergen in
+  the EU FIR 14-allergen list (gluten = wheat sheaf, dairy = milk
+  carton, eggs = ovoid, fish = almond body with tail flick, shellfish
+  = curled shrimp, nuts = almond with seam, peanuts = double-bump
+  shell, soy = pod with beans, celery = paired stalk with leaves,
+  mustard = lidded jar, sesame = three teardrop seeds, sulfites =
+  wine glass, lupin = stem with alternating buds, molluscs = octopus
+  head + tentacles). 16×16 at 1.3px stroke, `currentColor` so the
+  glyph picks up the chip's oxblood. Earlier builds rendered system
+  emoji (🌾, 🥛, 🥚…) inline — they read as a third-party drop-in
+  inside V8's hand-drawn vocabulary and rendered differently per
+  platform (Apple vs Google vs Windows). Empty allergens collapse
+  to a basil-deep `.v8-detail-no-allergens` line ("Senza allergeni
+  maggiori — no major allergens reported.") with a hand-drawn
+  basil-leaf SVG.
 - **Valori nutrizionali · nutrition** — `.v8-detail-nutri-row`
   printed-menu readout, one row per macro. Three-column grid:
   bilingual italic Cormorant label on the left

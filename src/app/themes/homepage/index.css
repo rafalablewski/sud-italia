@@ -5356,10 +5356,14 @@ body.v8-detail-open { overflow: hidden; }
   font-size: 12.5px;
   color: var(--color-oxblood);
 }
+/* Hand-drawn allergen line SVGs — see src/components/location/AllergenIcon.tsx.
+   Inherits the chip's oxblood colour via `currentColor`. Replaces the
+   OS emoji that shipped earlier (🌾, 🥛, …), which broke V8's
+   hand-drawn icon vocabulary and rendered differently on Apple /
+   Google / Windows. */
 .v8-detail-allergen-glyph {
-  font-style: normal;
-  font-size: 14px;
-  line-height: 1;
+  flex-shrink: 0;
+  display: block;
 }
 .v8-detail-no-allergens {
   display: inline-flex;

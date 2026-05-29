@@ -218,8 +218,10 @@ for the full chrome breakdown; the sections it surfaces are:
 
 - Hero — dish glyph + italic Cormorant name + italic Lora description
 - Meta — oxblood price + prep time + calories editorial row
-- Allergens · allergeni — oxblood chip row or basil "no major
-  allergens · senza allergeni maggiori" line
+- Allergens · allergeni — oxblood chip row (each chip carrying a
+  hand-drawn line SVG from `<AllergenIcon />` — wheat sheaf, milk
+  carton, octopus, …) or basil "no major allergens · senza allergeni
+  maggiori" line
 - Valori nutrizionali · nutrition — Cormorant-labelled bilingual
   printed-menu readout (label · italian phrase ·· value, dotted
   leader between) for calories / protein / carbs / fat / fiber /

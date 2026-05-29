@@ -8,6 +8,7 @@ import { getItemDetails } from "@/data/kodawari";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
+import { AllergenIcon } from "./AllergenIcon";
 
 /**
  * V8 item-detail drawer. Mounted exactly once at `(public)/layout.tsx`;
@@ -195,7 +196,7 @@ export function ItemDetailDrawer() {
                       const info = ALLERGEN_LABELS[a];
                       return (
                         <span key={a} className="v8-detail-allergen">
-                          <span className="v8-detail-allergen-glyph" aria-hidden>{info.emoji}</span>
+                          <AllergenIcon allergen={a} />
                           {info.en}
                         </span>
                       );
