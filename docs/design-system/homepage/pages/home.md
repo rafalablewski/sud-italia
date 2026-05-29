@@ -85,7 +85,11 @@ photography. The hero earns the "one place Cormorant leads" rule
   ("Ordina a Kraków", "La nostra storia"). Hover lifts 2px and
   swaps to terracotta-dark with a 16px / 60% terracotta shadow.
 - **Tricolore hairline** — 200×3px Italian-flag gradient closes the
-  hero, 70% opacity.
+  hero, 70% opacity, sits `28px` below the CTA row. The section's
+  bottom padding then drops to `16px / 24px ≥md` so the next
+  section's own top padding handles the rhythm — don't reintroduce
+  the original `56/90px` bottom padding, it creates the dead band
+  the V8 audit flagged.
 
 A single, confident hero — never rotating slides. The location CTAs
 are the entry points to ordering; the ghost Story CTA is the brand
