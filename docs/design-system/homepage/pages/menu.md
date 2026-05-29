@@ -4,10 +4,14 @@
 
 The location's menu surface. Each location has its own page rendered
 from `src/app/(public)/locations/[slug]/page.tsx`. The page composes
-five blocks under the public layout.
+six blocks under the public layout. The chain-wide `<LiveTicker />`
+also mounts here — it used to ship globally in the public layout,
+but V8 polish scoped it to the order-flow context so the homepage
+and other non-order surfaces don't open under a dark espresso strip.
 
 | Block            | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
+| Live ticker      | `src/components/layout/LiveTicker.tsx` (chain-wide, location-page only) |
 | Location hero    | `src/components/location/LocationHero.tsx`                 |
 | Menu sections    | `src/components/location/MenuSection.tsx` (per category)   |
 | Location info    | `src/components/location/LocationInfo.tsx`                 |

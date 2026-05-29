@@ -239,21 +239,28 @@ The V8 Trattoria top nav.
 
 ### `<LiveTicker />` — `src/components/layout/LiveTicker.tsx`
 
-The slim espresso strip directly under `<Header />`. Shown on every
-`(public)` route via the `showLiveTicker` LayoutGate.
+The slim espresso strip directly under `<Header />`. **Mounted only
+on `/locations/[slug]`** (`src/app/(public)/locations/[slug]/page.tsx`)
+via the `showLiveTicker` LayoutGate — V8 polish scoped the bar
+from a global storefront mount to a location-page mount so the
+homepage / rewards / non-order surfaces open on a clean parchment
+band beneath the nav. The bar is order-flow context; surfaces that
+don't lead to an order don't need it.
 
 - **Espresso gradient canvas** (`#2D1810 → #3D2817`, the **only** dark
-  slab on the storefront), ochre-tinted hairline + inset highlight.
+  slab on the storefront besides the `/rewards` tier card), ochre-
+  tinted hairline + inset highlight.
 - **Four widgets:** orders in the last hour (pulsing basil dot + ochre
   people icon), currently preparing (flame icon), trending item
   (basil trending icon), avg prep time (ochre bolt icon).
 - **Data source:** `simulateLiveActivity` from `src/lib/growth-engine.ts`
   with a chain-wide sentinel slug (`"chain"`) — same helper that powers
   the admin-configurable `<LiveActivityBar />` widget. Refreshed every 30s.
-  As of Step 8 the LiveActivityBar is NOT rendered on `/locations/[slug]`
-  to avoid two stacked espresso ticker bands; Step 9 (menu chrome) will
-  re-mount it inside the menu's `loc-card-soft` wrapper where V8's
-  mockup places it (`.live-act` row).
+  As of Step 8 the per-location `<LiveActivityBar />` is NOT rendered on
+  `/locations/[slug]` to avoid two stacked espresso ticker bands;
+  Step 9 (menu chrome) will re-mount it inside the menu's
+  `loc-card-soft` wrapper where V8's mockup places it (`.live-act`
+  row).
 - **Bilingual subtitles** (`nell'ultima ora`, `in preparazione`, `in
   tendenza`, `tempo medio`) — italic Cormorant ochre, hidden under
   640px to keep the strip in one row.
