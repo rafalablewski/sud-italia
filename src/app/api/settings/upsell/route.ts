@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUpsellSettings } from "@/lib/store";
-import { locations } from "@/data/locations";
-
-const validSlugs = new Set(locations.map((l) => l.slug));
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 
 // The cart drawer re-fetches this on every open so admin edits surface
 // without a hard refresh. Pin the route to dynamic + no-store so a CDN
@@ -17,7 +15,14 @@ const NO_STORE_HEADERS = {
 export async function GET(req: NextRequest) {
   const location = req.nextUrl.searchParams.get("location");
 
-  if (!location || !validSlugs.has(location)) {
+  if (!location) {
+    return NextResponse.json(null, { headers: NO_STORE_HEADERS });
+  }
+  // Slug validation reads the live locations store on every call so a
+  // newly added truck is accepted immediately. The store caches
+  // in-process, so the extra round trip is cheap.
+  const known = await getActiveLocationsAsync();
+  if (!known.some((l) => l.slug === location)) {
     return NextResponse.json(null, { headers: NO_STORE_HEADERS });
   }
 

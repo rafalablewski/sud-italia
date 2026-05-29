@@ -4,7 +4,7 @@ import { getEmailProvider } from "@/lib/providers/email";
 import { getSmsProvider } from "@/lib/providers/sms";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
 import { getCustomer, getOrderById } from "@/lib/store";
-import { locations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { formatPrice } from "@/lib/utils";
 import { pushToCustomer, PUSH_TEMPLATES } from "@/lib/push-notifications";
 import {
@@ -32,9 +32,9 @@ import {
 
 type OutboxRow = typeof outboxEvents.$inferSelect;
 
-function locationNameFor(slug: string): string {
-  const hit = locations.find((l) => l.slug === slug);
-  return hit?.name ?? slug;
+async function locationNameFor(slug: string): Promise<string> {
+  const list = await getActiveLocationsAsync();
+  return list.find((l) => l.slug === slug)?.name ?? slug;
 }
 
 interface OrderEventPayload {
@@ -133,7 +133,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         orderId: ctx.order.id,
         customerName: ctx.customer.name || ctx.order.customerName || "Friend",
         fulfillmentType: ctx.order.fulfillmentType,
-        locationName: locationNameFor(ctx.order.locationSlug),
+        locationName: await locationNameFor(ctx.order.locationSlug),
       }).body;
       if (ctx.order.channel === "whatsapp") {
         await getWhatsAppProvider().sendText(ctx.customer.phone, body);
@@ -193,7 +193,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         const message =
           ctx.order.fulfillmentType === "delivery"
             ? `Płatność odebrana ✅ Zamówienie #${ctx.order.id} jedzie do Ciebie na ${slotLabel}. Grazie! 🍕`
-            : `Płatność odebrana ✅ Zamówienie #${ctx.order.id} będzie gotowe do odbioru na ${slotLabel} (${locationNameFor(ctx.order.locationSlug)}). Smacznego! 🍕`;
+            : `Płatność odebrana ✅ Zamówienie #${ctx.order.id} będzie gotowe do odbioru na ${slotLabel} (${await locationNameFor(ctx.order.locationSlug)}). Smacznego! 🍕`;
         await getWhatsAppProvider().sendText(ctx.customer.phone, message);
       }
       if (!ctx.customer.email || ctx.customer.emailOptout) return;
@@ -216,7 +216,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         // 1 PLN spent = 1 point earned (matches the existing loyalty math).
         pointsEarned: Math.floor(ctx.order.totalAmount / 100),
         slotDisplay: ctx.order.slotTime,
-        locationName: locationNameFor(ctx.order.locationSlug),
+        locationName: await locationNameFor(ctx.order.locationSlug),
         referralUrl,
       });
       await getEmailProvider().send({

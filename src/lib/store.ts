@@ -3,7 +3,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
-import { getActiveLocations, locations as allLocations } from "@/data/locations";
+import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
   getCartPresenceForLocationRedis,
@@ -1806,8 +1806,9 @@ export async function upsertCartPresence(
 }
 
 /** True if slug is an active location (cart presence only for open locations). */
-export function isActiveLocationSlug(slug: string): boolean {
-  return getActiveLocations().some((l) => l.slug === slug);
+export async function isActiveLocationSlug(slug: string): Promise<boolean> {
+  const list = await getActiveLocationsAsync();
+  return list.some((l) => l.slug === slug);
 }
 
 // --- Analytics ---
@@ -2086,7 +2087,7 @@ export async function getInsights(dateFrom?: string, dateTo?: string): Promise<I
     .sort((a, b) => a.time.localeCompare(b.time));
 
   // --- Location comparison ---
-  const activeLocations = allLocations.filter((l) => l.isActive);
+  const activeLocations = await getActiveLocationsAsync();
   const locationComparison: LocationComparison[] = [];
 
   for (const loc of activeLocations) {
