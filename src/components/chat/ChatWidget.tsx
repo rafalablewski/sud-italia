@@ -2,7 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { getChatResponse, ChatMessage } from "@/lib/ai-engine";
-import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+
+// V8 Trattoria chat assistant. Paper-textured FAB in the bottom-right
+// that expands into a parchment chat sheet — italic Cormorant header
+// ("Il nostro aiuto · our help"), bilingual subtitle, V8 message
+// bubbles (oxblood-fill for the visitor, parchment-cream for the
+// assistant), and a paper-card input with a terracotta send circle.
+// Mirrors the rest of the storefront's hand-drawn line icons + V8
+// palette so the widget reads as part of the page, not a third-party
+// drop-in.
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -10,7 +18,7 @@ export function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Ciao! 👋 I'm the Sud Italia assistant. Ask me about our menu, locations, hours, delivery, or loyalty program!",
+        "Ciao! I'm the Sud Italia assistant. Ask me about our menu, locations, hours, delivery, or loyalty program.",
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -36,7 +44,6 @@ export function ChatWidget() {
     setInput("");
     setTyping(true);
 
-    // Simulate AI thinking delay
     setTimeout(() => {
       const response = getChatResponse(text);
       const botMsg: ChatMessage = {
@@ -58,66 +65,53 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Chat bubble button */}
       {!open && (
         <button
+          type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 w-14 h-14 rounded-full bg-italia-green text-white shadow-lg shadow-italia-green/30 hover:shadow-xl hover:shadow-italia-green/40 transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
-          aria-label="Open chat"
+          className="v8-chat-fab"
+          aria-label="Open chat assistant"
         >
-          <MessageCircle className="h-6 w-6" />
+          <ChatBubbleIcon />
+          <span className="v8-chat-fab-dot" aria-hidden />
         </button>
       )}
 
-      {/* Chat window */}
       {open && (
-        <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-40 w-[340px] sm:w-[380px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-scale-in"
-          style={{ maxHeight: "min(500px, 70vh)" }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-italia-green to-italia-green-dark text-white flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
-              <div>
-                <p className="font-semibold text-sm">Sud Italia Assistant</p>
-                <p className="text-xs text-white/70">Usually replies instantly</p>
-              </div>
+        <div className="v8-chat-sheet" role="dialog" aria-label="Sud Italia assistant">
+          <div className="v8-chat-head">
+            <div className="v8-chat-head-mark" aria-hidden>
+              <BasilSprigIcon />
+            </div>
+            <div className="v8-chat-head-titles">
+              <p className="v8-chat-head-title">
+                Il nostro aiuto <span className="v8-chat-head-sub-en">· our help</span>
+              </p>
+              <p className="v8-chat-head-sub">
+                <span className="v8-chat-head-dot" aria-hidden /> Usually replies instantly
+                <span className="bi-sec"> · risposte rapide</span>
+              </p>
             </div>
             <button
+              type="button"
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg hover:bg-white/15 transition-colors"
+              className="v8-chat-close"
+              aria-label="Close chat"
             >
-              <X className="h-4 w-4" />
+              <CloseIcon />
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div className="v8-chat-body">
             {messages.map((msg) => (
               <div
                 key={msg.timestamp}
-                className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                className={`v8-chat-row ${msg.role === "user" ? "is-user" : "is-bot"}`}
               >
-                <div
-                  className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
-                    msg.role === "user"
-                      ? "bg-italia-red/10 text-italia-red"
-                      : "bg-italia-green/10 text-italia-green"
-                  }`}
-                >
-                  {msg.role === "user" ? (
-                    <User className="h-3.5 w-3.5" />
-                  ) : (
-                    <Bot className="h-3.5 w-3.5" />
-                  )}
+                <div className="v8-chat-avatar" aria-hidden>
+                  {msg.role === "user" ? <PersonIcon /> : <ChefHatIcon />}
                 </div>
-                <div
-                  className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-italia-red text-white rounded-tr-md"
-                      : "bg-gray-100 text-italia-dark rounded-tl-md"
-                  }`}
-                >
+                <div className="v8-chat-bubble">
                   {msg.content.split("\n").map((line, j) => (
                     <p key={j} className={j > 0 ? "mt-1" : ""}>
                       {line}
@@ -128,42 +122,150 @@ export function ChatWidget() {
             ))}
 
             {typing && (
-              <div className="flex gap-2">
-                <div className="w-7 h-7 rounded-full bg-italia-green/10 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-3.5 w-3.5 text-italia-green" />
+              <div className="v8-chat-row is-bot">
+                <div className="v8-chat-avatar" aria-hidden>
+                  <ChefHatIcon />
                 </div>
-                <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-tl-md">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
+                <div className="v8-chat-bubble v8-chat-typing">
+                  <span aria-hidden />
+                  <span aria-hidden />
+                  <span aria-hidden />
                 </div>
               </div>
             )}
             <div ref={messagesEnd} />
           </div>
 
-          {/* Input */}
-          <div className="flex items-center gap-2 px-3 py-3 border-t border-gray-100 flex-shrink-0 bg-white">
+          <div className="v8-chat-input-row">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about our menu, hours..."
-              className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-italia-green focus:ring-2 focus:ring-italia-green/10"
+              placeholder="Ask about our menu, hours…"
+              className="v8-chat-input"
+              aria-label="Message"
             />
             <button
+              type="button"
               onClick={sendMessage}
               disabled={!input.trim() || typing}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-italia-green text-white hover:bg-italia-green-dark transition-colors disabled:opacity-40"
+              className="v8-chat-send"
+              aria-label="Send message"
             >
-              <Send className="h-4 w-4" />
+              <SendIcon />
             </button>
           </div>
         </div>
       )}
     </>
+  );
+}
+
+// V8-style hand-drawn icons. Strokes use `currentColor` so the FAB +
+// hover + active states drive colour from the surrounding text.
+
+function ChatBubbleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 6 C 4 4.5, 5 3.5, 7 3.5 L 17 3.5 C 19 3.5, 20 4.5, 20 6 L 20 14 C 20 15.5, 19 16.5, 17 16.5 L 11.5 16.5 L 6.5 20 L 7.5 16.5 C 5.5 16.4, 4 15.4, 4 14 Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <circle cx="8.5" cy="10" r="0.9" fill="currentColor" />
+      <circle cx="12" cy="10" r="0.9" fill="currentColor" />
+      <circle cx="15.5" cy="10" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M3 3 L11 11 M11 3 L3 11"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path
+        d="M2 9 L16 2 L13 16 L9 10 L2 9 Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M9 10 L13 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BasilSprigIcon() {
+  // Same basil-sprig brand mark the Header uses, scaled down. Anchors
+  // the chat header in the V8 brand voice — the assistant is signed
+  // by the trattoria, not "Bot".
+  return (
+    <svg width="18" height="18" viewBox="0 0 38 38" fill="none" aria-hidden>
+      <path d="M19 33 C 19 27, 19 20, 19 12" stroke="#4A7C59" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M19 24 C 14 22, 11 19, 10 15 C 14 17, 17 19, 19 22"
+        fill="#4A7C59"
+        fillOpacity="0.22"
+        stroke="#4A7C59"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 19 C 24 17, 27 14, 28 10 C 24 12, 21 14, 19 17"
+        fill="#4A7C59"
+        fillOpacity="0.22"
+        stroke="#4A7C59"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="19" cy="34" r="1.3" fill="#B85C38" />
+    </svg>
+  );
+}
+
+function ChefHatIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path
+        d="M4 9 C 2.5 8, 2 6.5, 3 5 C 4 3.5, 6 3.5, 7 4.5 C 7 3.5, 9 2.5, 11 4 C 13 2.5, 15.5 4, 15 6.5 C 16 7.5, 15.5 9, 14 9 L 14 13 L 4 13 Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path d="M4 13 L14 13 L13.5 15.5 L4.5 15.5 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+function PersonIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <circle cx="9" cy="6" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      <path
+        d="M3 16 C 3 12.5, 5.5 10.5, 9 10.5 C 12.5 10.5, 15 12.5, 15 16"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
   );
 }

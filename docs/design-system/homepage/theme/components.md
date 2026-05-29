@@ -280,6 +280,59 @@ The V8 cart pill. Lives inside `<Header />`.
   class on the terracotta detail strokes.
 - Click opens `<CartDrawer />` (portalled, see the Sheet primitive above).
 
+### `<ChatWidget />` — `src/components/chat/ChatWidget.tsx`
+
+Storefront assistant — fixed FAB in the bottom-right that expands
+into a parchment chat sheet. V8 polish migrated the widget from a
+flat basil-green WhatsApp-style circle + lucide icons + generic
+rounded-2xl chrome to the V8 paper-and-ink treatment so it reads as
+part of the page, not a third-party drop-in. Mounted in
+`(public)/layout.tsx` via `<LayoutGate flag="showChatWidget">`.
+
+- **FAB closed state** (`.v8-chat-fab`) — 56px paper circle,
+  parchment-cream gradient ground, line-soft border, paper shadow,
+  hand-drawn speech-bubble icon (three dots inside the bubble) in
+  oxblood stroke. A pulsing basil "available" dot
+  (`.v8-chat-fab-dot`) at the top-right corner — same kicker dot
+  pattern the homepage hero + the chat-header sub use. Hover flips
+  to oxblood fill with parchment icon + a lifted shadow, mirroring
+  the CartButton / FloatingCartButton hover language but in oxblood
+  (chat = hospitality / personal voice) instead of terracotta
+  (order action). Sits at `bottom: 92px` (above the
+  FloatingCartButton's `bottom: 22px` corner).
+- **Chat sheet open state** (`.v8-chat-sheet`) — 360px paper
+  card, parchment-deep gradient, 18px radius, 22/48px warm-brown
+  drop shadow, scale-in entrance animation. Capped at `min(560px,
+  78vh)` so it never overruns the viewport. Hides under
+  `body.v8-cart-open` so the cart drawer owns the bottom-right
+  conversation.
+- **Header** (`.v8-chat-head`) — basil-tinted brand-mark circle
+  (the same basil sprig the Header brand uses, scaled to 18px),
+  italic Cormorant title `Il nostro aiuto · our help` with a
+  bilingual italian-first read, italic Lora subtitle `Usually
+  replies instantly · risposte rapide` with a pulsing basil
+  status dot. A 28px line-bordered close circle on the right
+  flips to oxblood on hover.
+- **Message bubbles** (`.v8-chat-bubble`) — assistant bubbles are
+  parchment-cream with a line-soft border + espresso text + a
+  shaved top-left corner (`border-top-left-radius: 6px`); user
+  bubbles are oxblood-fill with parchment text + a shaved
+  top-right corner. 26px avatar circles (basil-tinted for the
+  assistant with a chef-hat sketch, oxblood-tinted for the user
+  with a small person sketch) — both icons are hand-drawn in the
+  storefront's V8 line style.
+- **Typing indicator** (`.v8-chat-typing`) — three muted-brown
+  dots bouncing inside an assistant bubble, 1s ease cycle with
+  staggered delays.
+- **Input row** (`.v8-chat-input-row`) — parchment-tinted
+  background, paper-card pill input with italic Cormorant
+  placeholder + terracotta focus ring, 36px terracotta-fill send
+  circle with a hand-drawn paper-plane SVG. Send disables to 35%
+  opacity when the input is empty or the assistant is replying.
+- **Reduced-motion**: pulse, scale-in, and typing dots all kill
+  under `prefers-reduced-motion: reduce` — only the colour cues
+  remain.
+
 ### `<Footer />` — `src/components/layout/Footer.tsx`
 
 V8 Trattoria footer — espresso canvas that picks up the Soci rail's
