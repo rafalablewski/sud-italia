@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, Dialog, Input, Select, Switch, Textarea } from "../v2/ui";
 import { useToast } from "../v2/ui/Toast";
+import { getActiveLocations } from "@/data/locations";
 
 /**
  * Advanced WhatsApp channel configuration. This is the hub for everything that
@@ -70,6 +71,16 @@ export function WhatsAppSettingsDialog({
   const [capText, setCapText] = useState("60");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Default-location dropdown — derived from the active trucks seed so
+  // a third truck shows up in the picker without editing this file.
+  const locationOptions = useMemo(
+    () => [
+      { value: "", label: "Ask the customer" },
+      ...getActiveLocations().map((l) => ({ value: l.slug, label: l.city })),
+    ],
+    [],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -303,11 +314,7 @@ export function WhatsAppSettingsDialog({
                       (e.target.value || null) as WaSettings["defaultLocation"],
                     )
                   }
-                  options={[
-                    { value: "", label: "Ask the customer" },
-                    { value: "krakow", label: "Kraków" },
-                    { value: "warszawa", label: "Warszawa" },
-                  ]}
+                  options={locationOptions}
                 />
               </Field>
               <Field label="Daily inbound cap / phone">
