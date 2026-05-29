@@ -226,7 +226,13 @@ The V8 Trattoria top nav.
   `38×38` line-bordered hamburger circle (`<lg` only). The switchers
   used to be always-expanded segmented rows of four codes each, which
   ate ~250px of horizontal budget; the disclosure refactor reclaims
-  that width and keeps the nav reading at a glance.
+  that width and keeps the nav reading at a glance. The cluster is
+  pinned to the right edge of the 1180px container with `ml-auto` at
+  every breakpoint — the brand + nav-links sit left, the switchers +
+  cart sit right, with the remaining space absorbed between them.
+  (Earlier builds used `lg:ml-0` to let the cluster sit immediately
+  after the nav-links; the V8 polish pass dropped that override so the
+  three pills land flush right, where the user expects to grab them.)
 - **Mobile menu:** appears under the nav-inner when the hamburger
   toggles. Each link is the same EN/IT bilingual format but inline
   instead of stacked.
