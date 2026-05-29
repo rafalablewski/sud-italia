@@ -140,7 +140,7 @@ The simulation also carries:
 
 **One-line verdict:** A genuinely impressive single-operator codebase wearing the costume of a multi-location chain — about 12 months of solo-builder over-engineering disguising a business that has not yet proven it can fill the trucks it already owns.
 
-The product side is sophisticated for a 2-truck Polish pizza concept: 27 admin pages, segmented delivery thresholds, customer-attach-history-weighted upsell scoring, hour-of-day bundle ladders, Stripe + idempotency + webhook dedup, a phone-first loyalty wallet with group pooling, JPK_V7M Polish tax export, dual-write database migration, distributed locking via Upstash, Sentry, structured logging, RBAC with HMAC-signed location-scoped sessions. This is **Toast-tier surface coverage built by what looks like one or two people**.
+The product side is sophisticated for a 2-truck Polish pizza concept: 42 admin pages, segmented delivery thresholds, customer-attach-history-weighted upsell scoring, hour-of-day bundle ladders, Stripe + idempotency + webhook dedup, a phone-first loyalty wallet with group pooling, JPK_V7M Polish tax export, dual-write database migration, distributed locking via Upstash, Sentry, structured logging, RBAC with HMAC-signed location-scoped sessions. This is **Toast-tier surface coverage built by what looks like one or two people**.
 
 But:
 

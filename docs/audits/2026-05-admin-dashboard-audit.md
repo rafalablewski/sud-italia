@@ -5,7 +5,7 @@
 **Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
 **Auditor scope:** Senior hospitality-tech product strategy, enterprise SaaS architecture, restaurant ops, UX systems
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres
-**Object of audit:** the entire `/admin/*` surface (25 pages, ~12,450 LOC) plus `src/lib/*` (store, ai-engine, growth-engine, loyalty, upsell, admin-auth)
+**Object of audit:** the entire `/admin/*` surface (42 pages, ~74,600 LOC across `src/app/admin` + `src/components/admin`) plus `src/lib/*` (store, ai-engine, growth-engine, loyalty, upsell, admin-auth)
 **Reviewers benchmarked against:** Toast POS, Square for Restaurants, Uber Eats Merchant, Notion, Linear, Stripe Dashboard, McDonald's GME / NPP / SOS-100, MICROS / Oracle Simphony, future AI-native hospitality OS
 
 > This audit is **not a compliment file**. The goal is to identify everything that is missing, fake, weak, fragile, unscalable, or below institutional standard — and to specify what an elite operator would have built instead.
@@ -95,7 +95,7 @@ The five honest findings:
 
 Sophistication score (detailed in §5): originally **38 / 100**, **~68–72 / 100 as of 2026-05-29** (see the dated Update sections — real POS terminal, audited LLM agent, relational migration, three-theme design system, V8 storefront). Investor-grade hospitality SaaS starts at **70**. McDonald's-grade internal ops platforms operate at **88–95**.
 
-The product is salvageable and, in many dimensions, well-architected for its current stage — the data model in `store.ts` is clean, types are coherent, the glass design system is consistent, and breadth (25 pages, 40+ admin endpoints) is impressive for what is effectively a single-team build. But the gap between **"functional admin tool"** and **"category-defining hospitality OS"** is approximately the work outlined in §3 and §5 of this document.
+The product is salvageable and, in many dimensions, well-architected for its current stage — the data model in `store.ts` is clean, types are coherent, the glass design system is consistent, and breadth (42 pages, 130+ admin endpoints) is impressive for what is effectively a single-team build. But the gap between **"functional admin tool"** and **"category-defining hospitality OS"** is approximately the work outlined in §3 and §5 of this document.
 
 ---
 
@@ -290,7 +290,7 @@ The most important admission this audit can offer: **stop calling the current `/
 | **Information density** (signal/cm²) | high | very high | medium | very high | **medium-low** (lots of glass card padding, oversize headings) | ✗ Not fixed — design-system pass (typography scale + card padding) deferred |
 | **Mobile workflow** | first-class | first-class | first-class | first-class (KDS-on-tablet) | **responsive ≠ designed-for-mobile**; no mobile-shift dashboard | ✗ Not fixed — needs dedicated mobile shell |
 | **Keyboard-driven** | total | strong | strong | n/a | partial (only page navigation) | ✗ Not fixed — global `J/K/E/U` model not yet wired |
-| **Cognitive load on first open** | low | low | low | medium | **medium-high** (25 sidebar items) | ✓ Out of date — sidebar is grouped into 10 sections (adds a "Core" group, `nav.config.ts:92`) and role-based filtering is real (`requiredRole` per item) so the nav collapses by role |
+| **Cognitive load on first open** | low | low | low | medium | **medium-high** (42 nav items) | ✓ Out of date — sidebar is grouped into 10 sections (adds a "Core" group, `nav.config.ts:92`) and role-based filtering is real (`requiredRole` per item) so the nav collapses by role |
 | **Time to one critical action** (e.g. "find this customer's last order") | ~3 s | ~5 s | ~6 s | ~5 s | **~12–18 s** (navigate → customers → search → click → orders tab) | ✓ Partly fixed by command palette (jump directly to a customer in ~3 s); deep "last order" link still missing |
 | **Real-time feedback** | live | live | live | live (sub-200 ms) | **SSE streaming on orders + KDS** | ✓ Fixed — `GET /api/admin/orders/stream` delivers per-mutation SSE frames (2 s server-side debounce, only emits on JSON change). `useAdminOrdersStream` hook handles reconnect + REST fallback when EventSource drops. Polling intervals removed from AdminOrders (was 30 s) and AdminKDS (was 5 s). |
 | **Empty states / first-run** | excellent | excellent | excellent | excellent | **untested; many pages render with no data and feel broken** | ✗ Not fixed — system-wide pass deferred |
