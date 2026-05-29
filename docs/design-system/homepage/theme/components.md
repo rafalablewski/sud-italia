@@ -665,9 +665,28 @@ for the full surface contract).
 - Portalled to `document.body` per Rule 4. `body.v8-cart-open` toggles
   while open so the floating cart pill / nav can fade out without
   rolling their own state.
+- **Single-mount** (Step 11 follow-up). Lives at `(public)/layout.tsx`
+  exactly once and reads open state + active-location menu items from
+  `useCartUIStore`. Every trigger surface (top-nav `<CartButton />`,
+  mobile `<FloatingCartButton />`, `<AbandonedCartBanner />`) opens
+  this one instance; no more 3× duplicated effects (slot polling,
+  upsell-config refetch, attach-history fetch, compliance lookup).
 - Stages still flow within the same surface — no page navigation.
 - Sticky paybar with the running total + bilingual `Pay · procedi
   · 46,51 zł` CTA (terracotta) + outline trash chip for `Clear cart`.
+
+### `<MenuItemsRegistrar />` — `src/components/cart/MenuItemsRegistrar.tsx`
+
+The bridge that lets the layout-level `<CartDrawer />` see the live
+menu of whichever location page is currently mounted. Rendered once
+on `/locations/[slug]/page.tsx`, it calls
+`useCartUIStore.setMenuItems(menuItems)` on mount and clears the
+store on unmount. Returns `null`.
+
+Without this the drawer would fall back to the hardcoded
+`krakowMenu` / `warszawaMenu` arrays — which miss admin overrides
+(price changes, item-86 toggles, badges) and break the cross-sell
+rail + bundle ladder + tier perk for the current location.
 
 ### `<CartItem />` — `src/components/cart/CartItem.tsx`
 
@@ -709,13 +728,17 @@ rail.
 
 ### `<FloatingCartButton />` — `src/components/cart/FloatingCartButton.tsx`
 
-The persistent in-thumb-reach order surface. **Pre-V8 styling — Step 12
-will port to `.v8-float-cart`.** Currently the mobile-only
-`floating-cart-bar` strip from the pre-V8 vocabulary.
+The mobile-only persistent in-thumb-reach order surface. Still on its
+pre-V8 chrome (`.floating-cart-bar`) — Step 12 will port to
+`.v8-float-cart`.
 
-- Fixed bottom-right desktop, bottom-centre mobile (24px gutter from
-  edge).
 - Renders nothing when the cart is empty (don't tease an empty cart).
+- Opens the layout-level `<CartDrawer />` via
+  `useCartUIStore.setDrawerOpen(true)` — does not mount its own
+  drawer instance.
+- The `allMenuItems` prop is accepted for API stability but ignored;
+  menu items now flow through `<MenuItemsRegistrar />` into the same
+  UI store.
 
 ### `<DeliveryProgress />` — `src/components/cart/DeliveryProgress.tsx`
 
@@ -732,6 +755,116 @@ V8 free-delivery shimmer-sweep-unlock micro-flow.
   + the one-shot `.v8-cart-delivery-sweep` overlay. Uses the same
   `--animate-delivery-unlock` / `--animate-delivery-sweep` /
   `--animate-delivery-medallion` keyframes declared in Step 1.
+
+### `<LoyaltyEarnPreview />` — `src/components/cart/LoyaltyEarnPreview.tsx`
+
+Italic Lora "You'll earn N points · N punti" line shown inside the
+paybar foot. Filled ochre star + Cormorant 600 ochre-dark tabular
+count. Server is the source of truth for the actual number; this
+preview uses the bronze multiplier and is intentionally cosmetic.
+
+### `<CorporateOrderBanner />` — `src/components/cart/CorporateOrderBanner.tsx`
+
+"Sud Italia per le aziende" rollup card (audit §3.4) — shown when the
+active wallet is a productised corporate account.
+
+- `.v8-cart-corp` ochre paper card with the building-block SVG on the
+  left + Cormorant kicker ("Sud Italia for businesses · per le
+  aziende") + italic Cormorant headline "Ordering with [name]" +
+  italic Lora rollup line (employee count, optional auto-preorder
+  copy, optional head-of-wallet bonus).
+- Self-hides for solo customers and family wallets without a
+  corporate config.
+
+### `<TierPerkBanner />` — `src/components/cart/TierPerkBanner.tsx`
+
+Famiglia Oro / Famiglia Platino complimentary antipasto toggle (audit
+§2.2 row 6).
+
+- `.v8-cart-perk` ochre paper card with the star SVG + italic
+  Cormorant tier name + italic Lora copy "A complimentary *antipasto
+  della casa* on us — added at the truck." + italic Cormorant
+  "Add · aggiungi" CTA on the right.
+- Toggled state (`.is-on`) flips to a basil-deep "added to the
+  table" headline with a round line-bordered × in the corner.
+- Adds a price-0 line tagged with `perk-gold-` prefix so the cart
+  store can find + remove it without disturbing real paid lines.
+
+### `<TodBanner />` — `src/components/cart/TodBanner.tsx`
+
+Time-of-day pairing card (audit §2.3). Five variants — morning
+(basil), lunch (ochre), afternoon "l'aperitivo" (ochre), dinner
+(terracotta), late (espresso night palette).
+
+- `.v8-cart-tod.is-{variant}` paper card with a hand-drawn variant
+  glyph on the left (sun / plate / wine glass / table-and-knife /
+  moon) + italic Cormorant variant title + italian italic phrase +
+  italic Lora sub.
+- CTA is the standard ochre Cormorant pill; on `.is-late` it flips
+  to terracotta so it reads on the espresso background.
+- Re-evaluates the active window every minute so a customer who
+  lingers in the drawer doesn't sit at "Lunch combo" past 13:00.
+
+### `<ComboDealBanner />` — `src/components/cart/ComboDealBanner.tsx`
+
+Italian Classic / Pasta Combo / etc. percent deals.
+
+- `.v8-cart-combo` espresso paper card with a hand-drawn wood-fired-
+  oven glyph + italic Cormorant deal name + italic Lora copy + ochre
+  `−12%` chip on the right + hairline progress rail underneath.
+- While the deal is incomplete the card becomes a button — tap adds
+  the missing items (cheapest in each missing category, or the missing
+  required suffixes) and unlocks the discount in one go.
+- Applied state flips to basil-tinted `.is-complete` card with the
+  basil-deep italic "applied · attivato — saving X zł" headline.
+
+### `<SlotPicker />` — `src/components/cart/SlotPicker.tsx`
+
+Date strip + slot grid in the V8 paper-card vocabulary.
+
+- `.v8-cart-days` horizontal scroll of day pills (Today · oggi /
+  Tomorrow · domani / formatted dates). Active day flips to
+  terracotta fill.
+- `.v8-cart-slots` 3-up grid of slot tiles. Each tile is a paper
+  pill with the time on top (Cormorant 600 tabular) + italic Lora
+  scarcity line below (bilingual: "Only 2 left · ultimi 2",
+  "Last spot · ultimo!", "N slots · liberi"). Critical slots tint
+  oxblood, low-stock slots tint ochre.
+- `.v8-cart-slots-empty` — parchment-deep dashed card with italic
+  Cormorant "Fully booked today · pieno" + terracotta italic
+  day-rollover link.
+- `.v8-cart-slots-skel` — 6-tile shimmer skeleton with the
+  parchment → parchment-deep gradient.
+
+### `<BundleLadder />` — `src/components/cart/BundleLadder.tsx`
+
+Make-it-a-bundle paper card (audit §3.2). Surfaces Lunch / Family
+Feast / Late dinner ladders depending on time-of-day, mainItems
+count, and admin config.
+
+- `.v8-cart-ladder` paper card with italic Cormorant period title +
+  italian phrase + a `.v8-cart-ladder-switch` chip to cycle when
+  more than one period qualifies. Sub copy reads "À la carte you'd
+  pay X — cross a threshold and share a feast with la famiglia."
+- `.v8-cart-ladder-primary` full-width paper tile for the
+  default-pushed tier (the McDonald's "Make it a Meal" pattern):
+  italic Cormorant "Most picked · il preferito" badge + headline
+  "Make it a *Family*", italic Lora description with per-person
+  framing (kicks in at ≥3 mains), tabular oxblood now-price with the
+  à-la-carte strikethrough above and basil-deep "Save X" below.
+- `.v8-cart-ladder-chip` paper tiles for the secondary tiers, grid
+  layout (1- or 2-up). Decoy tier dims to 85% opacity.
+- `.v8-cart-ladder-hint` ochre paper strip with the silhouette icon —
+  fires when the cart is within `hintWithin` mains of the Family
+  Feast threshold; copy: "Add N more pizzas or pastas to unlock
+  *Festa di famiglia* — save up to X."
+- Combo × Bundle clarity: when a combo deal is already active the
+  primary CTA shows the *incremental* basil-deep savings alongside a
+  muted "Replaces the active [combo name]" italic line so the
+  customer understands the trade.
+- Composer-sheet handoff, A/B variant resolution (SHA-256 hashed
+  phone), and funnel beaconing (impression / composer_opened /
+  composer_abandoned) all preserved.
 
 ## Loyalty components
 
@@ -808,22 +941,20 @@ tests might still import them.
 
 ### Cart sub-components still on pre-V8 chrome
 
-These render **inside** the V8 cart sheet at their pre-V8 visual but
-are still wired and shipping — Step 11 left them deliberately so the
-drawer's audit-tied behaviour stayed untouched. Each one will be
-ported in a follow-up step; until then, they sit on the parchment
-canvas with their original surface treatment.
+After the Step 11 follow-up, only two cart-area components remain on
+pre-V8 chrome:
 
-- `src/components/cart/CorporateOrderBanner.tsx`
-- `src/components/cart/TodBanner.tsx`
-- `src/components/cart/TierPerkBanner.tsx`
-- `src/components/cart/BundleLadder.tsx`
-- `src/components/cart/ComboDealBanner.tsx`
-- `src/components/cart/LoyaltyEarnPreview.tsx`
-- `src/components/cart/SlotPicker.tsx`
-- `src/components/cart/FloatingCartButton.tsx`
-- `src/components/cart/AddToCartToast.tsx`
+- `src/components/cart/FloatingCartButton.tsx` — mobile floating cart
+  bar (`.floating-cart-bar`). Visible at the bottom of the location
+  page when the cart has items. Step 12 will port to `.v8-float-cart`.
+- `src/components/cart/AddToCartToast.tsx` — post-add toast with the
+  cross-sell hint. Step 12 will port to `.v8-cart-toast`.
 
-The drawer chrome itself, the items list, the cross-sell rail, the
-delivery progress bar, and the pay bar are V8 (Step 11). Everything
-else above is queued for Steps 12+.
+The drawer shell, the items list, the loyalty status chip, the
+fulfilment toggle, the address / phone / email / notes fields, the
+dine-in party-size panel, the slot picker (date strip + grid + empty
+states), the tip picker, the pay bar, the cross-sell rail, the
+delivery progress bar, the loyalty-earn preview, the corporate-order
+banner, the gold-tier perk banner, the time-of-day banner, the
+combo-deal banner, and the bundle ladder all share the `.v8-cart-*`
+paper-card vocabulary now.

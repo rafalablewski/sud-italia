@@ -4,7 +4,8 @@ import { Header } from "@/components/layout/Header";
 import { LiveTicker } from "@/components/layout/LiveTicker";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import { AbandonedCartWrapper } from "@/components/cart/AbandonedCartWrapper";
+import { AbandonedCartBanner } from "@/components/cart/AbandonedCartBanner";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartPresenceSync } from "@/components/cart/CartPresenceSync";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CustomerProvider } from "@/store/customer";
@@ -72,7 +73,11 @@ export default function PublicLayout({
         <LayoutGate flag="showChatWidget">
           <ChatWidget />
         </LayoutGate>
-        <AbandonedCartWrapper />
+        {/* Single-mount cart drawer (Step 11 follow-up) — every trigger
+            (CartButton, FloatingCartButton, AbandonedCartBanner, …)
+            opens this one instance via useCartUIStore.setDrawerOpen. */}
+        <CartDrawer />
+        <AbandonedCartBanner />
         <CartPresenceSync />
       </div>
     </CustomerProvider>

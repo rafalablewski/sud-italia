@@ -7,6 +7,7 @@ import { MenuSection } from "@/components/location/MenuSection";
 import { LocationInfo } from "@/components/location/LocationInfo";
 import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { AddToCartToast } from "@/components/cart/AddToCartToast";
+import { MenuItemsRegistrar } from "@/components/cart/MenuItemsRegistrar";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ComplianceBanner } from "@/components/location/ComplianceBanner";
@@ -145,7 +146,11 @@ export default async function LocationPage({ params }: PageProps) {
       <LayoutGate flag="showLoyaltySection">
         <LoyaltySection />
       </LayoutGate>
-      <FloatingCartButton allMenuItems={menuItems} />
+      {/* Seed the live, override-aware menu into useCartUIStore so the
+          layout-level <CartDrawer />'s cross-sell + bundle ladder +
+          tier perk read the same data the menu chrome above renders. */}
+      <MenuItemsRegistrar menuItems={menuItems} />
+      <FloatingCartButton />
       <AddToCartToast allMenuItems={menuItems} />
     </>
   );

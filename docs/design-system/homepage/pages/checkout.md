@@ -189,6 +189,31 @@ parchment-paper feel can extend edge-to-edge inside the panel).
 | Editorial section title        | `.v8-cart-section-title` (Cormorant 13/2.4px) |
 | Sticky paybar                  | `.v8-cart-paybar` + `.v8-cart-paybar-tricolore` |
 
+### Single-mount contract (Step 11 follow-up)
+
+The drawer is mounted **exactly once** at `(public)/layout.tsx`. Every
+trigger surface — `<CartButton />` in the top nav, `<FloatingCartButton />`
+on the location page, `<AbandonedCartBanner />` 30s after idle — opens
+the same instance via `useCartUIStore.setDrawerOpen(true)`.
+
+| Slot              | Store / source                                  |
+| ----------------- | ----------------------------------------------- |
+| Drawer open state | `useCartUIStore.drawerOpen`                     |
+| Menu items        | `useCartUIStore.menuItems` (seeded by `<MenuItemsRegistrar />` on `/locations/[slug]`) |
+| Cart contents     | `useCartStore` (persisted; unchanged)           |
+
+`<MenuItemsRegistrar menuItems={menuItems} />` is rendered once on
+every page that has a live, override-aware menu in scope (today
+that's `/locations/[slug]/page.tsx`). It hydrates the UI store on
+mount and clears it on unmount so a back-navigation doesn't leak a
+stale menu into the drawer.
+
+The previous multi-mount setup (3 `<CartDrawer />` instances reading
+the same Zustand state) was replaced because it duplicated all
+audit-tied effects — slot polling, upsell-config refetch, attach
+history fetch, compliance lookup — three times per cart open. The
+single-mount drops those redundant calls and keeps the DOM clean.
+
 The sheet sizes to `96vh` on mobile (leaves a 4vh parchment breathing
 strip at the top so the underlying nav stays slightly visible — the
 mockup's "near-full-screen" pattern) and `calc(100vh - 40px)` on
@@ -233,22 +258,50 @@ The audit §2.2 row-9 chip:
   card linking to `/rewards` ("Soci e amici. Points follow the
   phone you enter below — tap to sign in.").
 
-### Sub-components retained (audit-tied)
+### Sub-components — all V8 (Step 11 + follow-up)
 
-These render inside the V8 sheet at their current visual treatment.
-They have audit-tied behaviour that Step 11 keeps untouched; each
-will be ported to V8 in a follow-up step:
+Step 11 ported the drawer shell + items + cross-sell + delivery
+progress; the Step 11 follow-up ported the remaining seven
+sub-components so the whole sheet reads as one paper-card
+vocabulary. Every audit-tied wiring is preserved verbatim:
 
-- `<CorporateOrderBanner />` — Sud Italia for businesses upsell
-- `<TodBanner />` — time-of-day "Aperitivo hour" pairing
-- `<TierPerkBanner />` — Gold/Platinum complimentary antipasto
-- `<BundleLadder />` — Festa di famiglia ladder + Make-it-a-Lunch
-- `<ComboDealBanner />` — percentage-deal banner (Italian Classic, etc.)
-- `<LoyaltyEarnPreview />` — "You'll earn N points" inline preview
-- `<SlotPicker />` — date strip + slot grid
+| Component                  | V8 selector family            | Audit tie-in                                                  |
+| -------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `<LoyaltyEarnPreview />`   | `.v8-cart-loyalty-preview-*`  | Ochre star + italic point preview line in the paybar foot     |
+| `<CorporateOrderBanner />` | `.v8-cart-corp-*`             | "Sud Italia per le aziende" rollup card (audit §3.4)          |
+| `<TierPerkBanner />`       | `.v8-cart-perk-*`             | Famiglia Oro complimentary antipasto toggle (audit §2.2 row 6) |
+| `<TodBanner />`            | `.v8-cart-tod-*` (.is-late)   | Time-of-day pairing card; espresso palette for the late window |
+| `<ComboDealBanner />`      | `.v8-cart-combo-*`            | Italian Classic / Pasta Combo paper card with hairline progress |
+| `<SlotPicker />`           | `.v8-cart-days-* .v8-cart-slot-*` | Date strip + slot grid with italic Lora scarcity copy     |
+| `<BundleLadder />`         | `.v8-cart-ladder-*`           | Make-it-a-bundle paper card + primary CTA + chip ladder (audit §3.2) |
 
-The audit §2.5 free-delivery progress bar **does** get the V8 port
-in this step — see below.
+#### Notes on the bigger sub-components
+
+- **BundleLadder.** The ladder still surfaces Lunch (hour-gated), Family
+  Feast (mainItems gated), and Late dinner ladders. The header
+  cycles between them via `.v8-cart-ladder-switch` when more than one
+  qualifies; the primary tier renders as a full-width paper tile
+  (`.v8-cart-ladder-primary`) with the "Most picked · il preferito"
+  italic Cormorant pill, the secondary tiers as paper chips below
+  (`.v8-cart-ladder-chip`). A `.v8-cart-ladder-hint` lands above the
+  ladder when the cart is within `hintWithin` items of the Family
+  Feast threshold. All funnel beaconing (impression /
+  composer_opened / composer_abandoned), variant resolution, and
+  composer-sheet handoff stays untouched.
+
+- **ComboDealBanner.** When the cart is short of the combo, the card
+  becomes an actionable button — tap adds the cheapest available
+  items in the missing categories (or the missing required suffixes)
+  and unlocks the discount. Mini hairline progress under the
+  copy. Applied state flips to a basil-deep "applied · attivato —
+  saving X zł" headline with a check tag.
+
+- **SlotPicker.** The empty state lands as a parchment-deep dashed
+  card with an italic Cormorant "Fully booked today · pieno" line +
+  a terracotta italic day-rollover link. Slot scarcity now reads
+  bilingual: "Only 2 left · ultimi 2", "Last spot · ultimo!". Loading
+  state is a 6-slot shimmer skeleton with the
+  parchment → parchment-deep gradient.
 
 ### Free-delivery progress — `DeliveryProgress.tsx`
 

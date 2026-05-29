@@ -3467,3 +3467,900 @@ body.v8-cart-open { overflow: hidden; }
   font-family: var(--font-heading);
   color: var(--color-muted);
 }
+
+/* ============================================================================
+   V8 Trattoria — Cart sub-components (Step 11 follow-up)
+   ============================================================================
+   The seven cart sub-components that were intentionally left at pre-V8
+   chrome inside the Step 11 sheet — now ported. LoyaltyEarnPreview,
+   CorporateOrderBanner, TierPerkBanner, TodBanner, ComboDealBanner,
+   SlotPicker, BundleLadder. Selectors stay namespaced under .v8-cart-*
+   so the styling can't leak into the admin or core themes.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------
+   LoyaltyEarnPreview — slim italic line in the paybar foot.
+   ------------------------------------------------------------------ */
+.v8-cart-loyalty-preview {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+.v8-cart-loyalty-preview-icon {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+  color: var(--color-ochre);
+}
+.v8-cart-loyalty-preview strong {
+  font-family: var(--font-heading);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--color-ochre);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.v8-cart-loyalty-preview-it {
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------------
+   CorporateOrderBanner — Sud Italia per le aziende ochre paper card.
+   ------------------------------------------------------------------ */
+.v8-cart-corp {
+  margin: 14px 20px 0;
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(201, 162, 62, 0.12) 0%, rgba(201, 162, 62, 0.04) 100%);
+  border: 1px solid rgba(201, 162, 62, 0.4);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+}
+.v8-cart-corp-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--color-ochre);
+  background: rgba(201, 162, 62, 0.12);
+  border-radius: var(--r-sm);
+}
+.v8-cart-corp-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+.v8-cart-corp-kicker {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--color-ochre);
+}
+.v8-cart-corp-it {
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.v8-cart-corp-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-espresso);
+  margin-top: 2px;
+}
+.v8-cart-corp-title em {
+  font-style: italic;
+  color: var(--color-oxblood);
+}
+.v8-cart-corp-soft {
+  font-style: normal;
+  font-weight: 400;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.v8-cart-corp-sub {
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------------------
+   TierPerkBanner — Famiglia Oro complimentary antipasto.
+   ------------------------------------------------------------------ */
+.v8-cart-perk {
+  margin: 14px 20px 0;
+  padding: 12px 14px;
+  background: rgba(201, 162, 62, 0.10);
+  border: 1px solid rgba(201, 162, 62, 0.40);
+  border-radius: var(--r-md);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-family: var(--font-body);
+  color: var(--color-espresso);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.v8-cart-perk:hover {
+  border-color: rgba(201, 162, 62, 0.7);
+  background: rgba(201, 162, 62, 0.16);
+}
+.v8-cart-perk.is-on {
+  background: rgba(74, 124, 89, 0.08);
+  border-color: rgba(74, 124, 89, 0.35);
+  cursor: default;
+}
+.v8-cart-perk.is-on:hover {
+  background: rgba(74, 124, 89, 0.08);
+  border-color: rgba(74, 124, 89, 0.35);
+}
+.v8-cart-perk-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--color-ochre);
+  background: rgba(201, 162, 62, 0.14);
+  border-radius: 50%;
+}
+.v8-cart-perk.is-on .v8-cart-perk-icon {
+  color: var(--color-basil-deep);
+  background: rgba(74, 124, 89, 0.14);
+}
+.v8-cart-perk-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.v8-cart-perk-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-espresso);
+}
+.v8-cart-perk-sub {
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.v8-cart-perk-sub em {
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-basil-deep);
+}
+.v8-cart-perk-cta {
+  flex: 0 0 auto;
+  background: var(--color-ochre);
+  color: var(--color-espresso);
+  border: 1px solid #B58F36;
+  border-radius: var(--r-sm);
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 12px;
+  letter-spacing: 0.4px;
+}
+.v8-cart-perk-remove {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-espresso-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.v8-cart-perk-remove:hover {
+  border-color: var(--color-oxblood);
+  color: var(--color-oxblood);
+  background: rgba(122, 43, 43, 0.04);
+}
+
+/* ------------------------------------------------------------------
+   TodBanner — time-of-day pairing paper card. Five variants:
+   morning (basil), lunch (ochre), afternoon (ochre — l'aperitivo),
+   dinner (terracotta), late (espresso night palette).
+   ------------------------------------------------------------------ */
+.v8-cart-tod {
+  margin: 14px 20px 0;
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(201, 162, 62, 0.14), rgba(201, 162, 62, 0.05));
+  border: 1px solid rgba(201, 162, 62, 0.4);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  color: var(--color-espresso);
+}
+.v8-cart-tod.is-morning {
+  background: linear-gradient(180deg, rgba(74, 124, 89, 0.10), rgba(74, 124, 89, 0.03));
+  border-color: rgba(74, 124, 89, 0.35);
+}
+.v8-cart-tod.is-dinner {
+  background: linear-gradient(180deg, rgba(184, 92, 56, 0.10), rgba(184, 92, 56, 0.04));
+  border-color: rgba(184, 92, 56, 0.35);
+}
+.v8-cart-tod.is-late {
+  background: var(--color-espresso);
+  border-color: var(--color-espresso-soft);
+  color: var(--color-parchment);
+}
+.v8-cart-tod-illus {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.v8-cart-tod.is-late .v8-cart-tod-illus {
+  color: var(--color-ochre-light);
+}
+.v8-cart-tod-body {
+  flex: 1;
+  min-width: 0;
+}
+.v8-cart-tod-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 17px;
+  color: inherit;
+  line-height: 1.1;
+}
+.v8-cart-tod-it {
+  font-style: italic;
+  font-weight: 400;
+  font-size: 13.5px;
+  color: var(--color-muted);
+}
+.v8-cart-tod.is-late .v8-cart-tod-it {
+  color: rgba(248, 239, 222, 0.65);
+}
+.v8-cart-tod-sub {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  font-style: italic;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.v8-cart-tod.is-late .v8-cart-tod-sub {
+  color: rgba(248, 239, 222, 0.72);
+}
+.v8-cart-tod-cta {
+  flex: 0 0 auto;
+  background: var(--color-ochre);
+  color: var(--color-espresso);
+  border: 1px solid #B58F36;
+  border-radius: var(--r-sm);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 12px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.v8-cart-tod-cta:hover { background: var(--color-ochre-light); }
+.v8-cart-tod.is-late .v8-cart-tod-cta {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+}
+.v8-cart-tod.is-late .v8-cart-tod-cta:hover { background: var(--color-terracotta-dark); }
+
+/* ------------------------------------------------------------------
+   ComboDealBanner — Italian Classic / Pasta Combo paper card.
+   ------------------------------------------------------------------ */
+.v8-cart-combo {
+  margin: 14px 20px 0;
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--color-espresso);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-espresso-soft);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  text-align: left;
+  width: calc(100% - 40px);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.v8-cart-combo.is-actionable {
+  cursor: pointer;
+}
+.v8-cart-combo.is-actionable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -10px rgba(61, 40, 23, 0.5);
+}
+.v8-cart-combo.is-complete {
+  background: rgba(74, 124, 89, 0.10);
+  color: var(--color-espresso);
+  border-color: rgba(74, 124, 89, 0.45);
+}
+.v8-cart-combo.is-pulse {
+  box-shadow: 0 0 0 4px rgba(74, 124, 89, 0.18);
+}
+.v8-cart-combo-illus {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--color-ochre-light);
+}
+.v8-cart-combo.is-complete .v8-cart-combo-illus {
+  color: var(--color-basil-deep);
+}
+.v8-cart-combo-body {
+  flex: 1;
+  min-width: 0;
+}
+.v8-cart-combo-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 17px;
+  color: inherit;
+  line-height: 1.1;
+}
+.v8-cart-combo-sub {
+  font-size: 12.5px;
+  color: inherit;
+  opacity: 0.78;
+  font-style: italic;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.v8-cart-combo.is-complete .v8-cart-combo-sub {
+  color: var(--color-basil-deep);
+  opacity: 1;
+}
+.v8-cart-combo-sub em {
+  font-style: italic;
+  font-weight: 600;
+}
+.v8-cart-combo-rail {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(248, 239, 222, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.v8-cart-combo.is-complete .v8-cart-combo-rail {
+  background: rgba(74, 124, 89, 0.18);
+}
+.v8-cart-combo-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-terracotta-soft), var(--color-ochre));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.v8-cart-combo.is-complete .v8-cart-combo-fill {
+  background: var(--color-basil);
+}
+.v8-cart-combo-tag {
+  flex: 0 0 auto;
+  align-self: center;
+  background: var(--color-ochre);
+  color: var(--color-espresso);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  letter-spacing: 0.4px;
+}
+.v8-cart-combo.is-complete .v8-cart-combo-tag {
+  background: var(--color-basil);
+  color: var(--color-parchment);
+}
+
+/* ------------------------------------------------------------------
+   SlotPicker — day strip + slot grid in V8 paper-card vocabulary.
+   ------------------------------------------------------------------ */
+.v8-cart-slots-wrap {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.v8-cart-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.v8-cart-days::-webkit-scrollbar { display: none; }
+.v8-cart-day {
+  flex: 0 0 auto;
+  background: #FBF4E1;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-espresso);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.1;
+}
+.v8-cart-day:hover { background: var(--color-parchment-deep); }
+.v8-cart-day.is-on {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+  font-weight: 600;
+}
+.v8-cart-day-it {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 10.5px;
+  opacity: 0.7;
+}
+.v8-cart-day.is-on .v8-cart-day-it { color: var(--color-ochre-light); opacity: 1; }
+
+.v8-cart-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.v8-cart-slot {
+  background: #FBF4E1;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-sm);
+  padding: 9px 6px;
+  font-family: var(--font-heading);
+  color: var(--color-espresso);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.v8-cart-slot:hover { background: var(--color-parchment-deep); }
+.v8-cart-slot.is-on {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border-color: var(--color-terracotta-dark);
+  font-weight: 600;
+}
+.v8-cart-slot.is-low {
+  background: rgba(201, 162, 62, 0.10);
+  border-color: rgba(201, 162, 62, 0.4);
+}
+.v8-cart-slot.is-critical {
+  background: rgba(122, 43, 43, 0.06);
+  border-color: rgba(122, 43, 43, 0.35);
+}
+.v8-cart-slot.is-on.is-critical {
+  background: var(--color-oxblood);
+  border-color: var(--color-oxblood);
+  color: var(--color-parchment);
+}
+.v8-cart-slot-time {
+  font-size: 15px;
+  font-weight: 600;
+}
+.v8-cart-slot-scarce {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 10.5px;
+  margin-top: 2px;
+  color: var(--color-oxblood);
+  font-weight: 400;
+}
+.v8-cart-slot.is-on .v8-cart-slot-scarce { color: var(--color-ochre-light); }
+.v8-cart-slot-scarce em { font-style: italic; opacity: 0.85; }
+
+.v8-cart-slots-skel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.v8-cart-slot-skel {
+  height: 50px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, #F2E2C2, #FBF4E1, #F2E2C2);
+  background-size: 200% 100%;
+  animation: v8-skel 1.4s ease-in-out infinite;
+}
+@keyframes v8-skel {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.v8-cart-slots-empty {
+  text-align: center;
+  padding: 16px 20px;
+  background: var(--color-parchment-deep);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+}
+.v8-cart-slots-empty.is-error {
+  background: rgba(122, 43, 43, 0.04);
+  border-color: var(--color-oxblood);
+  border-style: solid;
+  color: var(--color-oxblood);
+}
+.v8-cart-slots-empty-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-espresso);
+}
+.v8-cart-slots-empty.is-error .v8-cart-slots-empty-title { color: var(--color-oxblood); }
+.v8-cart-slots-empty-sub {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+.v8-cart-slots-roll {
+  margin-top: 8px;
+  background: none;
+  border: 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-terracotta);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  padding: 0 2px;
+}
+.v8-cart-slots-roll:hover {
+  color: var(--color-terracotta-dark);
+  border-bottom-color: var(--color-terracotta-dark);
+}
+.v8-cart-slots-low {
+  padding: 8px 12px;
+  background: rgba(201, 162, 62, 0.10);
+  border: 1px solid rgba(201, 162, 62, 0.4);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-espresso);
+}
+.v8-cart-slots-low em {
+  font-style: italic;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-ochre);
+}
+
+/* ------------------------------------------------------------------
+   BundleLadder — Make-it-a-bundle paper card (Family / Lunch / Late).
+   ------------------------------------------------------------------ */
+.v8-cart-ladder {
+  margin: 18px 20px 0;
+  padding: 16px;
+  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment));
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-paper);
+  font-family: var(--font-body);
+  color: var(--color-espresso);
+}
+.v8-cart-ladder-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.v8-cart-ladder-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 19px;
+  color: var(--color-oxblood);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.v8-cart-ladder-it {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.v8-cart-ladder-switch {
+  background: none;
+  border: 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-terracotta);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-terracotta-soft);
+  padding: 0 2px;
+}
+.v8-cart-ladder-switch:hover {
+  color: var(--color-terracotta-dark);
+  border-bottom-color: var(--color-terracotta-dark);
+}
+.v8-cart-ladder-sub {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  font-style: italic;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.v8-cart-ladder-primary {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(184, 92, 56, 0.08), rgba(201, 162, 62, 0.08));
+  border: 1px solid rgba(184, 92, 56, 0.35);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v8-cart-ladder-primary:hover:not(.is-applied) {
+  border-color: var(--color-terracotta);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -12px rgba(184, 92, 56, 0.45);
+}
+.v8-cart-ladder-primary.is-applied {
+  background: rgba(74, 124, 89, 0.08);
+  border-color: rgba(74, 124, 89, 0.4);
+  cursor: default;
+}
+.v8-cart-ladder-primary-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.v8-cart-ladder-badge {
+  display: inline-block;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--color-terracotta-dark);
+}
+.v8-cart-ladder-badge.is-applied {
+  background: var(--color-basil);
+  border-color: var(--color-basil-deep);
+}
+.v8-cart-ladder-primary-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--color-espresso);
+  font-weight: 600;
+}
+.v8-cart-ladder-primary-name em {
+  font-style: italic;
+  color: var(--color-oxblood);
+}
+.v8-cart-ladder-primary-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v8-cart-ladder-primary-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+.v8-cart-ladder-primary-perperson {
+  color: var(--color-ochre);
+  font-weight: 600;
+  font-family: var(--font-heading);
+  font-style: italic;
+}
+.v8-cart-ladder-primary-price {
+  flex: 0 0 auto;
+  text-align: right;
+}
+.v8-cart-ladder-primary-now {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-oxblood);
+  line-height: 1.1;
+}
+.v8-cart-ladder-primary.is-applied .v8-cart-ladder-primary-now {
+  color: var(--color-basil-deep);
+}
+.v8-cart-ladder-primary-ref {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--color-muted);
+  text-decoration: line-through;
+  margin-top: 1px;
+}
+.v8-cart-ladder-primary-save {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-basil-deep);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.v8-cart-ladder-primary-incremental {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-basil-deep);
+}
+.v8-cart-ladder-primary-replaces {
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+
+.v8-cart-ladder-chips {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+.v8-cart-ladder-chip {
+  background: var(--color-parchment);
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.v8-cart-ladder-chip:hover:not(.is-applied) {
+  border-color: var(--color-terracotta-soft);
+  transform: translateY(-1px);
+}
+.v8-cart-ladder-chip.is-applied {
+  background: rgba(74, 124, 89, 0.08);
+  border-color: rgba(74, 124, 89, 0.35);
+  cursor: default;
+}
+.v8-cart-ladder-chip.is-decoy { opacity: 0.85; }
+.v8-cart-ladder-chip-tier {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.v8-cart-ladder-chip-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--color-espresso);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.v8-cart-ladder-chip-desc {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+  line-height: 1.35;
+  min-height: 28px;
+}
+.v8-cart-ladder-chip-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+.v8-cart-ladder-chip-now {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-oxblood);
+}
+.v8-cart-ladder-chip.is-applied .v8-cart-ladder-chip-now {
+  color: var(--color-basil-deep);
+}
+.v8-cart-ladder-chip-ref {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+.v8-cart-ladder-chip-save {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-basil-deep);
+  letter-spacing: 0.4px;
+}
+.v8-cart-ladder-chip-applied {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-basil-deep);
+  letter-spacing: 0.4px;
+}
+
+.v8-cart-ladder-hint {
+  margin: 14px 20px 0;
+  padding: 10px 12px;
+  background: rgba(201, 162, 62, 0.08);
+  border: 1px solid rgba(201, 162, 62, 0.35);
+  border-radius: var(--r-md);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--color-espresso);
+  line-height: 1.4;
+}
+.v8-cart-ladder-hint em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-oxblood);
+}
+.v8-cart-ladder-hint-icon {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--color-ochre);
+}
+.v8-cart-ladder-hint-progress {
+  font-style: italic;
+  color: var(--color-muted);
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCartStore } from "@/store/cart";
+import { useCartUIStore } from "@/store/cart-ui";
 import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
 import { DeliveryProgress } from "./DeliveryProgress";
@@ -34,15 +35,21 @@ import { postCartPresenceToServer } from "@/lib/cart-presence-post-client";
 import { useLiveMenuAvailability } from "@/lib/useLiveMenuAvailability";
 import { fetchPublicSettings } from "@/lib/public-settings";
 
-interface CartDrawerProps {
-  open: boolean;
-  onClose: () => void;
-  allMenuItems?: import("@/data/types").MenuItem[];
-}
-
 const PHONE_PATTERN = /^[\d\s\-()]{7,}$/;
 
-export function CartDrawer({ open, onClose, allMenuItems = [] }: CartDrawerProps) {
+/**
+ * V8 cart drawer. Mounted exactly once at `(public)/layout.tsx`. Open
+ * state and the active location's menu items both flow through
+ * `useCartUIStore` so any trigger (top-nav CartButton, mobile
+ * FloatingCartButton, AbandonedCartBanner, future surfaces) can open
+ * the drawer without minting a sibling instance.
+ */
+export function CartDrawer() {
+  const open = useCartUIStore((s) => s.drawerOpen);
+  const setDrawerOpen = useCartUIStore((s) => s.setDrawerOpen);
+  const allMenuItems = useCartUIStore((s) => s.menuItems);
+  const onClose = () => setDrawerOpen(false);
+
   const items = useCartStore((s) => s.items);
   const getTotal = useCartStore((s) => s.getTotal);
   const clearCart = useCartStore((s) => s.clearCart);

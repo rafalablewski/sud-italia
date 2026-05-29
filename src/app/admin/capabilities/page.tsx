@@ -515,7 +515,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Abandoned-cart recovery",
           status: "live",
-          summary: "AbandonedCartWrapper persists the cart; banner surfaces 'finish your order' on return.",
+          summary: "Cart state persists via the Zustand store; AbandonedCartBanner surfaces 'finish your order' on return.",
         },
         {
           name: "Embedded chatbot widget",

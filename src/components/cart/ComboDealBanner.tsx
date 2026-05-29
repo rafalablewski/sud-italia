@@ -5,31 +5,26 @@ import { getActiveComboDeals, type UpsellConfig } from "@/lib/upsell";
 import { CartItem, MENU_CATEGORY_LABELS, MenuItem, FulfillmentType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
-import { Gift, Check, Sparkles } from "lucide-react";
 
 interface ComboDealBannerProps {
   cartItems: CartItem[];
-  /** Cart fulfillment type — drives channel-aware combo filtering
-   *  (audit §3 — channel economics). Optional so legacy callers still work. */
   fulfillmentType?: FulfillmentType;
-  /** Menu items available at the current location. Required for click-to-apply
-   *  — the banner looks up the missing required-item suffixes / cheapest item
-   *  per missing category against this list. Without it the banner stays in
-   *  read-only mode. */
   allMenuItems?: MenuItem[];
-  /** Cart's active location slug. Needed by `addItem` so cross-location adds
-   *  reset the cart correctly. */
   locationSlug?: string | null;
-  /** Admin-edited upsell config for the active location. Without this the
-   *  banner used to call getActiveComboDeals with `null`, which silently
-   *  pinned it to DEFAULT_COMBO_DEALS — so renaming "Pasta Combo" to
-   *  "Classic Pasta Deal" in admin had no visible effect on the cart even
-   *  though the discount math (computed separately inside CartDrawer with
-   *  the real config) honoured the override. Pass the config explicitly so
-   *  the banner and the discount stay in sync. */
   upsellConfig?: UpsellConfig | null;
 }
 
+/**
+ * V8 combo-deal banner. Italian Classic / Pasta Combo / etc. percent
+ * deals that auto-apply when the cart hits the required composition.
+ *
+ * V8 styling: `.v8-cart-combo` paper card with a hand-drawn oven SVG
+ * + italic Cormorant deal name + Italian italic sublabel + ochre
+ * `−12%` chip on the right. While the deal is incomplete the card
+ * becomes a button — tap adds the missing items and unlocks the
+ * discount in one go. Mini hairline progress rail underneath. Applied
+ * state flips to basil-deep "applied · attivato — saving X zł".
+ */
 export function ComboDealBanner({
   cartItems,
   fulfillmentType,
@@ -43,18 +38,10 @@ export function ComboDealBanner({
   const addItem = useCartStore((s) => s.addItem);
   const [justApplied, setJustApplied] = useState(false);
 
-  // Resolve the menu items we'd add on click. For requiredItems-based combos
-  // we match every missing suffix against the current location's menu. For
-  // pure category combos we pick the cheapest item in each missing category
-  // so a single tap completes the combo without forcing the customer to
-  // hunt through the menu. Plain computation — React Compiler memoizes.
   const itemsToAdd: MenuItem[] = (() => {
     if (!activeDeal || isComplete) return [];
     if (allMenuItems.length === 0) return [];
 
-    // Only suggest items the kitchen can actually serve — `available: false`
-    // means the operator 86'd the SKU, and offering it via the click-to-apply
-    // would surface a sold-out line at checkout.
     const isAvailable = (m: MenuItem) => m.available !== false;
 
     if (activeDeal.requiredItems && activeDeal.requiredItems.length > 0) {
@@ -100,14 +87,10 @@ export function ComboDealBanner({
 
   const handleApply = () => {
     if (!canApply || !locationSlug) return;
-    for (const item of itemsToAdd) {
-      addItem(item, locationSlug);
-    }
+    for (const item of itemsToAdd) addItem(item, locationSlug);
     setJustApplied(true);
   };
 
-  // Clear the "just applied" pulse a couple seconds after the cart settles
-  // into the complete state so the green glow doesn't linger forever.
   useEffect(() => {
     if (!justApplied) return;
     if (!isComplete) return;
@@ -117,10 +100,6 @@ export function ComboDealBanner({
 
   if (!activeDeal) return null;
 
-  // Item-required combos (Italian Classic Deal) name the specific missing
-  // items; category-only combos fall back to the legacy category copy;
-  // when categories AND items are all matched but minItems is short, we
-  // surface the quantity gap so the banner stays actionable.
   const missingLabels = missingItems.length > 0
     ? missingItems
     : missingCategories.map((cat) => MENU_CATEGORY_LABELS[cat].toLowerCase());
@@ -131,95 +110,69 @@ export function ComboDealBanner({
         ? [`${missingQuantity} more item${missingQuantity === 1 ? "" : "s"}`]
         : [];
 
-  const containerClasses = `p-3 rounded-xl border transition-all duration-300 ${
-    isComplete
-      ? "bg-italia-green/5 border-italia-green/30"
-      : "bg-italia-gold/5 border-italia-gold/25"
-  } ${justApplied && isComplete ? "ring-2 ring-italia-green/40 shadow-[0_0_0_4px_rgba(16,185,129,0.08)]" : ""} ${
-    canApply
-      ? "cursor-pointer hover:border-italia-gold/50 hover:bg-italia-gold/10 active:scale-[0.99]"
-      : ""
-  }`;
+  const classes = [
+    "v8-cart-combo",
+    isComplete ? "is-complete" : "",
+    justApplied && isComplete ? "is-pulse" : "",
+    canApply ? "is-actionable" : "",
+  ].filter(Boolean).join(" ");
 
   const content = (
-    <div className="flex items-start gap-3">
-      <div
-        className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-          isComplete
-            ? "bg-italia-green/15 text-italia-green"
-            : "bg-italia-gold/15 text-italia-gold-dark"
-        }`}
-      >
-        {isComplete ? <Check className="h-5 w-5" /> : <Gift className="h-5 w-5" />}
-      </div>
-      <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-semibold text-sm text-italia-dark">
-            {activeDeal.name}
-          </p>
-          <span
-            className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-              isComplete
-                ? "bg-italia-green/15 text-italia-green"
-                : "bg-italia-gold/15 text-italia-gold-dark"
-            }`}
-          >
-            {isComplete ? "Applied" : `-${activeDeal.discountPercent}%`}
-          </span>
+    <>
+      <span className="v8-cart-combo-illus" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path d="M6 30 L6 18 C 6 12, 12 8, 20 8 C 28 8, 34 12, 34 18 L34 30" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <ellipse cx="20" cy="20" rx="9" ry="7" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <path d="M14 21 C 16 19, 24 19, 26 21" stroke="#CD212A" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          <path d="M16 23 C 18 22, 22 22, 24 23" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          <path d="M3 32 L37 32" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </span>
+      <div className="v8-cart-combo-body">
+        <div className="v8-cart-combo-title">
+          {activeDeal.name}
         </div>
         {isComplete ? (
-          <p className="text-sm text-italia-green font-semibold mt-1 flex items-center gap-1">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Deal applied — you&apos;re saving {formatPrice(savings)}
-          </p>
+          <div className="v8-cart-combo-sub">
+            <em>applied · attivato</em> — saving{" "}
+            <span className="num">{formatPrice(savings)}</span>
+          </div>
         ) : partialCopy.length > 0 ? (
-          <>
-            <p className="text-xs text-italia-gray mt-1">
-              Add{" "}
-              {partialCopy.map((label, i) => (
-                <span key={label}>
-                  {i > 0 && (i === partialCopy.length - 1 ? " & " : ", ")}
-                  <span className="font-semibold text-italia-dark">
-                    {label}
-                  </span>
-                </span>
-              ))}{" "}
-              to unlock this deal
-            </p>
-            {canApply && (
-              <p className="text-[11px] font-semibold text-italia-gold-dark mt-1">
-                Tap to add {itemsToAdd.length === 1 ? "it" : "them"} and save {formatPrice(savings)}
-              </p>
-            )}
-          </>
+          <div className="v8-cart-combo-sub">
+            Add{" "}
+            {partialCopy.map((label, i) => (
+              <span key={label}>
+                {i > 0 && (i === partialCopy.length - 1 ? " & " : ", ")}
+                <em>{label}</em>
+              </span>
+            ))}{" "}
+            to unlock — saves{" "}
+            <span className="num">{formatPrice(savings)}</span>
+          </div>
         ) : null}
-        {/* Mini progress bar */}
         {!isComplete && (
-          <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2">
-            <div
-              className="h-full bg-italia-gold rounded-full transition-all duration-500"
-              style={{ width: `${progress * 100}%` }}
-            />
+          <div className="v8-cart-combo-rail">
+            <div className="v8-cart-combo-fill" style={{ width: `${Math.max(2, progress * 100)}%` }} />
           </div>
         )}
       </div>
-    </div>
+      <span className="v8-cart-combo-tag">
+        {isComplete ? "✓" : `−${activeDeal.discountPercent}%`}
+      </span>
+    </>
   );
 
-  return (
-    <div className="px-5 mt-3">
-      {canApply ? (
-        <button
-          type="button"
-          onClick={handleApply}
-          className={`${containerClasses} w-full block transition-transform`}
-          aria-label={`Apply ${activeDeal.name} — add ${itemsToAdd.map((i) => i.name).join(", ")}`}
-        >
-          {content}
-        </button>
-      ) : (
-        <div className={containerClasses}>{content}</div>
-      )}
-    </div>
-  );
+  if (canApply) {
+    return (
+      <button
+        type="button"
+        onClick={handleApply}
+        className={classes}
+        aria-label={`Apply ${activeDeal.name} — add ${itemsToAdd.map((i) => i.name).join(", ")}`}
+      >
+        {content}
+      </button>
+    );
+  }
+  return <div className={classes}>{content}</div>;
 }

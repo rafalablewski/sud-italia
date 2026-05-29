@@ -7,22 +7,31 @@ interface LoyaltyEarnPreviewProps {
   cartTotal: number; // in grosze
 }
 
+/**
+ * "You'll earn N points" line shown inside the cart paybar foot. The
+ * server is the source of truth for the points-earned number (it
+ * resolves the customer's actual tier); this preview assumes bronze
+ * (1× multiplier) and is intentionally cosmetic — it never gates
+ * anything.
+ *
+ * V8 styling lives on `.v8-cart-loyalty-preview` in
+ * themes/homepage/index.css — italic Lora muted with a filled ochre
+ * star + Cormorant 600 ochre-dark tabular point count.
+ */
 export function LoyaltyEarnPreview({ cartTotal }: LoyaltyEarnPreviewProps) {
   if (cartTotal <= 0) return null;
 
-  // Assume bronze tier for preview (1x multiplier) — actual tier calculated server-side
   const pointsToEarn = calculatePointsForOrder(cartTotal, "bronze");
-
   if (pointsToEarn <= 0) return null;
 
   return (
-    <div className="flex items-center justify-start gap-2 py-0.5">
-      <Star className="h-3.5 w-3.5 text-italia-gold fill-italia-gold flex-shrink-0" />
-      <p className="text-xs text-italia-gray">
-        You&apos;ll earn{" "}
-        <span className="font-bold text-italia-gold-dark">{pointsToEarn} points</span>
-        {" "}with this order
-      </p>
-    </div>
+    <p className="v8-cart-loyalty-preview">
+      <Star className="v8-cart-loyalty-preview-icon" fill="currentColor" aria-hidden />
+      You&apos;ll earn{" "}
+      <strong>
+        <span className="num">{pointsToEarn}</span> points
+      </strong>{" "}
+      <span className="v8-cart-loyalty-preview-it">· {pointsToEarn} punti</span>
+    </p>
   );
 }

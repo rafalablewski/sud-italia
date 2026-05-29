@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useCartStore } from "@/store/cart";
-import { ShoppingBag, X, Clock, ArrowRight } from "lucide-react";
+import { useCartUIStore } from "@/store/cart-ui";
+import { ShoppingBag, X, ArrowRight } from "lucide-react";
 
-interface AbandonedCartBannerProps {
-  onOpenCart: () => void;
-}
-
-export function AbandonedCartBanner({ onOpenCart }: AbandonedCartBannerProps) {
+export function AbandonedCartBanner() {
   const items = useCartStore((s) => s.items);
+  const setDrawerOpen = useCartUIStore((s) => s.setDrawerOpen);
   const getTotal = useCartStore((s) => s.getTotal);
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -48,7 +46,7 @@ export function AbandonedCartBanner({ onOpenCart }: AbandonedCartBannerProps) {
         </div>
         <button
           onClick={() => {
-            onOpenCart();
+            setDrawerOpen(true);
             setShow(false);
           }}
           className="flex-shrink-0 flex items-center gap-1 px-3 py-2 bg-italia-red text-white text-xs font-semibold rounded-xl hover:bg-italia-red-dark transition-colors"
