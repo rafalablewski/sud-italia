@@ -1,7 +1,6 @@
 import "../themes/homepage/index.css";
 import { Lora, Cormorant_Garamond } from "next/font/google";
 import { Header } from "@/components/layout/Header";
-import { LiveTicker } from "@/components/layout/LiveTicker";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { AbandonedCartBanner } from "@/components/cart/AbandonedCartBanner";
@@ -68,9 +67,6 @@ export default function PublicLayout({
       <style dangerouslySetInnerHTML={{ __html: fontVarsOnRoot }} />
       <div className={`${homepageBody.variable} ${homepageHeading.variable} flex flex-col flex-1`}>
         <Header />
-        <LayoutGate flag="showLiveTicker">
-          <LiveTicker />
-        </LayoutGate>
         <main className="flex-1">{children}</main>
         <Footer />
         <LayoutGate flag="showChatWidget">

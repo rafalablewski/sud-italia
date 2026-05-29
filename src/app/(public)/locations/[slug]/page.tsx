@@ -8,6 +8,7 @@ import { LocationInfo } from "@/components/location/LocationInfo";
 import { MenuItemsRegistrar } from "@/components/cart/MenuItemsRegistrar";
 import { LoyaltySection } from "@/components/location/LoyaltySection";
 import { LayoutGate } from "@/components/layout/LayoutGate";
+import { LiveTicker } from "@/components/layout/LiveTicker";
 import { ComplianceBanner } from "@/components/location/ComplianceBanner";
 import { SITE_NAME } from "@/lib/constants";
 import { getSettings, resolveLocationCompliance } from "@/lib/store";
@@ -113,6 +114,15 @@ export default async function LocationPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* Chain-wide live ticker — was previously mounted globally in
+       *  (public)/layout.tsx so it shipped on every storefront route,
+       *  but it's only meaningful in the order-flow context. V8 polish
+       *  scoped it to the location page so the homepage / rewards
+       *  surfaces open on a clean parchment band instead of a dark
+       *  espresso strip beneath the nav. */}
+      <LayoutGate flag="showLiveTicker">
+        <LiveTicker />
+      </LayoutGate>
       <LocationHero location={location} />
       <ComplianceBanner compliance={compliance} />
       {/* <LiveActivityBar /> intentionally NOT rendered here right now —

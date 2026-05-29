@@ -205,40 +205,137 @@ body {
   color: var(--color-terracotta-dark);
 }
 
-/* ----- Language pill ------------------------------------------------- */
-.v8-lang-picker {
-  background: rgba(184, 92, 56, 0.06);
-  border: 1px solid rgba(184, 92, 56, 0.25);
+/* ----- Nav switcher (language + currency) ---------------------------- *
+ * Collapsible disclosure pattern shared by <LanguageSwitcher /> and
+ * <CurrencySwitcher /> via the <NavDropdown /> primitive. Trigger is a
+ * compact tinted pill showing the active code + a caret; clicking
+ * reveals a small floating panel listing every enabled option as
+ * "CODE · native label". Replaces the always-expanded segmented pills
+ * that crowded the right cluster. Tone variants: terracotta (lang) +
+ * basil (currency). */
+.v8-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.v8-lang-opt { color: var(--color-muted); }
-.v8-lang-opt:hover { color: var(--color-terracotta-dark); }
-.v8-lang-opt-active,
-.v8-lang-opt-active:hover {
-  background: var(--color-terracotta);
-  color: #FFF7E8;
-  box-shadow: 0 1px 2px rgba(122, 43, 43, 0.15);
+.v8-switcher-trigger:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
 }
-@media (max-width: 640px) {
-  .v8-lang-opt { padding: 5px 8px; font-size: 10px; }
+.v8-switcher-trigger-label {
+  min-width: 16px;
+  text-align: center;
+}
+.v8-switcher-caret {
+  transition: transform 0.2s ease;
+  opacity: 0.7;
+}
+.v8-switcher-caret.is-open {
+  transform: rotate(180deg);
 }
 
-/* ----- Currency pill (basil) ---------------------------------------- */
-.v8-curr-picker {
+.v8-switcher-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  padding: 6px;
+  background: rgba(248, 239, 222, 0.98);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 12px 32px -12px rgba(61, 40, 23, 0.45);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.v8-switcher-opt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: var(--font-body);
+}
+.v8-switcher-opt-code {
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  color: var(--color-espresso);
+  min-width: 22px;
+}
+.v8-switcher-opt-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+/* Tone — terracotta (language) */
+.v8-switcher-terracotta .v8-switcher-trigger {
+  background: rgba(184, 92, 56, 0.06);
+  border-color: rgba(184, 92, 56, 0.25);
+  color: var(--color-terracotta-dark);
+}
+.v8-switcher-terracotta .v8-switcher-trigger:hover {
+  background: rgba(184, 92, 56, 0.12);
+  border-color: rgba(184, 92, 56, 0.4);
+}
+.v8-switcher-terracotta .v8-switcher-opt:hover {
+  background: rgba(184, 92, 56, 0.08);
+}
+.v8-switcher-terracotta .v8-switcher-opt[aria-selected="true"] {
+  background: rgba(184, 92, 56, 0.14);
+}
+.v8-switcher-terracotta .v8-switcher-opt[aria-selected="true"] .v8-switcher-opt-code {
+  color: var(--color-terracotta-dark);
+}
+
+/* Tone — basil (currency) */
+.v8-switcher-basil { margin-left: 6px; }
+.v8-switcher-basil .v8-switcher-trigger {
   background: rgba(74, 124, 89, 0.08);
-  border: 1px solid rgba(74, 124, 89, 0.28);
-  margin-left: 6px;
+  border-color: rgba(74, 124, 89, 0.28);
+  color: #2E5840;
 }
-.v8-curr-opt { color: var(--color-muted); }
-.v8-curr-opt:hover { color: #2E5840; }
-.v8-curr-opt-active,
-.v8-curr-opt-active:hover {
-  background: var(--color-basil);
-  color: #FFF7E8;
-  box-shadow: 0 1px 2px rgba(46, 88, 64, 0.18);
+.v8-switcher-basil .v8-switcher-trigger:hover {
+  background: rgba(74, 124, 89, 0.14);
+  border-color: rgba(74, 124, 89, 0.42);
 }
+.v8-switcher-basil .v8-switcher-opt:hover {
+  background: rgba(74, 124, 89, 0.1);
+}
+.v8-switcher-basil .v8-switcher-opt[aria-selected="true"] {
+  background: rgba(74, 124, 89, 0.16);
+}
+.v8-switcher-basil .v8-switcher-opt[aria-selected="true"] .v8-switcher-opt-code {
+  color: #2E5840;
+}
+
 @media (max-width: 640px) {
-  .v8-curr-picker { margin-left: 4px; }
-  .v8-curr-opt { padding: 4px 7px; font-size: 11px; }
+  .v8-switcher-basil { margin-left: 4px; }
+  .v8-switcher-panel { min-width: 160px; }
 }
 
 /* ============================
@@ -394,10 +491,10 @@ body {
    (which uses currentColor + the terracotta text colour). */
 
 .v8-hero {
-  padding: 48px 0 56px;
+  padding: 48px 0 0;
 }
 @media (min-width: 768px) {
-  .v8-hero { padding: 80px 0 90px; }
+  .v8-hero { padding: 80px 0 0; }
 }
 
 /* Kicker — oxblood "Open now" pill above the headline */
@@ -564,7 +661,7 @@ body {
 
 /* Tricolore at the bottom of the hero — 200px hairline, slightly faded */
 .v8-hero-tricolore {
-  margin: 40px auto 0;
+  margin: 28px auto 0;
   width: 200px;
   opacity: 0.7;
 }
@@ -1122,13 +1219,18 @@ body {
    Slim italic-Cormorant quote between Bundles and Loyalty. Not a
    `.v8-ps` block — V8 deliberately strips the eyebrow / title chrome
    and lets the quote land alone on a soft terracotta radial wash, the
-   way a hand-printed menu inserts its founder's voice. Tighter
-   vertical rhythm (64px padding both sides) than the standard `.v8-ps`.
+   way a hand-printed menu inserts its founder's voice. Zero vertical
+   padding — the strip's height is exactly the quote + citation, and
+   the previous `.v8-ps` section's bottom padding + the next
+   `.v8-ps.v8-ps-dark` section's top padding own the rhythm on both
+   sides. Earlier builds shipped `padding: 64px 0`, which stacked into
+   the neighbours' padding to read as a ~150px dead band — V8 polish
+   zeroed it.
    Markup in src/components/landing/AboutSection.tsx. */
 
 .v8-famiglia {
   text-align: center;
-  padding: 64px 0;
+  padding: 0;
   background: radial-gradient(at 50% 50%, rgba(184, 92, 56, 0.06), transparent 70%);
 }
 
@@ -1323,15 +1425,14 @@ body {
    subsequent steps port the menu chrome + the location-page menu
    item grid. */
 
-/* ---- Back chip — "← Home · la casa" -------------------------------- */
-.v8-back-chip-wrap {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 14px 18px 0;
-}
-@media (min-width: 768px) {
-  .v8-back-chip-wrap { padding: 18px 36px 0; }
-}
+/* ---- Back chip — "← Home · la casa" --------------------------------
+   Lives INSIDE `.v8-loc-hero` as its first child. Renders inline-flex
+   so it sits at the top-left of the hero band while the
+   `.v8-loc-hero-inner` block below it centres on its own auto
+   margins. Earlier builds shipped a separate `.v8-back-chip-wrap`
+   strip above the hero (a wide cream band holding nothing but the
+   chip) — V8 polish folded the chip into the hero so the page opens
+   on one continuous parchment surface. */
 .v8-back-chip {
   display: inline-flex;
   align-items: center;
@@ -1345,6 +1446,18 @@ body {
   border-radius: 999px;
   padding: 6px 14px 6px 10px;
   transition: all 0.2s ease;
+}
+/* In-hero placement override — flex (block-level) + max-content so the
+   chip keeps its pill shape, sits at the top-left of the hero band,
+   and breaks the centred `.v8-loc-hero-inner` onto a new line below
+   it. `z-index: 3` keeps it above the basil ornament (z-index 1). */
+.v8-loc-back-chip {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  position: relative;
+  z-index: 3;
+  margin-bottom: 10px;
 }
 .v8-back-chip:hover {
   background: var(--color-oxblood);
@@ -1499,21 +1612,81 @@ body {
 
 .v8-menu-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
-  border-radius: 14px;
-  padding: 22px 18px 28px;
   box-shadow: var(--shadow-paper);
-  max-width: 1180px;
-  margin: 22px auto;
+  margin: 0 auto;
+  padding: 22px 18px 28px;
 }
 @media (min-width: 768px) {
-  .v8-menu-card { padding: 28px 28px 36px; margin: 28px auto; }
+  .v8-menu-card { padding: 28px 28px 36px; }
 }
 
 /* Section header inside the menu card — slightly tighter than the
    landing's `.v8-ps-head` (margin-bottom shrinks because the search
    sits right under the sub). */
 .v8-menu-card .v8-ps-head { margin-bottom: 18px; }
+
+/* ============================
+   V8 Trattoria — location-page loading skeleton
+   ============================
+   Used by src/app/(public)/locations/[slug]/loading.tsx. The skeleton
+   reuses the real page's structural classes (`.v8-loc-hero` with a
+   `.v8-loc-back-chip` skeleton inside it where the live page renders
+   the chip, then `.v8-menu-card`) so the parchment ground is
+   identical from first paint — no "flash of the old dark hero"
+   during the route transition. Skeleton blocks (`.v8-skel`) carry a
+   terracotta-tinted shimmer so the wait reads as part of the V8
+   surface, not a generic gray placeholder. */
+
+.v8-loc-loading {
+  background: var(--color-parchment);
+  min-height: 100vh;
+}
+
+.v8-skel {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(184, 92, 56, 0.06) 0%,
+    rgba(184, 92, 56, 0.14) 50%,
+    rgba(184, 92, 56, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: v8-skel-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes v8-skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.v8-skel-chip      { width: 96px;  height: 28px; border-radius: 999px; margin-bottom: 10px; }
+.v8-skel-illus     { width: 100%; max-width: 360px; height: 132px; margin: 0 auto 12px; border-radius: 10px; }
+.v8-skel-tricolore { width: 80px;  height: 3px;  margin: 4px auto 14px; border-radius: 2px; }
+.v8-skel-h1        { width: 60%;  max-width: 280px; height: 44px; margin: 8px auto 12px; border-radius: 6px; }
+.v8-skel-sub       { width: 75%;  max-width: 420px; height: 16px; margin: 0 auto 18px; }
+.v8-skel-status    { width: 200px; height: 28px; margin: 0 auto; border-radius: 999px; }
+
+.v8-skel-eyebrow   { width: 160px; height: 12px; margin: 4px auto 14px; }
+.v8-skel-title     { width: 60%; max-width: 320px; height: 32px; margin: 0 auto 20px; border-radius: 6px; }
+.v8-skel-search    { width: 100%; max-width: 720px; height: 44px; margin: 0 auto 22px; border-radius: 999px; }
+
+.v8-skel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 768px) {
+  .v8-skel-h1   { height: 56px; max-width: 360px; }
+  .v8-skel-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+}
+.v8-skel-card { height: 132px; border-radius: 12px; }
+
+/* Respect users who've asked for reduced motion — kill the shimmer
+   and let the skeleton sit static at the mid-tint. */
+@media (prefers-reduced-motion: reduce) {
+  .v8-skel { animation: none; background: rgba(184, 92, 56, 0.1); }
+}
 
 /* ---- Menu search input -------------------------------------------- */
 .v8-menu-search {
@@ -4465,6 +4638,321 @@ body.v8-cart-open .v8-float-cart {
 }
 
 /* ------------------------------------------------------------------
+   ChatWidget — paper FAB + parchment chat sheet. Sits above the
+   FloatingCartButton in the bottom-right, palette in V8's oxblood
+   accent (chat = hospitality / personal voice, distinct from the
+   terracotta order CTAs). Hand-drawn line icons match the rest of
+   the storefront's iconography. Closed state is a 56px paper circle
+   with a pulsing basil "available" dot; open state is a parchment
+   card with bilingual italic Cormorant header, V8 message bubbles,
+   and a paper-card input with a terracotta send circle.
+   ------------------------------------------------------------------ */
+
+.v8-chat-fab {
+  position: fixed;
+  bottom: 92px;
+  right: 22px;
+  z-index: 70;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: linear-gradient(180deg, #FBF4E1, var(--color-parchment-deep));
+  border: 1px solid var(--color-line);
+  color: var(--color-oxblood);
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 14px 32px -12px rgba(61, 40, 23, 0.45);
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease,
+    transform 0.25s ease, box-shadow 0.25s ease;
+}
+.v8-chat-fab:hover {
+  background: var(--color-oxblood);
+  color: var(--color-parchment);
+  border-color: var(--color-oxblood-dark, #5A1F1F);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -12px rgba(122, 43, 43, 0.55);
+}
+.v8-chat-fab:focus-visible {
+  outline: 2px solid var(--color-oxblood);
+  outline-offset: 3px;
+}
+.v8-chat-fab-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 3px rgba(248, 239, 222, 0.95);
+  animation: v8-chat-fab-pulse 2.4s ease-in-out infinite;
+}
+@keyframes v8-chat-fab-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.18); opacity: 0.7; }
+}
+@media (max-width: 768px) {
+  .v8-chat-fab { bottom: 96px; right: 16px; }
+}
+
+/* ----- Chat sheet ----------------------------------------------------- */
+.v8-chat-sheet {
+  position: fixed;
+  bottom: 92px;
+  right: 22px;
+  z-index: 70;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: min(560px, 78vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(248, 239, 222, 0.72) 100%),
+    var(--color-parchment-deep);
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 22px 48px -16px rgba(61, 40, 23, 0.5);
+  animation: v8-chat-sheet-in 0.22s ease-out;
+}
+@keyframes v8-chat-sheet-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 768px) {
+  .v8-chat-sheet { bottom: 96px; right: 16px; }
+}
+
+/* ----- Sheet header --------------------------------------------------- */
+.v8-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 14px 16px;
+  border-bottom: 1px solid var(--color-line-soft);
+  background: linear-gradient(180deg, rgba(184, 92, 56, 0.06), transparent);
+}
+.v8-chat-head-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(74, 124, 89, 0.12);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.v8-chat-head-titles { flex: 1; min-width: 0; }
+.v8-chat-head-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-espresso);
+  line-height: 1.15;
+}
+.v8-chat-head-sub-en {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-left: 2px;
+}
+.v8-chat-head-sub {
+  margin: 2px 0 0;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--color-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+}
+.v8-chat-head-sub .bi-sec {
+  font-family: var(--font-heading);
+  font-style: italic;
+  opacity: 0.85;
+}
+.v8-chat-head-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 2px rgba(74, 124, 89, 0.18);
+  animation: v8-chat-fab-pulse 2.4s ease-in-out infinite;
+}
+.v8-chat-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.v8-chat-close:hover {
+  background: var(--color-oxblood);
+  color: var(--color-parchment);
+  border-color: var(--color-oxblood-dark, #5A1F1F);
+}
+
+/* ----- Sheet body (messages) ----------------------------------------- */
+.v8-chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v8-chat-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.v8-chat-row.is-user { flex-direction: row-reverse; }
+.v8-chat-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+}
+.v8-chat-row.is-bot .v8-chat-avatar {
+  background: rgba(74, 124, 89, 0.14);
+  color: #2E5840;
+}
+.v8-chat-row.is-user .v8-chat-avatar {
+  background: rgba(122, 43, 43, 0.12);
+  color: var(--color-oxblood);
+}
+.v8-chat-bubble {
+  max-width: 78%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.45;
+  word-wrap: break-word;
+}
+.v8-chat-row.is-bot .v8-chat-bubble {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-line-soft);
+  color: var(--color-espresso);
+  border-top-left-radius: 6px;
+}
+.v8-chat-row.is-user .v8-chat-bubble {
+  background: var(--color-oxblood);
+  color: var(--color-parchment);
+  border-top-right-radius: 6px;
+}
+.v8-chat-bubble p { margin: 0; }
+.v8-chat-bubble .mt-1 { margin-top: 4px; }
+
+/* Typing — three bouncing parchment dots inside an assistant bubble. */
+.v8-chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 14px;
+}
+.v8-chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  animation: v8-chat-typing-bounce 1s ease-in-out infinite;
+}
+.v8-chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.v8-chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes v8-chat-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%           { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ----- Input row ------------------------------------------------------ */
+.v8-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--color-line-soft);
+  background: rgba(248, 239, 222, 0.6);
+}
+.v8-chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-espresso);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.v8-chat-input::placeholder {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--color-muted);
+}
+.v8-chat-input:focus {
+  border-color: var(--color-terracotta);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.18);
+}
+.v8-chat-send {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.v8-chat-send:hover:not(:disabled) {
+  background: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+}
+.v8-chat-send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Fade out the FAB while the cart drawer is up so two CTAs don't
+   fight for the bottom-right corner. Mirrors the FloatingCartButton
+   rule. */
+body.v8-cart-open .v8-chat-fab,
+body.v8-cart-open .v8-chat-sheet {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v8-chat-fab,
+  .v8-chat-fab-dot,
+  .v8-chat-head-dot,
+  .v8-chat-sheet,
+  .v8-chat-typing span { animation: none; transition: none; }
+}
+
+/* ------------------------------------------------------------------
    AddToCartToast — espresso slide-up from bottom of viewport.
    "Margherita added · aggiunto al carrello" + cross-sell seed in
    italic Lora muted-parchment.
@@ -4868,10 +5356,14 @@ body.v8-detail-open { overflow: hidden; }
   font-size: 12.5px;
   color: var(--color-oxblood);
 }
+/* Hand-drawn allergen line SVGs — see src/components/location/AllergenIcon.tsx.
+   Inherits the chip's oxblood colour via `currentColor`. Replaces the
+   OS emoji that shipped earlier (🌾, 🥛, …), which broke V8's
+   hand-drawn icon vocabulary and rendered differently on Apple /
+   Google / Windows. */
 .v8-detail-allergen-glyph {
-  font-style: normal;
-  font-size: 14px;
-  line-height: 1;
+  flex-shrink: 0;
+  display: block;
 }
 .v8-detail-no-allergens {
   display: inline-flex;
@@ -4892,60 +5384,55 @@ body.v8-detail-open { overflow: hidden; }
   font-weight: 600;
 }
 
-/* Nutrition bars */
+/* Nutrition — printed-menu editorial readout.
+   Each row is a 3-column grid: label / dotted leader / value, so
+   the line reads like a tasting-menu entry ("Calories · calorie
+   ··············· 480 kcal"). Replaces the earlier coloured
+   progress bars, which were filled against dev-picked maxes (1000
+   kcal, 50 g protein, …) that didn't map to RDA or any actionable
+   reading — decoration pretending to be information. */
 .v8-detail-nutrition {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 2px;
 }
-.v8-detail-bar {
-  font-family: var(--font-body);
-}
-.v8-detail-bar-head {
-  display: flex;
-  justify-content: space-between;
+.v8-detail-nutri-row {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
   align-items: baseline;
-  margin-bottom: 4px;
+  column-gap: 10px;
+  padding: 5px 0;
 }
-.v8-detail-bar-label {
+.v8-detail-nutri-label {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-espresso);
+  white-space: nowrap;
 }
-.v8-detail-bar-it {
+.v8-detail-nutri-it {
+  font-family: var(--font-heading);
   font-style: italic;
   font-weight: 400;
   color: var(--color-muted);
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  margin-left: 2px;
 }
-.v8-detail-bar-val {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--color-ink);
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-.v8-detail-bar-rail {
+.v8-detail-nutri-leader {
+  align-self: end;
+  margin-bottom: 6px;
+  background-image: radial-gradient(circle, rgba(140, 111, 79, 0.55) 1.1px, transparent 1.3px);
+  background-size: 6px 100%;
+  background-repeat: repeat-x;
+  background-position: center;
   height: 6px;
-  background: var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
-  border-radius: 4px;
-  overflow: hidden;
 }
-.v8-detail-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s ease;
+.v8-detail-nutri-value {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-espresso);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  white-space: nowrap;
 }
-.v8-detail-bar-fill.is-ochre { background: var(--color-ochre); }
-.v8-detail-bar-fill.is-ochre-light { background: var(--color-ochre-light); }
-.v8-detail-bar-fill.is-terracotta { background: var(--color-terracotta); }
-.v8-detail-bar-fill.is-oxblood { background: var(--color-oxblood); }
-.v8-detail-bar-fill.is-basil { background: var(--color-basil); }
-.v8-detail-bar-fill.is-espresso { background: var(--color-espresso); }
 
 /* Sourcing — italic quote in a parchment-deep paper card */
 .v8-detail-sourcing {

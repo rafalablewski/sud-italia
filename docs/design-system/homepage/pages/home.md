@@ -2,14 +2,16 @@
 
 ← back to [Homepage README](../README.md)
 
-The storefront landing — the first impression at `/`. Six stacked
+The storefront landing — the first impression at `/`. Five stacked
 sections under the public layout's `<Header />` (the V8 Trattoria nav)
-+ `<LiveTicker />` (espresso strip under the nav) + `<Footer />`,
-rendered in `src/app/(public)/page.tsx`.
++ `<Footer />`, rendered in `src/app/(public)/page.tsx`. **No
+`<LiveTicker />` here** — V8 polish scoped the chain-wide live
+activity strip to the location pages where it's meaningful in the
+order-flow context; the landing opens on a clean parchment band
+under the nav.
 
 | Section          | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
-| Live ticker      | `src/components/layout/LiveTicker.tsx` (shipped under nav, all routes) |
 | Hero             | `src/components/landing/HeroSection.tsx`                   |
 | Locations grid   | `src/components/landing/LocationsGrid.tsx`                 |
 | Bundles showcase | `src/components/landing/BundlesShowcase.tsx`               |
@@ -85,7 +87,11 @@ photography. The hero earns the "one place Cormorant leads" rule
   ("Ordina a Kraków", "La nostra storia"). Hover lifts 2px and
   swaps to terracotta-dark with a 16px / 60% terracotta shadow.
 - **Tricolore hairline** — 200×3px Italian-flag gradient closes the
-  hero, 70% opacity.
+  hero, 70% opacity, sits `28px` below the CTA row. The section's
+  bottom padding is **zero** — the next `.v8-ps` section's own
+  56/80px top padding handles the rhythm — don't reintroduce any
+  bottom padding here, it stacks into the dead band the V8 audit
+  flagged.
 
 A single, confident hero — never rotating slides. The location CTAs
 are the entry points to ordering; the ghost Story CTA is the brand
@@ -237,8 +243,13 @@ Famiglia strip.
 - **Section is NOT a `.v8-ps` block.** Deliberately strips the
   eyebrow / title / subtitle chrome — V8 lets the quote land alone
   the way a hand-printed menu inserts its founder's voice between
-  the day's bundles and the loyalty pitch. Tighter vertical rhythm
-  (`64px` top + bottom, vs `.v8-ps` 56/80px).
+  the day's bundles and the loyalty pitch. **Zero vertical padding**
+  — the strip's height is exactly the quote + citation. The previous
+  `.v8-ps` section's bottom padding and the next `.v8-ps-dark`
+  section's top padding (`56/80px ≥md` on both sides) own all the
+  rhythm. Earlier builds shipped `64px top + bottom` here, which
+  stacked into the neighbours to read as a ~150px dead band under
+  the citation — V8 polish zeroed it.
 - **Background** is a single soft terracotta radial wash centred on
   the section box (`radial-gradient(at 50% 50%, rgba(184,92,56,
   0.06), transparent 70%)`). No alt-paper band, no tricolore, no

@@ -242,16 +242,12 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
        *  doesn't ship this; we keep it for the returning-customer
        *  flow it supports. */}
       {!isSearching && (
-        <div className="mx-auto max-w-[1180px] px-[18px] md:px-[36px] pt-4 md:pt-6">
-          <ReorderSection locationSlug={locationSlug} allMenuItems={items} />
-        </div>
+        <ReorderSection locationSlug={locationSlug} allMenuItems={items} />
       )}
 
       {!isSearching && (
         <LayoutGate flag="showSeasonalSpecials">
-          <div className="mx-auto max-w-[1180px] px-[18px] md:px-[36px]">
-            <SeasonalSpecials locationSlug={locationSlug} />
-          </div>
+          <SeasonalSpecials locationSlug={locationSlug} />
         </LayoutGate>
       )}
 

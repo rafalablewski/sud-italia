@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { getLocale, setLocale, ALL_LOCALES, LOCALE_META, Locale } from "@/lib/i18n";
 import { fetchPublicSettings } from "@/lib/public-settings";
+import { NavDropdown } from "./NavDropdown";
 
-// V8 Trattoria language pill — inline segmented control of one-letter
-// codes (EN / PL / DE / SG) inside a terracotta-tinted pill. The
-// previously-shipped dropdown is gone; V8's nav budget calls for the row
-// to read at a glance. Honours the enabledLocales from public settings
-// just like the old dropdown — disabled locales drop out of the row.
+// V8 Trattoria language switcher — collapsible disclosure on a
+// terracotta-tinted pill. Trigger shows the active 2-letter code
+// (EN / PL / DE / SG); clicking expands a small panel listing every
+// enabled locale by code + native name (Polski, English, Deutsch,
+// Singapore English). Replaces the previous always-expanded segmented
+// row that ate too much width on a busy header. Honours
+// `enabledLocales` from public settings.
 const SHORT_CODE: Record<Locale, string> = {
   pl: "PL",
   en: "EN",
@@ -38,30 +41,33 @@ export function LanguageSwitcher() {
     window.location.reload();
   };
 
-  // Preserve the ALL_LOCALES order so the pill reads predictably.
+  // Preserve the ALL_LOCALES order so the panel reads predictably.
   const visible = ALL_LOCALES.filter((l) => enabled.includes(l));
 
   return (
-    <div className="v8-lang-picker inline-flex items-center rounded-full p-[2px] gap-[2px]" role="radiogroup" aria-label="Primary language">
-      {visible.map((code) => {
-        const meta = LOCALE_META[code];
-        const active = code === locale;
-        return (
-          <button
-            key={code}
-            type="button"
-            onClick={() => pick(code)}
-            role="radio"
-            aria-checked={active}
-            title={meta.label}
-            className={`v8-lang-opt appearance-none border-0 bg-transparent font-body text-[11px] font-semibold tracking-[0.12em] px-[10px] py-[5px] rounded-full leading-none cursor-pointer transition-colors ${
-              active ? "v8-lang-opt-active" : ""
-            }`}
-          >
-            {SHORT_CODE[code]}
-          </button>
-        );
-      })}
-    </div>
+    <NavDropdown label={SHORT_CODE[locale]} ariaLabel="Language" tone="terracotta">
+      {(close) =>
+        visible.map((code) => {
+          const meta = LOCALE_META[code];
+          const active = code === locale;
+          return (
+            <button
+              key={code}
+              type="button"
+              role="option"
+              aria-selected={active}
+              onClick={() => {
+                close();
+                pick(code);
+              }}
+              className="v8-switcher-opt"
+            >
+              <span className="v8-switcher-opt-code">{SHORT_CODE[code]}</span>
+              <span className="v8-switcher-opt-label">{meta.nativeLabel}</span>
+            </button>
+          );
+        })
+      }
+    </NavDropdown>
   );
 }

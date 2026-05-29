@@ -62,7 +62,7 @@ export function Header() {
               Sud Italia
             </div>
             <div className="v8-brand-sub font-heading italic text-[11.5px] text-muted tracking-[0.8px] mt-[1px] hidden md:block">
-              Neapolitan pizza <span className="it">· pizza napoletana</span> · since 2019
+              <span className="it">Pizza napoletana</span> · est. 2019
             </div>
           </div>
         </Link>
@@ -79,21 +79,24 @@ export function Header() {
           ))}
         </ul>
 
-        {/* Right cluster. The two pill switchers eat too much width on
-            a 390px viewport — V8's mockup is constrained to a 430px
-            frame so the same row works there — so on <md we hide them
-            from the top bar and surface them inside the mobile menu
-            instead. Cart + hamburger stay at every width. */}
-        <div className="v8-nav-right ml-auto lg:ml-0 flex items-center gap-[10px]">
+        {/* Right cluster — language / currency switchers + cart + the
+            mobile hamburger. `ml-auto` at every breakpoint so the
+            cluster is always flush to the right edge of the 1180px
+            container; the nav-links sit left-of-centre against the
+            brand and the switchers + cart land on the right. On <md
+            the two switchers hide from the top bar and surface inside
+            the mobile menu instead. Cart + hamburger stay at every
+            width. */}
+        <div className="v8-nav-right ml-auto flex items-center gap-[10px]">
           <LayoutGate flag="showLanguageSwitcher">
-            <span className="hidden md:inline-flex">
+            <div className="hidden md:inline-flex">
               <LanguageSwitcher />
-            </span>
+            </div>
           </LayoutGate>
           <LayoutGate flag="showCurrencySwitcher">
-            <span className="hidden md:inline-flex">
+            <div className="hidden md:inline-flex">
               <CurrencySwitcher />
-            </span>
+            </div>
           </LayoutGate>
           <CartButton />
           <button

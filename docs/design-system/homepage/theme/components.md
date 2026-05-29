@@ -122,20 +122,47 @@ The 5-star display for feedback + reviews.
 - Half star supported via SVG mask.
 - Inline rating count: `text-italia-gray` at body-sm.
 
+### `<NavDropdown />` — `src/components/ui/NavDropdown.tsx`
+
+Shared collapsible disclosure primitive for the language + currency
+switchers (and any future nav-cluster picker). A tinted pill trigger
+showing the current code + a caret; clicking expands a floating panel
+anchored `right: 0; top: calc(100% + 8px)` of the trigger, with a 10px
+backdrop blur and a 12/32px warm-brown drop shadow. Closes on outside
+click, touch, or `Escape`. Caret rotates 180° while open.
+
+- **Tone variants:** `terracotta` (language) + `basil` (currency).
+  Both share the same trigger shape and panel chrome; the tone
+  changes the trigger background tint, border colour, and the
+  `[aria-selected="true"]` highlight inside the panel. Keeps the
+  colour memory the old segmented pills established.
+- **ARIA:** trigger carries `aria-haspopup="listbox"`,
+  `aria-expanded`, `aria-controls={panelId}` (when open), and the
+  caller-supplied `aria-label`. The panel is `role="listbox"`; each
+  option button inside is `role="option"` with `aria-selected` on the
+  active code.
+- **Children-as-function:** `children: (close) => ReactNode` so the
+  caller can fire `close()` after writing the selection — both
+  switchers reload the page on pick, but the explicit close keeps
+  the focus model right if a future variant doesn't reload.
+
 ### `<CurrencySwitcher />` — `src/components/ui/CurrencySwitcher.tsx`
 
 The currency picker (governed by `showCurrencySwitcher` in admin
 Settings → Layout — when off, the component returns `null` and the
 storefront falls back to PLN).
 
-- **V8 pill segmented control.** Symbol-only buttons (zł / € / $ / S$)
-  inside a basil-tinted pill — the sibling of `<LanguageSwitcher />`,
-  in green. Single-row, no dropdown — V8 trades discoverability for
-  glanceability so the top nav reads at a tap.
-- Active option: basil fill + parchment text + subtle 0 1px 2px basil
-  drop. Inactive: muted-brown text on the basil-tinted background.
+- **Collapsible disclosure** built on `<NavDropdown tone="basil">`.
+  Trigger shows the active symbol only (zł / € / $ / S$) on a
+  basil-tinted pill. Clicking expands a panel of `SYMBOL · label`
+  rows (`zł · Polish Złoty`, `€ · Euro`, …) so the active selection
+  stays glanceable while every option becomes discoverable behind a
+  single click.
+- Active option: basil-tinted row + dark-basil code. Hover: faint
+  basil wash on the row. Inactive: muted-brown italic label on
+  parchment, espresso code.
 - Honours `enabledCurrencies` from public settings; disabled currencies
-  drop out of the row.
+  drop out of the panel.
 - Selected currency persists via the customer cookie (same `setCurrency`
   helper as before). Picking a non-current option triggers a full
   reload so every SSR'd `formatPrice()` re-renders.
@@ -145,14 +172,16 @@ storefront falls back to PLN).
 The language picker (governed by `showLanguageSwitcher` in admin
 Settings → Layout).
 
-- **V8 pill segmented control.** Two-letter codes (EN / PL / DE / SG)
-  inside a terracotta-tinted pill — left-sibling of `<CurrencySwitcher />`.
-  Single-row, no dropdown.
-- Active option: terracotta fill + parchment text + subtle 0 1px 2px
-  oxblood drop. Inactive: muted-brown text on the terracotta-tinted
-  background.
+- **Collapsible disclosure** built on `<NavDropdown tone="terracotta">`.
+  Trigger shows the active 2-letter code only (PL / EN / DE / SG) on a
+  terracotta-tinted pill. Clicking expands a panel of `CODE · native
+  name` rows (`PL · Polski`, `EN · English`, `DE · Deutsch`, `SG ·
+  Singapore English`) — codes for glanceability, native labels for
+  discoverability.
+- Active option: terracotta-tinted row + dark-terracotta code.
+  Inactive: muted-brown italic label, espresso code.
 - Honours `enabledLocales` from public settings; disabled locales drop
-  out of the row.
+  out of the panel.
 - Picking a non-current option calls `setLocale()` then full-reloads so
   every SSR string re-renders in the new locale.
 
@@ -181,37 +210,57 @@ The V8 Trattoria top nav.
 - **Brand block (left):** basil-sprig SVG mark that rotates `-8°` on
   hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Sud Italia"
   (Cormorant Garamond 600, 24px, espresso) + the italic sublabel
-  "Neapolitan pizza · pizza napoletana · since 2019" (Cormorant 11.5px
-  italic muted, ≥768px only).
+  "Pizza napoletana · est. 2019" (Cormorant 11.5px italic muted,
+  ≥768px only). The sublabel was previously the longer
+  "Neapolitan pizza · pizza napoletana · since 2019" — V8 polish trimmed
+  the redundant English half so the wordmark reads as a single, refined
+  line rather than two duplicated phrases.
 - **Nav links (≥1024px):** Menu, Bundles, Locations, Story, Rewards.
   Each renders the primary EN/PL on top + the Italian italic phrase
   underneath (`Menù`, `Menù del giorno`, `Botteghe`, `La famiglia`,
   `Soci`). Hover sweeps in a 1.5px terracotta underline via `::after
   { transform: scaleX(0/1) }`.
 - **Right cluster:** `<LanguageSwitcher />` + `<CurrencySwitcher />`
-  (the V8 pill switchers above) + `<CartButton />` (the V8 cart pill)
-  + a `38×38` line-bordered hamburger circle (`<lg` only).
+  (the collapsible V8 nav switchers above — single tinted pill each,
+  panel expands on click) + `<CartButton />` (the V8 cart pill) + a
+  `38×38` line-bordered hamburger circle (`<lg` only). The switchers
+  used to be always-expanded segmented rows of four codes each, which
+  ate ~250px of horizontal budget; the disclosure refactor reclaims
+  that width and keeps the nav reading at a glance. The cluster is
+  pinned to the right edge of the 1180px container with `ml-auto` at
+  every breakpoint — the brand + nav-links sit left, the switchers +
+  cart sit right, with the remaining space absorbed between them.
+  (Earlier builds used `lg:ml-0` to let the cluster sit immediately
+  after the nav-links; the V8 polish pass dropped that override so the
+  three pills land flush right, where the user expects to grab them.)
 - **Mobile menu:** appears under the nav-inner when the hamburger
   toggles. Each link is the same EN/IT bilingual format but inline
   instead of stacked.
 
 ### `<LiveTicker />` — `src/components/layout/LiveTicker.tsx`
 
-The slim espresso strip directly under `<Header />`. Shown on every
-`(public)` route via the `showLiveTicker` LayoutGate.
+The slim espresso strip directly under `<Header />`. **Mounted only
+on `/locations/[slug]`** (`src/app/(public)/locations/[slug]/page.tsx`)
+via the `showLiveTicker` LayoutGate — V8 polish scoped the bar
+from a global storefront mount to a location-page mount so the
+homepage / rewards / non-order surfaces open on a clean parchment
+band beneath the nav. The bar is order-flow context; surfaces that
+don't lead to an order don't need it.
 
 - **Espresso gradient canvas** (`#2D1810 → #3D2817`, the **only** dark
-  slab on the storefront), ochre-tinted hairline + inset highlight.
+  slab on the storefront besides the `/rewards` tier card), ochre-
+  tinted hairline + inset highlight.
 - **Four widgets:** orders in the last hour (pulsing basil dot + ochre
   people icon), currently preparing (flame icon), trending item
   (basil trending icon), avg prep time (ochre bolt icon).
 - **Data source:** `simulateLiveActivity` from `src/lib/growth-engine.ts`
   with a chain-wide sentinel slug (`"chain"`) — same helper that powers
   the admin-configurable `<LiveActivityBar />` widget. Refreshed every 30s.
-  As of Step 8 the LiveActivityBar is NOT rendered on `/locations/[slug]`
-  to avoid two stacked espresso ticker bands; Step 9 (menu chrome) will
-  re-mount it inside the menu's `loc-card-soft` wrapper where V8's
-  mockup places it (`.live-act` row).
+  As of Step 8 the per-location `<LiveActivityBar />` is NOT rendered on
+  `/locations/[slug]` to avoid two stacked espresso ticker bands;
+  Step 9 (menu chrome) will re-mount it inside the menu's
+  `loc-card-soft` wrapper where V8's mockup places it (`.live-act`
+  row).
 - **Bilingual subtitles** (`nell'ultima ora`, `in preparazione`, `in
   tendenza`, `tempo medio`) — italic Cormorant ochre, hidden under
   640px to keep the strip in one row.
@@ -230,6 +279,59 @@ The V8 cart pill. Lives inside `<Header />`.
   dark text. Icon strokes follow via `currentColor` + a `.v8-cart-lines`
   class on the terracotta detail strokes.
 - Click opens `<CartDrawer />` (portalled, see the Sheet primitive above).
+
+### `<ChatWidget />` — `src/components/chat/ChatWidget.tsx`
+
+Storefront assistant — fixed FAB in the bottom-right that expands
+into a parchment chat sheet. V8 polish migrated the widget from a
+flat basil-green WhatsApp-style circle + lucide icons + generic
+rounded-2xl chrome to the V8 paper-and-ink treatment so it reads as
+part of the page, not a third-party drop-in. Mounted in
+`(public)/layout.tsx` via `<LayoutGate flag="showChatWidget">`.
+
+- **FAB closed state** (`.v8-chat-fab`) — 56px paper circle,
+  parchment-cream gradient ground, line-soft border, paper shadow,
+  hand-drawn speech-bubble icon (three dots inside the bubble) in
+  oxblood stroke. A pulsing basil "available" dot
+  (`.v8-chat-fab-dot`) at the top-right corner — same kicker dot
+  pattern the homepage hero + the chat-header sub use. Hover flips
+  to oxblood fill with parchment icon + a lifted shadow, mirroring
+  the CartButton / FloatingCartButton hover language but in oxblood
+  (chat = hospitality / personal voice) instead of terracotta
+  (order action). Sits at `bottom: 92px` (above the
+  FloatingCartButton's `bottom: 22px` corner).
+- **Chat sheet open state** (`.v8-chat-sheet`) — 360px paper
+  card, parchment-deep gradient, 18px radius, 22/48px warm-brown
+  drop shadow, scale-in entrance animation. Capped at `min(560px,
+  78vh)` so it never overruns the viewport. Hides under
+  `body.v8-cart-open` so the cart drawer owns the bottom-right
+  conversation.
+- **Header** (`.v8-chat-head`) — basil-tinted brand-mark circle
+  (the same basil sprig the Header brand uses, scaled to 18px),
+  italic Cormorant title `Il nostro aiuto · our help` with a
+  bilingual italian-first read, italic Lora subtitle `Usually
+  replies instantly · risposte rapide` with a pulsing basil
+  status dot. A 28px line-bordered close circle on the right
+  flips to oxblood on hover.
+- **Message bubbles** (`.v8-chat-bubble`) — assistant bubbles are
+  parchment-cream with a line-soft border + espresso text + a
+  shaved top-left corner (`border-top-left-radius: 6px`); user
+  bubbles are oxblood-fill with parchment text + a shaved
+  top-right corner. 26px avatar circles (basil-tinted for the
+  assistant with a chef-hat sketch, oxblood-tinted for the user
+  with a small person sketch) — both icons are hand-drawn in the
+  storefront's V8 line style.
+- **Typing indicator** (`.v8-chat-typing`) — three muted-brown
+  dots bouncing inside an assistant bubble, 1s ease cycle with
+  staggered delays.
+- **Input row** (`.v8-chat-input-row`) — parchment-tinted
+  background, paper-card pill input with italic Cormorant
+  placeholder + terracotta focus ring, 36px terracotta-fill send
+  circle with a hand-drawn paper-plane SVG. Send disables to 35%
+  opacity when the input is empty or the assistant is replying.
+- **Reduced-motion**: pulse, scale-in, and typing dots all kill
+  under `prefers-reduced-motion: reduce` — only the colour cues
+  remain.
 
 ### `<Footer />` — `src/components/layout/Footer.tsx`
 
@@ -277,10 +379,13 @@ don't have alternate variants.
 
 The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#hero).
 
-- **Centred parchment block**, not full-bleed. Padding 48px/56px →
-  80px/90px ≥md. Five ornament SVGs scattered behind the column
-  (basil sprigs, ellipse stains, a tomato) at z-index 1 with
-  `pointer-events: none`.
+- **Centred parchment block**, not full-bleed. Padding `48px top /
+  0 bottom` → `80px top / 0 bottom` ≥md. The bottom is zeroed: the
+  closing tricolore sits 28px below the CTAs and the next `.v8-ps`
+  section's own 56/80px top padding supplies all the rhythm —
+  anything else stacks into a dead band under the CTAs. Five
+  ornament SVGs scattered behind the column (basil sprigs, ellipse
+  stains, a tomato) at z-index 1 with `pointer-events: none`.
 - **Headline** — Cormorant Garamond 600 at 44px → 76px ≥md,
   letter-spacing -0.5px, line-height 1.02, espresso colour.
 - **Italian sublabel** — Cormorant italic, 19→24px, muted-brown.
@@ -432,9 +537,13 @@ existing LayoutGate wiring don't churn — the export stays
 
 - **No `.v8-ps` chrome.** Deliberately strips the eyebrow / title /
   subtitle the other sections use. Uses a bespoke `.v8-famiglia`
-  class with tighter 64px vertical rhythm + a soft terracotta radial
+  class with **zero vertical padding** + a soft terracotta radial
   wash (`radial-gradient(at 50% 50%, rgba(184,92,56,0.06),
-  transparent 70%)`).
+  transparent 70%)`). The strip's height is exactly the quote +
+  citation; the surrounding `.v8-ps` / `.v8-ps-dark` sections' own
+  56/80px ≥md padding owns the rhythm above and below — the
+  earlier `64px top + bottom` stacked with those neighbours into a
+  dead band V8 polish flagged and zeroed.
 - **The pull-quote** — italic Cormorant 28 / 36px ≥md, espresso,
   max-width 720px, centred. Wrapped in translucent oxblood curly-
   quote pseudo-elements at 60px (`\201C` / `\201D`) — screen
@@ -509,11 +618,17 @@ V8 Trattoria treatment — full spec in
 - **`getCurrentHourSlot()` helper** (in `data/locations.ts`)
   drives the status pill's real close time. Falls back to "Closed
   now · chiuso ora" outside hours.
-- **Back chip** ("Home · la casa") renders ABOVE the hero in the
-  same component fragment — oxblood-tinted pill, hover flips to
-  filled oxblood with parchment text. Lets visitors arriving via
-  cross-link / share URL return to the landing without scrolling
-  back to the nav.
+- **Back chip** ("Home · la casa") renders as the **first child of
+  the hero `<header>`** — oxblood-tinted pill (`.v8-back-chip`)
+  with the `.v8-loc-back-chip` modifier (`display: flex` + `width:
+  max-content` + `z-index: 3` so it stays pill-shaped at the top-
+  left while the centred `.v8-loc-hero-inner` flows below it).
+  Hover flips to filled oxblood with parchment text. Lets visitors
+  arriving via cross-link / share URL return to the landing without
+  scrolling back to the nav. Earlier builds shipped a separate
+  `.v8-back-chip-wrap` cream strip ABOVE the hero; V8 polish folded
+  the chip into the hero so the page opens on one continuous
+  parchment surface.
 
 ### `<MenuSection />` — `src/components/location/MenuSection.tsx`
 
@@ -524,10 +639,14 @@ search input, per-location live-activity strip, category tabs,
 and the items grid. Full layout spec in
 [`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
 
-- **Single paper-card wrapper** — `.v8-menu-card` (parchment-deep
-  with the shared `shadow-paper`, 14px radius). The whole menu
-  surface is one continuous V8 block instead of the pre-V8
-  per-category sections.
+- **Single paper-band wrapper** — `.v8-menu-card` (parchment-deep
+  with the shared `shadow-paper`, full-bleed: no `max-width`, no
+  border, no border-radius). The whole menu surface is one
+  continuous V8 band across the viewport instead of the pre-V8
+  per-category sections, or the framed-rectangle "card" the earlier
+  V8 build shipped (rounded radius + 1180px max-width + line-soft
+  border — removed in polish because the card frame read as a
+  settings panel inside an editorial layout).
 - **Category tabs filter in place.** The "All" tab + a per-active-
   category pill row replaces the pre-V8 sort/pill split. The
   active tab fills terracotta with an ochre-light count chip.
@@ -557,7 +676,18 @@ and the items grid. Full layout spec in
 - **`<ReorderSection />` + `<SeasonalSpecials />`** render ABOVE
   the V8 menu card, outside the wrapper. V8's mockup doesn't ship
   them but they're valuable existing features; placing them above
-  keeps the V8 menu card visually clean.
+  keeps the V8 menu band visually clean. **They mount directly
+  under `<MenuSection />` without an intermediate container** —
+  earlier builds wrapped each in an `mx-auto max-w-[1180px]
+  px-[18px] md:px-[36px]` div, but those containers rendered
+  unconditionally even when the children returned `null`
+  (returning customers with no recent orders, no seasonal items
+  active) and left a pair of empty padded boxes in the DOM. Since
+  `<ReorderSection />` and `<SeasonalSpecials />` already early-
+  return `null` when empty, dropping the wrappers is the right
+  fix; when they DO render they inherit the menu band's
+  full-bleed treatment, consistent with the new `.v8-menu-card`
+  shape.
 
 ### `<MenuItemCard />` — `src/components/location/MenuItem.tsx`
 
@@ -791,16 +921,37 @@ button on each menu card.
 - **Meta row** — dashed-hairline-bordered `.v8-detail-meta` with the
   oxblood Cormorant 26px tabular price + "Nm · in cottura" prep time
   + tabular calorie count.
-- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen` chip
-  row when present. Empty allergens collapse to a basil-deep
-  `.v8-detail-no-allergens` line ("Senza allergeni maggiori — no major
-  allergens reported.") with a hand-drawn basil-leaf SVG.
-- **Valori nutrizionali · nutrition** — `.v8-detail-bar` rows with
-  bilingual italic Lora labels (Calories · calorie, Protein · proteine,
-  Carbohydrates · carboidrati, Fat · grassi, Fiber · fibra, Sodium ·
-  sodio) and progress fills tinted per-nutrient (`.is-ochre`,
-  `.is-terracotta`, `.is-ochre-light`, `.is-oxblood`, `.is-basil`,
-  `.is-espresso`).
+- **Allergens · allergeni** — oxblood-tinted `.v8-detail-allergen`
+  chip row when present. Each chip carries a hand-drawn line SVG
+  glyph from `<AllergenIcon />`
+  (`src/components/location/AllergenIcon.tsx`) — one per allergen in
+  the EU FIR 14-allergen list (gluten = wheat sheaf, dairy = milk
+  carton, eggs = ovoid, fish = almond body with tail flick, shellfish
+  = curled shrimp, nuts = almond with seam, peanuts = double-bump
+  shell, soy = pod with beans, celery = paired stalk with leaves,
+  mustard = lidded jar, sesame = three teardrop seeds, sulfites =
+  wine glass, lupin = stem with alternating buds, molluscs = octopus
+  head + tentacles). 16×16 at 1.3px stroke, `currentColor` so the
+  glyph picks up the chip's oxblood. Earlier builds rendered system
+  emoji (🌾, 🥛, 🥚…) inline — they read as a third-party drop-in
+  inside V8's hand-drawn vocabulary and rendered differently per
+  platform (Apple vs Google vs Windows). Empty allergens collapse
+  to a basil-deep `.v8-detail-no-allergens` line ("Senza allergeni
+  maggiori — no major allergens reported.") with a hand-drawn
+  basil-leaf SVG.
+- **Valori nutrizionali · nutrition** — `.v8-detail-nutri-row`
+  printed-menu readout, one row per macro. Three-column grid:
+  bilingual italic Cormorant label on the left
+  (`Calories · calorie`, `Protein · proteine`, …), a dotted-leader
+  filler in the centre (`background-image: radial-gradient(circle,
+  rgba(140, 111, 79, 0.55) 1.1px, transparent 1.3px)` repeating on
+  a 6px grid), and a tabular-num value on the right (`480 kcal`).
+  No bars: earlier builds shipped coloured `.v8-detail-bar` fills
+  scaled against dev-picked maxes (1000 kcal calories, 50 g
+  protein, …), but the fills didn't map to RDA or any actionable
+  rule, so they read as decoration pretending to be information —
+  V8 polish swapped them for the printed-menu line so the numbers
+  stay scannable without faking a visualisation.
 - **Provenienza · sourcing** — parchment-deep `.v8-detail-sourcing`
   paper card with a basil-sprig mark + italic Lora quote from the
   Kodawari sourcing copy.

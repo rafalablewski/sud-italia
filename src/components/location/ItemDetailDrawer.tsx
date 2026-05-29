@@ -8,6 +8,7 @@ import { getItemDetails } from "@/data/kodawari";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
+import { AllergenIcon } from "./AllergenIcon";
 
 /**
  * V8 item-detail drawer. Mounted exactly once at `(public)/layout.tsx`;
@@ -25,8 +26,15 @@ import { useCartUIStore } from "@/store/cart-ui";
  *   - Editorial meta row: price (oxblood) + prep time + calories
  *   - Allergens · allergeni — oxblood chip row when present, basil
  *     "no major allergens · senza allergeni maggiori" line when empty
- *   - Valori nutrizionali · nutrition — terracotta / ochre / basil
- *     bars for calories / protein / carbs / fat / fiber / sodium
+ *   - Valori nutrizionali · nutrition — editorial dotted-leader
+ *     readout (label · italian phrase ··· value) for calories,
+ *     protein, carbs, fat, fiber, sodium. No bars: the earlier
+ *     terracotta / ochre / basil rails were filled against arbitrary
+ *     dev-picked maxes (1000 kcal, 50 g protein, …) — the fill
+ *     percentages didn't map to RDA or any actionable rule, so they
+ *     read as decoration pretending to be information. The printed-
+ *     menu readout keeps the numbers scannable without faking a
+ *     visualisation.
  *   - Provenienza · sourcing — italic Lora quote in a parchment-deep
  *     paper card
  *   - Sticky paybar: terracotta "Add to cart · aggiungi al carrello"
@@ -188,7 +196,7 @@ export function ItemDetailDrawer() {
                       const info = ALLERGEN_LABELS[a];
                       return (
                         <span key={a} className="v8-detail-allergen">
-                          <span className="v8-detail-allergen-glyph" aria-hidden>{info.emoji}</span>
+                          <AllergenIcon allergen={a} />
                           {info.en}
                         </span>
                       );
@@ -203,15 +211,15 @@ export function ItemDetailDrawer() {
                     Nutrition <span className="v8-detail-section-it">· valori nutrizionali</span>
                   </div>
                   <div className="v8-detail-nutrition">
-                    <NutritionBar label="Calories" italian="calorie" value={nutrition.calories} unit=" kcal" max={1000} tint="ochre" />
-                    <NutritionBar label="Protein" italian="proteine" value={nutrition.protein} unit="g" max={50} tint="terracotta" />
-                    <NutritionBar label="Carbohydrates" italian="carboidrati" value={nutrition.carbs} unit="g" max={100} tint="ochre-light" />
-                    <NutritionBar label="Fat" italian="grassi" value={nutrition.fat} unit="g" max={60} tint="oxblood" />
+                    <NutritionRow label="Calories" italian="calorie" value={nutrition.calories} unit=" kcal" />
+                    <NutritionRow label="Protein" italian="proteine" value={nutrition.protein} unit=" g" />
+                    <NutritionRow label="Carbohydrates" italian="carboidrati" value={nutrition.carbs} unit=" g" />
+                    <NutritionRow label="Fat" italian="grassi" value={nutrition.fat} unit=" g" />
                     {nutrition.fiber !== undefined && (
-                      <NutritionBar label="Fiber" italian="fibra" value={nutrition.fiber} unit="g" max={10} tint="basil" />
+                      <NutritionRow label="Fiber" italian="fibra" value={nutrition.fiber} unit=" g" />
                     )}
                     {nutrition.sodium !== undefined && (
-                      <NutritionBar label="Sodium" italian="sodio" value={nutrition.sodium} unit=" mg" max={2000} tint="espresso" />
+                      <NutritionRow label="Sodium" italian="sodio" value={nutrition.sodium} unit=" mg" />
                     )}
                   </div>
                 </div>
@@ -257,31 +265,28 @@ export function ItemDetailDrawer() {
   );
 }
 
-interface NutritionBarProps {
+interface NutritionRowProps {
   label: string;
   italian: string;
   value: number;
   unit: string;
-  max: number;
-  tint: "ochre" | "ochre-light" | "terracotta" | "oxblood" | "basil" | "espresso";
 }
 
-function NutritionBar({ label, italian, value, unit, max, tint }: NutritionBarProps) {
-  const pct = Math.min((value / max) * 100, 100);
+// Editorial nutrition row — printed-menu treatment with a label on
+// the left ("Calories · calorie"), a dotted leader filling the gap,
+// and a tabular-num value on the right ("480 kcal"). Replaces the
+// dev-picked-max progress bars the earlier build shipped.
+function NutritionRow({ label, italian, value, unit }: NutritionRowProps) {
   return (
-    <div className="v8-detail-bar">
-      <div className="v8-detail-bar-head">
-        <span className="v8-detail-bar-label">
-          {label} <span className="v8-detail-bar-it">· {italian}</span>
-        </span>
-        <span className="v8-detail-bar-val num">
-          {value}
-          {unit}
-        </span>
-      </div>
-      <div className="v8-detail-bar-rail">
-        <div className={`v8-detail-bar-fill is-${tint}`} style={{ width: `${pct}%` }} />
-      </div>
+    <div className="v8-detail-nutri-row">
+      <span className="v8-detail-nutri-label">
+        {label} <span className="v8-detail-nutri-it">· {italian}</span>
+      </span>
+      <span className="v8-detail-nutri-leader" aria-hidden />
+      <span className="v8-detail-nutri-value num">
+        {value}
+        {unit}
+      </span>
     </div>
   );
 }

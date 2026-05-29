@@ -4,10 +4,14 @@
 
 The location's menu surface. Each location has its own page rendered
 from `src/app/(public)/locations/[slug]/page.tsx`. The page composes
-five blocks under the public layout.
+six blocks under the public layout. The chain-wide `<LiveTicker />`
+also mounts here — it used to ship globally in the public layout,
+but V8 polish scoped it to the order-flow context so the homepage
+and other non-order surfaces don't open under a dark espresso strip.
 
 | Block            | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
+| Live ticker      | `src/components/layout/LiveTicker.tsx` (chain-wide, location-page only) |
 | Location hero    | `src/components/location/LocationHero.tsx`                 |
 | Menu sections    | `src/components/location/MenuSection.tsx` (per category)   |
 | Location info    | `src/components/location/LocationInfo.tsx`                 |
@@ -33,12 +37,20 @@ This means:
 ### Back chip — `<Link href="/">`
 
 The location page opens with a small oxblood-tinted back chip
-("Home · la casa") rendered ABOVE the hero by `<LocationHero />`.
-Pill-shape, hover swaps to oxblood fill with parchment text. Lets
-a visitor who arrived deep (search engine, cross-link, share URL)
-hop back to the landing without scrolling up to the nav. Lives at
-the `.v8-back-chip-wrap` container — 14/18px top padding, 1180px
-max width, shares the column gutter with the rest of the layout.
+("Home · la casa") rendered as the **first child of
+`<header className="v8-loc-hero">`** by `<LocationHero />` — it
+sits at the top-left of the hero band, on the same parchment ground
+as the illustration + name. Pill-shape (`.v8-back-chip`), hover
+swaps to oxblood fill with parchment text. The chip carries the
+`v8-loc-back-chip` modifier — `display: flex` + `width: max-content`
+so it stays pill-shaped while breaking the centred
+`.v8-loc-hero-inner` onto a new line below it, plus `z-index: 3`
+to sit above the basil ornament. Lets a visitor who arrived deep
+(search engine, cross-link, share URL) hop back to the landing
+without scrolling up to the nav. Earlier builds shipped a separate
+`.v8-back-chip-wrap` strip above the hero (a wide cream band
+holding nothing but the chip) — V8 polish folded the chip into
+the hero so the page opens on one continuous parchment surface.
 
 ### Location hero — `<LocationHero />`
 
@@ -92,9 +104,20 @@ gone; the V8 design uses a single card with category tabs that
 filter the grid in place.
 
 - **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
-  shadow-paper, 14px radius, 22/28px padding ramp). Renders at the
-  `#menu` anchor; the location-hero's status pill scrolls here on
-  tap (the floating cart button also lands the visitor here).
+  `shadow-paper`, `margin: 0 auto`, 22/28px padding ramp).
+  **Full-bleed** — no `max-width`, no border, no border-radius — the
+  menu reads as a continuous parchment band across the viewport,
+  with only the shadow signalling the slab's elevation. Zero
+  vertical margin keeps the band flush against the location-info
+  block above and the Soci rail below — earlier builds shipped
+  `margin: 22/28px auto`, which stacked into the neighbours'
+  padding as visible parchment gutters above and below the band.
+  (V8 polish removed the earlier 1180px card frame because the
+  rounded-rectangle "card" read as a settings panel inside an
+  editorial layout; the band treatment lands as one continuous
+  surface that visually owns the page.) Renders at the `#menu`
+  anchor; the location-hero's status pill scrolls here on tap (the
+  floating cart button also lands the visitor here).
 - **Section header** uses the shared `.v8-ps-eyebrow / -title / -sub`
   primitives — "The menu · il menù", "What comes out of *the oven*"
   (italic-oxblood "the oven"), italic-Cormorant sub.
@@ -179,7 +202,11 @@ the mockup without coordinating restyles across separate components.
 `<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card
 when active — V8's mockup doesn't ship them but they're valuable
 existing features. They sit outside the V8 wrapper so the menu
-card stays clean.
+band stays clean, and they mount directly without an intermediate
+`mx-auto max-w-[1180px]` container — the earlier wrappers
+rendered unconditionally even when both children early-returned
+`null`, leaving a pair of empty padded boxes in the DOM. Both
+components own their own layout when they DO render.
 
 ### Item detail drawer — `<ItemDetailDrawer />`
 
@@ -191,10 +218,16 @@ for the full chrome breakdown; the sections it surfaces are:
 
 - Hero — dish glyph + italic Cormorant name + italic Lora description
 - Meta — oxblood price + prep time + calories editorial row
-- Allergens · allergeni — oxblood chip row or basil "no major
-  allergens · senza allergeni maggiori" line
-- Valori nutrizionali · nutrition — Cormorant-labelled bilingual bars
-  for calories / protein / carbs / fat / fiber / sodium
+- Allergens · allergeni — oxblood chip row (each chip carrying a
+  hand-drawn line SVG from `<AllergenIcon />` — wheat sheaf, milk
+  carton, octopus, …) or basil "no major allergens · senza allergeni
+  maggiori" line
+- Valori nutrizionali · nutrition — Cormorant-labelled bilingual
+  printed-menu readout (label · italian phrase ·· value, dotted
+  leader between) for calories / protein / carbs / fat / fiber /
+  sodium. No bars: see the
+  [`<ItemDetailDrawer />` doc](../theme/components.md#-itemdetaildrawer-----srccomponentslocationitemdetaildrawertsx)
+  for why the bar treatment was dropped.
 - Provenienza · sourcing — italic Lora ingredient-origin quote in a
   parchment-deep paper card
 - Sticky paybar — terracotta "Add to cart · aggiungi al carrello +
@@ -232,6 +265,37 @@ The persistent in-thumb-reach order surface.
 - Tap opens the `CartDrawer` (see [`checkout.md`](./checkout.md)).
 - **`AddToCartToast`** fires on add — a 3-second toast confirming
   "Margherita added" with a `View cart` link in the toast itself.
+
+### Loading skeleton — `loading.tsx`
+
+`src/app/(public)/locations/[slug]/loading.tsx` is the route's
+suspense fallback — what Next renders during the server-side fetch
+before `<LocationPage />` hydrates.
+
+- **Mirrors the real page's structure** by reusing the same V8
+  classes (`.v8-loc-hero` for the hero band — with a
+  `.v8-loc-back-chip` skeleton inside it where the live page renders
+  the back chip — and `.v8-menu-card` for the menu band), so the
+  parchment background, hero proportions, and menu band are
+  identical between skeleton and final paint. The route transition
+  reads as one continuous parchment surface — no theme jump.
+- **Skeleton blocks (`.v8-skel`)** are terracotta-tinted (the
+  `rgba(184, 92, 56, 0.06–0.14)` shimmer band V8's accent layer uses
+  elsewhere), not generic gray. Shimmer animation: a 1.4s
+  ease-in-out 200%-wide gradient sweep (`@keyframes
+  v8-skel-shimmer`). Honours `prefers-reduced-motion` by killing the
+  sweep and sitting at the mid-tint.
+- **Shape per slot:** chip → hero illustration → tricolore → name →
+  sub → status pill → menu eyebrow → title → search bar → 2-column
+  grid of four card placeholders. The skeleton hero is centred and
+  short (`.v8-loc-hero` ground), not a full-bleed dark photo block.
+- **Why this matters.** Pre-V8 builds shipped a `bg-italia-dark`
+  `h-72 md:h-96` hero placeholder + `bg-gray-{100,200}` card
+  blocks, which flashed as a dark espresso slab over light gray
+  inside the new V8 layout chrome before the route hydrated — the
+  "old theme flash" V8 polish flagged. If you ever rewrite the
+  skeleton, keep it on the same classes the live page uses, or the
+  flash comes back.
 
 ## The rules unique to the menu
 
