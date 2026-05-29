@@ -92,9 +92,16 @@ gone; the V8 design uses a single card with category tabs that
 filter the grid in place.
 
 - **Wrapper** — `.v8-menu-card` (parchment-deep paper with shared
-  shadow-paper, 14px radius, 22/28px padding ramp). Renders at the
-  `#menu` anchor; the location-hero's status pill scrolls here on
-  tap (the floating cart button also lands the visitor here).
+  `shadow-paper`, 22/28px padding ramp). **Full-bleed** — no
+  `max-width`, no border, no border-radius — the menu reads as a
+  continuous parchment band across the viewport, with only the
+  shadow signalling the slab's elevation. (V8 polish removed the
+  earlier 1180px card frame because the rounded-rectangle "card"
+  read as a settings panel inside an editorial layout; the band
+  treatment lands as one continuous surface that visually owns the
+  page.) Renders at the `#menu` anchor; the location-hero's status
+  pill scrolls here on tap (the floating cart button also lands the
+  visitor here).
 - **Section header** uses the shared `.v8-ps-eyebrow / -title / -sub`
   primitives — "The menu · il menù", "What comes out of *the oven*"
   (italic-oxblood "the oven"), italic-Cormorant sub.
@@ -179,7 +186,11 @@ the mockup without coordinating restyles across separate components.
 `<SeasonalSpecials />` (LTO items) render ABOVE the V8 menu card
 when active — V8's mockup doesn't ship them but they're valuable
 existing features. They sit outside the V8 wrapper so the menu
-card stays clean.
+band stays clean, and they mount directly without an intermediate
+`mx-auto max-w-[1180px]` container — the earlier wrappers
+rendered unconditionally even when both children early-returned
+`null`, leaving a pair of empty padded boxes in the DOM. Both
+components own their own layout when they DO render.
 
 ### Item detail drawer — `<ItemDetailDrawer />`
 

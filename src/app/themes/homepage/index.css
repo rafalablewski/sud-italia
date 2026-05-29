@@ -1601,15 +1601,12 @@ body {
 
 .v8-menu-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 239, 222, 0.6) 100%), var(--color-parchment-deep);
-  border: 1px solid var(--color-line-soft);
-  border-radius: 14px;
-  padding: 22px 18px 28px;
   box-shadow: var(--shadow-paper);
-  max-width: 1180px;
   margin: 22px auto;
+  padding: 22px 18px 28px;
 }
 @media (min-width: 768px) {
-  .v8-menu-card { padding: 28px 28px 36px; margin: 28px auto; }
+  .v8-menu-card { padding: 28px 28px 36px; }
 }
 
 /* Section header inside the menu card — slightly tighter than the

@@ -573,10 +573,14 @@ search input, per-location live-activity strip, category tabs,
 and the items grid. Full layout spec in
 [`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
 
-- **Single paper-card wrapper** — `.v8-menu-card` (parchment-deep
-  with the shared `shadow-paper`, 14px radius). The whole menu
-  surface is one continuous V8 block instead of the pre-V8
-  per-category sections.
+- **Single paper-band wrapper** — `.v8-menu-card` (parchment-deep
+  with the shared `shadow-paper`, full-bleed: no `max-width`, no
+  border, no border-radius). The whole menu surface is one
+  continuous V8 band across the viewport instead of the pre-V8
+  per-category sections, or the framed-rectangle "card" the earlier
+  V8 build shipped (rounded radius + 1180px max-width + line-soft
+  border — removed in polish because the card frame read as a
+  settings panel inside an editorial layout).
 - **Category tabs filter in place.** The "All" tab + a per-active-
   category pill row replaces the pre-V8 sort/pill split. The
   active tab fills terracotta with an ochre-light count chip.
@@ -606,7 +610,18 @@ and the items grid. Full layout spec in
 - **`<ReorderSection />` + `<SeasonalSpecials />`** render ABOVE
   the V8 menu card, outside the wrapper. V8's mockup doesn't ship
   them but they're valuable existing features; placing them above
-  keeps the V8 menu card visually clean.
+  keeps the V8 menu band visually clean. **They mount directly
+  under `<MenuSection />` without an intermediate container** —
+  earlier builds wrapped each in an `mx-auto max-w-[1180px]
+  px-[18px] md:px-[36px]` div, but those containers rendered
+  unconditionally even when the children returned `null`
+  (returning customers with no recent orders, no seasonal items
+  active) and left a pair of empty padded boxes in the DOM. Since
+  `<ReorderSection />` and `<SeasonalSpecials />` already early-
+  return `null` when empty, dropping the wrappers is the right
+  fix; when they DO render they inherit the menu band's
+  full-bleed treatment, consistent with the new `.v8-menu-card`
+  shape.
 
 ### `<MenuItemCard />` — `src/components/location/MenuItem.tsx`
 
