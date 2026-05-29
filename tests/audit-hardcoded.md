@@ -14,10 +14,10 @@
 
 | # | area | symbol | file:line | current source | should-be source | sev | fix sketch |
 |---|------|--------|-----------|----------------|------------------|-----|------------|
-| 1 | Loyalty | `REWARDS` (catalog of 5 rewards) | `src/lib/loyalty.ts:52` | hardcoded array, consumed by `/rewards` page + `/api/customer/wallet/redeem` | `getLoyaltySettings().rewards` (new field) + admin UI in `/admin/loyalty` | P0 | Move to loyalty settings; migrate seed into DB defaults; redeem route reads from settings. |
-| 2 | Loyalty | `TIER_THRESHOLDS` (0/500/1500/5000) | `src/lib/loyalty.ts:16` | hardcoded record | `getLoyaltySettings().tiers.{tier}.threshold` | P0 | Settings already has tier shape (`store.ts:3006`); collapse the two sources into one and have `loyalty.ts` read from settings. |
-| 3 | Loyalty | `TIER_CONFIG` (perks, multipliers, labels, colors) | `src/lib/loyalty.ts:22` | hardcoded record with customer-facing promises ("Free delivery", "VIP events") | settings for multiplier + perks; theme-managed for color/label | P0 | Multipliers + perks → settings (admin-editable); label + color stay in code (theme). |
-| 4 | Loyalty | duplicate tier config | `src/lib/store.ts:3006-3009` | second hardcoded copy of the same thresholds + perks | single source via settings | P0 | Same fix as #2/#3 — delete the duplicate after the migration lands. |
+| 1 | ~~Loyalty~~ | ~~`REWARDS`~~ | ~~`src/lib/loyalty.ts:52`~~ | `getLoyaltySettings().rewards`; redeem route validates active flag server-side | — | ~~P0~~ | **DONE (Phase 4).** |
+| 2 | ~~Loyalty~~ | ~~`TIER_THRESHOLDS`~~ | ~~`src/lib/loyalty.ts:16`~~ | `getLoyaltySettings().tiers.{tier}.threshold` | — | ~~P0~~ | **DONE (Phase 4).** Helpers take ladder as param. |
+| 3 | ~~Loyalty~~ | ~~`TIER_CONFIG`~~ | ~~`src/lib/loyalty.ts:22`~~ | `getLoyaltySettings().tiers.{tier}.{label,multiplier,perks}`; `TIER_COLORS` stays code (theme) | — | ~~P0~~ | **DONE (Phase 4).** Tier label now editable too. |
+| 4 | ~~Loyalty~~ | ~~duplicate tier config~~ | ~~`src/lib/store.ts:3006-3009`~~ | single source via settings | — | ~~P0~~ | **DONE (Phase 4).** lib/loyalty.ts duplicates deleted, store.ts is the single canonical shape. Admin edits at /admin/growth → Tiers and → Rewards. |
 | 5 | ~~Fiscal~~ | ~~`VAT_RATE = 0.08`~~ | ~~`src/lib/jpk.ts:34`~~ | resolved per location via `vatRateBps` on `LocationComplianceConfig` (default 800 bps) | — | ~~P0~~ | **DONE (Phase 1, Step 1.1).** Added `vatRateBps` field, refactored `jpk.ts` to compute per-row, surfaced operator input in EU panel of `/admin/regulatory-compliance`, extended Zod schema, refreshed capabilities entry. Backward-compatible (default still 8%). |
 | 6 | Brand | `CONTACT_EMAIL`, `CONTACT_PHONE` | `src/lib/constants.ts:15-16` | hardcoded operational contact | `getSettings().contact.{email,phone}` | P0 | Per Q4 branding = code, but contact info is operational, not brand — must be admin-editable. |
 | 7 | Brand | `SOCIAL_LINKS` (IG / FB / TikTok URLs) | `src/lib/constants.ts:7` | hardcoded URLs | `getSettings().social.*` | P1 | Same reasoning as #6. Today they change without a code review = high churn. |
@@ -69,7 +69,7 @@
 | 1 | money flow | **complete** — 1.1 VAT, 1.2 cart placeholder, 1.3 JSON-LD currency |
 | 2 | menu | **complete** |
 | 3 | locations | **complete** (3a whatsapp, 3b server sweep, 3c admin dropdowns) |
-| 4 | loyalty | not started |
+| 4 | loyalty | **complete** (4a-c collapse to settings · 4d admin label input + UI confirmed · 4e docs) |
 | 5 | kds/pos | not started |
 | 6 | copy/i18n | not started |
 | 7 | compliance/flags | not started |

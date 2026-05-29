@@ -277,7 +277,7 @@ function AdminLoyaltyDesktop() {
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Loyalty</h1>
           <p className="v2-page-subtitle">
-            Members, family wallets, and redemptions. Tiers calculated from earned + manually-adjusted points.
+            Members, family wallets, and redemptions. Tiers calculated from earned + manually-adjusted points. To edit the programme itself — tier labels / thresholds / multipliers / perks + the rewards catalogue — go to <Link href="/admin/growth" className="v2-link">/admin/growth</Link>.
           </p>
         </div>
         <Tabs

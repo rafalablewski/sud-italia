@@ -549,7 +549,7 @@ export default async function CapabilitiesPage() {
           name: "Loyalty points",
           status: "live",
           href: "/admin/loyalty",
-          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email.",
+          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live at /admin/loyalty; the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Referral codes",
@@ -810,8 +810,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty tier multipliers",
           status: "live",
-          href: "/admin/loyalty",
-          summary: "Bronze / Silver / Gold / Platinum tiers with 1×–3× points multipliers and perks.",
+          href: "/admin/growth",
+          summary: "Bronze / Silver / Gold / Platinum ladder with operator-editable label (Famiglia Oro / Platino), threshold, points multiplier, and perks bullet list. Edited at /admin/growth → Tiers; persisted via updateLoyaltySettings() and shipped to customer surfaces (the /rewards page, cart tier banners, the earn preview) through /api/settings/public. Pure-compute helpers in src/lib/loyalty.ts take the ladder as a parameter so no hardcoded threshold remains anywhere — every value the operator can change is the only value the runtime sees.",
         },
         {
           name: "Achievements engine",

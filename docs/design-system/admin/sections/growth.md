@@ -37,23 +37,50 @@ the truck-stop route plan.
    (`aria-label="Move up"` / `"Move down"`) — order persists on click,
    toast confirms.
 
-## Campaigns — `/admin/growth`
+## Programme — `/admin/growth`
 
-The live-widget composer — banners, slot-callouts, hero overrides
-operating on the storefront in real time.
+The single editor for everything the customer sees on the loyalty
+surface — tier ladder, rewards catalogue, referral mechanics, live
+widgets. Live code: `src/components/admin/AdminGrowth.tsx`. Writes
+through `PUT /api/admin/growth` → `updateLoyaltySettings()` in
+`src/lib/store.ts`. Everything edited here flows out via
+`/api/settings/public` so customer surfaces (the `/rewards` page,
+cart tier banners, the earn preview, the loyalty section on the
+location page) pick up the new state within one fetch — no deploy.
 
-- **Header:** `Growth` (h1) / `Growth engine` for the v2 surface,
-  segmented tabs (Live widgets · A/B tests · Calendar).
-- **Live widgets:** stacked cards, drag-or-arrow reorder, per-widget
-  edit (`aria-label="Edit widget"`), enable / disable toggle, observed
-  conversion stat ("847 views → 31 clicks, 3.6% CTR" inline).
-- **Widget types** are a closed enum: hero override, ribbon, slot
-  callout, exit-intent, post-add nudge. Adding a new type is a design
-  decision, not a data-entry one.
-- **A/B tests** are first-class — variant config + traffic split + live
-  results table with significance indicator.
-- **Calendar view** shows the upcoming widget schedule overlaid on the
-  weekday rhythm.
+- **Header:** `Growth` (h1) + segmented tabs `Rewards · Tiers ·
+  Referrals · Live widgets`.
+- **Rewards tab:** card grid of the redeemable catalogue. Each card
+  shows name, description, points cost, active/disabled badge, with
+  inline `Enable/Disable · Edit · Delete` actions. `+ New reward`
+  opens the same dialog used for edit — `id` is generated, all four
+  fields validated. Customers see only rewards marked `active: true`;
+  the redeem API re-checks the active flag server-side so a stale
+  client can't redeem a disabled reward.
+- **Tiers tab:** one card per tier (Bronze → Silver → Gold → Platinum,
+  fixed ladder order). Each card edits four fields, all admin-
+  managed: **customer-facing label** (operator can run an Italian
+  voice — "Famiglia Oro" — without a deploy), **threshold**
+  (cumulative lifetime points to unlock), **points multiplier**
+  (drives the earn rate per order), and **perks** (one bullet per
+  line, rendered verbatim on the rewards-page tier card). The
+  tier-card chrome (colour, icon) stays code-managed per Rule #11 —
+  see `TIER_COLORS` in `src/lib/loyalty.ts`.
+- **Referrals tab:** referrer-points + referee-discount values + the
+  active toggle that gates the whole programme.
+- **Live widgets tab:** stacked cards, drag-or-arrow reorder, per-
+  widget edit, enable / disable toggle, observed conversion stat
+  ("847 views → 31 clicks, 3.6% CTR" inline). Widget types are a
+  closed enum (hero override, ribbon, slot callout, exit-intent,
+  post-add nudge, orders-in-last-hour, currently-preparing, trending,
+  avg-prep-time, happy-hour, truck-location). The public endpoint
+  caps the rendered list at `LIVE_WIDGET_LIMIT` (currently 7).
+
+The pure-compute layer (`calculateTier`, `calculatePointsForOrder`,
+`pointsToNextTier`) in `src/lib/loyalty.ts` takes the tier ladder
+as a parameter — no hardcoded thresholds remain in the helper
+module, and so no value an operator can edit can drift away from
+what the helpers compute.
 
 ## Upsell — `/admin/upsell`
 
