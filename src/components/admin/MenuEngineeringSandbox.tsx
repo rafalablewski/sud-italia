@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, Coins, TrendingUp, Boxes, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Select, Badge, InfoButton, type BadgeTone } from "./v2/ui";
-import { PlainTalk, Methodology, Tips } from "./Explainers";
+import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
@@ -266,15 +266,39 @@ export function MenuEngineeringSandbox() {
         <KpiCard
           label={kpiInfo(
             "Projected contribution",
-            <>
-              <p style={{ margin: 0 }}>
-                Total gross profit across the whole menu under your levers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>= Σ (projected revenue − projected cost)</strong> over every dish. The
-                headline question: does this menu change grow total profit?
-              </p>
-            </>,
+            <MetricExplainer
+              description="Total gross profit across the whole menu under your pricing and promotion levers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Contribution margin — not revenue — covers fixed costs and becomes profit, so menu
+                  engineering optimises for total contribution, never top line. The Kasavana-Smith
+                  discipline exists precisely because the highest-revenue menu and the
+                  highest-contribution menu are rarely the same one; this is the number a CFO signs off.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Add up what every dish makes you after its own food cost. That total is the menu&apos;s
+                  real engine. A change that grows it is a good change — even if it sells fewer
+                  pizzas.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Reprice plowhorses up (high volume × thin margin = the biggest lever), promote
+                  puzzles to lift your best-margin dishes, and prune or re-cost dogs. Re-engineering
+                  a high-volume recipe pays off hardest — 50 grosze of cost off a Margherita is huge
+                  at scale.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>Σ (projected revenue − projected cost)</code> across every dish, where
+                  per-dish price/cost come from real revenue÷units and units respond to price via the
+                  elasticity setting. Window-scoped (30/60/90/180d).
+                </p>
+              }
+            />,
           )}
           value={totals.simGp}
           display={formatPrice(Math.round(totals.simGp))}
@@ -285,15 +309,38 @@ export function MenuEngineeringSandbox() {
         <KpiCard
           label={kpiInfo(
             "Δ contribution",
-            <>
-              <p style={{ margin: 0 }}>
-                The change in total contribution versus the baseline window.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                Positive (green) means the change earns more; negative (red) means it costs you.
-                This is the number to anchor a menu decision on.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The change in total menu contribution versus the real baseline window."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  The decision variable. Menu changes are bets, and this is the expected payoff in
+                  gross-profit złoty — the only number that should green-light or kill a repricing.
+                  Reviewers want the delta, not the absolute, because it isolates the impact of the
+                  change from the underlying business.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Green and you&apos;d make more money than you do today; red and the change costs
+                  you. This is the &ldquo;should I actually do this?&rdquo; number — everything else is
+                  supporting detail.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Hunt for the combination that maximises it: small price rises on inelastic
+                  stars/plowhorses usually win; aggressive rises shed too many units; promoting
+                  puzzles is almost free upside. A negative delta means you&apos;re discounting volume
+                  you didn&apos;t need to buy.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>projected total contribution − baseline total contribution</code>, over the
+                  same window.
+                </p>
+              }
+            />,
           )}
           value={gpDelta}
           display={`${gpDelta >= 0 ? "+" : ""}${formatPrice(Math.round(gpDelta))}`}
@@ -304,16 +351,36 @@ export function MenuEngineeringSandbox() {
         <KpiCard
           label={kpiInfo(
             "Projected revenue",
-            <>
-              <p style={{ margin: 0 }}>
-                Total menu revenue (top line) under your levers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                Watch this alongside contribution: revenue can <strong>rise while contribution
-                falls</strong> (e.g. discounting to drive volume), so don&apos;t judge a change on
-                revenue alone.
-              </p>
-            </>,
+            <MetricExplainer
+              description="Total menu revenue (top line) under your levers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Revenue sits next to contribution as a deliberate trap-spotter: the two move
+                  together until they don&apos;t. The classic reviewer&apos;s catch is a &ldquo;growth&rdquo;
+                  plan that lifts revenue while eroding contribution — volume bought with margin.
+                  Treat revenue as context, never the objective.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  This is sales, before food costs. It can go up while you actually make less money —
+                  e.g. a discount that sells more but earns less per plate. Always read it next to
+                  contribution, never alone.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  If revenue rises but contribution doesn&apos;t, you&apos;re trading margin for volume —
+                  only worth it if the volume buys something else (capacity utilisation, share,
+                  attach). For a truck at peak capacity, prefer contribution per unit over raw revenue.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>Σ (projected units × projected unit price)</code> across the menu.
+                </p>
+              }
+            />,
           )}
           value={totals.simRevenue}
           display={formatPrice(Math.round(totals.simRevenue))}
@@ -324,16 +391,38 @@ export function MenuEngineeringSandbox() {
         <KpiCard
           label={kpiInfo(
             "Projected units",
-            <>
-              <p style={{ margin: 0 }}>
-                Total units sold across the menu under your levers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                Price rises shed units via the <strong>elasticity</strong> setting; promoting
-                puzzles and removing dogs move it too. Falling units with rising contribution = a
-                leaner, more profitable menu.
-              </p>
-            </>,
+            <MetricExplainer
+              description="Total units sold across the menu under your levers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Units are the operational reality check on a financial plan — they drive kitchen
+                  throughput, prep labour and stock burn. A contribution-positive plan that doubles
+                  units can still fail if the line can&apos;t produce them; sanity-check unit volume
+                  against capacity before committing to a price move.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  How many things you&apos;d sell in total. Raise prices and this drops a bit (people
+                  buy slightly less); keep prices keen or promote and it climbs. Fewer units but more
+                  contribution is usually a leaner, better menu.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Use the elasticity setting honestly — food is fairly inelastic (~0.5), so modest
+                  price rises lose few units. If a plan needs a big unit jump to pay off,
+                  pressure-test it against kitchen capacity and prep times before believing it.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>Σ projected units</code>, where each dish&apos;s units = baseline units ×
+                  <code> (1+Δprice)^(−elasticity)</code>, with puzzle-promotion and dog-removal
+                  applied.
+                </p>
+              }
+            />,
           )}
           value={totals.simUnits}
           display={Math.round(totals.simUnits).toLocaleString("pl-PL")}

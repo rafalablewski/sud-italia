@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import { RotateCcw, TrendingUp, Wallet, Coins, Timer, AlertTriangle, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
-import { PlainTalk, Methodology, Tips } from "./Explainers";
+import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -232,15 +232,38 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "LTV : CAC",
-            <>
-              <p style={{ margin: 0 }}>
-                How many złoty of lifetime gross profit each złoty of acquisition spend returns.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>= LTV ÷ CAC.</strong> Green ≥ 3× (scale it), amber 1–3× (thin), red below 1×
-                (you&apos;re losing money on every customer you buy).
-              </p>
-            </>,
+            <MetricExplainer
+              description="How many złoty of lifetime gross profit you earn for each złoty spent acquiring a customer."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  The defining unit-economics ratio in consumer investing. 3× is the institutional
+                  floor — below it growth destroys value; at 3–5× you scale; far above 5× you&apos;re
+                  under-investing in growth and leaving share on the table. Reported blended and by
+                  cohort, because a healthy blend can mask a deteriorating recent cohort.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 35&nbsp;zł to win a customer who leaves you ~92&nbsp;zł of margin and you&apos;re
+                  at 2.6× — under the 3× bar, so each customer is a touch too expensive. Either make
+                  them worth more or acquire them cheaper.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Lift the numerator before cutting the denominator: raising LTV (retention, AOV,
+                  margin) compounds across every future customer, while shaving CAC has a hard floor.
+                  If you must touch CAC, kill the worst-performing channel rather than trimming every
+                  channel evenly.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>LTV ÷ CAC</code>, using margin-adjusted 365-day LTV and blended CAC from the
+                  marketing-cost ledger. Tone: green ≥ 3×, amber 1–3×, red &lt; 1×.
+                </p>
+              }
+            />,
           )}
           value={sim.ratio ?? 0}
           display={fmtRatio(sim.ratio)}
@@ -251,15 +274,38 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "LTV (365d, margin)",
-            <>
-              <p style={{ margin: 0 }}>
-                Margin-adjusted lifetime value — first-year revenue per customer × gross margin.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                We use <strong>margin, not revenue</strong>, because revenue doesn&apos;t pay the
-                kitchen. Retention and AOV levers scale it; the margin lever re-margins it.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The margin-adjusted lifetime value of a customer over their first 365 days."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Underwriters use margin LTV, not revenue LTV, because only gross profit services
+                  CAC, overhead and refunds — revenue LTV flatters thin-margin businesses. A
+                  defensible LTV is built from observed cohort behaviour, not an assumed lifespan,
+                  which is why this anchors to real 365-day cohort CLTV rather than a &ldquo;lifetime&rdquo; guess.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  A customer might spend ~150&nbsp;zł of revenue with you in a year, but at a 62% gross
+                  margin only ~92&nbsp;zł of that is profit you actually keep. That 92&nbsp;zł is what
+                  you can spend to win them and still come out ahead.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Three levers feed it: come-back rate, basket size, and the margin on what they buy.
+                  Steer the mix toward high-margin dishes (the stars/puzzles on the menu-engineering
+                  sandbox), defend price, and lift repeat — each flows straight into this number.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Blended margin-LTV from the cohort CLTV engine × blended order-line gross margin.
+                  Under the levers, revenue-LTV is recovered as <code>LTV ÷ margin</code>, scaled by
+                  retention and AOV, then re-margined.
+                </p>
+              }
+            />,
           )}
           value={sim.ltv}
           display={formatPrice(Math.round(sim.ltv))}
@@ -270,15 +316,38 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "CAC",
-            <>
-              <p style={{ margin: 0 }}>
-                Customer acquisition cost — what you pay in marketing to win one customer.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                Seeded from your marketing-cost ledger (or an assumed value when none is logged),
-                and editable here so you can model a cheaper or pricier channel.
-              </p>
-            </>,
+            <MetricExplainer
+              description="Customer acquisition cost — the marketing spend it takes to win one new customer."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  CAC is the denominator of the ratio and the lever with the hardest floor — there&apos;s
+                  a market-clearing price for attention you can&apos;t undercut indefinitely. Reviewers
+                  separate blended from paid CAC and watch it per channel over time, because a rising
+                  CAC is the earliest sign a channel is saturating.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 6,300&nbsp;zł in a month and 180 new customers show up → each cost ~35&nbsp;zł
+                  to acquire. That&apos;s your CAC — the price tag on a new regular.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Lower it by improving what you already have before buying more: referrals (your
+                  cheapest channel — a give-get beats paid every time), word-of-mouth from a genuinely
+                  better product, and retargeting people who already know you. Cut the channel with
+                  the worst CAC; don&apos;t dilute the whole budget.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Marketing-category spend from the Business-costs ledger ÷ new customers that month.
+                  Seeded from the real report (or an assumed value when no spend is logged) and
+                  editable here.
+                </p>
+              }
+            />,
           )}
           value={cacGrosze}
           display={formatPrice(Math.round(cacGrosze))}
@@ -288,15 +357,37 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "CAC payback",
-            <>
-              <p style={{ margin: 0 }}>
-                How many months it takes to earn the CAC back from margin.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>= 12 × CAC ÷ LTV.</strong> Under 3 months is healthy and lets you reinvest
-                fast; over 12 strains cash flow.
-              </p>
-            </>,
+            <MetricExplainer
+              description="How many months it takes to earn back a customer's acquisition cost from their margin."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Payback is the cash-flow twin of the ratio: LTV:CAC says a customer is profitable
+                  eventually; payback says how long your money is tied up getting there. Under ~12
+                  months is the venture norm; under 3 means you can self-fund growth without a war
+                  chest. It&apos;s the constraint that actually caps how fast you can scale.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 35&nbsp;zł to win a customer who throws off ~8&nbsp;zł of margin a month and
+                  you&apos;ve got your money back in about four months — after that they&apos;re pure
+                  profit. Short payback = you reinvest fast.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Shorten it by pulling the second order forward (a fast post-first-order nudge),
+                  raising early-life basket size, or lowering CAC. A long payback with a great ratio
+                  is a financing problem, not a profitability one — but it still throttles growth.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>12 × CAC ÷ LTV</code> (months). Tone: green ≤ 3, amber 3–12, red ≥ 13
+                  (shown as &ldquo;&gt;12 mo&rdquo;).
+                </p>
+              }
+            />,
           )}
           value={0}
           display={paybackDisplay}
@@ -307,15 +398,36 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "Profit / customer",
-            <>
-              <p style={{ margin: 0 }}>
-                The lifetime profit left after acquisition.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>= LTV − CAC.</strong> Negative means you pay more to win a customer than
-                they&apos;re worth — the ratio is below 1×.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The lifetime profit a customer leaves after subtracting what you paid to acquire them."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  The absolute-złoty complement to the ratio — the same economics as cash per head
+                  rather than a multiple. A 3× ratio on a 10&nbsp;zł customer and a 3× on a 200&nbsp;zł
+                  customer are equally &ldquo;healthy&rdquo; but vastly different businesses; this keeps you
+                  honest about the scale of the prize, not just its quality.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Worth ~92&nbsp;zł, cost ~35&nbsp;zł to get → you net ~57&nbsp;zł per customer over
+                  the year. If this ever goes negative, you&apos;re paying more for customers than
+                  they&apos;re worth — stop and fix it.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Every lever that lifts LTV or lowers CAC lifts this. The fastest absolute gains
+                  usually come from the high-value end — protect and deepen your best customers (VIP
+                  treatment, loyalty tiers) rather than chasing cheap, low-value traffic.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>LTV − CAC</code>, in złoty. Negative means the ratio is below 1×.
+                </p>
+              }
+            />,
           )}
           value={sim.profitPerCust}
           display={formatPrice(Math.round(sim.profitPerCust))}
@@ -326,15 +438,38 @@ export function LtvCacSandbox() {
         <KpiCard
           label={kpiInfo(
             "Monthly cohort profit",
-            <>
-              <p style={{ margin: 0 }}>
-                The profit from one month&apos;s worth of new customers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>= new customers/month × profit per customer.</strong> Scales the
-                per-customer economics up to the whole acquisition funnel.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The total profit thrown off by a single month's worth of new customers, over their first year."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Scales per-customer economics to the funnel — the number a CFO multiplies out to
+                  size the return on a marketing budget. It deliberately blends quality
+                  (profit/customer) and quantity (acquisition volume), so it&apos;s right for
+                  &ldquo;what does this month of spend return?&rdquo; but wrong for judging unit economics
+                  in isolation.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  If each customer nets you ~57&nbsp;zł and you win 180 a month, that month&apos;s
+                  intake is worth ~10,000&nbsp;zł of profit over the year. Double the intake (without
+                  wrecking CAC) and you double that.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Grow it by winning more customers/month OR by raising profit/customer. When
+                  LTV:CAC is comfortably ≥ 3×, scale volume; when it&apos;s tight, lifting
+                  profit/customer is the safer multiplier — volume on thin economics just scales the
+                  problem.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>new customers/month × profit per customer (LTV − CAC)</code>.
+                </p>
+              }
+            />,
           )}
           value={sim.monthlyProfit}
           display={formatPrice(Math.round(sim.monthlyProfit))}

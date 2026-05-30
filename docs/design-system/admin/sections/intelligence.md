@@ -18,9 +18,14 @@ Sud Italia example, badged `Example data`, so the sandbox is never empty.
 Read-only on live data — nothing they do writes back.
 
 Every sandbox **KPI card carries its own `InfoButton` (ⓘ)** in the card
-label (`kpiInfo()` helper → the shared `InfoButton` primitive, `size="sm"`):
-a per-metric dialog explaining what the number is, how it's computed and how
-to read it — in addition to the page-level "How this projects" explainer.
+label (`kpiInfo()` helper → the shared `InfoButton` primitive, `size="sm"`).
+Its dialog is built from **`MetricExplainer`** (`Explainers.tsx`), which —
+per **CLAUDE.md Rule #12** — renders all five required sections in a fixed
+order with fixed labels: a one-line **description**, **INSTITUTIONAL
+ANALYSIS**, **IN PLAIN TERMS**, **TIPS — HOW TO PUSH THIS LEVER**, and
+**METHODOLOGY — HOW THIS IS DETERMINED**. `MetricExplainer`'s five props are
+all required, so a half-written metric explanation won't compile. This is in
+addition to the page-level "How this projects" explainer.
 
 | Page                          | Code                                              | Role-gate | Embedded sandbox |
 | ----------------------------- | ------------------------------------------------- | --------- | ---------------- |

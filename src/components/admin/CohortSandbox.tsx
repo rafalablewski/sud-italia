@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, TrendingUp, Users, Repeat, Coins, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
-import { PlainTalk, Methodology, Tips } from "./Explainers";
+import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
 import { KpiCard, LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -240,17 +240,41 @@ export function CohortSandbox() {
         <KpiCard
           label={kpiInfo(
             "Projected CLTV (365d)",
-            <>
-              <p style={{ margin: 0 }}>
-                The average gross profit one customer leaves you over their first 365 days, under
-                your current levers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>How it&apos;s computed:</strong> orders per customer × value per order. The
-                baseline is your real (or example) number; the % shows how far your levers have
-                moved it.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The average gross profit a single customer leaves you across their first 365 days, under your current levers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  CLTV is the ceiling on what you can profitably pay to acquire a customer — the
+                  numerator of the LTV:CAC ratio every investor underwrites a consumer business on.
+                  Rising CLTV with flat CAC is the cleanest signal of a compounding book; falling
+                  CLTV means the cohort is decaying and acquisition spend should pause until
+                  retention is fixed.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  If your average customer comes back often enough to leave you ~185&nbsp;zł of gross
+                  profit in their first year, that 185&nbsp;zł is what one new regular is &ldquo;worth&rdquo;.
+                  Win 2&nbsp;zł of that for every 1&nbsp;zł of marketing and you&apos;re printing money.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  CLTV is two things multiplied — how often they come back (repeat rate) and how much
+                  they spend (AOV). Push repeat first: a &ldquo;come back this week&rdquo; nudge after order #1,
+                  a loyalty point that only matters on visit #2. Then push AOV with combos and a
+                  dessert/coffee attach.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Cohort-size-weighted mean of each cohort&apos;s real 365-day CLTV from the cohort
+                  engine, re-projected as <strong>orders/customer × value/order</strong> as you move
+                  the levers. Seeded from <code>/api/admin/reports/cohort</code> (or the worked
+                  example when there are no paid orders).
+                </p>
+              }
+            />,
           )}
           value={sim.cltv}
           display={formatPrice(Math.round(sim.cltv))}
@@ -261,15 +285,38 @@ export function CohortSandbox() {
         <KpiCard
           label={kpiInfo(
             "Repeat rate",
-            <>
-              <p style={{ margin: 0 }}>
-                The share of customers who order more than once.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                Your repeat-rate lever adds to the real baseline — and because repeat customers
-                drive the extra orders, raising it lifts orders/customer and therefore CLTV.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The share of your customers who place more than one order."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Repeat rate is the most predictive input to CLTV and the first thing a diligence
+                  team stress-tests — a casual/QSR book below ~25% repeat is effectively buying
+                  one-time traffic. Above ~35% the economics start to compound; the gap between a 30%
+                  and a 40% book is the difference between renting customers and owning them.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Out of every 100 new faces, how many come back at least once? At 34, a third stick
+                  — the other two-thirds tried you once and vanished. Nudging even five of them back
+                  lifts every downstream number.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  The second order is the hard one. Capture the phone at checkout (zero-friction
+                  loyalty), fire a timed &ldquo;we saved your usual&rdquo; message 5–7 days out, and make
+                  visit #2 easier than the regret of skipping it. Speed and consistency earn the habit.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>repeatCustomers ÷ total customers</code> from the cohort report. The lever
+                  adds percentage points to that baseline; orders/customer is then re-derived holding
+                  &ldquo;extra orders per repeater&rdquo; constant.
+                </p>
+              }
+            />,
           )}
           value={sim.R}
           display={`${sim.R.toFixed(1)}%`}
@@ -280,16 +327,40 @@ export function CohortSandbox() {
         <KpiCard
           label={kpiInfo(
             "Orders / customer",
-            <>
-              <p style={{ margin: 0 }}>
-                Average number of orders an average customer places.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>How it&apos;s computed:</strong> derived from the repeat rate — we hold
-                &ldquo;extra orders per repeater&rdquo; constant ({base.extraPerRepeater.toFixed(1)}{" "}
-                here) and recompute as the repeat-rate lever moves.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The average number of orders an average customer places over the measured horizon."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Frequency is the volume half of CLTV and the cheapest growth there is — an existing
+                  customer carries zero marginal CAC. Institutional operators watch orders/customer
+                  because it isolates loyalty from acquisition: total orders can rise on ad spend
+                  while orders/customer quietly falls, which is a leaky bucket dressed up as growth.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  2.6 means the typical customer orders between two and three times before they
+                  drift. Get them to 3 and you&apos;ve added a whole order&apos;s worth of profit
+                  without spending a złoty on ads.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Frequency responds to occasions and reminders: a slow-Tuesday offer, a
+                  &ldquo;buy 9 get the 10th&rdquo; card, scheduled-bundle nudges. Make reordering one tap
+                  (saved usual, reorder button). Target the lapsing customers, not the regulars who&apos;d
+                  come anyway.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>avgOrdersPerCustomer</code> from the cohort report. Under the levers:
+                  <code> 1 + (repeat rate ÷ 100) × extra-orders-per-repeater</code>, where the
+                  extra-orders term is fixed at the baseline ({base.extraPerRepeater.toFixed(1)} here)
+                  so the repeat lever drives this honestly.
+                </p>
+              }
+            />,
           )}
           value={sim.O}
           display={sim.O.toFixed(2)}
@@ -300,16 +371,39 @@ export function CohortSandbox() {
         <KpiCard
           label={kpiInfo(
             "Annual cohort value",
-            <>
-              <p style={{ margin: 0 }}>
-                The total first-year value of a year&apos;s worth of new customers.
-              </p>
-              <p style={{ margin: "8px 0 0" }}>
-                <strong>How it&apos;s computed:</strong> new customers/month × 12 × CLTV. This is the
-                acquisition lever&apos;s payoff — it scales with how many customers you win, not with
-                per-customer value.
-              </p>
-            </>,
+            <MetricExplainer
+              description="The total first-year gross profit from a full year of newly-acquired customers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  This translates per-customer economics into a planning number — the annual gross
+                  profit a year of acquisition will throw off, the figure that anchors a marketing
+                  budget and a board forecast. It scales with acquisition volume, so it answers
+                  &ldquo;how big is the prize?&rdquo; rather than &ldquo;is each customer worth it?&rdquo;.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  If each new customer is worth ~185&nbsp;zł and you bring in 300 a month, a year of
+                  new customers (3,600 people) is worth ~666,000&nbsp;zł of gross profit over their
+                  first year. That&apos;s the size of the engine you&apos;re feeding.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Two ways up: more new customers/month (acquisition — but watch CAC on the LTV/CAC
+                  sandbox) or a higher CLTV (retention/AOV, which compounds and is cheaper). When CLTV
+                  is healthy (LTV:CAC ≥ 3×) pour fuel on acquisition; when it&apos;s thin, fix
+                  retention first.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>new customers/month × 12 × projected CLTV</code>. New customers/month seeds
+                  from total customers ÷ cohort months and is operator-overridable; it scales this
+                  number only, never per-customer CLTV.
+                </p>
+              }
+            />,
           )}
           value={sim.annual}
           display={formatPrice(Math.round(sim.annual))}
