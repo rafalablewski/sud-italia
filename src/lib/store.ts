@@ -13,6 +13,7 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
+import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
@@ -429,7 +430,7 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
-    if (slot.currentOrders >= slot.maxOrders) {
+    if (isSlotFull(slot)) {
       incrCounter("slot.full");
       return false;
     }
@@ -494,7 +495,7 @@ export async function getAvailableSlots(
 ): Promise<TimeSlot[]> {
   return (await getSlots(locationSlug, date)).filter((s) => {
     if ((s.status ?? "active") !== "active") return false;
-    if (s.currentOrders >= s.maxOrders) return false;
+    if (isSlotFull(s)) return false;
     if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as TimeSlot["fulfillmentTypes"][number])) return false;
     return true;
   });
