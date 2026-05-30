@@ -52,3 +52,5 @@ These come from CLAUDE.md and apply to every Homepage surface:
    (rule 7).
 
 Mockups live at `public/mockups/` — open `/mockups/` on any deploy.
+Hero-redesign concepts (R&D, not production) are at
+`public/mockups/hero/` — open `/mockups/hero/` for the gallery.
