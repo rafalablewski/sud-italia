@@ -103,6 +103,13 @@ export default async function CapabilitiesPage() {
           summary: "Owner-only CRUD on admin accounts. Roles: staff, kitchen, manager, owner, franchisee.",
         },
         {
+          name: "Admin MFA (TOTP two-factor)",
+          status: has("ADMIN_TOTP_SECRET") ? "live" : "needs-config",
+          href: "/admin/users",
+          envVars: ["ADMIN_TOTP_SECRET"],
+          summary: "RFC 6238 TOTP on admin login. Per-user MFA enrolls in /admin/users (Begin setup → scan secret → confirm code); login then requires a 6-digit code. The shared owner session is protected by ADMIN_TOTP_SECRET (generate with `tsx scripts/generate-totp-secret.ts`). Codes verified constant-time with ±1 step skew; secrets never leave the server.",
+        },
+        {
           name: "Admin password hashing (scrypt)",
           status: has("ADMIN_PASSWORD_HASH") ? "live" : "needs-config",
           envVars: ["ADMIN_PASSWORD_HASH"],

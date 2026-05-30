@@ -619,6 +619,9 @@ export const gdprDeleteSchema = z.object({
 export const adminLoginSchema = z.object({
   password: z.string().min(1).max(500),
   email: z.string().email().max(254).optional().or(z.literal("")),
+  // Optional 6-digit TOTP code, required only when the resolved account (or the
+  // shared session via ADMIN_TOTP_SECRET) has MFA enabled.
+  totp: z.string().regex(/^\d{6}$/).optional().or(z.literal("")),
 });
 
 // --- Helpers -------------------------------------------------------------

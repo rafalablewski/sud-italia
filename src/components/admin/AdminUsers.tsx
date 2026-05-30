@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
+import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import dynamic from "next/dynamic";
@@ -69,6 +69,8 @@ function AdminUsersDesktop() {
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
   const [dialog, setDialog] = useState<DialogState>({ open: false, user: null });
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
+  const [mfaUser, setMfaUser] = useState<AdminUser | null>(null);
+  const [me, setMe] = useState<{ id: string; role: AdminRole } | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -85,6 +87,10 @@ function AdminUsersDesktop() {
 
   useEffect(() => {
     fetchAll();
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setMe({ id: d.id, role: d.role }))
+      .catch(() => {});
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
@@ -161,10 +167,24 @@ function AdminUsersDesktop() {
       sortValue: (u) => u.status,
     },
     {
+      key: "mfa",
+      header: "MFA",
+      cell: (u) =>
+        u.totpEnabled ? (
+          <Badge tone="success" variant="soft" dot>On</Badge>
+        ) : (
+          <Badge tone="neutral" variant="outline">Off</Badge>
+        ),
+      sortValue: (u) => (u.totpEnabled ? 1 : 0),
+    },
+    {
       key: "actions",
       header: "",
       cell: (u) => (
         <div className="v2-row-actions">
+          <Button size="sm" variant="ghost" leadingIcon={<KeyRound className="h-3.5 w-3.5" />} onClick={() => setMfaUser(u)}>
+            MFA
+          </Button>
           <Button size="sm" variant="ghost" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: u })}>
             Edit
           </Button>
@@ -182,7 +202,7 @@ function AdminUsersDesktop() {
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Users & roles</h1>
           <p className="v2-page-subtitle">
-            Plan per-user accounts and role mappings. Today the dashboard uses a single shared admin password — these users are the staging ground for future per-user authentication. Sensitive write APIs already gate on owner / manager via the new role helpers.
+            Per-user accounts, role mappings, and two-factor auth. Users with an email log in with the shared password + their own role/location scope; enable MFA per account for a required 6-digit code. Admin APIs gate on owner / manager via the role helpers.
           </p>
         </div>
         <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
@@ -268,7 +288,168 @@ function AdminUsersDesktop() {
         confirmLabel="Remove"
         destructive
       />
+
+      <MfaDialog
+        user={mfaUser}
+        me={me}
+        onClose={() => setMfaUser(null)}
+        onChanged={fetchAll}
+      />
     </div>
+  );
+}
+
+function MfaDialog({
+  user,
+  me,
+  onClose,
+  onChanged,
+}: {
+  user: AdminUser | null;
+  me: { id: string; role: AdminRole } | null;
+  onClose: () => void;
+  onChanged: () => Promise<void> | void;
+}) {
+  const toast = useToast();
+  const [enrollment, setEnrollment] = useState<{ secret: string; uri: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setEnrollment(null);
+    setCode("");
+    setBusy(false);
+  }, [user]);
+
+  if (!user) return <Dialog open={false} onClose={onClose} />;
+
+  const isSelf = me?.id === user.id;
+  const isOwner = me?.role === "owner";
+
+  const call = async (body: Record<string, unknown>) => {
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/mfa`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, data };
+  };
+
+  const begin = async () => {
+    setBusy(true);
+    try {
+      const { ok, data } = await call({ action: "begin" });
+      if (ok && data?.secret) setEnrollment({ secret: data.secret, uri: data.uri });
+      else toast.error("Could not start", data?.error || "");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const enable = async () => {
+    setBusy(true);
+    try {
+      const { ok, data } = await call({ action: "enable", token: code });
+      if (ok) {
+        toast.success("MFA enabled");
+        await onChanged();
+        onClose();
+      } else {
+        toast.error("Could not enable", data?.error || "");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    try {
+      // Self-disable needs a current code; an owner can force-disable without one.
+      const { ok, data } = await call({ action: "disable", token: code || undefined });
+      if (ok) {
+        toast.success("MFA disabled");
+        await onChanged();
+        onClose();
+      } else {
+        toast.error("Could not disable", data?.error || "");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={`Two-factor auth — ${user.name}`}
+      footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
+    >
+      <div className="v2-stack-12">
+        {user.totpEnabled ? (
+          <>
+            <div className="v2-note">
+              <ShieldCheck className="h-4 w-4" />
+              <span>MFA is <strong>enabled</strong> for this account. A 6-digit code is required at login.</span>
+            </div>
+            {isSelf && !isOwner && (
+              <Input
+                label="Current authenticator code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                description="Required to turn off your own MFA."
+              />
+            )}
+            {(isSelf || isOwner) ? (
+              <Button variant="primary" onClick={disable} loading={busy}>
+                {isOwner && !isSelf ? "Force-disable (recovery)" : "Disable MFA"}
+              </Button>
+            ) : (
+              <p className="v2-muted">Only the account holder or an owner can change this.</p>
+            )}
+          </>
+        ) : !isSelf ? (
+          <p className="v2-muted">
+            MFA can only be set up by the account holder, signed in as this user. Owners can force-disable an existing MFA for recovery.
+          </p>
+        ) : !enrollment ? (
+          <>
+            <p className="v2-muted">
+              Protect your login with a time-based code from an authenticator app
+              (Google Authenticator, 1Password, Authy…).
+            </p>
+            <Button variant="primary" onClick={begin} loading={busy} leadingIcon={<KeyRound className="h-3.5 w-3.5" />}>
+              Begin setup
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="v2-muted">
+              Add this secret to your authenticator app, then enter the current code to confirm.
+            </p>
+            <div className="v2-note">
+              <span>
+                Setup key: <span className="mono" style={{ wordBreak: "break-all" }}>{enrollment.secret}</span>
+              </span>
+            </div>
+            <p className="v2-muted" style={{ fontSize: "0.75rem", wordBreak: "break-all" }}>
+              otpauth URI: {enrollment.uri}
+            </p>
+            <Input
+              label="6-digit code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            />
+            <Button variant="primary" onClick={enable} loading={busy} disabled={code.length !== 6}>
+              Confirm & enable
+            </Button>
+          </>
+        )}
+      </div>
+    </Dialog>
   );
 }
 

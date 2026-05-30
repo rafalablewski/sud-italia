@@ -898,6 +898,10 @@ export interface AdminUser {
   locationSlug?: string;
   notes?: string;
   createdAt: string;
+  /** Base32 TOTP secret, set during enrollment (before it's confirmed). */
+  totpSecret?: string;
+  /** True once the user confirms a code — login then requires a TOTP. */
+  totpEnabled?: boolean;
 }
 
 // --- Business costs (operating expenses ledger) ---

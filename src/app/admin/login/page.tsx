@@ -7,6 +7,8 @@ import { LogIn } from "lucide-react";
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
+  const [totp, setTotp] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -23,11 +25,18 @@ export default function AdminLoginPage() {
         body: JSON.stringify({
           password,
           email: email.trim() || undefined,
+          totp: totp.trim() || undefined,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
+        if (data?.mfaRequired) {
+          // Password was correct — now reveal the code field and prompt.
+          setMfaRequired(true);
+          setError(totp ? "Invalid MFA code" : "Enter the 6-digit code from your authenticator app");
+          return;
+        }
         setError(data?.error || "Invalid password");
         return;
       }
@@ -74,6 +83,21 @@ export default function AdminLoginPage() {
               className="w-full px-4 py-3 glass-input rounded-xl text-base"
               autoFocus
             />
+
+            {mfaRequired && (
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="6-digit authenticator code"
+                value={totp}
+                onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                autoComplete="one-time-code"
+                className="w-full px-4 py-3 glass-input rounded-xl text-base tracking-widest text-center"
+                autoFocus
+              />
+            )}
 
             {error && (
               <p className="text-sm text-[var(--danger)] text-center bg-[var(--danger-soft)] rounded-lg py-2">{error}</p>
