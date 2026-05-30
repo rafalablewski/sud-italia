@@ -1,5 +1,10 @@
 # Sud Italia — Mobile Admin UX Strategy
 
+> **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
+> document describes is no longer served; phones now render the responsive
+> desktop layout 1:1. See [`README.md`](./README.md) for the retirement note.
+> Kept for history — not the current spec.
+
 **Date:** 2026-05-17
 **Companion docs:** `audit.md`, `navigation.md`, `design-system.md`
 **Implementation:** `src/components/admin/v2/mobile/*`, `src/components/admin/mobile/*`

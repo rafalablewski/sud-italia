@@ -1,5 +1,10 @@
 # Sud Italia — Mobile Admin Final Review
 
+> **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
+> document describes is no longer served; phones now render the responsive
+> desktop layout 1:1. See [`README.md`](./README.md) for the retirement note.
+> Kept for history — not the current spec.
+
 **Date:** 2026-05-17
 **Reviewer scope:** Senior product designer, operational UX architect, restaurant-tech benchmark survey
 **Object of review:** the mobile admin built in this branch — shell (`src/components/admin/v2/mobile/*`), mobile views (`src/components/admin/mobile/*`), CSS additions to `globals.css`, and clickable mockups (`public/mockups/mobile/`)

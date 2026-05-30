@@ -41,7 +41,7 @@ export {
 export { canShare, share } from "./share";
 export { playKdsCue } from "./kdsAudio";
 export { useActionTiming } from "./useActionTiming";
-export { useAdminPush } from "./useAdminPush";
+export { useAdminPush } from "../useAdminPush";
 export { useAutoTheme } from "./useAutoTheme";
 export { useFirstLoad } from "./useFirstLoad";
 export { useIdlePrefetch } from "./useIdlePrefetch";

@@ -69,6 +69,10 @@ import {
   Select,
 } from "./v2/ui";
 import { Heatmap, KpiCard, LineChart, PieChart } from "./v2/charts";
+// Shared explainer callout blocks (CLAUDE.md Rule #12 — same five-section
+// vocabulary the reports and sandboxes use). These used to be defined
+// locally in this file; unified here so there's one source of truth.
+import { PlainTalk, Methodology, Tips, InstitutionalAnalysis } from "./Explainers";
 
 const PAYROLL_ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
   pizzaiolo: "Pizzaiolo",
@@ -1586,141 +1590,10 @@ function deriveArchetypes(s: SimulationScenario) {
 // explanation with a "plain terms" callout showing real-life examples and
 // how the lever moves the actual zł numbers.
 
-function PlainTalk({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        padding: "10px 12px",
-        background: "rgba(234, 88, 12, 0.06)",
-        borderLeft: "3px solid rgb(234, 88, 12)",
-        borderRadius: 6,
-        fontSize: 13.5,
-        lineHeight: 1.55,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          color: "rgb(194, 65, 12)",
-          marginBottom: 6,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <Sparkles style={{ width: 12, height: 12 }} aria-hidden /> In plain terms
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Tips({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: "10px 12px",
-        background: "rgba(22, 163, 74, 0.07)",
-        borderLeft: "3px solid rgb(22, 163, 74)",
-        borderRadius: 6,
-        fontSize: 13.5,
-        lineHeight: 1.55,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          color: "rgb(21, 128, 61)",
-          marginBottom: 6,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <Lightbulb style={{ width: 12, height: 12 }} aria-hidden /> Tips — how to push this lever
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Methodology({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: "10px 12px",
-        background: "rgba(59, 130, 246, 0.06)",
-        borderLeft: "3px solid rgb(59, 130, 246)",
-        borderRadius: 6,
-        fontSize: 13,
-        lineHeight: 1.55,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          color: "rgb(30, 64, 175)",
-          marginBottom: 6,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <Calculator style={{ width: 12, height: 12 }} aria-hidden /> Methodology — how this is determined
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/** Slate/navy callout for the deeper CFA-3 / institutional analysis tier.
- *  Sits between the 1-2 sentence brief description and the storytelling
- *  PlainTalk callout. Carries the rigorous "why it matters, how to think
- *  about it" content — benchmarks, formulas, structural commentary. */
-function InstitutionalAnalysis({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: "10px 12px",
-        background: "rgba(71, 85, 105, 0.06)",
-        borderLeft: "3px solid rgb(71, 85, 105)",
-        borderRadius: 6,
-        fontSize: 13.5,
-        lineHeight: 1.55,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          color: "rgb(30, 41, 59)",
-          marginBottom: 6,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <Scale style={{ width: 12, height: 12 }} aria-hidden /> Institutional analysis
-      </div>
-      {children}
-    </div>
-  );
-}
+// PlainTalk / Tips / Methodology / InstitutionalAnalysis now live in
+// ./Explainers (imported above) — the Calculator was the origin of this
+// five-section vocabulary; it's been unified onto the shared blocks so the
+// reports, sandboxes and Calculator can't drift (CLAUDE.md Rule #12).
 
 // --- Dynamic attach-lever help -------------------------------------------
 //

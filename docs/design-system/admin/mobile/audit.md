@@ -1,5 +1,10 @@
 # Sud Italia — Mobile Admin Audit
 
+> **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
+> document describes is no longer served; phones now render the responsive
+> desktop layout 1:1. See [`README.md`](./README.md) for the retirement note.
+> Kept for history — not the current spec.
+
 **Date:** 2026-05-17
 **Scope:** Every admin surface in `src/app/admin/*` and its shell, evaluated for mobile readiness, restructuring need, and ergonomic risk.
 **Companion docs:** `ux-strategy.md`, `navigation.md`, `design-system.md`

@@ -179,6 +179,36 @@ Key rules:
   `--radius-xl` (16px).
 - Header / footer of the dialog have 1px `--border` dividers.
 
+## Metric explainers — the ⓘ contract
+
+Live code: `src/components/admin/Explainers.tsx` (+ `InfoButton` in
+`v2/ui/InfoButton.tsx`, which portals the dialog).
+
+Any ⓘ `InfoButton` on a KPI card, metric or what-if lever (reports,
+sandboxes, the Calculator) explains itself in **five fixed sections, in this
+order, with these labels** — the **CLAUDE.md Rule #12** contract:
+
+1. one-line **description** (plain paragraph, no rail)
+2. **INSTITUTIONAL ANALYSIS** — slate left-rail (`rgb(71,85,105)`), `Scale` icon
+3. **IN PLAIN TERMS** — orange left-rail (`rgb(234,88,12)`), `Sparkles` icon
+4. **TIPS — HOW TO PUSH THIS LEVER** — green left-rail (`rgb(22,163,74)`), `Lightbulb` icon
+5. **METHODOLOGY — HOW THIS IS DETERMINED** — blue left-rail (`rgb(59,130,246)`), `Calculator` icon
+
+- **Build it from `MetricExplainer`** (`Explainers.tsx`) — it fixes the order
+  and labels and its five props are all required, so a half-written
+  explanation won't compile. The individual blocks (`InstitutionalAnalysis` /
+  `PlainTalk` / `Tips` / `Methodology`) are exported for the page-level "How to
+  read these numbers" / "How this projects" cards; `Tips` defaults its
+  headline to "Tips — how to push this lever" (override via the `headline`
+  prop). The Calculator's `HELP` registry is the origin of this vocabulary and
+  imports the same shared blocks.
+- **Colour exception:** the four accent left-rails are intentional semantic
+  hex (orange/slate/green/blue), *not* theme tokens — the one sanctioned
+  deviation from "all colour from tokens", because the rails are a fixed,
+  cross-surface reading language. Don't recolour them per surface.
+- Render the ⓘ trigger via `InfoButton` (`size="sm"` inside a KPI-card label;
+  `size="md"` in a card header). The dialog is portaled (Rule #4).
+
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /

@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
-import { PlainTalk, Methodology, Tips } from "./Explainers";
-import { Button, Card, CardBody, EmptyState } from "./v2/ui";
+import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
+import { LtvCacSandbox } from "./LtvCacSandbox";
 
 interface LtvCacMonthRow {
   cohortMonth: string;
@@ -77,6 +78,19 @@ function blendedRetentionCurve(
   return out;
 }
 
+/** KPI label with a per-card InfoButton (ⓘ) whose dialog follows the
+ *  five-section MetricExplainer contract (CLAUDE.md Rule #12). */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
+}
+
 export function AdminLtvCac() {
   const [data, setData] = useState<LtvCacReport | null>(null);
   const [cohort, setCohort] = useState<CohortReport | null>(null);
@@ -131,6 +145,7 @@ export function AdminLtvCac() {
             />
           </CardBody>
         </Card>
+        <LtvCacSandbox />
       </div>
     );
   }
@@ -176,7 +191,41 @@ export function AdminLtvCac() {
 
       <section className="v2-kpi-grid">
         <KpiCard
-          label="LTV : CAC"
+          label={kpiInfo(
+            "LTV : CAC",
+            <MetricExplainer
+              description="How many złoty of lifetime gross profit you earn for each złoty spent acquiring a customer."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  The defining unit-economics ratio in consumer investing. 3× is the institutional
+                  floor — below it growth destroys value; at 3–5× you scale; far above 5× you&apos;re
+                  under-investing in growth. Read it blended <em>and</em> by cohort, because a healthy
+                  blend can mask a deteriorating recent cohort.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 35&nbsp;zł to win a customer worth ~92&nbsp;zł of margin and you&apos;re at
+                  2.6× — under the bar, so each customer is a touch too expensive. Make them worth
+                  more or acquire them cheaper.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Lift the numerator before cutting the denominator: raising LTV (retention, AOV,
+                  margin) compounds across every future customer; shaving CAC has a hard floor. Model
+                  the moves on the what-if sandbox below.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>LTV ÷ CAC</code>, using margin-adjusted 365-day LTV and blended CAC from the
+                  marketing-cost ledger. Tone: green ≥ 3×, amber 1–3×, red &lt; 1×; &ldquo;—&rdquo;
+                  until marketing spend is logged.
+                </p>
+              }
+            />,
+          )}
           value={t.ltvCacRatio ?? 0}
           display={fmtRatio(t.ltvCacRatio)}
           icon={TrendingUp}
@@ -184,21 +233,118 @@ export function AdminLtvCac() {
           hint={t.ltvCacRatio === null ? "log marketing spend" : t.ltvCacRatio >= 3 ? "healthy (≥ 3×)" : "below 3× benchmark"}
         />
         <KpiCard
-          label="Blended CAC"
+          label={kpiInfo(
+            "Blended CAC",
+            <MetricExplainer
+              description="Customer acquisition cost across all channels — the marketing spend it takes to win one new customer."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  CAC is the denominator of the ratio and the lever with the hardest floor — there&apos;s
+                  a market-clearing price for attention you can&apos;t undercut forever. &ldquo;Blended&rdquo;
+                  mixes every channel; track it per channel and over time, because a rising CAC is the
+                  earliest sign a channel is saturating.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 6,300&nbsp;zł in a month and 180 new customers show up → each cost ~35&nbsp;zł
+                  to acquire. That&apos;s the price tag on a new regular.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Lower it by leaning on what you already have: referrals (your cheapest channel — a
+                  give-get beats paid every time), word-of-mouth, and retargeting people who already
+                  know you. Cut the worst-CAC channel; don&apos;t dilute the whole budget.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Marketing-category spend from the <Link href="/admin/business-costs" className="v2-link">Business-costs ledger</Link>{" "}
+                  ÷ new customers in the window. Shows &ldquo;—&rdquo; (never a fabricated 0) until spend is logged.
+                </p>
+              }
+            />,
+          )}
           value={t.blendedCacGrosze ?? 0}
           display={t.blendedCacGrosze === null ? "—" : formatPrice(t.blendedCacGrosze)}
           icon={Wallet}
           hint={`${t.newCustomers} new customers · ${formatPrice(t.marketingSpendGrosze)} spend`}
         />
         <KpiCard
-          label="Blended LTV"
+          label={kpiInfo(
+            "Blended LTV",
+            <MetricExplainer
+              description="The margin-adjusted lifetime value of an average customer over their first 365 days."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Underwriters use margin LTV, not revenue LTV, because only gross profit services
+                  CAC and overhead — revenue LTV flatters thin-margin businesses. Anchoring to
+                  observed 365-day cohort behaviour (not an assumed lifespan) is what makes it
+                  defensible in diligence.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  A customer might spend ~150&nbsp;zł of revenue with you in a year, but at a 62%
+                  margin only ~92&nbsp;zł is profit you keep. That 92&nbsp;zł is what you can spend to
+                  win them and still come out ahead.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Three levers feed it: come-back rate, basket size, and the margin on what they buy.
+                  Steer the mix toward high-margin dishes (see Menu engineering), defend price, and
+                  lift repeat — each flows straight in.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Cohort 365-day revenue per customer × the blended order-line gross margin
+                  ({data.blendedMarginPct}% here, computed from real line-item price − cost).
+                </p>
+              }
+            />,
+          )}
           value={t.blendedLtvMarginGrosze}
           display={formatPrice(t.blendedLtvMarginGrosze)}
           icon={Coins}
           hint={`${formatPrice(t.blendedLtvGrosze)} revenue · ${data.blendedMarginPct}% margin`}
         />
         <KpiCard
-          label="CAC payback"
+          label={kpiInfo(
+            "CAC payback",
+            <MetricExplainer
+              description="How many months it takes to earn a customer's acquisition cost back from their margin."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Payback is the cash-flow twin of the ratio: LTV:CAC says a customer is profitable
+                  eventually; payback says how long your cash is tied up getting there. Under ~12
+                  months is the venture norm; under 3 means you can self-fund growth. It&apos;s the
+                  constraint that actually caps how fast you can scale.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Spend 35&nbsp;zł on a customer who throws off ~8&nbsp;zł of margin a month and
+                  you&apos;re square in about four months — after that they&apos;re pure profit.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Shorten it by pulling the second order forward (a fast post-first-order nudge),
+                  lifting early-life basket size, or lowering CAC. A long payback with a great ratio
+                  is a financing problem — but it still throttles growth.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  <code>12 × CAC ÷ LTV</code> (months). Tone: green ≤ 3, amber 3–12, red ≥ 13 (shown
+                  as &ldquo;&gt;12 mo&rdquo;).
+                </p>
+              }
+            />,
+          )}
           value={0}
           display={fmtPayback(t.paybackMonths)}
           icon={Timer}
@@ -333,6 +479,7 @@ export function AdminLtvCac() {
           </div>
         </CardBody>
       </Card>
+      <LtvCacSandbox />
     </div>
   );
 }

@@ -24,7 +24,7 @@ What this doc covers (the admin back-office):
 | Customers     | Customers, Loyalty, Corporate, Feedback                                |
 | Finance       | Reports, Cash, Business costs, Calculator                              |
 | Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Truck ops            |
-| Intelligence  | Multi-location, Manage locations, Cohort & CLTV, LTV / CAC, Menu engineering, Insights, Expansion |
+| Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
 | System        | Users & roles, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Currency, Languages, Settings |
 
 What this doc does **not** cover:
@@ -52,9 +52,14 @@ The shell owns:
   warrants it (single-key, lowercase).
 - **Notification panel** — operator-facing alerts; never marketing.
 - **Shortcuts help** (`?`) — auto-generated from `nav.config.ts`.
-- **Mobile shell** — switches to `MobileShell` below the breakpoint; admin
-  pages must work in both. Mobile-specific patterns live in
-  [`mobile/`](./mobile/).
+- **Responsive shell (one layout, all viewports)** — the `v2-shell` chrome is
+  served on **every** screen size. Below 900px the sidebar collapses into the
+  hamburger drawer (`Topbar` → `v2-mobile-drawer`) and pages reflow via their
+  own `@media (max-width: 720px)` rules; there is no separate phone UI. Admin
+  is **1:1 across phone / tablet / desktop**. The old divergent `MobileShell`
+  (bottom-nav + per-page `Mobile*` components) is **retired** — `useIsMobile()`
+  is now a desktop-only shim. See [`mobile/`](./mobile/) for the historical
+  shape and the retirement note.
 
 Login (`/admin/login`) is the only bare route — it renders without the shell.
 

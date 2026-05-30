@@ -49,8 +49,11 @@ The live stock dashboard + the recent-movements log.
 - **Movement form:** inline (no modal) — quantity + direction (in / out
   / waste / transfer) + optional note. Persists immediately, toast
   confirms, table refreshes.
-- **Barcode scan** is available on the mobile shell — `BarcodeScanner` in
-  `src/components/admin/mobile/`. Desktop has a manual code field.
+- **Code entry:** a manual code field on the stock table. (A camera
+  `BarcodeScanner` shipped only inside the now-retired mobile shell — see
+  [`mobile/README.md`](../mobile/README.md) — so live barcode scanning is
+  not currently wired into the responsive layout; the manual field is the
+  path until it's re-added.)
 - **Movements log** (last 50) underneath the table — ingredient,
   direction, quantity, who, when, note.
 

@@ -2735,6 +2735,22 @@ export interface AppSettings {
    *  conversations (built only from the real menu); when false the controls
    *  are hidden and the simulator API rejects spawn (purge still works). */
   whatsappSimulatorEnabled?: boolean;
+  /** Toggle for the Cohort & CLTV what-if sandbox embedded at the bottom of
+   *  the cohort report (/admin/reports/cohort, CohortSandbox.tsx). When false
+   *  the sandbox section renders null. Seeds from the real cohort report and
+   *  projects forward under operator-set retention / AOV / frequency levers
+   *  (worked example fallback when there's no data) — never writes live data. */
+  cohortSimulationEnabled?: boolean;
+  /** Toggle for the LTV/CAC what-if sandbox embedded at the bottom of the
+   *  LTV/CAC report (/admin/reports/ltv-cac, LtvCacSandbox.tsx). When false the
+   *  sandbox renders null. Lets operators flex CAC, retention, AOV, margin and
+   *  frequency to see the LTV:CAC ratio + payback move. */
+  ltvCacSimulationEnabled?: boolean;
+  /** Toggle for the Menu-engineering what-if sandbox embedded at the bottom of
+   *  the matrix (/admin/menu-engineering, MenuEngineeringSandbox.tsx). When
+   *  false the sandbox renders null. Re-prices / re-promotes items to project
+   *  the contribution-margin impact before touching the live menu. */
+  menuEngineeringSimulationEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;

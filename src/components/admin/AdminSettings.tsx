@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Bell,
   FlaskConical,
   History,
   KeyRound,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
+import { useAdminPush } from "./v2/useAdminPush";
 import { useToast } from "./v2/ui/Toast";
 
 const MobileSettings = dynamic(
@@ -58,6 +60,9 @@ interface Settings {
   simulationEnabled?: boolean;
   kdsSimulatorEnabled?: boolean;
   whatsappSimulatorEnabled?: boolean;
+  cohortSimulationEnabled?: boolean;
+  ltvCacSimulationEnabled?: boolean;
+  menuEngineeringSimulationEnabled?: boolean;
   /** Storefront visibility toggles set in the Layout tab. */
   layout?: {
     showCurrencySwitcher: boolean;
@@ -220,6 +225,7 @@ export function AdminSettings() {
 
 function AdminSettingsDesktop() {
   const toast = useToast();
+  const push = useAdminPush();
   const [tab, setTab] = useState<TabKey>("general");
 
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -242,6 +248,9 @@ function AdminSettingsDesktop() {
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [whatsappSimulatorEnabled, setWhatsappSimulatorEnabled] = useState(false);
+  const [cohortSimulationEnabled, setCohortSimulationEnabled] = useState(false);
+  const [ltvCacSimulationEnabled, setLtvCacSimulationEnabled] = useState(false);
+  const [menuEngineeringSimulationEnabled, setMenuEngineeringSimulationEnabled] = useState(false);
   const [layoutFlags, setLayoutFlags] = useState<Record<LayoutFlag, boolean>>(
     () =>
       LAYOUT_TOGGLES.reduce((acc, spec) => {
@@ -254,6 +263,9 @@ function AdminSettingsDesktop() {
   const [simBusy, setSimBusy] = useState(false);
   const [kdsSimBusy, setKdsSimBusy] = useState(false);
   const [whatsappSimBusy, setWhatsappSimBusy] = useState(false);
+  const [cohortSimBusy, setCohortSimBusy] = useState(false);
+  const [ltvCacSimBusy, setLtvCacSimBusy] = useState(false);
+  const [menuEngSimBusy, setMenuEngSimBusy] = useState(false);
 
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -286,6 +298,9 @@ function AdminSettingsDesktop() {
     setSimulationEnabled(!!data.simulationEnabled);
     setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
     setWhatsappSimulatorEnabled(!!data.whatsappSimulatorEnabled);
+    setCohortSimulationEnabled(!!data.cohortSimulationEnabled);
+    setLtvCacSimulationEnabled(!!data.ltvCacSimulationEnabled);
+    setMenuEngineeringSimulationEnabled(!!data.menuEngineeringSimulationEnabled);
     // Layout tab — visibility toggles for storefront chrome. Default to
     // "show" so a freshly-deployed instance behaves the same as before
     // this tab existed. Any unset flag stays `true`.
@@ -398,6 +413,36 @@ function AdminSettingsDesktop() {
       }
     } finally {
       setSimBusy(false);
+    }
+  };
+
+  // Generic helper for the three what-if simulator toggles — each gates a
+  // nav link + a server-side page redirect, exactly like toggleSimulation.
+  const toggleAnalyticsSim = async (
+    key: "cohortSimulationEnabled" | "ltvCacSimulationEnabled" | "menuEngineeringSimulationEnabled",
+    next: boolean,
+    setEnabled: (v: boolean) => void,
+    setBusy: (v: boolean) => void,
+    label: string,
+  ) => {
+    setBusy(true);
+    setEnabled(next); // optimistic
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: next }),
+      });
+      if (res.ok) {
+        toast.success(next ? `${label} enabled` : `${label} disabled`);
+        window.dispatchEvent(new Event("sud-admin-settings-updated"));
+        await Promise.all([fetchSettings(), fetchAudit()]);
+      } else {
+        setEnabled(!next); // revert
+        toast.error("Could not update toggle");
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -864,7 +909,137 @@ function AdminSettingsDesktop() {
                     </span>
                   </span>
                 </label>
+                <label className="v2-field">
+                  <span className="v2-field-label">Cohort &amp; CLTV simulator</span>
+                  <span className="v2-muted text-sm">
+                    What-if on top of the real cohort report. Seeds the blended retention
+                    curve, repeat rate and CLTV from live paid orders, then projects them
+                    forward under operator-set retention uplift, AOV growth and order-frequency
+                    levers. Read-only on the data — nothing here writes to orders, CRM or reports.
+                  </span>
+                  <span className="inline-flex items-center gap-2 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={cohortSimulationEnabled}
+                      onChange={(e) =>
+                        toggleAnalyticsSim(
+                          "cohortSimulationEnabled",
+                          e.target.checked,
+                          setCohortSimulationEnabled,
+                          setCohortSimBusy,
+                          "Cohort & CLTV simulator",
+                        )
+                      }
+                      disabled={cohortSimBusy}
+                    />
+                    <span className="v2-muted text-sm">
+                      {cohortSimulationEnabled
+                        ? "On — a what-if sandbox shows at the bottom of the Cohort & CLTV report (/admin/reports/cohort)."
+                        : "Off — the sandbox section is hidden on the Cohort & CLTV report."}
+                    </span>
+                  </span>
+                </label>
+                <label className="v2-field">
+                  <span className="v2-field-label">LTV / CAC simulator</span>
+                  <span className="v2-muted text-sm">
+                    What-if on top of the real LTV/CAC report. Seeds blended LTV, CAC, margin
+                    and the LTV:CAC ratio from live orders + your marketing-cost ledger, then
+                    lets you flex CAC, retention, AOV, gross margin and frequency to watch the
+                    ratio, payback and profit-per-customer move against the 3× gate.
+                  </span>
+                  <span className="inline-flex items-center gap-2 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={ltvCacSimulationEnabled}
+                      onChange={(e) =>
+                        toggleAnalyticsSim(
+                          "ltvCacSimulationEnabled",
+                          e.target.checked,
+                          setLtvCacSimulationEnabled,
+                          setLtvCacSimBusy,
+                          "LTV / CAC simulator",
+                        )
+                      }
+                      disabled={ltvCacSimBusy}
+                    />
+                    <span className="v2-muted text-sm">
+                      {ltvCacSimulationEnabled
+                        ? "On — a what-if sandbox shows at the bottom of the LTV/CAC report (/admin/reports/ltv-cac)."
+                        : "Off — the sandbox section is hidden on the LTV/CAC report."}
+                    </span>
+                  </span>
+                </label>
+                <label className="v2-field">
+                  <span className="v2-field-label">Menu engineering simulator</span>
+                  <span className="v2-muted text-sm">
+                    What-if on top of the real Kasavana-Smith matrix. Seeds each dish&apos;s
+                    velocity and margin from live order history, then re-prices (with a demand
+                    elasticity), re-promotes puzzles or removes dogs to project total contribution
+                    margin and the quadrant reshuffle before you touch the live menu.
+                  </span>
+                  <span className="inline-flex items-center gap-2 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={menuEngineeringSimulationEnabled}
+                      onChange={(e) =>
+                        toggleAnalyticsSim(
+                          "menuEngineeringSimulationEnabled",
+                          e.target.checked,
+                          setMenuEngineeringSimulationEnabled,
+                          setMenuEngSimBusy,
+                          "Menu engineering simulator",
+                        )
+                      }
+                      disabled={menuEngSimBusy}
+                    />
+                    <span className="v2-muted text-sm">
+                      {menuEngineeringSimulationEnabled
+                        ? "On — a what-if sandbox shows at the bottom of the Menu engineering report (/admin/menu-engineering)."
+                        : "Off — the sandbox section is hidden on the Menu engineering report."}
+                    </span>
+                  </span>
+                </label>
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Push notifications"
+              description="Subscribe this device to admin push alerts — new orders, slot pressure, low stock, cash variance and refunds. Per-device; subscribe on each phone or desktop you want pinged."
+              actions={<Bell className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              {!push.supported ? (
+                <p className="v2-muted text-sm">
+                  This browser doesn&apos;t support web push (notifications, service workers or the
+                  Push API are unavailable). Try a recent Chrome, Edge, Firefox or Safari.
+                </p>
+              ) : !push.configured ? (
+                <p className="v2-muted text-sm">
+                  Web push isn&apos;t configured on the server yet. Set{" "}
+                  <code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code> to
+                  enable it, then this control will let operators subscribe.
+                </p>
+              ) : (
+                <div className="inline-flex items-center gap-3">
+                  <Button
+                    variant={push.subscribed ? "secondary" : "primary"}
+                    leadingIcon={<Bell className="h-3.5 w-3.5" />}
+                    loading={push.busy}
+                    onClick={() => (push.subscribed ? push.unsubscribe() : push.subscribe())}
+                  >
+                    {push.subscribed ? "Unsubscribe this device" : "Enable push on this device"}
+                  </Button>
+                  <span className="v2-muted text-sm">
+                    {push.subscribed
+                      ? "On — this device receives admin push alerts."
+                      : push.permission === "denied"
+                        ? "Notifications are blocked in your browser settings — allow them for this site first."
+                        : "Off — this device won't receive push alerts."}
+                  </span>
+                </div>
+              )}
             </CardBody>
           </Card>
 

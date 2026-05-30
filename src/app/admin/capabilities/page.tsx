@@ -137,18 +137,18 @@ export default async function CapabilitiesPage() {
           summary: "Recent system alerts surfaced in the shell — new orders, slot capacity, low stock.",
         },
         {
-          name: "Mobile admin shell",
+          name: "Responsive admin (1:1 phone ↔ desktop)",
           status: "live",
           href: "/admin",
           summary:
-            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/design-system/admin/mobile/*.md.",
+            "The admin serves the SAME responsive desktop layout on every viewport — phone, tablet and desktop are now 1:1. Below 900px the sidebar collapses into the hamburger drawer and pages reflow via their own @media (max-width: 720px) rules; there is no separate phone UI to drift. The old divergent mobile shell (bottom-nav + FAB + per-page Mobile* components) is RETIRED: useIsMobile() is a desktop-only shim and that code is dead pending a cleanup PR. See docs/design-system/admin/mobile/README.md for the retirement note.",
         },
         {
           name: "Mobile admin push notifications",
           status: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY") ? "live" : "needs-config",
           envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
           summary:
-            "Full pipeline live: client opt-in in More drawer → /api/admin/push/subscribe → admin_push_subscriptions table → pushToAdmins() server helper. Fan-out from addNotification (new order / slot pressure / slot full / low stock / bundle low margin), cash close with |variance| ≥ 50 zł, and refund processed (excluding the actor). Dead-endpoint pruning on 404/410.",
+            "Full pipeline live: per-device opt-in in Settings → General → Push notifications (useAdminPush) → /api/admin/push/subscribe → admin_push_subscriptions table → pushToAdmins() server helper. Fan-out from addNotification (new order / slot pressure / slot full / low stock / bundle low margin), cash close with |variance| ≥ 50 zł, and refund processed (excluding the actor). Dead-endpoint pruning on 404/410.",
         },
         {
           name: "Mobile operator-action telemetry",
@@ -231,7 +231,7 @@ export default async function CapabilitiesPage() {
           summary:
             "The floor board doubles as a wall-mountable kitchen-display appliance. A Fullscreen button takes it edge-to-edge (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4) and repaints into a dedicated always-dark, high-contrast 'kitchen OS' theme — oversized type, color-coded lanes, live wall-clock — regardless of the admin light/dark toggle, so it reads across a hot, bright kitchen. A stage switcher (All lanes · New · In prep · Ready, each with a live count) focuses one stage into a dense full-width grid or shows the three-column board. The component stays mounted across the portal, so the SSE stream, bump-bar hotkeys, sound and SLA timers keep running; Esc or the browser control exits fullscreen and drops kiosk. Decorative stat cards, the manager ops header and chef strip collapse in kiosk to maximize ticket space.",
           caveats:
-            "Native fullscreen is best-effort — if the browser denies it (sandboxed iframe, kiosk policy) the immersive dark layout still applies and Esc / the Exit button leave it. Kiosk is the desktop/tablet floor board; phones keep the dedicated mobile KDS, and the owner Fleet roll-up is not a kiosk surface.",
+            "Native fullscreen is best-effort — if the browser denies it (sandboxed iframe, kiosk policy) the immersive dark layout still applies and Esc / the Exit button leave it. Kiosk is the floor board on any viewport; on a phone the same board reflows via the responsive layout (the dedicated mobile KDS shell is retired). The owner Fleet roll-up is not a kiosk surface.",
         },
         {
           name: "Line cook view",
@@ -258,9 +258,9 @@ export default async function CapabilitiesPage() {
             "Number keys 1–9 (and 0 = 10) advance the Nth ticket in the leftmost active column — wired to AdminKDS keydown listener. No modifier required; ignored while an input/textarea is focused so admin search still works. Pairs with a USB number pad to remove ~3s of mouse hunt per bump at rush.",
         },
         {
-          name: "Mobile KDS layout",
+          name: "Responsive KDS layout on phones",
           status: "live",
-          summary: "Vertical card list under 640px. Same data, glove-friendly buttons.",
+          summary: "The one KDS board reflows on small viewports — its lanes stack and the ticket cards go full-width with glove-friendly bump buttons. Same board, same data as desktop (the old dedicated mobile-KDS view is retired; phones now get the responsive desktop board).",
         },
         {
           name: "Per-station analytics",
@@ -315,7 +315,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/kds",
           summary:
-            "One live-order KDS engine, three lenses by role. OWNER lands on the Atlas Fleet command board — on desktop AND mobile (the dark fleet-command surface reflows to a single-column responsive layout on a phone, with the Fleet ↔ Floor toggle dropping to the dedicated mobile KDS): both trucks side by side on a dark fleet-command surface, each with a live health ring/score, a stat row (active / at-risk / late / ready / on-shift + a throughput sparkline), the per-truck Pace layer (covers/hr, revenue/hr, a bottleneck capacity meter, and per-station pace gauges), and a tone-sorted ticket stack with depleting SLA rings, the violet predicted-miss tier, allergen alerts and notes. A fleet command bar aggregates active / at-risk / late / ready / throughput / covers / revenue and a cross-truck promise-accuracy benchmark (per-truck bars vs target, leader-vs-lagger gap, throughput-weighted fleet mean). Header carries Refresh, a live clock, and Fullscreen (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4). Tickets advance inline (Start prep / Mark ready / Bump) through PUT /api/admin/orders; clicking a truck header drills into its floor board (sets location + switches lens). GET /api/admin/kds/fleet, owner-only, opts into simulated tickets (?includeSimulated=1, each marked with a dashed frame + 'SIMULATION' tag) so a sandbox rush lights up the board for demos, 1s live tick + 6s data refresh. MANAGER / FRANCHISEE (and an owner drilled into a truck) get the floor board plus a floor-control header: live open / late / due-soon / oldest / average-age from the active orders the board streams, with throughput (done last hour) + on-shift staff (open time-punches) + live 86 management (restore chips + '86 an item' picker) from GET /api/admin/kds/floor-ops. CHEF (kitchen / staff) get a line strip: live queue depth (tickets in queue + oldest age), and one-tap 86 of an item they've run out of (candidates are the items actually on the active tickets) + restore, via the kitchen-permitted GET/POST /api/admin/kds/eighty-six (audit-logged as menu.item_86). Every surface — the Atlas fleet board, the floor board (desktop + mobile, which keeps its New / In prep / Ready lanes) and the fullscreen kiosk — renders ONE shared KdsTicketCard (ring timer, predicted-ready line, violet at-risk tier, allergen alert, station-grouped items) built by buildKdsTicket and toned by the same analyzeTruck predictive engine, so the cards are byte-for-byte identical across the whole KDS. Both the floor board and the Atlas fleet board opt into simulated tickets (?includeSimulated=1) so the order simulator can stream a marked SIMULATION rush onto them; the floor-ops / fleet roll-ups (promise-accuracy + throughput sparkline, from the kds_tickets ledger) and every report stay real-only. Bump-time P95 reads getKdsStationAnalytics (real kds_tickets only).",
+            "One live-order KDS engine, three lenses by role. OWNER lands on the Atlas Fleet command board — on desktop AND mobile (the dark fleet-command surface reflows to a single-column responsive layout on a phone, with the Fleet ↔ Floor toggle reflowing the same board to the phone): both trucks side by side on a dark fleet-command surface, each with a live health ring/score, a stat row (active / at-risk / late / ready / on-shift + a throughput sparkline), the per-truck Pace layer (covers/hr, revenue/hr, a bottleneck capacity meter, and per-station pace gauges), and a tone-sorted ticket stack with depleting SLA rings, the violet predicted-miss tier, allergen alerts and notes. A fleet command bar aggregates active / at-risk / late / ready / throughput / covers / revenue and a cross-truck promise-accuracy benchmark (per-truck bars vs target, leader-vs-lagger gap, throughput-weighted fleet mean). Header carries Refresh, a live clock, and Fullscreen (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4). Tickets advance inline (Start prep / Mark ready / Bump) through PUT /api/admin/orders; clicking a truck header drills into its floor board (sets location + switches lens). GET /api/admin/kds/fleet, owner-only, opts into simulated tickets (?includeSimulated=1, each marked with a dashed frame + 'SIMULATION' tag) so a sandbox rush lights up the board for demos, 1s live tick + 6s data refresh. MANAGER / FRANCHISEE (and an owner drilled into a truck) get the floor board plus a floor-control header: live open / late / due-soon / oldest / average-age from the active orders the board streams, with throughput (done last hour) + on-shift staff (open time-punches) + live 86 management (restore chips + '86 an item' picker) from GET /api/admin/kds/floor-ops. CHEF (kitchen / staff) get a line strip: live queue depth (tickets in queue + oldest age), and one-tap 86 of an item they've run out of (candidates are the items actually on the active tickets) + restore, via the kitchen-permitted GET/POST /api/admin/kds/eighty-six (audit-logged as menu.item_86). Every surface — the Atlas fleet board, the floor board (desktop + mobile, which keeps its New / In prep / Ready lanes) and the fullscreen kiosk — renders ONE shared KdsTicketCard (ring timer, predicted-ready line, violet at-risk tier, allergen alert, station-grouped items) built by buildKdsTicket and toned by the same analyzeTruck predictive engine, so the cards are byte-for-byte identical across the whole KDS. Both the floor board and the Atlas fleet board opt into simulated tickets (?includeSimulated=1) so the order simulator can stream a marked SIMULATION rush onto them; the floor-ops / fleet roll-ups (promise-accuracy + throughput sparkline, from the kds_tickets ledger) and every report stay real-only. Bump-time P95 reads getKdsStationAnalytics (real kds_tickets only).",
           caveats:
             "A persisted expedite / reprioritize action (pin a ticket to the top of every screen) is the remaining enhancement. Throughput counts orders completed-and-created in the trailing hour (no separate completedAt timestamp), accurate at truck prep times. The kitchen 86 endpoint can only flip availability (not edit price/menu), and every flip is audit-logged with the actor.",
         },
@@ -940,6 +940,27 @@ export default async function CapabilitiesPage() {
           href: "/admin/simulation",
           summary:
             "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
+        },
+        {
+          name: "Cohort & CLTV what-if sandbox",
+          status: "live",
+          href: "/admin/reports/cohort",
+          summary:
+            "A what-if sandbox embedded at the bottom of the Cohort & CLTV report (CohortSandbox.tsx). Seeds the real cohort numbers (repeat rate, orders/customer, cohort-size-weighted 365-day CLTV, blended retention curve) and projects them forward under three levers — repeat-rate uplift (pp), AOV growth (%), new customers/month. CLTV = orders/customer × value/order; the repeat lever holds 'extra orders per repeater' constant and re-derives orders/customer; the retention curve is scaled by the repeat-rate ratio (capped 100%). KPIs vs baseline. When there are no paid orders yet it runs on a worked Sud Italia example (badged 'Example data') so it's never empty. Read-only on live data. Off by default; toggle in Settings → General (Simulator card).",
+        },
+        {
+          name: "LTV / CAC what-if sandbox",
+          status: "live",
+          href: "/admin/reports/ltv-cac",
+          summary:
+            "A what-if sandbox embedded at the bottom of the LTV/CAC report (LtvCacSandbox.tsx). Seeds the real margin-LTV, blended margin and CAC, then flexes CAC (absolute zł), retention/frequency (%), AOV (%), gross-margin (pp) and new customers/month. Revenue-LTV is recovered as LTV ÷ margin, scaled, then re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV. KPIs tone against the 3× gate plus profit/customer and monthly cohort profit. Falls back to a worked example when there's no acquisition data. Off by default; toggle in Settings → General (Simulator card).",
+        },
+        {
+          name: "Menu-engineering what-if sandbox",
+          status: "live",
+          href: "/admin/menu-engineering",
+          summary:
+            "A what-if sandbox embedded at the bottom of the Menu engineering matrix (MenuEngineeringSandbox.tsx). Seeds per-item units / revenue / cost / quadrant (30/60/90/180-day window) and re-prices a target group with a demand response of (1+Δprice)^(−elasticity), promotes puzzle velocity, or removes dogs. Recovers per-unit price/cost from real revenue÷units, recomputes contribution = projected revenue − cost across the menu. KPIs + a 'biggest movers' table. Falls back to a worked 10-dish Sud Italia menu when nothing has sold. Off by default; toggle in Settings → General (Simulator card).",
         },
         {
           name: "Calculator actuals (real-order ground truth)",
