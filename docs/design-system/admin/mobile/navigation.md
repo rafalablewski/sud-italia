@@ -1,5 +1,10 @@
 # Sud Italia — Mobile Navigation Architecture
 
+> **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
+> document describes is no longer served; phones now render the responsive
+> desktop layout 1:1. See [`README.md`](./README.md) for the retirement note.
+> Kept for history — not the current spec.
+
 **Date:** 2026-05-17
 **Companion:** `design-system.md`, `ux-strategy.md`
 **Implementation:** `src/components/admin/v2/mobile/BottomNav.tsx`, `MoreDrawer.tsx`, `MobileTopbar.tsx`, `QuickActionSheet.tsx`

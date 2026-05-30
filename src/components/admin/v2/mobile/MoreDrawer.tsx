@@ -9,7 +9,7 @@ import { BottomSheet } from "./BottomSheet";
 import { setBottomNavPin } from "./BottomNav";
 import { useAdminLocation } from "../LocationContext";
 import { PushSettingsSheet } from "./PushSettingsSheet";
-import { useAdminPush } from "./useAdminPush";
+import { useAdminPush } from "../useAdminPush";
 import { useAutoTheme } from "./useAutoTheme";
 import { useInstallPrompt } from "./useInstallPrompt";
 import { useNavHistory } from "./useNavHistory";

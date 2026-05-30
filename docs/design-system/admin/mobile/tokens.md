@@ -1,5 +1,10 @@
 # Sud Italia — Mobile Admin Design System
 
+> **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
+> document describes is no longer served; phones now render the responsive
+> desktop layout 1:1. See [`README.md`](./README.md) for the retirement note.
+> Kept for history — not the current spec.
+
 **Date:** 2026-05-17
 **Scope:** Mobile-only design tokens, primitives, patterns, ergonomics
 **Foundation:** Extends `src/components/admin/v2/` (theme.ts, ui/*, charts/*) — does NOT replace the desktop system

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Bell,
   FlaskConical,
   History,
   KeyRound,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
+import { useAdminPush } from "./v2/useAdminPush";
 import { useToast } from "./v2/ui/Toast";
 
 const MobileSettings = dynamic(
@@ -223,6 +225,7 @@ export function AdminSettings() {
 
 function AdminSettingsDesktop() {
   const toast = useToast();
+  const push = useAdminPush();
   const [tab, setTab] = useState<TabKey>("general");
 
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -997,6 +1000,46 @@ function AdminSettingsDesktop() {
                   </span>
                 </label>
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Push notifications"
+              description="Subscribe this device to admin push alerts — new orders, slot pressure, low stock, cash variance and refunds. Per-device; subscribe on each phone or desktop you want pinged."
+              actions={<Bell className="h-4 w-4 v2-muted" />}
+            />
+            <CardBody>
+              {!push.supported ? (
+                <p className="v2-muted text-sm">
+                  This browser doesn&apos;t support web push (notifications, service workers or the
+                  Push API are unavailable). Try a recent Chrome, Edge, Firefox or Safari.
+                </p>
+              ) : !push.configured ? (
+                <p className="v2-muted text-sm">
+                  Web push isn&apos;t configured on the server yet. Set{" "}
+                  <code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code> to
+                  enable it, then this control will let operators subscribe.
+                </p>
+              ) : (
+                <div className="inline-flex items-center gap-3">
+                  <Button
+                    variant={push.subscribed ? "secondary" : "primary"}
+                    leadingIcon={<Bell className="h-3.5 w-3.5" />}
+                    loading={push.busy}
+                    onClick={() => (push.subscribed ? push.unsubscribe() : push.subscribe())}
+                  >
+                    {push.subscribed ? "Unsubscribe this device" : "Enable push on this device"}
+                  </Button>
+                  <span className="v2-muted text-sm">
+                    {push.subscribed
+                      ? "On — this device receives admin push alerts."
+                      : push.permission === "denied"
+                        ? "Notifications are blocked in your browser settings — allow them for this site first."
+                        : "Off — this device won't receive push alerts."}
+                  </span>
+                </div>
+              )}
             </CardBody>
           </Card>
 
