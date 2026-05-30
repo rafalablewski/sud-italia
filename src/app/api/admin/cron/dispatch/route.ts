@@ -61,6 +61,9 @@ const ALL_JOBS = [
   { path: "/api/admin/cron/whatsapp-abandoned-cart", everyDay: true },
   // WhatsApp broadcast backstop — finishes any campaign left mid-send.
   { path: "/api/admin/cron/whatsapp-broadcast-drain", everyDay: true },
+  // Appendix A — nightly logical DB backup to S3. Self-skips when S3 isn't
+  // configured. Restore: docs/runbooks/backup-restore.md.
+  { path: "/api/admin/cron/db-backup", everyDay: true },
 ] as const;
 
 function shouldRun(

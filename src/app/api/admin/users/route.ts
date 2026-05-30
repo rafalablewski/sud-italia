@@ -6,7 +6,13 @@ import { adminUserUpsertSchema, parseBody } from "@/lib/api-schemas";
 // Admin-user mgmt is itself a privileged surface — manager+ for writes,
 // any-auth for reads (so the admin/users page can show the roster).
 export const GET = withAdmin({}, async () => {
-  return NextResponse.json(await getAdminUsers());
+  // Never ship the TOTP secret to the client — expose only the boolean flag.
+  const users = (await getAdminUsers()).map((u) => {
+    const { totpSecret, ...rest } = u;
+    void totpSecret;
+    return { ...rest, totpEnabled: !!u.totpEnabled };
+  });
+  return NextResponse.json(users);
 });
 
 async function upsertUser(req: NextRequest, actor: string) {

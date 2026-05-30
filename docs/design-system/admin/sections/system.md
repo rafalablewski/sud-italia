@@ -162,6 +162,14 @@ The source-of-truth dashboard for what's deployed.
 - **Status auto-introspects** via the `has(...keys)` helper. A live
   feature with all env vars present is `live`; missing env vars give
   `needs-config`; an explicit kill switch gives `disabled`.
+- **Optional `setup` guide:** a card may carry a `setup: SetupGuide`
+  (`{ goal, steps: { text, code? }[], appliesAt?, doc? }`). It renders as
+  an expandable `<details>` block **outside** the card's wrapping `<Link>`
+  (a `<details>` is interactive content and can't nest in an anchor, and
+  the toggle must not navigate). Use it on `needs-config` items to turn
+  "Set: FOO" into an actual how-to — copyable commands, where to paste the
+  value (`appliesAt`), and a pointer to the in-repo runbook (`doc`). Live
+  examples: admin password rotation, MFA, Sentry alerting, S3 backup.
 - **Anything not registered here doesn't exist** for the operator. This
   is the deal — if a feature ships without registering, operators can't
   find it, can't configure it, can't debug it.

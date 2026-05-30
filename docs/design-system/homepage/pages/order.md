@@ -19,6 +19,7 @@ V8 since Step 14 — all selectors live under `.v8-order-*` in
 | Order summary                  | (inside `OrderTracker`)                                    | `.v8-order-summary`                         |
 | Pickup location                | inline                                                     | `.v8-order-pickup`                          |
 | Loyalty points earned          | `src/components/order/LoyaltyPointsEarned.tsx`             | `.v8-order-loyalty`                         |
+| Post-order upsell              | `src/components/order/PostOrderUpsell.tsx`                 | reuses `.v8-cart-pairs`, `.v8-cart-pair*`   |
 | Limited-time come-back card    | inline                                                     | `.v8-order-comeback`                        |
 | Customer milestone             | `src/components/order/CustomerMilestone.tsx`               | `.v8-order-milestone`                       |
 | Push opt-in                    | `src/components/order/PushOptInButton.tsx`                 | `.v8-order-push`, `.v8-order-push-confirmed`|
@@ -140,6 +141,22 @@ Quiet, non-intrusive recognition. Triggers on 1st / 5th / 10th /
   is ready · *quando è pronto*".
 - Hides entirely when VAPID isn't configured, the browser doesn't
   support push, or the customer has denied permission.
+
+### Post-order upsell — `<PostOrderUpsell />`
+
+- Live code: `src/components/order/PostOrderUpsell.tsx`. Reuses the cart
+  pairing surface (`.v8-cart-pairs`, `.v8-cart-pair`, `.v8-cart-pair-add`)
+  rather than adding new selectors, so the confirmation cross-sell reads
+  identically to the cart drawer's "Pairs beautifully with —" rail.
+- Fetches `/api/upsell/post-order?orderId=` — the same `getCartSuggestions()`
+  engine, seeded with the just-placed order and filtered to additive items
+  (anything already on the order is dropped). Renders nothing when there are
+  no suggestions.
+- Tapping **Add · aggiungi** drops the item into the (now empty) cart store;
+  once anything is added a terracotta `.v8-order-action.is-primary` CTA links
+  back to `/locations/{slug}#menu` to complete a quick follow-on order.
+- Gated by `<LayoutGate flag="showPostOrderUpsell">` (Settings → Layout →
+  Order confirmation). Default on.
 
 ### Feedback survey — `<FeedbackSurvey />`
 

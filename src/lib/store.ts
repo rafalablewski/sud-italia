@@ -13,6 +13,7 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { withDistributedLock } from "@/lib/locks";
+import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
@@ -429,7 +430,7 @@ export async function incrementSlotOrders(id: string): Promise<boolean> {
     const slots = await readJSON<TimeSlot[]>("slots.json", []);
     const slot = slots.find((s) => s.id === id);
     if (!slot) return false;
-    if (slot.currentOrders >= slot.maxOrders) {
+    if (isSlotFull(slot)) {
       incrCounter("slot.full");
       return false;
     }
@@ -494,7 +495,7 @@ export async function getAvailableSlots(
 ): Promise<TimeSlot[]> {
   return (await getSlots(locationSlug, date)).filter((s) => {
     if ((s.status ?? "active") !== "active") return false;
-    if (s.currentOrders >= s.maxOrders) return false;
+    if (isSlotFull(s)) return false;
     if (fulfillmentType && !s.fulfillmentTypes.includes(fulfillmentType as TimeSlot["fulfillmentTypes"][number])) return false;
     return true;
   });
@@ -2797,6 +2798,9 @@ export interface LayoutSettings {
   /** Show the post-order feedback survey on the order-confirmation +
    *  review pages. */
   showFeedbackSurvey: boolean;
+  /** Show the "complete your meal" post-order cross-sell on the
+   *  order-confirmation page. */
+  showPostOrderUpsell: boolean;
   /** Show the floating chat widget across the public site. */
   showChatWidget: boolean;
   /** Show the V8 live activity ticker (espresso-bg strip with orders/hour,
@@ -2816,6 +2820,7 @@ export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   showDeliveryProgress: true,
   showPushOptIn: true,
   showFeedbackSurvey: true,
+  showPostOrderUpsell: true,
   showChatWidget: true,
   showLiveTicker: true,
 };
@@ -7186,21 +7191,57 @@ export async function saveAdminUser(
 ): Promise<AdminUser> {
   return withLock("admin-users.json", async () => {
     const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const id = input.id || `usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const i = list.findIndex((u) => u.id === id);
+    const existing = i >= 0 ? list[i] : undefined;
     const user: AdminUser = {
-      id: input.id || `usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      // Spread the existing row first so security fields the upsert form
+      // doesn't manage (totpSecret / totpEnabled) survive an edit instead of
+      // being silently wiped on every save.
+      ...(existing ?? {}),
+      id,
       name: input.name,
       email: input.email,
       role: input.role,
       status: input.status,
       locationSlug: input.locationSlug,
       notes: input.notes,
-      createdAt: input.createdAt ?? new Date().toISOString(),
+      createdAt: input.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
-    const i = list.findIndex((u) => u.id === user.id);
     if (i >= 0) list[i] = user;
     else list.push(user);
     await writeJSON("admin-users.json", list);
     return user;
+  });
+}
+
+/** Reads a single admin user by id (or undefined). */
+export async function getAdminUserById(id: string): Promise<AdminUser | undefined> {
+  const list = await getAdminUsers();
+  return list.find((u) => u.id === id);
+}
+
+/**
+ * Updates only the TOTP fields on an admin user (enrollment + enable/disable).
+ * Returns the updated row, or null when the id isn't found.
+ */
+export async function updateAdminUserTotp(
+  id: string,
+  fields: { totpSecret?: string | null; totpEnabled?: boolean },
+): Promise<AdminUser | null> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return null;
+    const next: AdminUser = { ...list[i] };
+    if ("totpSecret" in fields) {
+      if (fields.totpSecret) next.totpSecret = fields.totpSecret;
+      else delete next.totpSecret;
+    }
+    if ("totpEnabled" in fields) next.totpEnabled = fields.totpEnabled;
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+    return next;
   });
 }
 

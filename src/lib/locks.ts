@@ -161,6 +161,15 @@ export async function withDistributedLock<T>(
       // worse than dropping to in-process and accepting the cross-
       // instance race we were already living with pre-m0_1.
       metrics.inProcessFallbacks += 1;
+      incrCounter("lock.fallbacks");
+      // Surface to Sentry (logger.error mirrors there) so the lock-fallback
+      // alert fires — a cross-instance race window is open while we run
+      // unlocked. Previously this path bumped a metric but logged nothing, so
+      // the degradation was invisible to alerting.
+      logger.error(
+        "withDistributedLock: Redis broken; falling back to in-process lock",
+        { key, layer: "locks", alert: "lock.fallback" },
+      );
       return withInProcessLock(key, fn);
     }
     attempts += 1;

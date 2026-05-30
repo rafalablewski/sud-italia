@@ -74,6 +74,7 @@ interface Settings {
     showDeliveryProgress: boolean;
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
+    showPostOrderUpsell: boolean;
     showChatWidget: boolean;
     showLiveTicker: boolean;
   };
@@ -174,6 +175,15 @@ const LAYOUT_TOGGLES: LayoutToggleSpec[] = [
       "The post-order 5-star survey on the confirmation + review pages. Surveys still arrive via admin Feedback when this is off, just not collected client-side.",
     onCopy: "Survey visible after pickup / delivery.",
     offCopy: "Hidden — no client-side survey.",
+  },
+  {
+    key: "showPostOrderUpsell",
+    group: "Order confirmation",
+    label: "Post-order upsell",
+    description:
+      "The 'complete your meal' cross-sell on the confirmation page. Uses the same getCartSuggestions() engine as the cart, seeded with the just-placed order and filtered to additive items; adding one starts a quick follow-on order.",
+    onCopy: "Complement suggestions shown after a successful order.",
+    offCopy: "Hidden — no post-order cross-sell.",
   },
   {
     key: "showChatWidget",

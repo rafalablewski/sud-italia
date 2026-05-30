@@ -355,6 +355,7 @@ sommelier rail:
 | ------------------------ | ------------------------------------------------------- |
 | 3-up segmented toggle    | `.v8-cart-fulfill` + `.v8-cart-fulfill-btn` (`.is-on`)  |
 | Address / email field    | `.v8-cart-field` + `.v8-cart-field-label` + `.v8-cart-input` |
+| Delivery address autocomplete | `<AddressAutocomplete />` (`src/components/cart/AddressAutocomplete.tsx`) — `.v8-address-ac` wrapper + `.v8-address-ac-list` / `.v8-address-ac-option` (`.is-active`) dropdown. Wraps the same `.v8-cart-input`; suggestions come from `/api/address/autocomplete` (Google Places or OSM Nominatim, key server-side). Field stays free-text. |
 | Phone with +48 prefix    | `.v8-cart-phone` + `.v8-cart-phone-prefix`              |
 | First/last grid          | `.v8-cart-name-grid`                                    |
 | Kitchen notes            | `.v8-cart-textarea`                                     |

@@ -4,6 +4,7 @@ import { useCartStore, cartLineKey } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
 import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 import { DeliveryProgress } from "./DeliveryProgress";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { ComboDealBanner } from "./ComboDealBanner";
@@ -734,13 +735,12 @@ export function CartDrawer() {
                   <label className="v8-cart-field-label" htmlFor="checkout-address">
                     Address <span className="v8-cart-field-label-aside">· indirizzo</span>
                   </label>
-                  <input
-                    id="checkout-address"
-                    type="text"
+                  <AddressAutocomplete
+                    inputId="checkout-address"
                     placeholder="Where shall we send it?"
                     value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    autoComplete="street-address"
+                    onChange={setDeliveryAddress}
+                    locationSlug={locationSlug}
                     className="v8-cart-input"
                   />
                 </div>
