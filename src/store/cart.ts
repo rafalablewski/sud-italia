@@ -2,8 +2,28 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
-import { CartItem, MenuItem, FulfillmentType } from "@/data/types";
+import { CartItem, MenuItem, FulfillmentType, SelectedModifier } from "@/data/types";
 import { effectiveUnitPrice } from "@/lib/upsell";
+
+/**
+ * Stable identity for a cart line. Two lines merge only when they are the same
+ * menu item with the same modifier selections — so a plain Margherita and a
+ * Margherita with "half Diavola + extra cheese" sit on separate lines and the
+ * stepper / remove / notes target the right one. Lines with no modifiers key on
+ * the bare menu-item id, so every existing caller that passed `menuItem.id`
+ * keeps addressing the correct line unchanged.
+ */
+export function cartLineKey(
+  item: Pick<CartItem, "menuItem" | "selectedModifiers">,
+): string {
+  const mods = item.selectedModifiers;
+  if (!mods || mods.length === 0) return item.menuItem.id;
+  const sig = mods
+    .map((m) => `${m.groupId}:${m.optionId}`)
+    .sort()
+    .join("|");
+  return `${item.menuItem.id}#${sig}`;
+}
 
 /**
  * Debounced localStorage adapter. The previous sync-on-every-set
@@ -104,10 +124,16 @@ interface CartStore {
   setDeliveryAddress: (address: string) => void;
   setPartySize: (size: number) => void;
   setTipAmount: (grosze: number) => void;
-  addItem: (item: MenuItem, locationSlug: string) => void;
-  removeItem: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
-  setItemNotes: (itemId: string, notes: string) => void;
+  addItem: (
+    item: MenuItem,
+    locationSlug: string,
+    selectedModifiers?: SelectedModifier[],
+  ) => void;
+  /** All three address a line by its `cartLineKey` (= menu-item id when the
+   *  line has no modifiers, so old call sites passing `menuItem.id` still work). */
+  removeItem: (lineKey: string) => void;
+  updateQuantity: (lineKey: string, quantity: number) => void;
+  setItemNotes: (lineKey: string, notes: string) => void;
   /**
    * Replace the cart with the bundle's resolved composition and lock the
    * subtotal to `priceGrosze`. Pass `null` to clear an applied bundle and
@@ -154,20 +180,35 @@ export const useCartStore = create<CartStore>()(
       setTipAmount: (grosze: number) =>
         set({ tipAmount: Math.max(0, Math.round(grosze)) }),
 
-      addItem: (item: MenuItem, locationSlug: string) => {
+      addItem: (
+        item: MenuItem,
+        locationSlug: string,
+        selectedModifiers?: SelectedModifier[],
+      ) => {
         set((state) => {
           const isNewLocation =
             state.locationSlug !== null && state.locationSlug !== locationSlug;
           const currentItems = isNewLocation ? [] : state.items;
 
-          const existing = currentItems.find(
-            (i) => i.menuItem.id === item.id
-          );
+          const mods =
+            selectedModifiers && selectedModifiers.length > 0
+              ? selectedModifiers
+              : undefined;
+          const candidate: CartItem = {
+            menuItem: item,
+            quantity: 1,
+            locationSlug,
+            ...(mods ? { selectedModifiers: mods } : {}),
+          };
+          // Lines are keyed by item id + chosen modifiers, so a Margherita with
+          // "half Diavola + extra cheese" stacks separately from a plain one.
+          const key = cartLineKey(candidate);
+          const existing = currentItems.find((i) => cartLineKey(i) === key);
 
           if (existing) {
             return {
               items: currentItems.map((i) =>
-                i.menuItem.id === item.id
+                cartLineKey(i) === key
                   ? { ...i, quantity: i.quantity + 1 }
                   : i
               ),
@@ -179,10 +220,7 @@ export const useCartStore = create<CartStore>()(
           }
 
           return {
-            items: [
-              ...currentItems,
-              { menuItem: item, quantity: 1, locationSlug },
-            ],
+            items: [...currentItems, candidate],
             locationSlug,
             appliedBundleId: null,
             bundlePriceGrosze: 0,
@@ -190,10 +228,10 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
-      removeItem: (itemId: string) => {
+      removeItem: (lineKey: string) => {
         set((state) => {
           const newItems = state.items.filter(
-            (i) => i.menuItem.id !== itemId
+            (i) => cartLineKey(i) !== lineKey
           );
           return {
             items: newItems,
@@ -207,14 +245,14 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
-      updateQuantity: (itemId: string, quantity: number) => {
+      updateQuantity: (lineKey: string, quantity: number) => {
         if (quantity <= 0) {
-          get().removeItem(itemId);
+          get().removeItem(lineKey);
           return;
         }
         set((state) => ({
           items: state.items.map((i) =>
-            i.menuItem.id === itemId ? { ...i, quantity } : i
+            cartLineKey(i) === lineKey ? { ...i, quantity } : i
           ),
           appliedBundleId: null,
           bundlePriceGrosze: 0,
@@ -238,11 +276,11 @@ export const useCartStore = create<CartStore>()(
       clearBundle: () =>
         set({ appliedBundleId: null, bundlePriceGrosze: 0 }),
 
-      setItemNotes: (itemId: string, notes: string) => {
+      setItemNotes: (lineKey: string, notes: string) => {
         const trimmed = notes.trim();
         set((state) => ({
           items: state.items.map((i) =>
-            i.menuItem.id === itemId
+            cartLineKey(i) === lineKey
               ? { ...i, notes: trimmed.length > 0 ? trimmed : undefined }
               : i
           ),

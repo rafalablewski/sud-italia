@@ -240,12 +240,19 @@ Each row is `.v8-cart-item` and carries:
 - **`.v8-cart-item-name`** — italic Cormorant 20px espresso. The
   dish name reads like a menu entry, not a UI label.
 - **`.v8-cart-item-price`** — Cormorant 600 tabular ink, line total
-  (price × quantity).
+  (`effectiveUnitPrice` × quantity — includes modifier surcharges).
 - **`.v8-cart-item-origin`** — Lora italic muted, picks up
   `menuItem.description` so the cart row still tells the sourcing
   story (San Marzano DOP, fior di latte, basilico fresco).
+- **`.v8-cart-item-mods`** — basil-tinted chip row
+  (`.v8-cart-item-mod`) listing the line's chosen modifiers ("48h
+  sourdough", "Half Diavola +6,00") resolved from
+  `menuItem.modifierGroups`. Absent when the line has no modifiers.
 - **`.v8-cart-qty`** — terracotta-tinted pill stepper (`− 1 +`).
-  Decrement at 1 removes the line entirely (preserved behaviour).
+  Decrement at 1 removes the line entirely (preserved behaviour). The
+  stepper / remove / note all address the line by `cartLineKey` (item
+  id + chosen options), so editing one modifier variant never touches
+  another line of the same dish.
 - **`.v8-cart-item-action`** — italic text buttons under the row:
   `note · nota` (toggles the note panel) + `remove · rimuovi`
   (oxblood on hover).

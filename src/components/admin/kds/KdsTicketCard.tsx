@@ -180,6 +180,18 @@ export function KdsTicketCard({
                     <span className="ka-q tabular">{i.quantity}×</span>
                     <span className="ka-nm">{i.name}</span>
                   </div>
+                  {i.modifiers.length > 0 && (
+                    <div className="ka-mods">
+                      {i.modifiers.map((m, mi) => (
+                        <span
+                          key={mi}
+                          className={`ka-mod${m.flag ? " is-flagged" : ""}`}
+                        >
+                          {m.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {i.notes && <span className="ka-req">⮐ {i.notes}</span>}
                 </div>
               ))}

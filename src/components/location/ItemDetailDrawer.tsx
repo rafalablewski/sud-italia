@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { ALLERGEN_LABELS } from "@/data/types";
+import { ALLERGEN_LABELS, type ModifierGroup, type SelectedModifier } from "@/data/types";
 import { getItemDetails } from "@/data/kodawari";
 import { formatPrice } from "@/lib/utils";
+import { effectiveUnitPrice } from "@/lib/upsell";
 import { useCartStore } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
 import { AllergenIcon } from "./AllergenIcon";
@@ -54,6 +55,23 @@ export function ItemDetailDrawer() {
     setMounted(true);
   }, []);
 
+  // Modifier selections, keyed by group id → chosen option ids. Reset (and
+  // required single-select groups pre-seeded with their first option, the usual
+  // "Standard" default) whenever the drawer opens for a different item.
+  const itemId = payload?.item?.id ?? null;
+  const modifierGroups = payload?.item?.modifierGroups ?? [];
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    const groups = payload?.item?.modifierGroups ?? [];
+    const init: Record<string, string[]> = {};
+    for (const g of groups) {
+      const min = g.minSelections ?? 0;
+      const max = g.maxSelections ?? 1;
+      if (min >= 1 && max === 1 && g.options[0]) init[g.id] = [g.options[0].id];
+    }
+    setSelections(init);
+  }, [itemId, payload?.item?.modifierGroups]);
+
   const open = payload !== null;
 
   useEffect(() => {
@@ -92,9 +110,42 @@ export function ItemDetailDrawer() {
   const sourcing = details?.sourcing;
   const prepTime = details?.prepTimeMinutes;
 
+  const selectedModifiers: SelectedModifier[] = modifierGroups.flatMap((g) =>
+    (selections[g.id] ?? []).map((optionId) => ({ groupId: g.id, optionId })),
+  );
+  const requiredGroupsMet = modifierGroups.every(
+    (g) => (selections[g.id]?.length ?? 0) >= (g.minSelections ?? 0),
+  );
+  // Live unit price including modifier surcharges — same helper the cart and
+  // server use, so the previewed price equals the charged price.
+  const livePrice = item
+    ? effectiveUnitPrice({ menuItem: item, selectedModifiers })
+    : 0;
+
+  const toggleOption = (group: ModifierGroup, optionId: string) => {
+    setSelections((prev) => {
+      const current = prev[group.id] ?? [];
+      const max = group.maxSelections ?? 1;
+      const min = group.minSelections ?? 0;
+      const isSelected = current.includes(optionId);
+      let next: string[];
+      if (max === 1) {
+        // Radio: pick this one; a required group can't be emptied by re-tapping.
+        if (isSelected) next = min >= 1 ? current : [];
+        else next = [optionId];
+      } else if (isSelected) {
+        next = current.filter((id) => id !== optionId);
+      } else {
+        // Checkbox: add up to the cap, otherwise ignore the tap.
+        next = current.length >= max ? current : [...current, optionId];
+      }
+      return { ...prev, [group.id]: next };
+    });
+  };
+
   const handleAdd = () => {
-    if (!item || !locationSlug) return;
-    addItem(item, locationSlug);
+    if (!item || !locationSlug || !requiredGroupsMet) return;
+    addItem(item, locationSlug, selectedModifiers);
     setDetailItem(null);
   };
 
@@ -179,6 +230,58 @@ export function ItemDetailDrawer() {
                 )}
               </div>
 
+              {modifierGroups.map((group) => {
+                const max = group.maxSelections ?? 1;
+                const min = group.minSelections ?? 0;
+                const chosen = selections[group.id] ?? [];
+                const unmet = chosen.length < min;
+                return (
+                  <div className="v8-detail-section v8-detail-mod-group" key={group.id}>
+                    <div className="v8-detail-section-title">
+                      {group.label}
+                      <span className="v8-detail-mod-rule">
+                        {min >= 1
+                          ? max > 1
+                            ? `· choose ${min}–${max}`
+                            : "· required"
+                          : max > 1
+                            ? `· up to ${max} · optional`
+                            : "· optional"}
+                      </span>
+                    </div>
+                    <div className="v8-detail-mod-options">
+                      {group.options.map((opt) => {
+                        const isSelected = chosen.includes(opt.id);
+                        return (
+                          <button
+                            type="button"
+                            key={opt.id}
+                            onClick={() => toggleOption(group, opt.id)}
+                            className={`v8-detail-mod-option${isSelected ? " is-selected" : ""}`}
+                            aria-pressed={isSelected}
+                          >
+                            <span className="v8-detail-mod-mark" aria-hidden="true">
+                              {isSelected ? "✓" : max === 1 ? "○" : "+"}
+                            </span>
+                            <span className="v8-detail-mod-label">{opt.label}</span>
+                            {opt.priceDelta > 0 && (
+                              <span className="v8-detail-mod-delta num">
+                                +{formatPrice(opt.priceDelta)}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {unmet && (
+                      <div className="v8-detail-mod-hint">
+                        Pick {min === 1 ? "an option" : `at least ${min}`} to continue.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
               <div className="v8-detail-section">
                 <div className="v8-detail-section-title">
                   Allergens <span className="v8-detail-section-it">· allergeni</span>
@@ -247,12 +350,12 @@ export function ItemDetailDrawer() {
                   <button
                     type="button"
                     onClick={handleAdd}
-                    disabled={!item.available || !locationSlug}
+                    disabled={!item.available || !locationSlug || !requiredGroupsMet}
                     className="v8-detail-pay-cta"
                   >
-                    <span>Add to cart</span>
+                    <span>{requiredGroupsMet ? "Add to cart" : "Choose options"}</span>
                     <span className="it">· aggiungi al carrello</span>
-                    <span className="num">{formatPrice(item.price)}</span>
+                    <span className="num">{formatPrice(livePrice)}</span>
                   </button>
                 </div>
               </div>

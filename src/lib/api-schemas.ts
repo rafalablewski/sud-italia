@@ -53,6 +53,13 @@ const cartItemInput = z.object({
   id: stableId,
   quantity: z.number().int().positive().max(99),
   notes: cartNote,
+  /** Modifier picks (audit §3 / §11.2). Re-validated against the live menu in
+   *  createOrder before pricing, so a forged id can't lower the price. Capped to
+   *  keep the payload bounded. */
+  selectedModifiers: z
+    .array(z.object({ groupId: stableId, optionId: stableId }))
+    .max(20)
+    .optional(),
 });
 
 /**

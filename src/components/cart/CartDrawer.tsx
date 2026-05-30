@@ -1,6 +1,6 @@
 "use client";
 
-import { useCartStore } from "@/store/cart";
+import { useCartStore, cartLineKey } from "@/store/cart";
 import { useCartUIStore } from "@/store/cart-ui";
 import { CartItemRow } from "./CartItem";
 import { CartUpsell } from "./CartUpsell";
@@ -424,6 +424,9 @@ export function CartDrawer() {
             id: i.menuItem.id,
             quantity: i.quantity,
             notes: i.notes,
+            // Server re-validates these ids against the live menu before pricing
+            // (createOrder) — a forged option can't lower the price or skip KDS.
+            selectedModifiers: i.selectedModifiers,
           })),
           locationSlug,
           customerName,
@@ -608,7 +611,7 @@ export function CartDrawer() {
                   const soldOut = liveAvailability[item.menuItem.id] === false;
                   return (
                     <CartItemRow
-                      key={item.menuItem.id}
+                      key={cartLineKey(item)}
                       item={item}
                       soldOut={soldOut}
                     />

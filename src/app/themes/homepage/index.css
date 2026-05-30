@@ -2668,6 +2668,25 @@ body.v8-cart-open { overflow: hidden; }
   margin-top: 3px;
   line-height: 1.35;
 }
+/* Chosen modifiers on a cart line (half & half, extra toppings). */
+.v8-cart-item-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+.v8-cart-item-mod {
+  font-size: 11.5px;
+  color: var(--color-basil-deep);
+  background: rgba(74, 124, 89, 0.1);
+  border: 1px solid rgba(74, 124, 89, 0.28);
+  border-radius: 5px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+.v8-cart-item-mod .num {
+  font-variant-numeric: tabular-nums;
+}
 .v8-cart-item-foot {
   display: flex;
   align-items: center;
@@ -5318,6 +5337,69 @@ body.v8-detail-open { overflow: hidden; }
 /* Generic detail section — uppercase Cormorant title + editorial hairline */
 .v8-detail-section {
   padding: 18px 20px;
+}
+
+/* Modifier picker — option chips (half & half, crust, extra toppings) inside
+   the item-detail drawer. Selected chips go basil-filled; the paybar price
+   re-quotes live as the customer picks. */
+.v8-detail-mod-rule {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-muted);
+  margin-left: 8px;
+}
+.v8-detail-mod-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v8-detail-mod-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  background: var(--color-parchment);
+  color: var(--color-espresso);
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.v8-detail-mod-option:hover {
+  border-color: var(--color-basil-deep);
+}
+.v8-detail-mod-option.is-selected {
+  border-color: var(--color-basil-deep);
+  background: rgba(74, 124, 89, 0.1);
+}
+.v8-detail-mod-mark {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+  color: var(--color-basil-deep);
+  font-weight: 700;
+}
+.v8-detail-mod-label {
+  flex: 1 1 auto;
+}
+.v8-detail-mod-delta {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-oxblood);
+  font-variant-numeric: tabular-nums;
+}
+.v8-detail-mod-hint {
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--color-oxblood);
 }
 .v8-detail-section-title {
   font-family: var(--font-heading);

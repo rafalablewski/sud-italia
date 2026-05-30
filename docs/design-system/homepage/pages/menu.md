@@ -230,8 +230,24 @@ for the full chrome breakdown; the sections it surfaces are:
   for why the bar treatment was dropped.
 - Provenienza · sourcing — italic Lora ingredient-origin quote in a
   parchment-deep paper card
+- **Modifier picker** (`.v8-detail-mod-*`) — one section per
+  `MenuItem.modifierGroups` entry (Crust, Premium toppings, "Make it
+  half & half"). The section title carries an italic rule chip
+  (`· required` / `· optional` / `· choose N–M`). Options render as
+  full-width `.v8-detail-mod-option` chips — radio when
+  `maxSelections === 1` (○ → ✓), checkbox when `> 1` (＋ → ✓, capped at
+  the max) — going basil-filled (`.is-selected`) when picked, with an
+  oxblood `+price` delta on surcharge options. Required single-select
+  groups pre-seed their first option (the "Standard" default). An
+  unmet required group shows a `.v8-detail-mod-hint` and disables the
+  CTA. The cart line keys on item id + chosen options
+  (`cartLineKey`), so each variant stacks separately.
 - Sticky paybar — terracotta "Add to cart · aggiungi al carrello +
-  [price]" CTA
+  [price]" CTA. The price re-quotes live (`effectiveUnitPrice`) as
+  options are picked; the label reads "Choose options" while a
+  required group is unmet. Menu cards for items that carry modifier
+  groups route their **Add** straight to this drawer (no one-tap add /
+  inline stepper) so required picks happen before the line lands.
 
 **Single-mount** since Step 13 — the drawer lives once at the layout
 level and opens via `useCartUIStore.setDetailItem({ item,

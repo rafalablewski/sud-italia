@@ -109,9 +109,15 @@ export function MenuItemCard({
   const setDetailItem = useCartUIStore((s) => s.setDetailItem);
   const [justAdded, setJustAdded] = useState(false);
 
+  // Items with modifier groups (e.g. "half & half", extra toppings) can't be
+  // one-tap-added — the customer has to choose in the detail drawer first, and
+  // each variant is its own cart line. So those cards stay in "Add" mode (which
+  // opens the picker) rather than showing an inline stepper that couldn't tell
+  // the variants apart.
+  const hasModifierGroups = (item.modifierGroups?.length ?? 0) > 0;
   const cartItem = cartItems.find((i) => i.menuItem.id === item.id);
   const quantity = cartItem?.quantity ?? 0;
-  const inCart = quantity > 0;
+  const inCart = !hasModifierGroups && quantity > 0;
 
   const roleBadges = getMenuRoleBadges(item, upsellConfig);
   const adminBadges = getItemBadges(item.id, locationSlug, upsellConfig).filter(
@@ -140,6 +146,12 @@ export function MenuItemCard({
   }, [justAdded]);
 
   const handleAdd = () => {
+    if (hasModifierGroups) {
+      // Route to the picker so required choices (and any surcharges) are made
+      // before the line lands in the cart.
+      setDetailItem({ item, locationSlug, popularThisWeek });
+      return;
+    }
     addItem(item, locationSlug);
     setJustAdded(true);
   };
