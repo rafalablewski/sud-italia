@@ -48,7 +48,7 @@ export function Methodology({ children }: { children: ReactNode }) {
   );
 }
 
-export function Tips({ children, headline = "Tips — what to do" }: { children: ReactNode; headline?: string }) {
+export function Tips({ children, headline = "Tips — how to push this lever" }: { children: ReactNode; headline?: string }) {
   return (
     <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(22, 163, 74, 0.07)", borderLeft: "3px solid rgb(22, 163, 74)", borderRadius: 6, fontSize: 13.5, lineHeight: 1.55 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "rgb(21, 128, 61)", marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>

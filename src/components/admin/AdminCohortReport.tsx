@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
-import { Button, Card, CardBody, EmptyState } from "./v2/ui";
-import { PlainTalk, Methodology, Tips } from "./Explainers";
+import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
+import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
@@ -50,6 +50,19 @@ const HEAT_COLORS = ["#0a3d1a", "#15613c", "#1f8055", "#28a06d", "#3bcb88", "#7b
 function heatColor(pct: number): string {
   const idx = Math.min(HEAT_COLORS.length - 1, Math.floor(pct / 20));
   return HEAT_COLORS[idx];
+}
+
+/** KPI label with a per-card InfoButton (ⓘ) whose dialog follows the
+ *  five-section MetricExplainer contract (CLAUDE.md Rule #12). */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
 }
 
 export function AdminCohortReport() {
@@ -153,24 +166,151 @@ function AdminCohortReportDesktop() {
 
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Paid customers"
+          label={kpiInfo(
+            "Paid customers",
+            <MetricExplainer
+              description="The number of distinct customers who have placed at least one paid order in the window."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  The denominator of every cohort metric and the base of the acquisition funnel.
+                  Reviewers care less about the absolute count than its growth rate and the
+                  new-vs-returning split — a count that grows only on paid spend, with flat repeat,
+                  is renting traffic rather than building a base.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Simply how many different people have actually paid you. Everything else on this
+                  page — repeat rate, CLTV, retention — is sliced out of this group.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Grow it without wrecking economics: referrals and word-of-mouth bring customers who
+                  behave like your best ones. Capture the phone at checkout (zero-friction loyalty)
+                  so a first-time buyer becomes a known, re-marketable customer.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Distinct customers (by phone, per the loyalty capture at checkout) with ≥ 1 paid
+                  order in the window, from the orders table.
+                </p>
+              }
+            />,
+          )}
           value={data.totals.customers}
           icon={Users}
           tone="info"
         />
         <KpiCard
-          label="Repeat customers"
+          label={kpiInfo(
+            "Repeat customers",
+            <MetricExplainer
+              description="How many customers have ordered more than once — and, as the hint, what share that is of all customers."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Repeat rate is the most predictive input to CLTV and the first thing diligence
+                  stress-tests. Below ~25% a casual/QSR book is effectively buying one-time traffic;
+                  above ~35% the economics compound. The gap between a 30% and a 40% book is the
+                  difference between renting customers and owning them.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Out of everyone who tried you, how many came back? The ones who do are where almost
+                  all your profit lives — a repeat customer costs nothing to re-acquire.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  The second order is the hard one. Fire a timed &ldquo;we saved your usual&rdquo; nudge
+                  5–7 days out, make visit #2 easy, and keep speed and consistency high so the habit
+                  forms. Win back lapsing customers before chasing brand-new ones.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Customers with ≥ 2 paid orders. The hint is{" "}
+                  <code>repeat customers ÷ total customers</code>; tone turns green at ≥ 25%.
+                </p>
+              }
+            />,
+          )}
           value={data.totals.repeatCustomers}
           hint={`${data.totals.repeatRatePct}% repeat rate`}
           tone={data.totals.repeatRatePct >= 25 ? "success" : "warning"}
         />
         <KpiCard
-          label="Avg orders / customer"
+          label={kpiInfo(
+            "Avg orders / customer",
+            <MetricExplainer
+              description="The average number of paid orders each customer has placed."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Frequency is the volume half of CLTV and the cheapest growth there is — an existing
+                  customer carries zero marginal CAC. Watch it because total orders can rise on ad
+                  spend while orders/customer quietly falls: a leaky bucket dressed up as growth.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  If this is 2.6, the typical customer orders between two and three times before they
+                  drift away. Nudge that toward 3 and you&apos;ve added a whole order of profit per
+                  customer, free of acquisition cost.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Frequency responds to occasions and reminders: a slow-day offer, a loyalty
+                  punch-card, a saved-usual reorder button. Target the lapsing customers, not the
+                  regulars who&apos;d come anyway.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Total paid orders ÷ distinct customers in the window.
+                </p>
+              }
+            />,
+          )}
           value={data.totals.avgOrdersPerCustomer}
           format={(n) => n.toFixed(2)}
         />
         <KpiCard
-          label="Median spend"
+          label={kpiInfo(
+            "Median spend",
+            <MetricExplainer
+              description="The lifetime spend of the middle customer — half spend more, half spend less."
+              institutional={
+                <p style={{ margin: 0 }}>
+                  Median, not mean, is the honest centre for spend: a handful of whales drag the
+                  average up and flatter the picture. The gap between median and mean is itself a
+                  signal — a wide gap means your economics lean on a few big spenders rather than a
+                  broad, healthy base.
+                </p>
+              }
+              plain={
+                <p style={{ margin: 0 }}>
+                  Line every customer up by how much they&apos;ve spent with you; this is the person
+                  in the middle. It tells you what a <em>typical</em> customer is worth, not what the
+                  one big-spender skews it to.
+                </p>
+              }
+              tips={
+                <p style={{ margin: 0 }}>
+                  Lift the median by raising the floor: bigger baskets (combos, attach), more repeat
+                  visits, and converting one-timers into twice-buyers — moving the middle matters more
+                  than chasing another whale.
+                </p>
+              }
+              methodology={
+                <p style={{ margin: 0 }}>
+                  Median of total paid spend (grosze) per customer across the window.
+                </p>
+              }
+            />,
+          )}
           value={data.totals.medianGrossePerCustomer}
           display={formatPrice(data.totals.medianGrossePerCustomer)}
         />

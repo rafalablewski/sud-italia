@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Award,
@@ -10,6 +10,7 @@ import {
   Trash2,
   UtensilsCrossed,
 } from "lucide-react";
+import { MetricExplainer } from "./Explainers";
 import { useAdminLocation } from "./v2/LocationContext";
 import {
   Badge,
@@ -95,6 +96,19 @@ function actionFor(r: SimulationMenuEngineeringLine): string {
 
 function gmPct(r: SimulationMenuEngineeringLine): number {
   return r.revenue > 0 ? ((r.revenue - r.cost) / r.revenue) * 100 : 0;
+}
+
+/** KPI label with a per-card InfoButton (ⓘ) whose dialog follows the
+ *  five-section MetricExplainer contract (CLAUDE.md Rule #12). */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
 }
 
 export function AdminMenuEngineering() {
@@ -322,14 +336,188 @@ export function AdminMenuEngineering() {
       {!loading && !error && rows.length > 0 && (
         <>
           <div className="v2-kpi-grid">
-            <KpiCard label="Items analysed" value={summary.items} icon={UtensilsCrossed} tone="brand" staticValue />
-            <KpiCard label="Stars" value={summary.stars} icon={Crown} tone="success" staticValue
+            <KpiCard
+              label={kpiInfo(
+                "Items analysed",
+                <MetricExplainer
+                  description="How many distinct dishes sold at least one unit in the window and are plotted on the matrix."
+                  institutional={
+                    <p style={{ margin: 0 }}>
+                      Menu breadth is a cost in itself — every SKU consumes prep, stock, training and
+                      menu real-estate. Institutional QSR operators run lean menus on purpose;
+                      a long tail of rarely-ordered items quietly erodes kitchen throughput and
+                      raises waste without moving revenue.
+                    </p>
+                  }
+                  plain={
+                    <p style={{ margin: 0 }}>
+                      Just the count of dishes that actually sold in this window. If it&apos;s much
+                      bigger than the dishes that earn real money, you&apos;re carrying dead weight.
+                    </p>
+                  }
+                  tips={
+                    <p style={{ margin: 0 }}>
+                      Use the matrix to prune: dogs that aren&apos;t strategic anchors are the
+                      first cut. A tighter menu speeds the line, shrinks the stock list and makes
+                      the stars easier to find.
+                    </p>
+                  }
+                  methodology={
+                    <p style={{ margin: 0 }}>
+                      Count of menu items with ≥ 1 unit sold over the selected window
+                      (30/60/90/180d), per the location filter.
+                    </p>
+                  }
+                />,
+              )}
+              value={summary.items} icon={UtensilsCrossed} tone="brand" staticValue />
+            <KpiCard
+              label={kpiInfo(
+                "Stars",
+                <MetricExplainer
+                  description="Dishes that are both high-volume and high-margin — the top-right quadrant of the Kasavana-Smith matrix."
+                  institutional={
+                    <p style={{ margin: 0 }}>
+                      Stars are the menu&apos;s franchise — they prove product-market fit and carry
+                      the contribution. The institutional move is to protect and feature them
+                      relentlessly; a menu with too few stars is undifferentiated, one whose stars
+                      are fragile (single supplier, prep-heavy) carries hidden risk.
+                    </p>
+                  }
+                  plain={
+                    <p style={{ margin: 0 }}>
+                      Your heroes: people order them <em>and</em> they make you good money. These are
+                      what you put on the hero image, the top of the menu, and never let go out of stock.
+                    </p>
+                  }
+                  tips={
+                    <p style={{ margin: 0 }}>
+                      Protect, promote, anchor. Give them prime menu placement, make them the default
+                      in combos, and guard their recipe and quality — consistency is what keeps a
+                      star a star (see Rule #10).
+                    </p>
+                  }
+                  methodology={
+                    <p style={{ margin: 0 }}>
+                      Items above the median on both velocity (units sold) and per-unit gross profit,
+                      split at the median of each.
+                    </p>
+                  }
+                />,
+              )}
+              value={summary.stars} icon={Crown} tone="success" staticValue
               hint="High volume × high margin" />
-            <KpiCard label="Action needed" value={summary.actionNeeded} icon={Tractor} tone="warning" staticValue
+            <KpiCard
+              label={kpiInfo(
+                "Action needed",
+                <MetricExplainer
+                  description="Dishes that need a decision — plowhorses (high volume, thin margin) plus dogs (low volume, low margin)."
+                  institutional={
+                    <p style={{ margin: 0 }}>
+                      This is the menu-engineering work queue. Plowhorses are the highest-leverage
+                      repricing/re-engineering targets (small per-unit gains × big volume); dogs are
+                      pruning candidates unless they&apos;re strategic anchors. Left untouched, both
+                      drag blended contribution down.
+                    </p>
+                  }
+                  plain={
+                    <p style={{ margin: 0 }}>
+                      The dishes that aren&apos;t pulling their weight — either popular but barely
+                      profitable, or neither. Not a problem, a to-do list: each one can be repriced,
+                      re-costed or cut.
+                    </p>
+                  }
+                  tips={
+                    <p style={{ margin: 0 }}>
+                      Reprice plowhorses up or trim their recipe cost; cut or re-cost dogs (keep only
+                      anchors). Model the exact contribution impact on the what-if sandbox below
+                      before you change the live menu.
+                    </p>
+                  }
+                  methodology={
+                    <p style={{ margin: 0 }}>
+                      Count of items in the plowhorse and dog quadrants (below-median velocity and/or
+                      below-median per-unit gross profit).
+                    </p>
+                  }
+                />,
+              )}
+              value={summary.actionNeeded} icon={Tractor} tone="warning" staticValue
               hint="Plowhorses + dogs" />
-            <KpiCard label="Margin traps" value={summary.traps} icon={AlertTriangle} tone="danger" staticValue
+            <KpiCard
+              label={kpiInfo(
+                "Margin traps",
+                <MetricExplainer
+                  description="Dishes that look profitable on gross margin but whose True CM1 collapses once fees, waste, refunds and loyalty burn are netted out."
+                  institutional={
+                    <p style={{ margin: 0 }}>
+                      The most dangerous line on the menu, because the headline GM hides the loss.
+                      Delivery-marketplace commission (a ~27% proxy here) is the usual culprit — a
+                      dish that earns on-site can lose money on Glovo/Wolt. Institutional costing
+                      always nets channel fees before ranking items.
+                    </p>
+                  }
+                  plain={
+                    <p style={{ margin: 0 }}>
+                      Dishes that look like winners but aren&apos;t once you count the fees that eat
+                      them — especially delivery commission. They flatter the menu and quietly drain
+                      the till.
+                    </p>
+                  }
+                  tips={
+                    <p style={{ margin: 0 }}>
+                      Reprice them up on delivery channels (or pull them from delivery entirely),
+                      re-engineer the recipe cost, or bundle them so the basket carries the fee.
+                      Never feature a margin trap.
+                    </p>
+                  }
+                  methodology={
+                    <p style={{ margin: 0 }}>
+                      Items with healthy gross margin but a True CM1 per unit destroyed by payment
+                      fees + waste + refunds + loyalty burn (delivery-only items at a 27%
+                      marketplace-commission proxy).
+                    </p>
+                  }
+                />,
+              )}
+              value={summary.traps} icon={AlertTriangle} tone="danger" staticValue
               hint="High GM, low True CM1" />
-            <KpiCard label="Window gross profit" value={summary.windowGp} display={formatPricePLN(Math.round(summary.windowGp))}
+            <KpiCard
+              label={kpiInfo(
+                "Window gross profit",
+                <MetricExplainer
+                  description="Total gross profit the whole menu generated over the selected window."
+                  institutional={
+                    <p style={{ margin: 0 }}>
+                      The bottom-line scoreboard for the menu — the number every repricing and
+                      pruning decision should be measured against. Gross profit, not revenue, is what
+                      survives to cover fixed costs; a menu optimised for revenue and one optimised
+                      for this are rarely the same.
+                    </p>
+                  }
+                  plain={
+                    <p style={{ margin: 0 }}>
+                      What the menu actually earned you (after food cost) over the period. This is the
+                      number you&apos;re trying to grow — and the what-if sandbox below projects how
+                      a menu change would move it.
+                    </p>
+                  }
+                  tips={
+                    <p style={{ margin: 0 }}>
+                      Grow it by repricing plowhorses, promoting puzzles, and re-engineering
+                      high-volume recipes — not by adding more SKUs. Watch it alongside units so you
+                      don&apos;t buy revenue with margin.
+                    </p>
+                  }
+                  methodology={
+                    <p style={{ margin: 0 }}>
+                      Σ (revenue − cost) across every item that sold in the window
+                      (Last {data?.windowDays ?? windowDays} days), per the location filter.
+                    </p>
+                  }
+                />,
+              )}
+              value={summary.windowGp} display={formatPricePLN(Math.round(summary.windowGp))}
               icon={Award} tone="info" staticValue hint={`Last ${data?.windowDays ?? windowDays} days`} />
           </div>
 

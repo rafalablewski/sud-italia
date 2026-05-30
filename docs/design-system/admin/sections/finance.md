@@ -105,6 +105,16 @@ reconcile to real numbers.
 - **Cohort GP** here uses the SaaS / restaurant unit-economics literature
   framing (David Skok on cohort LTV) — month-1 vs month-12 cohort GP,
   compounding cohorts as the health signal.
+- **Metric ⓘ explanations** — the Calculator's per-metric / per-lever
+  `InfoButton` dialogs (the `HELP` registry → `LabelWithInfo`) are the
+  origin of the five-section vocabulary now codified in **CLAUDE.md Rule
+  #12**: a one-line description + INSTITUTIONAL ANALYSIS + IN PLAIN TERMS +
+  TIPS — HOW TO PUSH THIS LEVER + METHODOLOGY — HOW THIS IS DETERMINED. The
+  callout blocks (`PlainTalk` / `InstitutionalAnalysis` / `Tips` /
+  `Methodology`) are now imported from the shared
+  `src/components/admin/Explainers.tsx` (they used to be defined locally in
+  `AdminSimulation.tsx`) so the Calculator, the reports and the sandboxes
+  can't drift.
 
 ## What Finance is not
 
