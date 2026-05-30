@@ -84,6 +84,27 @@ test("marketingSpendByMonth: one-off lands in its month, recurring fills the win
   assert.equal(spend["2026-03"], 0); // recurring ended Feb, no one-off
 });
 
+test("CAC is null (not 0) for a cohort month with customers but no attributed spend", () => {
+  // Marketing only starts in February, but the January cohort still has
+  // customers. January CAC must read "unknown" (null → "—"), never a
+  // fabricated 0 that implies free acquisition.
+  const mixed: Order[] = [
+    order("+48111", "2026-01-10T12:00:00.000Z", 2500, 800), // Jan cohort
+    order("+48222", "2026-02-10T12:00:00.000Z", 2500, 800), // Feb cohort
+  ];
+  const febOnly: MarketingCostInput[] = [
+    { amountGrosze: 1000, frequency: "monthly", startDate: "2026-02-01" },
+  ];
+  const r = buildLtvCacReport(mixed, febOnly, now);
+  const jan = r.months.find((m) => m.cohortMonth === "2026-01")!;
+  const feb = r.months.find((m) => m.cohortMonth === "2026-02")!;
+  assert.equal(jan.marketingSpendGrosze, 0);
+  assert.equal(jan.cacGrosze, null); // unknown, not 0
+  assert.equal(jan.ltvCacRatio, null);
+  assert.equal(jan.paybackMonths, null);
+  assert.equal(feb.cacGrosze, 1000); // 1000 / 1 new customer
+});
+
 test("an empty order list yields a zeroed, non-throwing report", () => {
   const r = buildLtvCacReport([], marketing, now);
   assert.equal(r.totals.newCustomers, 0);

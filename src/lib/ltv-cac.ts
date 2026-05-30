@@ -161,7 +161,15 @@ export function buildLtvCacReport(
     const ltv365 = cl?.cltv365Grosze ?? 0;
     const ltv365Margin = Math.round(ltv365 * margin);
     const spendThisMonth = spend[c.cohortMonth] ?? 0;
-    const cac = c.cohortSize > 0 ? Math.round(spendThisMonth / c.cohortSize) : null;
+    // CAC is null (unknown) when no spend is attributed to the month — NOT 0.
+    // A 0 here would render as "free acquisition", but the honest reading is
+    // "no marketing spend attributed to this cohort month" (e.g. spend started
+    // later, or wasn't dated). Keeps CAC consistent with the ratio/payback,
+    // which already treat a zero/absent CAC as unknown.
+    const cac =
+      c.cohortSize > 0 && spendThisMonth > 0
+        ? Math.round(spendThisMonth / c.cohortSize)
+        : null;
     const ratio = cac && cac > 0 ? Math.round((ltv365Margin / cac) * 100) / 100 : null;
     const payback = cl
       ? paybackFromCurve(cl, margin, cac)
