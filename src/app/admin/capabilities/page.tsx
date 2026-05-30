@@ -76,6 +76,18 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Nightly DB backup → S3",
+          setup: {
+            goal: "turn on nightly S3 backups with least-privilege creds",
+            appliesAt: "Vercel → Project → Settings → Environment Variables (Production)",
+            doc: "docs/runbooks/backup-restore.md",
+            steps: [
+              { text: "Create an S3 bucket. Enable Versioning + a lifecycle rule to expire old backups (e.g. 35 days)." },
+              { text: "Create an IAM user/role allowed ONLY s3:PutObject on the backup prefix — the app never reads or deletes:", code: "arn:aws:s3:::<bucket>/<prefix>/*" },
+              { text: "Set BACKUP_S3_BUCKET, BACKUP_S3_REGION, BACKUP_S3_ACCESS_KEY_ID, BACKUP_S3_SECRET_ACCESS_KEY in Vercel (Production), then redeploy — this card flips to Live." },
+              { text: "Confirm CRON_SECRET is set (cron auth), then trigger a manual run to verify:", code: "curl -X POST -H \"Authorization: Bearer $CRON_SECRET\" https://<host>/api/admin/cron/db-backup" },
+              { text: "Check the object appears in S3 under today's date partition. Rehearse a restore against a Neon branch before you ever need it (see runbook)." },
+            ],
+          },
           status:
             has("BACKUP_S3_BUCKET", "BACKUP_S3_REGION", "BACKUP_S3_ACCESS_KEY_ID", "BACKUP_S3_SECRET_ACCESS_KEY")
               ? "live"
@@ -86,6 +98,18 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Error monitoring + alerting (Sentry)",
+          setup: {
+            goal: "ship errors to Sentry and alert on >1% 5xx + lock fallback",
+            appliesAt: "Vercel env (SENTRY_DSN) + the Sentry dashboard (alert rules)",
+            doc: "docs/runbooks/alerting.md",
+            steps: [
+              { text: "In Sentry, open (or create) the project and copy its DSN. Set SENTRY_DSN in Vercel (Production) and redeploy — this card flips to Live once set." },
+              { text: "Confirm capture: trigger a deliberate 500 on a preview deploy and check it lands in Sentry with the path / requestId tags." },
+              { text: "Alert 1 — error rate: Sentry → Alerts → Create Alert → Metric alert → condition 'failure rate > 1%' over a 5-minute window; action = notify on-call." },
+              { text: "Alert 2 — lock fallback: Sentry → Alerts → Create Alert → Issue alert filtered to messages containing 'withDistributedLock' (or extra alert = lock.fallback); trigger on any occurrence in production." },
+              { text: "In each alert's Actions step, route to your channel (email / Slack / PagerDuty)." },
+            ],
+          },
           status: has("SENTRY_DSN") || has("NEXT_PUBLIC_SENTRY_DSN") ? "live" : "needs-config",
           envVars: ["SENTRY_DSN"],
           summary: "instrumentation.ts (register + onRequestError) ships every server error, RSC failure and cron throw to Sentry; logger.error/warn mirror with request context. Lock timeouts and Redis-broken fallbacks are logged as alertable events. Alert rules (>1% 5xx, lock-fallback) are documented in docs/runbooks/alerting.md — configure the thresholds in the Sentry dashboard.",
@@ -104,6 +128,17 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Admin MFA (TOTP two-factor)",
+          setup: {
+            goal: "require a 6-digit code on admin login",
+            appliesAt: "Vercel env (shared session) and/or /admin/users (per user)",
+            doc: "scripts/generate-totp-secret.ts",
+            steps: [
+              { text: "Per-user MFA (recommended): each user opens /admin/users → their row → MFA → Begin setup → scan the secret into an authenticator app → enter the code to confirm." },
+              { text: "Shared owner session: generate a shared secret + otpauth URI:", code: "tsx scripts/generate-totp-secret.ts" },
+              { text: "Scan the otpauth:// URI (or paste the secret) into an authenticator app (Google Authenticator, 1Password, Authy)." },
+              { text: "Set the printed value as ADMIN_TOTP_SECRET in Vercel (Production) and redeploy — this card then reads Live." },
+            ],
+          },
           status: has("ADMIN_TOTP_SECRET") ? "live" : "needs-config",
           href: "/admin/users",
           envVars: ["ADMIN_TOTP_SECRET"],
@@ -111,6 +146,18 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Admin password hashing (scrypt)",
+          setup: {
+            goal: "rotate the admin password to a salted hash",
+            appliesAt: "Vercel → Project → Settings → Environment Variables (Production)",
+            doc: "scripts/hash-admin-password.ts",
+            steps: [
+              { text: "Generate a hash from a strong new password (input is hidden; not stored in shell history):", code: "tsx scripts/hash-admin-password.ts" },
+              { text: "Copy the printed line (it starts with scrypt$…) and set it as ADMIN_PASSWORD_HASH in Vercel for Production." },
+              { text: "Delete the old plaintext ADMIN_PASSWORD env var on the same screen." },
+              { text: "Redeploy (Vercel → Deployments → ⋯ → Redeploy) so the new env loads, then confirm this card flips to Live." },
+              { text: "Verify by logging in at /admin/login with the new password." },
+            ],
+          },
           status: has("ADMIN_PASSWORD_HASH") ? "live" : "needs-config",
           envVars: ["ADMIN_PASSWORD_HASH"],
           summary:
@@ -1484,6 +1531,23 @@ export default async function CapabilitiesPage() {
   );
 }
 
+interface SetupStep {
+  /** The instruction. */
+  text: string;
+  /** Optional command / value to copy, rendered as a code block. */
+  code?: string;
+}
+
+interface SetupGuide {
+  /** One-line outcome the steps achieve. */
+  goal: string;
+  steps: SetupStep[];
+  /** Where the operator applies the resulting value (e.g. Vercel env). */
+  appliesAt?: string;
+  /** In-repo runbook with the full detail. */
+  doc?: string;
+}
+
 interface Capability {
   name: string;
   status: "live" | "needs-config" | "disabled";
@@ -1495,6 +1559,10 @@ interface Capability {
    *  limitation an inspector would otherwise catch in 2 hours of
    *  diligence (heuristic instead of ML, manual fallback path, etc.). */
   caveats?: string;
+  /** Optional step-by-step operator setup, shown as an expandable guide
+   *  under the card. Most useful on needs-config items — turns "Set: FOO"
+   *  into an actual how-to (copyable commands + where to paste them). */
+  setup?: SetupGuide;
 }
 
 interface CapabilityGroup {
@@ -1555,12 +1623,49 @@ function CapabilityCard({ item }: { item: Capability }) {
     </div>
   );
 
-  if (item.href) {
-    return (
-      <Link href={item.href} className="block hover:opacity-90 transition-opacity">
-        {content}
-      </Link>
-    );
-  }
-  return content;
+  const setup = item.setup && (
+    <details className="mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+      <summary className="cursor-pointer select-none text-[11px] font-semibold text-[var(--info)]">
+        Setup guide — {item.setup.goal}
+      </summary>
+      <ol className="mt-2 ml-4 list-decimal space-y-1.5">
+        {item.setup.steps.map((step, i) => (
+          <li key={i} className="admin-text-secondary text-xs leading-relaxed">
+            <span>{step.text}</span>
+            {step.code && (
+              <pre className="mt-1 overflow-x-auto rounded-md bg-black/30 p-2 text-[11px]">
+                <code className="font-mono admin-text">{step.code}</code>
+              </pre>
+            )}
+          </li>
+        ))}
+      </ol>
+      {item.setup.appliesAt && (
+        <p className="admin-text-secondary text-[11px] mt-2">
+          Apply at: <span className="admin-text">{item.setup.appliesAt}</span>
+        </p>
+      )}
+      {item.setup.doc && (
+        <p className="admin-text-secondary text-[11px] mt-1">
+          Full runbook: <code className="font-mono text-[var(--info)]">{item.setup.doc}</code>
+        </p>
+      )}
+    </details>
+  );
+
+  // Setup lives OUTSIDE the wrapping <Link> — a <details> is interactive
+  // content and can't legally nest inside an anchor (and the toggle must not
+  // navigate the card).
+  return (
+    <div className="flex flex-col gap-1.5 h-full">
+      {item.href ? (
+        <Link href={item.href} className="block hover:opacity-90 transition-opacity">
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
+      {setup}
+    </div>
+  );
 }
