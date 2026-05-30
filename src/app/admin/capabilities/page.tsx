@@ -66,7 +66,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Per-route role + location enforcement",
           status: "live",
-          summary: "withAdmin middleware blocks cross-tenant reads. ~80 admin routes wrapped.",
+          summary: "withAdmin middleware blocks cross-tenant reads + enforces role/location scope and the per-user rate limit. 120+ of ~140 admin routes wrapped (the rest are cron/health endpoints with their own gates).",
         },
         {
           name: "Health endpoint",
@@ -234,7 +234,13 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Concierge — agent commerce (MCP + WhatsApp)",
-          status: "live",
+          // Read capabilities (get_menu/check_availability/...) are always live
+          // off the real menu, but the headline agent-commerce channel
+          // (place_order / create_payment over WhatsApp) needs the channel env
+          // to be more than demo mode — so introspect rather than claim "live".
+          status: has("WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY")
+            ? "live"
+            : "needs-config",
           href: "/admin/concierge",
           summary:
             "One capability layer exposed to AI assistants over a public read endpoint and to guests over WhatsApp. Operator toggles per-capability exposure (toggle = saved) for get_menu / check_availability / get_allergens / locate_truck (served live from the real menu at /api/agent/<capability>) plus the conversational place_order / create_payment that run through the WhatsApp bot + Stripe checkout. Inspector shows the live JSON + an EU-14 allergen matrix from the real menu.",
