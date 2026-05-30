@@ -49,14 +49,23 @@ on.
 The admin-account list — who has admin access, what role.
 
 - **Header:** `Users & roles` (h1), search, role filter
-  (`all` / `staff` / `kitchen` / `manager` / `owner`), `+ Invite user`
+  (`all` / `owner` / `manager` / `staff` / `kitchen`), `New user`
   primary.
-- **Table:** email + name, role, last sign-in, two-factor status,
-  status (`active` / `suspended`), row actions (change role, reset
-  2FA, suspend, delete).
-- **Role change** opens a portalled confirmation — "Promoting Maria to
-  manager will grant access to X, Y, Z surfaces" — operator confirms
-  the cascade.
+- **Table:** name + email, role, location scope, status
+  (`active` / `disabled`), `MFA` (On / Off), row actions
+  (`MFA`, `Edit`, delete). Live code: `AdminUsers.tsx`.
+- **MFA (TOTP):** the `MFA` row action opens an enrollment dialog —
+  Begin setup → add the shown secret to an authenticator app → confirm
+  a 6-digit code to turn it on (or disable, with a current code; an
+  owner can force-disable for recovery). Once enabled, `/admin/login`
+  requires the code in addition to the shared password. Per-user enroll
+  is self-service only; the shared owner session is covered by
+  `ADMIN_TOTP_SECRET` instead. Secrets never leave the server — the
+  users API strips `totpSecret` from reads. Code:
+  `src/app/api/admin/users/[id]/mfa/route.ts`,
+  `src/app/admin/login/page.tsx`, `src/lib/totp.ts`.
+- **Edit** opens a dialog (name, email, role, status, location scope,
+  notes); save preserves the user's MFA fields rather than wiping them.
 - **The role enum is closed**: `staff` / `kitchen` / `manager` /
   `owner`. Don't add roles ad-hoc — every new role is a `nav.config.ts`
   + permission-matrix audit.
