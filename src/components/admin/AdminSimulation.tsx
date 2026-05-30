@@ -10596,7 +10596,11 @@ export function AdminSimulation() {
   );
 
   if (loading || !scenario || !computed) {
-    return <div className="v2-page-loading">Loading Calculator…</div>;
+    return (
+      <div className="v2-page">
+        <div className="v2-page-loading">Loading Calculator…</div>
+      </div>
+    );
   }
 
   const seedFromHistory = async () => {
