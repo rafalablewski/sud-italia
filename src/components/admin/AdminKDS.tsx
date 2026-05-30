@@ -51,6 +51,40 @@ const MobileKDS = dynamic(
   { ssr: false },
 );
 
+/** One entry in the "Recall" tray — the last few tickets a cook bumped. */
+type BumpEntry = { orderId: string; label: string; bumpedAt: number };
+
+// The recall tray must survive a tablet refresh (the KDS runs all day on a
+// wall-mounted screen that gets reloaded on Wi-Fi blips). We mirror the last 5
+// bumps to localStorage, scoped per location, and prune anything older than the
+// window where a recall is still plausibly useful so a reload doesn't resurrect
+// a bump from hours ago.
+const BUMP_HISTORY_TTL_MS = 10 * 60 * 1000;
+const bumpStorageKey = (loc: string) => `sud-kds-bump-history:${loc}`;
+
+function loadBumpHistory(loc: string): BumpEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(bumpStorageKey(loc));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const cutoff = Date.now() - BUMP_HISTORY_TTL_MS;
+    return parsed
+      .filter(
+        (e): e is BumpEntry =>
+          !!e &&
+          typeof (e as BumpEntry).orderId === "string" &&
+          typeof (e as BumpEntry).label === "string" &&
+          typeof (e as BumpEntry).bumpedAt === "number" &&
+          (e as BumpEntry).bumpedAt >= cutoff,
+      )
+      .slice(0, 5);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Role-aware KDS shell. One live-order engine, three lenses:
  *   • owner   → Fleet command (cross-truck health) by default. Drilling into
@@ -211,9 +245,40 @@ function AdminKDSDesktop({
   // memory so a "Recall" tray on the right side can put one back on the
   // expo column in a single click — within the 60 s window where this is
   // most useful. Older bumps quietly fall out of the list.
-  const [bumpHistory, setBumpHistory] = useState<
-    { orderId: string; label: string; bumpedAt: number }[]
-  >([]);
+  // Starts empty so server and first client render match (no hydration
+  // mismatch); the mount effect below rehydrates it from localStorage.
+  const [bumpHistory, setBumpHistory] = useState<BumpEntry[]>([]);
+
+  // Reload the recall tray from storage on mount and when the operator switches
+  // trucks, and persist it on every change so a refresh keeps the last bumps
+  // recallable. `bumpLocRef` tracks which location the in-state tray belongs to;
+  // the skip-flag stops the hydration write from clobbering the freshly loaded
+  // tray.
+  const bumpLocRef = useRef<string | null>(null);
+  const skipBumpPersistRef = useRef(false);
+  useEffect(() => {
+    if (bumpLocRef.current === location) return;
+    bumpLocRef.current = location;
+    skipBumpPersistRef.current = true;
+    setBumpHistory(loadBumpHistory(location));
+  }, [location]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (skipBumpPersistRef.current) {
+      skipBumpPersistRef.current = false;
+      return;
+    }
+    const loc = bumpLocRef.current;
+    if (!loc) return;
+    try {
+      window.localStorage.setItem(
+        bumpStorageKey(loc),
+        JSON.stringify(bumpHistory),
+      );
+    } catch {
+      // localStorage full/blocked — the tray still works in-memory this session.
+    }
+  }, [bumpHistory]);
 
   const knownIdsRef = useRef<Set<string>>(new Set());
   const overdueFiredRef = useRef<Set<string>>(new Set());
