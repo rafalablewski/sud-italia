@@ -2735,23 +2735,21 @@ export interface AppSettings {
    *  conversations (built only from the real menu); when false the controls
    *  are hidden and the simulator API rejects spawn (purge still works). */
   whatsappSimulatorEnabled?: boolean;
-  /** Master toggle for the Cohort & CLTV what-if simulator
-   *  (/admin/simulators/cohort). When false the nav link is hidden and the
-   *  page redirects to /admin/settings. Seeds from the real cohort report
-   *  and projects forward under operator-set retention / AOV / frequency
-   *  levers — never writes to live data. */
+  /** Toggle for the Cohort & CLTV what-if sandbox embedded at the bottom of
+   *  the cohort report (/admin/reports/cohort, CohortSandbox.tsx). When false
+   *  the sandbox section renders null. Seeds from the real cohort report and
+   *  projects forward under operator-set retention / AOV / frequency levers
+   *  (worked example fallback when there's no data) — never writes live data. */
   cohortSimulationEnabled?: boolean;
-  /** Master toggle for the LTV/CAC what-if simulator
-   *  (/admin/simulators/ltv-cac). When false the nav link is hidden and the
-   *  page redirects to /admin/settings. Seeds from the real LTV/CAC report
-   *  and lets operators flex CAC, retention, AOV, margin and frequency to
-   *  see the LTV:CAC ratio + payback move. */
+  /** Toggle for the LTV/CAC what-if sandbox embedded at the bottom of the
+   *  LTV/CAC report (/admin/reports/ltv-cac, LtvCacSandbox.tsx). When false the
+   *  sandbox renders null. Lets operators flex CAC, retention, AOV, margin and
+   *  frequency to see the LTV:CAC ratio + payback move. */
   ltvCacSimulationEnabled?: boolean;
-  /** Master toggle for the Menu-engineering what-if simulator
-   *  (/admin/simulators/menu-engineering). When false the nav link is hidden
-   *  and the page redirects to /admin/settings. Seeds from the real
-   *  Kasavana-Smith matrix and re-prices / re-promotes items to project the
-   *  contribution-margin and quadrant impact before touching the menu. */
+  /** Toggle for the Menu-engineering what-if sandbox embedded at the bottom of
+   *  the matrix (/admin/menu-engineering, MenuEngineeringSandbox.tsx). When
+   *  false the sandbox renders null. Re-prices / re-promotes items to project
+   *  the contribution-margin impact before touching the live menu. */
   menuEngineeringSimulationEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */

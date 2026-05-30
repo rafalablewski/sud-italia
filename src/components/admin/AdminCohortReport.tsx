@@ -9,6 +9,7 @@ import { KpiCard } from "./v2/charts";
 import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
 import { useIsMobile } from "./v2/mobile";
+import { CohortSandbox } from "./CohortSandbox";
 
 const MobileCohortReport = dynamic(
   () => import("./mobile/MobileCohortReport").then((m) => m.MobileCohortReport),
@@ -125,6 +126,7 @@ function AdminCohortReportDesktop() {
             />
           </CardBody>
         </Card>
+        <CohortSandbox />
       </div>
     );
   }
@@ -361,6 +363,7 @@ function AdminCohortReportDesktop() {
           </div>
         </CardBody>
       </Card>
+      <CohortSandbox />
     </div>
   );
 }

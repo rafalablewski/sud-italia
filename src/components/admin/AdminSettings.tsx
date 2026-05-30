@@ -931,8 +931,8 @@ function AdminSettingsDesktop() {
                     />
                     <span className="v2-muted text-sm">
                       {cohortSimulationEnabled
-                        ? "Visible at /admin/simulators/cohort."
-                        : "Hidden from the sidebar and command palette. The page redirects to settings when off."}
+                        ? "On — a what-if sandbox shows at the bottom of the Cohort & CLTV report (/admin/reports/cohort)."
+                        : "Off — the sandbox section is hidden on the Cohort & CLTV report."}
                     </span>
                   </span>
                 </label>
@@ -961,8 +961,8 @@ function AdminSettingsDesktop() {
                     />
                     <span className="v2-muted text-sm">
                       {ltvCacSimulationEnabled
-                        ? "Visible at /admin/simulators/ltv-cac."
-                        : "Hidden from the sidebar and command palette. The page redirects to settings when off."}
+                        ? "On — a what-if sandbox shows at the bottom of the LTV/CAC report (/admin/reports/ltv-cac)."
+                        : "Off — the sandbox section is hidden on the LTV/CAC report."}
                     </span>
                   </span>
                 </label>
@@ -991,8 +991,8 @@ function AdminSettingsDesktop() {
                     />
                     <span className="v2-muted text-sm">
                       {menuEngineeringSimulationEnabled
-                        ? "Visible at /admin/simulators/menu-engineering."
-                        : "Hidden from the sidebar and command palette. The page redirects to settings when off."}
+                        ? "On — a what-if sandbox shows at the bottom of the Menu engineering report (/admin/menu-engineering)."
+                        : "Off — the sandbox section is hidden on the Menu engineering report."}
                     </span>
                   </span>
                 </label>

@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { RotateCcw, TrendingUp, Wallet, Coins, Timer, AlertTriangle } from "lucide-react";
-import { Button, Card, CardBody, EmptyState, Input } from "./v2/ui";
+import { RotateCcw, TrendingUp, Wallet, Coins, Timer, AlertTriangle, FlaskConical } from "lucide-react";
+import { Button, Card, CardBody, Input, Badge } from "./v2/ui";
 import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
 interface LtvCacReport {
-  generatedAt: string;
   blendedMarginPct: number;
   totals: {
     newCustomers: number;
@@ -29,12 +28,33 @@ const fmtRatio = (r: number | null) => (r === null ? "—" : `${r.toFixed(1)}×`
 const ratioTone = (r: number | null) =>
   r === null ? "neutral" : r >= 3 ? "success" : r >= 1 ? "warning" : "danger";
 
-// Fallback CAC when no marketing spend is logged — operator can override.
 const FALLBACK_CAC_GROSZE = 2000;
 
-export function AdminLtvCacSimulator() {
-  const [data, setData] = useState<LtvCacReport | null>(null);
-  const [loading, setLoading] = useState(true);
+/** Worked Sud Italia example — 62% blended margin, ~35 zł CAC, ~92 zł
+ *  margin-LTV ⇒ 2.6× (below the 3× gate, so there's something to fix). */
+const EXAMPLE_LTVCAC: LtvCacReport = {
+  blendedMarginPct: 62,
+  totals: {
+    newCustomers: 1800,
+    marketingSpendGrosze: 6_300_000,
+    blendedCacGrosze: 3500,
+    blendedLtvGrosze: 14839,
+    blendedLtvMarginGrosze: 9200,
+    ltvCacRatio: 2.6,
+    paybackMonths: 5,
+    hasMarketingData: true,
+  },
+  months: Array.from({ length: 6 }, (_, i) => ({ cohortMonth: `2025-${String(i + 6).padStart(2, "0")}` })),
+};
+
+/**
+ * LTV/CAC what-if sandbox — embedded at the bottom of the LTV/CAC report.
+ * Self-gates on `ltvCacSimulationEnabled`, seeds from the live report and
+ * falls back to a worked example when there's no acquisition data yet.
+ */
+export function LtvCacSandbox() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [report, setReport] = useState<LtvCacReport | null>(null);
 
   const [cacGrosze, setCacGrosze] = useState(0);
   const [cacTouched, setCacTouched] = useState(false);
@@ -44,22 +64,30 @@ export function AdminLtvCacSimulator() {
   const [newCustPerMonth, setNewCustPerMonth] = useState(0);
   const [custTouched, setCustTouched] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const report = await fetch("/api/admin/reports/ltv-cac").then((r) => (r.ok ? r.json() : null));
-      setData(report);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => !cancelled && setEnabled(!!j?.ltvCacSimulationEnabled))
+      .catch(() => !cancelled && setEnabled(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadReport = useCallback(async () => {
+    const r = await fetch("/api/admin/reports/ltv-cac").then((res) => (res.ok ? res.json() : null));
+    setReport(r);
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (enabled) void loadReport();
+  }, [enabled, loadReport]);
+
+  const usingExample = !report || report.totals.newCustomers === 0;
+  const data = usingExample ? EXAMPLE_LTVCAC : report;
 
   const base = useMemo(() => {
-    if (!data || data.totals.newCustomers === 0) return null;
     const t = data.totals;
     const margin0 = data.blendedMarginPct;
     const ltv0 = t.blendedLtvMarginGrosze;
@@ -71,16 +99,14 @@ export function AdminLtvCacSimulator() {
     return { margin0, ltv0, revenueLtv0, cac0, defaultNewCust, ratio0, hasMarketingData: t.hasMarketingData };
   }, [data]);
 
-  // Seed the editable inputs from real data once it lands.
   useEffect(() => {
-    if (base && !cacTouched) setCacGrosze(base.cac0 && base.cac0 > 0 ? base.cac0 : FALLBACK_CAC_GROSZE);
+    if (!cacTouched) setCacGrosze(base.cac0 && base.cac0 > 0 ? base.cac0 : FALLBACK_CAC_GROSZE);
   }, [base, cacTouched]);
   useEffect(() => {
-    if (base && !custTouched) setNewCustPerMonth(base.defaultNewCust);
+    if (!custTouched) setNewCustPerMonth(base.defaultNewCust);
   }, [base, custTouched]);
 
   const sim = useMemo(() => {
-    if (!base) return null;
     const revenueLtv = base.revenueLtv0 * (1 + freqUpliftPct / 100) * (1 + aovGrowthPct / 100);
     const margin = clamp(base.margin0 + marginDeltaPp, 0, 100);
     const ltv = (revenueLtv * margin) / 100;
@@ -97,121 +123,45 @@ export function AdminLtvCacSimulator() {
     setMarginDeltaPp(0);
     setCacTouched(false);
     setCustTouched(false);
-    if (base) {
-      setCacGrosze(base.cac0 && base.cac0 > 0 ? base.cac0 : FALLBACK_CAC_GROSZE);
-      setNewCustPerMonth(base.defaultNewCust);
-    }
+    setCacGrosze(base.cac0 && base.cac0 > 0 ? base.cac0 : FALLBACK_CAC_GROSZE);
+    setNewCustPerMonth(base.defaultNewCust);
   };
 
-  if (loading) {
-    return (
-      <div className="v2-page">
-        <div className="v2-page-loading">Loading LTV / CAC simulator…</div>
-      </div>
-    );
-  }
-
-  if (!base || !sim) {
-    return (
-      <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">LTV / CAC simulator</h1>
-            <p className="v2-page-subtitle">No paid customers yet — nothing to value.</p>
-          </div>
-        </header>
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={TrendingUp}
-              title="No data to seed"
-              description="Once paid orders land, this seeds blended LTV, CAC and margin from real orders + your marketing-cost ledger, then lets you flex them against the 3× gate."
-            />
-          </CardBody>
-        </Card>
-      </div>
-    );
-  }
+  if (!enabled) return null;
 
   const paybackDisplay = sim.payback === null ? "—" : sim.payback >= 13 ? ">12 mo" : `${sim.payback.toFixed(1)} mo`;
 
   return (
-    <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">LTV / CAC simulator</h1>
-          <p className="v2-page-subtitle">
-            Seeded from the real{" "}
-            <Link href="/admin/reports/ltv-cac" className="v2-link">LTV/CAC report</Link>. Flex
-            acquisition cost, retention, order value and margin to watch the ratio and payback
-            move against the 3× institutional gate.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="ghost" size="sm" leadingIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={resetLevers}>
-            Reset levers
-          </Button>
-        </div>
-      </header>
-
-      {!base.hasMarketingData && (
-        <Card>
-          <CardBody>
-            <div className="v2-callout v2-callout-warning" style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <AlertTriangle className="h-4 w-4" style={{ marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <strong>No marketing spend logged.</strong> CAC is seeded at an assumed{" "}
-                {formatPrice(FALLBACK_CAC_GROSZE)} so you can still model the ratio — override it
-                below, or log real spend under{" "}
-                <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link>{" "}
-                and it flows into the report automatically.
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      <section className="v2-kpi-grid">
-        <KpiCard
-          label="LTV : CAC"
-          value={sim.ratio ?? 0}
-          display={fmtRatio(sim.ratio)}
-          icon={TrendingUp}
-          tone={ratioTone(sim.ratio)}
-          hint={base.ratio0 === null ? "baseline —" : `baseline ${fmtRatio(base.ratio0)} · gate 3×`}
-        />
-        <KpiCard
-          label="LTV (365d, margin)"
-          value={sim.ltv}
-          display={formatPrice(Math.round(sim.ltv))}
-          icon={Coins}
-          tone={sim.ltv > base.ltv0 ? "success" : sim.ltv < base.ltv0 ? "danger" : "neutral"}
-          hint={`baseline ${formatPrice(Math.round(base.ltv0))} · ${sim.margin.toFixed(1)}% margin`}
-        />
-        <KpiCard
-          label="CAC"
-          value={cacGrosze}
-          display={formatPrice(Math.round(cacGrosze))}
-          icon={Wallet}
-          hint={base.cac0 && base.cac0 > 0 ? `baseline ${formatPrice(base.cac0)}` : "assumed (no spend logged)"}
-        />
-        <KpiCard
-          label="CAC payback"
-          value={0}
-          display={paybackDisplay}
-          icon={Timer}
-          tone={sim.payback === null ? "neutral" : sim.payback <= 3 ? "success" : sim.payback >= 13 ? "danger" : "warning"}
-          hint="months to recoup CAC from margin"
-        />
-      </section>
-
+    <div className="v2-stack-16" style={{ marginTop: 8 }}>
       <Card>
         <CardBody>
           <div className="v2-detail-head">
-            <h2>What-if levers</h2>
-            <span className="v2-detail-head-hint">Defaults equal your real numbers — move one to see the ratio respond</span>
+            <h2 style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <FlaskConical className="h-4 w-4" aria-hidden /> What-if sandbox
+              {usingExample && <Badge tone="warning">Example data</Badge>}
+            </h2>
+            <Button variant="ghost" size="sm" leadingIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={resetLevers}>
+              Reset levers
+            </Button>
           </div>
-          <div className="v2-detail-grid" style={{ marginTop: 12 }}>
+          <p style={{ margin: "2px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)" }}>
+            {usingExample
+              ? "No acquisition data yet — these levers run on a worked example (62% margin, ~35 zł CAC, 2.6× ratio). Real orders + logged marketing spend seed it from your own numbers automatically."
+              : "Seeded from your real LTV/CAC. Flex acquisition cost, retention, order value and margin to watch the ratio and payback move against the 3× gate."}
+          </p>
+
+          {!base.hasMarketingData && !usingExample && (
+            <div className="v2-callout v2-callout-warning" style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12 }}>
+              <AlertTriangle className="h-4 w-4" style={{ marginTop: 2, flexShrink: 0 }} />
+              <div>
+                <strong>No marketing spend logged.</strong> CAC is seeded at an assumed{" "}
+                {formatPrice(FALLBACK_CAC_GROSZE)} — override it below, or log real spend under{" "}
+                <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link>.
+              </div>
+            </div>
+          )}
+
+          <div className="v2-detail-grid" style={{ marginTop: 14 }}>
             <Input
               type="number"
               label="CAC (zł)"
@@ -268,6 +218,37 @@ export function AdminLtvCacSimulator() {
 
       <section className="v2-kpi-grid">
         <KpiCard
+          label="LTV : CAC"
+          value={sim.ratio ?? 0}
+          display={fmtRatio(sim.ratio)}
+          icon={TrendingUp}
+          tone={ratioTone(sim.ratio)}
+          hint={base.ratio0 === null ? "baseline —" : `baseline ${fmtRatio(base.ratio0)} · gate 3×`}
+        />
+        <KpiCard
+          label="LTV (365d, margin)"
+          value={sim.ltv}
+          display={formatPrice(Math.round(sim.ltv))}
+          icon={Coins}
+          tone={sim.ltv > base.ltv0 ? "success" : sim.ltv < base.ltv0 ? "danger" : "neutral"}
+          hint={`baseline ${formatPrice(Math.round(base.ltv0))} · ${sim.margin.toFixed(1)}% margin`}
+        />
+        <KpiCard
+          label="CAC"
+          value={cacGrosze}
+          display={formatPrice(Math.round(cacGrosze))}
+          icon={Wallet}
+          hint={base.cac0 && base.cac0 > 0 ? `baseline ${formatPrice(base.cac0)}` : "assumed (no spend logged)"}
+        />
+        <KpiCard
+          label="CAC payback"
+          value={0}
+          display={paybackDisplay}
+          icon={Timer}
+          tone={sim.payback === null ? "neutral" : sim.payback <= 3 ? "success" : sim.payback >= 13 ? "danger" : "warning"}
+          hint="months to recoup CAC from margin"
+        />
+        <KpiCard
           label="Profit / customer"
           value={sim.profitPerCust}
           display={formatPrice(Math.round(sim.profitPerCust))}
@@ -281,7 +262,7 @@ export function AdminLtvCacSimulator() {
           display={formatPrice(Math.round(sim.monthlyProfit))}
           icon={TrendingUp}
           tone={sim.monthlyProfit > 0 ? "success" : "danger"}
-          hint={`${newCustPerMonth.toLocaleString("pl-PL")} new customers × profit/customer`}
+          hint={`${newCustPerMonth.toLocaleString("pl-PL")} new × profit/customer`}
         />
       </section>
 
@@ -293,26 +274,21 @@ export function AdminLtvCacSimulator() {
           </div>
           <PlainTalk>
             <p style={{ margin: 0 }}>
-              You want each customer to be worth at least <strong>3×</strong> what you pay to win
-              them, and to earn that back fast. Lifting retention or order value raises{" "}
-              <strong>LTV</strong>; spending smarter lowers <strong>CAC</strong>. The ratio reacts
-              to both — and the colour tells you where you stand: green ≥ 3×, amber 1–3×, red below 1×.
+              You want each customer worth at least <strong>3×</strong> what you pay to win them.
+              Lifting retention or order value raises <strong>LTV</strong>; spending smarter lowers{" "}
+              <strong>CAC</strong>. The colour tells you where you stand: green ≥ 3×, amber 1–3×, red below 1×.
             </p>
           </PlainTalk>
           <Methodology>
             <p style={{ margin: 0 }}>
-              Baseline margin-LTV (<strong>{formatPrice(Math.round(base.ltv0))}</strong>) and blended
-              margin (<strong>{base.margin0.toFixed(1)}%</strong>) come from the cohort + line-item
-              engine; CAC from the marketing-cost ledger. Revenue-LTV is recovered as LTV ÷ margin,
-              scaled by the retention and AOV levers, then re-margined. Ratio = LTV ÷ CAC; payback =
-              12 × CAC ÷ LTV.
+              Revenue-LTV is recovered as LTV ÷ margin, scaled by the retention and AOV levers, then
+              re-margined. Ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV.
             </p>
           </Methodology>
           <Tips>
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               <li><strong>Ratio under 3×?</strong> Lifting LTV (retention, AOV, margin) compounds; cutting CAC alone rarely closes the gap.</li>
-              <li><strong>Use the cohort simulator first</strong> — the CLTV it projects is the LTV input here.</li>
-              <li><strong>Payback over 3 months</strong> strains cash flow — get the second order sooner.</li>
+              <li><strong>Use the cohort sandbox first</strong> — the CLTV it projects is the LTV input here.</li>
             </ul>
           </Tips>
         </CardBody>

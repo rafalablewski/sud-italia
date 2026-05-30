@@ -942,25 +942,25 @@ export default async function CapabilitiesPage() {
             "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
         },
         {
-          name: "Cohort & CLTV simulator (what-if)",
+          name: "Cohort & CLTV what-if sandbox",
           status: "live",
-          href: "/admin/simulators/cohort",
+          href: "/admin/reports/cohort",
           summary:
-            "Seeds the real cohort report (/api/admin/reports/cohort: repeat rate, orders/customer, cohort-size-weighted 365-day CLTV, blended retention curve) and projects it forward under three levers — repeat-rate uplift (pp), AOV growth (%), and new customers/month. CLTV = orders/customer × value/order; the repeat lever holds 'extra orders per repeater' constant and re-derives orders/customer; the retention curve is scaled by the repeat-rate ratio (capped 100%). KPIs: projected CLTV, repeat rate, orders/customer, annual cohort value — each vs baseline. Read-only on live data. Off by default; master toggle in Settings → General (Simulator card).",
+            "A what-if sandbox embedded at the bottom of the Cohort & CLTV report (CohortSandbox.tsx). Seeds the real cohort numbers (repeat rate, orders/customer, cohort-size-weighted 365-day CLTV, blended retention curve) and projects them forward under three levers — repeat-rate uplift (pp), AOV growth (%), new customers/month. CLTV = orders/customer × value/order; the repeat lever holds 'extra orders per repeater' constant and re-derives orders/customer; the retention curve is scaled by the repeat-rate ratio (capped 100%). KPIs vs baseline. When there are no paid orders yet it runs on a worked Sud Italia example (badged 'Example data') so it's never empty. Read-only on live data. Off by default; toggle in Settings → General (Simulator card).",
         },
         {
-          name: "LTV / CAC simulator (what-if)",
+          name: "LTV / CAC what-if sandbox",
           status: "live",
-          href: "/admin/simulators/ltv-cac",
+          href: "/admin/reports/ltv-cac",
           summary:
-            "Seeds the real LTV/CAC report (/api/admin/reports/ltv-cac: margin-LTV, blended margin, CAC from the marketing-cost ledger) and flexes CAC (absolute zł), retention/frequency (%), AOV (%), gross-margin (pp) and new customers/month. Revenue-LTV is recovered as LTV ÷ margin, scaled, then re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV. KPIs tone against the 3× institutional gate plus profit/customer and monthly cohort profit. When no marketing spend is logged, CAC seeds at an editable assumed value. Off by default; master toggle in Settings → General (Simulator card).",
+            "A what-if sandbox embedded at the bottom of the LTV/CAC report (LtvCacSandbox.tsx). Seeds the real margin-LTV, blended margin and CAC, then flexes CAC (absolute zł), retention/frequency (%), AOV (%), gross-margin (pp) and new customers/month. Revenue-LTV is recovered as LTV ÷ margin, scaled, then re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV. KPIs tone against the 3× gate plus profit/customer and monthly cohort profit. Falls back to a worked example when there's no acquisition data. Off by default; toggle in Settings → General (Simulator card).",
         },
         {
-          name: "Menu-engineering simulator (what-if)",
+          name: "Menu-engineering what-if sandbox",
           status: "live",
-          href: "/admin/simulators/menu-engineering",
+          href: "/admin/menu-engineering",
           summary:
-            "Seeds the real Kasavana-Smith matrix (/api/admin/menu-engineering: per-item units, revenue, cost, quadrant over a 30/60/90/180-day window) and re-prices a target group with a demand response of (1+Δprice)^(−elasticity), promotes puzzle velocity, or removes dogs. Recovers per-unit price/cost from real revenue÷units, recomputes contribution = projected revenue − cost across the menu. KPIs: projected contribution + Δ vs baseline, revenue, units; 'biggest movers' table per dish. Lets operators prove a menu change grows total profit before touching the live menu. Off by default; master toggle in Settings → General (Simulator card).",
+            "A what-if sandbox embedded at the bottom of the Menu engineering matrix (MenuEngineeringSandbox.tsx). Seeds per-item units / revenue / cost / quadrant (30/60/90/180-day window) and re-prices a target group with a demand response of (1+Δprice)^(−elasticity), promotes puzzle velocity, or removes dogs. Recovers per-unit price/cost from real revenue÷units, recomputes contribution = projected revenue − cost across the menu. KPIs + a 'biggest movers' table. Falls back to a worked 10-dish Sud Italia menu when nothing has sold. Off by default; toggle in Settings → General (Simulator card).",
         },
         {
           name: "Calculator actuals (real-order ground truth)",

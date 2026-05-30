@@ -26,6 +26,7 @@ import {
 import { KpiCard } from "./v2/charts";
 import { formatPricePLN } from "@/lib/utils";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
+import { MenuEngineeringSandbox } from "./MenuEngineeringSandbox";
 
 type Quadrant = SimulationMenuEngineeringLine["quadrant"];
 
@@ -457,6 +458,7 @@ export function AdminMenuEngineering() {
           </Card>
         </>
       )}
+      <MenuEngineeringSandbox />
     </div>
   );
 }

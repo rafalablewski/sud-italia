@@ -8,6 +8,7 @@ import { Button, Card, CardBody, EmptyState } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
+import { LtvCacSandbox } from "./LtvCacSandbox";
 
 interface LtvCacMonthRow {
   cohortMonth: string;
@@ -131,6 +132,7 @@ export function AdminLtvCac() {
             />
           </CardBody>
         </Card>
+        <LtvCacSandbox />
       </div>
     );
   }
@@ -333,6 +335,7 @@ export function AdminLtvCac() {
           </div>
         </CardBody>
       </Card>
+      <LtvCacSandbox />
     </div>
   );
 }

@@ -61,7 +61,7 @@ export interface NavItem {
    * unless the corresponding boolean in /api/admin/settings is true.
    * The page itself still enforces the same check server-side.
    */
-  featureFlag?: "simulation" | "cohortSim" | "ltvCacSim" | "menuEngSim";
+  featureFlag?: "simulation";
 }
 
 export interface NavSection {
@@ -173,11 +173,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/locations", label: "Multi-location", icon: Map, requiredRole: "owner" },
       { href: "/admin/locations/manage", label: "Manage locations", icon: MapPin, requiredRole: "owner" },
       { href: "/admin/reports/cohort", label: "Cohort & CLTV", icon: BarChart3, requiredRole: "manager" },
-      { href: "/admin/simulators/cohort", label: "Cohort simulator", icon: FlaskConical, requiredRole: "manager", featureFlag: "cohortSim" },
       { href: "/admin/reports/ltv-cac", label: "LTV / CAC", icon: TrendingUp, requiredRole: "manager" },
-      { href: "/admin/simulators/ltv-cac", label: "LTV / CAC simulator", icon: FlaskConical, requiredRole: "manager", featureFlag: "ltvCacSim" },
       { href: "/admin/menu-engineering", label: "Menu engineering", icon: UtensilsCrossed, requiredRole: "manager" },
-      { href: "/admin/simulators/menu-engineering", label: "Menu eng. simulator", icon: FlaskConical, requiredRole: "manager", featureFlag: "menuEngSim" },
       { href: "/admin/ai", label: "Insights", icon: Brain, requiredRole: "manager" },
       { href: "/admin/expansion", label: "Expansion", icon: Map, requiredRole: "owner" },
     ],
@@ -213,7 +210,7 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
  */
 export function filterNavForRole(
   role: AdminRole | null,
-  flags?: { simulation?: boolean; cohortSim?: boolean; ltvCacSim?: boolean; menuEngSim?: boolean },
+  flags?: { simulation?: boolean },
 ): NavSection[] {
   if (!role) return [];
   const userRank = ROLE_RANK[role];

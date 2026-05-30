@@ -3,30 +3,29 @@
 ← back to [Admin README](../README.md)
 
 The surfaces where signal becomes decision: multi-location overview,
-location admin, cohort + CLTV (report **and** what-if simulator), LTV / CAC
-(report **and** simulator), menu engineering (report **and** simulator),
-AI insights, expansion planning.
+location admin, cohort + CLTV, LTV / CAC, menu engineering, AI insights,
+expansion planning.
 
-Each of the three analytics reports now has a paired **what-if simulator**
-that seeds from the report's real data and projects it forward under
-operator-set levers. The simulators are **off by default** and each gated by
-its own toggle in Settings → General (Simulator card) — `cohortSimulationEnabled`,
-`ltvCacSimulationEnabled`, `menuEngineeringSimulationEnabled` — which both
-hides the nav link (`featureFlag` in `nav.config.ts`) and redirects the page
-to `/admin/settings` server-side when off (same pattern as the Calculator).
+Three of these reports embed a **what-if sandbox** at the bottom of the
+page — *not* a separate route. Each sandbox seeds from the report's own
+real data and projects it forward under operator-set levers. The sandbox
+components **self-gate**: they fetch `/api/admin/settings` and render
+`null` unless their flag is on (`cohortSimulationEnabled`,
+`ltvCacSimulationEnabled`, `menuEngineeringSimulationEnabled` — all **off by
+default**, toggled in Settings → General → Simulator card). They are also
+**self-seeding**: when there is no live data yet they fall back to a worked
+Sud Italia example, badged `Example data`, so the sandbox is never empty.
+Read-only on live data — nothing they do writes back.
 
-| Page                                  | Code                                                       | Role-gate | Gated by |
-| ------------------------------------- | ---------------------------------------------------------- | --------- | -------- |
-| `/admin/locations`                    | `src/components/admin/AdminLocations.tsx`                  | **owner**   | — |
-| `/admin/locations/manage`             | (sub-page of the above)                                    | **owner**   | — |
-| `/admin/reports/cohort`               | `src/components/admin/AdminCohortReport.tsx`               | manager+  | — |
-| `/admin/simulators/cohort`            | `src/components/admin/AdminCohortSimulator.tsx`            | manager+  | `cohortSimulationEnabled` |
-| `/admin/reports/ltv-cac`              | `src/components/admin/AdminLtvCac.tsx`                     | manager+  | — |
-| `/admin/simulators/ltv-cac`           | `src/components/admin/AdminLtvCacSimulator.tsx`            | manager+  | `ltvCacSimulationEnabled` |
-| `/admin/menu-engineering`             | `src/components/admin/AdminMenuEngineering.tsx`            | manager+  | — |
-| `/admin/simulators/menu-engineering`  | `src/components/admin/AdminMenuEngineeringSimulator.tsx`   | manager+  | `menuEngineeringSimulationEnabled` |
-| `/admin/ai`                           | `src/components/admin/AdminAi.tsx`                         | manager+  | — |
-| `/admin/expansion`                    | `src/components/admin/AdminExpansion.tsx`                  | **owner**   | — |
+| Page                          | Code                                              | Role-gate | Embedded sandbox |
+| ----------------------------- | ------------------------------------------------- | --------- | ---------------- |
+| `/admin/locations`            | `src/components/admin/AdminLocations.tsx`         | **owner**   | — |
+| `/admin/locations/manage`     | (sub-page of the above)                           | **owner**   | — |
+| `/admin/reports/cohort`       | `src/components/admin/AdminCohortReport.tsx`      | manager+  | `CohortSandbox.tsx` · `cohortSimulationEnabled` |
+| `/admin/reports/ltv-cac`      | `src/components/admin/AdminLtvCac.tsx`            | manager+  | `LtvCacSandbox.tsx` · `ltvCacSimulationEnabled` |
+| `/admin/menu-engineering`     | `src/components/admin/AdminMenuEngineering.tsx`   | manager+  | `MenuEngineeringSandbox.tsx` · `menuEngineeringSimulationEnabled` |
+| `/admin/ai`                   | `src/components/admin/AdminAi.tsx`                | manager+  | — |
+| `/admin/expansion`            | `src/components/admin/AdminExpansion.tsx`         | **owner**   | — |
 
 Owner-gated pages here are deliberate — Multi-location and Expansion
 touch chain strategy that managers don't need (and seeing them creates
@@ -98,23 +97,23 @@ The retention triangle + the customer-lifetime-value curve.
   cohorts, the retention matrix, repeat rate, and CLTV horizons, in the
   same voice as the Calculator and the LTV/CAC page.
 
-## Cohort & CLTV simulator — `/admin/simulators/cohort`
+### Cohort & CLTV sandbox (`CohortSandbox.tsx`)
 
-The what-if twin of the cohort report. Seeds the real numbers, then lets
-the operator project them forward — never writes to live data.
+Rendered at the foot of the cohort report (both the data and empty-state
+returns). Self-gates on `cohortSimulationEnabled`; self-seeds.
 
 - **Seed:** `GET /api/admin/reports/cohort` — repeat rate, orders/customer,
-  cohort-size-weighted 365-day CLTV, blended retention curve.
+  cohort-size-weighted 365-day CLTV, blended retention curve. Falls back to
+  `EXAMPLE_COHORT` (badged `Example data`) when `customers === 0`.
 - **Levers** (`v2-detail-grid` of `Input`s, all default to "no change" so
   the projection starts identical to the baseline): repeat-rate uplift (pp),
-  AOV growth (%), new customers/month (seeded from data, operator-overridable).
+  AOV growth (%), new customers/month.
 - **KPI row** (`v2-kpi-grid` + `KpiCard`, tone vs baseline): projected CLTV,
-  repeat rate, orders/customer, annual cohort value — each with a baseline hint.
+  repeat rate, orders/customer, annual cohort value.
 - **Retention curve:** a `LineChart` with two series — `Baseline` (grey) vs
-  `Simulated` (green), the simulated line scaled by the repeat-rate ratio
-  (capped 100%).
-- **Math (transparent, in the explainer):** CLTV = orders/customer × value/order;
-  the repeat lever holds "extra orders per repeater" constant and re-derives
+  `Simulated` (green), scaled by the repeat-rate ratio (capped 100%).
+- **Math (in the explainer):** CLTV = orders/customer × value/order; the
+  repeat lever holds "extra orders per repeater" constant and re-derives
   orders/customer. Shares the `PlainTalk` / `Methodology` / `Tips` blocks.
 - **`Reset levers`** ghost action restores every lever to baseline.
 
@@ -149,21 +148,20 @@ Acquisition economics — the "what's your LTV:CAC?" answer in one screen.
   365-day margin LTV, LTV:CAC, payback. Headline LTV:CAC cell uses
   `v2-cohort-td-headline`.
 
-## LTV / CAC simulator — `/admin/simulators/ltv-cac`
+### LTV / CAC sandbox (`LtvCacSandbox.tsx`)
 
-The what-if twin of the LTV/CAC report — flex the acquisition economics
-against the 3× institutional gate.
+Rendered at the foot of the LTV/CAC report. Self-gates on
+`ltvCacSimulationEnabled`; self-seeds (`EXAMPLE_LTVCAC` fallback).
 
 - **Seed:** `GET /api/admin/reports/ltv-cac` — margin-LTV, blended margin,
   CAC from the marketing-cost ledger, new customers/month.
 - **Levers:** CAC (absolute zł, seeded from real CAC — or an editable assumed
   value when no spend is logged), retention/frequency (%), AOV growth (%),
   gross-margin Δ (pp), new customers/month.
-- **KPI rows:** LTV:CAC ratio (same green ≥ 3× / amber ≥ 1× / red tone as the
-  report), LTV, CAC, payback; plus a second row for profit/customer and
-  monthly cohort profit.
-- **No-spend state:** mirrors the report — a `v2-callout v2-callout-warning`
-  explains CAC is an assumed seed and points to Business costs → Marketing.
+- **KPI grid:** LTV:CAC ratio (same green ≥ 3× / amber ≥ 1× / red tone as the
+  report), LTV, CAC, payback, profit/customer, monthly cohort profit.
+- **No-spend state:** a `v2-callout v2-callout-warning` explains CAC is an
+  assumed seed and points to Business costs → Marketing.
 - **Math:** revenue-LTV recovered as LTV ÷ margin, scaled by the retention +
   AOV levers, re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV.
 
@@ -190,14 +188,15 @@ The four-quadrant analysis: every item sorted by margin × popularity.
   velocity", "Drop unless anchor" — surfaced as one line under the item
   name, the operator confirms.
 
-## Menu engineering simulator — `/admin/simulators/menu-engineering`
+### Menu engineering sandbox (`MenuEngineeringSandbox.tsx`)
 
-The what-if twin of the matrix — prove a menu change grows total
-contribution before touching the live menu.
+Rendered at the foot of the matrix. Self-gates on
+`menuEngineeringSimulationEnabled`; self-seeds (`EXAMPLE_MENU`, a worked
+10-dish Sud Italia menu).
 
 - **Seed:** `GET /api/admin/menu-engineering?days=` — per-item units,
-  revenue, cost, quadrant. Carries the same `aria-label="Window"` selector
-  (30 / 60 / 90 / 180) as the report.
+  revenue, cost, quadrant. Carries its own `aria-label="Window"` selector
+  (30 / 60 / 90 / 180).
 - **Levers:** target group (`Select`: all / stars / plowhorses / puzzles /
   dogs), price change (%), demand elasticity (units lost per 1% price rise,
   default 0.5 — food is inelastic), promote-puzzles velocity (%), remove-dogs
@@ -210,8 +209,7 @@ contribution before touching the live menu.
 - **Math:** per-unit price/cost recovered from real revenue÷units; a price
   change applies a demand response of `(1+Δprice)^(−elasticity)`; promoting
   puzzles multiplies their velocity; removing dogs zeroes their units;
-  contribution = projected revenue − cost summed across the menu. Quadrant
-  labels are the seed's real Kasavana-Smith classification.
+  contribution = projected revenue − cost summed across the menu.
 
 ## AI Insights — `/admin/ai`
 
@@ -252,10 +250,9 @@ The "where could we open next" planning surface — owner-gated.
 - It is **not** growth execution — Growth pulls the levers, Intelligence
   decides which lever to pull.
 - The **Calculator** (Finance) models the whole-business P&L from scratch;
-  the Intelligence **simulators** are narrower — each takes one real analytics
-  report (cohort, LTV/CAC, menu engineering) as its seed and projects *that*
-  forward. Hypothetical modelling now lives in both places, scoped to the
-  question being asked.
+  the Intelligence **sandboxes** are narrower — each is embedded in its own
+  report and projects *that* report's real data forward. Hypothetical
+  modelling now lives in both places, scoped to the question being asked.
 
 Intelligence is the **decision surface** — every page exists to inform a
 choice the operator or owner has to make in the next planning cycle.

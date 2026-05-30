@@ -1,21 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { RotateCcw, UtensilsCrossed, Coins, TrendingUp, Boxes } from "lucide-react";
-import { Button, Card, CardBody, EmptyState, Input, Select, Badge, type BadgeTone } from "./v2/ui";
+import { RotateCcw, Coins, TrendingUp, Boxes, FlaskConical } from "lucide-react";
+import { Button, Card, CardBody, Input, Select, Badge, type BadgeTone } from "./v2/ui";
 import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
 
 type Quadrant = SimulationMenuEngineeringLine["quadrant"];
-
-interface ApiResponse {
-  windowDays: number;
-  location: string;
-  items: SimulationMenuEngineeringLine[];
-}
 
 const QUADRANT_TONE: Record<Quadrant, BadgeTone> = {
   star: "success",
@@ -38,6 +31,50 @@ const TARGET_OPTIONS = [
   { value: "dog", label: "Dogs only" },
 ];
 
+/** Build a fully-typed example line from the few fields the sandbox uses. */
+function ex(
+  id: string,
+  name: string,
+  category: string,
+  quadrant: Quadrant,
+  units: number,
+  priceG: number,
+  costG: number,
+): SimulationMenuEngineeringLine {
+  const gpPerUnit = priceG - costG;
+  return {
+    menuItemId: id,
+    name,
+    category,
+    unitsSold: units,
+    gpPerUnit,
+    revenue: units * priceG,
+    cost: units * costG,
+    quadrant,
+    deliveryOnly: false,
+    prepTimeMinutes: 8,
+    trueCm1PerUnit: Math.round(gpPerUnit * 0.82),
+    marginTrap: false,
+    prepHeavy: false,
+    spoilageRisk: false,
+  };
+}
+
+/** Worked Sud Italia menu example (90-day window) — used when no dishes
+ *  have sold yet so the sandbox is never empty. */
+const EXAMPLE_MENU: SimulationMenuEngineeringLine[] = [
+  ex("ex-margherita", "Pizza Margherita", "pizza", "star", 2400, 3200, 950),
+  ex("ex-diavola", "Pizza Diavola", "pizza", "star", 1500, 3800, 1250),
+  ex("ex-tiramisu", "Tiramisù", "dolci", "star", 1300, 1900, 520),
+  ex("ex-espresso", "Espresso", "caffe", "plowhorse", 2100, 800, 150),
+  ex("ex-patatine", "Patatine fritte", "contorni", "plowhorse", 1400, 1500, 480),
+  ex("ex-bufala", "Pizza Bufala", "pizza", "puzzle", 620, 4400, 1750),
+  ex("ex-aperol", "Aperol Spritz", "bevande", "puzzle", 780, 2400, 620),
+  ex("ex-marinara", "Pizza Marinara", "pizza", "puzzle", 540, 2900, 700),
+  ex("ex-burrata", "Burrata starter", "antipasti", "dog", 240, 3600, 2050),
+  ex("ex-calzone", "Calzone", "pizza", "dog", 300, 4000, 1500),
+];
+
 const WINDOW_OPTIONS = [
   { value: "30", label: "Last 30 days" },
   { value: "60", label: "Last 60 days" },
@@ -45,45 +82,56 @@ const WINDOW_OPTIONS = [
   { value: "180", label: "Last 180 days" },
 ];
 
-export function AdminMenuEngineeringSimulator() {
+/**
+ * Menu-engineering what-if sandbox — embedded at the bottom of the menu
+ * engineering matrix. Self-gates on `menuEngineeringSimulationEnabled`,
+ * seeds from the live matrix and falls back to a worked Sud Italia menu
+ * when nothing has sold yet.
+ */
+export function MenuEngineeringSandbox() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [windowDays, setWindowDays] = useState("90");
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<SimulationMenuEngineeringLine[] | null>(null);
 
-  // Levers.
   const [target, setTarget] = useState("all");
   const [priceChangePct, setPriceChangePct] = useState(0);
   const [elasticity, setElasticity] = useState(0.5);
   const [promotePuzzlesPct, setPromotePuzzlesPct] = useState(0);
   const [removeDogs, setRemoveDogs] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => !cancelled && setEnabled(!!j?.menuEngineeringSimulationEnabled))
+      .catch(() => !cancelled && setEnabled(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/menu-engineering?days=${windowDays}`).then((r) =>
-        r.ok ? r.json() : null,
-      );
-      setData(res);
-    } finally {
-      setLoading(false);
-    }
+    const res = await fetch(`/api/admin/menu-engineering?days=${windowDays}`).then((r) =>
+      r.ok ? r.json() : null,
+    );
+    setItems(res?.items ?? null);
   }, [windowDays]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (enabled) void load();
+  }, [enabled, load]);
+
+  const usingExample = !items || items.length === 0;
+  const source = usingExample ? EXAMPLE_MENU : items;
 
   const rows = useMemo(() => {
-    const items = data?.items ?? [];
-    return items.map((it) => {
+    return source.map((it) => {
       const unitPrice = it.unitsSold > 0 ? it.revenue / it.unitsSold : 0;
       const unitCost = it.unitsSold > 0 ? it.cost / it.unitsSold : 0;
       const baseGp = it.revenue - it.cost;
 
       const inTarget = target === "all" || it.quadrant === target;
       const priceMult = inTarget ? 1 + priceChangePct / 100 : 1;
-      // Price elasticity of demand: a 10% price rise at e=0.5 sheds ~5% of
-      // units. Food is typically inelastic (e < 1).
       let demandMult = inTarget && priceMult > 0 ? Math.pow(priceMult, -elasticity) : 1;
       if (it.quadrant === "puzzle") demandMult *= 1 + promotePuzzlesPct / 100;
       const removed = removeDogs && it.quadrant === "dog";
@@ -108,7 +156,7 @@ export function AdminMenuEngineeringSimulator() {
         removed,
       };
     });
-  }, [data, target, priceChangePct, elasticity, promotePuzzlesPct, removeDogs]);
+  }, [source, target, priceChangePct, elasticity, promotePuzzlesPct, removeDogs]);
 
   const totals = useMemo(() => {
     const baseGp = rows.reduce((s, r) => s + r.baseGp, 0);
@@ -133,35 +181,7 @@ export function AdminMenuEngineeringSimulator() {
     setRemoveDogs(false);
   };
 
-  if (loading) {
-    return (
-      <div className="v2-page">
-        <div className="v2-page-loading">Loading menu engineering simulator…</div>
-      </div>
-    );
-  }
-
-  if (!data || data.items.length === 0) {
-    return (
-      <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Menu engineering simulator</h1>
-            <p className="v2-page-subtitle">No sales in this window — nothing to re-engineer.</p>
-          </div>
-        </header>
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={UtensilsCrossed}
-              title="No data to seed"
-              description="Once dishes sell, this seeds each item's real velocity and margin, then re-prices and re-promotes them to project the contribution-margin impact."
-            />
-          </CardBody>
-        </Card>
-      </div>
-    );
-  }
+  if (!enabled) return null;
 
   const gpDelta = totals.simGp - totals.baseGp;
   const gpDeltaPct = totals.baseGp > 0 ? (gpDelta / totals.baseGp) * 100 : 0;
@@ -169,78 +189,29 @@ export function AdminMenuEngineeringSimulator() {
   const unitsDelta = totals.simUnits - totals.baseUnits;
 
   return (
-    <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Menu engineering simulator</h1>
-          <p className="v2-page-subtitle">
-            Seeded from the real{" "}
-            <Link href="/admin/menu-engineering" className="v2-link">Kasavana-Smith matrix</Link>{" "}
-            over the last {data.windowDays} days. Re-price, re-promote or cut dishes to project the
-            contribution-margin impact before you touch the live menu.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Select
-            aria-label="Window"
-            value={windowDays}
-            onChange={(e) => setWindowDays(e.target.value)}
-            options={WINDOW_OPTIONS}
-          />
-          <Button variant="ghost" size="sm" leadingIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={resetLevers}>
-            Reset levers
-          </Button>
-        </div>
-      </header>
-
-      <section className="v2-kpi-grid">
-        <KpiCard
-          label="Projected contribution"
-          value={totals.simGp}
-          display={formatPrice(Math.round(totals.simGp))}
-          icon={Coins}
-          tone={gpDelta > 0 ? "success" : gpDelta < 0 ? "danger" : "neutral"}
-          hint={`baseline ${formatPrice(Math.round(totals.baseGp))} · ${gpDelta >= 0 ? "+" : ""}${gpDeltaPct.toFixed(1)}%`}
-        />
-        <KpiCard
-          label="Δ contribution"
-          value={gpDelta}
-          display={`${gpDelta >= 0 ? "+" : ""}${formatPrice(Math.round(gpDelta))}`}
-          icon={TrendingUp}
-          tone={gpDelta > 0 ? "success" : gpDelta < 0 ? "danger" : "neutral"}
-          hint="vs the real baseline window"
-        />
-        <KpiCard
-          label="Projected revenue"
-          value={totals.simRevenue}
-          display={formatPrice(Math.round(totals.simRevenue))}
-          icon={Coins}
-          tone={revDelta > 0 ? "success" : revDelta < 0 ? "danger" : "neutral"}
-          hint={`baseline ${formatPrice(Math.round(totals.baseRevenue))}`}
-        />
-        <KpiCard
-          label="Projected units"
-          value={totals.simUnits}
-          display={Math.round(totals.simUnits).toLocaleString("pl-PL")}
-          icon={Boxes}
-          tone={unitsDelta > 0 ? "success" : unitsDelta < 0 ? "danger" : "neutral"}
-          hint={`baseline ${Math.round(totals.baseUnits).toLocaleString("pl-PL")}`}
-        />
-      </section>
-
+    <div className="v2-stack-16" style={{ marginTop: 8 }}>
       <Card>
         <CardBody>
           <div className="v2-detail-head">
-            <h2>What-if levers</h2>
-            <span className="v2-detail-head-hint">Price moves carry a demand response; defaults leave the menu untouched</span>
+            <h2 style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <FlaskConical className="h-4 w-4" aria-hidden /> What-if sandbox
+              {usingExample && <Badge tone="warning">Example data</Badge>}
+            </h2>
+            <div style={{ display: "inline-flex", gap: 8 }}>
+              <Select aria-label="Window" value={windowDays} onChange={(e) => setWindowDays(e.target.value)} options={WINDOW_OPTIONS} />
+              <Button variant="ghost" size="sm" leadingIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={resetLevers}>
+                Reset levers
+              </Button>
+            </div>
           </div>
-          <div className="v2-detail-grid" style={{ marginTop: 12 }}>
-            <Select
-              label="Apply price change to"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              options={TARGET_OPTIONS}
-            />
+          <p style={{ margin: "2px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)" }}>
+            {usingExample
+              ? "No sales in this window — these levers run on a worked Sud Italia menu (10 dishes). Once dishes sell it seeds from your own velocity and margin automatically."
+              : "Re-price, re-promote or cut dishes to project the contribution-margin impact before you touch the live menu."}
+          </p>
+
+          <div className="v2-detail-grid" style={{ marginTop: 14 }}>
+            <Select label="Apply price change to" value={target} onChange={(e) => setTarget(e.target.value)} options={TARGET_OPTIONS} />
             <Input
               type="number"
               label="Price change (%)"
@@ -272,14 +243,47 @@ export function AdminMenuEngineeringSimulator() {
               <span className="v2-field-label">Remove dogs</span>
               <span className="inline-flex items-center gap-2 mt-1">
                 <input type="checkbox" checked={removeDogs} onChange={(e) => setRemoveDogs(e.target.checked)} />
-                <span className="v2-muted text-sm">
-                  Drop low-volume, low-margin dishes from the projection.
-                </span>
+                <span className="v2-muted text-sm">Drop low-volume, low-margin dishes from the projection.</span>
               </span>
             </label>
           </div>
         </CardBody>
       </Card>
+
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="Projected contribution"
+          value={totals.simGp}
+          display={formatPrice(Math.round(totals.simGp))}
+          icon={Coins}
+          tone={gpDelta > 0 ? "success" : gpDelta < 0 ? "danger" : "neutral"}
+          hint={`baseline ${formatPrice(Math.round(totals.baseGp))} · ${gpDelta >= 0 ? "+" : ""}${gpDeltaPct.toFixed(1)}%`}
+        />
+        <KpiCard
+          label="Δ contribution"
+          value={gpDelta}
+          display={`${gpDelta >= 0 ? "+" : ""}${formatPrice(Math.round(gpDelta))}`}
+          icon={TrendingUp}
+          tone={gpDelta > 0 ? "success" : gpDelta < 0 ? "danger" : "neutral"}
+          hint="vs the baseline window"
+        />
+        <KpiCard
+          label="Projected revenue"
+          value={totals.simRevenue}
+          display={formatPrice(Math.round(totals.simRevenue))}
+          icon={Coins}
+          tone={revDelta > 0 ? "success" : revDelta < 0 ? "danger" : "neutral"}
+          hint={`baseline ${formatPrice(Math.round(totals.baseRevenue))}`}
+        />
+        <KpiCard
+          label="Projected units"
+          value={totals.simUnits}
+          display={Math.round(totals.simUnits).toLocaleString("pl-PL")}
+          icon={Boxes}
+          tone={unitsDelta > 0 ? "success" : unitsDelta < 0 ? "danger" : "neutral"}
+          hint={`baseline ${Math.round(totals.baseUnits).toLocaleString("pl-PL")}`}
+        />
+      </section>
 
       <Card>
         <CardBody>
@@ -336,27 +340,24 @@ export function AdminMenuEngineeringSimulator() {
           </div>
           <PlainTalk>
             <p style={{ margin: 0 }}>
-              Every dish has a real selling price, cost and how many you actually sold. Raise a
-              price and you make more on each one — but sell a few fewer. Promote a high-margin
-              &ldquo;puzzle&rdquo; and you sell more of your best earners. This adds it all up so you
-              can see whether a menu change <em>grows total profit</em> before you commit to it.
+              Every dish has a real price, cost and how many you sold. Raise a price and you make
+              more on each one — but sell a few fewer. Promote a high-margin &ldquo;puzzle&rdquo; and
+              you sell more of your best earners. This adds it all up so you can see whether a menu
+              change <em>grows total profit</em> before you commit.
             </p>
           </PlainTalk>
           <Methodology>
             <p style={{ margin: 0 }}>
-              Per-unit price and cost are recovered from each item&apos;s real revenue ÷ units and
-              cost ÷ units. A price change multiplies the unit price and applies a demand response
-              of <code>(1 + Δprice)^(−elasticity)</code>; promoting puzzles multiplies their
-              velocity; removing dogs zeroes their units. Contribution = projected revenue −
-              projected cost, summed across the menu. Quadrant labels are the seed&apos;s real
-              Kasavana-Smith classification.
+              Per-unit price/cost are recovered from each item&apos;s revenue ÷ units. A price change
+              multiplies unit price and applies a demand response of <code>(1 + Δprice)^(−elasticity)</code>;
+              promoting puzzles multiplies their velocity; removing dogs zeroes their units.
+              Contribution = projected revenue − cost, summed across the menu.
             </p>
           </Methodology>
           <Tips>
             <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Reprice plowhorses up.</strong> High-volume, low-margin dishes are the best repricing candidates — small per-unit gains × big volume.</li>
+              <li><strong>Reprice plowhorses up.</strong> High-volume, low-margin dishes give small per-unit gains × big volume.</li>
               <li><strong>Promote puzzles, don&apos;t discount them.</strong> They already carry margin; they just need velocity.</li>
-              <li><strong>Don&apos;t blanket-cut dogs</strong> tagged as anchors — premium decoys earn their menu slot by making everything else look reasonable.</li>
             </ul>
           </Tips>
         </CardBody>
