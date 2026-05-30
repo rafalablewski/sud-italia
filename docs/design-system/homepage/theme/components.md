@@ -385,13 +385,6 @@ don't have alternate variants.
 
 The V8 Trattoria hero — full spec in [`../pages/home.md`](../pages/home.md#hero).
 
-- **Redesign variants** — `?hero=a|b|c` swaps the current hero for an
-  appetite-forward alternative (A wood-peel full-bleed, B split
-  editorial — recommended, C ingredient-forward). All reuse the
-  `.v8-hero-*` tokens + live data and add the `<Margherita />` SVG +
-  a `.v8-hero-eta` "Ready in ~15 min" chip. A fixed `.v8-hero-switch`
-  pill is a temporary comparison aid (removed once a direction ships).
-  Default (no param) = the current hero below.
 - **Centred parchment block**, not full-bleed. Padding `48px top /
   0 bottom` → `80px top / 0 bottom` ≥md. The bottom is zeroed: the
   closing tricolore sits 28px below the CTAs and the next `.v8-ps`
