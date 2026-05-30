@@ -641,7 +641,7 @@ V8 Trattoria treatment — full spec in
 V8 Trattoria menu chrome. Wraps the entire menu surface in a single
 soft paper card (`.v8-menu-card`) holding the section header,
 search input, per-location live-activity strip, category tabs,
-15-min guarantee banner, inline combo deals row, surprise-me pill,
+speed-guarantee banner, inline combo deals row, surprise-me pill,
 and the items grid. Full layout spec in
 [`../pages/menu.md`](../pages/menu.md#menu-section--menusection).
 

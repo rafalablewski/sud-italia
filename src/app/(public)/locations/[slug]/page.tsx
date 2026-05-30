@@ -11,7 +11,7 @@ import { LayoutGate } from "@/components/layout/LayoutGate";
 import { LiveTicker } from "@/components/layout/LiveTicker";
 import { ComplianceBanner } from "@/components/location/ComplianceBanner";
 import { SITE_NAME } from "@/lib/constants";
-import { getSettings, resolveLocationCompliance } from "@/lib/store";
+import { getLoyaltySettings, getSettings, resolveLocationCompliance } from "@/lib/store";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -65,7 +65,10 @@ export default async function LocationPage({ params }: PageProps) {
   // Audit §11.1 — per-location regulatory disclosures. Loaded server-side
   // so SSR + client hydration agree (no fetch flicker before the DOH
   // grade / halal banner appears).
-  const appSettings = await getSettings();
+  const [appSettings, loyaltySettings] = await Promise.all([
+    getSettings(),
+    getLoyaltySettings(),
+  ]);
   const compliance = resolveLocationCompliance(appSettings.compliance, slug);
 
   const jsonLd = {
@@ -141,6 +144,7 @@ export default async function LocationPage({ params }: PageProps) {
         locationSlug={slug}
         initialAvailability={initialAvailability}
         compliance={compliance}
+        speedGuarantee={loyaltySettings.speedGuarantee}
       />
       <LocationInfo location={location} />
       {/* Soci rail closes the location page the same way it closes

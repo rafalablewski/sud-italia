@@ -2,15 +2,16 @@
 
 ← back to [Admin README](../README.md)
 
-The six surfaces where signal becomes decision: multi-location overview,
-location admin, cohort + CLTV, menu engineering, AI insights, expansion
-planning.
+The seven surfaces where signal becomes decision: multi-location overview,
+location admin, cohort + CLTV, LTV / CAC, menu engineering, AI insights,
+expansion planning.
 
 | Page                          | Code                                              | Role-gate |
 | ----------------------------- | ------------------------------------------------- | --------- |
 | `/admin/locations`            | `src/components/admin/AdminLocations.tsx`         | **owner**   |
 | `/admin/locations/manage`     | (sub-page of the above)                           | **owner**   |
-| `/admin/reports/cohort`       | `src/components/admin/AdminCohort.tsx`            | manager+  |
+| `/admin/reports/cohort`       | `src/components/admin/AdminCohortReport.tsx`      | manager+  |
+| `/admin/reports/ltv-cac`      | `src/components/admin/AdminLtvCac.tsx`            | manager+  |
 | `/admin/menu-engineering`     | `src/components/admin/AdminMenuEngineering.tsx`   | manager+  |
 | `/admin/ai`                   | `src/components/admin/AdminAi.tsx`                | manager+  |
 | `/admin/expansion`            | `src/components/admin/AdminExpansion.tsx`         | **owner**   |
@@ -79,6 +80,30 @@ The retention triangle + the customer-lifetime-value curve.
   surfaces the cohort size + median + p10/p90 band.
 - **Compare two cohorts** — pin one, click another, the second renders
   as an overlay curve. Useful for "did the new pricing change retention?".
+
+## LTV / CAC — `/admin/reports/ltv-cac`
+
+Acquisition economics — the "what's your LTV:CAC?" answer in one screen.
+
+- **KPI row** (`v2-kpi-grid` + `KpiCard`): LTV:CAC ratio (tone green ≥ 3×,
+  amber ≥ 1×, red below), Blended CAC, Blended LTV (margin-adjusted),
+  CAC payback in months (green ≤ 3, red > 12).
+- **Data sources, both real:** LTV from the cohort CLTV engine
+  (`buildCohortReport`) × a blended gross margin computed from paid-order
+  line-item price/cost; CAC from the **marketing-category** rows of the
+  Business-costs ledger (`getBusinessCosts({ category: "marketing",
+  status: "active" })`), normalized to a monthly burn via
+  `src/lib/business-costs-math.ts` and divided by new customers/month.
+  The pure engine is `src/lib/ltv-cac.ts` (`buildLtvCacReport`).
+- **No-spend state:** when no marketing cost is logged, a `v2-callout
+  v2-callout-warning` prompts the operator to add spend under Business
+  costs → Marketing; CAC / ratio / payback render `—` rather than a fake
+  number. LTV still shows (it only needs orders).
+- **Retention curve:** a `LineChart` of size-weighted blended retention
+  by month-offset (the investor "show me a cohort retention curve" ask).
+- **Cohort table:** per acquisition month — new customers, spend, CAC,
+  365-day margin LTV, LTV:CAC, payback. Headline LTV:CAC cell uses
+  `v2-cohort-td-headline`.
 
 ## Menu engineering — `/admin/menu-engineering`
 

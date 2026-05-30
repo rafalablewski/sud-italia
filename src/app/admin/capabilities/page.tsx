@@ -1124,6 +1124,14 @@ export default async function CapabilitiesPage() {
             "Per-cohort retention matrix (% of cohort reordering N months later) + mean CLTV at 30 / 60 / 90 / 180 / 365 day horizons. Computed live from the orders table; cached 60s per location filter.",
         },
         {
+          name: "LTV / CAC",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/admin/reports/ltv-cac",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Acquisition economics: margin-adjusted lifetime value (from cohort CLTV × blended order-line gross margin) over CAC (marketing-category rows of the Business-costs ledger ÷ new customers/month). Shows LTV:CAC ratio, CAC payback months, and a blended cohort-retention curve. CAC is null until marketing spend is logged in /admin/business-costs — no fabricated numbers.",
+        },
+        {
           name: "Customer segments (RFM)",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/reports/cohort",
@@ -1197,6 +1205,13 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/compliance",
           summary: "Permits / certs with expiry alerts on the HQ rollup.",
+        },
+        {
+          name: "SOC 2 controls register",
+          status: "live",
+          href: "/admin/soc2",
+          summary:
+            "Owner-only readiness board mapping the platform's live runtime posture to SOC 2 Trust Services Criteria (CC6.x access, CC7.x monitoring, CC8.1 change mgmt, A1.2 availability, C1.1 secrets). Each control's status (met/partial/gap) + evidence + remediation is introspected from real config (env), the admin-user table, and the audit log via buildSoc2Register — not a static checklist. Readiness, not certification.",
         },
         {
           name: "HACCP temperature logs",

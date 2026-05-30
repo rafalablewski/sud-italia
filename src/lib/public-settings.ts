@@ -73,6 +73,16 @@ export interface PublicSettings {
   deliveryThresholds?: Record<string, number | undefined> | null;
   /** Operator-managed flat delivery fee (grosze) — see /admin/settings. */
   deliveryFee?: number;
+  /** Speed-guarantee SLA shown on the menu page ("X minutes guaranteed").
+   *  Sourced from `LoyaltySettings.speedGuarantee` so the operator controls
+   *  the promised minutes + copy — and can switch it OFF when the kitchen
+   *  can't honour it, rather than the home page promising a number it can't
+   *  keep. `active: false` hides the banner entirely. */
+  speedGuarantee?: {
+    active: boolean;
+    maxMinutes: number;
+    guaranteeText: string;
+  };
   /** Operator-managed contact + social handles rendered in the
    *  public footer. */
   businessPhone?: string;

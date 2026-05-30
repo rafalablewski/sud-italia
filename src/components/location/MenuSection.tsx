@@ -50,6 +50,11 @@ interface MenuSectionProps {
   initialAvailability?: Record<string, boolean>;
   /** Audit §11.1 — per-location regulatory disclosure. */
   compliance?: import("./CompliancePills").PublicCompliance | null;
+  /** SSR seed for the operator-managed speed guarantee (minutes / copy /
+   *  on-off). Passed from the server page so the banner renders correctly on
+   *  first paint — no flash of a default or disabled banner before the client
+   *  settings fetch resolves. The client fetch then keeps it live. */
+  speedGuarantee?: import("@/lib/public-settings").PublicSettings["speedGuarantee"];
 }
 
 const CATEGORY_ORDER: MenuCategory[] = [
@@ -70,7 +75,7 @@ const CAT_IT: Partial<Record<MenuCategory, string>> = {
   desserts: "dolci",
 };
 
-export function MenuSection({ items, locationSlug, initialAvailability, compliance }: MenuSectionProps) {
+export function MenuSection({ items, locationSlug, initialAvailability, compliance, speedGuarantee: initialSpeedGuarantee }: MenuSectionProps) {
   // Editorial badges from /admin/crosssell.
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
@@ -78,6 +83,23 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
     fetch(`/api/settings/upsell?location=${locationSlug}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (!cancelled && data) setUpsellConfig(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [locationSlug]);
+
+  // Speed-guarantee SLA (operator-managed: minutes, copy, on/off). Seeded
+  // from the server (SSR prop) so first paint already shows the real value —
+  // no layout shift and no flash of a default/disabled banner before a fetch
+  // resolves (same SSR-to-avoid-flicker pattern the page uses for compliance).
+  // The fetch below only keeps it live if the operator toggles it after the
+  // page was rendered/cached.
+  const [speedGuarantee, setSpeedGuarantee] =
+    useState<import("@/lib/public-settings").PublicSettings["speedGuarantee"]>(initialSpeedGuarantee);
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/public-settings")
+      .then(({ fetchPublicSettings }) => fetchPublicSettings(locationSlug))
+      .then((s) => { if (!cancelled && s) setSpeedGuarantee(s.speedGuarantee); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [locationSlug]);
@@ -393,27 +415,33 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
           </div>
         </div>
 
-        {/* 15-minute guarantee banner */}
-        <div className="v8-guarantee" role="note">
-          <span className="v8-guarantee-icon" aria-hidden>
-            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-              <circle cx="28" cy="28" r="18" stroke="currentColor" strokeWidth="1.8" fill="rgba(184,92,56,0.06)" />
-              <path d="M28 12 L28 14 M28 42 L28 44 M12 28 L14 28 M42 28 L44 28" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M28 28 L28 16 M28 28 L36 32" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="28" cy="28" r="1.8" fill="currentColor" />
-              <path d="M16 42 C 22 46, 34 46, 40 42" stroke="currentColor" strokeWidth="1.3" fill="none" opacity="0.5" />
-            </svg>
-          </span>
-          <div className="v8-guarantee-text">
-            <div className="v8-guarantee-title">
-              <span>15 minutes guaranteed</span>{" "}
-              <span className="bi-sec">· 15 minuti garantiti</span>
-            </div>
-            <div className="v8-guarantee-sub">
-              Ready in 15 minutes — or your next drink&apos;s on us.
+        {/* Speed-guarantee banner — operator-managed minutes + copy + on/off
+            (LoyaltySettings.speedGuarantee via /api/settings/public). Hidden
+            when the operator switches it off so the page never promises a
+            time the kitchen isn't committing to. */}
+        {speedGuarantee?.active !== false && (
+          <div className="v8-guarantee" role="note">
+            <span className="v8-guarantee-icon" aria-hidden>
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="18" stroke="currentColor" strokeWidth="1.8" fill="rgba(184,92,56,0.06)" />
+                <path d="M28 12 L28 14 M28 42 L28 44 M12 28 L14 28 M42 28 L44 28" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M28 28 L28 16 M28 28 L36 32" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="28" cy="28" r="1.8" fill="currentColor" />
+                <path d="M16 42 C 22 46, 34 46, 40 42" stroke="currentColor" strokeWidth="1.3" fill="none" opacity="0.5" />
+              </svg>
+            </span>
+            <div className="v8-guarantee-text">
+              <div className="v8-guarantee-title">
+                <span>{speedGuarantee?.maxMinutes ?? 15} minutes guaranteed</span>{" "}
+                <span className="bi-sec">· {speedGuarantee?.maxMinutes ?? 15} minuti garantiti</span>
+              </div>
+              <div className="v8-guarantee-sub">
+                {speedGuarantee?.guaranteeText ??
+                  `Ready in ${speedGuarantee?.maxMinutes ?? 15} minutes — or your next drink's on us.`}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Inline combo deals row with wax-seal stamps */}
         {!isSearching && (

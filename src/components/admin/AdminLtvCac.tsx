@@ -1,0 +1,283 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
+import { Button, Card, CardBody, EmptyState } from "./v2/ui";
+import { KpiCard } from "./v2/charts";
+import { LineChart } from "./v2/charts";
+import { formatPrice } from "@/lib/utils";
+
+interface LtvCacMonthRow {
+  cohortMonth: string;
+  newCustomers: number;
+  marketingSpendGrosze: number;
+  cacGrosze: number | null;
+  ltv365Grosze: number;
+  ltv365MarginGrosze: number;
+  ltvCacRatio: number | null;
+  paybackMonths: number | null;
+}
+
+interface LtvCacReport {
+  generatedAt: string;
+  blendedMarginPct: number;
+  totals: {
+    newCustomers: number;
+    marketingSpendGrosze: number;
+    blendedCacGrosze: number | null;
+    blendedLtvGrosze: number;
+    blendedLtvMarginGrosze: number;
+    ltvCacRatio: number | null;
+    paybackMonths: number | null;
+    hasMarketingData: boolean;
+  };
+  months: LtvCacMonthRow[];
+}
+
+interface CohortRow {
+  cohortMonth: string;
+  cohortSize: number;
+  retention: { monthOffset: number; retained: number; revenueGrosze: number }[];
+}
+interface CohortReport {
+  cohortsByMonth: CohortRow[];
+}
+
+function fmtRatio(r: number | null): string {
+  return r === null ? "—" : `${r.toFixed(1)}×`;
+}
+function fmtPayback(m: number | null): string {
+  if (m === null) return "—";
+  if (m >= 13) return ">12 mo";
+  return `${m} mo`;
+}
+
+/** Size-weighted blended retention by month-offset: Σ retained / Σ cohortSize
+ *  over cohorts that have actually reached that offset. The investor "show me
+ *  a cohort retention curve" answer — one line, real data. */
+function blendedRetentionCurve(
+  cohorts: CohortRow[],
+): { offset: string; retention: number }[] {
+  const maxLen = Math.max(0, ...cohorts.map((c) => c.retention.length));
+  const out: { offset: string; retention: number }[] = [];
+  for (let i = 0; i < Math.min(13, maxLen); i++) {
+    let retained = 0;
+    let size = 0;
+    for (const c of cohorts) {
+      const r = c.retention[i];
+      if (!r) continue; // cohort hasn't reached this offset yet
+      retained += r.retained;
+      size += c.cohortSize;
+    }
+    if (size === 0) continue;
+    out.push({ offset: `M${i}`, retention: Math.round((retained / size) * 1000) / 10 });
+  }
+  return out;
+}
+
+export function AdminLtvCac() {
+  const [data, setData] = useState<LtvCacReport | null>(null);
+  const [cohort, setCohort] = useState<CohortReport | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ltv, coh] = await Promise.all([
+        fetch("/api/admin/reports/ltv-cac").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/admin/reports/cohort").then((r) => (r.ok ? r.json() : null)),
+      ]);
+      setData(ltv);
+      setCohort(coh);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const curve = useMemo(
+    () => (cohort ? blendedRetentionCurve(cohort.cohortsByMonth) : []),
+    [cohort],
+  );
+
+  if (loading) {
+    return (
+      <div className="v2-page">
+        <div className="v2-page-loading">Loading LTV / CAC…</div>
+      </div>
+    );
+  }
+
+  if (!data || data.totals.newCustomers === 0) {
+    return (
+      <div className="v2-page">
+        <header className="v2-page-header">
+          <div className="v2-page-title-row">
+            <h1 className="v2-page-title">LTV / CAC</h1>
+            <p className="v2-page-subtitle">No paid customers yet — nothing to value.</p>
+          </div>
+        </header>
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={TrendingUp}
+              title="No data"
+              description="Once paid orders land, lifetime value, acquisition cost, and the LTV:CAC ratio compute here from real orders + your marketing-cost ledger."
+            />
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  const t = data.totals;
+
+  return (
+    <div className="v2-page">
+      <header className="v2-page-header">
+        <div className="v2-page-title-row">
+          <h1 className="v2-page-title">LTV / CAC</h1>
+          <p className="v2-page-subtitle">
+            Lifetime value from paid-order cohorts, acquisition cost from your{" "}
+            <Link href="/admin/business-costs" className="v2-link">marketing-cost ledger</Link>.
+            LTV is margin-adjusted at the blended {data.blendedMarginPct}% gross margin
+            derived from order line items. Generated{" "}
+            {new Date(data.generatedAt).toLocaleString("pl-PL")}.
+          </p>
+        </div>
+        <div className="v2-page-actions">
+          <Link href="/admin/reports/cohort">
+            <Button variant="ghost" size="sm">Cohort &amp; CLTV</Button>
+          </Link>
+        </div>
+      </header>
+
+      {!t.hasMarketingData && (
+        <Card>
+          <CardBody>
+            <div className="v2-callout v2-callout-warning" style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <AlertTriangle className="h-4 w-4" style={{ marginTop: 2, flexShrink: 0 }} />
+              <div>
+                <strong>No marketing spend logged.</strong> LTV is computed, but
+                CAC, the LTV:CAC ratio, and payback need acquisition spend. Add
+                your ad / promo spend under{" "}
+                <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link>{" "}
+                and it flows in here automatically.
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      <section className="v2-kpi-grid">
+        <KpiCard
+          label="LTV : CAC"
+          value={t.ltvCacRatio ?? 0}
+          display={fmtRatio(t.ltvCacRatio)}
+          icon={TrendingUp}
+          tone={t.ltvCacRatio === null ? "neutral" : t.ltvCacRatio >= 3 ? "success" : t.ltvCacRatio >= 1 ? "warning" : "danger"}
+          hint={t.ltvCacRatio === null ? "log marketing spend" : t.ltvCacRatio >= 3 ? "healthy (≥ 3×)" : "below 3× benchmark"}
+        />
+        <KpiCard
+          label="Blended CAC"
+          value={t.blendedCacGrosze ?? 0}
+          display={t.blendedCacGrosze === null ? "—" : formatPrice(t.blendedCacGrosze)}
+          icon={Wallet}
+          hint={`${t.newCustomers} new customers · ${formatPrice(t.marketingSpendGrosze)} spend`}
+        />
+        <KpiCard
+          label="Blended LTV"
+          value={t.blendedLtvMarginGrosze}
+          display={formatPrice(t.blendedLtvMarginGrosze)}
+          icon={Coins}
+          hint={`${formatPrice(t.blendedLtvGrosze)} revenue · ${data.blendedMarginPct}% margin`}
+        />
+        <KpiCard
+          label="CAC payback"
+          value={0}
+          display={fmtPayback(t.paybackMonths)}
+          icon={Timer}
+          tone={t.paybackMonths === null ? "neutral" : t.paybackMonths <= 3 ? "success" : t.paybackMonths >= 13 ? "danger" : "warning"}
+          hint="months to recoup CAC from margin"
+        />
+      </section>
+
+      <Card>
+        <CardBody>
+          <div className="v2-detail-head">
+            <h2>Blended cohort retention curve</h2>
+            <span className="v2-detail-head-hint">
+              % of customers still ordering N months after their first order
+            </span>
+          </div>
+          {curve.length > 1 ? (
+            <LineChart
+              data={curve}
+              xKey="offset"
+              series={[{ key: "retention", label: "Retention", color: "#28a06d" }]}
+              height={220}
+              yFormat={(n) => `${n}%`}
+              tooltipValue={(n) => `${n}%`}
+            />
+          ) : (
+            <p className="v2-muted">Not enough cohort history to plot a curve yet.</p>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <div className="v2-detail-head">
+            <h2>Acquisition economics by cohort</h2>
+            <span className="v2-detail-head-hint">
+              CAC = that month&apos;s marketing spend ÷ new customers · LTV = 365-day margin CLTV
+            </span>
+          </div>
+          <div className="v2-cohort-table-wrap">
+            <table className="v2-cohort-table">
+              <thead>
+                <tr>
+                  <th className="v2-cohort-th-cohort">Cohort</th>
+                  <th className="v2-cohort-th-num">New</th>
+                  <th className="v2-cohort-th-num">Spend</th>
+                  <th className="v2-cohort-th-num">CAC</th>
+                  <th className="v2-cohort-th-num">LTV (365d, margin)</th>
+                  <th className="v2-cohort-th-num">LTV : CAC</th>
+                  <th className="v2-cohort-th-num">Payback</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.months
+                  .slice(-18)
+                  .reverse()
+                  .map((m) => (
+                    <tr key={m.cohortMonth}>
+                      <td className="v2-cohort-td-cohort tabular">{m.cohortMonth}</td>
+                      <td className="v2-cohort-td-num tabular">{m.newCustomers}</td>
+                      <td className="v2-cohort-td-num tabular">
+                        {m.marketingSpendGrosze > 0 ? formatPrice(m.marketingSpendGrosze) : "—"}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {m.cacGrosze === null ? "—" : formatPrice(m.cacGrosze)}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">
+                        {formatPrice(m.ltv365MarginGrosze)}
+                      </td>
+                      <td className="v2-cohort-td-num v2-cohort-td-headline tabular">
+                        {fmtRatio(m.ltvCacRatio)}
+                      </td>
+                      <td className="v2-cohort-td-num tabular">{fmtPayback(m.paybackMonths)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
