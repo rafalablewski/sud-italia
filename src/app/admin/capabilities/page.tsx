@@ -726,6 +726,12 @@ export default async function CapabilitiesPage() {
           summary: "Every dynamic bundle row in /admin/upsell carries a 'Limited until' date input + a per-weekday chip selector (Mon–Sun). Past-dated bundles auto-deactivate; weekday-gated bundles only surface on matching local days so operators can run Friday Family Feast pushes / Wednesday Lunch+ defaults without code. Both fields validate server-side and round-trip through saves.",
         },
         {
+          name: "Delivery address autocomplete",
+          status: "live",
+          envVars: ["ADDRESS_AUTOCOMPLETE_GOOGLE_KEY"],
+          summary: "Server-proxied autocomplete on the delivery address field (/api/address/autocomplete, rate-limited, key server-side). Uses Google Places when ADDRESS_AUTOCOMPLETE_GOOGLE_KEY (or GOOGLE_MAPS_API_KEY) is set, else falls back to free OSM Nominatim biased to Poland + the truck's city — so it works with no key. Field stays free-text; a failed lookup never blocks checkout.",
+        },
+        {
           name: "Post-order upsell (confirmation page)",
           status: "live",
           href: "/order-confirmation",
