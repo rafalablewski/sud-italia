@@ -26,6 +26,11 @@ import {
 } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
+import {
+  evaluateRefundGuard,
+  type RefundGuardDecision,
+} from "@/lib/refund-guard";
+import type { AdminRole } from "@/lib/admin-roles";
 import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import dynamic from "next/dynamic";
@@ -1038,6 +1043,30 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Refund-cap context for this actor + location (audit §11.2). Lets us preview
+  // the same block the server enforces, so a manager isn't surprised by a 403
+  // after filling the form. Falls back to "no policy" (allow) if the fetch fails
+  // — the POST route stays the authority either way.
+  const [policy, setPolicy] = useState<{
+    role: AdminRole;
+    ownerBypass: boolean;
+    singleMaxGrosze: number;
+    compDailyCapGrosze: number;
+    actorCompTotalTodayGrosze: number;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/refund-policy?location=${encodeURIComponent(order.locationSlug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setPolicy(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [order.locationSlug]);
+
   const partialGrosze = type === "partial" ? Math.round(parseFloat(amountPln || "0") * 100) : 0;
   const partialValid =
     type === "full" ||
@@ -1057,6 +1086,27 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
 
   const previewAmount = type === "full" ? order.totalAmount : partialGrosze;
   const willReverseStripe = !!order.stripePaymentIntentId && reasonCode !== "manager_comp";
+
+  // Preview the authorization decision (audit §11.2). Only meaningful once the
+  // policy has loaded and there's an amount to test; otherwise allow and let
+  // the server have the final word.
+  const guard: RefundGuardDecision =
+    policy && previewAmount > 0
+      ? evaluateRefundGuard({
+          role: policy.role,
+          reasonCode,
+          amountGrosze: previewAmount,
+          actorCompTotalTodayGrosze: policy.actorCompTotalTodayGrosze,
+          limits: {
+            singleMaxGrosze: policy.singleMaxGrosze,
+            compDailyCapGrosze: policy.compDailyCapGrosze,
+          },
+        })
+      : { allowed: true };
+  const compRemaining =
+    policy && !policy.ownerBypass && policy.compDailyCapGrosze > 0
+      ? Math.max(0, policy.compDailyCapGrosze - policy.actorCompTotalTodayGrosze)
+      : null;
 
   return (
     <Dialog
@@ -1078,12 +1128,14 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
           <Button
             variant="danger"
             onClick={submit}
-            disabled={submitting || !partialValid}
+            disabled={submitting || !partialValid || !guard.allowed}
             leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
           >
             {submitting
               ? "Processing…"
-              : `Refund ${previewAmount > 0 ? formatPrice(previewAmount) : "…"}`}
+              : !guard.allowed
+                ? "Owner approval required"
+                : `Refund ${previewAmount > 0 ? formatPrice(previewAmount) : "…"}`}
           </Button>
         </>
       }
@@ -1171,7 +1223,31 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
               The order status will be set to <strong>cancelled</strong>.
             </>
           )}
+          {reasonCode === "manager_comp" && compRemaining !== null && guard.allowed && (
+            <>
+              <br />
+              Comp budget left today: <strong>{formatPrice(compRemaining)}</strong> of{" "}
+              {formatPrice(policy!.compDailyCapGrosze)}.
+            </>
+          )}
         </div>
+
+        {!guard.allowed && (
+          <div
+            role="alert"
+            style={{
+              background: "var(--danger-bg, rgba(220,38,38,0.08))",
+              border: "1px solid var(--danger, #dc2626)",
+              borderRadius: "0.5rem",
+              padding: "0.75rem 1rem",
+              fontSize: "0.8125rem",
+              lineHeight: 1.5,
+              color: "var(--danger, #dc2626)",
+            }}
+          >
+            <strong>Blocked:</strong> {guard.message} Have an owner sign in to process it.
+          </div>
+        )}
       </div>
     </Dialog>
   );

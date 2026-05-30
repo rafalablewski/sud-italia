@@ -1001,10 +1001,12 @@ export default async function CapabilitiesPage() {
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
-          name: "Refunds (Stripe)",
+          name: "Refunds + comp controls (Stripe)",
           status: has("STRIPE_SECRET_KEY") ? "live" : "needs-config",
+          href: "/admin/orders",
           envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
-          summary: "Full + partial. manager_comp reason skips Stripe.",
+          summary:
+            "Full + partial refunds from the order detail, manager/owner-only, with an 8-code reason dropdown (customer_request, wrong_item, quality_issue, late_or_no_show, missing_item, duplicate_charge, manager_comp, other); manager_comp skips Stripe. Authorization caps (audit §11.2) stop one person comping the whole shift: a per-refund ceiling and a per-actor-per-location daily comp cap, both configurable in Settings → General (default 200 / 500 PLN), owners always bypass. Enforced server-side in /api/admin/orders/[id]/refund BEFORE Stripe is touched, previewed live in the refund dialog via /api/admin/refund-policy, every refund audit-logged + push-notified to other admins. Logic in src/lib/refund-guard.ts (unit-tested).",
         },
         {
           name: "Delivery profitability report",

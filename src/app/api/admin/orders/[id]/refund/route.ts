@@ -1,18 +1,28 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentActor, hasLocationAccess } from "@/lib/admin-auth";
-import { appendAuditLog, getOrderById, updateOrder } from "@/lib/store";
+import {
+  appendAuditLog,
+  getActorCompTotalToday,
+  getOrderById,
+  getSettings,
+  updateOrder,
+} from "@/lib/store";
 import { restoreRecipeForOrder } from "@/lib/inventory-decrement";
 import { logger } from "@/lib/logger";
 import { type OrderRefund } from "@/data/types";
 import { parseBody, refundBodySchema } from "@/lib/api-schemas";
+import {
+  DEFAULT_REFUND_CONTROLS,
+  evaluateRefundGuard,
+} from "@/lib/refund-guard";
 
 // Refunds reach back to Stripe and to revenue rows — owner/manager only.
 // Per-order tenancy check happens inside the handler because the order's
 // locationSlug isn't known until we read it.
 export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
   { roles: ["owner", "manager"] },
-  async (req, { params }) => {
+  async (req, { params }, { user }) => {
     const { id: orderId } = await params;
   if (!orderId) {
     return NextResponse.json({ error: "Missing order id" }, { status: 400 });
@@ -51,6 +61,29 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     return NextResponse.json(
       { error: "Refund amount exceeds order total" },
       { status: 400 },
+    );
+  }
+
+  // Authorization caps (audit §11.2) — a per-refund ceiling and a per-actor
+  // daily comp cap stop one manager from comping the whole shift. Owners
+  // bypass. Checked BEFORE Stripe so a blocked refund never reverses a charge.
+  const actor = await getCurrentActor();
+  const limits = (await getSettings()).refundControls ?? DEFAULT_REFUND_CONTROLS;
+  const compTotalToday =
+    reasonCode === "manager_comp"
+      ? await getActorCompTotalToday(actor, order.locationSlug)
+      : 0;
+  const guard = evaluateRefundGuard({
+    role: user.role,
+    reasonCode,
+    amountGrosze: refundAmount,
+    actorCompTotalTodayGrosze: compTotalToday,
+    limits,
+  });
+  if (!guard.allowed) {
+    return NextResponse.json(
+      { error: guard.message, guardCode: guard.code },
+      { status: 403 },
     );
   }
 
@@ -107,7 +140,6 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     }
   }
 
-  const actor = await getCurrentActor();
   const refundRecord: OrderRefund = {
     type,
     amount: refundAmount,
@@ -139,6 +171,9 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     after: {
       refundAmount,
       reasonCode,
+      // locationSlug + reasonCode here are what getActorCompTotalToday reads to
+      // enforce the per-shift comp cap on the next refund.
+      locationSlug: order.locationSlug,
       stripeRefundId: stripeRefundId ?? null,
       newStatus: updated.status,
     },

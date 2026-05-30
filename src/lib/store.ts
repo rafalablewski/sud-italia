@@ -23,6 +23,7 @@ import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { getBaseSlug } from "@/lib/utils";
 import { estimateReadyAt } from "@/lib/eta";
+import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -2743,6 +2744,10 @@ export interface AppSettings {
    *  EU/PL operates on the defaults; operators tag specific trucks as
    *  NYC or SG and the customer-facing chrome upgrades to match. */
   compliance?: ComplianceConfig;
+  /** Refund/comp authorization caps (audit §11.2 — "what stops a cashier
+   *  from comping the whole shift's revenue?"). Enforced server-side in the
+   *  refund route; owners always bypass. See src/lib/refund-guard.ts. */
+  refundControls?: RefundControls;
   /** Storefront visibility toggles — turn whole pieces of the public
    *  UI on/off without code changes. Each flag is the saved state
    *  (CLAUDE rule 7 — toggle = saved). When a flag is false, the
@@ -2911,6 +2916,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
   compliance: DEFAULT_COMPLIANCE_CONFIG,
+  refundControls: DEFAULT_REFUND_CONTROLS,
 };
 
 function mergeSettings(
@@ -7068,6 +7074,85 @@ export async function getAuditLog(filters?: {
     void Promise.all(list.map((e) => dualWriteAuditEntry(e)));
   }
   return list;
+}
+
+/**
+ * Start-of-today (Warsaw local midnight) as a UTC ISO string. Used to scope
+ * the per-shift comp cap to "today". Correct within a DST period; the once-a-year
+ * DST-change day can be off by an hour, which is immaterial for a daily reset.
+ */
+function startOfWarsawDayIso(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Warsaw",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(now);
+  const p = Object.fromEntries(parts.map((x) => [x.type, x.value])) as Record<string, string>;
+  const wallNow = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  const offsetMs = wallNow - Math.floor(now.getTime() / 1000) * 1000;
+  const wallMidnight = Date.UTC(+p.year, +p.month - 1, +p.day);
+  return new Date(wallMidnight - offsetMs).toISOString();
+}
+
+const REFUND_AUDIT_ACTIONS = ["orders.refund_full", "orders.refund_partial"];
+
+/**
+ * Sum of one actor's `manager_comp` refunds at a location since Warsaw midnight.
+ * Backs the per-shift comp cap (src/lib/refund-guard.ts). Reads the refund audit
+ * entries — which carry `{ refundAmount, reasonCode, locationSlug }` in `after` —
+ * so the figure is correct even for comps applied today to older orders (which a
+ * createdAt-filtered order scan would miss).
+ */
+export async function getActorCompTotalToday(
+  actor: string,
+  locationSlug: string,
+): Promise<number> {
+  const since = startOfWarsawDayIso();
+  const sumComps = (entries: AuditLogEntry[]): number => {
+    let total = 0;
+    for (const e of entries) {
+      if (e.actor !== actor) continue;
+      if (!REFUND_AUDIT_ACTIONS.includes(e.action)) continue;
+      if (e.occurredAt < since) continue;
+      const after = e.after as
+        | { reasonCode?: string; locationSlug?: string; refundAmount?: number }
+        | undefined;
+      if (!after || after.reasonCode !== "manager_comp") continue;
+      if (after.locationSlug !== locationSlug) continue;
+      if (typeof after.refundAmount === "number") total += after.refundAmount;
+    }
+    return total;
+  };
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureAuditLogTable();
+      const rows = await db
+        .select()
+        .from(auditLogTable)
+        .where(
+          and(
+            eq(auditLogTable.actor, actor),
+            inArray(auditLogTable.action, REFUND_AUDIT_ACTIONS),
+            gte(auditLogTable.occurredAt, new Date(since)),
+          ),
+        );
+      return sumComps(rows.map(rowToAuditEntry));
+    } catch (err) {
+      logger.warn(
+        "getActorCompTotalToday DB read failed; falling back to kv_store",
+        { layer: "store.audit_log" },
+        err,
+      );
+    }
+  }
+  const all = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+  return sumComps(all);
 }
 
 // --- Admin users ---
