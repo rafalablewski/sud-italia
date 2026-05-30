@@ -164,14 +164,18 @@ filter the grid in place.
 - **Speed-guarantee banner** (`.v8-guarantee`) — ochre-tinted
   card with a 4px ochre→terracotta left rail, a sundial SVG icon,
   italic Cormorant title "{N} minutes guaranteed · {N} minuti
-  garantiti", and a Lora sub. Operator-managed: `MenuSection` reads
-  `speedGuarantee` ({ `active`, `maxMinutes`, `guaranteeText` }) from
-  `/api/settings/public` (sourced from `LoyaltySettings.speedGuarantee`,
-  edited at `/admin/settings`). The minutes (`{N}`) come from
-  `maxMinutes` and the sub from `guaranteeText`; the whole card is
-  **hidden** when `active === false` so the page never promises a time
-  the kitchen isn't committing to. Defaults to 15 minutes while the
-  settings fetch is in flight.
+  garantiti", and a Lora sub. Operator-managed via
+  `speedGuarantee` ({ `active`, `maxMinutes`, `guaranteeText` }, sourced
+  from `LoyaltySettings.speedGuarantee`, edited at `/admin/settings`).
+  The minutes (`{N}`) come from `maxMinutes` and the sub from
+  `guaranteeText`; the whole card is **hidden** when `active === false`
+  so the page never promises a time the kitchen isn't committing to.
+  The value is **SSR-seeded** — the location page passes
+  `loyaltySettings.speedGuarantee` as a prop so the banner renders
+  correctly on first paint (no flash of a default/disabled banner, no
+  layout shift, same pattern as the compliance banner). `MenuSection`
+  then refreshes it client-side from `/api/settings/public` so an
+  operator toggle lands live on an already-rendered page.
 - **Inline combo deals** (`.v8-combos`) — 1→2-col grid of compact
   combo cards, each with a tricolore left rail, a small SVG (pizza
   wedge for the Italian Classic, pasta bowl for the Pasta Combo),

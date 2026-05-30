@@ -50,6 +50,11 @@ interface MenuSectionProps {
   initialAvailability?: Record<string, boolean>;
   /** Audit §11.1 — per-location regulatory disclosure. */
   compliance?: import("./CompliancePills").PublicCompliance | null;
+  /** SSR seed for the operator-managed speed guarantee (minutes / copy /
+   *  on-off). Passed from the server page so the banner renders correctly on
+   *  first paint — no flash of a default or disabled banner before the client
+   *  settings fetch resolves. The client fetch then keeps it live. */
+  speedGuarantee?: import("@/lib/public-settings").PublicSettings["speedGuarantee"];
 }
 
 const CATEGORY_ORDER: MenuCategory[] = [
@@ -70,7 +75,7 @@ const CAT_IT: Partial<Record<MenuCategory, string>> = {
   desserts: "dolci",
 };
 
-export function MenuSection({ items, locationSlug, initialAvailability, compliance }: MenuSectionProps) {
+export function MenuSection({ items, locationSlug, initialAvailability, compliance, speedGuarantee: initialSpeedGuarantee }: MenuSectionProps) {
   // Editorial badges from /admin/crosssell.
   const [upsellConfig, setUpsellConfig] = useState<UpsellConfig | null>(null);
   useEffect(() => {
@@ -82,12 +87,14 @@ export function MenuSection({ items, locationSlug, initialAvailability, complian
     return () => { cancelled = true; };
   }, [locationSlug]);
 
-  // Speed-guarantee SLA (operator-managed: minutes, copy, on/off) sourced
-  // from /api/settings/public so the home-page promise reflects what the
-  // kitchen actually commits to — and disappears when the operator turns it
-  // off, instead of hardcoding "15 minutes" the line may not be able to keep.
+  // Speed-guarantee SLA (operator-managed: minutes, copy, on/off). Seeded
+  // from the server (SSR prop) so first paint already shows the real value —
+  // no layout shift and no flash of a default/disabled banner before a fetch
+  // resolves (same SSR-to-avoid-flicker pattern the page uses for compliance).
+  // The fetch below only keeps it live if the operator toggles it after the
+  // page was rendered/cached.
   const [speedGuarantee, setSpeedGuarantee] =
-    useState<import("@/lib/public-settings").PublicSettings["speedGuarantee"]>(undefined);
+    useState<import("@/lib/public-settings").PublicSettings["speedGuarantee"]>(initialSpeedGuarantee);
   useEffect(() => {
     let cancelled = false;
     import("@/lib/public-settings")
