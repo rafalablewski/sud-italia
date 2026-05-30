@@ -7114,12 +7114,15 @@ export async function getActorCompTotalToday(
   locationSlug: string,
 ): Promise<number> {
   const since = startOfWarsawDayIso();
+  const sinceTime = new Date(since).getTime();
   const sumComps = (entries: AuditLogEntry[]): number => {
     let total = 0;
     for (const e of entries) {
       if (e.actor !== actor) continue;
       if (!REFUND_AUDIT_ACTIONS.includes(e.action)) continue;
-      if (e.occurredAt < since) continue;
+      // occurredAt is an ISO string today, but compare by timestamp so this
+      // stays correct if the audit mapper ever hands back a Date.
+      if (new Date(e.occurredAt).getTime() < sinceTime) continue;
       const after = e.after as
         | { reasonCode?: string; locationSlug?: string; refundAmount?: number }
         | undefined;

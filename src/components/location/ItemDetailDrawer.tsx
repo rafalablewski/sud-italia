@@ -57,20 +57,24 @@ export function ItemDetailDrawer() {
 
   // Modifier selections, keyed by group id → chosen option ids. Reset (and
   // required single-select groups pre-seeded with their first option, the usual
-  // "Standard" default) whenever the drawer opens for a different item.
+  // "Standard" default) whenever the drawer opens for a different item. Done
+  // during render via `prevItemId` (React's "adjust state on prop change"
+  // pattern) so the same render never pairs the new item with the previous
+  // item's selections — which would otherwise misprice for one frame.
   const itemId = payload?.item?.id ?? null;
   const modifierGroups = payload?.item?.modifierGroups ?? [];
   const [selections, setSelections] = useState<Record<string, string[]>>({});
-  useEffect(() => {
-    const groups = payload?.item?.modifierGroups ?? [];
+  const [prevItemId, setPrevItemId] = useState<string | null>(null);
+  if (itemId !== prevItemId) {
+    setPrevItemId(itemId);
     const init: Record<string, string[]> = {};
-    for (const g of groups) {
+    for (const g of modifierGroups) {
       const min = g.minSelections ?? 0;
       const max = g.maxSelections ?? 1;
       if (min >= 1 && max === 1 && g.options[0]) init[g.id] = [g.options[0].id];
     }
     setSelections(init);
-  }, [itemId, payload?.item?.modifierGroups]);
+  }
 
   const open = payload !== null;
 

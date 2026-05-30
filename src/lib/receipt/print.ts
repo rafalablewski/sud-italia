@@ -37,15 +37,29 @@ function sendRaw(host: string, port: number, payload: Uint8Array): Promise<void>
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
     socket.setTimeout(5000);
+    // Settle exactly once — error/timeout/close can all fire, and we must not
+    // resolve after a reject (or leak the socket on error).
+    let settled = false;
     socket.on("connect", () => {
       socket.write(Buffer.from(payload), () => socket.end());
     });
-    socket.on("error", (err) => reject(err));
+    socket.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      reject(err);
+    });
     socket.on("timeout", () => {
+      if (settled) return;
+      settled = true;
       socket.destroy();
       reject(new Error("printer connection timed out"));
     });
-    socket.on("close", () => resolve());
+    socket.on("close", () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    });
   });
 }
 

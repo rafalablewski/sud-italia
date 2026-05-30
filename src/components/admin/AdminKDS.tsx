@@ -251,34 +251,26 @@ function AdminKDSDesktop({
 
   // Reload the recall tray from storage on mount and when the operator switches
   // trucks, and persist it on every change so a refresh keeps the last bumps
-  // recallable. `bumpLocRef` tracks which location the in-state tray belongs to;
-  // the skip-flag stops the hydration write from clobbering the freshly loaded
-  // tray.
-  const bumpLocRef = useRef<string | null>(null);
-  const skipBumpPersistRef = useRef(false);
+  // recallable. `loadedLocation` tracks which truck the in-state tray belongs to
+  // so the persist effect can't clobber a freshly hydrated tray before it has
+  // caught up to the new location (and avoids the state-bailout edge case a
+  // skip-flag had when the loaded history was empty).
+  const [loadedLocation, setLoadedLocation] = useState<string | null>(null);
   useEffect(() => {
-    if (bumpLocRef.current === location) return;
-    bumpLocRef.current = location;
-    skipBumpPersistRef.current = true;
     setBumpHistory(loadBumpHistory(location));
+    setLoadedLocation(location);
   }, [location]);
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (skipBumpPersistRef.current) {
-      skipBumpPersistRef.current = false;
-      return;
-    }
-    const loc = bumpLocRef.current;
-    if (!loc) return;
+    if (typeof window === "undefined" || loadedLocation !== location) return;
     try {
       window.localStorage.setItem(
-        bumpStorageKey(loc),
+        bumpStorageKey(location),
         JSON.stringify(bumpHistory),
       );
     } catch {
       // localStorage full/blocked — the tray still works in-memory this session.
     }
-  }, [bumpHistory]);
+  }, [bumpHistory, location, loadedLocation]);
 
   const knownIdsRef = useRef<Set<string>>(new Set());
   const overdueFiredRef = useRef<Set<string>>(new Set());
