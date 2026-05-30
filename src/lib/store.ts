@@ -24,6 +24,7 @@ import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { getBaseSlug } from "@/lib/utils";
 import { estimateReadyAt } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
+import { tempVerdict } from "@/lib/haccp";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -8483,47 +8484,42 @@ export interface AllergenIncident {
   resolvedAt?: string;
 }
 
-const TEMP_RANGES: Record<string, { minTenths: number; maxTenths: number }> = {
-  // Defaults from HACCP guidance. Operator can override per-sensor later;
-  // for now any sensor name maps to a fridge range unless it contains
-  // "freezer" or "hot".
-  default: { minTenths: 0, maxTenths: 50 },
-  freezer: { minTenths: -300, maxTenths: -180 },
-  hot: { minTenths: 630, maxTenths: 800 },
-};
-
-function rangeForSensor(sensor: string): { minTenths: number; maxTenths: number } {
-  const lower = sensor.toLowerCase();
-  if (lower.includes("freezer")) return TEMP_RANGES.freezer;
-  if (lower.includes("hot")) return TEMP_RANGES.hot;
-  return TEMP_RANGES.default;
-}
+// HACCP bands + sensor presets live in the client-safe @/lib/haccp module so the
+// log form previews the same verdict this file assigns on save. Re-exported here
+// for existing import sites.
+export { HACCP_SENSORS } from "@/lib/haccp";
 
 export async function saveTempLog(input: Omit<TempLog, "id" | "status"> & { id?: string }): Promise<TempLog | null> {
+  const id = input.id || `tl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const status = tempVerdict(input.sensor, input.tempCelsius);
+  const record: TempLog = { id, status, ...input };
   const db = getDb();
-  if (!db) return null;
-  try {
-    await ensureComplianceTables();
-    const id = input.id || `tl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-    const range = rangeForSensor(input.sensor);
-    const status: "ok" | "flagged" =
-      input.tempCelsius < range.minTenths || input.tempCelsius > range.maxTenths
-        ? "flagged"
-        : "ok";
-    await db.insert(tempLogsTable).values({
-      id,
-      locationSlug: input.locationSlug,
-      sensor: input.sensor,
-      tempCelsius: input.tempCelsius,
-      status,
-      recordedBy: input.recordedBy ?? null,
-      recordedAt: new Date(input.recordedAt),
-    });
-    return { id, status, ...input };
-  } catch (err) {
-    logger.error("saveTempLog failed", { layer: "store.compliance" }, err);
-    return null;
+  if (db) {
+    try {
+      await ensureComplianceTables();
+      await db.insert(tempLogsTable).values({
+        id,
+        locationSlug: input.locationSlug,
+        sensor: input.sensor,
+        tempCelsius: input.tempCelsius,
+        status,
+        recordedBy: input.recordedBy ?? null,
+        recordedAt: new Date(input.recordedAt),
+      });
+      return record;
+    } catch (err) {
+      logger.error("saveTempLog failed", { layer: "store.compliance" }, err);
+      return null;
+    }
   }
+  // Filesystem / no-DATABASE_URL fallback (local dev) — keeps the HACCP log
+  // usable everywhere per CLAUDE rule #2.
+  return withLock("temp-logs.json", async () => {
+    const list = await readJSON<TempLog[]>("temp-logs.json", []);
+    list.push(record);
+    await writeJSON("temp-logs.json", list);
+    return record;
+  });
 }
 
 export async function getTempLogs(filters: {
@@ -8533,7 +8529,14 @@ export async function getTempLogs(filters: {
   limit?: number;
 }): Promise<TempLog[]> {
   const db = getDb();
-  if (!db) return [];
+  if (!db) {
+    const all = await readJSON<TempLog[]>("temp-logs.json", []);
+    let list = all.filter((t) => t.locationSlug === filters.locationSlug);
+    if (filters.fromIso) list = list.filter((t) => t.recordedAt >= filters.fromIso!);
+    if (filters.toIso) list = list.filter((t) => t.recordedAt <= filters.toIso!);
+    list.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+    return list.slice(0, filters.limit ?? 500);
+  }
   try {
     await ensureComplianceTables();
     const where = [eq(tempLogsTable.locationSlug, filters.locationSlug)];
@@ -8558,6 +8561,151 @@ export async function getTempLogs(filters: {
     logger.warn("getTempLogs failed", { layer: "store.compliance" }, err);
     return [];
   }
+}
+
+// --- Waste log (audit §11.2 / §12.4 #4) ---------------------------------
+//
+// A line-level record of food discarded outside a sale — spoilage, prep
+// errors, drops, over-production. Inventory already has a `waste` stock
+// movement, but operators need a fast, reason-coded log at the line that rolls
+// up to a daily cost. Stored in the kv store (no dedicated table needed yet).
+
+export type WasteReason =
+  | "spoilage"
+  | "prep_error"
+  | "dropped"
+  | "overproduction"
+  | "customer_return"
+  | "expired"
+  | "other";
+
+export interface WasteLogEntry {
+  id: string;
+  locationSlug: string;
+  item: string;
+  quantity: number;
+  unit: string;
+  reason: WasteReason;
+  /** Operator estimate of the cost written off, in grosze. */
+  estimatedCostGrosze?: number;
+  notes?: string;
+  recordedBy?: string;
+  recordedAt: string;
+}
+
+export async function getWasteLogs(
+  locationSlug: string,
+  opts: { fromIso?: string; toIso?: string; limit?: number } = {},
+): Promise<WasteLogEntry[]> {
+  const all = await readJSON<WasteLogEntry[]>("waste-logs.json", []);
+  let list = all.filter((w) => w.locationSlug === locationSlug);
+  if (opts.fromIso) list = list.filter((w) => w.recordedAt >= opts.fromIso!);
+  if (opts.toIso) list = list.filter((w) => w.recordedAt <= opts.toIso!);
+  list.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  return list.slice(0, opts.limit ?? 500);
+}
+
+export async function saveWasteLog(
+  input: Omit<WasteLogEntry, "id" | "recordedAt"> & { id?: string; recordedAt?: string },
+): Promise<WasteLogEntry> {
+  return withLock("waste-logs.json", async () => {
+    const list = await readJSON<WasteLogEntry[]>("waste-logs.json", []);
+    const entry: WasteLogEntry = {
+      id: input.id || `waste-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      item: input.item,
+      quantity: input.quantity,
+      unit: input.unit,
+      reason: input.reason,
+      estimatedCostGrosze: input.estimatedCostGrosze,
+      notes: input.notes,
+      recordedBy: input.recordedBy,
+      recordedAt: input.recordedAt ?? new Date().toISOString(),
+    };
+    list.push(entry);
+    await writeJSON("waste-logs.json", list);
+    return entry;
+  });
+}
+
+// --- Shift handover (audit §11.2 / §12.4 #1) ----------------------------
+//
+// The end-of-shift sign-off that ties cash count, waste and temperature
+// checks to a named manager. The #1 control against shift-boundary theft +
+// morale collapse in QSR. Stored in the kv store.
+
+export interface ShiftHandover {
+  id: string;
+  locationSlug: string;
+  shift: "open" | "mid" | "close";
+  /** Drawer counted at handover, grosze. */
+  cashCountedGrosze?: number;
+  /** Cash session reconciled against, if any. */
+  cashSessionId?: string;
+  /** Counted − expected for that session, grosze (computed at save). */
+  cashVarianceGrosze?: number;
+  tempChecksOk: boolean;
+  wasteNoted: boolean;
+  equipmentOk: boolean;
+  managerComment?: string;
+  outgoingManager: string;
+  incomingManager?: string;
+  recordedBy?: string;
+  recordedAt: string;
+}
+
+export async function getShiftHandovers(
+  locationSlug: string,
+  opts: { fromIso?: string; limit?: number } = {},
+): Promise<ShiftHandover[]> {
+  const all = await readJSON<ShiftHandover[]>("shift-handovers.json", []);
+  let list = all.filter((h) => h.locationSlug === locationSlug);
+  if (opts.fromIso) list = list.filter((h) => h.recordedAt >= opts.fromIso!);
+  list.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  return list.slice(0, opts.limit ?? 200);
+}
+
+export async function saveShiftHandover(
+  input: Omit<ShiftHandover, "id" | "recordedAt" | "cashVarianceGrosze"> & {
+    id?: string;
+    recordedAt?: string;
+  },
+): Promise<ShiftHandover> {
+  // Reconcile the counted drawer against the named session's expected total so
+  // the handover carries a real variance (the #1 shift-boundary theft signal),
+  // not just a number the closing manager typed.
+  let cashVarianceGrosze: number | undefined;
+  if (input.cashSessionId && typeof input.cashCountedGrosze === "number") {
+    const sessions = await getCashSessions(input.locationSlug, { includeHidden: true });
+    const session = sessions.find((s) => s.id === input.cashSessionId);
+    if (session) {
+      const expected =
+        session.openingFloat + session.drops.reduce((acc, d) => acc + d.amountGrosze, 0);
+      cashVarianceGrosze = input.cashCountedGrosze - expected;
+    }
+  }
+  return withLock("shift-handovers.json", async () => {
+    const list = await readJSON<ShiftHandover[]>("shift-handovers.json", []);
+    const entry: ShiftHandover = {
+      id: input.id || `ho-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: input.locationSlug,
+      shift: input.shift,
+      cashCountedGrosze: input.cashCountedGrosze,
+      cashSessionId: input.cashSessionId,
+      cashVarianceGrosze,
+      tempChecksOk: input.tempChecksOk,
+      wasteNoted: input.wasteNoted,
+      equipmentOk: input.equipmentOk,
+      managerComment: input.managerComment,
+      outgoingManager: input.outgoingManager,
+      incomingManager: input.incomingManager,
+      recordedBy: input.recordedBy,
+      recordedAt: input.recordedAt ?? new Date().toISOString(),
+    };
+    list.push(entry);
+    await writeJSON("shift-handovers.json", list);
+    return entry;
+  });
 }
 
 export async function saveAllergenIncident(input: Omit<AllergenIncident, "id"> & { id?: string }): Promise<AllergenIncident | null> {

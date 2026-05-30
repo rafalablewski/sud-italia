@@ -910,6 +910,24 @@ export default async function CapabilitiesPage() {
           summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
+          name: "HACCP temperature log",
+          status: "live",
+          href: "/admin/haccp",
+          summary: "Per-shift cold/hot-holding checks (audit §11.2 / §12.4 #5). Staff pick a holding point (fridge / freezer / hot-hold) and log a reading; the safe band + ok/flagged verdict derive from the sensor name in the client-safe src/lib/haccp module (shared with the server so the preview equals the saved verdict). Out-of-range readings raise a toast and append a `haccp.temp_flagged` audit entry for inspectors + insurers. GET/POST /api/admin/haccp, staff+, per-location; backed by the temp_logs Postgres table with a kv-store fallback for local dev.",
+        },
+        {
+          name: "Waste log",
+          status: "live",
+          href: "/admin/waste",
+          summary: "Reason-coded line log of food binned outside a sale — spoilage / prep error / dropped / over-production / customer return / expired / other (audit §11.2 / §12.4 #4). Item + quantity + unit + optional cost estimate roll up to a daily write-off total. Distinct from the inventory `waste` stock movement: this is the fast at-the-line capture. GET/POST /api/admin/waste, staff+, per-location, every entry audit-logged as `waste.log`.",
+        },
+        {
+          name: "Shift handover",
+          status: "live",
+          href: "/admin/handover",
+          summary: "End-of-shift sign-off (audit §11.2 / §12.4 #1 — the #1 control against shift-boundary theft + morale collapse). Records the drawer count reconciled against the chosen cash session for a real variance, temp-checks-logged / waste-logged / equipment-OK confirmations, a manager comment for the next shift, and the named outgoing (→ incoming) manager. GET/POST /api/admin/handover, manager+, per-location, audit-logged as `shift.handover`.",
+        },
+        {
           name: "Business costs ledger",
           status: "live",
           href: "/admin/business-costs",
