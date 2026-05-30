@@ -75,6 +75,16 @@ export default async function CapabilitiesPage() {
           summary: "DB + Redis latency, lock contention, business KPIs, AI usage.",
         },
         {
+          name: "Nightly DB backup → S3",
+          status:
+            has("BACKUP_S3_BUCKET", "BACKUP_S3_REGION", "BACKUP_S3_ACCESS_KEY_ID", "BACKUP_S3_SECRET_ACCESS_KEY")
+              ? "live"
+              : "needs-config",
+          href: "/api/admin/cron/db-backup",
+          envVars: ["BACKUP_S3_BUCKET", "BACKUP_S3_REGION", "BACKUP_S3_ACCESS_KEY_ID", "BACKUP_S3_SECRET_ACCESS_KEY", "BACKUP_S3_PREFIX", "BACKUP_S3_ENDPOINT"],
+          summary: "Logical snapshot of every public table (relational + kv_store) → gzipped JSON → S3, nightly via the cron dispatcher. Self-describing dump (records column types) restored by scripts/restore-backup.ts in FK order inside a transaction. Self-skips when S3 unset. Runbook: docs/runbooks/backup-restore.md.",
+        },
+        {
           name: "Error monitoring + alerting (Sentry)",
           status: has("SENTRY_DSN") || has("NEXT_PUBLIC_SENTRY_DSN") ? "live" : "needs-config",
           envVars: ["SENTRY_DSN"],
