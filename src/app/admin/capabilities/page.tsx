@@ -1124,6 +1124,14 @@ export default async function CapabilitiesPage() {
             "Per-cohort retention matrix (% of cohort reordering N months later) + mean CLTV at 30 / 60 / 90 / 180 / 365 day horizons. Computed live from the orders table; cached 60s per location filter.",
         },
         {
+          name: "LTV / CAC",
+          status: has("DATABASE_URL") ? "live" : "needs-config",
+          href: "/admin/reports/ltv-cac",
+          envVars: ["DATABASE_URL"],
+          summary:
+            "Acquisition economics: margin-adjusted lifetime value (from cohort CLTV × blended order-line gross margin) over CAC (marketing-category rows of the Business-costs ledger ÷ new customers/month). Shows LTV:CAC ratio, CAC payback months, and a blended cohort-retention curve. CAC is null until marketing spend is logged in /admin/business-costs — no fabricated numbers.",
+        },
+        {
           name: "Customer segments (RFM)",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/reports/cohort",

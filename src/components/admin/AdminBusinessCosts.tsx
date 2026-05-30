@@ -25,6 +25,7 @@ import type {
   BusinessCostPayrollRole,
   BusinessCostStatus,
 } from "@/data/types";
+import { FREQUENCY_TO_MONTHS, monthlyGrosze } from "@/lib/business-costs-math";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 import {
@@ -103,21 +104,8 @@ const FREQUENCY_LABEL: Record<BusinessCostFrequency, string> = {
   yearly: "Yearly",
 };
 
-/** Conversion factors that normalize amountGrosze@frequency to grosze/month. */
-const FREQUENCY_TO_MONTHS: Record<BusinessCostFrequency, number> = {
-  "one-off": 0,
-  daily: 30.4375,
-  weekly: 4.345,
-  monthly: 1,
-  quarterly: 1 / 3,
-  yearly: 1 / 12,
-};
-
-/** Convert any recurring cost to a monthly grosze figure. One-off ⇒ 0. */
-function monthlyGrosze(c: BusinessCost): number {
-  const f = FREQUENCY_TO_MONTHS[c.frequency];
-  return Math.round(c.amountGrosze * f);
-}
+// Monthly-normalization math is shared with the LTV/CAC report (CAC numerator)
+// via src/lib/business-costs-math.ts so the two never drift.
 
 const activeLocations = getActiveLocations();
 
