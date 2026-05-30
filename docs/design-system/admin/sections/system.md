@@ -181,12 +181,16 @@ The chain-wide configuration tabs.
   Danger. Tab keys are stable for deep linking.
 - **General:** chain identity (name, tagline), service defaults
   (delivery fee, minimum order, per-segment free-delivery
-  thresholds), **Business contact** (operator-managed
-  `businessPhone` + `businessEmail`), **Social links** (Instagram /
-  Facebook / TikTok URLs). The contact + social fields propagate to
-  the public footer through `getSettings()` (Footer is an async
-  server component) — empty fields hide the matching row / link
-  instead of shipping placeholder strings.
+  thresholds), **Refund & comp controls** (`AppSettings.refundControls`
+  — per-refund ceiling + per-actor-per-location daily comp cap, audit
+  §11.2; always sent as a complete object so a partial PUT can't drop a
+  field on the shallow merge; enforced server-side in the refund route),
+  **Business contact** (operator-managed `businessPhone` +
+  `businessEmail`), **Social links** (Instagram / Facebook / TikTok
+  URLs). The contact + social fields propagate to the public footer
+  through `getSettings()` (Footer is an async server component) — empty
+  fields hide the matching row / link instead of shipping placeholder
+  strings.
 - **Layout:** storefront visibility toggles. Each flips a flag in
   `AppSettings.layout` that the storefront reads via
   `/api/settings/public`; the owning component is wrapped in

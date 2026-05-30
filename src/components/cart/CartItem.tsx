@@ -3,7 +3,22 @@
 import { useState } from "react";
 import { CartItem as CartItemType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { useCartStore } from "@/store/cart";
+import { effectiveUnitPrice } from "@/lib/upsell";
+import { useCartStore, cartLineKey } from "@/store/cart";
+
+/** Resolve a line's modifier selections into "{label} (+{delta})" display chips. */
+function modifierSummary(item: CartItemType): { label: string; delta: number }[] {
+  if (!item.selectedModifiers?.length) return [];
+  const groups = item.menuItem.modifierGroups ?? [];
+  const out: { label: string; delta: number }[] = [];
+  for (const sel of item.selectedModifiers) {
+    const opt = groups
+      .find((g) => g.id === sel.groupId)
+      ?.options.find((o) => o.id === sel.optionId);
+    if (opt) out.push({ label: opt.label, delta: opt.priceDelta });
+  }
+  return out;
+}
 
 interface CartItemProps {
   item: CartItemType;
@@ -36,7 +51,14 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
   const [noteOpen, setNoteOpen] = useState(false);
 
   const hasNote = !!item.notes && item.notes.length > 0;
-  const lineTotal = item.menuItem.price * item.quantity;
+  // Line total includes any modifier surcharges — same helper the cart total,
+  // checkout and KDS use, so the row price matches what's charged.
+  const lineTotal = effectiveUnitPrice(item) * item.quantity;
+  const lineKey = cartLineKey(item);
+  // DOM-safe id (lineKey carries #/:/| separators) so two modifier variants of
+  // the same dish don't collide on the note panel's id / aria-controls.
+  const domId = `note-${lineKey.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const mods = modifierSummary(item);
 
   return (
     <>
@@ -54,6 +76,16 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
               {item.menuItem.description}
             </div>
           )}
+          {mods.length > 0 && (
+            <div className="v8-cart-item-mods">
+              {mods.map((m, i) => (
+                <span key={i} className="v8-cart-item-mod">
+                  {m.label}
+                  {m.delta > 0 && <span className="num"> +{formatPrice(m.delta)}</span>}
+                </span>
+              ))}
+            </div>
+          )}
           {soldOut && (
             <div
               className="v8-cart-item-origin"
@@ -67,7 +99,7 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
               <button
                 type="button"
                 className="v8-cart-qty-btn"
-                onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                onClick={() => updateQuantity(lineKey, item.quantity - 1)}
                 aria-label="Decrease quantity"
               >
                 −
@@ -76,7 +108,7 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
               <button
                 type="button"
                 className="v8-cart-qty-btn"
-                onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                onClick={() => updateQuantity(lineKey, item.quantity + 1)}
                 aria-label="Increase quantity"
               >
                 +
@@ -88,13 +120,13 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
                 onClick={() => setNoteOpen((o) => !o)}
                 className={`v8-cart-item-action${hasNote || noteOpen ? " is-on" : ""}`}
                 aria-expanded={noteOpen}
-                aria-controls={`note-${item.menuItem.id}`}
+                aria-controls={domId}
               >
                 {hasNote ? "edit note" : "note"} <span style={{ opacity: 0.6 }}>· nota</span>
               </button>
               <button
                 type="button"
-                onClick={() => removeItem(item.menuItem.id)}
+                onClick={() => removeItem(lineKey)}
                 className="v8-cart-item-action is-danger"
                 aria-label={`Remove ${item.menuItem.name}`}
               >
@@ -105,15 +137,15 @@ export function CartItemRow({ item, soldOut = false }: CartItemProps) {
         </div>
       </div>
       {(noteOpen || hasNote) && (
-        <div id={`note-${item.menuItem.id}`} className="v8-cart-note">
-          <label htmlFor={`note-input-${item.menuItem.id}`} className="sr-only">
+        <div id={domId} className="v8-cart-note">
+          <label htmlFor={`${domId}-input`} className="sr-only">
             Special request for {item.menuItem.name}
           </label>
           <textarea
-            id={`note-input-${item.menuItem.id}`}
+            id={`${domId}-input`}
             value={item.notes || ""}
             onChange={(e) =>
-              setItemNotes(item.menuItem.id, e.target.value.slice(0, NOTE_MAX_LEN))
+              setItemNotes(lineKey, e.target.value.slice(0, NOTE_MAX_LEN))
             }
             placeholder='e.g. "no onion", "extra crispy", "gluten-free if possible"'
             rows={2}

@@ -240,12 +240,19 @@ Each row is `.v8-cart-item` and carries:
 - **`.v8-cart-item-name`** — italic Cormorant 20px espresso. The
   dish name reads like a menu entry, not a UI label.
 - **`.v8-cart-item-price`** — Cormorant 600 tabular ink, line total
-  (price × quantity).
+  (`effectiveUnitPrice` × quantity — includes modifier surcharges).
 - **`.v8-cart-item-origin`** — Lora italic muted, picks up
   `menuItem.description` so the cart row still tells the sourcing
   story (San Marzano DOP, fior di latte, basilico fresco).
+- **`.v8-cart-item-mods`** — basil-tinted chip row
+  (`.v8-cart-item-mod`) listing the line's chosen modifiers ("48h
+  sourdough", "Half Diavola +6,00") resolved from
+  `menuItem.modifierGroups`. Absent when the line has no modifiers.
 - **`.v8-cart-qty`** — terracotta-tinted pill stepper (`− 1 +`).
-  Decrement at 1 removes the line entirely (preserved behaviour).
+  Decrement at 1 removes the line entirely (preserved behaviour). The
+  stepper / remove / note all address the line by `cartLineKey` (item
+  id + chosen options), so editing one modifier variant never touches
+  another line of the same dish.
 - **`.v8-cart-item-action`** — italic text buttons under the row:
   `note · nota` (toggles the note panel) + `remove · rimuovi`
   (oxblood on hover).
@@ -376,9 +383,14 @@ clear on checkout — unchanged from the pre-V8 version.
   gradient + 3px Italian-flag stripe on top + `0 -12px 30px -16px
   rgba(61,40,23,0.35)` editorial drop shadow.
 - **`.v8-cart-totals`** — one row per line item (Subtotal, combo
-  discount, Delivery, Mancia, GST). Combo-discount rows carry
+  discount, Delivery, Mancia, GST, Ready-by). Combo-discount rows carry
   `.is-discount` (basil-deep + italic). The total row carries
   `.is-total` (dashed hairline above + oxblood 21px tabular).
+  The `.is-ready` row (clock icon + "Ready · pronto") surfaces the
+  pre-pay ETA in basil-deep: "by HH:MM" once a slot is picked (the slot
+  time is the kitchen's promised-ready), or "in ~N min · pick a time"
+  beforehand. The estimate comes from `estimatePrepMinutes` in
+  `src/lib/eta.ts` — the same formula the KDS SLA is held to.
 - **`.v8-cart-paybar-foot`** — slim italic note strip for the
   `<LoyaltyEarnPreview />` line + NYC FRESH Act packaging text + SG
   PDPA §13 consent text. Hidden via `:empty` when none apply.

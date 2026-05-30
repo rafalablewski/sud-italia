@@ -290,6 +290,12 @@
 :is(.kds-atlas, .kds-floor-dark) .ka-q { font-weight: 600; font-size: 13px; min-width: 34px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid var(--cmd-hair); border-radius: 5px; padding: 2px 6px; flex: 0 0 auto; }
 :is(.kds-atlas, .kds-floor-dark) .ka-nm { font-size: 14px; font-weight: 500; line-height: 1.3; }
 :is(.kds-atlas, .kds-floor-dark) .ka-req { display: inline-flex; align-items: center; gap: 6px; margin-left: 46px; font-size: 12.5px; color: var(--cmd-warn); font-weight: 500; }
+:is(.kds-atlas, .kds-floor-dark) .ka-mods { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: 46px; margin-top: 2px; }
+/* Modifiers ride the documented "Fraunces italic amber" menu-copy voice
+   (docs/design-system/core/modules/kds.md). flagOnKds options escalate to the
+   late-red operational alert + uppercase so the cook can't miss them. */
+:is(.kds-atlas, .kds-floor-dark) .ka-mod { font-style: italic; font-weight: 500; font-size: 13px; line-height: 1.3; color: var(--cmd-warn); }
+:is(.kds-atlas, .kds-floor-dark) .ka-mod.is-flagged { font-style: normal; font-weight: 700; color: var(--cmd-late); text-transform: uppercase; letter-spacing: 0.04em; }
 :is(.kds-atlas, .kds-floor-dark) .ka-t-allergy { margin-top: 12px; border: 1px solid rgba(229,72,77,0.45); background: rgba(229,72,77,0.11); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ta-head { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cmd-late); font-weight: 700; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ta-body { font-size: 13px; font-weight: 600; line-height: 1.4; padding-left: 20px; text-transform: capitalize; }

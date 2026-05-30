@@ -24,7 +24,8 @@ core/
     ├── guest.md       ← the unified Guest hub
     ├── crm.md         ← module under Guest
     ├── concierge.md   ← module under Guest
-    └── whatsapp.md    ← module under Guest
+    ├── whatsapp.md    ← module under Guest
+    └── receipt-printer.md  ← ESC/POS receipt printing + go-live guide
 ```
 
 ## What ships today

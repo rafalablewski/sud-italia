@@ -51,6 +51,17 @@ export const krakowMenu: MenuItem[] = [
           { id: "prosciutto", label: "Prosciutto di Parma", priceDelta: 1200, costDelta: 480, flagOnKds: true },
         ],
       },
+      {
+        id: "half-and-half",
+        label: "Make it half & half",
+        minSelections: 0,
+        maxSelections: 1,
+        options: [
+          { id: "diavola", label: "Half Diavola · spicy salame", priceDelta: 600, costDelta: 220, flagOnKds: true },
+          { id: "quattro-formaggi", label: "Half Quattro Formaggi", priceDelta: 500, costDelta: 240, flagOnKds: true },
+          { id: "ortolana", label: "Half Ortolana · grilled veg", priceDelta: 400, costDelta: 160, flagOnKds: true },
+        ],
+      },
     ],
   },
   {

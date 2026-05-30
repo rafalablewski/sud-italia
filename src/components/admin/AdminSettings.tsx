@@ -51,6 +51,10 @@ interface Settings {
     regular?: number;
     vip?: number;
   };
+  refundControls?: {
+    singleMaxGrosze?: number;
+    compDailyCapGrosze?: number;
+  };
   simulationEnabled?: boolean;
   kdsSimulatorEnabled?: boolean;
   whatsappSimulatorEnabled?: boolean;
@@ -232,6 +236,9 @@ function AdminSettingsDesktop() {
   const [thGrowing, setThGrowing] = useState("");
   const [thRegular, setThRegular] = useState("");
   const [thVip, setThVip] = useState("");
+  // Refund/comp caps (audit §11.2). 0 zł = that cap is off.
+  const [refundSingleMaxStr, setRefundSingleMaxStr] = useState("");
+  const [refundCompCapStr, setRefundCompCapStr] = useState("");
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [kdsSimulatorEnabled, setKdsSimulatorEnabled] = useState(false);
   const [whatsappSimulatorEnabled, setWhatsappSimulatorEnabled] = useState(false);
@@ -273,6 +280,9 @@ function AdminSettingsDesktop() {
     setThGrowing(typeof t?.growing === "number" ? (t.growing / 100).toFixed(2) : "");
     setThRegular(typeof t?.regular === "number" ? (t.regular / 100).toFixed(2) : "");
     setThVip(typeof t?.vip === "number" ? (t.vip / 100).toFixed(2) : "");
+    const rc = data.refundControls;
+    setRefundSingleMaxStr(typeof rc?.singleMaxGrosze === "number" ? (rc.singleMaxGrosze / 100).toFixed(2) : "200.00");
+    setRefundCompCapStr(typeof rc?.compDailyCapGrosze === "number" ? (rc.compDailyCapGrosze / 100).toFixed(2) : "500.00");
     setSimulationEnabled(!!data.simulationEnabled);
     setKdsSimulatorEnabled(!!data.kdsSimulatorEnabled);
     setWhatsappSimulatorEnabled(!!data.whatsappSimulatorEnabled);
@@ -329,6 +339,18 @@ function AdminSettingsDesktop() {
       const deliveryThresholds =
         Object.keys(thresholdsClean).length > 0 ? thresholdsClean : null;
 
+      // Refund/comp caps — always sent as a complete object (both fields) so a
+      // partial PUT can't drop one field on the shallow settings merge. Blank or
+      // 0 = that cap is disabled.
+      const parseGroszeOrZero = (s: string): number => {
+        const v = Math.max(0, Math.round(parseFloat(s.trim() || "0") * 100));
+        return Number.isFinite(v) ? v : 0;
+      };
+      const refundControls = {
+        singleMaxGrosze: parseGroszeOrZero(refundSingleMaxStr),
+        compDailyCapGrosze: parseGroszeOrZero(refundCompCapStr),
+      };
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -343,6 +365,7 @@ function AdminSettingsDesktop() {
             tiktok: tiktokUrl.trim(),
           },
           deliveryThresholds,
+          refundControls,
         }),
       });
       if (res.ok) {
@@ -729,6 +752,37 @@ function AdminSettingsDesktop() {
                     description="Default 35 PLN. Floor protects courier economics — set to 0 only if you accept losses on tiny VIP orders."
                   />
                 </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Refund & comp controls (audit §11.2)"
+              description="Caps that stop one person from comping the whole shift. Refunds are already manager/owner-only; these add a ceiling. Owners always bypass — a blocked refund just needs an owner to sign in and process it. Set a field to 0 to disable that cap."
+            />
+            <CardBody>
+              <div className="v2-form-row-2">
+                <Input
+                  label="Per-refund limit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundSingleMaxStr}
+                  onChange={(e) => setRefundSingleMaxStr(e.target.value)}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                  description="Any single refund or comp above this needs an owner. Default 200 PLN."
+                />
+                <Input
+                  label="Daily comp cap (per person · per truck)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundCompCapStr}
+                  onChange={(e) => setRefundCompCapStr(e.target.value)}
+                  trailingAdornment={<span className="v2-muted">zł</span>}
+                  description="Total 'manager comp' (on-the-house) one person can give away per day at one location before an owner is required. Customer-request / quality refunds don't count. Default 500 PLN."
+                />
               </div>
             </CardBody>
           </Card>

@@ -6,12 +6,15 @@ The four pages an operator hits during service to keep the menu live, the
 recipes consistent across locations, the available time slots correct,
 and the dining floor up to date.
 
-| Page              | Code                                                                 | Role-gate   |
-| ----------------- | -------------------------------------------------------------------- | ----------- |
-| `/admin/menu`     | `src/components/admin/AdminMenu.tsx`                                 | manager+    |
-| `/admin/recipes`  | `src/components/admin/AdminRecipes.tsx`                              | manager+    |
-| `/admin/slots`    | `src/components/admin/AdminSlots.tsx`                                | manager+    |
-| `/admin/floor`    | `src/components/admin/AdminFloor.tsx`                                | manager+    |
+| Page               | Code                                                                 | Role-gate   |
+| ------------------ | -------------------------------------------------------------------- | ----------- |
+| `/admin/menu`      | `src/components/admin/AdminMenu.tsx`                                 | manager+    |
+| `/admin/recipes`   | `src/components/admin/AdminRecipes.tsx`                              | manager+    |
+| `/admin/slots`     | `src/components/admin/AdminSlots.tsx`                                | manager+    |
+| `/admin/floor`     | `src/components/admin/AdminFloor.tsx`                                | manager+    |
+| `/admin/haccp`     | `src/components/admin/AdminHaccp.tsx`                                | staff+      |
+| `/admin/waste`     | `src/components/admin/AdminWaste.tsx`                                | staff+      |
+| `/admin/handover`  | `src/components/admin/AdminHandover.tsx`                             | manager+    |
 
 ## Common rules across the section
 
@@ -98,6 +101,53 @@ attribution.
   `warning`, `danger`, `info`, `default`) — never invent a new tone.
 - **Delete is destructive** — confirmation dialog required
   (`pendingTableDelete`), portalled per the admin portal rule.
+
+## HACCP temperature log — `/admin/haccp`
+
+Per-shift cold/hot-holding checks (audit §11.2). Staff+.
+
+- **Header:** `HACCP temperature log` (h1) + location switcher
+  (per-location only — a probe reading belongs to one truck; no
+  "all locations" view).
+- **KPI grid** (`v2-kpi-grid` + `v2-kds-stat`): readings today, flagged
+  today (red when > 0).
+- **Log form:** a holding-point `Select` (presets from
+  `@/lib/haccp` `HACCP_SENSORS`) + a `°C` `Input`. The safe band + the
+  ok/flagged verdict are previewed live from `tempVerdict()` — the same
+  client-safe helper the server uses on save, so preview never lies.
+- **Readings list:** today's readings with the safe band, value,
+  `success`/`danger` status `Badge`, and time. Out-of-range readings
+  also raise a danger toast and append a `haccp.temp_flagged` audit row.
+
+## Waste log — `/admin/waste`
+
+Reason-coded write-off capture at the line (audit §11.2). Staff+.
+
+- **Header:** `Waste log` (h1) + location switcher.
+- **KPI grid:** entries today + zł written off today (warning-tinted
+  when non-zero).
+- **Log form:** item + reason (`Select` — spoilage / prep error /
+  dropped / over-production / customer return / expired / other) +
+  quantity + unit + optional zł cost + note.
+- **List:** today's entries, reason `Badge`, cost, time. Distinct from
+  the Inventory `waste` stock movement — this is the fast at-the-line
+  log, audit-logged as `waste.log`.
+
+## Shift handover — `/admin/handover`
+
+End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
+
+- **Header:** `Shift handover` (h1) + location switcher.
+- **Record form:** shift (`open` / `mid` / `close`), a cash-session
+  `Select` (fetched from `/api/admin/cash`) + counted-drawer `zł` input
+  — the server reconciles the two into a real `cashVarianceGrosze` on
+  save — three `Switch` confirmations (temp checks logged / waste
+  logged / equipment OK), outgoing (→ incoming) manager, and a comment
+  for the next shift.
+- **History:** last 7 days, each row showing the shift `Badge`,
+  managers, a variance `Badge` on the canonical
+  (`success`/`warning`/`danger`) ramp, the three check badges, and the
+  timestamp. Audit-logged as `shift.handover`.
 
 ## What Operations is not
 

@@ -756,10 +756,10 @@ export default async function CapabilitiesPage() {
           summary: "Cart-total discounts capped to one combo's worth (cheapest unit per matched category). Default ladder rebuilt May 2026: Italian Classic Deal (Margherita + **Limonata** + Tiramisù, 10% — moved off espresso because 60% of carts add espresso anyway; the combo was paying a discount on items customers already buy organically), Pasta Combo (any pasta + drink, 10% — honours the lunch TodBanner promise and acts as the graceful fallback when a customer breaks the Lunch bundle by removing the dessert), Pizza & Side (any pizza + garlic bread, 12% — replaced the dead Lunch Special panini+drink combo at 8% which was 2 zł savings ignored by customers). Channel-aware: combos can be flagged dine-in or delivery exclusive. getActiveComboDeals picks the highest-savings complete combo first, then the highest-potential partial — order-independent. Combo discounts ride to Stripe as an amount_off coupon.",
         },
         {
-          name: "Item modifiers (pizza crust + premium toppings)",
+          name: "Item modifiers — customer picker → KDS (half & half, crust, toppings)",
           status: "live",
           href: "/admin/menu",
-          summary: "Per-item modifier groups (audit §3 — the previously-missing #1 revenue capability). Each MenuItem can carry `modifierGroups[]` — each group has a label, min/max selections, and an option list with priceDelta (added to line price) and costDelta (subtracted from gross margin). Margherita ships with Crust group (Standard / Sourdough +5 / Gluten-free +5) and Premium toppings (Buffalo mozz +9, Extra cheese +6, Truffle oil +8, Prosciutto +12). Diavola ships with Spice level + Premium toppings. **Editor lives on /admin/menu** — open any item, the ModifierEditor at the bottom of the dialog manages groups, options, min/max picks, priceDelta, costDelta, KDS-highlight flag. MenuOverride.modifierGroups round-trips through the menu API (validated by api-schemas.ts) so groups persist per-location. Cart math (src/store/cart.ts:getTotal) uses effectiveUnitPrice() which sums modifier priceDelta × qty. Server checkout (createOrder.ts) re-validates every selection against the current menu and reuses the same helper so charged total matches displayed total. Operator at-a-glance inventory at /admin/upsell → Item modifiers shows every modifier group per truck with GM% callout.",
+          summary: "Per-item modifier groups, now wired end-to-end (audit §3 + §11.2 — \"freeform notes instead of modifiers; half-and-half all day\"). Each MenuItem carries `modifierGroups[]` (label, min/max selections, options with priceDelta + costDelta + KDS-flag). Margherita ships Crust (Standard / Sourdough +5 / Gluten-free +5), Premium toppings (Buffalo mozz +9, Extra cheese +6, Truffle oil +8, Prosciutto +12) and **Make it half & half** (Half Diavola / Quattro Formaggi / Ortolana) — chain-consistent across Kraków + Warszawa; Diavola adds Spice level. CUSTOMER PICKER: a menu card whose item has modifier groups routes its Add into the item-detail drawer (src/components/location/ItemDetailDrawer.tsx), which renders each group as radio (max 1) / checkbox (≤ max) chips, enforces required picks, pre-seeds the default crust, and live-quotes the price via effectiveUnitPrice(). Cart lines key on item id + chosen options (cartLineKey) so each variant stacks separately and the row shows the picks as chips. PROPAGATION: the checkout payload + api-schemas carry selectedModifiers; createOrder.ts re-validates every id against the live menu (forge-proof) and prices with the same helper; the Stripe line items now include the modifier delta (previously undercharged) and list the picks in the line description. KDS: KdsTicketCard renders each line's modifiers in Fraunces italic amber, flagOnKds options escalated to upright uppercase late-red. Editor lives on /admin/menu (ModifierEditor); groups round-trip through the menu API per location. Operator inventory at /admin/upsell → Item modifiers. (POS terminal modifier selection is still a later pass — see POS note.)",
         },
         {
           name: "Delivery-only item flag + packaging cost editor",
@@ -910,6 +910,24 @@ export default async function CapabilitiesPage() {
           summary: "Open/close drawer, drops, variance vs orders. History rows can be hidden (soft) or deleted (audit-logged).",
         },
         {
+          name: "HACCP temperature log",
+          status: "live",
+          href: "/admin/haccp",
+          summary: "Per-shift cold/hot-holding checks (audit §11.2 / §12.4 #5). Staff pick a holding point (fridge / freezer / hot-hold) and log a reading; the safe band + ok/flagged verdict derive from the sensor name in the client-safe src/lib/haccp module (shared with the server so the preview equals the saved verdict). Out-of-range readings raise a toast and append a `haccp.temp_flagged` audit entry for inspectors + insurers. GET/POST /api/admin/haccp, staff+, per-location; backed by the temp_logs Postgres table with a kv-store fallback for local dev.",
+        },
+        {
+          name: "Waste log",
+          status: "live",
+          href: "/admin/waste",
+          summary: "Reason-coded line log of food binned outside a sale — spoilage / prep error / dropped / over-production / customer return / expired / other (audit §11.2 / §12.4 #4). Item + quantity + unit + optional cost estimate roll up to a daily write-off total. Distinct from the inventory `waste` stock movement: this is the fast at-the-line capture. GET/POST /api/admin/waste, staff+, per-location, every entry audit-logged as `waste.log`.",
+        },
+        {
+          name: "Shift handover",
+          status: "live",
+          href: "/admin/handover",
+          summary: "End-of-shift sign-off (audit §11.2 / §12.4 #1 — the #1 control against shift-boundary theft + morale collapse). Records the drawer count reconciled against the chosen cash session for a real variance, temp-checks-logged / waste-logged / equipment-OK confirmations, a manager comment for the next shift, and the named outgoing (→ incoming) manager. GET/POST /api/admin/handover, manager+, per-location, audit-logged as `shift.handover`.",
+        },
+        {
           name: "Business costs ledger",
           status: "live",
           href: "/admin/business-costs",
@@ -1001,10 +1019,12 @@ export default async function CapabilitiesPage() {
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
-          name: "Refunds (Stripe)",
+          name: "Refunds + comp controls (Stripe)",
           status: has("STRIPE_SECRET_KEY") ? "live" : "needs-config",
+          href: "/admin/orders",
           envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
-          summary: "Full + partial. manager_comp reason skips Stripe.",
+          summary:
+            "Full + partial refunds from the order detail, manager/owner-only, with an 8-code reason dropdown (customer_request, wrong_item, quality_issue, late_or_no_show, missing_item, duplicate_charge, manager_comp, other); manager_comp skips Stripe. Authorization caps (audit §11.2) stop one person comping the whole shift: a per-refund ceiling and a per-actor-per-location daily comp cap, both configurable in Settings → General (default 200 / 500 PLN), owners always bypass. Enforced server-side in /api/admin/orders/[id]/refund BEFORE Stripe is touched, previewed live in the refund dialog via /api/admin/refund-policy, every refund audit-logged + push-notified to other admins. Logic in src/lib/refund-guard.ts (unit-tested).",
         },
         {
           name: "Delivery profitability report",
@@ -1023,6 +1043,14 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/orders",
           summary: "Pull a ticket already on the line. Cancels KDS + auto-refunds via Stripe.",
+        },
+        {
+          name: "Receipt printer (ESC/POS)",
+          status: has("RECEIPT_PRINTER_HOST") ? "live" : "needs-config",
+          href: "/admin/orders",
+          envVars: ["RECEIPT_PRINTER_HOST", "RECEIPT_PRINTER_PORT"],
+          summary:
+            "Thermal receipt printing (audit §11.2 / §12.4 #7). 'Print receipt' on any order detail POSTs /api/admin/orders/[id]/print-receipt, which builds an 80mm ESC/POS payload (src/lib/receipt/escpos.ts — header, per-line items with resolved modifiers + notes, modifier-inclusive prices, total, partial cut; unit-tested) and streams it over a raw TCP socket to RECEIPT_PRINTER_HOST:RECEIPT_PRINTER_PORT (default 9100). With no host set it runs as a SIMULATOR — returns the exact byte count + a plain-text preview and the UI falls back to a browser print, so a receipt comes out with or without hardware. Go-live for a truck-local printer: run a print-bridge on the truck or expose the printer via a reverse tunnel, then set RECEIPT_PRINTER_HOST — see docs/design-system/core/modules/receipt-printer.md. Every print is audit-logged as receipt.print.",
         },
         {
           name: "Courier / driver dispatch",

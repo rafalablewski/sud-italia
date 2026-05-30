@@ -53,6 +53,13 @@ const cartItemInput = z.object({
   id: stableId,
   quantity: z.number().int().positive().max(99),
   notes: cartNote,
+  /** Modifier picks (audit §3 / §11.2). Re-validated against the live menu in
+   *  createOrder before pricing, so a forged id can't lower the price. Capped to
+   *  keep the payload bounded. */
+  selectedModifiers: z
+    .array(z.object({ groupId: stableId, optionId: stableId }))
+    .max(20)
+    .optional(),
 });
 
 /**
@@ -214,6 +221,50 @@ export const cashOpenSchema = z.object({
   openingFloat: grosze.max(1_000_000),
   openedBy: z.string().min(1).max(120).optional(),
   notes: z.string().max(500).optional(),
+});
+
+/** POST /api/admin/haccp — record a HACCP temperature reading. `tempCelsius` is
+ *  in tenths of a degree (so -180 = -18.0 °C), bounded to a sane probe range. */
+export const tempLogCreateSchema = z.object({
+  locationSlug,
+  sensor: z.string().min(1).max(80),
+  tempCelsius: z.number().int().min(-500).max(1500),
+  recordedBy: z.string().min(1).max(120).optional(),
+});
+
+/** POST /api/admin/waste — log a discarded item (spoilage / prep error / etc.). */
+export const wasteLogCreateSchema = z.object({
+  locationSlug,
+  item: z.string().min(1).max(120),
+  quantity: z.number().positive().max(100_000),
+  unit: z.string().min(1).max(24),
+  reason: z.enum([
+    "spoilage",
+    "prep_error",
+    "dropped",
+    "overproduction",
+    "customer_return",
+    "expired",
+    "other",
+  ]),
+  estimatedCostGrosze: z.number().int().nonnegative().max(10_000_000).optional(),
+  notes: z.string().max(500).optional(),
+  recordedBy: z.string().min(1).max(120).optional(),
+});
+
+/** POST /api/admin/handover — close a shift with a handover record. */
+export const handoverCreateSchema = z.object({
+  locationSlug,
+  shift: z.enum(["open", "mid", "close"]),
+  cashCountedGrosze: z.number().int().nonnegative().max(10_000_000).optional(),
+  cashSessionId: z.string().max(80).optional(),
+  tempChecksOk: z.boolean(),
+  wasteNoted: z.boolean(),
+  equipmentOk: z.boolean(),
+  managerComment: z.string().max(2000).optional(),
+  outgoingManager: z.string().min(1).max(120),
+  incomingManager: z.string().max(120).optional(),
+  recordedBy: z.string().min(1).max(120).optional(),
 });
 
 const cashDropKindSchema = z.enum(["sale", "drop", "payout", "adjust"]);

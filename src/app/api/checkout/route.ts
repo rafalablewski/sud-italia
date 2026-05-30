@@ -14,6 +14,7 @@ import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { checkoutBodySchema, parseBody } from "@/lib/api-schemas";
 import { incrCounter, recordHistogram } from "@/lib/metrics";
 import { createOrderFromCart } from "@/lib/checkout/createOrder";
+import { effectiveUnitPrice } from "@/lib/upsell";
 
 export async function POST(req: NextRequest) {
   const checkoutStart = Date.now();
@@ -211,14 +212,35 @@ export async function POST(req: NextRequest) {
             ...(bundleStripeLines ??
               order.items.map((i) => {
                 const live = menuItemsById.get(i.menuItem.id);
+                // Price against the live menu item (authoritative modifier
+                // definitions) INCLUDING modifier surcharges — otherwise Stripe
+                // would charge the base price while the order total includes the
+                // add-ons. Modifier labels go on the Stripe line description so
+                // they show on the Stripe-hosted receipt.
+                const priced = {
+                  menuItem: live ?? i.menuItem,
+                  selectedModifiers: i.selectedModifiers,
+                };
+                const modLabels = (i.selectedModifiers ?? [])
+                  .map(
+                    (sel) =>
+                      (live ?? i.menuItem).modifierGroups
+                        ?.find((g) => g.id === sel.groupId)
+                        ?.options.find((o) => o.id === sel.optionId)?.label,
+                  )
+                  .filter(Boolean)
+                  .join(", ");
+                const description = [modLabels, i.notes]
+                  .filter(Boolean)
+                  .join(" · ");
                 return {
                   price_data: {
                     currency: "pln",
                     product_data: {
                       name: i.menuItem.name,
-                      ...(i.notes ? { description: i.notes } : {}),
+                      ...(description ? { description } : {}),
                     },
-                    unit_amount: live?.price ?? i.menuItem.price,
+                    unit_amount: effectiveUnitPrice(priced),
                   },
                   quantity: i.quantity,
                 };

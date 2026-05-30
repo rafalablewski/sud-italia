@@ -961,12 +961,23 @@ button on each menu card.
 - **Provenienza · sourcing** — parchment-deep `.v8-detail-sourcing`
   paper card with a basil-sprig mark + italic Lora quote from the
   Kodawari sourcing copy.
+- **Modifier picker** (`.v8-detail-mod-*`) — one section per
+  `MenuItem.modifierGroups` (Crust, Premium toppings, Make it half &
+  half). Radio chips when `maxSelections === 1` (○ → ✓), checkbox when
+  `> 1` (＋ → ✓, capped at max); `.is-selected` goes basil-filled, an
+  oxblood `+price` rides surcharge options. Required single-select
+  groups pre-seed their first option; an unmet required group shows a
+  `.v8-detail-mod-hint` and disables the CTA. See the picker breakdown
+  in [`../pages/menu.md`](../pages/menu.md#item-detail-drawer---itemdetaildrawer-).
 - **Footer flourish** — italic Cormorant "Un piatto fatto bene · a dish
   done well." closing line.
 - **Sticky paybar** — terracotta Cormorant "Add to cart · aggiungi
   al carrello + [price]" CTA with the same shadow + hover lift as the
-  cart drawer's pay CTA. Tap adds the item via `useCartStore.addItem`
-  + closes the drawer (the layout-level `<FloatingCartButton />` +
+  cart drawer's pay CTA. The price re-quotes live via `effectiveUnitPrice`
+  as modifiers are picked, and the label reads "Choose options" while a
+  required group is unmet. Tap adds the item via
+  `useCartStore.addItem(item, slug, selectedModifiers)` + closes the
+  drawer (the layout-level `<FloatingCartButton />` +
   `<AddToCartToast />` take over the post-add feedback). Disabled
   state when the item is sold out or the location slug is missing.
 - ESC key closes; backdrop click closes; rotating × button closes.

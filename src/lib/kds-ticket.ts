@@ -16,6 +16,9 @@ export interface KdsTicketItem {
   categoryLabel: string;
   notes?: string;
   allergens: string[];
+  /** Resolved modifier picks for the line. `flag` mirrors the option's
+   *  `flagOnKds` so the cook gets a highlighted callout (e.g. BUFFALO MOZZ). */
+  modifiers: { label: string; flag: boolean }[];
 }
 
 export interface KdsTicket {
@@ -68,6 +71,12 @@ export function buildKdsTicket(o: Order, prediction: TicketPrediction | undefine
       categoryLabel: MENU_CATEGORY_LABELS[ci.menuItem.category] ?? ci.menuItem.category,
       notes: ci.notes,
       allergens: ci.menuItem.allergens ?? [],
+      modifiers: (ci.selectedModifiers ?? []).map((sel) => {
+        const opt = ci.menuItem.modifierGroups
+          ?.find((g) => g.id === sel.groupId)
+          ?.options.find((o) => o.id === sel.optionId);
+        return { label: opt?.label ?? sel.optionId, flag: !!opt?.flagOnKds };
+      }),
     })),
     paidAtMs: Date.parse(o.paidAt ?? o.createdAt) || nowMs,
     promisedReadyAtMs: prediction?.promisedReadyAtMs ?? null,

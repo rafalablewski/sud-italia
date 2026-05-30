@@ -107,7 +107,7 @@ listed there is invisible to operators — treat the missing entry as a bug.
 Each admin section has its own design doc under [`sections/`](./sections/).
 Progress:
 
-- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), slots, floor
+- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), slots, floor, HACCP log, waste log, shift handover
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
 - [`sections/customers.md`](./sections/customers.md) — customers, loyalty, corporate, feedback

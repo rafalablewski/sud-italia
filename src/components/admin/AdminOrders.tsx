@@ -9,6 +9,7 @@ import {
   MapPin,
   Package,
   Phone,
+  Printer,
   RefreshCw,
   RotateCcw,
   Search,
@@ -26,6 +27,11 @@ import {
 } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/format";
+import {
+  evaluateRefundGuard,
+  type RefundGuardDecision,
+} from "@/lib/refund-guard";
+import type { AdminRole } from "@/lib/admin-roles";
 import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import dynamic from "next/dynamic";
@@ -644,6 +650,62 @@ interface DetailProps {
   updating: string | null;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Browser-print fallback — opens the plain-text receipt in a print window so a
+ *  receipt prints to any browser-connected printer even with no ESC/POS head. */
+function browserPrintReceipt(text: string) {
+  const w = window.open("", "_blank", "width=380,height=640");
+  if (!w) return;
+  w.document.write(
+    `<html><head><title>Receipt</title><style>body{font:12px/1.4 ui-monospace,Menlo,monospace;white-space:pre;padding:10px;}@media print{body{padding:0;}}</style></head><body>${escapeHtml(text)}</body></html>`,
+  );
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+/** "Print receipt" — POSTs to the ESC/POS print endpoint. When a network printer
+ *  is configured it streams to the thermal head; otherwise the server returns a
+ *  preview and we fall back to a browser print so a receipt still comes out. */
+function PrintReceiptButton({ orderId }: { orderId: string }) {
+  const toast = useToast();
+  const [printing, setPrinting] = useState(false);
+  const print = async () => {
+    setPrinting(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/print-receipt`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.mode === "printed") {
+          toast.success("Receipt printed", data.printer ? `${data.bytes} bytes → ${data.printer}` : undefined);
+        } else {
+          toast.info("No printer configured", "Printed via your browser instead. Set RECEIPT_PRINTER_HOST to use the thermal printer.");
+          if (typeof data.preview === "string") browserPrintReceipt(data.preview);
+        }
+      } else {
+        toast.error("Print failed", data.error || "Try again.");
+      }
+    } catch {
+      toast.error("Print failed", "Network error.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+  return (
+    <Button
+      variant="ghost"
+      leadingIcon={<Printer className="h-3.5 w-3.5" />}
+      onClick={print}
+      disabled={printing}
+    >
+      {printing ? "Printing…" : "Print receipt"}
+    </Button>
+  );
+}
+
 function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onRequestRefund, updating }: DetailProps) {
   if (!order) {
     return <Dialog open={false} onClose={onClose} />;
@@ -703,6 +765,7 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
       footer={
         <>
           <div className="v2-detail-status-actions" style={{ marginRight: "auto", gap: "0.5rem" }}>
+            <PrintReceiptButton orderId={order.id} />
             <Button
               variant="ghost"
               leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
@@ -1038,6 +1101,30 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Refund-cap context for this actor + location (audit §11.2). Lets us preview
+  // the same block the server enforces, so a manager isn't surprised by a 403
+  // after filling the form. Falls back to "no policy" (allow) if the fetch fails
+  // — the POST route stays the authority either way.
+  const [policy, setPolicy] = useState<{
+    role: AdminRole;
+    ownerBypass: boolean;
+    singleMaxGrosze: number;
+    compDailyCapGrosze: number;
+    actorCompTotalTodayGrosze: number;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/refund-policy?location=${encodeURIComponent(order.locationSlug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setPolicy(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [order.locationSlug]);
+
   const partialGrosze = type === "partial" ? Math.round(parseFloat(amountPln || "0") * 100) : 0;
   const partialValid =
     type === "full" ||
@@ -1057,6 +1144,27 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
 
   const previewAmount = type === "full" ? order.totalAmount : partialGrosze;
   const willReverseStripe = !!order.stripePaymentIntentId && reasonCode !== "manager_comp";
+
+  // Preview the authorization decision (audit §11.2). Only meaningful once the
+  // policy has loaded and there's an amount to test; otherwise allow and let
+  // the server have the final word.
+  const guard: RefundGuardDecision =
+    policy && previewAmount > 0
+      ? evaluateRefundGuard({
+          role: policy.role,
+          reasonCode,
+          amountGrosze: previewAmount,
+          actorCompTotalTodayGrosze: policy.actorCompTotalTodayGrosze,
+          limits: {
+            singleMaxGrosze: policy.singleMaxGrosze,
+            compDailyCapGrosze: policy.compDailyCapGrosze,
+          },
+        })
+      : { allowed: true };
+  const compRemaining =
+    policy && !policy.ownerBypass && policy.compDailyCapGrosze > 0
+      ? Math.max(0, policy.compDailyCapGrosze - policy.actorCompTotalTodayGrosze)
+      : null;
 
   return (
     <Dialog
@@ -1078,12 +1186,14 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
           <Button
             variant="danger"
             onClick={submit}
-            disabled={submitting || !partialValid}
+            disabled={submitting || !partialValid || !guard.allowed}
             leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
           >
             {submitting
               ? "Processing…"
-              : `Refund ${previewAmount > 0 ? formatPrice(previewAmount) : "…"}`}
+              : !guard.allowed
+                ? "Owner approval required"
+                : `Refund ${previewAmount > 0 ? formatPrice(previewAmount) : "…"}`}
           </Button>
         </>
       }
@@ -1171,7 +1281,31 @@ function RefundDialogBody({ order, onClose, onSubmit }: RefundDialogBodyProps) {
               The order status will be set to <strong>cancelled</strong>.
             </>
           )}
+          {reasonCode === "manager_comp" && compRemaining !== null && guard.allowed && (
+            <>
+              <br />
+              Comp budget left today: <strong>{formatPrice(compRemaining)}</strong> of{" "}
+              {formatPrice(policy!.compDailyCapGrosze)}.
+            </>
+          )}
         </div>
+
+        {!guard.allowed && (
+          <div
+            role="alert"
+            style={{
+              background: "var(--danger-bg, rgba(220,38,38,0.08))",
+              border: "1px solid var(--danger, #dc2626)",
+              borderRadius: "0.5rem",
+              padding: "0.75rem 1rem",
+              fontSize: "0.8125rem",
+              lineHeight: 1.5,
+              color: "var(--danger, #dc2626)",
+            }}
+          >
+            <strong>Blocked:</strong> {guard.message} Have an owner sign in to process it.
+          </div>
+        )}
       </div>
     </Dialog>
   );

@@ -45,6 +45,17 @@ export const warszawaMenu: MenuItem[] = [
           { id: "prosciutto", label: "Prosciutto di Parma", priceDelta: 1400, costDelta: 540, flagOnKds: true },
         ],
       },
+      {
+        id: "half-and-half",
+        label: "Make it half & half",
+        minSelections: 0,
+        maxSelections: 1,
+        options: [
+          { id: "diavola", label: "Half Diavola · spicy salame", priceDelta: 700, costDelta: 240, flagOnKds: true },
+          { id: "quattro-formaggi", label: "Half Quattro Formaggi", priceDelta: 600, costDelta: 260, flagOnKds: true },
+          { id: "ortolana", label: "Half Ortolana · grilled veg", priceDelta: 500, costDelta: 180, flagOnKds: true },
+        ],
+      },
     ],
   },
   {
