@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Coins, TrendingUp, Wallet, Timer, AlertTriangle, Sparkles, Lightbulb, Calculator } from "lucide-react";
+import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
+import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { Button, Card, CardBody, EmptyState } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
@@ -332,41 +333,6 @@ export function AdminLtvCac() {
           </div>
         </CardBody>
       </Card>
-    </div>
-  );
-}
-
-// Plain-English explainer blocks — same vocabulary as the Calculator
-// (/admin/simulation) so the two analytics surfaces read in one voice.
-function PlainTalk({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(234, 88, 12, 0.06)", borderLeft: "3px solid rgb(234, 88, 12)", borderRadius: 6, fontSize: 13.5, lineHeight: 1.55 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "rgb(194, 65, 12)", marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <Sparkles style={{ width: 12, height: 12 }} aria-hidden /> In plain terms
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Methodology({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(59, 130, 246, 0.06)", borderLeft: "3px solid rgb(59, 130, 246)", borderRadius: 6, fontSize: 13, lineHeight: 1.55 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "rgb(30, 64, 175)", marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <Calculator style={{ width: 12, height: 12 }} aria-hidden /> Methodology — how this is determined
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Tips({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(22, 163, 74, 0.07)", borderLeft: "3px solid rgb(22, 163, 74)", borderRadius: 6, fontSize: 13.5, lineHeight: 1.55 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "rgb(21, 128, 61)", marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <Lightbulb style={{ width: 12, height: 12 }} aria-hidden /> Tips — what to do
-      </div>
-      {children}
     </div>
   );
 }
