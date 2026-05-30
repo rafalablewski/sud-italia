@@ -1,9 +1,25 @@
 # Admin — mobile shape
 
+> **⚠️ RETIRED (superseded).** The separate, hand-built phone shell this
+> folder describes — `MobileShell` + `BottomNav` + `MoreDrawer` + the
+> per-page `Mobile*` components under `src/components/admin/v2/mobile/`
+> — is **no longer served**. Operators required that the mobile admin
+> reflect the desktop admin **1:1**, and a divergent phone UI can't
+> guarantee that. So `useIsMobile()` is now a desktop-only shim: phones,
+> tablets and desktops all render the same responsive `v2-shell` chrome
+> (sidebar → hamburger drawer below 900px, pages reflow via their own
+> `@media (max-width: 720px)` rules). **Code wins:** the `Mobile*` code
+> still exists but is dead (never reached) pending a cleanup PR, and the
+> sub-docs below (`audit.md`, `ux-strategy.md`, `navigation.md`,
+> `tokens.md`, `final-review.md`, `next-steps.md`) are kept only as a
+> **historical record** of that retired shape — do not treat them as the
+> current spec.
+
 The mobile shape of the Admin theme. Same theme, same tokens, same
-operators — phone-shaped. Not a separate theme: the `AdminShell` swaps
-in `MobileShell` (`src/components/admin/v2/mobile/`) below the
-breakpoint and these docs describe what changes in that swap.
+operators — phone-shaped. Not a separate theme: the `AdminShell` *used
+to* swap in `MobileShell` (`src/components/admin/v2/mobile/`) below the
+breakpoint and these docs describe what changed in that (now retired)
+swap.
 
 ← back to [Admin README](../README.md)
 

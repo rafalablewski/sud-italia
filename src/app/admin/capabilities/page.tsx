@@ -137,11 +137,11 @@ export default async function CapabilitiesPage() {
           summary: "Recent system alerts surfaced in the shell — new orders, slot capacity, low stock.",
         },
         {
-          name: "Mobile admin shell",
+          name: "Responsive admin (1:1 phone ↔ desktop)",
           status: "live",
           href: "/admin",
           summary:
-            "Bottom-nav + topbar + FAB + bottom-sheet mobile chrome activates automatically below 900px (tablet band 720–900 inherits the same chrome). Same APIs as desktop. Mobile-native views for: Dashboard, Orders (+ refund + comp + bulk select), KDS (with offline queue), Inventory (with barcode scan), Customers (+ detail), Schedule, Reports, Cohort, Loyalty, Cash, Feedback, Settings, AI Insights, WhatsApp, Audit log, Compliance, Users, Suppliers, POs, Menu, Recipes, Slots, Locations, Truck, Expansion. Config surfaces (growth/upsell/crosssell/scheduled-bundles/corporate) intentionally stay desktop-only — see docs/design-system/admin/mobile/*.md.",
+            "The admin serves the SAME responsive desktop layout on every viewport — phone, tablet and desktop are now 1:1. Below 900px the sidebar collapses into the hamburger drawer and pages reflow via their own @media (max-width: 720px) rules; there is no separate phone UI to drift. The old divergent mobile shell (bottom-nav + FAB + per-page Mobile* components) is RETIRED: useIsMobile() is a desktop-only shim and that code is dead pending a cleanup PR. See docs/design-system/admin/mobile/README.md for the retirement note.",
         },
         {
           name: "Mobile admin push notifications",
@@ -940,6 +940,27 @@ export default async function CapabilitiesPage() {
           href: "/admin/simulation",
           summary:
             "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
+        },
+        {
+          name: "Cohort & CLTV simulator (what-if)",
+          status: "live",
+          href: "/admin/simulators/cohort",
+          summary:
+            "Seeds the real cohort report (/api/admin/reports/cohort: repeat rate, orders/customer, cohort-size-weighted 365-day CLTV, blended retention curve) and projects it forward under three levers — repeat-rate uplift (pp), AOV growth (%), and new customers/month. CLTV = orders/customer × value/order; the repeat lever holds 'extra orders per repeater' constant and re-derives orders/customer; the retention curve is scaled by the repeat-rate ratio (capped 100%). KPIs: projected CLTV, repeat rate, orders/customer, annual cohort value — each vs baseline. Read-only on live data. Off by default; master toggle in Settings → General (Simulator card).",
+        },
+        {
+          name: "LTV / CAC simulator (what-if)",
+          status: "live",
+          href: "/admin/simulators/ltv-cac",
+          summary:
+            "Seeds the real LTV/CAC report (/api/admin/reports/ltv-cac: margin-LTV, blended margin, CAC from the marketing-cost ledger) and flexes CAC (absolute zł), retention/frequency (%), AOV (%), gross-margin (pp) and new customers/month. Revenue-LTV is recovered as LTV ÷ margin, scaled, then re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV. KPIs tone against the 3× institutional gate plus profit/customer and monthly cohort profit. When no marketing spend is logged, CAC seeds at an editable assumed value. Off by default; master toggle in Settings → General (Simulator card).",
+        },
+        {
+          name: "Menu-engineering simulator (what-if)",
+          status: "live",
+          href: "/admin/simulators/menu-engineering",
+          summary:
+            "Seeds the real Kasavana-Smith matrix (/api/admin/menu-engineering: per-item units, revenue, cost, quadrant over a 30/60/90/180-day window) and re-prices a target group with a demand response of (1+Δprice)^(−elasticity), promotes puzzle velocity, or removes dogs. Recovers per-unit price/cost from real revenue÷units, recomputes contribution = projected revenue − cost across the menu. KPIs: projected contribution + Δ vs baseline, revenue, units; 'biggest movers' table per dish. Lets operators prove a menu change grows total profit before touching the live menu. Off by default; master toggle in Settings → General (Simulator card).",
         },
         {
           name: "Calculator actuals (real-order ground truth)",

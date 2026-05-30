@@ -1,45 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 /**
- * SSR-safe viewport detection. Phones (≤ 720px) get the full mobile
- * shell; tablet-portrait (720–900px) gets the mobile shell with a wider
- * content max-width and the bottom nav still anchored to thumb-reach.
- * Desktop (≥ 900px) gets the regular sidebar chrome — matches the
- * existing `@media (max-width: 900px)` rules.
+ * Viewport hook — RETIRED MOBILE SHELL.
+ *
+ * The admin used to swap in a separate, hand-built phone shell
+ * (`MobileShell` + per-page `Mobile*` components) below 900px. That
+ * divergent mobile UI is retired: phones now get the **exact same**
+ * responsive desktop layout as every other viewport (the `v2-shell`
+ * chrome already collapses its sidebar into a hamburger drawer and the
+ * pages carry their own `@media (max-width: 720px)` rules). The admin
+ * is now 1:1 across phone / tablet / desktop.
+ *
+ * This hook is kept as a thin, always-"desktop" shim so the ~26 page
+ * components and the shell that call `useIsMobile()` keep compiling and
+ * uniformly render their desktop variant. The old `MobileShell` /
+ * `BottomNav` / `MoreDrawer` code is now dead (never reached) and can
+ * be deleted in a follow-up cleanup.
  */
-const MOBILE_QUERY = "(max-width: 900px)";
-const TABLET_QUERY = "(min-width: 720px) and (max-width: 900px)";
 
-/**
- * Operator escape hatch — when set, all admin pages fall back to the
- * desktop layout even on small viewports. Useful for tablets in
- * landscape, foldables, and "I need the full editor on my phone"
- * cases. Toggle from the More drawer; stored in localStorage so it
- * survives reloads but resets per-device.
- */
 export const FORCE_DESKTOP_KEY = "sud-admin-force-desktop";
-const FORCE_DESKTOP_EVENT = "sud-admin-force-desktop-change";
 
+/** No-op kept for import compatibility — there is no mobile shell to
+ *  fall back from anymore, so "force desktop" is always on. */
 export function getForceDesktop(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(FORCE_DESKTOP_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return true;
 }
 
+/** No-op kept for import compatibility. The mobile shell is retired, so
+ *  there is nothing to toggle. */
 export function setForceDesktop(on: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (on) window.localStorage.setItem(FORCE_DESKTOP_KEY, "1");
-    else window.localStorage.removeItem(FORCE_DESKTOP_KEY);
-    window.dispatchEvent(new Event(FORCE_DESKTOP_EVENT));
-  } catch {
-    /* non-fatal */
-  }
+  void on; /* retired — no-op */
 }
 
 export type Viewport = "phone" | "tablet" | "desktop";
@@ -50,57 +40,17 @@ export function useIsMobile(): {
   viewport: Viewport;
   ready: boolean;
   forcedDesktop: boolean;
-  /** True when the underlying viewport is small (≤ 900px) — independent
-   *  of the force-desktop override. Used to surface "back to mobile"
-   *  affordances after a user has flipped the escape hatch on. */
   rawIsMobile: boolean;
 } {
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [forcedDesktop, setForcedDesktop] = useState(false);
-
-  useEffect(() => {
-    const mqlMobile = window.matchMedia(MOBILE_QUERY);
-    const mqlTablet = window.matchMedia(TABLET_QUERY);
-    const apply = () => {
-      setIsMobile(mqlMobile.matches);
-      setIsTablet(mqlTablet.matches);
-    };
-    apply();
-    setForcedDesktop(getForceDesktop());
-    setReady(true);
-    const sub = (mql: MediaQueryList) => {
-      if (mql.addEventListener) {
-        mql.addEventListener("change", apply);
-        return () => mql.removeEventListener("change", apply);
-      }
-      mql.addListener(apply);
-      return () => mql.removeListener(apply);
-    };
-    const unsubA = sub(mqlMobile);
-    const unsubB = sub(mqlTablet);
-    const onForce = () => setForcedDesktop(getForceDesktop());
-    window.addEventListener(FORCE_DESKTOP_EVENT, onForce);
-    window.addEventListener("storage", onForce);
-    return () => {
-      unsubA();
-      unsubB();
-      window.removeEventListener(FORCE_DESKTOP_EVENT, onForce);
-      window.removeEventListener("storage", onForce);
-    };
-  }, []);
-
-  const rawViewport: Viewport = isTablet ? "tablet" : isMobile ? "phone" : "desktop";
-  const effectiveMobile = forcedDesktop ? false : isMobile;
-  const effectiveTablet = forcedDesktop ? false : isTablet;
-  const viewport: Viewport = forcedDesktop ? "desktop" : rawViewport;
+  // Always desktop. Rendered identically on the server and the client,
+  // so there is no hydration mismatch and no first-paint flash — the
+  // shell can render its real chrome immediately (`ready: true`).
   return {
-    isMobile: effectiveMobile,
-    isTablet: effectiveTablet,
-    viewport,
-    ready,
-    forcedDesktop,
-    rawIsMobile: isMobile,
+    isMobile: false,
+    isTablet: false,
+    viewport: "desktop",
+    ready: true,
+    forcedDesktop: true,
+    rawIsMobile: false,
   };
 }
