@@ -80,6 +80,11 @@ The retention triangle + the customer-lifetime-value curve.
   surfaces the cohort size + median + p10/p90 band.
 - **Compare two cohorts** — pin one, click another, the second renders
   as an overlay curve. Useful for "did the new pricing change retention?".
+- **"How to read these numbers" explainer** (below the KPI row): the
+  shared `PlainTalk` / `Methodology` / `Tips` callout blocks from
+  `src/components/admin/Explainers.tsx` — plain-English walkthrough of
+  cohorts, the retention matrix, repeat rate, and CLTV horizons, in the
+  same voice as the Calculator and the LTV/CAC page.
 
 ## LTV / CAC — `/admin/reports/ltv-cac`
 
@@ -89,11 +94,12 @@ Acquisition economics — the "what's your LTV:CAC?" answer in one screen.
   amber ≥ 1×, red below), Blended CAC, Blended LTV (margin-adjusted),
   CAC payback in months (green ≤ 3, red > 12).
 - **"How to read these numbers" explainer** (below the KPI row): a card
-  with `PlainTalk` / `Methodology` / `Tips` callout blocks — the same
-  orange/blue/green left-rail vocabulary the Calculator
-  (`/admin/simulation`) uses, so the two analytics surfaces explain
-  things in one voice. Plain-English walkthrough of LTV, CAC, the ratio
-  benchmark, and payback, with złoty examples and operator actions.
+  with the shared `PlainTalk` / `Methodology` / `Tips` callout blocks
+  (`src/components/admin/Explainers.tsx`) — the same orange/blue/green
+  left-rail vocabulary the Calculator (`/admin/simulation`) uses, so the
+  analytics surfaces explain things in one voice. Plain-English
+  walkthrough of LTV, CAC, the ratio benchmark, and payback, with złoty
+  examples and operator actions.
 - **Data sources, both real:** LTV from the cohort CLTV engine
   (`buildCohortReport`) × a blended gross margin computed from paid-order
   line-item price/cost; CAC from the **marketing-category** rows of the
