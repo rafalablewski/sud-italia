@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, TrendingUp, Users, Repeat, Coins, FlaskConical } from "lucide-react";
-import { Button, Card, CardBody, Input, Badge } from "./v2/ui";
+import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
 import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { KpiCard, LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -72,6 +72,20 @@ function blendedRetentionCurve(cohorts: CohortRow[]): { offset: string; retained
     out.push({ offset: `M${i}`, retained: Math.round((retained / size) * 1000) / 10 });
   }
   return out;
+}
+
+/** KPI label with a per-card InfoButton (ⓘ) explaining that one metric —
+ *  the amateur-friendly "what is this number, how is it computed, how do I
+ *  read it" dialog, per card rather than one general block. */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
 }
 
 /**
@@ -224,7 +238,20 @@ export function CohortSandbox() {
 
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Projected CLTV (365d)"
+          label={kpiInfo(
+            "Projected CLTV (365d)",
+            <>
+              <p style={{ margin: 0 }}>
+                The average gross profit one customer leaves you over their first 365 days, under
+                your current levers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>How it&apos;s computed:</strong> orders per customer × value per order. The
+                baseline is your real (or example) number; the % shows how far your levers have
+                moved it.
+              </p>
+            </>,
+          )}
           value={sim.cltv}
           display={formatPrice(Math.round(sim.cltv))}
           icon={Coins}
@@ -232,7 +259,18 @@ export function CohortSandbox() {
           hint={`baseline ${formatPrice(Math.round(base.meanCltv365))} · ${cltvDelta >= 0 ? "+" : ""}${cltvDeltaPct.toFixed(1)}%`}
         />
         <KpiCard
-          label="Repeat rate"
+          label={kpiInfo(
+            "Repeat rate",
+            <>
+              <p style={{ margin: 0 }}>
+                The share of customers who order more than once.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                Your repeat-rate lever adds to the real baseline — and because repeat customers
+                drive the extra orders, raising it lifts orders/customer and therefore CLTV.
+              </p>
+            </>,
+          )}
           value={sim.R}
           display={`${sim.R.toFixed(1)}%`}
           icon={Repeat}
@@ -240,7 +278,19 @@ export function CohortSandbox() {
           hint={`baseline ${base.R0.toFixed(1)}%`}
         />
         <KpiCard
-          label="Orders / customer"
+          label={kpiInfo(
+            "Orders / customer",
+            <>
+              <p style={{ margin: 0 }}>
+                Average number of orders an average customer places.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>How it&apos;s computed:</strong> derived from the repeat rate — we hold
+                &ldquo;extra orders per repeater&rdquo; constant ({base.extraPerRepeater.toFixed(1)}{" "}
+                here) and recompute as the repeat-rate lever moves.
+              </p>
+            </>,
+          )}
           value={sim.O}
           display={sim.O.toFixed(2)}
           icon={TrendingUp}
@@ -248,7 +298,19 @@ export function CohortSandbox() {
           hint={`baseline ${base.O0.toFixed(2)}`}
         />
         <KpiCard
-          label="Annual cohort value"
+          label={kpiInfo(
+            "Annual cohort value",
+            <>
+              <p style={{ margin: 0 }}>
+                The total first-year value of a year&apos;s worth of new customers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>How it&apos;s computed:</strong> new customers/month × 12 × CLTV. This is the
+                acquisition lever&apos;s payoff — it scales with how many customers you win, not with
+                per-customer value.
+              </p>
+            </>,
+          )}
           value={sim.annual}
           display={formatPrice(Math.round(sim.annual))}
           icon={Users}

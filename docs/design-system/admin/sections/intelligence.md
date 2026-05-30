@@ -17,6 +17,11 @@ default**, toggled in Settings → General → Simulator card). They are also
 Sud Italia example, badged `Example data`, so the sandbox is never empty.
 Read-only on live data — nothing they do writes back.
 
+Every sandbox **KPI card carries its own `InfoButton` (ⓘ)** in the card
+label (`kpiInfo()` helper → the shared `InfoButton` primitive, `size="sm"`):
+a per-metric dialog explaining what the number is, how it's computed and how
+to read it — in addition to the page-level "How this projects" explainer.
+
 | Page                          | Code                                              | Role-gate | Embedded sandbox |
 | ----------------------------- | ------------------------------------------------- | --------- | ---------------- |
 | `/admin/locations`            | `src/components/admin/AdminLocations.tsx`         | **owner**   | — |

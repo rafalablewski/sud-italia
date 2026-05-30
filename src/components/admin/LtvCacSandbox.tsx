@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { RotateCcw, TrendingUp, Wallet, Coins, Timer, AlertTriangle, FlaskConical } from "lucide-react";
-import { Button, Card, CardBody, Input, Badge } from "./v2/ui";
+import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
 import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -46,6 +46,18 @@ const EXAMPLE_LTVCAC: LtvCacReport = {
   },
   months: Array.from({ length: 6 }, (_, i) => ({ cohortMonth: `2025-${String(i + 6).padStart(2, "0")}` })),
 };
+
+/** KPI label with a per-card InfoButton (ⓘ) explaining that one metric. */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
+}
 
 /**
  * LTV/CAC what-if sandbox — embedded at the bottom of the LTV/CAC report.
@@ -218,7 +230,18 @@ export function LtvCacSandbox() {
 
       <section className="v2-kpi-grid">
         <KpiCard
-          label="LTV : CAC"
+          label={kpiInfo(
+            "LTV : CAC",
+            <>
+              <p style={{ margin: 0 }}>
+                How many złoty of lifetime gross profit each złoty of acquisition spend returns.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>= LTV ÷ CAC.</strong> Green ≥ 3× (scale it), amber 1–3× (thin), red below 1×
+                (you&apos;re losing money on every customer you buy).
+              </p>
+            </>,
+          )}
           value={sim.ratio ?? 0}
           display={fmtRatio(sim.ratio)}
           icon={TrendingUp}
@@ -226,7 +249,18 @@ export function LtvCacSandbox() {
           hint={base.ratio0 === null ? "baseline —" : `baseline ${fmtRatio(base.ratio0)} · gate 3×`}
         />
         <KpiCard
-          label="LTV (365d, margin)"
+          label={kpiInfo(
+            "LTV (365d, margin)",
+            <>
+              <p style={{ margin: 0 }}>
+                Margin-adjusted lifetime value — first-year revenue per customer × gross margin.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                We use <strong>margin, not revenue</strong>, because revenue doesn&apos;t pay the
+                kitchen. Retention and AOV levers scale it; the margin lever re-margins it.
+              </p>
+            </>,
+          )}
           value={sim.ltv}
           display={formatPrice(Math.round(sim.ltv))}
           icon={Coins}
@@ -234,14 +268,36 @@ export function LtvCacSandbox() {
           hint={`baseline ${formatPrice(Math.round(base.ltv0))} · ${sim.margin.toFixed(1)}% margin`}
         />
         <KpiCard
-          label="CAC"
+          label={kpiInfo(
+            "CAC",
+            <>
+              <p style={{ margin: 0 }}>
+                Customer acquisition cost — what you pay in marketing to win one customer.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                Seeded from your marketing-cost ledger (or an assumed value when none is logged),
+                and editable here so you can model a cheaper or pricier channel.
+              </p>
+            </>,
+          )}
           value={cacGrosze}
           display={formatPrice(Math.round(cacGrosze))}
           icon={Wallet}
           hint={base.cac0 && base.cac0 > 0 ? `baseline ${formatPrice(base.cac0)}` : "assumed (no spend logged)"}
         />
         <KpiCard
-          label="CAC payback"
+          label={kpiInfo(
+            "CAC payback",
+            <>
+              <p style={{ margin: 0 }}>
+                How many months it takes to earn the CAC back from margin.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>= 12 × CAC ÷ LTV.</strong> Under 3 months is healthy and lets you reinvest
+                fast; over 12 strains cash flow.
+              </p>
+            </>,
+          )}
           value={0}
           display={paybackDisplay}
           icon={Timer}
@@ -249,7 +305,18 @@ export function LtvCacSandbox() {
           hint="months to recoup CAC from margin"
         />
         <KpiCard
-          label="Profit / customer"
+          label={kpiInfo(
+            "Profit / customer",
+            <>
+              <p style={{ margin: 0 }}>
+                The lifetime profit left after acquisition.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>= LTV − CAC.</strong> Negative means you pay more to win a customer than
+                they&apos;re worth — the ratio is below 1×.
+              </p>
+            </>,
+          )}
           value={sim.profitPerCust}
           display={formatPrice(Math.round(sim.profitPerCust))}
           icon={Coins}
@@ -257,7 +324,18 @@ export function LtvCacSandbox() {
           hint="LTV − CAC"
         />
         <KpiCard
-          label="Monthly cohort profit"
+          label={kpiInfo(
+            "Monthly cohort profit",
+            <>
+              <p style={{ margin: 0 }}>
+                The profit from one month&apos;s worth of new customers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>= new customers/month × profit per customer.</strong> Scales the
+                per-customer economics up to the whole acquisition funnel.
+              </p>
+            </>,
+          )}
           value={sim.monthlyProfit}
           display={formatPrice(Math.round(sim.monthlyProfit))}
           icon={TrendingUp}

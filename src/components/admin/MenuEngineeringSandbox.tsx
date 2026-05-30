@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, Coins, TrendingUp, Boxes, FlaskConical } from "lucide-react";
-import { Button, Card, CardBody, Input, Select, Badge, type BadgeTone } from "./v2/ui";
+import { Button, Card, CardBody, Input, Select, Badge, InfoButton, type BadgeTone } from "./v2/ui";
 import { PlainTalk, Methodology, Tips } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -81,6 +81,18 @@ const WINDOW_OPTIONS = [
   { value: "90", label: "Last 90 days" },
   { value: "180", label: "Last 180 days" },
 ];
+
+/** KPI label with a per-card InfoButton (ⓘ) explaining that one metric. */
+function kpiInfo(text: string, body: ReactNode): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {text}
+      <InfoButton title={text} label={`What is ${text}?`} size="sm">
+        {body}
+      </InfoButton>
+    </span>
+  );
+}
 
 /**
  * Menu-engineering what-if sandbox — embedded at the bottom of the menu
@@ -252,7 +264,18 @@ export function MenuEngineeringSandbox() {
 
       <section className="v2-kpi-grid">
         <KpiCard
-          label="Projected contribution"
+          label={kpiInfo(
+            "Projected contribution",
+            <>
+              <p style={{ margin: 0 }}>
+                Total gross profit across the whole menu under your levers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                <strong>= Σ (projected revenue − projected cost)</strong> over every dish. The
+                headline question: does this menu change grow total profit?
+              </p>
+            </>,
+          )}
           value={totals.simGp}
           display={formatPrice(Math.round(totals.simGp))}
           icon={Coins}
@@ -260,7 +283,18 @@ export function MenuEngineeringSandbox() {
           hint={`baseline ${formatPrice(Math.round(totals.baseGp))} · ${gpDelta >= 0 ? "+" : ""}${gpDeltaPct.toFixed(1)}%`}
         />
         <KpiCard
-          label="Δ contribution"
+          label={kpiInfo(
+            "Δ contribution",
+            <>
+              <p style={{ margin: 0 }}>
+                The change in total contribution versus the baseline window.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                Positive (green) means the change earns more; negative (red) means it costs you.
+                This is the number to anchor a menu decision on.
+              </p>
+            </>,
+          )}
           value={gpDelta}
           display={`${gpDelta >= 0 ? "+" : ""}${formatPrice(Math.round(gpDelta))}`}
           icon={TrendingUp}
@@ -268,7 +302,19 @@ export function MenuEngineeringSandbox() {
           hint="vs the baseline window"
         />
         <KpiCard
-          label="Projected revenue"
+          label={kpiInfo(
+            "Projected revenue",
+            <>
+              <p style={{ margin: 0 }}>
+                Total menu revenue (top line) under your levers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                Watch this alongside contribution: revenue can <strong>rise while contribution
+                falls</strong> (e.g. discounting to drive volume), so don&apos;t judge a change on
+                revenue alone.
+              </p>
+            </>,
+          )}
           value={totals.simRevenue}
           display={formatPrice(Math.round(totals.simRevenue))}
           icon={Coins}
@@ -276,7 +322,19 @@ export function MenuEngineeringSandbox() {
           hint={`baseline ${formatPrice(Math.round(totals.baseRevenue))}`}
         />
         <KpiCard
-          label="Projected units"
+          label={kpiInfo(
+            "Projected units",
+            <>
+              <p style={{ margin: 0 }}>
+                Total units sold across the menu under your levers.
+              </p>
+              <p style={{ margin: "8px 0 0" }}>
+                Price rises shed units via the <strong>elasticity</strong> setting; promoting
+                puzzles and removing dogs move it too. Falling units with rising contribution = a
+                leaner, more profitable menu.
+              </p>
+            </>,
+          )}
           value={totals.simUnits}
           display={Math.round(totals.simUnits).toLocaleString("pl-PL")}
           icon={Boxes}
