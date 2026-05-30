@@ -2798,6 +2798,9 @@ export interface LayoutSettings {
   /** Show the post-order feedback survey on the order-confirmation +
    *  review pages. */
   showFeedbackSurvey: boolean;
+  /** Show the "complete your meal" post-order cross-sell on the
+   *  order-confirmation page. */
+  showPostOrderUpsell: boolean;
   /** Show the floating chat widget across the public site. */
   showChatWidget: boolean;
   /** Show the V8 live activity ticker (espresso-bg strip with orders/hour,
@@ -2817,6 +2820,7 @@ export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   showDeliveryProgress: true,
   showPushOptIn: true,
   showFeedbackSurvey: true,
+  showPostOrderUpsell: true,
   showChatWidget: true,
   showLiveTicker: true,
 };

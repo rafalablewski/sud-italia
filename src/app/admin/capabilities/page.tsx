@@ -127,7 +127,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/settings",
           summary:
-            "Layout tab in /admin/settings lets the operator turn whole pieces of the public site on or off. 10 toggles: Header (currency switcher, language switcher), Landing (bundles showcase, loyalty pitch), Menu pages (seasonal specials), Cart (cross-sell rail, free-delivery progress), Order confirmation (push opt-in, feedback survey), Site-wide (chat widget). Each call site wraps the owning component in <LayoutGate flag=...> which reads /api/settings/public on mount and returns null when the flag is false — no DOM, no painted CSS, no event listeners. Persists via AppSettings.layout; toggle is the saved state per the toggle-=-saved rule.",
+            "Layout tab in /admin/settings lets the operator turn whole pieces of the public site on or off. 11 toggles: Header (currency switcher, language switcher), Landing (bundles showcase, loyalty pitch), Menu pages (seasonal specials), Cart (cross-sell rail, free-delivery progress), Order confirmation (push opt-in, feedback survey, post-order upsell), Site-wide (chat widget). Each call site wraps the owning component in <LayoutGate flag=...> which reads /api/settings/public on mount and returns null when the flag is false — no DOM, no painted CSS, no event listeners. Persists via AppSettings.layout; toggle is the saved state per the toggle-=-saved rule.",
         },
         {
           name: "Themes inspector (Settings → Themes)",
@@ -724,6 +724,12 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/upsell",
           summary: "Every dynamic bundle row in /admin/upsell carries a 'Limited until' date input + a per-weekday chip selector (Mon–Sun). Past-dated bundles auto-deactivate; weekday-gated bundles only surface on matching local days so operators can run Friday Family Feast pushes / Wednesday Lunch+ defaults without code. Both fields validate server-side and round-trip through saves.",
+        },
+        {
+          name: "Post-order upsell (confirmation page)",
+          status: "live",
+          href: "/order-confirmation",
+          summary: "'Complete your meal' cross-sell on the order-confirmation page via /api/upsell/post-order — runs the same getCartSuggestions() engine as the cart, seeded with the just-placed order and filtered to additive items. Adding one drops it into the cart and offers a one-tap checkout for a quick follow-on order. Operator-gated by the showPostOrderUpsell layout toggle.",
         },
         {
           name: "Bundle conversion funnel telemetry",

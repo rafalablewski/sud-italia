@@ -8,6 +8,7 @@ import { FeedbackSurvey } from "@/components/order/FeedbackSurvey";
 import { CustomerMilestone } from "@/components/order/CustomerMilestone";
 import { LoyaltyPointsEarned } from "@/components/order/LoyaltyPointsEarned";
 import { PushOptInButton } from "@/components/order/PushOptInButton";
+import { PostOrderUpsell } from "@/components/order/PostOrderUpsell";
 import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CheckCircle, MapPin, ArrowLeft, Share2, Link2, Sparkles, Users } from "lucide-react";
 import { getLocation } from "@/data/locations";
@@ -114,6 +115,13 @@ function OrderConfirmationContent() {
         totalPoints={totalPoints}
         tierName={tierName.charAt(0).toUpperCase() + tierName.slice(1)}
       />
+
+      {/* Post-order "complete your meal" cross-sell (Appendix A) */}
+      {orderId && (
+        <LayoutGate flag="showPostOrderUpsell">
+          <PostOrderUpsell orderId={orderId} />
+        </LayoutGate>
+      )}
 
       {/* Honest FOMO — come back for limited-time items + invite friends */}
       {location && (

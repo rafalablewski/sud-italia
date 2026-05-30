@@ -105,6 +105,7 @@ export interface PublicSettings {
     showDeliveryProgress: boolean;
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
+    showPostOrderUpsell: boolean;
     showChatWidget: boolean;
     showLiveTicker: boolean;
   };
