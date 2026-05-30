@@ -376,9 +376,14 @@ clear on checkout — unchanged from the pre-V8 version.
   gradient + 3px Italian-flag stripe on top + `0 -12px 30px -16px
   rgba(61,40,23,0.35)` editorial drop shadow.
 - **`.v8-cart-totals`** — one row per line item (Subtotal, combo
-  discount, Delivery, Mancia, GST). Combo-discount rows carry
+  discount, Delivery, Mancia, GST, Ready-by). Combo-discount rows carry
   `.is-discount` (basil-deep + italic). The total row carries
   `.is-total` (dashed hairline above + oxblood 21px tabular).
+  The `.is-ready` row (clock icon + "Ready · pronto") surfaces the
+  pre-pay ETA in basil-deep: "by HH:MM" once a slot is picked (the slot
+  time is the kitchen's promised-ready), or "in ~N min · pick a time"
+  beforehand. The estimate comes from `estimatePrepMinutes` in
+  `src/lib/eta.ts` — the same formula the KDS SLA is held to.
 - **`.v8-cart-paybar-foot`** — slim italic note strip for the
   `<LoyaltyEarnPreview />` line + NYC FRESH Act packaging text + SG
   PDPA §13 consent text. Hidden via `:empty` when none apply.

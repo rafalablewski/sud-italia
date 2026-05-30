@@ -22,6 +22,7 @@ import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable,
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { getBaseSlug } from "@/lib/utils";
+import { estimateReadyAt } from "@/lib/eta";
 
 // --- Storage abstraction: Neon Postgres when DATABASE_URL is set, filesystem fallback for local dev ---
 
@@ -7625,12 +7626,9 @@ function computePromisedReadyAt(order: Order, firedAt: Date): Date {
     const slotInstant = new Date(`${order.slotDate}T${order.slotTime}:00.000+02:00`);
     if (Number.isFinite(slotInstant.getTime())) return slotInstant;
   }
-  const maxPrep = Math.max(
-    0,
-    ...order.items.map((i) => i.menuItem.prepTimeMinutes ?? 0),
-  );
-  const minutes = Math.max(10, maxPrep + 3);
-  return new Date(firedAt.getTime() + minutes * 60 * 1000);
+  // Shared with the cart's pre-pay "Ready by" quote so the time we promise the
+  // customer before they pay matches the SLA the KDS holds the line to.
+  return estimateReadyAt(order.items, firedAt);
 }
 /**
  * Fire KDS tickets for an order (m2_2 + m2_4 + m2_5). Generates one ticket

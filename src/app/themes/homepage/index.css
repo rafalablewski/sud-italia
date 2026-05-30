@@ -3427,6 +3427,15 @@ body.v8-cart-open { overflow: hidden; }
   color: var(--color-muted);
   font-style: italic;
 }
+/* Pre-pay "Ready by" reassurance — the promised-ready time surfaced next to the
+   total so the customer sees an ETA before paying, not only after. */
+.v8-cart-totals-row.is-ready {
+  margin-top: 4px;
+  color: var(--color-basil-deep);
+}
+.v8-cart-totals-row.is-ready .v8-cart-totals-val {
+  color: var(--color-basil-deep);
+}
 
 .v8-cart-pay-actions {
   display: flex;

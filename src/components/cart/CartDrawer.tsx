@@ -14,6 +14,8 @@ import { BundleLadder } from "./BundleLadder";
 import { CorporateOrderBanner } from "./CorporateOrderBanner";
 import type { BundleTier } from "@/lib/bundles";
 import { formatPrice } from "@/lib/utils";
+import { formatSlotDate } from "@/lib/format";
+import { estimatePrepMinutes } from "@/lib/eta";
 import {
   getCartSuggestions,
   getActiveComboDeals,
@@ -309,6 +311,25 @@ export function CartDrawer() {
     publicDeliveryFee,
   );
   const total = subtotal - comboDiscount + deliveryFee + tipAmount;
+
+  // Pre-pay "Ready by" quote (audit §11.2 — ETA before pay, not only after).
+  // When the customer has picked a slot, that slot time IS the kitchen's
+  // promised-ready (mirrors store.computePromisedReadyAt for slot orders), so
+  // we surface it verbatim. Before a slot is picked we fall back to the shared
+  // prep estimate so an ETA is visible from the moment there's a cart.
+  const prepMinutes = useMemo(() => estimatePrepMinutes(items), [items]);
+  const readyByLabel = useMemo<string | null>(() => {
+    if (items.length === 0) return null;
+    if (selectedSlotTime) {
+      const time = selectedSlotTime.slice(0, 5);
+      const today = new Date().toISOString().split("T")[0];
+      if (selectedSlotDate && selectedSlotDate !== today) {
+        return `${formatSlotDate(selectedSlotDate)} · ${time}`;
+      }
+      return time;
+    }
+    return null;
+  }, [items.length, selectedSlotTime, selectedSlotDate]);
 
   const isPhoneValid = PHONE_PATTERN.test(customerPhone.trim());
 
@@ -973,6 +994,23 @@ export function CartDrawer() {
                           {(gstRateBps / 100).toFixed(gstRateBps % 100 === 0 ? 0 : 1)}%
                         </span>
                         <span className="v8-cart-totals-val">{formatPrice(gstAmount)}</span>
+                      </div>
+                    )}
+                    {items.length > 0 && (
+                      <div className="v8-cart-totals-row is-ready">
+                        <span className="v8-cart-totals-label" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                          Ready <span className="it" style={{ color: "var(--color-muted)" }}>· pronto</span>
+                        </span>
+                        <span className="v8-cart-totals-val">
+                          {readyByLabel ? (
+                            <>by {readyByLabel}</>
+                          ) : (
+                            <span style={{ fontStyle: "italic", color: "var(--color-muted)" }}>
+                              in ~{prepMinutes} min · pick a time
+                            </span>
+                          )}
+                        </span>
                       </div>
                     )}
                   </div>
