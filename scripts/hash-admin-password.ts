@@ -32,22 +32,26 @@ function prompt(): Promise<string> {
     process.stdout.write("Admin password: ");
     const stdin = process.stdin;
     stdin.setEncoding("utf8");
-    // Hide input.
+    // Hide input by reading raw keystrokes.
     if (stdin.isTTY) stdin.setRawMode?.(true);
     let buf = "";
+    const ENTER = ["\n", "\r"];
+    const ETX = "\u0003"; // Ctrl-C
+    const EOT = "\u0004"; // Ctrl-D
+    const BACKSPACE = ["\u0008", "\u007f"]; // BS / DEL
     const onData = (ch: string) => {
       for (const c of ch) {
-        if (c === "\n" || c === "\r" || c === "") {
+        if (ENTER.includes(c) || c === EOT) {
           if (stdin.isTTY) stdin.setRawMode?.(false);
           stdin.removeListener("data", onData);
           stdin.pause();
           process.stdout.write("\n");
           resolve(buf);
           return;
-        } else if (c === "") {
-          // Ctrl-C
+        } else if (c === ETX) {
+          // Ctrl-C: abort.
           process.exit(1);
-        } else if (c === "" || c === "\b") {
+        } else if (BACKSPACE.includes(c)) {
           buf = buf.slice(0, -1);
         } else {
           buf += c;
@@ -58,7 +62,6 @@ function prompt(): Promise<string> {
     stdin.on("data", onData);
   });
 }
-
 async function main() {
   const password = process.stdin.isTTY ? await prompt() : await readFromStdin();
   if (!password) {
