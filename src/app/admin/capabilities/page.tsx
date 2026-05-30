@@ -80,6 +80,13 @@ export default async function CapabilitiesPage() {
           summary: "Owner-only CRUD on admin accounts. Roles: staff, kitchen, manager, owner, franchisee.",
         },
         {
+          name: "Admin password hashing (scrypt)",
+          status: has("ADMIN_PASSWORD_HASH") ? "live" : "needs-config",
+          envVars: ["ADMIN_PASSWORD_HASH"],
+          summary:
+            "Admin login verifies against a salted scrypt hash in constant time — no plaintext compare. Generate the hash with `tsx scripts/hash-admin-password.ts` and set ADMIN_PASSWORD_HASH; rotating = re-run and replace the var. Falls back to the deprecated plaintext ADMIN_PASSWORD (with a warning) until the hash is set.",
+        },
+        {
           name: "Admin settings hub",
           status: "live",
           href: "/admin/settings",

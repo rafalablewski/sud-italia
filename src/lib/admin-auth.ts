@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getSessionSigningSecret } from "@/lib/session-secret";
 import { getAdminUsers } from "@/lib/store";
+import { verifyPasswordHash, isPasswordHash } from "@/lib/password";
 
 export const SESSION_COOKIE = "sud-italia-admin";
 export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
@@ -140,8 +141,44 @@ export function getAdminPassword(): string {
   return "admin123";
 }
 
+let warnedPlaintextFallback = false;
+
+/**
+ * Verifies the submitted admin password.
+ *
+ * Primary path: `ADMIN_PASSWORD_HASH` holds a salted scrypt hash (produced by
+ * `scripts/hash-admin-password.ts`). We scrypt-verify in constant time — the
+ * plaintext is never stored or compared directly.
+ *
+ * Fallback: when no hash is configured we fall back to the deprecated
+ * plaintext `ADMIN_PASSWORD` env var, but compare in constant time and warn
+ * loudly in production so the operator is nudged to rotate to a hash. This
+ * fallback exists only so an upgrade doesn't lock anyone out before they
+ * generate a hash; set `ADMIN_PASSWORD_HASH` and the plaintext var becomes
+ * unnecessary.
+ */
 export function verifyPassword(password: string): boolean {
-  return password === getAdminPassword();
+  if (typeof password !== "string") return false;
+
+  const hash = process.env.ADMIN_PASSWORD_HASH;
+  if (hash && isPasswordHash(hash)) {
+    return verifyPasswordHash(password, hash);
+  }
+
+  if (process.env.NODE_ENV === "production" && !warnedPlaintextFallback) {
+    console.warn(
+      "ADMIN_PASSWORD_HASH not set — using deprecated plaintext ADMIN_PASSWORD. " +
+        "Run `tsx scripts/hash-admin-password.ts`, set ADMIN_PASSWORD_HASH, and remove ADMIN_PASSWORD.",
+    );
+    warnedPlaintextFallback = true;
+  }
+
+  // Constant-time plaintext comparison. Length is checked first (an early
+  // return there leaks only the length, acceptable for the deprecated path).
+  const submitted = Buffer.from(password, "utf8");
+  const expected = Buffer.from(getAdminPassword(), "utf8");
+  if (submitted.length !== expected.length) return false;
+  return timingSafeEqual(submitted, expected);
 }
 
 export function createSession(
