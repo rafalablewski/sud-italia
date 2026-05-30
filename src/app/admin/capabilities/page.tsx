@@ -75,6 +75,12 @@ export default async function CapabilitiesPage() {
           summary: "DB + Redis latency, lock contention, business KPIs, AI usage.",
         },
         {
+          name: "Error monitoring + alerting (Sentry)",
+          status: has("SENTRY_DSN") || has("NEXT_PUBLIC_SENTRY_DSN") ? "live" : "needs-config",
+          envVars: ["SENTRY_DSN"],
+          summary: "instrumentation.ts (register + onRequestError) ships every server error, RSC failure and cron throw to Sentry; logger.error/warn mirror with request context. Lock timeouts and Redis-broken fallbacks are logged as alertable events. Alert rules (>1% 5xx, lock-fallback) are documented in docs/runbooks/alerting.md — configure the thresholds in the Sentry dashboard.",
+        },
+        {
           name: "Audit log",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/audit-log",
