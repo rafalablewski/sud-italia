@@ -40,6 +40,13 @@ jobs:
       - name: Lint
         run: npx eslint "src/**/*.{ts,tsx}"
 
+      - name: Test
+        # Pure-logic unit suite (node:test via tsx) — loyalty/points math,
+        # combo-deal savings, delivery thresholds, recipe base-slug, cohort
+        # retention + CLTV. Fast and dependency-free; runs before build so a
+        # broken invariant fails the PR loudly rather than shipping silently.
+        run: npm test
+
       - name: Build
         # Build catches issues tsc + lint can miss (Next route validation,
         # bundler errors, server-only imports in client components). Runs
