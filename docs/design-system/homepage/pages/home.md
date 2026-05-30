@@ -12,7 +12,7 @@ under the nav.
 
 | Section          | Component                                                  |
 | ---------------- | ---------------------------------------------------------- |
-| Hero             | `src/components/landing/HeroSection.tsx`                   |
+| Hero             | `src/components/landing/HeroSection.tsx` (+ `Margherita.tsx` for `?hero=a\|b\|c`) |
 | Locations grid   | `src/components/landing/LocationsGrid.tsx`                 |
 | Bundles showcase | `src/components/landing/BundlesShowcase.tsx`               |
 | Famiglia strip   | `src/components/landing/AboutSection.tsx` (file name kept) |
@@ -96,6 +96,32 @@ photography. The hero earns the "one place Cormorant leads" rule
 A single, confident hero — never rotating slides. The location CTAs
 are the entry points to ordering; the ghost Story CTA is the brand
 side-route.
+
+**Redesign variants — `?hero=a|b|c` (comparison toggle).** Audit §11.4
+flagged the hero as lacking appetite ("the competitor is showing you a
+Margherita on a wood peel"). Three appetite-forward alternatives render
+in place of the current hero when the query param is set, so they can be
+compared 1:1 on the live homepage:
+
+- **`a` — wood peel, dark full-bleed** (`.v8-hero--peel`): warm
+  sodium-lit radial background, the pie centred, cream overlay copy.
+  Boldest; departs from the light canvas.
+- **`b` — split editorial** (`.v8-hero--split`, recommended): a
+  left editorial column (kicker, headline, lede, CTAs, ETA chip,
+  tricolore) beside the Margherita on a warm peel disc
+  (`.v8-hero-disc`). Keeps the V8 warmth, adds the appetite.
+- **`c` — ingredient-forward** (`.v8-hero-stage` + `.v8-hero-callout`):
+  centred pie with four provenance callouts (San Marzano DOP, fior di
+  latte, 485°C oven, basilico) on dotted connector lines.
+
+All three reuse the live data (open/closed kicker, per-location CTAs)
+and the `.v8-hero-*` tokens, and carry a `.v8-hero-eta` "Ready in ~15
+min" chip tying the hero to the cart's real pre-pay ETA. The pie is a
+deterministic SVG (`<Margherita />`, `src/components/landing/Margherita.tsx`)
+— placeholder art; production swaps in owned photography at the same
+composition. The fixed `.v8-hero-switch` pill (Current / A / B / C) is a
+**temporary comparison aid** and is removed once a direction is chosen;
+the default (no param) is the current hero.
 
 **Closes with the tricolore, not a chevron.** The previous dark-
 gradient hero had a `<ChevronDown />` "scroll for more" affordance
