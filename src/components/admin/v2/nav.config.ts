@@ -186,6 +186,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck, requiredRole: "owner" },
       { href: "/admin/compliance", label: "Compliance", icon: CalendarCheck2, requiredRole: "manager" },
       { href: "/admin/regulatory-compliance", label: "Regulatory disclosures", icon: ShieldCheck, requiredRole: "owner" },
+      { href: "/admin/soc2", label: "SOC 2 controls", icon: ShieldCheck, requiredRole: "owner" },
       { href: "/admin/audit-log", label: "Audit log", icon: History, requiredRole: "manager" },
       { href: "/admin/capabilities", label: "Capabilities", icon: Layers, requiredRole: "manager" },
       { href: "/admin/currency", label: "Currency", icon: Coins, requiredRole: "owner" },

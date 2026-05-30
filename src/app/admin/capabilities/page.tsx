@@ -1207,6 +1207,13 @@ export default async function CapabilitiesPage() {
           summary: "Permits / certs with expiry alerts on the HQ rollup.",
         },
         {
+          name: "SOC 2 controls register",
+          status: "live",
+          href: "/admin/soc2",
+          summary:
+            "Owner-only readiness board mapping the platform's live runtime posture to SOC 2 Trust Services Criteria (CC6.x access, CC7.x monitoring, CC8.1 change mgmt, A1.2 availability, C1.1 secrets). Each control's status (met/partial/gap) + evidence + remediation is introspected from real config (env), the admin-user table, and the audit log via buildSoc2Register — not a static checklist. Readiness, not certification.",
+        },
+        {
           name: "HACCP temperature logs",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           summary: "Auto-flag readings outside the sensor range.",

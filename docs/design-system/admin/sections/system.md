@@ -2,7 +2,7 @@
 
 ← back to [Admin README](../README.md)
 
-The eight surfaces that manage admin itself: who can do what, what
+The surfaces that manage admin itself: who can do what, what
 regulations apply, what's been done, what's deployed, and the
 chain-wide configuration.
 
@@ -11,6 +11,7 @@ chain-wide configuration.
 | `/admin/users`                    | `src/components/admin/AdminUsers.tsx`                     | **owner**   |
 | `/admin/compliance`               | `src/components/admin/AdminCompliance.tsx`                | manager+  |
 | `/admin/regulatory-compliance`    | `src/app/admin/regulatory-compliance/page.tsx`            | **owner**   |
+| `/admin/soc2`                     | `src/components/admin/AdminSoc2.tsx`                      | **owner**   |
 | `/admin/audit-log`                | `src/components/admin/AdminAuditLog.tsx`                  | manager+  |
 | `/admin/capabilities`             | `src/app/admin/capabilities/page.tsx`                     | manager+  |
 | `/admin/currency`                 | `src/components/admin/AdminCurrency.tsx`                  | **owner**   |
@@ -79,6 +80,28 @@ inspections, certification renewals, supplier audits.
   attestation) + auto-schedules the next occurrence based on frequency.
 - **Overdue items show on the Dashboard** as a warning widget — the
   operator can't miss them from the landing page.
+
+## SOC 2 controls — `/admin/soc2`
+
+Owner-only security-readiness board. Maps the platform's **live runtime
+posture** to the SOC 2 Trust Services Criteria — readiness, not
+certification.
+
+- **Introspected, never static:** the server page gathers real signals
+  (env config, the admin-user table, the audit log) and the pure
+  `src/lib/soc2.ts` `buildSoc2Register` engine maps them to controls
+  (CC6.1/6.2/6.3 access, CC6.6 transit encryption, CC6.7 payment
+  tokenization, CC7.1 job auth, CC7.2 monitoring, CC8.1 change mgmt,
+  A1.2 availability, C1.1 secrets). Same `has(...env)` philosophy as the
+  Capabilities ledger.
+- **KPI row** (`v2-kpi-grid` + `KpiCard`): readiness score (met = 1,
+  partial = 0.5, gap = 0 → %), Met / Partial / Gaps counts.
+- **Per-category cards** (Security / Confidentiality / Availability /
+  Processing Integrity): each control row shows a status `Badge`
+  (success/warning/danger = met/partial/gap), the TSC id + criterion,
+  the **evidence** observed, and **remediation** when not met.
+- **Gating:** owner-only at the page level (redirects non-owners) — it
+  exposes the whole platform's security posture.
 
 ## Regulatory disclosures — `/admin/regulatory-compliance`
 
