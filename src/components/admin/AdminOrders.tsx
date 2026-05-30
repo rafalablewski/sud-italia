@@ -9,6 +9,7 @@ import {
   MapPin,
   Package,
   Phone,
+  Printer,
   RefreshCw,
   RotateCcw,
   Search,
@@ -649,6 +650,62 @@ interface DetailProps {
   updating: string | null;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Browser-print fallback — opens the plain-text receipt in a print window so a
+ *  receipt prints to any browser-connected printer even with no ESC/POS head. */
+function browserPrintReceipt(text: string) {
+  const w = window.open("", "_blank", "width=380,height=640");
+  if (!w) return;
+  w.document.write(
+    `<html><head><title>Receipt</title><style>body{font:12px/1.4 ui-monospace,Menlo,monospace;white-space:pre;padding:10px;}@media print{body{padding:0;}}</style></head><body>${escapeHtml(text)}</body></html>`,
+  );
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+/** "Print receipt" — POSTs to the ESC/POS print endpoint. When a network printer
+ *  is configured it streams to the thermal head; otherwise the server returns a
+ *  preview and we fall back to a browser print so a receipt still comes out. */
+function PrintReceiptButton({ orderId }: { orderId: string }) {
+  const toast = useToast();
+  const [printing, setPrinting] = useState(false);
+  const print = async () => {
+    setPrinting(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/print-receipt`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.mode === "printed") {
+          toast.success("Receipt printed", data.printer ? `${data.bytes} bytes → ${data.printer}` : undefined);
+        } else {
+          toast.info("No printer configured", "Printed via your browser instead. Set RECEIPT_PRINTER_HOST to use the thermal printer.");
+          if (typeof data.preview === "string") browserPrintReceipt(data.preview);
+        }
+      } else {
+        toast.error("Print failed", data.error || "Try again.");
+      }
+    } catch {
+      toast.error("Print failed", "Network error.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+  return (
+    <Button
+      variant="ghost"
+      leadingIcon={<Printer className="h-3.5 w-3.5" />}
+      onClick={print}
+      disabled={printing}
+    >
+      {printing ? "Printing…" : "Print receipt"}
+    </Button>
+  );
+}
+
 function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onRequestRefund, updating }: DetailProps) {
   if (!order) {
     return <Dialog open={false} onClose={onClose} />;
@@ -708,6 +765,7 @@ function OrderDetail({ order, onClose, onStatusChange, onRequestDelete, onReques
       footer={
         <>
           <div className="v2-detail-status-actions" style={{ marginRight: "auto", gap: "0.5rem" }}>
+            <PrintReceiptButton orderId={order.id} />
             <Button
               variant="ghost"
               leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
