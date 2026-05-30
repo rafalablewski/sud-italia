@@ -161,11 +161,17 @@ filter the grid in place.
     intentional addition to preserve the pre-V8 price-sort feature
     inside the V8 chrome. Removing the sort dropdown without an
     affordance would be a real feature regression.
-- **15-minute guarantee banner** (`.v8-guarantee`) — ochre-tinted
+- **Speed-guarantee banner** (`.v8-guarantee`) — ochre-tinted
   card with a 4px ochre→terracotta left rail, a sundial SVG icon,
-  italic Cormorant title "15 minutes guaranteed · 15 minuti
-  garantiti", and a Lora sub "Ready in 15 minutes — or your next
-  drink's on us."
+  italic Cormorant title "{N} minutes guaranteed · {N} minuti
+  garantiti", and a Lora sub. Operator-managed: `MenuSection` reads
+  `speedGuarantee` ({ `active`, `maxMinutes`, `guaranteeText` }) from
+  `/api/settings/public` (sourced from `LoyaltySettings.speedGuarantee`,
+  edited at `/admin/settings`). The minutes (`{N}`) come from
+  `maxMinutes` and the sub from `guaranteeText`; the whole card is
+  **hidden** when `active === false` so the page never promises a time
+  the kitchen isn't committing to. Defaults to 15 minutes while the
+  settings fetch is in flight.
 - **Inline combo deals** (`.v8-combos`) — 1→2-col grid of compact
   combo cards, each with a tricolore left rail, a small SVG (pizza
   wedge for the Italian Classic, pasta bowl for the Pasta Combo),
