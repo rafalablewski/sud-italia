@@ -210,7 +210,8 @@ export async function s3PutObject(
       "Content-Type": contentType,
       "Content-Length": String(body.length),
     },
-    body,
+    // Node Buffer isn't in the DOM BodyInit union; a Uint8Array view is.
+    body: new Uint8Array(body),
   });
 
   if (!res.ok) {

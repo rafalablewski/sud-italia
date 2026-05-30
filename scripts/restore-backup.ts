@@ -37,9 +37,15 @@ function loadBackup(path: string): BackupDocument {
   return doc;
 }
 
+/** Minimal structural type for the bits of the neon client we use here —
+ *  decoupled from neon's invariant <false,false> generics. */
+type SqlClient = {
+  query: (q: string, params?: unknown[]) => Promise<Record<string, unknown>[]>;
+};
+
 /** Kahn topological sort of tables by FK dependency (parents first). */
 async function tableOrder(
-  sql: ReturnType<typeof neon>,
+  sql: SqlClient,
   tables: string[],
 ): Promise<string[]> {
   const set = new Set(tables);
