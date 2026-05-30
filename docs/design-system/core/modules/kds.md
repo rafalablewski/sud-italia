@@ -76,6 +76,16 @@ Late ticket's bump gets a red-tinted edge:
 The button is **full-width below the SLA bar**, not a small button beside
 it. This is part of the footer ETA pattern (below).
 
+## Recall tray
+
+The Floor / Fleet board keeps the **last 5 bumps** in a recall tray so a
+cook who bumped a ticket by mistake can put it back on the expo column in
+one tap, within the ~60 s window where that's useful. The tray is
+**persisted to `localStorage`, scoped per location** (`AdminKDS.tsx`), so a
+tablet refresh or Wi-Fi blip on a wall-mounted screen no longer wipes it;
+entries older than 10 min are pruned on reload so an old bump is never
+resurrected.
+
 ## Footer ETA pattern
 
 The model/predicted-ready info lives in the footer **as the SLA-bar's
