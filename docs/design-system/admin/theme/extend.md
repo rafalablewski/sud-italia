@@ -126,6 +126,30 @@ We use:
 Anything past 700 reads heavy in this palette; anything below 400
 reads frail in dark mode.
 
+## Add a metric / KPI explanation (the ⓘ)
+
+Any ⓘ `InfoButton` on a KPI card, metric or what-if lever is governed by
+**CLAUDE.md Rule #12** — five fixed sections, fixed order, fixed labels.
+Don't hand-roll it:
+
+1. Build the dialog body from **`MetricExplainer`** (`src/components/admin/Explainers.tsx`).
+   Its five props — `description`, `institutional`, `plain`, `tips`,
+   `methodology` — are all required, so a half-written explanation won't
+   compile.
+2. No section may be empty or hand-waved ("self-explanatory" is not an
+   explanation). Each needs real content: the analyst framing + benchmark,
+   a concrete złoty example, operator actions, and the formula + data source.
+3. Never invent new section labels or a sixth section — extend
+   `MetricExplainer` itself if the contract genuinely needs to change, and
+   update [`components.md`](./components.md#metric-explainers--the--contract)
+   + Rule #12 in the same commit.
+4. Wrap the trigger with `InfoButton` (`size="sm"` in a KPI-card label). The
+   page-level "How to read these numbers" card may use the individual blocks
+   (`InstitutionalAnalysis` / `PlainTalk` / `Tips` / `Methodology`) directly.
+
+The full block contract — colours, icons, the colour-token exception — lives
+in [`components.md`](./components.md#metric-explainers--the--contract).
+
 ## Add a module to this design system
 
 If a new module ships (e.g. a Reservations console):
