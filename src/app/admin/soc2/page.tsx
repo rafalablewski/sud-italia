@@ -16,6 +16,9 @@ export default async function AdminSoc2Page() {
   if (!user) redirect("/admin/login");
   if (ROLE_RANK[user.role] < ROLE_RANK.owner) redirect("/admin");
 
+  // Recent audit window — enough to evidence "logging is active + durable"
+  // without a full table scan. The control only needs presence (> 0); the
+  // evidence text is phrased as "recent entries observed", not a grand total.
   const [users, audit] = await Promise.all([
     getAdminUsers(),
     getAuditLog({ limit: 500 }),

@@ -2,15 +2,15 @@
 
 ← back to [Admin README](../README.md)
 
-The six surfaces where signal becomes decision: multi-location overview,
-location admin, cohort + CLTV, menu engineering, AI insights, expansion
-planning.
+The seven surfaces where signal becomes decision: multi-location overview,
+location admin, cohort + CLTV, LTV / CAC, menu engineering, AI insights,
+expansion planning.
 
 | Page                          | Code                                              | Role-gate |
 | ----------------------------- | ------------------------------------------------- | --------- |
 | `/admin/locations`            | `src/components/admin/AdminLocations.tsx`         | **owner**   |
 | `/admin/locations/manage`     | (sub-page of the above)                           | **owner**   |
-| `/admin/reports/cohort`       | `src/components/admin/AdminCohort.tsx`            | manager+  |
+| `/admin/reports/cohort`       | `src/components/admin/AdminCohortReport.tsx`      | manager+  |
 | `/admin/reports/ltv-cac`      | `src/components/admin/AdminLtvCac.tsx`            | manager+  |
 | `/admin/menu-engineering`     | `src/components/admin/AdminMenuEngineering.tsx`   | manager+  |
 | `/admin/ai`                   | `src/components/admin/AdminAi.tsx`                | manager+  |

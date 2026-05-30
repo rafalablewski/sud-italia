@@ -162,7 +162,7 @@ export function buildSoc2Register(
     criterion: "Monitoring — audit logging",
     category: "Security",
     status: pick(s.auditLogCount > 0 && s.durableStorage, s.auditLogCount > 0),
-    evidence: `Append-only audit log captures actor + action + before/after on every mutation. ${s.auditLogCount} entr${s.auditLogCount === 1 ? "y" : "ies"} recorded${s.latestAuditAt ? `, latest ${new Date(s.latestAuditAt).toISOString().slice(0, 10)}` : ""}. Backing store: ${s.durableStorage ? "Postgres (durable)" : "filesystem fallback (last 1000)"}.`,
+    evidence: `Append-only audit log captures actor + action + before/after on every mutation. ${s.auditLogCount} recent entr${s.auditLogCount === 1 ? "y" : "ies"} observed${s.latestAuditAt ? `, latest ${new Date(s.latestAuditAt).toISOString().slice(0, 10)}` : ""}. Backing store: ${s.durableStorage ? "Postgres (durable, unbounded retention)" : "filesystem fallback (last 1000)"}.`,
     remediation:
       s.auditLogCount > 0 && s.durableStorage
         ? undefined
