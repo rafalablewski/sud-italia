@@ -7,7 +7,7 @@ import {
   LOCATION_SCOPE_ALL,
 } from "@/lib/admin-auth";
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
-import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
 import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
 import { logger } from "@/lib/logger";
 
@@ -22,6 +22,15 @@ import { logger } from "@/lib/logger";
  *   returns the per-user role and `hasRole()` actually enforces.
  */
 export async function POST(req: NextRequest) {
+  // Network gate — login bypasses withAdmin, so enforce the admin IP
+  // allowlist here too. No-op when ADMIN_IP_ALLOWLIST is unset.
+  if (!isAdminIpAllowed(getClientIp(req))) {
+    return NextResponse.json(
+      { error: "Access from this network is not allowed" },
+      { status: 403 },
+    );
+  }
+
   // 5/min/IP blocks password-guessing without hurting a real operator who
   // mistypes their password a few times. Failed and successful attempts
   // both count to the limit — keeps the math simple and discourages enumerating

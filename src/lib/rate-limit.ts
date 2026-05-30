@@ -118,6 +118,32 @@ export function getClientIp(req: NextRequest): string {
 }
 
 /**
+ * Parsed `ADMIN_IP_ALLOWLIST` — a comma-separated list of exact client IPs
+ * (IPv4 or IPv6) permitted to reach the admin surface. Empty when unset.
+ */
+export function getAdminIpAllowlist(): string[] {
+  const raw = process.env.ADMIN_IP_ALLOWLIST;
+  if (!raw || !raw.trim()) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * True when `ip` may reach the admin surface. When no allowlist is configured
+ * (the default) every IP is allowed — the allowlist is opt-in. When one IS
+ * configured, only exact matches pass; anything else (including the "unknown"
+ * sentinel from getClientIp) is denied. Exact-match only; CIDR ranges are not
+ * supported yet.
+ */
+export function isAdminIpAllowed(ip: string): boolean {
+  const allowlist = getAdminIpAllowlist();
+  if (allowlist.length === 0) return true;
+  return allowlist.includes(ip);
+}
+
+/**
  * Convenience: returns null on allowed, a 429 NextResponse on denied.
  * Drop in at the top of a route handler.
  */

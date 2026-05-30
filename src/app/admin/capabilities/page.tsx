@@ -49,7 +49,14 @@ export default async function CapabilitiesPage() {
         {
           name: "Rate limiting",
           status: "live",
-          summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback. Fail-open on Redis error.",
+          summary: "5/min/IP login, 10/min/IP checkout, 5/min/phone feedback, plus a blanket per-user limit on EVERY admin API route (default 300/min/user, override ADMIN_RATE_LIMIT_PER_MIN) enforced inside withAdmin. Fail-open on Redis error.",
+          envVars: ["ADMIN_RATE_LIMIT_PER_MIN"],
+        },
+        {
+          name: "Admin IP allowlist",
+          status: has("ADMIN_IP_ALLOWLIST") ? "live" : "disabled",
+          envVars: ["ADMIN_IP_ALLOWLIST"],
+          summary: "Optional network gate on the whole admin surface. Set ADMIN_IP_ALLOWLIST to a comma-separated list of exact client IPs; requests from any other IP get 403 before auth or DB are touched (enforced in withAdmin + the login route). Unset = open to all (default). Exact-match only, no CIDR yet.",
         },
         {
           name: "Security headers (CSP, HSTS, XFO)",

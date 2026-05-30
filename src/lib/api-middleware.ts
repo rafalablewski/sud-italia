@@ -8,6 +8,18 @@ import {
 } from "@/lib/admin-auth";
 import { logger } from "@/lib/logger";
 import { deriveRequestId, runWithRequestContext } from "@/lib/request-context";
+import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
+
+/**
+ * Per-user ceiling on admin API calls, applied by withAdmin to every wrapped
+ * route. Generous enough that a dashboard firing a dozen fetches per page load
+ * never trips it, low enough that a runaway script or stolen session is
+ * throttled. Override with ADMIN_RATE_LIMIT_PER_MIN.
+ */
+function adminRateLimitPerMin(): number {
+  const raw = Number.parseInt(process.env.ADMIN_RATE_LIMIT_PER_MIN ?? "", 10);
+  return Number.isInteger(raw) && raw > 0 ? raw : 300;
+}
 
 /**
  * Drop-in wrapper for /api/admin/* route handlers. Replaces the
@@ -115,8 +127,25 @@ export function withAdmin<RouteCtx = { params: Promise<Record<string, never>> }>
   handler: AdminRouteHandler<RouteCtx>,
 ): (req: NextRequest, ctx: RouteCtx) => Promise<Response> {
   return async (req, ctx) => {
+    // Network gate first — cheapest deny, and it runs before we touch the
+    // session or DB. When ADMIN_IP_ALLOWLIST is unset this is a no-op.
+    if (!isAdminIpAllowed(getClientIp(req))) {
+      return forbidden("Access from this network is not allowed");
+    }
+
     const user = await getCurrentAdminUser();
     if (!user) return unauthorized();
+
+    // Per-user rate limit across the whole admin surface. Keyed by user id so
+    // one operator's runaway tab can't exhaust another's budget. Login has its
+    // own stricter 5/min/IP limiter; this covers every other admin route.
+    const limited = await enforceRateLimit({
+      key: "admin-api",
+      id: user.id,
+      limit: adminRateLimitPerMin(),
+      windowSec: 60,
+    });
+    if (limited) return limited;
 
     if (opts.roles && opts.roles.length > 0) {
       const minRank = Math.min(...opts.roles.map((r) => ROLE_RANK[r]));
