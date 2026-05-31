@@ -151,13 +151,11 @@ mystery line for new tickets).
 
 - **Dish names in Fraunces serif** (16.5px on Floor / 21px on Chef). This is
   the *only* operational use of serif besides the wordmark.
-- **Modifiers** (`.ka-mods` / `.ka-mod`) under the dish in **Fraunces
-  italic amber** (`48h sourdough · Half Diavola`), resolved from the
-  order line's `selectedModifiers` against `menuItem.modifierGroups`.
-  Refined "menu copy" voice. Options flagged `flagOnKds` (gluten-free,
-  buffalo mozz, half-and-half) **escalate to upright uppercase
-  late-red** (`.is-flagged`) so an allergy- or station-critical pick
-  can't be missed at the line.
+- **Modifiers** (`.tk-mod` on Floor / `.ct-mod` on Chef) under the dish in
+  **Fraunces italic amber** (`48h sourdough · Half Diavola`), carried on the
+  ticket item (`KdsTicketItem.modifiers`, resolved in `buildKdsTicket` from
+  the order line). The item's `notes` render in the same amber voice.
+  Refined "menu copy" tone.
 - **Allergen alert** when present — a small red-tinted strip
   (`Allergens: milk · gluten`) with the alert-triangle icon.
 - **Driver / order notes** (`<b>Driver note:</b> leave at reception…`) in a
@@ -176,11 +174,12 @@ carries a hint line below the items:
 
 > ⌗ *Coursed · Mains, Dessert held*
 
-Rendered as `.ka-t-course` (a `--cmd-firing` amber strip with a small
-`Layers` icon). It appears only while `coursing.held` is non-empty — a
-fully-fired or all-together check shows no hint. As each held course is
-fired from the POS the order grows and the line re-renders with the new
-items, the hint shrinking until nothing is held.
+Rendered as `.tk-coursehint` on the Floor `.tk` card (and `.ct-coursehint`
+on the Chef `.ct` card) — a faint line with a small `Layers` icon. It
+appears only while `coursing.held` is non-empty — a fully-fired or
+all-together check shows no hint. As each held course is fired from the POS
+the order grows and the line re-renders with the new items, the hint
+shrinking until nothing is held.
 
 > **Not yet built:** a per-course chip on the ticket header and grouping
 > items under course names (rather than station names) — the current
@@ -194,8 +193,8 @@ items, the hint shrinking until nothing is held.
 body.kds { min-height: 100vh; }
 .kds-wrap { min-height: 100vh; display: flex; flex-direction: column; }
 .kds-top { position: sticky; top: 0; z-index: 10; background: var(--canvas); }
-.board { flex: 1; display: grid; align-items: start; }
-.col-body { display: flex; flex-direction: column; gap: 11px; }     /* no overflow-y */
+.kds-board { flex: 1; display: grid; align-items: start; }
+.kds-col-body { display: flex; flex-direction: column; gap: 11px; }  /* no overflow-y */
 .tk { flex: none; }                                                  /* never get squashed */
 ```
 
@@ -206,6 +205,11 @@ scrolls.
 `flex: none` on `.tk` is critical — without it, a flex-column lane shrinks
 tickets to fit and `overflow: hidden` clips the footer (the late-ticket
 footer was getting cut in early iterations).
+
+The **Chef** queue is the one exception: per `kds-chef.html`, `.kds-queue`
+takes `flex: 1; overflow-y: auto` and scrolls internally under the pinned
+chef strip, rather than growing the page — the line cook keeps the strip and
+station chips fixed while the dense queue scrolls.
 
 ## Top controls
 
