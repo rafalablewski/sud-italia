@@ -61,6 +61,7 @@ export function WhatsAppFunnelDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      theme="core"
       size="lg"
       title="Conversion funnel"
       description="How far conversations get, from first message to a paid order. Cumulative per phone — reaching a later stage counts toward the earlier ones."

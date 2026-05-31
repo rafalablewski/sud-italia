@@ -1258,6 +1258,7 @@ export function AdminPos({
       <Dialog
         open={tablePickerOpen}
         onClose={() => setTablePickerOpen(false)}
+        theme="core"
         size="md"
         title="Assign a table"
         description={`Party of ${activeCovers}. Tables already on another open check, or with fewer seats than the party, are flagged — you can still seat there.`}
@@ -1342,6 +1343,7 @@ export function AdminPos({
       <Dialog
         open={addrOpen}
         onClose={() => setAddrOpen(false)}
+        theme="core"
         size="md"
         title="Delivery address"
         description={active ? `Open check #${active.id}` : undefined}

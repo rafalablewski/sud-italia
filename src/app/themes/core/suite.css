@@ -329,6 +329,36 @@
 .core-suite .core-suite-toast { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--r-pill); background: var(--success); color: #06140d; font-size: 13px; font-weight: 600; box-shadow: var(--sh-lg); }
 .core-suite .core-suite-toast svg { width: 15px; height: 15px; }
 
+/* ---- Dark "core" skin for the shared v2 Dialog ----
+   Dialogs opened from a Core surface (POS / Guest) pass theme="core",
+   which adds .v2-dialog-core to the portal root. We redefine the admin
+   token vars used by both the dialog chrome (.v2-dialog*) and the dialog
+   bodies (.wa-fa-* / .wa-bc-* / .wa-cfg-* funnel/broadcast/settings),
+   so the whole modal recolors to the warm-neutral dark palette without
+   touching the default admin dialog or rewriting any dialog body. */
+.v2-dialog-core {
+  --surface-1: #17161c;
+  --surface-2: #1d1b23;
+  --surface-3: #262430;
+  --surface-hover: #2f2c39;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --fg: #f5f3ee;
+  --fg-muted: #c0b9b0;
+  --text-muted: #978e85;
+  --success: #2fa875;
+  --success-soft: rgba(47, 168, 117, 0.4);
+}
+.v2-dialog-core .v2-dialog { background: #17161c; color: #f5f3ee; }
+.v2-dialog-core .v2-dialog-footer { background: #1d1b23; }
+.v2-dialog-core .wa-fa-track,
+.v2-dialog-core .wa-fa-tile,
+.v2-dialog-core .wa-bc-row,
+.v2-dialog-core .wa-cfg-sec { background: #1d1b23; border-color: rgba(255,255,255,0.10); }
+/* Standalone textarea.v2-input (POS address) has no .v2-input-wrap, so give
+   it a field surface on the dark dialog. */
+.v2-dialog-core textarea.v2-input { background: #1d1b23; border: 1px solid rgba(255,255,255,0.16); border-radius: 8px; }
+
 /* ============================================================
    KDS — kitchen wall (ported from kds.html / kds-fleet.html /
    kds-chef.html). Its own dark monochrome surface, scoped under

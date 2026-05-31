@@ -20,6 +20,10 @@ interface Props {
   size?: "sm" | "md" | "lg" | "xl";
   /** Disables outside-click close. */
   disableScrim?: boolean;
+  /** Dark "core" skin — for dialogs opened from a Core suite surface (POS /
+   *  Guest / KDS) so the modal matches the dark mockup instead of the light
+   *  admin glass. Only restyles the dialog chrome; bodies opt in via CSS. */
+  theme?: "admin" | "core";
 }
 
 const SIZE_PX: Record<NonNullable<Props["size"]>, number> = {
@@ -39,6 +43,7 @@ export function Dialog({
   hideClose = false,
   size = "md",
   disableScrim = false,
+  theme = "admin",
 }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -64,7 +69,7 @@ export function Dialog({
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="v2-dialog-root">
+    <div className={`v2-dialog-root${theme === "core" ? " v2-dialog-core" : ""}`}>
       <div
         className="v2-dialog-scrim"
         onClick={disableScrim ? undefined : onClose}

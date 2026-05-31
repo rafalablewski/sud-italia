@@ -126,6 +126,7 @@ export function WhatsAppBroadcastDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      theme="core"
       size="lg"
       title="Broadcast campaign"
       description="Send an approved Meta template to an opted-in customer segment. Opted-out customers are always excluded. Sends run in batches; you can leave — the daily job finishes anything left."
