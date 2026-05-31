@@ -194,7 +194,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const clock = useMemo(() => fmtWallClock(now), [now]);
 
   const board = (
-    <div className={`kds-atlas${fullscreen ? " is-fullscreen" : ""}`}>
+    <div className={`kds-atlas kds-bleed${fullscreen ? " is-fullscreen" : ""}`}>
       {/* ---------------- Header ---------------- */}
       <header className="cmd-head">
         <div className="cmd-brand">
@@ -203,6 +203,10 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
         <div className="cmd-spacer" />
+        <a href="/admin" className="cmd-btn" title="Back to admin">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span>Admin</span>
+        </a>
         <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
           <span>Refresh</span>

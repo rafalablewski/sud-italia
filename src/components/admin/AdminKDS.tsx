@@ -7,6 +7,7 @@ import {
   Bell,
   BellOff,
   ChefHat,
+  ChevronLeft,
   Flame,
   MapPin,
   Maximize2,
@@ -494,7 +495,7 @@ function AdminKDSDesktop({
   };
 
   const page = (
-    <div className={`kds-atlas kds-floor-dark${kiosk ? " is-fullscreen" : ""}`}>
+    <div className={`kds-atlas kds-floor-dark kds-bleed${kiosk ? " is-fullscreen" : ""}`}>
       {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
       <header className="cmd-head">
         <div className="cmd-brand">
@@ -503,6 +504,10 @@ function AdminKDSDesktop({
           {simEnabled && <span className="ka-sandbox">Sandbox</span>}
         </div>
         <div className="cmd-spacer" />
+        <a href="/admin" className="cmd-btn" title="Back to admin">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span>Admin</span>
+        </a>
         <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
           <RefreshCw className="h-3.5 w-3.5" />
           <span>Refresh</span>

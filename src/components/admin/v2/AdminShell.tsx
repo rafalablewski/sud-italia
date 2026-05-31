@@ -26,7 +26,7 @@ const BARE_ROUTES = ["/admin/login"];
 // sidebar + topbar), so the admin chrome steps aside — but the data providers
 // (location, toast, shell context) stay so the Core components keep working.
 // Routes are added here as each surface is rebuilt onto the Core suite shell.
-const CORE_ROUTES = ["/admin/guest", "/admin/pos"];
+const CORE_ROUTES = ["/admin/guest", "/admin/pos", "/admin/kds"];
 
 export function AdminShell({ children }: Props) {
   const pathname = usePathname();

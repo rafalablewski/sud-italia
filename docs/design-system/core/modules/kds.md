@@ -10,6 +10,14 @@ on what's wrong.
 (`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTicketCard.tsx`,
 `KdsManagerOpsHeader.tsx`, `KdsChefStrip.tsx`, mobile `MobileKDS.tsx`).
 **Mockups:** `kds-fleet.html` → `kds.html` → `kds-chef.html`.
+**Shell:** the KDS is a **full-screen kitchen-wall display** — it has no SI
+sidebar (unlike POS / Guest). `/admin/kds` is in `CORE_ROUTES`, so the
+admin chrome steps aside and the `.kds-atlas.kds-bleed` surface fills the
+viewport edge-to-edge (a fixed layer; the kiosk `is-fullscreen` mode sits
+above it). An "Admin" back link in the header is the only way out, since
+there's no nav rail on this surface. The dark command aesthetic, health
+rings, pace gauges, promise-accuracy benchmark and ticket stack already
+match the mockups 1:1 — the rebuild made the surface full-bleed.
 
 ## The core principle
 
