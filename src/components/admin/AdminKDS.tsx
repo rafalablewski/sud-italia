@@ -150,7 +150,12 @@ export function AdminKDS() {
   // this same window down to that truck's floor board. The Atlas board reflows
   // to its responsive layout on a phone; its floor view is the dedicated mobile
   // KDS there and the desktop floor board otherwise.
-  const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader fleetContext />;
+  const floorView =
+    ready && isMobile ? (
+      <MobileKDS />
+    ) : (
+      <AdminKDSDesktop opsHeader fleetContext onExitFleet={() => setMode("fleet")} />
+    );
 
   return (
     <div>
@@ -172,12 +177,15 @@ function AdminKDSDesktop({
   opsHeader = false,
   chefStrip = false,
   fleetContext = false,
+  onExitFleet,
 }: {
   opsHeader?: boolean;
   chefStrip?: boolean;
   /** True when an owner reached this board by drilling in from the fleet wall —
    *  the header keeps the "Fleet command" identity, scoped to the location. */
   fleetContext?: boolean;
+  /** Owner-only: jump back to the Atlas fleet wall (the viewswitch "Fleet" tab). */
+  onExitFleet?: () => void;
 }) {
   const { location, activeLocations } = useAdminLocation();
   const toast = useToast();
@@ -494,89 +502,91 @@ function AdminKDSDesktop({
     }
   };
 
+  const viewLabel = chefStrip ? "Chef" : "Floor";
   const page = (
-    <div className={`kds-atlas kds-floor-dark kds-bleed${kiosk ? " is-fullscreen" : ""}`}>
-      {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">{brandLabel}</span>
-          {simEnabled && <span className="ka-sandbox">Sandbox</span>}
-        </div>
-        <div className="cmd-spacer" />
-        <a href="/admin" className="cmd-btn" title="Back to admin">
-          <ChevronLeft className="h-3.5 w-3.5" />
-          <span>Admin</span>
-        </a>
-        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
-        >
-          {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="cmd-clock tabular">{clock}</div>
-      </header>
-
-      {/* Board controls — sound / pause live on a thin strip under the header
-          so the header keeps just refresh, fullscreen + clock. */}
-      <div className="cmd-subbar" role="group" aria-label="Board controls">
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={soundOn}
-          onClick={() => setSoundOn((s) => !s)}
-          title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
-        >
-          {soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-          <span>{soundOn ? "Sound" : "Muted"}</span>
-        </button>
-        <button type="button" className="cmd-btn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
-          {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
-          <span>{paused ? "Resume" : "Pause"}</span>
-        </button>
-      </div>
-
-      {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
-
-      {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
-
-      {/* Stage switcher — big, easily-tapped buttons sitting right above the
-          ticket cards (below floor command / 86'd) so the line can flip
-          between All / New / In progress / Ready · Expo at a glance. */}
-      <div className="kds-stage-switch" role="group" aria-label="Stage focus">
-        <button
-          type="button"
-          className="kds-stage-btn"
-          aria-pressed={lane === "all"}
-          onClick={() => setLane("all")}
-        >
-          <span className="kds-stage-label">All</span>
-          <span className="kds-stage-count tabular">{laneCounts.all}</span>
-        </button>
-        {KDS_COLUMNS.map((col) => (
-          <button
-            key={col.id}
-            type="button"
-            className="kds-stage-btn"
-            data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
-            aria-pressed={lane === col.id}
-            onClick={() => setLane(col.id)}
-          >
-            <span className="kds-stage-label">{col.label}</span>
-            <span className="kds-stage-count tabular">{laneCounts[col.id]}</span>
+    <div className={`kds-core${kiosk ? " is-fullscreen" : ""}`}>
+      <div className="kds-wrap">
+        <div className="kds-top">
+          <div className="kds-id">
+            <div className="brand-mark">SI</div>
+            <div>
+              <div className="nm">Kitchen</div>
+              <div className="loc">{brandLabel}</div>
+            </div>
+          </div>
+          <div className="kds-viewswitch">
+            {fleetContext && onExitFleet && (
+              <button type="button" onClick={onExitFleet}>
+                Fleet
+              </button>
+            )}
+            <button type="button" className={viewLabel === "Floor" ? "on" : ""}>
+              Floor
+            </button>
+            {chefStrip && (
+              <button type="button" className="on">
+                Chef
+              </button>
+            )}
+          </div>
+          <div className="kds-stage" role="group" aria-label="Stage focus">
+            <button type="button" className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
+              All <span className="n">{laneCounts.all}</span>
+            </button>
+            {KDS_COLUMNS.map((col) => (
+              <button
+                key={col.id}
+                type="button"
+                className={lane === col.id ? "on" : ""}
+                onClick={() => setLane(col.id)}
+              >
+                {col.label} <span className="n">{laneCounts[col.id]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="kds-clock">{clock}</div>
+          {simEnabled && (
+            <span className="kds-ctrl" style={{ color: "var(--platinum)", borderColor: "var(--platinum)" }}>
+              Sandbox
+            </span>
+          )}
+          <a href="/admin" className="kds-ctrl" title="Back to admin">
+            <ChevronLeft className="h-4 w-4" />
+          </a>
+          <button type="button" className="kds-ctrl" onClick={refresh} title="Refresh now">
+            <RefreshCw className="h-4 w-4" />
           </button>
-        ))}
-      </div>
+          <button
+            type="button"
+            className={`kds-ctrl${soundOn ? " on" : ""}`}
+            onClick={() => setSoundOn((s) => !s)}
+            title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
+          >
+            {soundOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className={`kds-ctrl${paused ? " on" : ""}`}
+            onClick={() => setPaused((p) => !p)}
+            title={paused ? "Resume" : "Pause"}
+          >
+            {paused ? <PlayCircle className="h-4 w-4" /> : <PauseCircle className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className={`kds-ctrl${kiosk ? " on" : ""}`}
+            onClick={kiosk ? exitKiosk : enterKiosk}
+            title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen kiosk"}
+          >
+            {kiosk ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        </div>
 
-      <div className="ka-floor-body">
+        {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+
+        {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
+
+        <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
         {loading ? (
           <div className="v2-page-loading">Loading Kitchen Display…</div>
         ) : orders.length === 0 ? (
@@ -621,6 +631,18 @@ function AdminKDSDesktop({
           when it crosses the promised-ready deadline. Same data-URI
           fallback so deployment doesn't depend on shipping an mp3. */}
       <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
+
+        <div className="kds-footrow">
+          <div className="kds-legend">
+            <span className="k"><span className="sw" />On time</span>
+            <span className="k"><span className="sw" style={{ background: "var(--warn)" }} />Approaching SLA</span>
+            <span className="k"><span className="sw" style={{ background: "var(--late)" }} />Late</span>
+            <span>
+              Keys <b>1–9</b> bump · <b>F</b> kiosk
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 

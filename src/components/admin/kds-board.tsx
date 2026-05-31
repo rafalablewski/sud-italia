@@ -3,10 +3,9 @@
 import type { ReactNode } from "react";
 import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
-import { Badge } from "./v2/ui";
 import { ticketTone, type TicketTone } from "@/lib/kds-prediction";
 import type { KdsTicket } from "@/lib/kds-ticket";
-import { KdsTicketCard } from "./kds/KdsTicketCard";
+import { KdsTk } from "./kds/KdsTk";
 
 /**
  * Shared Kitchen Display board primitives.
@@ -144,12 +143,12 @@ export interface KdsLaneProps {
  */
 export function KdsLane({ tickets, stationFilter, nowMs, updatingId, onAdvance }: KdsLaneProps) {
   if (tickets.length === 0) {
-    return <div className="v2-kds-lane-empty">No tickets in this lane.</div>;
+    return <div className="kds-empty">No tickets in this lane.</div>;
   }
   return (
-    <div className="v2-kds-lane-grid">
+    <div className="kds-board" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
       {tickets.map((t) => (
-        <KdsTicketCard
+        <KdsTk
           key={t.id}
           t={t}
           now={nowMs}
@@ -170,26 +169,24 @@ export function KdsLane({ tickets, stationFilter, nowMs, updatingId, onAdvance }
  */
 export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance, expoRecall }: KdsBoardProps) {
   return (
-    <div className="v2-kds-board">
+    <div className="kds-board">
       {KDS_COLUMNS.map((col) => {
         const tickets = columns.get(col.id) || [];
+        const active = col.id === "preparing";
         return (
-          <div key={col.id} className={`v2-kds-col v2-kds-col-${col.tone}`}>
-            <div className="v2-kds-col-header">
-              <Badge tone={col.tone} variant="solid">
-                {col.label}
-              </Badge>
-              <span className="v2-kds-col-head-right">
-                <span className="v2-kds-col-count">{tickets.length}</span>
-                {col.id === "ready" && expoRecall}
-              </span>
+          <div key={col.id} className={`kds-col${active ? " active" : ""}`}>
+            <div className="kds-col-head">
+              <span className="lbl">{col.label}</span>
+              <span className="cnt">{tickets.length}</span>
+              <span className="rule" />
+              {col.id === "ready" && expoRecall}
             </div>
-            <div className="v2-kds-col-body">
+            <div className="kds-col-body">
               {tickets.length === 0 ? (
-                <div className="v2-kds-col-empty">No tickets here.</div>
+                <div className="kds-empty" style={{ padding: 20 }}>No tickets here.</div>
               ) : (
                 tickets.map((t) => (
-                  <KdsTicketCard
+                  <KdsTk
                     key={t.id}
                     t={t}
                     now={nowMs}
