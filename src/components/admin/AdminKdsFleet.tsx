@@ -61,7 +61,15 @@ const NEXT_STATUS: Record<string, OrderStatus | null> = { confirmed: "preparing"
 
 /* ============================ Format helpers ============================ */
 
+// Compact złoty for the dense fleet tiles — the mockup's Revenue figures read
+// "3.1k/hr", and a full "1 800,00 zł" would overflow the 25px stat. Thousands
+// collapse to "1,8k zł"; anything under 1k keeps the exact formatted price.
 function zl(grosze: number): string {
+  const z = grosze / 100;
+  if (Math.abs(z) >= 1000) {
+    const k = z / 1000;
+    return `${k.toFixed(k >= 10 ? 0 : 1).replace(".", ",")}k zł`;
+  }
   return formatPricePLN(grosze);
 }
 
