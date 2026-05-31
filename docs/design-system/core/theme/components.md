@@ -157,6 +157,16 @@ The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
 / `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
 listed in [the README](./README.md#two-css-layers-mid-migration).
 
+### Dialogs — `theme="core"`
+
+Dialogs opened from a Core surface pass **`theme="core"`** to the shared
+v2 `Dialog`. That tags the portal root `.v2-dialog-core`; a scoped block
+in `suite.css` redefines the admin token vars so the modal renders in the
+dark warm-neutral palette (chrome **and** body) without rewriting the
+dialog body. Used by the WhatsApp Settings / Broadcast / Funnel dialogs
+and the POS table-assign / address dialogs. The full-screen tender pad is
+a bespoke `.core-suite-overlay` instead.
+
 ## What this component set is not
 
 - It is **not** the Admin component set. Admin has `glass-card`,

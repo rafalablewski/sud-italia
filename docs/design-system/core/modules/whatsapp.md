@@ -178,13 +178,13 @@ Higher-level (operator-only) actions live in the topbar:
 
 > **Shell note:** the three dialogs (`WhatsApp{Settings,Broadcast,Funnel}
 > Dialog.tsx`) render through the shared admin `Dialog` (v2), which
-> portals to `document.body` — so they appear as standard **light admin
-> modals over the dark Inbox**, not the dark `.overlay`/`.dialog` the
-> mockup draws. This is deliberate: their bodies (`.wa-fa-*` etc.) are
-> built on admin tokens (`--border`, `--text-muted`) and the same
-> decision is documented for POS's table/address dialogs. Reskinning
-> them to the dark `.core-suite-overlay` is a future pass; the dialogs
-> are fully functional as-is.
+> portals to `document.body`. They pass **`theme="core"`**, which tags
+> the portal root `.v2-dialog-core`; a scoped block in `suite.css`
+> redefines the admin token vars (`--surface-*` / `--fg` / `--border` /
+> `--text-muted`) to the warm-neutral dark palette, so the dialog chrome
+> **and** the bodies (`.wa-fa-*` / `.wa-bc-*` / `.wa-cfg-*`) recolor to
+> the dark mockup look without rewriting any body markup. POS's
+> table/address dialogs use the same `theme="core"` skin.
 
 ## Broadcast composer (`guest-broadcast.html`)
 
