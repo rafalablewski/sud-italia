@@ -469,10 +469,6 @@
 .tk.late .bump { border-color: color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
 
 .kds-footrow { flex: none; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.kds-recall { display: flex; align-items: center; gap: 9px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 7px 5px 13px; }
-.kds-recall .lbl { font: 600 9.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
-.kds-recall .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 6px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--mono); cursor: pointer; }
-.kds-recall .chip:hover { color: var(--t); border-color: var(--hair-2); }
 .kds-legend { margin-left: auto; display: flex; gap: 18px; align-items: center; font: 500 11px var(--ui); color: var(--faint); }
 .kds-legend .k { display: inline-flex; align-items: center; gap: 6px; }
 .kds-legend .sw { width: 8px; height: 8px; border-radius: 2px; background: var(--dim); }
@@ -817,10 +813,6 @@
 .core-suite .covers { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .core-suite .stp { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg); font-size: 15px; cursor: pointer; }
 .core-suite .covers .n { font: 600 14px var(--mono); min-width: 16px; text-align: center; }
-.core-suite .chan-seg { display: flex; gap: 6px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.core-suite .chan-seg button { flex: 1; min-width: 90px; height: 34px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-muted); font: 500 12.5px var(--ui); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.core-suite .chan-seg button[aria-pressed="true"] { background: var(--brand-soft); border-color: transparent; color: var(--brand-bright); }
-.core-suite .chan-seg button svg { width: 15px; height: 15px; }
 
 .core-suite .course-mode { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .core-suite .course-mode .cm-lbl { color: var(--fg-subtle); }
