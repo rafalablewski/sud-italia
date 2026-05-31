@@ -8,22 +8,18 @@ import {
   BellOff,
   ChefHat,
   ChevronLeft,
-  Flame,
-  MapPin,
   Maximize2,
   Minimize2,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   RotateCcw,
-  Timer,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Button, Card, CardBody, Select } from "./v2/ui";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import {
   ACTIVE_STATUSES,
@@ -39,8 +35,6 @@ import {
   ticketCategories,
   totalPrepSeconds,
 } from "./kds-board";
-import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
-import { SectionEyebrow } from "./command";
 import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
@@ -733,69 +727,57 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   const eightySixed = (ops?.menu ?? []).filter((m) => !m.available);
   const availableItems = (ops?.menu ?? []).filter((m) => m.available);
 
-  const stats: KdsStat[] = [
-    { label: "Open", value: orders.length, sub: "active tickets" },
-    { label: "Late", value: late, sub: "over SLA", tone: late > 0 ? "alert" : "good" },
-    { label: "Due soon", value: soon, sub: "< 3 min", tone: soon > 0 ? "warn" : undefined },
-    { label: "Oldest", value: orders.length > 0 ? fmtClock(oldest) : "—", sub: "ticket age" },
-    { label: "Avg age", value: orders.length > 0 ? fmtClock(avg) : "—", sub: "per ticket" },
-    { label: "Done", value: ops ? ops.throughputLastHour : "…", sub: "last hr" },
-    { label: "On shift", value: ops ? ops.onShift : "…", sub: "staff" },
-  ];
-
   return (
-    <Card padding="compact" className="v2-kds-ops">
-      <CardBody>
-        <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Floor command">
-          <b>{orders.length}</b> open
-        </SectionEyebrow>
-        <KdsStatGrid stats={stats} />
-
-        <div className="v2-kds-ops-86">
-          <span className="v2-kds-ops-86-label">86&apos;d</span>
-          {eightySixed.length === 0 ? (
-            <span className="v2-kds-ops-86-empty">Nothing — full menu available</span>
-          ) : (
-            eightySixed.map((m) => (
-              <Button
-                key={m.id}
-                size="sm"
-                variant="ghost"
-                disabled={busyId === m.id}
-                onClick={() => setAvailability(m.id, true)}
-                title={`Restore ${m.name}`}
-              >
-                <Badge tone="danger" variant="soft">{m.name}</Badge>
-                <span style={{ marginLeft: 6 }}>Restore</span>
-              </Button>
-            ))
-          )}
-          <div className="v2-kds-ops-86-pick">
-            <Select
-              aria-label="86 an item"
-              value={pick}
-              placeholder="86 an item…"
-              onChange={(e) => { if (e.target.value) void setAvailability(e.target.value, false); }}
-              options={availableItems.map((m) => ({ value: m.id, label: m.name }))}
-            />
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone?: "danger" | "warning" }) {
-  return (
-    <div className={`v2-kds-ops-stat${tone ? ` is-${tone}` : ""}`}>
-      <span className="v2-kds-ops-stat-icon">{icon}</span>
-      <span className="v2-kds-ops-stat-text">
-        <span className="v2-kds-ops-stat-value tabular">{value}</span>
-        <span className="v2-kds-ops-stat-label">{label}</span>
-      </span>
+    <div className="kds-ops">
+      <div className="kds-ops-stats">
+        <div className="ostat"><div className="l">Open</div><div className="v">{orders.length}</div></div>
+        <div className={`ostat${late > 0 ? " alert" : ""}`}><div className="l">Late</div><div className="v">{late}</div></div>
+        <div className={`ostat${soon > 0 ? " warn" : ""}`}><div className="l">Due &lt;3m</div><div className="v">{soon}</div></div>
+        <div className="ostat"><div className="l">Oldest</div><div className="v">{orders.length > 0 ? fmtClock(oldest) : "—"}</div></div>
+        <div className="ostat"><div className="l">Avg age</div><div className="v">{orders.length > 0 ? fmtClock(avg) : "—"}</div></div>
+        <div className="ostat good"><div className="l">Done/hr</div><div className="v">{ops ? ops.throughputLastHour : "…"}</div></div>
+        <div className="ostat"><div className="l">On shift</div><div className="v">{ops ? ops.onShift : "…"}</div></div>
+      </div>
+      <div className="kds-86">
+        <span className="lbl">86&apos;d</span>
+        {eightySixed.length === 0 ? (
+          <span style={{ color: "var(--faint)", fontSize: 12 }}>Nothing — full menu</span>
+        ) : (
+          eightySixed.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kds-restore"
+              disabled={busyId === m.id}
+              onClick={() => setAvailability(m.id, true)}
+              title={`Restore ${m.name}`}
+            >
+              <span className="dot" />
+              {m.name}
+              <span className="x">restore</span>
+            </button>
+          ))
+        )}
+        <select
+          className="kds-btn86"
+          aria-label="86 an item"
+          value={pick}
+          onChange={(e) => {
+            if (e.target.value) void setAvailability(e.target.value, false);
+          }}
+        >
+          <option value="">86 an item…</option>
+          {availableItems.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
+
 
 /**
  * Chef line strip. Shown to kitchen / staff on the board. Surfaces the
@@ -882,44 +864,50 @@ function KdsChefStrip({
   }
 
   return (
-    <Card padding="compact" className="v2-kds-chef">
-      <CardBody>
-        <div className="v2-kds-ops-stats v2-kds-chef-row">
-          <span className="v2-kds-chef-station">
-            <ChefHat className="h-4 w-4" />
-            <span>{stationLabel}</span>
-          </span>
-          <OpsStat icon={<Flame className="h-4 w-4" />} value={String(focused.length)} label="In queue" />
-          <OpsStat icon={<Timer className="h-4 w-4" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
-          <div className="v2-kds-ops-86-pick">
-            <Select
-              aria-label="86 an item you've run out of"
-              value={pick}
-              placeholder="Out of an item? 86 it…"
-              onChange={(e) => { if (e.target.value) void toggle(e.target.value, false); }}
-              options={[...candidates.entries()].map(([id, name]) => ({ value: id, label: name }))}
-            />
-          </div>
-        </div>
-        {eightySixed.length > 0 && (
-          <div className="v2-kds-ops-86">
-            <span className="v2-kds-ops-86-label">86&apos;d</span>
-            {eightySixed.map((m) => (
-              <Button
-                key={m.id}
-                size="sm"
-                variant="ghost"
-                disabled={busyId === m.id}
-                onClick={() => toggle(m.id, true)}
-                title={`Restore ${m.name}`}
-              >
-                <Badge tone="danger" variant="soft">{m.name}</Badge>
-                <span style={{ marginLeft: 6 }}>Restore</span>
-              </Button>
-            ))}
-          </div>
+    <div className="kds-ops">
+      <div className="kds-ops-stats">
+        <span className="ostat" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--t)" }}>
+          <ChefHat className="h-4 w-4" /> {stationLabel}
+        </span>
+        <div className="ostat"><div className="l">In queue</div><div className="v">{focused.length}</div></div>
+        <div className="ostat"><div className="l">Oldest</div><div className="v">{focused.length > 0 ? fmtClock(oldest) : "—"}</div></div>
+      </div>
+      <div className="kds-86">
+        <span className="lbl">86&apos;d</span>
+        {eightySixed.length === 0 ? (
+          <span style={{ color: "var(--faint)", fontSize: 12 }}>Nothing 86&apos;d</span>
+        ) : (
+          eightySixed.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kds-restore"
+              disabled={busyId === m.id}
+              onClick={() => toggle(m.id, true)}
+              title={`Restore ${m.name}`}
+            >
+              <span className="dot" />
+              {m.name}
+              <span className="x">restore</span>
+            </button>
+          ))
         )}
-      </CardBody>
-    </Card>
+        <select
+          className="kds-btn86"
+          aria-label="86 an item you've run out of"
+          value={pick}
+          onChange={(e) => {
+            if (e.target.value) void toggle(e.target.value, false);
+          }}
+        >
+          <option value="">Out of an item? 86 it…</option>
+          {[...candidates.entries()].map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
   );
 }
