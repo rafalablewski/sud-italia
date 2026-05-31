@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { LocationTabs } from "./LocationTabs";
-import { Tabs } from "./v2/ui";
+import { LocationFilter, Tabs } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -94,7 +93,7 @@ export function AdminUpsell() {
         </div>
       </header>
 
-      <LocationTabs value={activeLocation} onChange={setActiveLocation} />
+      <LocationFilter variant="tabs" value={activeLocation} onChange={setActiveLocation} />
 
       <Tabs
         value={tab}

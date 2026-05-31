@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCheck, MapPin } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 import {
@@ -15,6 +15,7 @@ import {
   Select,
   Switch,
   Textarea,
+  LocationFilter,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -187,15 +188,12 @@ export function AdminHandover() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
-            <MapPin className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={activeLocations.map((l) => ({ value: l.slug, label: l.city }))}
-              aria-label="Handover location"
-            />
-          </div>
+          <LocationFilter
+            variant="dropdown"
+            value={pageLoc}
+            onChange={setPageLoc}
+            ariaLabel="Handover location"
+          />
         </div>
       </header>
 

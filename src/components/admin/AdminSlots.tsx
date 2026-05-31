@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarPlus,
   Clock,
-  MapPin,
   Package,
   Plus,
   RefreshCw,
@@ -36,6 +35,7 @@ import {
   Input,
   Select,
   Tabs,
+  LocationFilter,
 } from "./v2/ui";
 
 interface SlotOrder {
@@ -281,8 +281,6 @@ function AdminSlotsDesktop() {
     return m;
   }, [slots]);
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
-
   const weekDates = view === "week" ? weekRangeFor(date) : [date];
 
   return (
@@ -315,15 +313,7 @@ function AdminSlotsDesktop() {
       </header>
 
       <div className="v2-filters">
-        <div className="v2-field-inline">
-          <MapPin className="h-3.5 w-3.5 v2-muted" />
-          <Select
-            value={pageLoc}
-            onChange={(e) => setPageLoc(e.target.value)}
-            options={locOptions}
-            aria-label="Location"
-          />
-        </div>
+        <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
         <DatePager unit={view} value={date} onChange={setDate} />
         <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
       </div>

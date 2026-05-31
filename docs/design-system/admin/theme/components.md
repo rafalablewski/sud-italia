@@ -127,6 +127,50 @@ Placed inline in the tags row on a POS product card.
   Chef, Guest Inbox / Guests / Concierge). Same look as `.seg` so the suite
   reads as one product.
 
+## Location filter — one component, two variants
+
+Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
+`v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
+site.** It replaced two drifting patterns — the hand-rolled `LocationTabs`
+pill row and the inline `v2-field-inline` + `Select` block copy-pasted into a
+dozen page headers — so the control now looks and behaves identically
+everywhere.
+
+It is **controlled** (`value` / `onChange`) and derives its option list from
+`getActiveLocations()`, so a page never hand-builds `{ value, label }` arrays.
+Wire it to whatever state the page already holds (page-local `pageLoc`, or the
+sidebar's `useAdminLocation()` context).
+
+```tsx
+// operational view — single location, compact header select
+<LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} ariaLabel="HACCP location" />
+
+// selling-rule editor — pill row you scan side-by-side
+<LocationFilter variant="tabs" value={activeLocation} onChange={setActiveLocation} />
+```
+
+**Pick the variant by intent, not by taste:**
+
+| Variant | Looks like | Use when | Live examples |
+|---|---|---|---|
+| `dropdown` (default) | Icon + compact `Select` in the page-actions / filters row | The page **views** data for **one** location at a time (API is location-scoped, can't fetch "all") | HACCP, Cash, Schedule, Slots, Floor, Inventory, Purchase orders, Truck ops, Waste, Handover |
+| `tabs` | Rounded pill row, one pill per site | The page **edits** config and you flip between locations side-by-side, saving all at once | Upsell, Cross-sell, Scheduled bundles |
+
+Props worth knowing:
+
+- `includeAll` (+ `allLabel`) — prepend an "all locations" option (slug `""`).
+  Off by default; operational views that can't span sites leave it off.
+- `icon` — defaults to `MapPin`. Pass a domain icon where the page already
+  leans on one (`Package` on Inventory, `Truck` on Purchase orders).
+- `ariaLabel` — the `dropdown` variant's accessible label (defaults to
+  `"Location"`).
+
+**Not the same as the sidebar switcher.** `v2/LocationSwitcher.tsx` is the
+**app-wide** location selector in the shell (backed by `useAdminLocation()`,
+persisted to `localStorage`). `LocationFilter` is the **per-page** filter. They
+coexist on purpose: the sidebar sets a global default; a page may still scope
+itself locally. Don't fold one into the other.
+
 ## Cards
 
 ### General card — `.v2-card` / `.glass-card`

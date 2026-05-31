@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, MapPin, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import dynamic from "next/dynamic";
 import { getActiveLocations } from "@/data/locations";
@@ -25,6 +25,7 @@ import {
   EmptyState,
   Input,
   Select,
+  LocationFilter,
 } from "./v2/ui";
 
 const activeLocations = getActiveLocations();
@@ -229,15 +230,7 @@ function AdminScheduleDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
-            <MapPin className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={activeLocations.map((l) => ({ value: l.slug, label: l.city }))}
-              aria-label="Location"
-            />
-          </div>
+          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
           <DatePager unit="week" value={weekStart} onChange={setWeekStart} />
         </div>
       </header>

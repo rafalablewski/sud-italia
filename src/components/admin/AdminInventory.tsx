@@ -45,6 +45,7 @@ import {
   Table,
   Textarea,
   type Column,
+  LocationFilter,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -373,8 +374,6 @@ function AdminInventoryDesktop() {
   const trackedIds = new Set(stock.map((s) => s.ingredientId));
   const untracked = ingredients.filter((i) => !trackedIds.has(i.id));
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
-
   return (
     <div className="v2-page">
       <header className="v2-page-header">
@@ -385,15 +384,7 @@ function AdminInventoryDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
-            <Package className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={locOptions}
-              aria-label="Location"
-            />
-          </div>
+          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} icon={Package} />
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
