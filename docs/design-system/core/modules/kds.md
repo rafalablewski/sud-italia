@@ -115,13 +115,14 @@ it. This is part of the footer ETA pattern (below).
 
 ## Recall tray
 
-The Floor / Fleet board keeps the **last 5 bumps** in a recall tray so a
-cook who bumped a ticket by mistake can put it back on the expo column in
-one tap, within the ~60 s window where that's useful. The tray is
-**persisted to `localStorage`, scoped per location** (`AdminKDS.tsx`), so a
-tablet refresh or Wi-Fi blip on a wall-mounted screen no longer wipes it;
-entries older than 10 min are pruned on reload so an old bump is never
-resurrected.
+The Floor board keeps the **last 5 bumps** in the footrow **`.kds-recall`
+tray** (left of the legend, matching `kds.html`) — one `#id` chip per recent
+bump, each a one-tap recall that puts the ticket back on the expo column,
+within the ~60 s window where that's useful. (Chef hides the tray — the line
+cook works forward, not back.) The tray is **persisted to `localStorage`,
+scoped per location** (`AdminKDS.tsx`), so a tablet refresh or Wi-Fi blip on
+a wall-mounted screen no longer wipes it; entries older than 10 min are
+pruned on reload so an old bump is never resurrected.
 
 ## Footer ETA pattern
 

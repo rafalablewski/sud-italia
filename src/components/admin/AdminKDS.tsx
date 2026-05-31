@@ -39,7 +39,7 @@ import {
 import { KdsCt } from "./kds/KdsCt";
 import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
-import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
+import { buildKdsTicket, kdsShortId, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import type { AdminRole } from "@/lib/admin-roles";
 
@@ -606,20 +606,6 @@ function AdminKDSDesktop({
             nowMs={now}
             updatingId={updatingId}
             onAdvance={advance}
-            expoRecall={
-              bumpHistory.length > 0 ? (
-                <button
-                  type="button"
-                  className="ka-expo-recall"
-                  disabled={updatingId === bumpHistory[0].orderId}
-                  onClick={() => recall(bumpHistory[0].orderId)}
-                  title={`Recall ${bumpHistory[0].label} to the expo column`}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Recall</span>
-                </button>
-              ) : null
-            }
           />
         ) : (
           <KdsLane
@@ -641,6 +627,23 @@ function AdminKDSDesktop({
       <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
 
         <div className="kds-footrow">
+          {!chefStrip && bumpHistory.length > 0 && (
+            <div className="kds-recall">
+              <span className="lbl">Recall</span>
+              {bumpHistory.slice(0, 5).map((b) => (
+                <button
+                  key={b.orderId}
+                  type="button"
+                  className="chip"
+                  disabled={updatingId === b.orderId}
+                  onClick={() => recall(b.orderId)}
+                  title={`Recall ${b.label} to the expo column`}
+                >
+                  <RotateCcw className="h-3 w-3" />#{kdsShortId(b.orderId)}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="kds-legend">
             <span className="k"><span className="sw" />On time</span>
             <span className="k"><span className="sw" style={{ background: "var(--warn)" }} />Approaching SLA</span>

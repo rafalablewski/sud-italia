@@ -358,12 +358,6 @@
   .kds-atlas .kds-stage-switch { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; }
 }
 
-/* Recall — expo-station control in the Ready · Expo column header that puts the
-   most recently bumped ticket back on the board (the classic expo recall key). */
-.kds-atlas .ka-expo-recall { appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 7px; border: 1px solid rgba(61,214,140,0.5); background: var(--cmd-ready-soft); color: var(--cmd-ready); transition: background .16s, border-color .16s; }
-.kds-atlas .ka-expo-recall:hover { background: rgba(61,214,140,0.2); }
-.kds-atlas .ka-expo-recall:disabled { opacity: .5; cursor: default; }
-.kds-atlas .ka-expo-recall svg { width: 13px; height: 13px; }
 /* Shared secondary strip under the command header — KDS sandbox controls / POS steer toggle. */
 .cmd-subbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px; border-bottom: 1px solid var(--cmd-hair); background: var(--cmd-panel); }
 .cmd-subbar-sep { align-self: stretch; width: 1px; margin: 2px 4px; background: var(--cmd-hair); }

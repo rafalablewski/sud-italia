@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { ticketTone, type TicketTone } from "@/lib/kds-prediction";
@@ -122,8 +121,6 @@ export interface KdsBoardProps {
   nowMs: number;
   updatingId: string | null;
   onAdvance: (t: KdsTicket) => void;
-  /** Optional control rendered in the Ready · Expo column header (the recall). */
-  expoRecall?: ReactNode;
 }
 
 export interface KdsLaneProps {
@@ -167,7 +164,7 @@ export function KdsLane({ tickets, stationFilter, nowMs, updatingId, onAdvance }
  * a pre-grouped column map, using the shared KdsTicketCard so the floor board
  * keeps its lane workflow while the cards match the Atlas fleet board exactly.
  */
-export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance, expoRecall }: KdsBoardProps) {
+export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance }: KdsBoardProps) {
   return (
     <div className="kds-board">
       {KDS_COLUMNS.map((col) => {
@@ -179,7 +176,6 @@ export function KdsBoard({ columns, stationFilter, nowMs, updatingId, onAdvance,
               <span className="lbl">{col.label}</span>
               <span className="cnt">{tickets.length}</span>
               <span className="rule" />
-              {col.id === "ready" && expoRecall}
             </div>
             <div className="kds-col-body">
               {tickets.length === 0 ? (
