@@ -260,6 +260,9 @@
 .kds-atlas .ka-tbody::-webkit-scrollbar { width: 7px; }
 .kds-atlas .ka-tbody::-webkit-scrollbar-thumb { background: var(--cmd-hair-strong); border-radius: 4px; }
 .kds-atlas .ka-empty { color: var(--cmd-faint); font-size: 12px; text-align: center; padding: 32px 16px; border: 1px dashed var(--cmd-hair); border-radius: 8px; }
+/* Offline / queued-sync status banner (mobile KDS) — warning-toned strip. */
+.kds-atlas .ka-recall { margin: 0 0 12px; padding: 9px 13px; border-radius: 8px; background: var(--cmd-warn-soft); border: 1px solid color-mix(in oklab, var(--cmd-warn) 40%, transparent); }
+.kds-atlas .ka-recall-lab { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--cmd-warn); }
 :is(.kds-atlas, .kds-floor-dark) .ka-ticket { position: relative; background: var(--cmd-raised); border: 1px solid var(--cmd-hair); border-radius: 12px; padding: 16px 16px 16px 20px; overflow: hidden; transition: border-color .16s, background .16s; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ticket::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cmd-queued); transition: background .16s; }
 :is(.kds-atlas, .kds-floor-dark) .ka-ticket.firing::before { background: var(--cmd-firing); }
