@@ -56,9 +56,9 @@ The roster: every person who can clock in.
 
 The week-grid shift board.
 
-- **Header:** `Schedule` (h1), location switcher (`aria-label="Location"`),
-  week navigator (← / today / →), role filter chips, `+ New shift`
-  primary.
+- **Header:** `Schedule` (h1), location switcher (the shared
+  `LocationFilter` pill row), week navigator (← / today / →), role filter
+  chips, `+ New shift` primary.
 - **Body:** the 7-day grid — columns are days, rows are staff (active
   only, sorted by role then name). Each cell holds 0..n shift chips.
 - **Shift chip:** time window (`9:00 – 17:00`), status badge with

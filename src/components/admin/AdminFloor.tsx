@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Armchair, CalendarClock, MapPin, Plus, RefreshCw, Trash2, Users } from "lucide-react";
+import { Armchair, CalendarClock, Plus, RefreshCw, Trash2, Users } from "lucide-react";
 import type {
   FloorTable,
   Reservation,
@@ -24,6 +24,7 @@ import {
   Textarea,
   useToast,
   type BadgeTone,
+  LocationFilter,
 } from "./v2/ui";
 
 type View = "tables" | "reservations";
@@ -109,7 +110,6 @@ export function AdminFloor() {
   }>({ open: false, reservation: null });
   const [pendingReservationDelete, setPendingReservationDelete] = useState<Reservation | null>(null);
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
   const locName = activeLocations.find((l) => l.slug === pageLoc)?.city ?? pageLoc;
 
   const fetchTables = useCallback(async () => {
@@ -331,15 +331,7 @@ export function AdminFloor() {
       </header>
 
       <div className="v2-filters">
-        <div className="v2-field-inline">
-          <MapPin className="h-3.5 w-3.5 v2-muted" />
-          <Select
-            value={pageLoc}
-            onChange={(e) => setPageLoc(e.target.value)}
-            options={locOptions}
-            aria-label="Location"
-          />
-        </div>
+        <LocationFilter value={pageLoc} onChange={setPageLoc} />
         {view === "reservations" && <DatePager unit="day" value={date} onChange={setDate} />}
         <Button
           size="sm"

@@ -52,9 +52,8 @@ The tabbed analytics surface — revenue, orders, items, cohort, exports.
 
 The till session ledger — open, count, close, reconcile.
 
-- **Header:** `Cash management` (h1), location switcher
-  (`aria-label="Cash session location"`), date range, `+ New session`
-  primary.
+- **Header:** `Cash management` (h1), location switcher (the shared
+  `LocationFilter` pill row), date range, `+ New session` primary.
 - **Sessions table:** session ID, opener, opened-at, closer,
   closed-at, opening float, expected close (from POS sales), actual
   count, variance (positive or negative, coloured by `success` /

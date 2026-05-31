@@ -71,6 +71,13 @@ The page header pattern (use, don't redesign):
 />
 ```
 
+**Filtering by location?** Use `LocationFilter` from `v2/ui` — never
+hand-roll a pill row or an inline `Select`. It renders one look (a pill row)
+on every page and takes no `variant`; just wire `value` / `onChange`. See the
+[Location filter](./components.md#location-filter--one-component-one-look)
+component doc. (The sidebar's app-wide `LocationSwitcher` is a separate
+thing — don't reach for it per-page.)
+
 ## Add an icon
 
 We use **custom stroke icons**. Never emoji in UI chrome, never a third

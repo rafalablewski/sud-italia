@@ -14,8 +14,7 @@ import {
   Tag,
   Sandwich,
 } from "lucide-react";
-import { LocationTabs } from "./LocationTabs";
-import { Tabs } from "./v2/ui";
+import { LocationFilter, Tabs } from "./v2/ui";
 import {
   ComboEditor,
   ItemMultiSelect,
@@ -104,7 +103,7 @@ export function AdminCrossSell() {
         </div>
       </header>
 
-      <LocationTabs value={activeLocation} onChange={setActiveLocation} />
+      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
 
       <Tabs
         value={tab}

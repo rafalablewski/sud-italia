@@ -8,7 +8,6 @@ import {
   EyeOff,
   ListPlus,
   Lock,
-  MapPin,
   Plus,
   Trash2,
   Unlock,
@@ -34,6 +33,7 @@ import {
   Input,
   Select,
   Textarea,
+  LocationFilter,
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
@@ -97,8 +97,6 @@ function AdminCashDesktop() {
   // concurrent mutations.
   const [busyRowId, setBusyRowId] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -175,15 +173,7 @@ function AdminCashDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
-            <MapPin className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={locOptions}
-              aria-label="Cash session location"
-            />
-          </div>
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Button
             variant="primary"
             size="sm"

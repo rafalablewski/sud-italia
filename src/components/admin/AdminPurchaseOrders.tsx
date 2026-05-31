@@ -8,7 +8,6 @@ import {
   Search,
   Send,
   Trash2,
-  Truck,
   X,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -41,6 +40,7 @@ import {
   Table,
   Textarea,
   type Column,
+  LocationFilter,
 } from "./v2/ui";
 
 interface SupplierLite {
@@ -284,8 +284,6 @@ function AdminPurchaseOrdersDesktop() {
     },
   ];
 
-  const locOptions = activeLocations.map((l) => ({ value: l.slug, label: l.city }));
-
   return (
     <div className="v2-page">
       <header className="v2-page-header">
@@ -296,15 +294,7 @@ function AdminPurchaseOrdersDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <div className="v2-field-inline">
-            <Truck className="h-3.5 w-3.5 v2-muted" />
-            <Select
-              value={pageLoc}
-              onChange={(e) => setPageLoc(e.target.value)}
-              options={locOptions}
-              aria-label="Location"
-            />
-          </div>
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
