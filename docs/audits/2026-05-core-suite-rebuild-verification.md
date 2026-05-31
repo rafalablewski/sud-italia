@@ -72,3 +72,13 @@ lenses, and the dark dialogs) and of the mobile layouts.
 - **KDS ticket grouping** is by station/category, not the mockup's
   per-course headers (order items don't carry a per-item course); the
   per-station chef filter stays retired. See `core/modules/kds.md`.
+
+## Pre-existing issues found (not introduced here, not fixed here)
+
+- `MobileKDS.tsx` applies `.ka-recall` / `.ka-recall-lab` which have **no
+  CSS definition** (and never did — confirmed against the pre-prune
+  `index.css`). Unrelated mobile debt, to address in the mobile pass.
+- An orphan-class sweep otherwise came back clean: the only orphan the
+  rebuild itself introduced was the CRM `ComposeModal` (it used the
+  pruned `.crm-modal-*` classes) — **fixed** by porting it to the dark
+  `v2 Dialog` (`theme="core"`).
