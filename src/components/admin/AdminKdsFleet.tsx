@@ -169,8 +169,8 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const board = (
     <div className={`kds-core${fullscreen ? " is-fullscreen" : ""}`}>
       <div className="wrap">
-        <div className="top">
-          <div className="id">
+        <div className="kds-top">
+          <div className="kds-id">
             <div className="brand-mark">SI</div>
             <div>
               <div className="nm">Fleet Command</div>
@@ -184,12 +184,11 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             )}
           </div>
           {simEnabled && (
-            <span className="badge platinum" style={{ marginLeft: 4 }}>
-              <span className="d" />
+            <span className="kds-ctrl" style={{ color: "var(--platinum)", borderColor: "var(--platinum)" }}>
               Sandbox
             </span>
           )}
-          <div className="clock" style={{ marginLeft: "auto" }}>{clock}</div>
+          <div className="kds-clock" style={{ marginLeft: "auto" }}>{clock}</div>
           <a href="/admin" className="kds-ctrl" title="Back to admin">
             <ChevronLeft className="h-4 w-4" />
           </a>
