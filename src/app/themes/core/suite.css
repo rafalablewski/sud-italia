@@ -525,6 +525,7 @@
 .grow .gn { font-size: 12.5px; }
 .gtrack { height: 6px; border-radius: 99px; background: var(--raised); overflow: hidden; position: relative; }
 .gtrack i { display: block; height: 100%; }
+.cmtrack .m100, .gtrack .m100 { position: absolute; top: -2px; bottom: -2px; left: 100%; width: 1px; background: var(--faint); }
 .grow .gf { font: 600 11px var(--mono); color: var(--dim); text-align: right; }
 .calm i { background: var(--ready); } .warnp i { background: var(--warn); } .riskp i { background: var(--late); }
 .stack { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }

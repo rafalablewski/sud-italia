@@ -168,7 +168,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
 
   const board = (
     <div className={`kds-core${fullscreen ? " is-fullscreen" : ""}`}>
-      <div className="wrap">
+      <div className="kds-wrap">
         <div className="kds-top">
           <div className="kds-id">
             <div className="brand-mark">SI</div>
