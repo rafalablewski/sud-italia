@@ -209,6 +209,34 @@ order, with these labels** — the **CLAUDE.md Rule #12** contract:
 - Render the ⓘ trigger via `InfoButton` (`size="sm"` inside a KPI-card label;
   `size="md"` in a card header). The dialog is portaled (Rule #4).
 
+## Loading states — the `.v2-page-loading` pill
+
+Live code: `.v2-page-loading` in `src/app/themes/admin/index.css`. A small
+fixed-position pill (`position: fixed; bottom: 16px; left: 50%`) that reads
+"Loading X…" while a page resolves its data.
+
+**The pill is `position: fixed`, so it needs a tall containing block — and on
+mobile it does not anchor to the viewport.** The mobile `.v2-m-page-transition`
+wrapper carries the page-slide `transform` (kept alive by
+`animation-fill-mode: both`), and any non-`none` transform makes that element
+the containing block for fixed descendants. Two safe patterns:
+
+- **Sole render → wrap it.** When a component early-returns the pill *as its
+  entire output*, wrap it in `.v2-page`:
+  `return (<div className="v2-page"><div className="v2-page-loading">Loading X…</div></div>)`.
+  `.v2-page` carries `min-height: calc(100vh - 53px)`, so the transition box
+  has real height and the pill sits as a centred bottom pill. Mirror of the
+  fixed-element trap in [Dialogs / overlays](#dialogs--overlays) / Rule #4.
+- **Alongside content → conditional child.** When the page chrome already
+  renders, drop the pill inside the existing `.v2-page`:
+  `{loading && <div className="v2-page-loading">Loading X…</div>}`. The box
+  already has height, so nothing extra is needed.
+
+**Never early-return a bare `<div className="v2-page-loading">`** with no
+`.v2-page` wrapper — on mobile the transition box collapses to ~0 height and
+the pill renders full-width, clipped under the topbar instead of as a pill.
+(`AdminSimulation`/Calculator hit exactly this.)
+
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /
@@ -251,3 +279,4 @@ Toggle = saved (persist immediately, no separate Save button) — see
 - [ ] No gradient, no coloured glow shadow
 - [ ] If interactive: subtle `:active` press, no flashy hover
 - [ ] If has emoji: confirm it's content or allergen, not UI chrome
+- [ ] If it early-returns a `.v2-page-loading` pill: wrapped in `.v2-page` (see [Loading states](#loading-states--the-v2-page-loading-pill))
