@@ -57,14 +57,18 @@ VIP overrides lifecycle: **points ≥ 1500 OR totalSpent ≥ 100,000 grosze.**
 
 ## Triggers ("Send today")
 
-A platinum-soft card at the top of the customer book:
+A warm-amber card (`.crm-promo`) at the top of the customer book — Core
+has no platinum token, so the amber `--cmd-warn` accent stands in:
 
 > 🎂 **Send today** · 2 birthdays · 1 anniversary
 
-Computed by `/api/admin/campaigns/triggers` (DOB month/day match + first-
-order anniversary). Tap-to-call / tap-to-message on the underlying records.
+Computed by `GET /api/admin/campaigns/triggers` (DOB month/day match +
+first-order anniversary), fetched once on mount. Only the non-zero parts
+render (e.g. just "2 birthdays" when no anniversary falls today); the card
+hides entirely when nothing is due. Tapping it opens the first guest in
+the deep profile so the operator can greet them.
 
-The cake icon is **a stroke SVG**, not the emoji 🎂 — see
+The cake icon is the `Cake` stroke icon, not the emoji 🎂 — see
 the Core theme's iconography rule ([`../theme/`](../theme/) — custom stroke, no emoji in UI chrome).
 
 ## The deep profile

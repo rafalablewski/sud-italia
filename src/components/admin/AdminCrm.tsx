@@ -8,12 +8,14 @@ import {
   Bot,
   Cake,
   Coffee,
+  Download,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   RefreshCw,
   Search,
+  ShieldAlert,
   Sparkles,
   Star,
   Trash2,
@@ -101,6 +103,16 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+/** "2 birthdays · 1 anniversary" from the greeting-trigger list. */
+function triggerSummary(triggers: { trigger: "birthday" | "anniversary" }[]): string {
+  const b = triggers.filter((t) => t.trigger === "birthday").length;
+  const a = triggers.filter((t) => t.trigger === "anniversary").length;
+  const parts: string[] = [];
+  if (b > 0) parts.push(`${b} birthday${b === 1 ? "" : "s"}`);
+  if (a > 0) parts.push(`${a} anniversar${a === 1 ? "y" : "ies"}`);
+  return parts.join(" · ") || `${triggers.length} to greet`;
+}
+
 function daysToBirthday(dob: string | null): number | null {
   if (!dob) return null;
   const d = new Date(dob);
@@ -277,6 +289,9 @@ export function AdminCrm() {
   const toast = useToast();
   const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [data, setData] = useState<CrmCustomer[]>([]);
+  // "Send today" greeting triggers (birthdays + first-order anniversaries),
+  // computed server-side from real DOB / first-order data.
+  const [triggers, setTriggers] = useState<{ phone: string; trigger: "birthday" | "anniversary" }[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [seg, setSeg] = useState("all");
@@ -310,6 +325,20 @@ export function AdminCrm() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Load today's greeting triggers once (birthdays + anniversaries).
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetch("/api/admin/campaigns/triggers");
+        if (!r.ok) return;
+        const d = (await r.json()) as { triggers?: { phone: string; trigger: "birthday" | "anniversary" }[] };
+        setTriggers(Array.isArray(d.triggers) ? d.triggers : []);
+      } catch {
+        /* leave empty — the prompt just hides */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString("en-GB"));
@@ -498,6 +527,31 @@ export function AdminCrm() {
       setData((prev) =>
         prev.map((x) => (x.phone === c.phone ? { ...x, notesCount: Math.max(0, x.notesCount - 1) } : x)),
       );
+    }
+  };
+
+  // GDPR — DSAR export downloads the full record; erase is a hard delete
+  // (owner-only, enforced server-side) gated behind an explicit confirm.
+  const exportCustomer = (c: CrmCustomer) => {
+    window.open(`/api/admin/gdpr/export?phone=${encodeURIComponent(c.phone)}`, "_blank");
+  };
+
+  const eraseCustomer = async (c: CrmCustomer) => {
+    if (!window.confirm(`Erase ALL data for ${c.name}? This permanently deletes their orders, loyalty, notes and consents. This cannot be undone.`)) {
+      return;
+    }
+    const res = await fetch("/api/admin/gdpr/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: c.phone, confirm: true }),
+    });
+    if (res.ok) {
+      toast.success(`Erased — ${c.name} removed under GDPR Art. 17`);
+      setSelected(null);
+      await load();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error("Could not erase", res.status === 403 ? "Owner only." : d?.error || "Try again.");
     }
   };
 
@@ -692,6 +746,18 @@ export function AdminCrm() {
               {chan === "all" ? "All channels" : chan} · by {SORTS.find((s) => s.key === sort)?.label}
             </span>
           </div>
+          {triggers.length > 0 && (
+            <button
+              type="button"
+              className="crm-promo"
+              onClick={() => setSelected(triggers[0].phone)}
+              title="Reach out with a greeting today"
+            >
+              <Cake />
+              <span className="crm-promo-txt">Send today · {triggerSummary(triggers)}</span>
+              <span className="crm-promo-go">Open →</span>
+            </button>
+          )}
           <div className="crm-list-scroll" ref={listRef}>
             {loading ? (
               <div className="crm-list-empty">Loading customer book…</div>
@@ -766,6 +832,8 @@ export function AdminCrm() {
               onRemoveNote={(id) => removeNote(selectedCustomer, id)}
               onNba={(act) => runNba(selectedCustomer, act)}
               onCompose={(channel) => setCompose({ channel })}
+              onExport={() => exportCustomer(selectedCustomer)}
+              onErase={() => void eraseCustomer(selectedCustomer)}
             />
           ) : (
             <div className="crm-detail-empty">
@@ -909,6 +977,8 @@ function Detail({
   onRemoveNote,
   onNba,
   onCompose,
+  onExport,
+  onErase,
 }: {
   c: CrmCustomer;
   notes: NoteRow[];
@@ -926,6 +996,8 @@ function Detail({
   onRemoveNote: (id: string) => void;
   onNba: (act: string) => void;
   onCompose: (channel: "sms" | "email") => void;
+  onExport: () => void;
+  onErase: () => void;
 }) {
   const seg = c.vip ? "vip" : c.lifecycle;
   const segLabel: Record<string, string> = {
@@ -1417,6 +1489,26 @@ function Detail({
           <button className="crm-note-save" type="button" onClick={onAddNote}>
             Save
           </button>
+        </div>
+      </div>
+
+      {/* GDPR — DSAR export + Art. 17 erase, wired to /api/admin/gdpr/*. */}
+      <div className="crm-sec">
+        <div className="crm-sec-head">
+          Privacy · GDPR
+          <span className="crm-sh-sep" />
+        </div>
+        <div className="crm-gdpr">
+          <button type="button" className="crm-gdpr-btn" onClick={onExport}>
+            <Download /> Export data (DSAR)
+          </button>
+          <button type="button" className="crm-gdpr-btn danger" onClick={onErase}>
+            <ShieldAlert /> Erase customer
+          </button>
+        </div>
+        <div className="crm-gdpr-note">
+          Export hands the guest their full record (Art. 15). Erase permanently deletes every
+          row tied to this phone (Art. 17) — owner-only, irreversible.
         </div>
       </div>
     </div>

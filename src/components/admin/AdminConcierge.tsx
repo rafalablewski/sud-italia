@@ -88,7 +88,7 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
   const [view, setView] = useState<"mcp" | "whatsapp">("mcp");
   const [selected, setSelected] = useState<CapId>("get_allergens");
   const [clock, setClock] = useState("--:--:--");
-  const [test, setTest] = useState<{ status: number; body: string } | null>(null);
+  const [test, setTest] = useState<{ status: number; body: string; ms: number } | null>(null);
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
@@ -128,12 +128,17 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
   const runTest = useCallback(async () => {
     setTesting(true);
     setTest(null);
+    const startedAt = performance.now();
     try {
       const res = await fetch(`/api/agent/${selected}?location=${loc}`);
       const body = await res.json().catch(() => ({}));
-      setTest({ status: res.status, body: JSON.stringify(body, null, 2) });
+      setTest({
+        status: res.status,
+        body: JSON.stringify(body, null, 2),
+        ms: Math.round(performance.now() - startedAt),
+      });
     } catch {
-      setTest({ status: 0, body: "Request failed" });
+      setTest({ status: 0, body: "Request failed", ms: Math.round(performance.now() - startedAt) });
     } finally {
       setTesting(false);
     }
@@ -310,7 +315,7 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
                 {test && (
                   <div className={`cncrg-test-result ${test.status >= 200 && test.status < 300 ? "ok" : "err"}`}>
                     <div className="cncrg-test-status">
-                      Live response · HTTP {test.status || "—"}
+                      Live response · HTTP {test.status || "—"} · <span className="tabular">{test.ms}ms</span>
                     </div>
                     <div className="cncrg-codeblock">
                       <pre dangerouslySetInnerHTML={{ __html: syntaxJson(safeParse(test.body)) }} />

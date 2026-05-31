@@ -39,7 +39,7 @@ profile sits at the bottom.
 
 ## KPI strip (top)
 
-5 compact `.stat` tiles above the panes:
+5 compact `.wa-kpi` card tiles (`.wa-kpis` grid) above the panes:
 
 | KPI | Source |
 |---|---|
@@ -67,10 +67,11 @@ same pill treatment as the segmented `.on` state).
 
 A 3-column grid (40px avatar · 1fr meta · auto right):
 
-- **Avatar** — initials in `--platinum`, with a **live dot** (`--success`)
-  on the corner if the conversation has an active session, otherwise
-  `--fg-subtle`.
-- **Name** + a small **tier pill** (Gold / VIP) if applicable.
+- **Avatar** (`.wa-conv-av`) — initials in the channel accent
+  (`--wa-accent`; Core has no platinum token), with a **live dot**
+  (`.wa-conv-av-ch`, `--wa-accent`) on the corner if the conversation has
+  an active session, otherwise `--wa-faint`.
+- **Name** (tier pill lives on the right-pane guest card, not the row).
 - **Last-message snippet** truncated.
 - **Tags** row — `Kraków` location, item count (`9 items`), `sim` (purple)
   if simulated, `awaiting pay` (warning).
@@ -126,10 +127,12 @@ message thread.
 
 ### Composer
 
-- Quick-action chips above the textarea — `+ Menu` · `💳 Payment link`
-  *(stroke card icon)* · `📅 Reservation` *(stroke calendar)* ·
-  `🎁 Comp dessert` *(stroke gift)* · `⤴ Re-open template`
-  *(stroke repeat)*. All icons custom stroke; the labels stay short.
+- Quick-reply chips (`.wa-quick-chip`) above the textarea — **Menu**,
+  **Payment link**, **Reservation**, **Comp dessert**, **Re-open
+  template**. Text-only pills (no icons). Most insert a short starter into
+  the composer for the operator to review and send; **Payment link**
+  inserts the chat's live Stripe URL (or toasts when none is pending), and
+  **Re-open template** fires the configured `welcome_back` template.
 - The textarea — `--surface-2`, 14px Inter, steel focus ring.
 - Hint line below: *"Inside 24h service window — free-text allowed. Outside
   it, only the **welcome_back** template can re-open."*

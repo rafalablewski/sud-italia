@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -41,6 +42,7 @@ const MobileWhatsApp = dynamic(
   { ssr: false },
 );
 import { formatPrice } from "@/lib/utils";
+import { loyaltyTier } from "@/lib/loyalty-tier";
 import { GuestViewNav } from "./guest/GuestViewNav";
 import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
 import { WhatsAppFunnelDialog } from "./whatsapp/WhatsAppFunnelDialog";
@@ -150,6 +152,17 @@ interface MetricsResponse {
 
 type ConvFilter = "inbox" | "live" | "awaiting" | "archived";
 
+/** The slice of the customer rollup the inbox shows beside a conversation. */
+interface GuestRollup {
+  name: string | null;
+  tier: string;
+  ltv: number;
+  avg: number;
+  visits: number;
+  isMember: boolean;
+  firstOrderAt: string | null;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ---- helpers ------------------------------------------------------------
@@ -175,6 +188,29 @@ function fmtFull(iso: string): string {
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
 }
+
+/** A short day separator for the transcript ("Today" / "Yesterday" / a date). */
+function dayLabel(iso: string): string | null {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t);
+  const today = new Date();
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOf(today) - startOf(d)) / DAY_MS);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+
+/** Operator quick-reply starters inserted into the composer (the operator still
+ *  reviews + sends). "Payment link" is wired to the chat's live Stripe URL. */
+const QUICK_REPLIES: { label: string; text: string }[] = [
+  { label: "Menu", text: "Here's our menu:" },
+  { label: "Payment link", text: "" },
+  { label: "Reservation", text: "Happy to hold a table — what time works for you?" },
+  { label: "Comp dessert", text: "Dessert's on us tonight 🍮" },
+  { label: "Re-open template", text: "" },
+];
 
 function withinWindow(iso: string): boolean {
   const t = Date.parse(iso);
@@ -313,6 +349,10 @@ function AdminWhatsAppDesktop() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
+
+  // Guest rollup for the selected conversation — the real CRM record (LTV,
+  // tier, visits) so the context panel mirrors the Guests view.
+  const [guest, setGuest] = useState<GuestRollup | null>(null);
 
   // Settings overlay (advanced config lives in WhatsAppSettingsDialog)
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -482,6 +522,49 @@ function AdminWhatsAppDesktop() {
     const id = setInterval(() => void loadThread(selectedPhone, true), 6_000);
     return () => clearInterval(id);
   }, [selectedPhone, loadThread]);
+
+  // Pull the guest's real CRM rollup for the context panel. Guards against a
+  // stale resolve when the operator switches conversations mid-fetch.
+  useEffect(() => {
+    if (!selectedPhone) {
+      setGuest(null);
+      return;
+    }
+    setGuest(null);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await fetch(`/api/admin/customers/${encodeURIComponent(selectedPhone)}`);
+        if (!r.ok) return;
+        const d = (await r.json()) as {
+          member?: { name?: string | null } | null;
+          totals?: {
+            totalSpent?: number;
+            avgOrderValue?: number;
+            orderCount?: number;
+            lifetimePoints?: number;
+            firstOrderAt?: string | null;
+          };
+        };
+        if (cancelled || selectedPhoneRef.current !== selectedPhone) return;
+        const t = d.totals ?? {};
+        setGuest({
+          name: d.member?.name ?? null,
+          tier: loyaltyTier(t.lifetimePoints ?? 0),
+          ltv: t.totalSpent ?? 0,
+          avg: t.avgOrderValue ?? 0,
+          visits: t.orderCount ?? 0,
+          isMember: !!d.member,
+          firstOrderAt: t.firstOrderAt ?? null,
+        });
+      } catch {
+        /* leave guest null — the panel falls back to session data */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPhone]);
 
   useEffect(() => {
     if (msgsRef.current) {
@@ -744,39 +827,29 @@ function AdminWhatsAppDesktop() {
         <div className="cmd-clock tnum">{clock}</div>
       </header>
 
-      {/* Stats + filters strip */}
-      <div className="cmd-subbar wa-stats" role="group" aria-label="Channel metrics and filters">
-        <span className="wa-stat">Orders 7d <b className="tnum">{m7 ? m7.orders.paid : "—"}</b></span>
-        <span className="wa-stat-sep" />
-        <span className="wa-stat">Conv 7d <b className="tnum">{m7 ? pct(m7.conversionRate) : "—"}</b></span>
-        <span className="wa-stat-sep" />
-        <span className="wa-stat">Active <b className="tnum">{af ? af.totalSessions : "—"}</b></span>
-        <span className="wa-stat-sep" />
-        <span className="wa-stat">Awaiting pay <b className="tnum">{af ? af.awaitingPayment : "—"}</b></span>
-        <span className="wa-stat-sep" />
-        <span className="wa-stat">Lifetime <b className="tnum">{mLife ? mLife.orders.paid : "—"}</b></span>
-        <div className="wa-filters">
-          {FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              className="cmd-chip"
-              aria-pressed={filter === f.value}
-              onClick={() => setFilter(f.value)}
-            >
-              {f.label}
-              <span className="wa-chip-count tnum">{f.count}</span>
-            </button>
-          ))}
-          <button
-            type="button"
-            className="cmd-btn"
-            onClick={() => void loadAll()}
-            title="Refresh"
-          >
-            <RotateCw />
-            <span>Refresh</span>
-          </button>
+      {/* KPI strip — five channel headline metrics as cards (guest.html). */}
+      <div className="wa-kpis" role="group" aria-label="Channel metrics">
+        <div className="wa-kpi">
+          <span className="wa-kpi-l">Orders · 7d</span>
+          <span className="wa-kpi-v tnum">{m7 ? m7.orders.paid : "—"}</span>
+          <span className="wa-kpi-h">paid via WhatsApp</span>
+        </div>
+        <div className="wa-kpi good">
+          <span className="wa-kpi-l">Conversion · 7d</span>
+          <span className="wa-kpi-v tnum">{m7 ? pct(m7.conversionRate) : "—"}</span>
+          <span className="wa-kpi-h">chat → paid</span>
+        </div>
+        <div className="wa-kpi">
+          <span className="wa-kpi-l">Active sessions</span>
+          <span className="wa-kpi-v tnum">{af ? af.totalSessions : "—"}</span>
+        </div>
+        <div className="wa-kpi warn">
+          <span className="wa-kpi-l">Awaiting pay</span>
+          <span className="wa-kpi-v tnum">{af ? af.awaitingPayment : "—"}</span>
+        </div>
+        <div className="wa-kpi">
+          <span className="wa-kpi-l">Lifetime paid</span>
+          <span className="wa-kpi-v tnum">{mLife ? mLife.orders.paid : "—"}</span>
         </div>
       </div>
 
@@ -790,11 +863,28 @@ function AdminWhatsAppDesktop() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search phone or name…"
+                placeholder="Search name, phone, order…"
                 spellCheck={false}
                 aria-label="Search conversations"
               />
             </div>
+            <button type="button" className="wa-list-refresh" onClick={() => void loadAll()} title="Refresh">
+              <RotateCw />
+            </button>
+          </div>
+          <div className="wa-conv-tabs" role="group" aria-label="Conversation filters">
+            {FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                className="wa-conv-tab"
+                aria-pressed={filter === f.value}
+                onClick={() => setFilter(f.value)}
+              >
+                {f.label}
+                <span className="wa-chip-count tnum">{f.count}</span>
+              </button>
+            ))}
           </div>
           <div className="wa-list-scroll">
             {loading ? (
@@ -847,11 +937,47 @@ function AdminWhatsAppDesktop() {
                 ) : thread.length === 0 ? (
                   <div className="wa-list-msg">No messages yet.</div>
                 ) : (
-                  thread.map((m, i) => <ThreadBubble key={i} message={m} />)
+                  thread.map((m, i) => {
+                    const day = dayLabel(m.at);
+                    const prevDay = i > 0 ? dayLabel(thread[i - 1].at) : null;
+                    return (
+                      <Fragment key={i}>
+                        {day && day !== prevDay && <div className="wa-day">{day}</div>}
+                        <ThreadBubble message={m} />
+                      </Fragment>
+                    );
+                  })
                 )}
               </div>
 
               <div className="wa-composer">
+                <div className="wa-quick" role="group" aria-label="Quick replies">
+                  {QUICK_REPLIES.map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      className="wa-quick-chip"
+                      onClick={() => {
+                        if (q.label === "Re-open template") {
+                          void sendTemplate();
+                          return;
+                        }
+                        if (q.label === "Payment link") {
+                          if (selected.pendingPaymentUrl) {
+                            setReply((r) => `${r ? r + " " : ""}${selected.pendingPaymentUrl}`);
+                          } else {
+                            toast.info("No pending payment link for this chat");
+                          }
+                          return;
+                        }
+                        setReply((r) => (r ? `${r} ${q.text}` : q.text));
+                      }}
+                      disabled={q.label === "Re-open template" && (!templateName || sending)}
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
@@ -912,22 +1038,44 @@ function AdminWhatsAppDesktop() {
           ) : (
             <>
               <div className="wa-ctx-sec">
-                <div className="wa-ctx-eyebrow">Customer</div>
-                <div className="wa-ctx-row">
-                  <span className="k">Name</span>
-                  <span className="v">{selected.customerName || "—"}</span>
+                <div className="wa-ctx-eyebrow">Guest</div>
+                <div className="wa-gp">
+                  <span className="wa-gp-av">{initials(guest?.name ?? selected.customerName, selected.phone)}</span>
+                  <div className="wa-gp-id">
+                    <div className="wa-gp-nm">{guest?.name ?? selected.customerName ?? selected.phone}</div>
+                    <div className="wa-gp-sub">
+                      {[
+                        guest?.isMember ? guest.tier : null,
+                        guest && guest.visits > 0
+                          ? `${guest.visits} visit${guest.visits === 1 ? "" : "s"}`
+                          : "New guest",
+                        guest?.firstOrderAt ? `since ${new Date(guest.firstOrderAt).getFullYear()}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  </div>
                 </div>
+                <div className="wa-gp-stats">
+                  <div className="wa-gp-stat">
+                    <span className="l">Lifetime value</span>
+                    <span className="v tnum">{guest ? formatPrice(guest.ltv) : "—"}</span>
+                  </div>
+                  <div className="wa-gp-stat">
+                    <span className="l">Avg spend</span>
+                    <span className="v tnum">{guest ? formatPrice(guest.avg) : "—"}</span>
+                  </div>
+                </div>
+                <a className="wa-gp-link" href="/admin/guest?view=guests">
+                  Open full profile →
+                </a>
                 <div className="wa-ctx-row">
                   <span className="k">Phone</span>
-                  <span className="v">{selected.phone}</span>
+                  <span className="v tnum">{selected.phone}</span>
                 </div>
                 <div className="wa-ctx-row">
                   <span className="k">Last activity</span>
                   <span className="v" title={fmtFull(selected.lastAt)}>{fmtAgo(selected.lastAt)} ago</span>
-                </div>
-                <div className="wa-ctx-row">
-                  <span className="k">Messages</span>
-                  <span className="v">{selected.messageCount || "—"}</span>
                 </div>
               </div>
 
@@ -1046,24 +1194,41 @@ function ConvItem({
       className={`wa-conv${active ? " active" : ""}${conv.hasActiveSession ? " live" : ""}`}
       onClick={onSelect}
     >
-      <div className="wa-conv-top">
-        <span className="wa-conv-dot" />
-        <span className="wa-conv-name">{conv.customerName || conv.phone}</span>
-        {pinned && <Pin className="wa-conv-pin" />}
+      <span className={`wa-conv-av${conv.hasActiveSession ? " live" : " idle"}`}>
+        {initials(conv.customerName, conv.phone)}
+        <span className="wa-conv-av-ch" />
+      </span>
+      <div className="wa-conv-main">
+        <div className="wa-conv-top">
+          <span className="wa-conv-name">{conv.customerName || conv.phone}</span>
+          {pinned && <Pin className="wa-conv-pin" />}
+        </div>
+        {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}
+        <div className="wa-conv-snip">{conv.lastBody || "—"}</div>
+        <div className="wa-conv-tags">
+          {conv.simulated && <span className="wa-chip-mini sim">sim</span>}
+          {conv.locationSlug && <span className="wa-chip-mini loc">{conv.locationSlug}</span>}
+          {conv.cartCount > 0 && (
+            <span className="wa-chip-mini">{conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}</span>
+          )}
+          {conv.pendingPaymentUrl && <span className="wa-chip-mini pay">awaiting pay</span>}
+        </div>
+      </div>
+      <span className="wa-conv-meta">
         <span className="wa-conv-ago tnum">{fmtAgo(conv.lastAt)}</span>
-      </div>
-      {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}
-      <div className="wa-conv-snip">{conv.lastBody || "—"}</div>
-      <div className="wa-conv-tags">
-        {conv.simulated && <span className="wa-chip-mini sim">sim</span>}
-        {conv.locationSlug && <span className="wa-chip-mini loc">{conv.locationSlug}</span>}
-        {conv.cartCount > 0 && (
-          <span className="wa-chip-mini">{conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}</span>
-        )}
-        {conv.pendingPaymentUrl && <span className="wa-chip-mini pay">awaiting pay</span>}
-      </div>
+      </span>
     </button>
   );
+}
+
+/** Two-letter avatar initials from a name (or the phone's last digits). */
+function initials(name: string | null, phone: string): string {
+  const n = (name || "").trim();
+  if (n) {
+    const parts = n.split(/\s+/);
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || n.slice(0, 2).toUpperCase();
+  }
+  return phone.replace(/\D/g, "").slice(-2) || "··";
 }
 
 function ThreadBubble({ message }: { message: WaMessage }) {

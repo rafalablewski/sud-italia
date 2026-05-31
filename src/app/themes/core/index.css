@@ -1070,6 +1070,22 @@
 .crm-note-input::placeholder { color: var(--cmd-faint); }
 .crm-note-save { appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--cmd-ready); background: var(--cmd-ready-soft); color: var(--cmd-ready); border-radius: 9px; padding: 0 16px; white-space: nowrap; }
 
+/* GDPR section — DSAR export + Art.17 erase on the profile. */
+.crm-gdpr { display: flex; gap: 8px; flex-wrap: wrap; }
+.crm-gdpr-btn { appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; border: 1px solid var(--cmd-hair-strong); background: var(--cmd-raised); color: var(--cmd-text); }
+.crm-gdpr-btn:hover { border-color: var(--cmd-text); }
+.crm-gdpr-btn svg { width: 14px; height: 14px; }
+.crm-gdpr-btn.danger { border-color: var(--cmd-late); background: var(--cmd-late-soft); color: var(--cmd-late); }
+.crm-gdpr-note { margin-top: 9px; font-size: 11px; line-height: 1.5; color: var(--cmd-faint); }
+
+/* "Send today" birthday prompt at the top of the customer book. Core has no
+   platinum token (by doctrine), so the warm amber accent stands in. */
+.crm-promo { flex: 0 0 auto; appearance: none; cursor: pointer; width: calc(100% - 28px); margin: 12px 14px 2px; display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 11px; border: 1px solid var(--cmd-warn); background: var(--cmd-warn-soft); color: var(--cmd-text); text-align: left; }
+.crm-promo svg { width: 16px; height: 16px; color: var(--cmd-warn); flex: 0 0 auto; }
+.crm-promo-txt { flex: 1 1 auto; font-size: 12.5px; }
+.crm-promo-txt b { font-weight: 700; }
+.crm-promo-go { font-size: 11.5px; font-weight: 600; color: var(--cmd-warn); }
+
 .crm-foot { flex: 0 0 auto; min-height: 38px; border-top: 1px solid var(--cmd-hair); background: var(--cmd-panel); display: flex; align-items: center; gap: 24px; padding: 6px 20px; font-size: 11px; color: var(--cmd-faint); flex-wrap: wrap; }
 .crm-legend { display: flex; gap: 16px; flex-wrap: wrap; }
 .crm-legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -1328,12 +1344,22 @@
 .wa-conv {
   width: 100%; text-align: left; appearance: none; cursor: pointer; background: transparent;
   border: 0; border-bottom: 1px solid var(--wa-hair); border-left: 3px solid transparent;
-  padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
+  padding: 11px 14px; display: grid; grid-template-columns: 40px 1fr auto; gap: 11px; align-items: start;
   transition: background .14s, border-color .14s;
 }
 .wa-conv:hover { background: var(--wa-raised); }
 .wa-conv.active { background: var(--wa-raised); border-left-color: var(--wa-accent); }
-.wa-conv-top { display: flex; align-items: center; gap: 8px; }
+/* Avatar with a channel presence dot (live = accent, idle = faint). */
+.wa-conv-av {
+  position: relative; width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--wa-accent);
+  background: var(--wa-raised); border: 1px solid var(--wa-hair-strong);
+}
+.wa-conv-av-ch { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: var(--wa-faint); border: 2px solid var(--wa-panel); }
+.wa-conv-av.live .wa-conv-av-ch { background: var(--wa-accent); }
+.wa-conv-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wa-conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
+.wa-conv-top { display: flex; align-items: center; gap: 6px; }
 .wa-conv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wa-faint); flex: 0 0 auto; }
 .wa-conv.live .wa-conv-dot { background: var(--wa-accent); box-shadow: 0 0 0 3px var(--wa-accent-soft); }
 .wa-conv-name { font-size: 13.5px; font-weight: 600; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1343,6 +1369,48 @@
 .wa-conv-tags { display: flex; gap: 5px; flex-wrap: wrap; }
 .wa-chip-mini { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--wa-raised); border: 1px solid var(--wa-hair); color: var(--wa-dim); }
 .wa-conv.active .wa-chip-mini { background: var(--wa-canvas); }
+
+/* ---- Inbox KPI strip (guest.html) — five headline channel metrics ---- */
+.wa-kpis { flex: 0 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--wa-hair); background: var(--wa-panel); }
+.wa-kpi { background: var(--wa-canvas); border: 1px solid var(--wa-hair); border-radius: 10px; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; }
+.wa-kpi-l { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wa-faint); }
+.wa-kpi-v { font-size: 22px; font-weight: 700; color: var(--wa-text); line-height: 1.1; }
+.wa-kpi-h { font-size: 10.5px; color: var(--wa-faint); }
+.wa-kpi.good .wa-kpi-v { color: var(--wa-accent); }
+.wa-kpi.warn .wa-kpi-v { color: var(--wa-warn, var(--cmd-warn)); }
+
+/* ---- Conversation filter tabs (in the list header) + refresh ---- */
+.wa-list-search { display: flex; align-items: center; gap: 8px; }
+.wa-list-search .wa-search-box { flex: 1 1 auto; }
+.wa-list-refresh { appearance: none; cursor: pointer; flex: 0 0 auto; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--wa-hair); background: var(--wa-raised); color: var(--wa-dim); display: grid; place-items: center; }
+.wa-list-refresh:hover { color: var(--wa-text); border-color: var(--wa-hair-strong); }
+.wa-list-refresh svg { width: 14px; height: 14px; }
+.wa-conv-tabs { flex: 0 0 auto; display: flex; gap: 5px; padding: 8px 12px; flex-wrap: wrap; border-bottom: 1px solid var(--wa-hair); }
+.wa-conv-tab { appearance: none; cursor: pointer; border: 0; background: transparent; color: var(--wa-faint); font: inherit; font-size: 11.5px; font-weight: 600; padding: 5px 9px; border-radius: var(--r-pill, 999px); display: inline-flex; align-items: center; }
+.wa-conv-tab:hover { color: var(--wa-text); }
+.wa-conv-tab[aria-pressed="true"] { background: var(--wa-accent-soft); color: var(--wa-accent); }
+
+/* ---- Transcript day separator ---- */
+.wa-day { align-self: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wa-faint); padding: 3px 10px; background: var(--wa-canvas); border: 1px solid var(--wa-hair); border-radius: var(--r-pill, 999px); margin: 4px 0; }
+
+/* ---- Composer quick replies ---- */
+.wa-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.wa-quick-chip { appearance: none; cursor: pointer; border: 1px solid var(--wa-hair); background: var(--wa-canvas); color: var(--wa-dim); font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: var(--r-pill, 999px); }
+.wa-quick-chip:hover:not(:disabled) { color: var(--wa-text); border-color: var(--wa-hair-strong); }
+.wa-quick-chip:disabled { opacity: 0.45; cursor: default; }
+
+/* ---- Guest profile card (context pane) ---- */
+.wa-gp { display: flex; align-items: center; gap: 11px; }
+.wa-gp-av { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; font-size: 16px; font-weight: 700; color: var(--wa-accent); background: var(--wa-raised); border: 1px solid var(--wa-hair-strong); }
+.wa-gp-id { min-width: 0; }
+.wa-gp-nm { font-size: 15px; font-weight: 700; color: var(--wa-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-gp-sub { font-size: 11px; color: var(--wa-faint); margin-top: 2px; }
+.wa-gp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+.wa-gp-stat { background: var(--wa-canvas); border: 1px solid var(--wa-hair); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+.wa-gp-stat .l { font-size: 10px; color: var(--wa-faint); }
+.wa-gp-stat .v { font-size: 15px; font-weight: 700; color: var(--wa-text); }
+.wa-gp-link { display: block; text-align: center; margin-top: 11px; font-size: 12px; font-weight: 600; color: var(--wa-accent); text-decoration: none; }
+.wa-gp-link:hover { text-decoration: underline; }
 .wa-chip-mini.loc { color: var(--wa-info); background: var(--wa-info-soft); border-color: rgba(59,130,246,0.3); }
 .wa-chip-mini.pay { color: var(--wa-warn); background: var(--wa-warn-soft); border-color: rgba(245,166,35,0.3); }
 .wa-chip-mini.sim { color: var(--wa-dim); background: rgba(255,255,255,0.04); border: 1px dashed var(--wa-hair-strong); }

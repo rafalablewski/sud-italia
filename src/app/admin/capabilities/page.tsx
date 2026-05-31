@@ -289,7 +289,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/guest?view=guests",
           summary:
-            "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
+            "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. A 'Send today' prompt surfaces today's birthdays + first-order anniversaries (GET /api/admin/campaigns/triggers). Each profile carries a GDPR panel — Export (DSAR, Art. 15, GET /api/admin/gdpr/export) and Erase (Art. 17, owner-only, POST /api/admin/gdpr/delete). Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
             "Relationship-health score and next-best-action are heuristics computed from RFM + reliability, not an ML churn model. No-shows are derived from cancelled orders.",
         },
