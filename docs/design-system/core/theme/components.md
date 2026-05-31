@@ -134,116 +134,38 @@ The bump / ready / undo button on a ticket.
   floor view (`.kds-os`) for thumb-target reach.
 - The `.ready` state variant is the canonical green "bump it" affordance.
 
-## POS — `.pos-tabs`
+## POS · Guest — now `.core-suite` (`suite.css`)
 
-### Tab card — `.pos-tab`
+POS and the Guest hub (CRM · Concierge · WhatsApp) were rebuilt onto the
+**`.core-suite`** vocabulary ported from the mockup's `system.css` — the
+`.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-console` thread classes documented
+here previously are **removed**. Their component anatomy now lives in the
+module docs, which describe the real shipped markup:
 
-A tab is an open check at the till.
+- **POS** — `../modules/pos.md` (`.tabrail` / `.cat-rail` / `.prod` /
+  `.ticket` / `.course` / `.tk`-style ticket lines).
+- **CRM** (Guests) — `../modules/crm.md` (`.book` / `.cust` / `.profile`
+  / `.panel` / health ring + RFM `.rfm`).
+- **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
+  allergen grid).
+- **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`
+  bubbles / `.ctx` order context). The `.wa-console` / `.wa-fa-*` /
+  `.wa-cfg-*` classes in `index.css` survive only for the Settings /
+  Broadcast / Funnel dialogs.
 
-- Background: `--cmd-raised`. Same radius + elevation as a ticket.
-- Header: party name / table number (Inter 600), open time, current
-  total (Inter 700, 22px, tabular).
-- Body: line items grouped by course (see Course divider below),
-  modifier inline beneath each item.
-- The tab rail (`.pos-tabrail`) is the vertical chrome that lists
-  every open tab — sidebar to the active tab card.
-
-### Tender pad
-
-The numeric input + tender breakdown.
-
-- Numeric pad: 4×3 grid of 56px buttons, `--cmd-raised` background.
-- Tender total: 26–32px Inter 700, tabular, currency suffix at 14px
-  trailing (`87.40 zł`).
-- Tender method buttons: full-width, `.cmd-btn` size variant, status
-  tinted for cash / card / split.
-
-### Course divider
-
-The visual separator between courses within a tab.
-
-- Full-width hairline `--cmd-hair-strong`.
-- Centred label badge: 10px Inter 700 uppercase, `letter-spacing:
-  0.16em`, `--cmd-dim`. "FIRST" / "MAIN" / "DESSERT" / "DRINKS".
-- Optional fire-now button on the right edge of the divider when the
-  course is queued.
-
-## CRM — `.crm-atlas`
-
-### Regular row
-
-A row in the customer book.
-
-- 36px row height. `.cmd-hair` separator. Hover lifts
-  `rgba(255,255,255,0.04)`.
-- Columns: name + masked phone, channels chips, RFM status chip,
-  loyalty tier badge, lifetime value (tabular), last order date.
-- Expanded state: row grows to a card with the deep profile drawer
-  inline (only one row expanded at a time).
-
-### Health gauge
-
-The relationship-health indicator on a profile.
-
-- A small radial gauge — 0..100 score, three bands (red / amber /
-  green using the status hues), centre number Inter 700 22px tabular.
-- Underneath: the reasons line (recency, frequency, monetary, no-show
-  penalty) as inline chips.
-
-## Concierge — `.cncrg-atlas`
-
-### Tool card
-
-A row in the MCP / WhatsApp capability list.
-
-- `.cmd-raised` card; left rail in `--cmd-risk` (the AI violet, the
-  one place that hue lives outside of risk-state badges).
-- Header: tool name (Inter 600), surface tags (`MCP` / `WhatsApp`),
-  enable toggle.
-- Body: input schema preview, output schema preview, last-call timestamp.
-
-### Allergen matrix
-
-The EU-14 grid — the only place emoji appear in the system (per
-`../modules/concierge.md`).
-
-- 14 columns (one per allergen), N rows (one per menu item).
-- Cell: filled red dot if the item declares the allergen, empty hairline
-  ring if not.
-- Header row: the emoji pictogram + the 2-letter allergen code.
-- This is the legal-affordance surface — the emoji are not decoration.
-
-## WhatsApp — `.wa-console`
-
-### Thread card
-
-A row in the conversation inbox.
-
-- 56px row height. `.cmd-raised` background. Border 1px `--cmd-hair`.
-  Radius 0 (rows in the list don't round — they're sliced from a single
-  surface).
-- Avatar circle (32px) + name + last-message preview (truncated).
-- Trailing: timestamp + unread count chip + status indicator (active /
-  paused / handed-off).
-
-### Live thread
-
-The middle pane — the message bubbles.
-
-- Inbound bubble: `--cmd-raised`, 12px radius (with a 4px notch on
-  the bottom-left).
-- Outbound bubble: `--cmd-firing-soft`, same radius (notch on
-  bottom-right).
-- Timestamp inside each bubble at 10px, `--cmd-faint`.
+The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
+/ `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
+listed in [the README](./README.md#two-css-layers-mid-migration).
 
 ## What this component set is not
 
 - It is **not** the Admin component set. Admin has `glass-card`,
   `v2-btn`, `v2-input`, `v2-table` primitives. Core does not use them —
   they're a separate component vocabulary scoped to the Admin theme.
-- It is **not** customisable per module. A `.cmd-btn` looks the same
-  on POS, KDS, CRM, Concierge, and WhatsApp. The shared chrome is the
-  reason Core reads as one product.
+- It is **not** customisable per module. A `.core-suite .btn` looks the
+  same on POS and every Guest view; the `.cmd-btn` chrome is shared
+  across the KDS lenses. The shared vocabulary is the reason Core reads
+  as one product.
 - It is **not** a closed list — new primitives can be added when a real
   cross-module need emerges, but they have to be reviewed against all
   five modules, not just the one that prompted them.

@@ -46,7 +46,7 @@ its theme's folder" doctrine holds.
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Admin tokens                  | ✅ Scoped under `[data-admin-theme="dark"\|"light"]` in `src/app/themes/admin/index.css`. Edits only affect admin surfaces.                                                                         |
 | Homepage tokens               | ✅ `@theme inline` block lives in `src/app/themes/homepage/tokens.css` (@import-ed by `globals.css` so Tailwind v4 sees it for utility generation; ships globally — ~50 lines). All other Homepage CSS — body, delivery animations, `.pub-*` form elements — lives in `src/app/themes/homepage/index.css` and is JS-imported per-route. |
-| Core tokens                   | ✅ Live in `src/app/themes/core/index.css` (`:root --cmd-*` palette + `.kds-*` / `.ka-*` / `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces).                                                    |
+| Core tokens                   | ✅ Two files: `themes/core/suite.css` (`.core-suite` — the current core-suite design for POS / Guest / KDS) + `themes/core/index.css` (legacy `:root --cmd-*` palette + `.cmd-*` / `.ka-*` / `.kds-*` kitchen chrome + `.wa-console` dialogs).                                                    |
 | Per-theme CSS file            | ✅ All theme CSS lives under `src/app/themes/{core,admin,homepage}/`. Editing one cannot accidentally affect another.                                                                              |
 | **Per-route bundle loading**  | ✅ `src/app/(public)/layout.tsx` imports `themes/homepage/index.css`; `src/app/admin/layout.tsx` imports `themes/admin/index.css` + `themes/core/index.css`. Storefront pages no longer ship admin's chunk or core's chunk; admin pages no longer ship homepage's chunk. The Homepage `tokens.css` (~50 lines, @theme inline only) ships globally — that's the Tailwind v4 utility-generation cost. |
 | Fonts                         | ✅ Each themed route-group layout loads its own `next/font` instances with namespaced variables: `(public)/layout.tsx` → `--font-homepage-{body,heading}`; `admin/layout.tsx` + `kitchen/layout.tsx` + `franchisee/layout.tsx` → `--font-admin-{body,display}`. The root `layout.tsx` no longer loads custom fonts. A weight / subset change in one theme can't move another. |
@@ -60,9 +60,9 @@ its theme's folder" doctrine holds.
 | `admin/*`            | base + Tailwind utilities + `themes/admin/index.css` + `themes/core/index.css` | ~392KB         |
 | neither (e.g. `/kitchen`) | base + Tailwind utilities only                                         | ~104KB             |
 
-Selectors are uniquely prefixed per theme (`[data-admin-theme]` / `.v2-`
-for Admin; `.cmd-` / `.kds-` / `.ka-` / `.pos-` / `.crm-` / `.cncrg-` /
-`.wa-` for Core; `--color-italia-*` / `.pub-` for Homepage), so even
+Selectors are uniquely prefixed/scoped per theme (`[data-admin-theme]` /
+`.v2-` for Admin; `.core-suite` + `.cmd-` / `.kds-` / `.ka-` / `.wa-`
+for Core; `--color-italia-*` / `.pub-` for Homepage), so even
 the small overlap that does still load globally (Tailwind utilities)
 cannot trigger cross-theme overrides.
 

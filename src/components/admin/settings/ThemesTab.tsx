@@ -48,10 +48,16 @@ const THEME_INFO: Record<ThemeKey, ThemeInfo> = {
       "The productised IP — POS, KDS, and the unified Guest hub (CRM + Concierge + WhatsApp). Operational clarity outranks brand expression.",
     files: [
       {
+        path: "src/app/themes/core/suite.css",
+        description:
+          "Current design — 1:1 port of the core-suite mockup (.core-suite scope): .shell / .card / .btn / .stat / .tk / .kds-* rules for POS + Guest + KDS, via CoreShell.",
+        lines: 859,
+      },
+      {
         path: "src/app/themes/core/index.css",
         description:
-          "Full Core CSS surface: --cmd-* palette + .cmd-* / .kds-* / .ka-* / .pos-* / .crm-* / .cncrg-* / .wa-* rules.",
-        lines: 1443,
+          "Legacy --cmd-* palette + .cmd-* / .ka-* / .kds-* kitchen chrome + .wa-console/.wa-fa-* dialog classes (KDS + MobileKDS + WhatsApp dialogs). Dead .pos-/.crm-/.cncrg- families pruned.",
+        lines: 680,
       },
       {
         path: "src/app/themes/core/theme.ts",
@@ -66,8 +72,8 @@ const THEME_INFO: Record<ThemeKey, ThemeInfo> = {
       "/admin/guest",
     ],
     fonts:
-      "Inherits admin fonts (--font-admin-body, --font-admin-display) loaded by src/app/admin/layout.tsx. Core surfaces don't use the display serif — Inter throughout.",
-    selectorPrefixes: [".cmd-*", ".kds-*", ".ka-*", ".pos-*", ".crm-*", ".cncrg-*", ".wa-*"],
+      "Admin next/font vars (--font-admin-body Inter, --font-admin-display Fraunces, --font-admin-mono JetBrains Mono). POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
+    selectorPrefixes: [".core-suite", ".shell", ".tk", ".cmd-*", ".kds-*", ".ka-*", ".wa-console"],
     docs: "docs/design-system/core/",
     sourceDir: "src/app/themes/core/",
   },

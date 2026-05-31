@@ -23,9 +23,11 @@ The Core theme ships in **two** stylesheets, both loaded only by
 2. **`src/app/themes/core/index.css`** — the original `--cmd-*` palette
    at `:root` plus the `.cmd-*` / `.kds-*` / `.ka-*` surfaces. This now
    backs the **KDS** kitchen-wall display (`.kds-atlas`, full-bleed via
-   `.kds-bleed`). The legacy `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*`
-   rules here are **dead** for POS/Guest (those moved to `suite.css`) and
-   are pending a prune — KDS is the only live consumer of this file.
+   `.kds-bleed`) and **Mobile KDS**. The dead `.pos-*` / `.crm-*` /
+   `.cncrg-*` families were pruned when POS/Guest moved to `suite.css`
+   (1560 → 680 lines); the surviving non-`.cmd-`/`.kds-` rules are the
+   `.wa-console` / `.wa-fa-*` / `.wa-cfg-*` classes for the WhatsApp
+   Settings / Broadcast / Funnel dialogs.
 
 - **JS-side token mirror:** `src/app/themes/core/theme.ts` exports the
   `--cmd-*` values as typed constants (for future Recharts / canvas
