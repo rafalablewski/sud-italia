@@ -10,14 +10,30 @@ on what's wrong.
 (`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTicketCard.tsx`,
 `KdsManagerOpsHeader.tsx`, `KdsChefStrip.tsx`, mobile `MobileKDS.tsx`).
 **Mockups:** `kds-fleet.html` → `kds.html` → `kds-chef.html`.
-**Shell:** the KDS is a **full-screen kitchen-wall display** — it has no SI
-sidebar (unlike POS / Guest). `/admin/kds` is in `CORE_ROUTES`, so the
-admin chrome steps aside and the `.kds-atlas.kds-bleed` surface fills the
-viewport edge-to-edge (a fixed layer; the kiosk `is-fullscreen` mode sits
-above it). An "Admin" back link in the header is the only way out, since
-there's no nav rail on this surface. The dark command aesthetic, health
-rings, pace gauges, promise-accuracy benchmark and ticket stack already
-match the mockups 1:1 — the rebuild made the surface full-bleed.
+**Theme:** rebuilt 1:1 onto the core-suite mockups on the **`.kds-core`**
+surface (a fixed full-viewport layer in `suite.css`) — the KDS is a
+**full-screen kitchen wall** with its own dark `.kds-top` chrome and **no
+SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
+`/admin/kds` is in `CORE_ROUTES` so the admin chrome steps aside; an
+"Admin" back link in the header is the way out. The three views:
+
+- **Floor / Chef** (`AdminKDSDesktop`, `kds.html` / `kds-chef.html`):
+  `.kds-top` (SI brand-mark + Fleet/Floor/Chef viewswitch + centred stage
+  filter + clock + sound/pause/refresh/fullscreen), the `.kds-ops` /
+  `.ostat` ops header (manager) or chef strip, the 3-column `.kds-board`,
+  and the **`.tk` ticket** (`KdsTk`: text timer escalating with the SLA,
+  category-grouped items, allergen / notes, SLA meter, bump). 86
+  management is a `.kds-restore` row + native `.kds-btn86` picker.
+- **Fleet** (`AdminKdsFleet`, `kds-fleet.html`): `.cmdbar` (7 tiles),
+  per-truck promise-accuracy `.bench`, and `.truck` cards (health `.ring`,
+  5-cell stat row, `.pacehead` + capacity meter, per-station `.gauges`,
+  compact `.mt` ticket stack). Drill-in flips to that truck's floor.
+
+The old `.kds-atlas` / `.ka-*` chrome is retired; `KdsTicketCard` survives
+only because it still exports the shared `Ring`. **Known gaps:** ticket
+items group by *station/category*, not the mockup's per-course headers
+(KDS order items don't carry per-item course), and the per-station chef
+filter stays retired (`station = "all"`).
 
 ## The core principle
 
