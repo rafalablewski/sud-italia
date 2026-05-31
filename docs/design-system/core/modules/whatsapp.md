@@ -176,6 +176,16 @@ Higher-level (operator-only) actions live in the topbar:
 - **Funnel** — opens `guest-funnel.html`
 - **Settings** — opens `guest-settings.html`
 
+> **Shell note:** the three dialogs (`WhatsApp{Settings,Broadcast,Funnel}
+> Dialog.tsx`) render through the shared admin `Dialog` (v2), which
+> portals to `document.body` — so they appear as standard **light admin
+> modals over the dark Inbox**, not the dark `.overlay`/`.dialog` the
+> mockup draws. This is deliberate: their bodies (`.wa-fa-*` etc.) are
+> built on admin tokens (`--border`, `--text-muted`) and the same
+> decision is documented for POS's table/address dialogs. Reskinning
+> them to the dark `.core-suite-overlay` is a future pass; the dialogs
+> are fully functional as-is.
+
 ## Broadcast composer (`guest-broadcast.html`)
 
 Centered dialog with:
