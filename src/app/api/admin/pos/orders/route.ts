@@ -145,7 +145,12 @@ export const POST = withAdmin(
     }
 
     const firedCourses = POS_COURSE_ORDER.filter((c) => firedSet.has(c));
-    const order = await persistTabOrder(tab, locationSlug, shape, false);
+    // Coursing metadata for the KDS: which courses are away vs still held.
+    // Only meaningful for a coursed check; the kitchen hint shows held courses.
+    const coursing = tab.coursed
+      ? { fired: firedCourses, held: POS_COURSE_ORDER.filter((c) => coursesPresent.has(c) && !firedSet.has(c)) }
+      : undefined;
+    const order = await persistTabOrder(tab, locationSlug, shape, false, coursing);
     await linkPosTabOrder(tab.id, {
       orderId: order.id,
       sentKds: true,
@@ -196,6 +201,7 @@ async function persistTabOrder(
   locationSlug: string,
   shape: { items: CartItem[]; totalAmount: number; fulfillmentType: FulfillmentType },
   paid: boolean,
+  coursing?: Order["coursing"],
 ): Promise<Order> {
   const now = new Date();
   const partySize = tab.channel === "dine-in" ? tab.covers ?? 2 : undefined;
@@ -210,6 +216,7 @@ async function persistTabOrder(
       partySize,
       tableId,
       deliveryAddress,
+      ...(coursing !== undefined ? { coursing } : {}),
       ...(paid ? { paidAt: now.toISOString() } : {}),
     });
     if (patched) return patched;
@@ -228,6 +235,7 @@ async function persistTabOrder(
     partySize,
     tableId,
     deliveryAddress,
+    coursing,
     slotId: "walkin",
     slotDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
     slotTime: `${pad(now.getHours())}:${pad(now.getMinutes())}`,

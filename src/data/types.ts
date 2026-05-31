@@ -499,6 +499,11 @@ export interface Order {
    *  POS or the Floor page. Pairs with partySize (covers). */
   tableId?: string;
   specialInstructions?: string;
+  /** POS dine-in coursing state captured at fire time — which courses are away
+   *  on the line vs still held back. Set by the POS order actuator when a
+   *  coursed check fires; drives the KDS "course held" hint. Held courses are
+   *  intentionally absent from `items` until they're fired. */
+  coursing?: { fired: PosCourse[]; held: PosCourse[] };
   slotId: string;
   slotDate: string;
   slotTime: string;

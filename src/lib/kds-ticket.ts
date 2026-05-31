@@ -1,4 +1,4 @@
-import type { FulfillmentType, MenuCategory, Order, OrderStatus } from "@/data/types";
+import type { FulfillmentType, MenuCategory, Order, OrderStatus, PosCourse } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import type { TicketPrediction } from "./kds-prediction";
 
@@ -41,6 +41,8 @@ export interface KdsTicket {
   predSeconds: number;
   atRisk: boolean;
   simulated?: boolean;
+  /** POS coursing state (dine-in) — held courses are still in the kitchen. */
+  coursing?: { fired: PosCourse[]; held: PosCourse[] };
 }
 
 /** Short, glanceable ticket id — last 6 chars, uppercased, symbols trimmed. */
@@ -84,5 +86,6 @@ export function buildKdsTicket(o: Order, prediction: TicketPrediction | undefine
     predSeconds: prediction?.predSeconds ?? 0,
     atRisk: prediction?.atRisk ?? false,
     simulated: o.simulated ?? false,
+    coursing: o.coursing,
   };
 }

@@ -127,28 +127,26 @@ mystery line for new tickets).
 - **Card structure:** `flex: none` so it keeps its full natural height —
   the lane scrolls, the ticket never gets squashed (see §"Scroll model").
 
-## Course tags on dine-in tickets
+## Coursing hint on dine-in tickets
 
-Dine-in tickets carry a course chip next to the fulfilment type:
+The POS fires a dine-in check **course-by-course** (see
+[`pos.md`](./pos.md)). Each fire stamps `Order.coursing = { fired, held }`,
+which flows through `buildKdsTicket` onto `KdsTicket.coursing`. The
+ticket only ever shows the items that have actually been fired (held
+courses aren't on the order yet), and when something is still held it
+carries a hint line below the items:
 
-| Chip | Border | Use |
-|---|---|---|
-| `1 · Starters` / `2 · Mains` / `3 · Dessert` | `--hair-2` neutral outline | A fired coursed ticket |
-| `All together` | `--platinum-soft-strong` outline + platinum text | A non-coursed ticket — the whole table at once |
+> ⌗ *Coursed · Mains, Dessert held*
 
-**Group items by course inside the ticket** — section headers use course
-names (`Starters` / `Mains` / `Dessert`), not station names (Pizza /
-Antipasti / Bevande). Every check reads as the courses the line is firing.
+Rendered as `.ka-t-course` (a `--cmd-firing` amber strip with a small
+`Layers` icon). It appears only while `coursing.held` is non-empty — a
+fully-fired or all-together check shows no hint. As each held course is
+fired from the POS the order grows and the line re-renders with the new
+items, the hint shrinking until nothing is held.
 
-A **coursed mains ticket** also carries a context hint line below items:
-
-> *Course 2 of 3 · starters away · dessert held*
-
-An **all-together ticket** carries:
-
-> *Fire whole table at once · no holds*
-
-Both use the same `.tk-coursehint` style (faint, with a small layers icon).
+> **Not yet built:** a per-course chip on the ticket header and grouping
+> items under course names (rather than station names) — the current
+> ticket lists the fired items and the held-course hint only.
 
 ## Scroll model
 

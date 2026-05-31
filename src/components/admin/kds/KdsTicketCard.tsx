@@ -1,5 +1,6 @@
-import { AlertTriangle, FlaskConical } from "lucide-react";
+import { AlertTriangle, FlaskConical, Layers } from "lucide-react";
 import type { MenuCategory } from "@/data/types";
+import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import type { TicketTone } from "@/lib/kds-prediction";
@@ -199,6 +200,15 @@ export function KdsTicketCard({
           );
         })}
       </div>
+
+      {t.coursing && t.coursing.held.length > 0 && (
+        <div className="ka-t-course">
+          <Layers className="h-3 w-3" />
+          <span>
+            Coursed · {t.coursing.held.map((c) => POS_COURSE_LABELS[c]).join(", ")} held
+          </span>
+        </div>
+      )}
 
       {allergens.length > 0 && (
         <div className="ka-t-allergy">

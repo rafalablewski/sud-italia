@@ -137,7 +137,10 @@ the kitchen ticket and **held courses never hit the KDS**. A bare send
 (non-coursed tab, or `Send to KDS`) fires everything. **Charge bills the
 whole tab** regardless of what's been fired. One growing Order per tab
 (not a separate ticket per course) keeps the charge/totals model intact;
-a future revision could split tickets per course.
+a future revision could split tickets per course. The fire also stamps
+`Order.coursing = { fired, held }`, which the KDS ticket reads to show a
+**"courses held"** hint (see [`kds.md`](./kds.md)) so the line knows more
+is coming.
 
 ### Drag-to-recourse
 
