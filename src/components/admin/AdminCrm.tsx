@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { getActiveLocations } from "@/data/locations";
 import {
   Bot,
@@ -18,10 +17,10 @@ import {
   Star,
   Trash2,
   Users,
-  X,
 } from "lucide-react";
 import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
+import { Button, Dialog } from "./v2/ui";
 import { useToast } from "./v2/ui/Toast";
 
 /* ====================== Types (mirror /api/admin/crm) ====================== */
@@ -754,16 +753,14 @@ export function AdminCrm() {
   return (
     <>
       {board}
-      {compose && selectedCustomer &&
-        createPortal(
-          <ComposeModal
-            customer={selectedCustomer}
-            channel={compose.channel}
-            onClose={() => setCompose(null)}
-            onSend={(subject, body) => sendMessage(selectedCustomer, compose.channel, subject, body)}
-          />,
-          document.body,
-        )}
+      {compose && selectedCustomer && (
+        <ComposeModal
+          customer={selectedCustomer}
+          channel={compose.channel}
+          onClose={() => setCompose(null)}
+          onSend={(subject, body) => sendMessage(selectedCustomer, compose.channel, subject, body)}
+        />
+      )}
     </>
   );
 }
@@ -1201,53 +1198,50 @@ function ComposeModal({
   onClose: () => void;
   onSend: (subject: string, body: string) => void;
 }) {
+  // Mounted only while composing (parent gates on `compose`), so state starts
+  // fresh each open — no reset effect needed.
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const canSend = !!body.trim() && (channel !== "email" || !!subject.trim());
+
   return (
-    <div className="crm-modal open" role="dialog" aria-modal="true">
-      <div className="crm-modal-backdrop" onClick={onClose} />
-      <div className="crm-modal-sheet">
-        <div className="crm-modal-head">
-          <span className="crm-mh-ic">{channel === "sms" ? <MessageCircle /> : <Mail />}</span>
-          <span className="crm-mh-title">
-            {channel === "sms" ? "Text" : "Email"} {customer.name}
-          </span>
-          <button className="crm-modal-x" type="button" onClick={onClose} aria-label="Close">
-            <X />
-          </button>
-        </div>
-        <div className="crm-modal-body">
-          {channel === "email" && (
-            <input
-              className="crm-note-input"
-              type="text"
-              placeholder="Subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          )}
-          <textarea
-            className="crm-modal-textarea"
-            rows={5}
-            placeholder={`Message to ${customer.name.split(" ")[0]}…`}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-          />
-        </div>
-        <div className="crm-modal-foot">
-          <button className="crm-act-btn" type="button" onClick={onClose}>
+    <Dialog
+      open
+      onClose={onClose}
+      theme="core"
+      size="md"
+      title={`${channel === "sms" ? "Text" : "Email"} ${customer.name}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            className="crm-act-btn primary"
-            type="button"
-            disabled={!body.trim() || (channel === "email" && !subject.trim())}
-            onClick={() => onSend(subject, body)}
-          >
+          </Button>
+          <Button variant="primary" disabled={!canSend} onClick={() => onSend(subject, body)}>
             Send {channel === "sms" ? "SMS" : "email"}
-          </button>
-        </div>
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {channel === "email" && (
+          <textarea
+            className="v2-input"
+            rows={1}
+            placeholder="Subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            style={{ resize: "none" }}
+          />
+        )}
+        <textarea
+          className="v2-input"
+          rows={5}
+          placeholder={`Message to ${customer.name.split(" ")[0]}…`}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          style={{ resize: "vertical" }}
+        />
       </div>
-    </div>
+    </Dialog>
   );
 }
