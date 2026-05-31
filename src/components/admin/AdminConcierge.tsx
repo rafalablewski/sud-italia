@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { SegControl, SectionEyebrow } from "./command";
 import { useFullscreen } from "./command/useFullscreen";
+import { GuestViewNav } from "./guest/GuestViewNav";
 import { useToast } from "./v2/ui/Toast";
 
 type CapId =
@@ -151,8 +152,9 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
       <header className="cmd-head">
         <div className="cmd-brand">
           <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Agent Commerce</span>
+          <span className="cmd-label">Guest Engagement</span>
         </div>
+        <GuestViewNav current="concierge" />
         <div className="cncrg-ctl">
           <span className="cncrg-ctl-lbl">Loc</span>
           <SegControl
@@ -409,8 +411,8 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
                 <div className="cncrg-sec-head">
                   Live console <span className="cncrg-sh-sep" />
                 </div>
-                <Link href="/admin/whatsapp" className="cncrg-wa-link">
-                  <MessageCircle /> Open the WhatsApp console
+                <Link href="/admin/guest?view=inbox" className="cncrg-wa-link">
+                  <MessageCircle /> Open the WhatsApp inbox
                   <ExternalLink />
                 </Link>
                 {!waConfigured && (

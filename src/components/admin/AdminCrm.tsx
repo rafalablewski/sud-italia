@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { SegControl, SectionEyebrow } from "./command";
 import { useFullscreen } from "./command/useFullscreen";
+import { GuestViewNav } from "./guest/GuestViewNav";
 import { useToast } from "./v2/ui/Toast";
 
 /* ====================== Types (mirror /api/admin/crm) ====================== */
@@ -553,8 +554,9 @@ export function AdminCrm() {
       <header className="cmd-head">
         <div className="cmd-brand">
           <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Customer Relationships</span>
+          <span className="cmd-label">Guest Engagement</span>
         </div>
+        <GuestViewNav current="guests" />
         <div className="crm-ctl">
           <span className="crm-ctl-lbl">Loc</span>
           <SegControl

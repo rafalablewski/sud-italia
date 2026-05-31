@@ -39,11 +39,15 @@ core/
 - **Fonts:** inherited from `admin/layout.tsx` (`--font-admin-body` /
   `--font-admin-display`). Core surfaces don't use Fraunces — the
   display serif is admin / homepage territory.
-- **Surfaces:** POS, KDS, CRM, Concierge, WhatsApp all live at
-  `/admin/{module}` but render the Core CSS, not admin chrome,
-  because their wrapping divs use `.kds-atlas` / `.pos-tabs` /
-  `.crm-atlas` / `.cncrg-atlas` / `.wa-atlas` (all scoped to the
-  Core block).
+- **Surfaces:** POS and KDS live at `/admin/pos` + `/admin/kds`. CRM,
+  Concierge and WhatsApp are unified under the **Guest Engagement hub**
+  at `/admin/guest` — `?view=inbox|guests|concierge` selects the module,
+  and the legacy `/admin/crm`, `/admin/concierge`, `/admin/whatsapp`
+  routes redirect into the matching view. Each renders the Core CSS, not
+  admin chrome, because their wrapping divs use `.kds-atlas` /
+  `.pos-tabs` / `.crm-atlas` / `.cncrg-atlas` / `.wa-console` (all scoped
+  to the Core block). The cross-view switcher (`<GuestViewNav>`,
+  `.guest-viewnav`) sits in each module's `cmd-head`.
 
 ## Authority
 

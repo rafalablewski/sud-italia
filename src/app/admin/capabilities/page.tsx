@@ -275,12 +275,19 @@ export default async function CapabilitiesPage() {
     },
     {
       id: "core-systems",
-      title: "Core systems (CRM & Agent Commerce)",
+      title: "Core systems (Guest Engagement)",
       items: [
+        {
+          name: "Guest Engagement hub",
+          status: "live",
+          href: "/admin/guest",
+          summary:
+            "One surface for the relationship layer (/admin/guest) with three views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and all three share the canonical customer record, identity-merge rules and loyalty-points ledger.",
+        },
         {
           name: "CRM — Regulars customer book",
           status: "live",
-          href: "/admin/crm",
+          href: "/admin/guest?view=guests",
           summary:
             "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
@@ -295,7 +302,7 @@ export default async function CapabilitiesPage() {
           status: has("WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY")
             ? "live"
             : "needs-config",
-          href: "/admin/concierge",
+          href: "/admin/guest?view=concierge",
           summary:
             "One capability layer exposed to AI assistants over a public read endpoint and to guests over WhatsApp. Operator toggles per-capability exposure (toggle = saved) for get_menu / check_availability / get_allergens / locate_truck (served live from the real menu at /api/agent/<capability>) plus the conversational place_order / create_payment that run through the WhatsApp bot + Stripe checkout. Inspector shows the live JSON + an EU-14 allergen matrix from the real menu.",
           envVars: ["WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY"],
@@ -394,7 +401,7 @@ export default async function CapabilitiesPage() {
         {
           name: "WhatsApp chat simulator",
           status: "live",
-          href: "/admin/whatsapp",
+          href: "/admin/guest?view=inbox",
           summary:
             "Demo / training tool with no separate page (mirrors the KDS order simulator): flip whatsappSimulatorEnabled in /admin/settings (owner-only toggle) and the WhatsApp console shows a 'Sandbox' tag plus manual Add 1 / Add 5 / Purge controls on the stats/filter strip. There is NO auto-spawn — the operator adds a controlled batch, then reads/replies to each chat with the normal thread composer. Each spawn (POST /api/admin/whatsapp-simulator, action: spawn, count clamped 1–5) builds a synthetic-but-real conversation ONLY from a real truck menu via getMenuWithOverrides() (no made-up products), at a random funnel stage (browsing / cart / fulfillment+slot / awaiting payment), and writes it through saveSimulatedWaConversation() — a real WaSession (simulated:true) + a real transcript — so the console renders it exactly like a live chat. Sandbox chats use a reserved +48999XXXXXX phone range, carry a '(sim)' customer name and a purple 'sim' badge in the list + 'sandbox' badge in the thread head, and never send a real WhatsApp message (the simulator writes straight to the store, bypassing the Meta provider). Spawned phones are tracked in a whatsapp-sim-phones.json registry so Purge (action: purge) clears every sandbox session + transcript in one shot. Spread across active trucks for variety unless scoped to one location.",
           caveats:
@@ -541,7 +548,7 @@ export default async function CapabilitiesPage() {
             "ANTHROPIC_API_KEY",
             "STRIPE_SECRET_KEY",
           ],
-          href: "/admin/whatsapp",
+          href: "/admin/guest?view=inbox",
           summary:
             "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. The /admin/whatsapp operator console is a KDS/POS-style command surface (3-pane inbox: live conversation list · chat thread with operator reply + re-open template · context panel showing cart/order/funnel), with a fullscreen kiosk mode. The Inbox/Live/Awaiting-pay/Archived filters drive an operator-side auto-archive: a chat with no new message for `autoArchiveMinutes` (default 5) drops to Archived — console-only, so the customer's 90-min bot session/cart is untouched and a new message restores it to the inbox. The Settings overlay (WhatsAppSettingsDialog) is the advanced config hub, all wired end-to-end via WaSettings: Channel (enable, default location, daily cap), Messages (welcome, opt-out keywords, re-open template), Conversation lifecycle (auto-archive minutes), AI concierge (enable/disable + extra system-prompt instructions appended to the base prompt in lib/whatsapp/turn.ts, plus an away message sent when AI is off), and Auto-replies/scripts (keyword→canned-reply pairs matched in the webhook BEFORE the LLM). Business hours (Europe/Warsaw, per-day open/close + closed days, computed in lib/whatsapp/hours.ts) gate the bot in the webhook — outside hours the away message is sent instead of taking an order, while auto-replies still answer 24/7. Operators can also manually Pin a chat (never auto-archives, stays in the inbox) or Archive it now from the context panel; a new inbound message un-archives automatically. Switches save instantly; text fields save with the button. A Funnel button opens conversion analytics: real stage instrumentation (started → location → cart → fulfillment → slot → pay-link → paid) emitted from the bot pipeline (first-touch in the webhook, stage transitions diffed in lib/whatsapp/turn.ts, paid from the Stripe webhook) into an appendWaFunnelEvent log, aggregated cumulatively per phone (a later stage counts toward earlier ones, so drop-off is monotonic and a missed intermediate event never breaks the funnel) over 7d/30d/all via GET /api/admin/whatsapp/funnel. Simulated chats bypass the live pipeline, so they never pollute the funnel. Abandoned-cart recovery (opt-in, Settings → Abandoned-cart recovery): when a customer builds a cart but doesn't pay, a record is upserted in the turn loop (persisted beyond the 90-min session) and cleared on paid (Stripe webhook) or escalation; the daily cron /api/admin/cron/whatsapp-abandoned-cart (registered in the dispatcher) sends the Meta re-open template once to carts idle ≥ delayHours and under 4 days old, marking each notified so customers are never spammed. Self-skips when disabled or no template is set. Broadcast campaigns (Broadcast button): send an approved Meta template to an opted-in customer segment — audience filters computed live from the customer rollup (all / active 60d / lapsed 90d+ / VIP ≥200 zł & ≥6 orders / new 14d), always excluding smsOptout + phoneless. POST /api/admin/whatsapp/broadcasts snapshots the audience into a campaign (capped 5000); the UI drives batched sends (25/tick) via /broadcasts/[id]/send with a live progress bar, and a daily /api/admin/cron/whatsapp-broadcast-drain backstop finishes any campaign left mid-send. Audit-logged on create. Scripted flows (Settings → Scripted flows): operator-authored deterministic sequences — a customer message containing the trigger word starts the flow (sends step 1) and each reply advances one step until the steps run out. Runs ahead of the LLM in lib/whatsapp/flows.ts (independent of the AI toggle), with per-session state on WaSession.activeFlow; replies are captured in the transcript. Great for feedback or info sequences without burning model calls.",
         },

@@ -63,9 +63,7 @@ const THEME_INFO: Record<ThemeKey, ThemeInfo> = {
     routes: [
       "/admin/pos",
       "/admin/kds",
-      "/admin/crm",
-      "/admin/concierge",
-      "/admin/whatsapp",
+      "/admin/guest",
     ],
     fonts:
       "Inherits admin fonts (--font-admin-body, --font-admin-display) loaded by src/app/admin/layout.tsx. Core surfaces don't use the display serif — Inter throughout.",

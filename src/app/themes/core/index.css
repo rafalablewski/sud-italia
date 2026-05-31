@@ -86,6 +86,11 @@
 }
 .cmd-seg[aria-pressed="true"] .cmd-seg-count { background: var(--cmd-hair-strong); color: var(--cmd-text); }
 
+/* Guest hub cross-view switcher (Inbox / Guests / Concierge) — segmented
+   links injected into each module's cmd-head so the three Guest views read as
+   one surface. Renders Next.js anchors as cmd-seg buttons. */
+.guest-viewnav .cmd-seg { text-decoration: none; }
+
 .cmd-eyebrow { display: flex; align-items: center; gap: 12px; }
 .cmd-eyebrow-brand { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cmd-dim); font-weight: 700; white-space: nowrap; }
 .cmd-eyebrow-brand svg { width: 13px; height: 13px; opacity: .7; }

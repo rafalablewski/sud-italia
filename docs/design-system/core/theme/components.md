@@ -50,6 +50,13 @@ The horizontal pill group for status / window / role switches.
   — full inversion, no halo, no shadow.
 - Count chip (`.cmd-seg-count`) — small 5px-radius pill carrying the
   count for each segment; lives inside the segment.
+- **Guest hub switcher** (`.guest-viewnav`) — the Inbox / Guests /
+  Concierge cross-view switcher rides the same `.cmd-seg-group`, but its
+  segments are Next.js `<Link>` anchors (not buttons), so the
+  `.guest-viewnav .cmd-seg` rule clears the default anchor underline.
+  `<GuestViewNav>` (`src/components/admin/guest/GuestViewNav.tsx`) drops
+  it into each module's `cmd-head`. Active segment uses the normal
+  `[aria-pressed="true"]` inversion.
 
 ### Button — `.cmd-btn`
 

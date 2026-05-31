@@ -41,6 +41,7 @@ const MobileWhatsApp = dynamic(
   { ssr: false },
 );
 import { formatPrice } from "@/lib/utils";
+import { GuestViewNav } from "./guest/GuestViewNav";
 import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
 import { WhatsAppFunnelDialog } from "./whatsapp/WhatsAppFunnelDialog";
 import { WhatsAppBroadcastDialog } from "./whatsapp/WhatsAppBroadcastDialog";
@@ -687,9 +688,10 @@ function AdminWhatsAppDesktop() {
       <header className="cmd-head">
         <div className="cmd-brand">
           <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">WhatsApp Console</span>
+          <span className="cmd-label">Guest Engagement</span>
           {simEnabled && <span className="wa-sim-tag">Sandbox</span>}
         </div>
+        <GuestViewNav current="inbox" counts={{ inbox: counts.inbox }} />
         <button
           type="button"
           className="cmd-btn wa-power"
