@@ -442,12 +442,14 @@ function TruckBoard({
         </div>
         <div>
           <div className="city">{tile.name}</div>
-          <div className="open">Open</div>
+          <div className="open">
+            Open · {activeCount} active ·{" "}
+            <span className="health-state" style={{ color: healthColor }}>
+              {liveHealth.state}
+            </span>
+          </div>
         </div>
-        <span className="health-state" style={{ color: healthColor }}>
-          {liveHealth.state}
-        </span>
-        {onDrillIn && <span className="drill">Drill in →</span>}
+        {onDrillIn && <span className="drill">Open floor →</span>}
       </button>
 
       <div className="trow2">
