@@ -49,6 +49,7 @@ export function LocationFilter({
       {options.map((l) => (
         <button
           key={l.slug}
+          type="button"
           onClick={() => onChange(l.slug)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
             value === l.slug
