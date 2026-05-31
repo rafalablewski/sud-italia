@@ -73,12 +73,15 @@ lenses, and the dark dialogs) and of the mobile layouts.
   per-course headers (order items don't carry a per-item course); the
   per-station chef filter stays retired. See `core/modules/kds.md`.
 
-## Pre-existing issues found (not introduced here, not fixed here)
+## Orphan-class sweep — results (all resolved)
 
-- `MobileKDS.tsx` applies `.ka-recall` / `.ka-recall-lab` which have **no
-  CSS definition** (and never did — confirmed against the pre-prune
-  `index.css`). Unrelated mobile debt, to address in the mobile pass.
-- An orphan-class sweep otherwise came back clean: the only orphan the
-  rebuild itself introduced was the CRM `ComposeModal` (it used the
-  pruned `.crm-modal-*` classes) — **fixed** by porting it to the dark
-  `v2 Dialog` (`theme="core"`).
+- CRM `ComposeModal` used the pruned `.crm-modal-*` classes (the one
+  orphan the rebuild itself introduced) — **fixed** by porting it to the
+  dark `v2 Dialog` (`theme="core"`).
+- `MobileKDS.tsx` applied `.ka-recall` / `.ka-recall-lab` with **no CSS
+  definition** (pre-existing — never had a rule, confirmed against the
+  pre-prune `index.css`) — **fixed** with a warning-toned banner rule
+  scoped under `.kds-atlas`.
+- No orphaned core classes remain (`v2-pos-table*` / `v2-kds-stat*` are
+  the admin-namespaced false positives the sweep flags; their CSS lives
+  in the admin theme).
