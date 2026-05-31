@@ -37,7 +37,11 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   const install = useInstallPrompt();
   const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
   const [desktopForced, setDesktopForced] = useState(false);
-  const [simulationEnabled, setSimulationEnabled] = useState(false);
+  // null = settings not loaded yet; treat the flag as on until known so a
+  // slow/failed settings fetch can't transiently hide a flagged item.
+  const [simulationEnabled, setSimulationEnabled] = useState<boolean | null>(
+    null,
+  );
   useEffect(() => {
     if (open) setDesktopForced(getForceDesktop());
   }, [open]);
@@ -62,7 +66,7 @@ export function MoreDrawer({ open, onClose, role }: Props) {
   }, []);
   const sections = useMemo(
     () =>
-      filterNavForRole(role, { simulation: simulationEnabled }) ||
+      filterNavForRole(role, { simulation: simulationEnabled ?? true }) ||
       NAV_SECTIONS,
     [role, simulationEnabled],
   );
