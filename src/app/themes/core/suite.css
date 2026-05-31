@@ -326,6 +326,8 @@
    overlay rules live on .core-suite-overlay at the document root. */
 .core-suite-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); backdrop-filter: saturate(120%) blur(4px); display: grid; place-items: center; padding: 28px; font-family: var(--font-admin-body), system-ui, sans-serif; }
 .core-suite-overlay .dialog { width: min(700px, 100%); max-height: 92vh; display: flex; flex-direction: column; background: #17161c; border: 1px solid rgba(255,255,255,0.16); border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.34); overflow: hidden; color: #f5f3ee; }
+.core-suite .core-suite-toast { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--r-pill); background: var(--success); color: #06140d; font-size: 13px; font-weight: 600; box-shadow: var(--sh-lg); }
+.core-suite .core-suite-toast svg { width: 15px; height: 15px; }
 
 /* ============================================================
    GUEST · INBOX (ported from guest.html page styles)

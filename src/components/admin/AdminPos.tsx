@@ -1,27 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { CoreShell } from "./core/CoreShell";
 import {
   Armchair,
   Banknote,
   Check,
-  Clock,
   CreditCard,
   Flame,
-  Gauge,
   MapPin,
   Maximize2,
   Minimize2,
   ParkingSquare,
   Plus,
-  Receipt,
   RefreshCw,
   Send,
   ShoppingBag,
   Sparkles,
   Truck,
-  Users,
   UtensilsCrossed,
 } from "lucide-react";
 import {
@@ -41,7 +38,6 @@ import {
 } from "@/lib/pos-coursing";
 import type { CartItem, PosCourse } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
-import { SegControl, SectionEyebrow } from "./command";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
@@ -61,8 +57,6 @@ const CHANNELS: { value: FulfillmentType; label: string; icon: React.ReactNode; 
   { value: "dine-in", label: "Dine-in", icon: <UtensilsCrossed />, cls: "chan-dinein" },
 ];
 const CHAN_BY_VALUE = new Map(CHANNELS.map((c) => [c.value, c]));
-const CHAN_CLASS = (c: FulfillmentType | null) =>
-  (c && CHAN_BY_VALUE.get(c)?.cls) || "chan-none";
 const CHAN_LABEL = (c: FulfillmentType | null) =>
   (c && CHAN_BY_VALUE.get(c)?.label) || "No channel";
 
@@ -82,12 +76,6 @@ const ROLE_BADGE: Partial<Record<NonNullable<MenuItem["menuRole"]>, { label: str
   anchor: { label: "Anchor", cls: "pos-role-anchor" },
 };
 const TAG_LABEL: Record<MenuItem["tags"][number], string> = {
-  vegetarian: "veg",
-  vegan: "vegan",
-  spicy: "spicy",
-  "gluten-free": "gf",
-};
-const TAG_CLS: Record<MenuItem["tags"][number], string> = {
   vegetarian: "veg",
   vegan: "vegan",
   spicy: "spicy",
@@ -661,18 +649,6 @@ export function AdminPos({
     };
   }, [kiosk]);
 
-  // --- Clock ---------------------------------------------------------------
-  const [clock, setClock] = useState("--:--:--");
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const p = (n: number) => String(n).padStart(2, "0");
-      setClock(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // --- Keyboard ------------------------------------------------------------
   useEffect(() => {
@@ -878,13 +854,14 @@ export function AdminPos({
     const m = byId(l.menuItemId);
     if (!m) return null;
     const fired = isCoursed && firedCourses.has(courseOf(l));
+    const drag = isCoursed && !fired;
     return (
       <div
         key={m.id}
-        className={`pos-line${isCoursed ? " coursable" : ""}${fired ? " fired" : ""}`}
-        draggable={isCoursed && !fired}
+        className={`line${drag ? " drag" : ""}${fired ? " fired" : ""}`}
+        draggable={drag}
         onDragStart={
-          isCoursed && !fired
+          drag
             ? (e) => {
                 dragItem.current = m.id;
                 e.dataTransfer.effectAllowed = "move";
@@ -896,157 +873,123 @@ export function AdminPos({
           setDropCourse(null);
         }}
       >
-        <div className="pos-line-body">
-          <div className="pos-line-name">{m.name}</div>
-          <div className="pos-line-each tnum">{fmtPLN(m.price)} each</div>
+        <span className="grip" />
+        <div>
+          <div className="nm">{m.name}</div>
+          <div className="each tnum">{fmtPLN(m.price)} each</div>
         </div>
-        <div className="pos-stepper">
-          <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, -1)} aria-label="Decrease">
+        <div className="qstep">
+          <button type="button" onClick={() => changeQty(m.id, -1)} aria-label="Decrease">
             −
           </button>
-          <span className="pos-step-q tnum">{l.quantity}</span>
-          <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, 1)} aria-label="Increase">
+          <span className="q tnum">{l.quantity}</span>
+          <button type="button" onClick={() => changeQty(m.id, 1)} aria-label="Increase">
             +
           </button>
         </div>
-        <span className="pos-line-total tnum">{fmtPLN(m.price * l.quantity)}</span>
+        <span className="lp tnum">{fmtPLN(m.price * l.quantity)}</span>
       </div>
     );
   };
 
   const page = (
-    <div className={`pos-tabs${kiosk ? " is-fullscreen" : ""}`}>
-      {/* Header */}
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Point of Sale · {locName}</span>
-        </div>
-        <div className="pos-ctl">
-          <SegControl
-            ariaLabel="Location"
-            value={pageLoc}
-            onChange={setPageLoc}
-            options={locOptions.map((o) => ({ value: o.slug, label: o.label }))}
-          />
-        </div>
-        <div className="cmd-spacer" />
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        >
-          {kiosk ? <Minimize2 /> : <Maximize2 />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="cmd-clock tnum">{clock}</div>
-      </header>
-
-      {/* Steer toggle lives on a strip under the shared header (not in it). */}
-      <div className="cmd-subbar" role="group" aria-label="Pace steering">
-        <button
-          type="button"
-          className="cmd-btn pos-steer-chip"
-          aria-pressed={steer}
-          onClick={() => setSteer((s) => !s)}
-          title="Toggle Pace → POS steering"
-        >
-          <span className="pos-sc-dot" />
-          <Gauge />
-          <span>Steer</span>
-        </button>
-      </div>
-
-      {/* Tab rail */}
-      <section className="pos-tabrail" aria-label="Open checks">
-        <SectionEyebrow icon={<MapPin />} label="Open checks">
-          <b>{railSummary.count}</b> tabs<span className="pos-pipe">·</span>
-          <b>{railSummary.pay}</b> ready to pay<span className="pos-pipe">·</span>
-          <b>{railSummary.parked}</b> parked<span className="pos-pipe">·</span>open value{" "}
-          <b>{fmtPLN(railSummary.openValue)}</b>
-        </SectionEyebrow>
-        <div className="pos-tabrail-scroll">
-          {tabs.map((t) => {
-            const cnt = itemCount(t);
-            const railTable = t.channel === "dine-in" && t.tableId ? tableById(t.tableId) : undefined;
-            const clash =
-              (t.channel === "dine-in" && !!t.tableId && tabsOnTable(t.tableId, t.id).length > 0) ||
-              (!!railTable && railTable.seats < (t.covers ?? 2));
-            const tableNo = railTable?.number;
-            return (
+    <CoreShell
+      active="pos"
+      crumbs={
+        <>
+          Core / <b>POS</b> · {locName}
+        </>
+      }
+      topbarRight={
+        <>
+          <div className="seg">
+            {CHANNELS.map((c) => (
               <button
-                key={t.id}
+                key={c.value}
                 type="button"
-                className={`pos-tab ${t.status} ${CHAN_CLASS(t.channel)}${
-                  t.id === activeTabId ? " active" : ""
-                }${t.status === "pay" ? " pay" : ""}`}
-                onClick={() => setActiveTabId(t.id)}
+                className={active?.channel === c.value ? "on" : ""}
+                disabled={!active}
+                onClick={() => setChannel(c.value)}
               >
-                <div className="pos-tab-top">
-                  <span className="pos-tab-dot" />
-                  <span className="pos-tab-name">{t.name}</span>
-                  {t.channel && <span className="pos-tab-chan">{CHAN_BY_VALUE.get(t.channel)?.icon}</span>}
-                </div>
-                <div className="pos-tab-meta">
-                  <span className="pos-tab-id tnum">#{t.id}</span>
-                  {t.channel === "dine-in" && t.tableId && (
-                    <span className={`pos-tab-table${clash ? " conflict" : ""}`}>
-                      {tableNo ? `T${tableNo}` : "Table"}
-                      {t.covers ? ` · ${t.covers}` : ""}
-                      {clash ? " ⚠" : ""}
-                    </span>
-                  )}
-                  {t.channel === "delivery" && t.address && (
-                    <span className="pos-tab-addr" title={t.address}>
-                      <MapPin />
-                    </span>
-                  )}
-                  <span className="pos-tab-status">{STATUS_LABEL[t.status]}</span>
-                </div>
-                <div className="pos-tab-foot">
-                  <span className="pos-tab-items">
-                    <Receipt />
-                    <span className="tnum">{cnt}</span> item{cnt !== 1 ? "s" : ""}
-                  </span>
-                  <span className="pos-tab-total tnum">{fmtPLN(grandG(t))}</span>
-                </div>
+                {c.label}
               </button>
-            );
-          })}
-          <button type="button" className="pos-tab-new" onClick={() => void newTab()}>
-            <Plus />
-            New tab
+            ))}
+          </div>
+          <button
+            type="button"
+            className={`badge ${steer ? "warning" : "neutral"}`}
+            style={{ cursor: "pointer", border: 0 }}
+            onClick={() => setSteer((s) => !s)}
+            title="Toggle Pace → POS steering"
+          >
+            <span className="d" />
+            Steer {steer ? "on" : "off"}
           </button>
-        </div>
-      </section>
-
-      {/* Editor */}
-      {tabs.length === 0 ? (
-        <div className="pos-editor">
-          <div className="pos-empty-editor">
-            <span className="pos-ee-emoji">🍕</span>
-            <span className="pos-ee-text">
-              {hydrated ? "No open checks — the window is clear." : "Loading open checks…"}
+          <div className="seg">
+            {locOptions.map((o) => (
+              <button key={o.slug} type="button" className={pageLoc === o.slug ? "on" : ""} onClick={() => setPageLoc(o.slug)}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn icon" onClick={kiosk ? exitKiosk : enterKiosk} title={kiosk ? "Exit fullscreen" : "Fullscreen"}>
+            {kiosk ? <Minimize2 /> : <Maximize2 />}
+          </button>
+        </>
+      }
+    >
+      <div className="pos-shell">
+        <div className="tabrail">
+          <div className="tabrail-head">
+            <span className="eyebrow">Open checks</span>
+            <span className="sum">
+              <b>{railSummary.count}</b> tabs · <b>{railSummary.pay}</b> ready to pay · <b>{railSummary.parked}</b> parked ·{" "}
+              <b>{fmtPLN(railSummary.openValue)}</b> open
             </span>
-            <button type="button" className="pos-ee-btn" onClick={() => void newTab()}>
-              + Start a new tab
+          </div>
+          <div className="tabs">
+            {tabs.map((t) => {
+              const railTable = t.channel === "dine-in" && t.tableId ? tableById(t.tableId) : undefined;
+              const chan = t.channel === "dine-in" ? "dinein" : t.channel === "delivery" ? "delivery" : "";
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`tab ${t.status} ${chan}${t.id === activeTabId ? " on" : ""}`}
+                  onClick={() => setActiveTabId(t.id)}
+                >
+                  <div className="r1">
+                    <span className="nm">{t.name}</span>
+                    <span className={`st ${t.status}`}>{STATUS_LABEL[t.status]}</span>
+                  </div>
+                  <div className="r2">
+                    <span>
+                      #{t.id}
+                      {railTable ? ` · T${railTable.number}` : ""} · {itemCount(t)} item{itemCount(t) === 1 ? "" : "s"}
+                    </span>
+                    <span className="tot">{fmtPLN(grandG(t))}</span>
+                  </div>
+                </button>
+              );
+            })}
+            <button type="button" className="tab newtab" onClick={() => void newTab()} title="New tab">
+              +
             </button>
           </div>
         </div>
-      ) : (
-        <div className="pos-editor">
-          {/* LEFT — products */}
-          <div className="pos-products">
-            <ComboStrip config={config} channel={active?.channel ?? null} onAdd={completeCombo} />
-            <div className="pos-cats" role="group" aria-label="Category filter">
-              <CatChip
-                label="All"
-                emoji="🗂️"
-                isActive={activeCat === "all"}
-                onClick={() => setActiveCat("all")}
-              />
+
+        {tabs.length === 0 ? (
+          <div className="empty-ticket" style={{ flex: 1 }}>
+            <span className="emoji">🍕</span>
+            <span>{hydrated ? "No open checks — the window is clear." : "Loading open checks…"}</span>
+            <button type="button" className="btn primary" onClick={() => void newTab()}>
+              + Start a new tab
+            </button>
+          </div>
+        ) : (
+          <div className="pos-body">
+            <div className="cat-rail">
+              <CatChip label="All" emoji="🗂️" isActive={activeCat === "all"} onClick={() => setActiveCat("all")} />
               {presentCats.map((c) => (
                 <CatChip
                   key={c}
@@ -1058,10 +1001,12 @@ export function AdminPos({
                 />
               ))}
             </div>
-            {steer && (
-              <SteerStrip plan={steerPlan} windowMin={windowMin} />
-            )}
-            <div className="pos-grid-scroll">
+
+            <div className="menu-wrap">
+              {steer && <SteerStrip plan={steerPlan} windowMin={windowMin} />}
+              <div className="menu-head">
+                <h2>{activeCat === "all" ? "Full menu" : MENU_CATEGORY_LABELS[activeCat]}</h2>
+              </div>
               <ProductGrid
                 menu={filteredMenu}
                 activeCat={activeCat}
@@ -1070,360 +1015,246 @@ export function AdminPos({
                 onAdd={addLine}
               />
             </div>
-          </div>
 
-          {/* RIGHT — ticket */}
-          <div className="pos-ticket">
-            <div className="pos-ticket-head">
-              <div className="pos-th-row1">
-                <span className={`pos-th-dot ${active?.status ?? ""}`} />
-                <input
-                  className="pos-th-name"
-                  value={active?.name ?? ""}
-                  onChange={(e) => setName(e.target.value)}
-                  aria-label="Tab name"
-                  spellCheck={false}
-                />
-                <span className="pos-th-id tnum">{active ? `#${active.id}` : ""}</span>
-                <span className="pos-th-chan">
-                  {active?.channel && CHAN_BY_VALUE.get(active.channel)?.icon}
-                  {CHAN_LABEL(active?.channel ?? null)} · {active ? STATUS_LABEL[active.status] : ""}
-                </span>
-                {tabPromise && (
-                  <span className={`pos-th-promise${tabPromise.tier !== "calm" ? ` tier-${tabPromise.tier}` : ""}`}>
-                    <Clock /> ready {promiseLabel(tabPromise.sec)}
+            <div className="ticket">
+              <div className="ticket-head">
+                <div className="t1">
+                  <h2 style={{ flex: 1, minWidth: 0 }}>
+                    <input
+                      value={active?.name ?? ""}
+                      onChange={(e) => setName(e.target.value)}
+                      aria-label="Tab name"
+                      spellCheck={false}
+                      style={{ background: "transparent", border: 0, color: "var(--fg)", font: "inherit", width: "100%" }}
+                    />
+                  </h2>
+                  <span className="mono subtle">{active ? `#${active.id}` : ""}</span>
+                  {tabPromise && (
+                    <span className="badge platinum promise-badge">
+                      <span className="d" />
+                      ready {promiseLabel(tabPromise.sec)}
+                    </span>
+                  )}
+                </div>
+                <div className="ticket-meta">
+                  <span>
+                    <b>{CHAN_LABEL(active?.channel ?? null)}</b> · {active ? STATUS_LABEL[active.status] : ""}
                   </span>
-                )}
+                  {active && !active.channel && <span style={{ color: "var(--warning)" }}>Pick a channel to send / charge</span>}
+                </div>
               </div>
 
-              <div className={`pos-th-channel${active && !active.channel ? " req" : ""}`} role="group" aria-label="Channel">
-                {CHANNELS.map((c) => (
+              {active?.channel === "dine-in" && (
+                <div className="fulfil-block">
+                  <span className="ic">
+                    <Armchair className="icn" />
+                  </span>
                   <button
-                    key={c.value}
                     type="button"
-                    className="pos-th-chan-btn"
-                    aria-pressed={!!active && active.channel === c.value}
-                    onClick={() => setChannel(c.value)}
+                    className="btn ghost"
+                    onClick={() => {
+                      void fetchTables();
+                      setTablePickerOpen(true);
+                    }}
                   >
-                    {c.icon}
-                    <span>{c.label}</span>
+                    {activeTable ? `Table ${activeTable.number}${activeTableConflict || activeOverCapacity ? " ⚠" : ""}` : "Assign table"}
                   </button>
-                ))}
-              </div>
-              {active && !active.channel && (
-                <span className="pos-th-chan-req">
-                  <i /> Choose a channel to send or charge this order
-                </span>
+                  <div className="covers">
+                    <span className="subtle">Covers</span>
+                    <button type="button" className="stp" onClick={() => changeCovers(-1)} aria-label="Fewer">
+                      −
+                    </button>
+                    <span className="n">{active.covers ?? 2}</span>
+                    <button type="button" className="stp" onClick={() => changeCovers(1)} aria-label="More">
+                      +
+                    </button>
+                  </div>
+                </div>
               )}
-
-              {(active?.channel === "dine-in" || active?.channel === "delivery") && (
-                <div className="pos-th-detail">
-                  {active.channel === "dine-in" && (
-                    <>
-                      <button
-                        type="button"
-                        className={`pos-detail-btn${
-                          active.tableId && !activeTableConflict && !activeOverCapacity ? " assigned" : ""
-                        }${activeTableConflict || activeOverCapacity ? " conflict" : ""}`}
-                        title={
-                          activeTableConflict
-                            ? "Another open check is already on this table"
-                            : activeOverCapacity
-                              ? `Table seats ${activeTable?.seats} — party of ${activeCovers}`
-                              : ""
-                        }
-                        onClick={() => {
-                          void fetchTables();
-                          setTablePickerOpen(true);
-                        }}
-                      >
-                        <Armchair />
-                        <span>
-                          {activeTable
-                            ? `Table ${activeTable.number}${activeTableConflict || activeOverCapacity ? " ⚠" : ""}`
-                            : "Assign table"}
-                        </span>
-                      </button>
-                      <div className="pos-covers">
-                        <span className="pos-cov-ic" title="Covers">
-                          <Users />
-                        </span>
-                        <button type="button" className="pos-cov-btn" onClick={() => changeCovers(-1)} aria-label="Fewer covers">
-                          −
-                        </button>
-                        <span className="pos-cov-n tnum">{active.covers ?? 2}</span>
-                        <button type="button" className="pos-cov-btn" onClick={() => changeCovers(1)} aria-label="More covers">
-                          +
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  {active.channel === "delivery" && (
-                    <>
-                      <button
-                        type="button"
-                        className={`pos-detail-btn${active.address ? " assigned" : ""}`}
-                        title={active.address || ""}
-                        onClick={() => {
-                          setAddrDraft(active.address || "");
-                          setAddrOpen(true);
-                        }}
-                      >
-                        <MapPin />
-                        <span>{active.address || "Add delivery address"}</span>
-                      </button>
-                      {deliveryPaused && (
-                        <span className="pos-chan-paused">
-                          <span className="pos-cp-dot" /> Delivery intake paused
-                        </span>
-                      )}
-                    </>
-                  )}
+              {active?.channel === "delivery" && (
+                <div className="fulfil-block">
+                  <span className="ic">
+                    <MapPin className="icn" />
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => {
+                      setAddrDraft(active.address || "");
+                      setAddrOpen(true);
+                    }}
+                  >
+                    {active.address || "Add delivery address"}
+                  </button>
+                  {deliveryPaused && <span style={{ color: "var(--warning)", marginLeft: "auto", fontSize: 11 }}>Delivery paused</span>}
                 </div>
               )}
 
-              <div className="pos-th-actions">
-                <button
-                  type="button"
-                  className={`pos-mini-btn park${active?.status === "parked" ? " is-parked" : ""}`}
-                  onClick={togglePark}
-                >
-                  <ParkingSquare />
-                  <span>{active?.status === "parked" ? "Resume" : "Park"}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`pos-mini-btn kds${active?.sentKds ? " sent" : ""}`}
-                  disabled={!active || active.items.length === 0 || busyTabId === active?.id}
-                  onClick={() => void sendKds()}
-                >
-                  <Send />
-                  <span>{active?.sentKds ? "Sent ✓" : "Send to KDS"}</span>
-                </button>
-              </div>
-            </div>
+              {active?.channel === "dine-in" && (
+                <div className="course-mode">
+                  <span className="cm-lbl">Kitchen timing</span>
+                  <div className="seg">
+                    <button type="button" className={isCoursed ? "on" : ""} onClick={toggleCoursed}>
+                      Coursed
+                    </button>
+                    <button type="button" className={!isCoursed ? "on" : ""} onClick={toggleCoursed}>
+                      All together
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <div className="pos-ticket-inner">
-              <div className="pos-lines">
+              <div className="lines">
                 {!active || active.items.length === 0 ? (
-                  <div className="pos-empty-ticket">
-                    <span className="pos-e-emoji">🧾</span>
-                    <span className="pos-e-text">
-                      {active ? `${active.name} is empty` : "No tab selected"}
-                    </span>
-                    <span className="pos-e-sub">Tap a product or combo to add it to this check.</span>
+                  <div className="empty-ticket">
+                    <span className="emoji">🧾</span>
+                    <span>{active ? `${active.name} is empty` : "No tab selected"}</span>
+                    <span className="subtle" style={{ fontSize: 12 }}>Tap a product to add it to this check.</span>
                   </div>
                 ) : isCoursed ? (
-                  <>
-                    {active.channel === "dine-in" && (
-                      <div className="pos-coursing-toggle">
-                        <span className="pos-ct-lbl">Kitchen timing</span>
-                        <div className="cmd-seg-group">
-                          <button type="button" className="cmd-seg" aria-pressed onClick={toggleCoursed}>
-                            Coursed
-                          </button>
-                          <button type="button" className="cmd-seg" aria-pressed={false} onClick={toggleCoursed}>
-                            All together
-                          </button>
+                  POS_COURSE_ORDER.map((course) => {
+                    const lines = active.items.filter((l) => courseOf(l) === course);
+                    if (lines.length === 0) return null;
+                    const fired = firedCourses.has(course);
+                    return (
+                      <div
+                        key={course}
+                        className={`course${dropCourse === course ? " drop" : ""}`}
+                        onDragOver={(e) => {
+                          if (!dragItem.current) return;
+                          e.preventDefault();
+                          if (dropCourse !== course) setDropCourse(course);
+                        }}
+                        onDragLeave={() => setDropCourse((c) => (c === course ? null : c))}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const id = dragItem.current;
+                          dragItem.current = null;
+                          setDropCourse(null);
+                          if (id) recourse(id, course);
+                        }}
+                      >
+                        <div className="course-h">
+                          <span className="course-nm">{POS_COURSE_LABELS[course]}</span>
+                          {fired ? (
+                            <span className="course-st sent">
+                              <Check /> Fired
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="course-fire"
+                              disabled={!active.channel || busyTabId === active.id}
+                              onClick={() => void fireCourse(course)}
+                            >
+                              <Flame /> Fire
+                            </button>
+                          )}
                         </div>
+                        {lines.map(renderLine)}
                       </div>
-                    )}
-                    {POS_COURSE_ORDER.map((course) => {
-                      const lines = active.items.filter((l) => courseOf(l) === course);
-                      if (lines.length === 0) return null;
-                      const fired = firedCourses.has(course);
-                      return (
-                        <div
-                          key={course}
-                          className={`pos-course${dropCourse === course ? " drop" : ""}${fired ? " fired" : ""}`}
-                          onDragOver={(e) => {
-                            if (!dragItem.current) return;
-                            e.preventDefault();
-                            if (dropCourse !== course) setDropCourse(course);
-                          }}
-                          onDragLeave={() => setDropCourse((c) => (c === course ? null : c))}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const id = dragItem.current;
-                            dragItem.current = null;
-                            setDropCourse(null);
-                            if (id) recourse(id, course);
-                          }}
-                        >
-                          <div className="pos-course-h">
-                            <span className="pos-course-nm">{POS_COURSE_LABELS[course]}</span>
-                            {fired ? (
-                              <span className="pos-course-st sent">
-                                <Check /> Fired
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                className="pos-course-fire"
-                                disabled={!active.channel || busyTabId === active.id}
-                                onClick={() => void fireCourse(course)}
-                              >
-                                <Flame /> Fire
-                              </button>
-                            )}
-                          </div>
-                          {lines.map(renderLine)}
-                        </div>
-                      );
-                    })}
-                    {discountG(active) > 0 && (
-                      <div className="pos-combo-applied">
-                        <span className="pos-ca-name">✓ {comboOf(active).activeDeal?.name}</span>
-                        <span className="pos-ca-off tnum">−{fmtPLN(discountG(active))}</span>
-                      </div>
-                    )}
-                  </>
+                    );
+                  })
                 ) : (
-                  <>
-                    {active.channel === "dine-in" && (
-                      <div className="pos-coursing-toggle">
-                        <span className="pos-ct-lbl">Kitchen timing</span>
-                        <div className="cmd-seg-group">
-                          <button type="button" className="cmd-seg" aria-pressed={false} onClick={toggleCoursed}>
-                            Coursed
-                          </button>
-                          <button type="button" className="cmd-seg" aria-pressed onClick={toggleCoursed}>
-                            All together
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {active.items.map(renderLine)}
-                    {discountG(active) > 0 && (
-                      <div className="pos-combo-applied">
-                        <span className="pos-ca-name">✓ {comboOf(active).activeDeal?.name}</span>
-                        <span className="pos-ca-off tnum">−{fmtPLN(discountG(active))}</span>
-                      </div>
-                    )}
-                  </>
+                  active.items.map(renderLine)
+                )}
+                {active && discountG(active) > 0 && (
+                  <div className="combo-row">
+                    <span>✓ {comboOf(active).activeDeal?.name}</span>
+                    <span className="tnum">−{fmtPLN(discountG(active))}</span>
+                  </div>
                 )}
               </div>
 
               {offers.length > 0 && (
-                <div className="pos-ai-offers">
-                  <div className="pos-ai-card">
-                    <div className="pos-ai-head">
-                      <span className="pos-ai-badge">
-                        <Sparkles /> AI
+                <div className="offers">
+                  <div className="eyebrow">Best offers for this order</div>
+                  {offers.map((o, i) => (
+                    <button key={i} type="button" className={`offer ${o.kind}`} onClick={o.apply}>
+                      <span className="ic">{o.kind === "combo" ? <Sparkles /> : <Plus />}</span>
+                      <span className="tx">
+                        <b>{o.title}</b> — {o.sub}
                       </span>
-                      <span className="pos-ai-title">Best offers for this order</span>
-                      <span className="pos-ai-hint">live</span>
-                    </div>
-                    <div className="pos-ai-list">
-                      {offers.map((o, i) => (
-                        <button key={i} type="button" className="pos-ai-offer" onClick={o.apply}>
-                          <span className="pos-ai-of-main">
-                            <span className="pos-ai-of-title">{o.title}</span>
-                            <span className="pos-ai-of-sub">{o.sub}</span>
-                          </span>
-                          <span className={`pos-ai-of-cta ${o.kind}`}>{o.cta}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                      <span className="cta">{o.cta}</span>
+                    </button>
+                  ))}
                 </div>
               )}
 
-              <div className="pos-totals">
-                <div className="pos-trow">
+              <div className="totals">
+                <div className="trow">
                   <span>Subtotal</span>
-                  <span className="pos-tv tnum">{fmtPLN(active ? subtotalG(active) : 0)}</span>
+                  <span className="v">{fmtPLN(active ? subtotalG(active) : 0)}</span>
                 </div>
                 {active && discountG(active) > 0 && (
-                  <div className="pos-trow discount">
-                    <span>Combo discount · {comboOf(active).activeDeal?.name}</span>
-                    <span className="pos-tv tnum">−{fmtPLN(discountG(active))}</span>
+                  <div className="trow disc">
+                    <span>Combo · {comboOf(active).activeDeal?.name}</span>
+                    <span className="v">−{fmtPLN(discountG(active))}</span>
                   </div>
                 )}
-                <div className="pos-trow grand">
+                <div className="trow grand">
                   <span>Total</span>
-                  <span className="pos-tv tnum">{fmtPLN(active ? grandG(active) : 0)}</span>
+                  <span className="v">{fmtPLN(active ? grandG(active) : 0)}</span>
                 </div>
               </div>
 
-              <div className="pos-charge-area">
+              <div className="actions">
+                <button type="button" className="btn" onClick={togglePark}>
+                  <ParkingSquare /> {active?.status === "parked" ? "Resume" : "Hold"}
+                </button>
                 <button
                   type="button"
-                  className="pos-btn"
+                  className="btn"
+                  disabled={!active || active.items.length === 0 || busyTabId === active?.id}
+                  onClick={() => void sendKds()}
+                >
+                  <Send /> {active?.sentKds ? "Sent ✓" : "Send to kitchen"}
+                </button>
+              </div>
+              <div className="charge">
+                <button
+                  type="button"
+                  className="btn primary xl"
                   disabled={!active || active.items.length === 0 || !active.channel || busyTabId === active?.id}
                   onClick={openTender}
                 >
                   <CreditCard />
-                  <span>
-                    {active && active.items.length > 0 && !active.channel
-                      ? "Select a channel"
-                      : `Charge ${fmtPLN(active ? grandG(active) : 0)}`}
-                  </span>
+                  {active && active.items.length > 0 && !active.channel ? "Select a channel" : `Charge ${fmtPLN(active ? grandG(active) : 0)}`}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-              {/* Tender overlay */}
-              <div className={`pos-overlay${tenderOpen ? " open" : ""}`}>
-                <div className="pos-tender-sheet">
-                  <div className="pos-tender-head">
-                    <span className="pos-te-title">Take payment</span>
-                    <span className="pos-te-amt tnum">{fmtPLN(active ? grandG(active) : 0)}</span>
-                  </div>
-                  <div className="pos-tender-opts">
-                    <button type="button" className="pos-tender-opt" onClick={() => void pay("Cash")}>
-                      <Banknote />
-                      Cash
-                    </button>
-                    <button type="button" className="pos-tender-opt" onClick={() => void pay("Card")}>
-                      <CreditCard />
-                      Card
-                    </button>
-                  </div>
-                  <button type="button" className="pos-tender-cancel" onClick={() => setTenderOpen(false)}>
-                    Cancel
-                  </button>
-                </div>
+      {tenderOpen && active && (
+        <div className="core-suite-overlay" onClick={() => setTenderOpen(false)}>
+          <div className="dialog" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: 28, textAlign: "center" }}>
+              <div className="eyebrow">Take payment</div>
+              <div style={{ fontFamily: "var(--font-admin-display)", fontSize: 42, margin: "12px 0" }}>{fmtPLN(grandG(active))}</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button type="button" className="btn primary lg" onClick={() => void pay("Card")}>
+                  <CreditCard /> Card
+                </button>
+                <button type="button" className="btn lg" onClick={() => void pay("Cash")}>
+                  <Banknote /> Cash
+                </button>
               </div>
-
-              {toastMsg && (
-                <div className="pos-toast show">
-                  <Check /> {toastMsg}
-                </div>
-              )}
+              <button type="button" className="btn ghost" style={{ marginTop: 14 }} onClick={() => setTenderOpen(false)}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <footer className="pos-footer">
-        <div className="pos-legend">
-          <span>
-            <i style={{ background: "var(--pos-firing)" }} />
-            Takeout
-          </span>
-          <span>
-            <i style={{ background: "var(--pos-warn)" }} />
-            Delivery
-          </span>
-          <span>
-            <i style={{ background: "var(--pos-risk)" }} />
-            Dine-in
-          </span>
-          <span>
-            <i style={{ background: "var(--pos-faint)" }} />
-            No channel
-          </span>
+      {toastMsg && (
+        <div className="core-suite-toast">
+          <Check /> {toastMsg}
         </div>
-        <div className="pos-kbd-hint">
-          <span className="pos-kbd">N</span> new · <span className="pos-kbd">1</span>–
-          <span className="pos-kbd">9</span> switch · <span className="pos-kbd">F</span> fullscreen ·{" "}
-          <span className="pos-kbd">Esc</span> cancel
-        </div>
-      </footer>
+      )}
 
-      {/* Assign-table + delivery-address use the standard admin Dialog (portaled
-          to document.body) — not the dark POS chrome — so they read as normal
-          admin modals. */}
       <Dialog
         open={tablePickerOpen}
         onClose={() => setTablePickerOpen(false)}
@@ -1544,7 +1375,7 @@ export function AdminPos({
           placeholder="Street & number, flat / buzzer, city — plus any note for the driver"
         />
       </Dialog>
-    </div>
+    </CoreShell>
   );
 
   // Kiosk renders through a portal to document.body so the edge-to-edge POS
@@ -1564,18 +1395,15 @@ function CatChip({
 }: {
   label: string;
   emoji: string;
-  active?: boolean;
   isActive: boolean;
   promiseSec?: number;
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="cmd-chip" aria-pressed={isActive} onClick={onClick}>
-      <span className="pos-cemoji">{emoji}</span>
+    <button type="button" className={`cat${isActive ? " on" : ""}`} aria-pressed={isActive} onClick={onClick}>
+      <span style={{ fontSize: 18, lineHeight: 1 }}>{emoji}</span>
       <span>{label}</span>
-      {promiseSec != null && promiseSec > 0 && (
-        <span className="pos-cprom">· {promiseLabel(promiseSec)}</span>
-      )}
+      {promiseSec != null && promiseSec > 0 && <span className="promise">{promiseLabel(promiseSec)}</span>}
     </button>
   );
 }
@@ -1591,7 +1419,9 @@ function ProductCard({
   isBottleCat: boolean;
   onAdd: (id: string) => void;
 }) {
-  const role = m.menuRole ? ROLE_BADGE[m.menuRole] : undefined;
+  const roleCls =
+    m.menuRole === "hero" ? "hero" : m.menuRole === "profit-driver" ? "profit" : m.menuRole === "anchor" ? "anchor" : null;
+  const roleLabel = m.menuRole ? ROLE_BADGE[m.menuRole]?.label : null;
   let eased = false;
   let makeNow = false;
   if (steerPlan?.active) {
@@ -1599,30 +1429,27 @@ function ProductCard({
     else if (!isBottleCat && steerPlan.makeNow.includes(m.id)) makeNow = true;
   }
   return (
-    <button type="button" className={`pos-card${eased ? " eased" : ""}`} onClick={() => onAdd(m.id)}>
-      {makeNow && <span className="pos-makenow">★ Make now</span>}
-      {eased && <span className="pos-easetag">▼ ease</span>}
-      <div className="pos-card-top">
-        <span className="pos-card-emoji">{CAT_EMOJI[m.category]}</span>
-        {role && (
-          <span className={`pos-role-badge ${role.cls}`}>
-            {role.label}
-            {m.isLimited && <span className="pos-lto-dot" />}
-          </span>
-        )}
-        {!role && m.isLimited && <span className="pos-lto-dot" />}
+    <button type="button" className="prod" onClick={() => onAdd(m.id)}>
+      <div className="phead">
+        <span className="catico" style={{ fontSize: 15, marginTop: 2 }}>
+          {CAT_EMOJI[m.category]}
+        </span>
+        <h3>{m.name}</h3>
+        {roleCls && roleLabel && <span className={`role ${roleCls}`}>{roleLabel}</span>}
       </div>
-      <span className="pos-card-name">{m.name}</span>
-      {m.tags.length > 0 && (
-        <div className="pos-card-tags">
+      {m.description && <div className="desc">{m.description}</div>}
+      <div className="row">
+        <div className="tags">
+          {makeNow && <span className="pace-tag make">★ make now</span>}
+          {eased && <span className="pace-tag ease">▼ ease</span>}
           {m.tags.map((t) => (
-            <span key={t} className={`pos-tag ${TAG_CLS[t]}`}>
+            <span key={t} className="badge neutral" style={{ height: 18, fontSize: 9, padding: "0 6px" }}>
               {TAG_LABEL[t]}
             </span>
           ))}
         </div>
-      )}
-      <span className="pos-card-price tnum">{fmtPLN(m.price)}</span>
+        <span className="price">{fmtPLN(m.price)}</span>
+      </div>
     </button>
   );
 }
@@ -1643,29 +1470,20 @@ function ProductGrid({
   const sellable = menu.filter((m) => m.available);
   if (activeCat === "all") {
     return (
-      <div className="pos-grid grouped">
+      <div className="menu-grid">
         {CAT_ORDER.map((cat) => {
           const items = sellable.filter((m) => m.category === cat);
           if (items.length === 0) return null;
           return (
-            <section key={cat} className="pos-grid-group">
-              <h3 className="pos-grid-group-head">
-                <span className="pos-cemoji">{CAT_EMOJI[cat]}</span>
+            <Fragment key={cat}>
+              <div className="menu-sec">
                 {MENU_CATEGORY_LABELS[cat]}
-                <span className="pos-ggh-n tnum">{items.length}</span>
-              </h3>
-              <div className="pos-grid-sub">
-                {items.map((m) => (
-                  <ProductCard
-                    key={m.id}
-                    m={m}
-                    steerPlan={steerPlan}
-                    isBottleCat={bottleneckCat === cat}
-                    onAdd={onAdd}
-                  />
-                ))}
+                <span className="ln" />
               </div>
-            </section>
+              {items.map((m) => (
+                <ProductCard key={m.id} m={m} steerPlan={steerPlan} isBottleCat={bottleneckCat === cat} onAdd={onAdd} />
+              ))}
+            </Fragment>
           );
         })}
       </div>
@@ -1673,144 +1491,39 @@ function ProductGrid({
   }
   const items = sellable.filter((m) => m.category === activeCat);
   return (
-    <div className="pos-grid">
+    <div className="menu-grid">
       {items.map((m) => (
-        <ProductCard
-          key={m.id}
-          m={m}
-          steerPlan={steerPlan}
-          isBottleCat={bottleneckCat === activeCat}
-          onAdd={onAdd}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ComboStrip({
-  config,
-  channel,
-  onAdd,
-}: {
-  config: UpsellConfig | null;
-  channel: FulfillmentType | null;
-  onAdd: (deal: { categories: MenuCategory[]; requiredItems?: { suffix: string }[] }) => void;
-}) {
-  // Combos are config-driven (admin /admin/crosssell) and fall back to the
-  // platform defaults. We show the deals available for the active channel; the
-  // discount itself is computed on the live cart by getActiveComboDeals.
-  const combos = useMemo(() => {
-    // The strip lists the deals available for the active channel; the discount
-    // itself is computed on the live cart by getActiveComboDeals in the ticket.
-    const list = config?.combos?.filter((c) => c.active) ?? DEFAULT_STRIP_COMBOS;
-    return list.filter((c) => {
-      if (!c.channel) return true;
-      if (!channel) return true;
-      if (c.channel === "delivery") return channel === "delivery";
-      return channel !== "delivery";
-    });
-  }, [config, channel]);
-
-  if (combos.length === 0) return null;
-  return (
-    <div className="pos-combo-strip">
-      <span className="pos-cs-lbl">Combos</span>
-      {combos.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          className="pos-combo-pill"
-          title={c.description}
-          onClick={() =>
-            onAdd({
-              categories: c.categories as MenuCategory[],
-              requiredItems: c.requiredItems,
-            })
-          }
-        >
-          <span>{c.name}</span>
-          <span className="pos-cp-off tnum">−{c.discountPercent}%</span>
-        </button>
+        <ProductCard key={m.id} m={m} steerPlan={steerPlan} isBottleCat={bottleneckCat === activeCat} onAdd={onAdd} />
       ))}
     </div>
   );
 }
 
 function SteerStrip({ plan, windowMin }: { plan: SteerPlan | null; windowMin: number }) {
-  if (!plan) {
+  if (!plan || !plan.active || !plan.bottleneck) {
     return (
-      <div className="pos-steer-strip">
-        <span className="pos-ss-badge">
-          <span className="pos-ss-dot" style={{ animation: "none" }} />✓ Line steady
-        </span>
-        <span className="pos-ss-reason">Live promise times update as the kitchen fills.</span>
-      </div>
-    );
-  }
-  if (!plan.active || !plan.bottleneck) {
-    return (
-      <div className="pos-steer-strip">
-        <span className="pos-ss-badge">
-          <span className="pos-ss-dot" style={{ animation: "none" }} />✓ Line clear
-        </span>
-        <span className="pos-ss-reason">
-          All stations within capacity — normal menu, honest promise times live.
+      <div className="steer" style={{ background: "var(--success-soft)" }}>
+        <span className="dot" style={{ background: "var(--success)" }} />
+        <span>
+          <b>Line clear</b> — all stations within capacity, honest promise times live.
         </span>
       </div>
     );
   }
-  const tier = plan.bottleneck.tier;
   const pct = Number.isFinite(plan.bottleneck.util) ? Math.round(plan.bottleneck.util * 100) : 999;
   const cap = plan.deliveryCapNextWindow ?? 0;
   return (
-    <div className={`pos-steer-strip tier-${tier}`}>
-      <span className="pos-ss-badge">
-        <span className="pos-ss-dot" />
-        {CAT_EMOJI[plan.bottleneck.id]} {plan.bottleneck.label} <span className="pos-ss-util">{pct}%</span>
+    <div className="steer">
+      <span className="dot" />
+      <span>
+        <b>
+          {CAT_EMOJI[plan.bottleneck.id]} {plan.bottleneck.label} {pct}%
+        </b>{" "}
+        — {plan.reason}
       </span>
-      <span className="pos-ss-reason">{plan.reason}</span>
-      <span className={`pos-ss-cap${cap === 0 ? " zero" : ""}`}>
+      <span className="cap">
         cap {cap}/{windowMin}m
       </span>
     </div>
   );
 }
-
-// Fallback combo strip labels when no admin config exists (mirrors
-// DEFAULT_COMBO_DEALS in upsell.ts so the strip is never empty on a fresh
-// install). Channel filtering still applies.
-const DEFAULT_STRIP_COMBOS = [
-  {
-    id: "italian-classic",
-    name: "Italian Classic Deal",
-    description: "Margherita + Limonata + Tiramisù",
-    categories: ["pizza", "drinks", "desserts"],
-    discountPercent: 10,
-    minItems: 3,
-    active: true,
-    requiredItems: [
-      { suffix: "pizza-margherita", label: "Margherita" },
-      { suffix: "drink-limonata", label: "Limonata" },
-      { suffix: "dessert-tiramisu", label: "Tiramisù" },
-    ],
-  },
-  {
-    id: "pasta-combo",
-    name: "Pasta Combo",
-    description: "Any pasta + drink",
-    categories: ["pasta", "drinks"],
-    discountPercent: 10,
-    minItems: 2,
-    active: true,
-  },
-  {
-    id: "pizza-side",
-    name: "Pizza & Side",
-    description: "Any pizza + garlic bread",
-    categories: ["pizza", "antipasti"],
-    discountPercent: 12,
-    minItems: 2,
-    active: true,
-    requiredItems: [{ suffix: "anti-garlic-bread", label: "Garlic Bread" }],
-  },
-] as NonNullable<UpsellConfig["combos"]>;
