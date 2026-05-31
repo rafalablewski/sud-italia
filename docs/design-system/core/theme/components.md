@@ -6,6 +6,24 @@ The primitive vocabulary every Core surface composes from. **Don't add
 to it casually** — a new primitive here lands on five modules at once
 and earns or loses operator trust on every one.
 
+## Two vocabularies
+
+- **`.core-suite` primitives** (`suite.css`, ported from the mockup's
+  `system.css`) — used by **POS** and the **Guest hub** inside
+  `<CoreShell>`: `.shell` / `.sidebar` / `.topbar` / `.viewnav` (shell),
+  `.card` / `.btn` (`.primary` / `.ghost` / `.lg` / `.xl` / `.icon`) /
+  `.badge` (`.brand` / `.platinum` / `.success` / …) / `.input` / `.seg`
+  / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
+  plus per-page layout (`.prod`, `.conv`, `.cust`, `.panel`, …). Generic
+  names, all scoped under `.core-suite`.
+- **`.cmd-*` chrome** (`index.css`) — used by **KDS** (the kitchen
+  wall): the header / eyebrow / subbar / segmented / button / chip
+  documented below, plus `.ka-*` ticket primitives.
+
+The two share token *values* (warm-neutral, burgundy, platinum) but not
+class names. Everything below is the `.cmd-*` set (KDS); the
+`.core-suite` set mirrors `public/mockups/core-suite/system.css` 1:1.
+
 ## Shared chrome (every Core module uses)
 
 ### Command header — `.cmd-head`

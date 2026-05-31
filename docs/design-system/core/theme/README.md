@@ -3,21 +3,39 @@
 Everything the Core theme owns. **No cross-theme links.** A Core token
 change must leave Admin and Homepage visually unchanged.
 
-## What ships today
+## Two CSS layers (mid-migration)
 
-- **CSS:** `src/app/themes/core/index.css` — declares the canonical
-  `--cmd-*` palette at `:root` and the `.cmd-*` / `.kds-*` / `.ka-*` /
-  `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*` surfaces. Loaded only by
-  `src/app/admin/layout.tsx` (Core modules live at `/admin/{pos,kds,
-  crm,concierge,whatsapp}`).
+The Core theme ships in **two** stylesheets, both loaded only by
+`src/app/admin/layout.tsx`:
+
+1. **`src/app/themes/core/suite.css`** — the **current** design, a 1:1
+   port of the core-suite mockup (`public/mockups/core-suite/
+   system.css` + the per-page layout styles). All rules are scoped under
+   **`.core-suite`** so its deliberately-generic class names (`.card` /
+   `.btn` / `.badge` / `.seg` / `.stat` / `.shell` / `.prod` / `.conv` /
+   …) can't leak into Admin or Homepage. This is what **POS** and the
+   **Guest hub** render, inside `<CoreShell>`
+   (`src/components/admin/core/CoreShell.tsx`) — the mockup's SI sidebar
+   + topbar as a fixed full-viewport layer. Tokens are redeclared on
+   `.core-suite` (same warm-neutral / burgundy / platinum values as
+   `--cmd-*`, under the mockup's generic names `--bg` / `--fg` /
+   `--brand` / `--surface-*`).
+2. **`src/app/themes/core/index.css`** — the original `--cmd-*` palette
+   at `:root` plus the `.cmd-*` / `.kds-*` / `.ka-*` surfaces. This now
+   backs the **KDS** kitchen-wall display (`.kds-atlas`, full-bleed via
+   `.kds-bleed`). The legacy `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-*`
+   rules here are **dead** for POS/Guest (those moved to `suite.css`) and
+   are pending a prune — KDS is the only live consumer of this file.
+
 - **JS-side token mirror:** `src/app/themes/core/theme.ts` exports the
-  same values as typed constants. No JS consumers today; the file
-  exists so future Recharts / canvas / inline-SVG code on a Core
-  surface imports from one place instead of hardcoding hex.
-- **Fonts:** Core inherits the admin fonts loaded in
-  `src/app/admin/layout.tsx` (`--font-admin-body` /
-  `--font-admin-display`). Core has no display-serif use — `.cmd-*`
-  surfaces are workhorse-Inter throughout.
+  `--cmd-*` values as typed constants (for future Recharts / canvas
+  code on KDS).
+- **Fonts:** loaded in `src/app/admin/layout.tsx` (`--font-admin-body`
+  Inter, `--font-admin-display` Fraunces, `--font-admin-mono` JetBrains
+  Mono). The **`.core-suite`** surfaces (POS / Guest) **do** use Fraunces
+  for display text (KPI values, dish + guest names) per the mockup; the
+  **KDS** (`.cmd-*`) surface stays workhorse-Inter — density over flourish
+  on the line.
 
 ## Core-specific rules
 
@@ -36,7 +54,7 @@ change must leave Admin and Homepage visually unchanged.
 
 - [`philosophy.md`](./philosophy.md) — Core's operating principle: operational clarity outranks brand expression.
 - [`color.md`](./color.md) — the `--cmd-*` palette + status hues + the platinum jewellery rule.
-- [`typography.md`](./typography.md) — Inter + JetBrains Mono only; the dense 13px body default; the three read-across-the-line numerals.
+- [`typography.md`](./typography.md) — the dense 13px Inter body + JetBrains Mono numerals on KDS; Fraunces display on the `.core-suite` POS / Guest surfaces (KPI values, dish + guest names).
 - [`material.md`](./material.md) — the canvas → panel → raised elevation ramp; hairlines; 12px card radius; quiet 160ms motion; no spring on operator stations.
 - [`components.md`](./components.md) — Core primitives: shared chrome (header, eyebrow, subbar, segmented, button, chip), KDS ticket + quantity badge + action button, POS tab card + tender pad + course divider, CRM regular row + health gauge, Concierge tool card + allergen matrix, WhatsApp thread card + live thread bubbles.
 
