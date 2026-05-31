@@ -466,6 +466,7 @@ function TruckBoard({
           <div className="l">Revenue / hr</div>
           <div className="v">{zl(tile.revenueHr)}</div>
         </div>
+        <Sparkline points={tile.throughputSeries} color={healthColor} />
         <div className="capmeter">
           <div className="lbl">
             <span>Capacity · {bottleneck ? bottleneck.label : "within capacity"}</span>

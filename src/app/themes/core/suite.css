@@ -514,6 +514,7 @@
 .tcell.risk .v { color: var(--risk); } .tcell.late .v { color: var(--late); } .tcell.ready .v { color: var(--ready); }
 .pacehead { display: flex; align-items: center; gap: 18px; padding: 12px 17px; border-bottom: 1px solid var(--hair); }
 .pacehead .met .l { font-size: 10.5px; color: var(--faint); } .pacehead .met .v { font: 600 15px var(--mono); margin-top: 3px; }
+.sparkbox { width: 64px; height: 26px; flex: none; }
 .capmeter { flex: 1; margin-left: auto; }
 .capmeter .lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 5px; }
 .capmeter .lbl .hint { color: var(--warn); }
