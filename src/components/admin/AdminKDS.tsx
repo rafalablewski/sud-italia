@@ -33,8 +33,10 @@ import {
   nextStatus,
   remainingSlaSeconds,
   ticketCategories,
+  toneForTicket,
   totalPrepSeconds,
 } from "./kds-board";
+import { KdsCt } from "./kds/KdsCt";
 import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
@@ -199,9 +201,11 @@ function AdminKDSDesktop({
   // SIMULATION tickets and flags itself with a Sandbox tag next to the wordmark.
   const { enabled: simEnabled } = useKdsSimulator(location);
 
-  // The KDS shows every station; the per-station filter chips were retired, so
-  // the board (and the shared ticket cards) always render the full ticket.
-  const station: MenuCategory | "all" = "all";
+  // Station focus. The floor + manager boards always show every station
+  // ("all"); the chef line lets the cook narrow the queue to their station
+  // (Pizza / Pasta / Cold …) via the chip rail in the chef strip — real
+  // category filtering off `ticketCategories`, not a cosmetic toggle.
+  const [station, setStation] = useState<MenuCategory | "all">("all");
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
@@ -578,13 +582,23 @@ function AdminKDSDesktop({
 
         {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
 
-        {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
+        {!kiosk && chefStrip && (
+          <KdsChefStrip orders={orders} station={station} onStation={setStation} location={location} />
+        )}
 
         <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
         {loading ? (
           <div className="v2-page-loading">Loading Kitchen Display…</div>
         ) : orders.length === 0 ? (
           <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
+        ) : chefStrip ? (
+          <KdsChefQueue
+            columns={visibleByStatus}
+            lane={lane}
+            nowMs={now}
+            updatingId={updatingId}
+            onAdvance={advance}
+          />
         ) : lane === "all" ? (
           <KdsBoard
             columns={visibleByStatus}
@@ -790,10 +804,12 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
 function KdsChefStrip({
   orders,
   station,
+  onStation,
   location,
 }: {
   orders: Order[];
   station: MenuCategory | "all";
+  onStation: (s: MenuCategory | "all") => void;
   location: string;
 }) {
   const toast = useToast();
@@ -848,7 +864,19 @@ function KdsChefStrip({
     const age = totalPrepSeconds(o);
     if (age > oldest) oldest = age;
   }
-  const stationLabel = STATION_FILTERS.find((s) => s.id === station)?.label ?? "All stations";
+
+  // Station chip rail: "All" plus every station that actually has a ticket on
+  // the line right now, with its live depth. Tapping a chip narrows the queue
+  // to that station (real category filter), so the cook sees only their pass.
+  const stationCounts = new Map<MenuCategory | "all", number>();
+  for (const o of orders) {
+    for (const cat of ticketCategories(o)) {
+      stationCounts.set(cat, (stationCounts.get(cat) ?? 0) + 1);
+    }
+  }
+  const stationChips = STATION_FILTERS.filter(
+    (s) => s.id === "all" || (stationCounts.get(s.id) ?? 0) > 0 || s.id === station,
+  );
 
   // Items currently on the active tickets (optionally narrowed to the
   // focused station) — the chef's one-tap 86 candidates.
@@ -864,15 +892,29 @@ function KdsChefStrip({
   }
 
   return (
-    <div className="kds-ops">
-      <div className="kds-ops-stats">
-        <span className="ostat" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--t)" }}>
-          <ChefHat className="h-4 w-4" /> {stationLabel}
-        </span>
-        <div className="ostat"><div className="l">In queue</div><div className="v">{focused.length}</div></div>
-        <div className="ostat"><div className="l">Oldest</div><div className="v">{focused.length > 0 ? fmtClock(oldest) : "—"}</div></div>
+    <div className="kds-chefstrip">
+      <div className="kds-stations">
+        {stationChips.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`kds-station${station === s.id ? " on" : ""}`}
+            onClick={() => onStation(s.id)}
+          >
+            {s.id === "all" ? <ChefHat className="h-4 w-4" /> : null}
+            {s.label}
+            <span className="n">{s.id === "all" ? orders.length : stationCounts.get(s.id) ?? 0}</span>
+          </button>
+        ))}
       </div>
-      <div className="kds-86">
+      <div className="kds-qdepth">
+        <div className="kds-qd"><div className="l">In queue</div><div className="v">{focused.length}</div></div>
+        <div className={`kds-qd${oldest >= 480 ? " warn" : ""}`}>
+          <div className="l">Oldest</div>
+          <div className="v">{focused.length > 0 ? fmtClock(oldest) : "—"}</div>
+        </div>
+      </div>
+      <div className="kds-chef-86">
         <span className="lbl">86&apos;d</span>
         {eightySixed.length === 0 ? (
           <span style={{ color: "var(--faint)", fontSize: 12 }}>Nothing 86&apos;d</span>
@@ -908,6 +950,49 @@ function KdsChefStrip({
           ))}
         </select>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Chef-line queue — the dense, large-type `.kds-queue` of `.ct` cards
+ * (kds-chef.html). One flat grid sized for reading across the line, oldest
+ * ticket first, honouring the stage filter from the header. Distinct from the
+ * 3-column floor board: the line cook works a single station, not the whole
+ * floor, so there are no status columns here.
+ */
+function KdsChefQueue({
+  columns,
+  lane,
+  nowMs,
+  updatingId,
+  onAdvance,
+}: {
+  columns: Map<OrderStatus, KdsTicket[]>;
+  lane: OrderStatus | "all";
+  nowMs: number;
+  updatingId: string | null;
+  onAdvance: (t: KdsTicket) => void;
+}) {
+  const tickets =
+    lane === "all" ? KDS_COLUMNS.flatMap((c) => columns.get(c.id) ?? []) : columns.get(lane) ?? [];
+  const sorted = [...tickets].sort((a, b) => a.paidAtMs - b.paidAtMs);
+
+  if (sorted.length === 0) {
+    return <div className="kds-empty">No tickets on this station.</div>;
+  }
+  return (
+    <div className="kds-queue">
+      {sorted.map((t) => (
+        <KdsCt
+          key={t.id}
+          t={t}
+          now={nowMs}
+          tone={toneForTicket(t, nowMs)}
+          advancing={updatingId === t.id}
+          onAdvance={onAdvance}
+        />
+      ))}
     </div>
   );
 }

@@ -21,7 +21,7 @@ export const ACTIVE_STATUSES: OrderStatus[] = ["confirmed", "preparing", "ready"
 
 export const KDS_COLUMNS: { id: OrderStatus; label: string; tone: "warning" | "info" | "success" }[] = [
   { id: "confirmed", label: "New", tone: "warning" },
-  { id: "preparing", label: "In progress", tone: "info" },
+  { id: "preparing", label: "Firing", tone: "info" },
   { id: "ready", label: "Ready · Expo", tone: "success" },
 ];
 

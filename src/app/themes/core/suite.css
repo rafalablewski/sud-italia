@@ -475,6 +475,47 @@
 .kds-empty { grid-column: 1/-1; text-align: center; color: var(--faint); padding: 40px; font-size: 13px; }
 @media (max-width: 1000px) { .kds-board { grid-template-columns: 1fr; } }
 
+/* ---- KDS Chef line (kds-chef.html): station focus + large-type queue ---- */
+.kds-chefstrip { display: flex; align-items: center; gap: 18px; flex: none; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 13px 16px; }
+.kds-stations { display: flex; gap: 6px; flex-wrap: wrap; }
+.kds-station { height: 38px; padding: 0 17px; border-radius: 8px; border: 1px solid var(--hair); background: transparent; color: var(--dim); font: 600 14px var(--ui); cursor: pointer; display: flex; align-items: center; gap: 9px; }
+.kds-station:hover { color: var(--t); border-color: var(--hair-2); }
+.kds-station.on { background: var(--raised); color: var(--t); border-color: var(--hair-2); }
+.kds-station .n { font: 600 12px var(--mono); color: var(--faint); }
+.kds-station.on .n { color: var(--dim); }
+.kds-qdepth { display: flex; gap: 24px; margin-left: 8px; }
+.kds-qd .l { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.kds-qd .v { font: 600 20px var(--mono); margin-top: 3px; color: var(--t); }
+.kds-qd.warn .v { color: var(--warn); }
+.kds-chef-86 { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.kds-queue { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-content: start; padding: 1px; }
+.ct { background: var(--panel); border: 1px solid var(--hair); border-left: 3px solid transparent; border-radius: 10px; padding: 14px 16px; }
+.ct.warn, .ct.risk { border-left-color: var(--warn); }
+.ct.late { border-left-color: var(--late); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
+.ct.ready { border-left-color: color-mix(in oklab, var(--ready) 55%, transparent); opacity: .92; }
+.ct-sim { font: 600 11px var(--ui); color: var(--platinum); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.ct-sim svg { flex: none; }
+.ct-h { display: flex; align-items: center; gap: 10px; }
+.ct-id { font: 600 16px var(--ui); letter-spacing: -.01em; color: var(--t); }
+.ct-type { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; background: var(--raised); color: var(--dim); }
+.ct-course { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--hair-2); color: var(--dim); }
+.ct-timer { margin-left: auto; font: 600 22px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.ct.warn .ct-timer, .ct.risk .ct-timer { color: var(--warn); }
+.ct.late .ct-timer { color: var(--late); }
+.ct-coursehint { padding: 6px 0 0; font: 500 11px var(--ui); color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.ct-coursehint svg { opacity: .7; flex: none; width: 12px; height: 12px; }
+.ct-it { display: flex; gap: 12px; padding: 9px 0 4px; min-width: 0; }
+.ct-it > div { min-width: 0; }
+.ct-q { font: 600 22px var(--mono); min-width: 38px; flex: none; color: var(--dim); }
+.ct-nm { font-family: var(--display); font-weight: 500; font-size: 21px; letter-spacing: .005em; color: var(--t); overflow-wrap: anywhere; }
+.ct-mod { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 15px; color: var(--warn); margin-top: 2px; }
+.ct-alrg { margin-top: 9px; padding: 5px 9px; border-radius: 6px; background: color-mix(in oklab, var(--late) 12%, transparent); color: var(--late); font: 600 11.5px var(--ui); display: flex; gap: 7px; align-items: center; }
+.ct-alrg svg { width: 12px; height: 12px; flex: none; }
+.ct-notes { margin-top: 9px; padding: 6px 9px; border-radius: 6px; background: var(--raised); font-size: 12px; color: var(--dim); }
+.ct-notes b { color: var(--t); font-weight: 600; }
+.ct-f { margin-top: 11px; }
+.ct-f .bump { height: 46px; font: 600 15px var(--ui); }
+
 /* ---- KDS Fleet command wall (kds-fleet.html) ---- */
 .kds-core .cmdbar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 14px; }
 .cstat { background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 12px 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }

@@ -100,11 +100,18 @@ The small dense pill — labels, status tags, role markers.
 - Always a single value — chips don't wrap. If you need wrapping,
   use the chip strip pattern from mobile (`.v2-m-chip-strip`).
 
-## KDS — `.kds-atlas` + `.ka-ticket`
+## KDS — `.kds-atlas` + `.ka-ticket` (mobile only)
 
-### Ticket card — `.ka-ticket`
+> **Scope:** the **desktop** KDS (Fleet / Floor / Chef) was rebuilt onto the
+> `.kds-core` core-suite surface — `.cmdbar` / `.truck` / `.mt` (Fleet),
+> `.kds-board` / `.tk` (Floor), `.kds-chefstrip` / `.kds-queue` / `.ct`
+> (Chef). Its anatomy lives in [`../modules/kds.md`](../modules/kds.md). The
+> `.kds-atlas` / `.ka-*` vocabulary below survives only as the **mobile** KDS
+> chrome (`MobileKDS`, `index.css`).
 
-The fundamental KDS unit.
+### Ticket card — `.ka-ticket` (mobile)
+
+The fundamental unit of the **mobile** KDS.
 
 - Background: `--cmd-raised`. Border 1px `--cmd-hair`. Radius 12px.
   Padding 16px 16px 16px 20px (extra left for the rail).

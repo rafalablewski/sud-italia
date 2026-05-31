@@ -7,8 +7,10 @@ display under pressure — the only thing that matters is that the eye lands
 on what's wrong.
 
 **Live code:** `src/components/admin/AdminKDS.tsx` + sub-components
-(`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTicketCard.tsx`,
-`KdsManagerOpsHeader.tsx`, `KdsChefStrip.tsx`, mobile `MobileKDS.tsx`).
+(`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTk.tsx` (floor `.tk`),
+`kds/KdsCt.tsx` (chef `.ct`), `kds/KdsTicketCard.tsx` (shared `Ring` +
+mobile), mobile `MobileKDS.tsx`). `KdsManagerOpsHeader` + `KdsChefStrip`
+live in `AdminKDS.tsx`.
 **Mockups:** `kds-fleet.html` → `kds.html` → `kds-chef.html`.
 **Theme:** rebuilt 1:1 onto the core-suite mockups on the **`.kds-core`**
 surface (a fixed full-viewport layer in `suite.css`) — the KDS is a
@@ -17,23 +19,34 @@ SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
 `/admin/kds` is in `CORE_ROUTES` so the admin chrome steps aside; an
 "Admin" back link in the header is the way out. The three views:
 
-- **Floor / Chef** (`AdminKDSDesktop`, `kds.html` / `kds-chef.html`):
-  `.kds-top` (SI brand-mark + Fleet/Floor/Chef viewswitch + centred stage
-  filter + clock + sound/pause/refresh/fullscreen), the `.kds-ops` /
-  `.ostat` ops header (manager) or chef strip, the 3-column `.kds-board`,
-  and the **`.tk` ticket** (`KdsTk`: text timer escalating with the SLA,
-  category-grouped items, allergen / notes, SLA meter, bump). 86
-  management is a `.kds-restore` row + native `.kds-btn86` picker.
+- **Floor** (`AdminKDSDesktop`, `kds.html`): `.kds-top` (SI brand-mark +
+  Fleet/Floor/Chef viewswitch + centred stage filter + clock +
+  sound/pause/refresh/fullscreen), the `.kds-ops` / `.ostat` manager ops
+  header, the 3-column `.kds-board`, and the **`.tk` ticket** (`KdsTk`:
+  text timer escalating with the SLA, category-grouped items, allergen /
+  notes, SLA meter, bump). 86 management is a `.kds-restore` row + native
+  `.kds-btn86` picker.
+- **Chef** (`AdminKDSDesktop` with `chefStrip`, `kds-chef.html`): same
+  `.kds-top`, then the **`.kds-chefstrip`** — a `.kds-station` chip rail
+  (All + every station with a live ticket, real `ticketCategories` filter,
+  depth count on each), the `.kds-qdepth` (In queue / Oldest, Oldest goes
+  `.warn` past 8 min) and the `.kds-chef-86` controls — over a single flat
+  **`.kds-queue`** (auto-fill grid, oldest-first, honours the stage filter)
+  of large-type **`.ct` cards** (`KdsCt`: 21px Fraunces dish names, 22px
+  quantities, 46px bump — sized to read across the line; no SLA meter, the
+  cook only needs dish + timer + bump). Allergens/notes are kept on the
+  `.ct` for safety even though the static mockup omits them.
 - **Fleet** (`AdminKdsFleet`, `kds-fleet.html`): `.cmdbar` (7 tiles),
   per-truck promise-accuracy `.bench`, and `.truck` cards (health `.ring`,
   5-cell stat row, `.pacehead` + capacity meter, per-station `.gauges`,
   compact `.mt` ticket stack). Drill-in flips to that truck's floor.
 
 The old `.kds-atlas` / `.ka-*` chrome is retired; `KdsTicketCard` survives
-only because it still exports the shared `Ring`. **Known gaps:** ticket
-items group by *station/category*, not the mockup's per-course headers
-(KDS order items don't carry per-item course), and the per-station chef
-filter stays retired (`station = "all"`).
+only because it still exports the shared `Ring` (+ the mobile KDS). **Known
+gap:** ticket items group by *station/category*, not the mockup's per-course
+headers (KDS order items don't carry per-item course). The per-station chef
+filter is **live** again on the Chef view (the `.kds-station` chip rail) —
+the Floor + manager boards still run station-agnostic (`station = "all"`).
 
 ## The core principle
 
