@@ -330,6 +330,125 @@
 .core-suite .core-suite-toast svg { width: 15px; height: 15px; }
 
 /* ============================================================
+   KDS — kitchen wall (ported from kds.html / kds-fleet.html /
+   kds-chef.html). Its own dark monochrome surface, scoped under
+   `.kds-core`; colour is reserved for SLA exceptions. No SI sidebar.
+   ============================================================ */
+.kds-core {
+  --canvas: #0a0a0c; --panel: #141318; --raised: #1f1d25;
+  --hair: rgba(255,255,255,.09); --hair-2: rgba(255,255,255,.16);
+  --t: #f4f2ee; --dim: #b6afa6; --faint: #8d847b;
+  --warn: #e0a93f; --late: #e5484d; --ready: #4ea882;
+  --platinum: #cbb48a;
+  --ui: var(--font-admin-body), ui-sans-serif, system-ui, sans-serif;
+  --display: var(--font-admin-display), Georgia, serif;
+  --mono: var(--font-admin-mono), ui-monospace, monospace;
+  position: fixed; inset: 0; z-index: 30; overflow: auto;
+  background: var(--canvas); color: var(--t);
+  font-family: var(--ui); font-size: 13px; line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.kds-core *, .kds-core *::before, .kds-core *::after { box-sizing: border-box; }
+.kds-core.is-fullscreen { z-index: 2147483600; }
+.kds-wrap { min-height: 100%; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
+.kds-top { display: flex; align-items: center; gap: 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
+.kds-top .kds-id { display: flex; align-items: center; gap: 11px; }
+.kds-top .brand-mark { width: 28px; height: 28px; border-radius: 9px; background: var(--brand, #a62d49); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 11px; letter-spacing: .04em; }
+.kds-top .kds-id .nm { font-family: var(--display); font-size: 17px; font-weight: 600; }
+.kds-top .kds-id .loc { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.kds-viewswitch { display: inline-flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
+.kds-viewswitch a, .kds-viewswitch button { height: 30px; padding: 0 14px; border: 0; background: transparent; color: var(--dim); font: 600 12.5px var(--ui); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.kds-viewswitch a:hover, .kds-viewswitch button:hover { color: var(--t); }
+.kds-viewswitch .on { background: var(--raised); color: var(--t); }
+.kds-stage { margin: 0 auto; display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
+.kds-stage button { height: 30px; padding: 0 15px; border: 0; background: transparent; color: var(--dim); font: 600 13px var(--ui); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.kds-stage button.on { background: var(--raised); color: var(--t); }
+.kds-stage .n { font: 600 11px var(--mono); color: var(--faint); }
+.kds-clock { font: 600 19px var(--mono); padding: 5px 13px; border-radius: 8px; background: var(--panel); border: 1px solid var(--hair); color: var(--t); letter-spacing: .02em; }
+.kds-ctrl { min-width: 34px; height: 34px; padding: 0 9px; border-radius: 7px; border: 1px solid var(--hair); background: var(--panel); color: var(--dim); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: color .12s, border-color .12s; font: 600 12px var(--ui); text-decoration: none; }
+.kds-ctrl:hover { color: var(--t); border-color: var(--hair-2); }
+.kds-ctrl.on { color: var(--t); border-color: var(--hair-2); background: var(--raised); }
+.kds-ctrl svg { width: 16px; height: 16px; }
+
+.kds-ops { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; }
+.kds-ops-stats { display: flex; gap: 7px; flex-wrap: wrap; }
+.ostat { background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 13px; min-width: 80px; }
+.ostat .l { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.ostat .v { font: 600 16px var(--mono); margin-top: 3px; color: var(--t); }
+.ostat.alert .v { color: var(--late); } .ostat.warn .v { color: var(--warn); } .ostat.good .v { color: var(--ready); }
+.kds-86 { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kds-86 .lbl { font: 600 9.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.kds-restore { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 7px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--ui); cursor: pointer; }
+.kds-restore .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--late); }
+.kds-restore .x { color: var(--faint); font-size: 11px; }
+.kds-restore:hover { color: var(--t); border-color: var(--hair-2); }
+.kds-btn86 { height: 30px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--hair-2); background: var(--panel); color: var(--dim); font: 600 12.5px var(--ui); cursor: pointer; }
+.kds-btn86:hover { color: var(--t); border-color: var(--t); }
+
+.kds-board { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.kds-col { display: flex; flex-direction: column; min-width: 0; }
+.kds-col-head { display: flex; align-items: center; gap: 10px; padding: 0 2px 10px; }
+.kds-col-head .lbl { font: 600 12px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.kds-col-head .cnt { font: 600 12px var(--mono); color: var(--faint); }
+.kds-col-head .rule { flex: 1; height: 1px; background: var(--hair); }
+.kds-col.active .kds-col-head .lbl { color: var(--t); }
+.kds-col.active .kds-col-head .rule { background: rgba(203,180,138,.35); }
+.kds-col-body { display: flex; flex-direction: column; gap: 11px; padding: 1px; }
+
+/* ticket */
+.tk { flex: none; background: var(--panel); border: 1px solid var(--hair); border-left: 3px solid transparent; border-radius: 10px; overflow: hidden; }
+.tk.warn, .tk.risk { border-left-color: var(--warn); }
+.tk.late { border-left-color: var(--late); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
+.tk.ready { border-left-color: color-mix(in oklab, var(--ready) 55%, transparent); opacity: .9; }
+.tk-h { display: flex; align-items: center; gap: 9px; padding: 11px 13px 7px; }
+.tk-id { font: 600 15px var(--ui); letter-spacing: -.01em; color: var(--t); }
+.tk-type { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: var(--raised); color: var(--dim); }
+.tk-course { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--hair-2); color: var(--dim); }
+.tk-course.together { border-color: color-mix(in oklab, var(--platinum) 45%, var(--hair-2)); color: var(--platinum); }
+.tk-coursehint { padding: 0 13px 7px; font: 500 11px var(--ui); color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.tk-coursehint svg { opacity: .7; flex: none; width: 12px; height: 12px; }
+.tk-timer { margin-left: auto; font: 600 20px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.tk.warn .tk-timer, .tk.risk .tk-timer { color: var(--warn); }
+.tk.late .tk-timer { color: var(--late); }
+.tk.ready .tk-timer { color: var(--ready); font-size: 13px; font-family: var(--ui); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.tk-items { padding: 1px 13px 7px; min-width: 0; }
+.tk-grp { font: 600 9px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 5px 0 3px; }
+.tk-it { display: flex; gap: 11px; padding: 4px 0; min-width: 0; }
+.tk-it > div { min-width: 0; }
+.tk-q { font: 600 15px var(--mono); min-width: 26px; flex: none; color: var(--dim); }
+.tk-nm { font-family: var(--display); font-weight: 500; font-size: 16.5px; letter-spacing: .005em; color: var(--t); overflow-wrap: anywhere; }
+.tk-mod { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 14px; color: var(--warn); margin-top: 2px; }
+.tk-alrg { margin: 1px 13px 7px; padding: 5px 9px; border-radius: 6px; background: color-mix(in oklab, var(--late) 12%, transparent); color: var(--late); font: 600 11.5px var(--ui); display: flex; gap: 7px; align-items: center; }
+.tk-alrg svg { width: 12px; height: 12px; flex: none; }
+.tk-notes { margin: 0 13px 8px; padding: 6px 9px; border-radius: 6px; background: var(--raised); font-size: 12px; color: var(--dim); }
+.tk-notes b { color: var(--t); font-weight: 600; }
+.tk-f { display: flex; flex-direction: column; gap: 9px; padding: 8px 13px 12px; }
+.tk-eta { display: flex; align-items: center; gap: 10px; }
+.tk-eta .lbl { font: 500 11.5px var(--ui); color: var(--faint); white-space: nowrap; flex: none; }
+.tk.warn .tk-eta .lbl, .tk.risk .tk-eta .lbl { color: var(--warn); }
+.tk.late .tk-eta .lbl { color: var(--late); }
+.tk.ready .tk-eta .lbl { color: var(--ready); }
+.sla { flex: 1; height: 4px; border-radius: 99px; background: var(--raised); overflow: hidden; }
+.sla i { display: block; height: 100%; background: var(--dim); }
+.tk.warn .sla i, .tk.risk .sla i { background: var(--warn); }
+.tk.late .sla i { background: var(--late); }
+.tk.ready .sla i { background: var(--ready); }
+.bump { width: 100%; height: 38px; padding: 0 18px; border: 1px solid var(--hair-2); border-radius: 7px; font: 600 13px var(--ui); cursor: pointer; background: var(--raised); color: var(--t); transition: border-color .12s, background .12s; }
+.bump:hover { border-color: var(--t); }
+.tk.late .bump { border-color: color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
+
+.kds-footrow { flex: none; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.kds-recall { display: flex; align-items: center; gap: 9px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 7px 5px 13px; }
+.kds-recall .lbl { font: 600 9.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.kds-recall .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 6px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--mono); cursor: pointer; }
+.kds-recall .chip:hover { color: var(--t); border-color: var(--hair-2); }
+.kds-legend { margin-left: auto; display: flex; gap: 18px; align-items: center; font: 500 11px var(--ui); color: var(--faint); }
+.kds-legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.kds-legend .sw { width: 8px; height: 8px; border-radius: 2px; background: var(--dim); }
+.kds-empty { grid-column: 1/-1; text-align: center; color: var(--faint); padding: 40px; font-size: 13px; }
+@media (max-width: 1000px) { .kds-board { grid-template-columns: 1fr; } }
+
+/* ============================================================
    GUEST · INBOX (ported from guest.html page styles)
    ============================================================ */
 .core-suite .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--border); flex: none; }
