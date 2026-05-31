@@ -51,6 +51,29 @@ environment (see constraint below).
 - `next build` succeeds; `npm test` = 119/119 pass — green on every
   commit in the rebuild.
 
+### Functional end-to-end (real data, via the running app's APIs)
+Beyond markup, the full POS → KDS chain was exercised against the live
+dev server with **real Kraków menu data** (no mocks):
+1. `POST /api/admin/pos/tabs` → created a tab.
+2. `PUT` set it dine-in + coursed with real items (2× `krk-pizza-
+   margherita` + 1× `krk-pizza-diavola`, course `main`); the API echoed
+   the coursed line shape back (`course:"main"`, `coursed:true`).
+3. `POST /api/admin/pos/orders {tabId, courses:["main"]}` → created a
+   real `Order` with `firedCourses:["main"]` (Phase-2 coursing wired).
+4. `GET /api/admin/kds/fleet` returned the ticket on the Kraków tile —
+   read from the JSON: `[[2,"Margherita"],[1,"Diavola"]]`,
+   `status:"confirmed"`, `coursing:{fired:["main"],held:[]}` — i.e.
+   `buildKdsTicket` + the coursing hint render off real persistence, not
+   fixtures.
+5. `PUT /api/admin/orders {status:"preparing"}` (the bump path the
+   rebuilt `KdsTk` buttons call) → the fleet feed reflected `preparing`.
+
+The test order lives only in the gitignored dev (filesystem-fallback)
+store, so the working tree stayed clean. This is the deepest functional
+check reachable without a browser: it proves the rebuilt POS + KDS
+render and mutate **real** order data end-to-end, satisfying the "wire
+every feature to real data" rule.
+
 ## What was NOT verified (constraint)
 
 **No pixel/visual screenshots.** This container has no browser engine,
