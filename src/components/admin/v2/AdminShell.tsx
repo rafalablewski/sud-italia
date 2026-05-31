@@ -110,9 +110,11 @@ export function AdminShell({ children }: Props) {
   }
 
   const isCore = CORE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
-  if (isCore) {
-    // Providers only — no Sidebar / Topbar / palette. The Core page owns the
-    // viewport via its own CoreShell (.core-suite is a fixed full-screen layer).
+  // Desktop Core surfaces own the full viewport via their own CoreShell
+  // (.core-suite / .kds-core fixed layers), so the admin chrome steps aside —
+  // providers only. On mobile we keep MobileShell (bottom nav): the Core pages
+  // swap to their dedicated Mobile* components, which rely on that chrome.
+  if (isCore && isMobileReady && !isMobile) {
     return (
       <AdminLocationProvider>
         <ShellContext.Provider value={ctxValue}>
