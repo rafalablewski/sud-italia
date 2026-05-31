@@ -2,21 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  AlertTriangle,
-  ChevronLeft,
-  MapPin,
-  Maximize2,
-  Minimize2,
-  RefreshCw,
-} from "lucide-react";
+import { ChevronLeft, Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import type { MenuCategory, OrderStatus } from "@/data/types";
 import { formatPricePLN } from "@/lib/utils";
+import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useToast } from "./v2/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
-import { KdsTicketCard, Ring } from "./kds/KdsTicketCard";
-import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
-import { SectionEyebrow } from "./command";
+import { Ring } from "./kds/KdsTicketCard";
 import { useFullscreen } from "./command/useFullscreen";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
@@ -76,25 +68,6 @@ function zl(grosze: number): string {
 const TONE_ORDER: Record<TicketTone, number> = { late: 0, risk: 1, warn: 2, firing: 3, queued: 4, ready: 5 };
 
 /* ============================ SVG bits ============================ */
-
-function Sparkline({ points, color }: { points: number[]; color: string }) {
-  const w = 64;
-  const h = 20;
-  if (points.length < 2) return null;
-  const max = Math.max(...points, 1);
-  const min = Math.min(...points, 0);
-  const span = max - min || 1;
-  const step = w / (points.length - 1);
-  const coords = points.map((p, i) => [i * step, h - 2 - ((p - min) / span) * (h - 4)] as const);
-  const d = "M" + coords.map((c) => `${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(" L ");
-  const area = `${d} L ${w} ${h} L 0 ${h} Z`;
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
-      <path d={area} fill={color} opacity={0.12} />
-      <path d={d} fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 /* ============================ Component ============================ */
 
@@ -194,74 +167,82 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
   const clock = useMemo(() => fmtWallClock(now), [now]);
 
   const board = (
-    <div className={`kds-atlas kds-bleed${fullscreen ? " is-fullscreen" : ""}`}>
-      {/* ---------------- Header ---------------- */}
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Fleet command</span>
-          {simEnabled && <span className="ka-sandbox">Sandbox</span>}
+    <div className={`kds-core${fullscreen ? " is-fullscreen" : ""}`}>
+      <div className="wrap">
+        <div className="top">
+          <div className="id">
+            <div className="brand-mark">SI</div>
+            <div>
+              <div className="nm">Fleet Command</div>
+              <div className="loc">Atlas · all trucks</div>
+            </div>
+          </div>
+          <div className="kds-viewswitch">
+            <button type="button" className="on">Fleet</button>
+            {data?.tiles[0] && (
+              <button type="button" onClick={() => onDrillIn?.(data.tiles[0].slug)}>Floor</button>
+            )}
+          </div>
+          {simEnabled && (
+            <span className="badge platinum" style={{ marginLeft: 4 }}>
+              <span className="d" />
+              Sandbox
+            </span>
+          )}
+          <div className="clock" style={{ marginLeft: "auto" }}>{clock}</div>
+          <a href="/admin" className="kds-ctrl" title="Back to admin">
+            <ChevronLeft className="h-4 w-4" />
+          </a>
+          <button type="button" className="kds-ctrl" onClick={() => void load()} title="Refresh now">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={`kds-ctrl${fullscreen ? " on" : ""}`}
+            onClick={fullscreen ? exitFs : enterFs}
+            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen fleet wall"}
+          >
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
         </div>
-        <div className="cmd-spacer" />
-        <a href="/admin" className="cmd-btn" title="Back to admin">
-          <ChevronLeft className="h-3.5 w-3.5" />
-          <span>Admin</span>
-        </a>
-        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          onClick={fullscreen ? exitFs : enterFs}
-          aria-pressed={fullscreen}
-          title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen fleet wall"}
-        >
-          {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          <span>{fullscreen ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="cmd-clock tabular">{clock}</div>
-      </header>
 
-      {/* ---------------- Fleet command bar ---------------- */}
-      {data && (
-        <FleetBar
-          data={data}
-          now={now}
-          toneOf={toneOf}
-        />
-      )}
+        {data && <FleetBar data={data} now={now} toneOf={toneOf} />}
 
-      {/* ---------------- Boards ---------------- */}
-      {loading && !data ? (
-        <div className="v2-page-loading">Loading Kitchen Display…</div>
-      ) : error && !data ? (
-        <div className="ka-loading ka-error">
-          <AlertTriangle className="h-4 w-4" /> Couldn’t load fleet — {error}
-        </div>
-      ) : data && data.tiles.length === 0 ? (
-        <div className="ka-loading">No active trucks. Activate a location to see it here.</div>
-      ) : (
-        <div className="ka-boards">
-          {data?.tiles.map((tile) => (
-            <TruckBoard
-              key={tile.slug}
-              tile={tile}
-              now={now}
-              paceWindowMin={data.paceWindowMin}
-              toneOf={toneOf}
-              advancingId={advancingId}
-              onAdvance={advance}
-              onDrillIn={onDrillIn}
-            />
-          ))}
-        </div>
-      )}
+        {loading && !data ? (
+          <div className="fleet-empty">Loading Kitchen Display…</div>
+        ) : error && !data ? (
+          <div className="fleet-empty">Couldn’t load fleet — {error}</div>
+        ) : data && data.tiles.length === 0 ? (
+          <div className="fleet-empty">No active trucks. Activate a location to see it here.</div>
+        ) : (
+          <div className="trucks">
+            {data?.tiles.map((tile) => (
+              <TruckBoard
+                key={tile.slug}
+                tile={tile}
+                now={now}
+                paceWindowMin={data.paceWindowMin}
+                toneOf={toneOf}
+                advancingId={advancingId}
+                onAdvance={advance}
+                onDrillIn={onDrillIn}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
   return fullscreen ? createPortal(board, document.body) : board;
+}
+
+function mmssF(seconds: number): string {
+  const a = Math.abs(Math.round(seconds));
+  return `${Math.floor(a / 60)}:${String(a % 60).padStart(2, "0")}`;
+}
+function paceClass(tier?: PaceTier | null): string {
+  return tier === "risk" ? "riskp" : tier === "warn" ? "warnp" : "calm";
 }
 
 /* ============================ Fleet bar ============================ */
@@ -275,8 +256,6 @@ function FleetBar({
   now: number;
   toneOf: (t: WireTicket) => TicketTone;
 }) {
-  // Recompute late / at-risk / ready live across all trucks so the headline
-  // tiles shift the moment a ticket crosses a threshold.
   let active = 0;
   let late = 0;
   let risk = 0;
@@ -296,71 +275,84 @@ function FleetBar({
   void now;
   const { totals, benchmark, promiseTarget } = data;
 
-  const stats: KdsStat[] = [
-    { label: "Active", value: active, sub: `${ready} ready` },
-    { label: "At risk", value: risk, sub: "predicted miss", tone: risk > 0 ? "risk" : undefined },
-    { label: "Late", value: late, sub: "over SLA", tone: late > 0 ? "alert" : "good" },
-    { label: "Ready", value: ready, sub: "for expo", tone: ready > 0 ? "good" : undefined },
-    { label: "Throughput", value: totals.throughputHr, sub: "/ hr fleet", tone: "good" },
-    { label: "Covers", value: totals.coversHr, sub: "/ hr fleet" },
-    { label: "Revenue", value: zl(totals.revenueHr), sub: "/ hr fleet" },
-  ];
-
   return (
-    <section className="ka-fleetbar" aria-label="Fleet aggregate metrics">
-      <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Fleet command">
-        <b>{data.tiles.length}</b> {data.tiles.length === 1 ? "truck" : "trucks"} live
-      </SectionEyebrow>
-      <KdsStatGrid stats={stats} />
-      <div className="ka-fb-benchmark">
-        <span className="ka-fb-bm-lab">Promise-accuracy · cross-truck benchmark</span>
-        <div className="ka-bm-rows">
-          {data.tiles.map((t) => {
-            // Only crown a leader when there's an actual margin — a tied fleet
-            // has no leader (otherwise we'd badge "Lead" on a 0-pt gap).
-            const isLeader = t.name === benchmark.leader && data.tiles.length > 1 && benchmark.gap > 0;
-            const color =
-              t.promiseAccuracy >= promiseTarget
-                ? "var(--cmd-ready)"
-                : t.promiseAccuracy >= promiseTarget - 5
-                  ? "var(--cmd-warn)"
-                  : "var(--cmd-late)";
-            return (
-              <div className="ka-bm-row" key={t.slug}>
-                <span className="ka-bm-name">
-                  <span className="ka-bm-name-text">{t.name}</span>
-                  {isLeader && <span className="ka-bm-lead">Lead</span>}
-                </span>
-                <span className="ka-bm-track">
-                  <span className="ka-bm-fill" style={{ width: `${t.promiseAccuracy}%`, background: color }} />
-                  <span className="ka-bm-mark" style={{ left: `${promiseTarget}%` }} title={`target ${promiseTarget}%`} />
-                </span>
-                <span className="ka-bm-pct tabular">{t.promiseAccuracy}%</span>
-              </div>
-            );
-          })}
+    <>
+      <div className="cmdbar">
+        <div className="cstat">
+          <div className="l">Active</div>
+          <div className="v">{active}</div>
+          <div className="s">{ready} ready for expo</div>
         </div>
-        <div className="ka-bm-foot">
-          {data.tiles.map((t, i) => (
-            <span key={t.slug}>
-              {i > 0 && " · "}
-              {t.name} <b>{t.promiseAccuracy}%</b>
-            </span>
-          ))}
-          {" · "}fleet <b>{benchmark.fleetAccuracy}%</b>
-          {benchmark.gap > 0 && benchmark.leader && benchmark.lagger && benchmark.leader !== benchmark.lagger ? (
-            <>
-              {" — "}
-              <b style={{ color: "var(--cmd-ready)" }}>{benchmark.leader}</b> leads {benchmark.lagger} by {benchmark.gap} pts
-            </>
-          ) : (
-            <> — all trucks level</>
-          )}
-          {" (target "}
-          {promiseTarget}%)
+        <div className="cstat risk">
+          <div className="l">At risk</div>
+          <div className="v">{risk}</div>
+          <div className="s">predicted miss</div>
+        </div>
+        <div className="cstat late">
+          <div className="l">Late</div>
+          <div className="v">{late}</div>
+          <div className="s">over SLA</div>
+        </div>
+        <div className="cstat ready">
+          <div className="l">Ready</div>
+          <div className="v">{ready}</div>
+          <div className="s">for expo</div>
+        </div>
+        <div className="cstat">
+          <div className="l">Throughput</div>
+          <div className="v">
+            {totals.throughputHr}
+            <span className="u">/hr</span>
+          </div>
+          <div className="s">last 60 min</div>
+        </div>
+        <div className="cstat">
+          <div className="l">Covers</div>
+          <div className="v">
+            {totals.coversHr}
+            <span className="u">/hr</span>
+          </div>
+        </div>
+        <div className="cstat">
+          <div className="l">Revenue</div>
+          <div className="v">
+            {zl(totals.revenueHr)}
+            <span className="u">/hr</span>
+          </div>
         </div>
       </div>
-    </section>
+
+      <div className="bench">
+        <div className="h">
+          <span className="ttl">Promise-accuracy · cross-truck benchmark</span>
+          <span className="sub">
+            fleet <b>{benchmark.fleetAccuracy}%</b> · target {promiseTarget}%
+          </span>
+        </div>
+        {data.tiles.map((t) => {
+          const isLeader = t.name === benchmark.leader && data.tiles.length > 1 && benchmark.gap > 0;
+          const color =
+            t.promiseAccuracy >= promiseTarget
+              ? "var(--ready)"
+              : t.promiseAccuracy >= promiseTarget - 5
+                ? "var(--warn)"
+                : "var(--late)";
+          return (
+            <div className="brow" key={t.slug}>
+              <span className="city">
+                {t.name}
+                {isLeader && <span className="lead">Lead</span>}
+              </span>
+              <span className="btrack">
+                <i style={{ width: `${t.promiseAccuracy}%`, background: color }} />
+                <span className="mark" style={{ left: `${promiseTarget}%` }} title={`target ${promiseTarget}%`} />
+              </span>
+              <span className="pct">{t.promiseAccuracy}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -383,7 +375,8 @@ function TruckBoard({
   onAdvance: (t: WireTicket) => void;
   onDrillIn?: (slug: string) => void;
 }) {
-  // Live counts for the header stat row.
+  void advancingId;
+  void onAdvance;
   let late = 0;
   let risk = 0;
   let ready = 0;
@@ -401,173 +394,130 @@ function TruckBoard({
   const liveHealth = computeHealth({ late, risk, promiseAcc: tile.promiseAccuracy });
   const healthColor =
     liveHealth.cls === "alert"
-      ? "var(--cmd-late)"
+      ? "var(--late)"
       : liveHealth.cls === "risk"
-        ? "var(--cmd-risk)"
+        ? "var(--risk)"
         : liveHealth.cls === "warn"
-          ? "var(--cmd-warn)"
-          : "var(--cmd-ready)";
+          ? "var(--warn)"
+          : "var(--ready)";
 
   const visible = [...tile.tickets].sort((a, b) => {
     const d = TONE_ORDER[toneOf(a)] - TONE_ORDER[toneOf(b)];
     if (d !== 0) return d;
-    const sa = a.promisedReadyAtMs ?? Infinity;
-    const sb = b.promisedReadyAtMs ?? Infinity;
-    if (sa === sb) return 0;
-    return sa - sb;
+    return (a.promisedReadyAtMs ?? Infinity) - (b.promisedReadyAtMs ?? Infinity);
   });
 
-  // Pace geometry — shared scale so every bar is comparable; mark at 100%.
   const maxUtil = Math.max(1.5, ...tile.stations.map((s) => (Number.isFinite(s.pct) ? s.pct / 100 : 1.5)));
   const markLeft = (1 / maxUtil) * 100;
   const bottleneck = tile.bottleneck;
 
   return (
-    <section className="ka-truck">
-      {/* Truck header */}
-      <div
-        className="ka-thead"
-        role={onDrillIn ? "button" : undefined}
-        tabIndex={onDrillIn ? 0 : undefined}
+    <div className="truck">
+      <button
+        type="button"
+        className="thead"
         onClick={onDrillIn ? () => onDrillIn(tile.slug) : undefined}
-        onKeyDown={
-          onDrillIn
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onDrillIn(tile.slug);
-                }
-              }
-            : undefined
-        }
         title={onDrillIn ? `Drill into ${tile.name}'s floor board` : undefined}
       >
-        <div className="ka-th-top">
-          <span className="ka-th-loc">
-            <MapPin className="h-3.5 w-3.5" /> {tile.name}
+        <div className="ring">
+          <Ring size={54} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
+          <span className="sc">
+            <b style={{ color: healthColor }}>{liveHealth.health}</b>
           </span>
-          {onDrillIn && (
-            <span className="ka-th-drillhint">
-              Drill in <ChevronLeft className="h-3 w-3" style={{ transform: "rotate(180deg)" }} />
-            </span>
-          )}
-          <div className="ka-health">
-            <div className="ka-health-meta">
-              <span className="ka-hm-lab">Health</span>
-              <span className={`ka-hm-state ${liveHealth.cls}`}>{liveHealth.state}</span>
-            </div>
-            <div className="ka-health-ring">
-              <Ring size={52} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
-              <span className="ka-hr-num tabular">{liveHealth.health}</span>
-            </div>
-          </div>
         </div>
-        <div className="ka-th-stats">
-          <Stat lab="Active" val={activeCount} />
-          <Stat lab="At risk" val={risk} cls={risk ? "is-risk" : ""} />
-          <Stat lab="Late" val={late} cls={late ? "is-alert" : ""} />
-          <Stat lab="Ready" val={ready} cls={ready ? "is-good" : ""} />
-          <Stat lab="On shift" val={tile.onShift} />
-          <div className="ka-th-spark">
-            <span className="ka-sp-lab">{tile.throughputHr} / hr</span>
-            <Sparkline points={tile.throughputSeries} color={healthColor} />
-          </div>
+        <div>
+          <div className="city">{tile.name}</div>
+          <div className="open">Open</div>
         </div>
-        {/* Pace head — covers/hr, revenue/hr, capacity bottleneck meter */}
-        <div className="ka-pace-head">
-          <div className="ka-pace-rate">
-            <span className="lab">Covers / hr</span>
-            <span className="val tabular">{tile.coversHr}</span>
+        <span className="health-state" style={{ color: healthColor }}>
+          {liveHealth.state}
+        </span>
+        {onDrillIn && <span className="drill">Drill in →</span>}
+      </button>
+
+      <div className="trow2">
+        <div className="tcell">
+          <div className="l">Active</div>
+          <div className="v">{activeCount}</div>
+        </div>
+        <div className={`tcell${risk ? " risk" : ""}`}>
+          <div className="l">At risk</div>
+          <div className="v">{risk}</div>
+        </div>
+        <div className={`tcell${late ? " late" : ""}`}>
+          <div className="l">Late</div>
+          <div className="v">{late}</div>
+        </div>
+        <div className={`tcell${ready ? " ready" : ""}`}>
+          <div className="l">Ready</div>
+          <div className="v">{ready}</div>
+        </div>
+        <div className="tcell">
+          <div className="l">On shift</div>
+          <div className="v">{tile.onShift}</div>
+        </div>
+      </div>
+
+      <div className="pacehead">
+        <div className="met">
+          <div className="l">Covers / hr</div>
+          <div className="v">{tile.coversHr}</div>
+        </div>
+        <div className="met">
+          <div className="l">Revenue / hr</div>
+          <div className="v">{zl(tile.revenueHr)}</div>
+        </div>
+        <div className="capmeter">
+          <div className="lbl">
+            <span>Capacity · {bottleneck ? bottleneck.label : "within capacity"}</span>
+            <span className="hint">{bottleneck ? `${bottleneck.pct}%` : ""}</span>
           </div>
-          <div className="ka-pace-rate">
-            <span className="lab">Revenue / hr</span>
-            <span className="val tabular">{zl(tile.revenueHr)}</span>
-          </div>
-          <div className="ka-cap-meter">
-            <div className="ka-cm-top">
-              <span className="ka-cm-lab">Capacity · bottleneck</span>
-              <span className={`ka-cm-pct ${bottleneck?.tier ?? ""}`}>{bottleneck ? `${bottleneck.pct}%` : "—"}</span>
-            </div>
-            <div className="ka-cap-track">
-              <span
-                className={`ka-cap-fill ${bottleneck?.tier ?? "calm"}`}
-                style={{ width: `${bottleneck ? Math.min(100, (bottleneck.pct / 100 / maxUtil) * 100) : 0}%` }}
-              />
-              <span className="ka-cap-mark" style={{ left: `${markLeft}%` }} title="100% capacity" />
-            </div>
-            <div className="ka-cm-foot">
-              <span className={`ka-cm-station ${bottleneck?.tier ?? ""}`}>
-                <span className="ka-dotb" />
-                {bottleneck ? bottleneck.label : "Within capacity"}
-              </span>
-              <span className={`ka-cm-hint ${bottleneck?.tier === "risk" ? "risk" : ""}`}>
-                {bottleneck?.tier === "risk"
-                  ? "predicted to fall behind"
-                  : bottleneck?.tier === "warn"
-                    ? "nearing capacity"
-                    : "within capacity"}
-              </span>
-            </div>
+          <div className={`cmtrack ${paceClass(bottleneck?.tier)}`}>
+            <i style={{ width: `${bottleneck ? Math.min(100, (bottleneck.pct / 100 / maxUtil) * 100) : 0}%` }} />
+            <span className="m100" style={{ left: `${markLeft}%` }} title="100% capacity" />
           </div>
         </div>
       </div>
 
-      {/* Pace gauges — per station */}
-      <div className="ka-pace-gauges">
-        <span className="ka-pg-title">Pace · next {paceWindowMin}m</span>
+      <div className="gauges">
+        <div className="gh">Pace · next {paceWindowMin}m</div>
         {tile.stations.map((s) => {
           const util = Number.isFinite(s.pct) ? s.pct / 100 : maxUtil;
           return (
-            <div className={`ka-gauge ${s.tier}`} key={s.id}>
-              <div className="ka-g-top">
-                <span className="ka-g-name">{s.label}</span>
-                <span className={`ka-g-pct ${s.tier === "calm" ? "" : s.tier}`}>{s.pct}%</span>
-              </div>
-              <div className="ka-g-track">
-                <span className={`ka-g-fill ${s.tier}`} style={{ width: `${Math.min(100, (util / maxUtil) * 100)}%` }} />
-                <span className="ka-g-mark" style={{ left: `${markLeft}%` }} />
-              </div>
-              <div className="ka-g-foot">
-                <span className="ka-g-fig tabular">
-                  {s.demand}/{s.capacity}
-                </span>
-                <span className={`ka-g-fc ${s.tier === "risk" ? "risk" : ""}`}>
-                  +{s.forecast} / {paceWindowMin}m
-                </span>
-              </div>
+            <div className="grow" key={s.id}>
+              <span className="gn">{s.label}</span>
+              <span className={`gtrack ${paceClass(s.tier)}`}>
+                <i style={{ width: `${Math.min(100, (util / maxUtil) * 100)}%` }} />
+                <span className="m100" style={{ left: `${markLeft}%` }} />
+              </span>
+              <span className="gf">
+                {s.demand}/{s.capacity} · +{s.forecast}
+              </span>
             </div>
           );
         })}
       </div>
 
-      {/* Ticket stack */}
-      <div className="ka-tbody">
+      <div className="stack">
         {visible.length === 0 ? (
-          <div className="ka-empty">No tickets in this view.</div>
+          <div className="fleet-empty" style={{ padding: 20 }}>No tickets in this view.</div>
         ) : (
-          visible.map((t) => (
-            <KdsTicketCard
-              key={t.id}
-              t={t}
-              now={now}
-              tone={toneOf(t)}
-              station="all"
-              advancing={advancingId === t.id}
-              onAdvance={onAdvance}
-            />
-          ))
+          visible.map((t) => {
+            const tone = toneOf(t);
+            const mt = t.status === "ready" ? "ready" : tone === "late" ? "late" : tone === "risk" ? "risk" : tone === "warn" ? "warn" : "";
+            const elapsed = Math.max(0, (now - t.paidAtMs) / 1000);
+            return (
+              <div className={`mt ${mt}`} key={t.id}>
+                <span className="mid">#{t.shortId}</span>
+                <span className="mty">{fulfillmentLabel(t.fulfillmentType)}</span>
+                <span className="mnm">{t.items[0]?.name ?? t.customerName}</span>
+                {tone === "risk" && t.status !== "ready" && <span className="riskpill">at risk</span>}
+                <span className="mtimer">{t.status === "ready" ? "plated" : mmssF(elapsed)}</span>
+              </div>
+            );
+          })
         )}
       </div>
-    </section>
-  );
-}
-
-function Stat({ lab, val, cls = "" }: { lab: string; val: number; cls?: string }) {
-  return (
-    <div className={`ka-th-stat ${cls}`}>
-      <span className="lab">{lab}</span>
-      <span className="val tabular">{val}</span>
     </div>
   );
 }
-
