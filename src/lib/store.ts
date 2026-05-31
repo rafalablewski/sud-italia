@@ -11303,11 +11303,27 @@ function sanitizePosTabLines(input: unknown): PosTabLine[] {
     const id = typeof raw?.menuItemId === "string" ? raw.menuItemId : "";
     const qty = Math.max(1, Math.min(99, Math.round(Number(raw?.quantity) || 0)));
     if (!id || qty < 1) continue;
+    // One line per menu item — an item lives in exactly one course; the last
+    // course wins if the same item appears twice (re-course moves it).
+    const course = POS_COURSES.has(raw?.course) ? (raw.course as PosTabLine["course"]) : undefined;
     const existing = lines.find((l) => l.menuItemId === id);
-    if (existing) existing.quantity = Math.min(99, existing.quantity + qty);
-    else lines.push({ menuItemId: id, quantity: qty });
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + qty);
+      if (course) existing.course = course;
+    } else {
+      lines.push(course ? { menuItemId: id, quantity: qty, course } : { menuItemId: id, quantity: qty });
+    }
   }
   return lines;
+}
+
+const POS_COURSES = new Set(["starter", "main", "dessert", "drink"]);
+
+function sanitizeFiredCourses(input: unknown): PosTab["firedCourses"] {
+  if (!Array.isArray(input)) return undefined;
+  const seen = new Set<string>();
+  for (const c of input) if (POS_COURSES.has(c)) seen.add(c as string);
+  return seen.size ? (Array.from(seen) as PosTab["firedCourses"]) : undefined;
 }
 
 export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
@@ -11376,6 +11392,15 @@ export async function savePosTab(
         : input.sentKds !== undefined
           ? !!input.sentKds
           : existing?.sentKds ?? false,
+      // Coursed is a user toggle (client may set it); default dine-in tabs to
+      // coursed, everything else to together when unset.
+      coursed:
+        input.coursed !== undefined
+          ? !!input.coursed
+          : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
+      // firedCourses is server-owned — set only by the order actuator via
+      // linkPosTabOrder, never taken from the client PUT.
+      firedCourses: existing?.firedCourses,
       // orderId is server-owned — never overwritten by the caller.
       orderId: existing?.orderId,
       createdAt: existing?.createdAt ?? input.createdAt ?? now,
@@ -11394,7 +11419,12 @@ export async function savePosTab(
  *  client PUT route. */
 export async function linkPosTabOrder(
   id: string,
-  patch: { orderId?: string; sentKds?: boolean; status?: PosTabStatus },
+  patch: {
+    orderId?: string;
+    sentKds?: boolean;
+    status?: PosTabStatus;
+    firedCourses?: PosTab["firedCourses"];
+  },
 ): Promise<PosTab | null> {
   return withLock("pos-tabs.json", async () => {
     const list = await readJSON<PosTab[]>("pos-tabs.json", []);
@@ -11403,6 +11433,9 @@ export async function linkPosTabOrder(
     const tab = list[i];
     if (patch.orderId !== undefined) tab.orderId = patch.orderId;
     if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
+    if (patch.firedCourses !== undefined) {
+      tab.firedCourses = sanitizeFiredCourses(patch.firedCourses);
+    }
     if (patch.status !== undefined && POS_TAB_STATUSES.includes(patch.status)) {
       tab.status = patch.status;
     }

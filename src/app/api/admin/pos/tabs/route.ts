@@ -67,6 +67,7 @@ export const PUT = withAdmin(
       covers: body.covers,
       address: body.address,
       sentKds: body.sentKds,
+      coursed: body.coursed === null ? undefined : body.coursed,
     });
     return NextResponse.json({ tab });
   },

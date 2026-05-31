@@ -663,6 +663,30 @@
 .pos-ca-name { font-size: 12px; font-weight: 600; color: var(--pos-accent); flex: 1 1 auto; }
 .pos-ca-off { font-family: var(--pos-mono); font-size: 12.5px; font-weight: 700; color: var(--pos-accent); }
 
+/* Dine-in coursing — fire course-by-course (starters away, mains held). The
+   kitchen-timing toggle, the per-course sections with a Fire button / Fired
+   pill, and the drag-to-recourse affordance on each held line. */
+.pos-coursing-toggle { display: flex; align-items: center; gap: 10px; padding: 2px 0 4px; }
+.pos-ct-lbl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pos-faint); }
+.pos-course { display: flex; flex-direction: column; gap: 4px; padding: 6px; margin: 0 -6px; border-radius: 9px; border: 1px solid transparent; transition: background .12s, border-color .12s; }
+.pos-course.drop { background: var(--pos-firing-soft); border-color: var(--pos-firing); border-style: dashed; }
+.pos-course.fired { opacity: 0.92; }
+.pos-course-h { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.pos-course-nm { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pos-dim); flex: 1 1 auto; }
+.pos-course-fire {
+  appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 11px; border-radius: var(--r-pill, 999px); border: 0;
+  background: var(--pos-firing); color: #1a1208; font-size: 11.5px; font-weight: 700; transition: filter .12s;
+}
+.pos-course-fire:hover:not(:disabled) { filter: brightness(1.08); }
+.pos-course-fire:disabled { opacity: 0.5; cursor: default; }
+.pos-course-fire svg { width: 13px; height: 13px; }
+.pos-course-st { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--pos-accent); }
+.pos-course-st svg { width: 13px; height: 13px; }
+.pos-line.coursable:not(.fired) { cursor: grab; }
+.pos-line.coursable:not(.fired):active { cursor: grabbing; }
+.pos-line.fired { opacity: 0.6; }
+
 /* AI offers */
 .pos-ai-offers { flex: 0 0 auto; padding: 12px 24px 0; background: var(--pos-canvas); }
 .pos-ai-card { border: 1px solid rgba(139,92,246,0.32); background: rgba(139,92,246,0.08); border-radius: 11px; padding: 12px; }

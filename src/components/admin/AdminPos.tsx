@@ -8,6 +8,7 @@ import {
   Check,
   Clock,
   CreditCard,
+  Flame,
   Gauge,
   MapPin,
   Maximize2,
@@ -32,7 +33,13 @@ import {
   type PosTab,
 } from "@/data/types";
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
-import type { CartItem } from "@/data/types";
+import {
+  POS_COURSE_ORDER,
+  POS_COURSE_LABELS,
+  courseOf,
+  defaultCourseForCategory,
+} from "@/lib/pos-coursing";
+import type { CartItem, PosCourse } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
 import { SegControl, SectionEyebrow } from "./command";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
@@ -283,6 +290,7 @@ export function AdminPos({
             covers: tab.covers,
             address: tab.address ?? null,
             sentKds: tab.sentKds,
+            coursed: tab.coursed ?? null,
           }),
         }).catch(() => {});
       }, 350),
@@ -311,9 +319,30 @@ export function AdminPos({
         const items = [...t.items];
         const i = items.findIndex((l) => l.menuItemId === id);
         if (i >= 0) items[i] = { ...items[i], quantity: Math.min(99, items[i].quantity + 1) };
-        else items.push({ menuItemId: id, quantity: 1 });
+        else {
+          // Land the line in its default course (by category) so dine-in
+          // coursing rarely needs a manual re-course.
+          const cat = byId(id)?.category;
+          items.push({ menuItemId: id, quantity: 1, course: cat ? defaultCourseForCategory(cat) : "main" });
+        }
         return { ...t, items, sentKds: false, status: t.status === "parked" ? "open" : t.status };
       }),
+    [mutateActive, byId],
+  );
+
+  // Move a line into another course (drag-to-recourse). Doesn't touch sentKds —
+  // re-pacing a held item shouldn't un-send what's already fired.
+  const recourse = useCallback(
+    (menuItemId: string, course: PosCourse) =>
+      mutateActive((t) => ({
+        ...t,
+        items: t.items.map((l) => (l.menuItemId === menuItemId ? { ...l, course } : l)),
+      })),
+    [mutateActive],
+  );
+
+  const toggleCoursed = useCallback(
+    () => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? t.channel === "dine-in") })),
     [mutateActive],
   );
 
@@ -396,6 +425,10 @@ export function AdminPos({
   // --- Send to KDS / charge ------------------------------------------------
   const [busyTabId, setBusyTabId] = useState<string | null>(null);
 
+  // Drag-to-recourse — the line being dragged + the course currently hovered.
+  const dragItem = useRef<string | null>(null);
+  const [dropCourse, setDropCourse] = useState<PosCourse | null>(null);
+
   const sendKds = useCallback(async () => {
     const t = getActive();
     if (!t || t.items.length === 0 || busyTabId) return;
@@ -415,10 +448,11 @@ export function AdminPos({
         toast((data as { error?: string }).error || "Could not send to KDS");
         return;
       }
+      const d = data as { orderId?: string; firedCourses?: PosCourse[] };
       setTabs((prev) =>
         prev.map((x) =>
           x.id === t.id
-            ? { ...x, sentKds: true, status: "pay", orderId: (data as { orderId?: string }).orderId }
+            ? { ...x, sentKds: true, status: "pay", orderId: d.orderId, firedCourses: d.firedCourses }
             : x,
         ),
       );
@@ -427,6 +461,45 @@ export function AdminPos({
       setBusyTabId(null);
     }
   }, [getActive, busyTabId, pageLoc, toast]);
+
+  // Fire one course to the kitchen. The server accumulates it onto whatever's
+  // already fired and rebuilds the order from the union, so held courses stay
+  // off the line until the operator fires them.
+  const fireCourse = useCallback(
+    async (course: PosCourse) => {
+      const t = getActive();
+      if (!t || busyTabId) return;
+      if (!t.channel) {
+        toast("Pick a channel first");
+        return;
+      }
+      setBusyTabId(t.id);
+      try {
+        const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tabId: t.id, courses: [course] }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast((data as { error?: string }).error || "Could not fire course");
+          return;
+        }
+        const d = data as { orderId?: string; firedCourses?: PosCourse[] };
+        setTabs((prev) =>
+          prev.map((x) =>
+            x.id === t.id
+              ? { ...x, sentKds: true, status: "pay", orderId: d.orderId, firedCourses: d.firedCourses }
+              : x,
+          ),
+        );
+        toast(`Fired ${POS_COURSE_LABELS[course]} · #${t.id}`);
+      } finally {
+        setBusyTabId(null);
+      }
+    },
+    [getActive, busyTabId, pageLoc, toast],
+  );
 
   const [tenderOpen, setTenderOpen] = useState(false);
   const openTender = useCallback(() => {
@@ -794,6 +867,53 @@ export function AdminPos({
     label: activeLocations.find((l) => l.slug === slug)?.city ?? slug,
   }));
 
+  // Coursing only applies to a sit-down (dine-in) check; takeaway / delivery
+  // always fire together. Unset `coursed` defaults to coursed for dine-in.
+  const isCoursed = active?.channel === "dine-in" && (active.coursed ?? true);
+  const firedCourses = new Set(active?.firedCourses ?? []);
+
+  // One ticket line. `locked` dims a line whose course has already been fired
+  // to the kitchen (it's away — editing it won't un-fire it here).
+  const renderLine = (l: { menuItemId: string; quantity: number; course?: PosCourse }) => {
+    const m = byId(l.menuItemId);
+    if (!m) return null;
+    const fired = isCoursed && firedCourses.has(courseOf(l));
+    return (
+      <div
+        key={m.id}
+        className={`pos-line${isCoursed ? " coursable" : ""}${fired ? " fired" : ""}`}
+        draggable={isCoursed && !fired}
+        onDragStart={
+          isCoursed && !fired
+            ? (e) => {
+                dragItem.current = m.id;
+                e.dataTransfer.effectAllowed = "move";
+              }
+            : undefined
+        }
+        onDragEnd={() => {
+          dragItem.current = null;
+          setDropCourse(null);
+        }}
+      >
+        <div className="pos-line-body">
+          <div className="pos-line-name">{m.name}</div>
+          <div className="pos-line-each tnum">{fmtPLN(m.price)} each</div>
+        </div>
+        <div className="pos-stepper">
+          <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, -1)} aria-label="Decrease">
+            −
+          </button>
+          <span className="pos-step-q tnum">{l.quantity}</span>
+          <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, 1)} aria-label="Increase">
+            +
+          </button>
+        </div>
+        <span className="pos-line-total tnum">{fmtPLN(m.price * l.quantity)}</span>
+      </div>
+    );
+  };
+
   const page = (
     <div className={`pos-tabs${kiosk ? " is-fullscreen" : ""}`}>
       {/* Header */}
@@ -1093,31 +1213,88 @@ export function AdminPos({
                     </span>
                     <span className="pos-e-sub">Tap a product or combo to add it to this check.</span>
                   </div>
-                ) : (
+                ) : isCoursed ? (
                   <>
-                    {active.items.map((l) => {
-                      const m = byId(l.menuItemId);
-                      if (!m) return null;
+                    {active.channel === "dine-in" && (
+                      <div className="pos-coursing-toggle">
+                        <span className="pos-ct-lbl">Kitchen timing</span>
+                        <div className="cmd-seg-group">
+                          <button type="button" className="cmd-seg" aria-pressed onClick={toggleCoursed}>
+                            Coursed
+                          </button>
+                          <button type="button" className="cmd-seg" aria-pressed={false} onClick={toggleCoursed}>
+                            All together
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {POS_COURSE_ORDER.map((course) => {
+                      const lines = active.items.filter((l) => courseOf(l) === course);
+                      if (lines.length === 0) return null;
+                      const fired = firedCourses.has(course);
                       return (
-                        <div key={m.id} className="pos-line">
-                          <div className="pos-line-body">
-                            <div className="pos-line-name">{m.name}</div>
-                            <div className="pos-line-each tnum">{fmtPLN(m.price)} each</div>
+                        <div
+                          key={course}
+                          className={`pos-course${dropCourse === course ? " drop" : ""}${fired ? " fired" : ""}`}
+                          onDragOver={(e) => {
+                            if (!dragItem.current) return;
+                            e.preventDefault();
+                            if (dropCourse !== course) setDropCourse(course);
+                          }}
+                          onDragLeave={() => setDropCourse((c) => (c === course ? null : c))}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const id = dragItem.current;
+                            dragItem.current = null;
+                            setDropCourse(null);
+                            if (id) recourse(id, course);
+                          }}
+                        >
+                          <div className="pos-course-h">
+                            <span className="pos-course-nm">{POS_COURSE_LABELS[course]}</span>
+                            {fired ? (
+                              <span className="pos-course-st sent">
+                                <Check /> Fired
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="pos-course-fire"
+                                disabled={!active.channel || busyTabId === active.id}
+                                onClick={() => void fireCourse(course)}
+                              >
+                                <Flame /> Fire
+                              </button>
+                            )}
                           </div>
-                          <div className="pos-stepper">
-                            <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, -1)} aria-label="Decrease">
-                              −
-                            </button>
-                            <span className="pos-step-q tnum">{l.quantity}</span>
-                            <button type="button" className="pos-step-btn" onClick={() => changeQty(m.id, 1)} aria-label="Increase">
-                              +
-                            </button>
-                          </div>
-                          <span className="pos-line-total tnum">{fmtPLN(m.price * l.quantity)}</span>
+                          {lines.map(renderLine)}
                         </div>
                       );
                     })}
-                    {active && discountG(active) > 0 && (
+                    {discountG(active) > 0 && (
+                      <div className="pos-combo-applied">
+                        <span className="pos-ca-name">✓ {comboOf(active).activeDeal?.name}</span>
+                        <span className="pos-ca-off tnum">−{fmtPLN(discountG(active))}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {active.channel === "dine-in" && (
+                      <div className="pos-coursing-toggle">
+                        <span className="pos-ct-lbl">Kitchen timing</span>
+                        <div className="cmd-seg-group">
+                          <button type="button" className="cmd-seg" aria-pressed={false} onClick={toggleCoursed}>
+                            Coursed
+                          </button>
+                          <button type="button" className="cmd-seg" aria-pressed onClick={toggleCoursed}>
+                            All together
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {active.items.map(renderLine)}
+                    {discountG(active) > 0 && (
                       <div className="pos-combo-applied">
                         <span className="pos-ca-name">✓ {comboOf(active).activeDeal?.name}</span>
                         <span className="pos-ca-off tnum">−{fmtPLN(discountG(active))}</span>

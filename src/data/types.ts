@@ -591,9 +591,17 @@ export type PosTabStatus = "open" | "parked" | "pay";
  *  only — never a price. Prices + discounts are resolved server-side against
  *  the location's real menu when the tab is sent to the kitchen or charged, so
  *  the till can never dictate what an item costs. */
+/** A dine-in coursing bucket. Lines are fired to the kitchen course-by-course
+ *  (starters away, mains held) so the line cooks pace a sit-down service.
+ *  Takeaway / delivery tabs ignore coursing and fire everything at once. */
+export type PosCourse = "starter" | "main" | "dessert" | "drink";
+
 export interface PosTabLine {
   menuItemId: string;
   quantity: number;
+  /** Which course this line belongs to (dine-in coursing). Absent lines are
+   *  treated as "main" so legacy / non-coursed tabs still resolve. */
+  course?: PosCourse;
 }
 
 /** An open check at the counter — the "Tabs" POS lets staff juggle several at
@@ -614,6 +622,13 @@ export interface PosTab {
   covers?: number;
   /** Delivery: free-text address + driver note. */
   address?: string;
+  /** Dine-in: fire course-by-course (true) vs everything together (false).
+   *  Defaults to coursed for dine-in, together for takeaway / delivery. */
+  coursed?: boolean;
+  /** Server-owned: which courses have been fired to the kitchen so far. Grows
+   *  as the operator fires each course; the linked Order is rebuilt from the
+   *  union of these courses' lines, so held courses never hit the KDS. */
+  firedCourses?: PosCourse[];
   /** True once the check has been fired to the kitchen display. */
   sentKds: boolean;
   /** The real Order created on send / charge. Absent until then. */
