@@ -19,7 +19,12 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [role, setRole] = useState<AdminRole | null>(null);
-  const [simulationEnabled, setSimulationEnabled] = useState(false);
+  // null = settings not loaded yet (distinct from an explicit `false`). Until
+  // we know, treat the flag as on so a slow/failed settings fetch can't
+  // momentarily hide a flagged item (e.g. Calculator) after role resolves.
+  const [simulationEnabled, setSimulationEnabled] = useState<boolean | null>(
+    null,
+  );
 
   useEffect(() => {
     try {
@@ -70,7 +75,7 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const sections = useMemo(
     () =>
       role
-        ? filterNavForRole(role, { simulation: simulationEnabled })
+        ? filterNavForRole(role, { simulation: simulationEnabled ?? true })
         : NAV_SECTIONS,
     [role, simulationEnabled],
   );
