@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveLocations } from "@/data/locations";
 import {
-  AlertTriangle,
   Bot,
   Cake,
   Coffee,
@@ -16,14 +15,12 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
-  Sparkles,
   Star,
   Trash2,
   Users,
   X,
 } from "lucide-react";
-import { SegControl, SectionEyebrow } from "./command";
-import { useFullscreen } from "./command/useFullscreen";
+import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
 import { useToast } from "./v2/ui/Toast";
 
@@ -167,22 +164,6 @@ function diagnosis(c: CrmCustomer): string {
   if (c.lifecycle === "new") return "Brand new — nail the second order to lock in the habit.";
   return "Steady — room to grow frequency and check size.";
 }
-interface Flag {
-  t: string;
-  cls: string;
-}
-function healthFlags(c: CrmCustomer): Flag[] {
-  const out: Flag[] = [];
-  const bd = daysToBirthday(c.birthday);
-  if (c.noShows > 0) out.push({ t: `${c.noShows} cancelled`, cls: "bad" });
-  if (c.lifecycle === "lapsed") out.push({ t: `Lapsed ${c.lastDays}d`, cls: "bad" });
-  if (!c.email) out.push({ t: "No email", cls: "warn" });
-  if (bd != null && bd <= 14) out.push({ t: `Birthday ${bd}d`, cls: "gold" });
-  if (c.vip) out.push({ t: "VIP", cls: "gold" });
-  if (!c.member) out.push({ t: "Not enrolled", cls: "info" });
-  if (out.length === 0) out.push({ t: "No flags — healthy", cls: "ok" });
-  return out;
-}
 type Nba = { title: string; sub: string; cta: string; act: string; risk: number; cls: string };
 function nextBestAction(c: CrmCustomer): Nba {
   const h = health(c);
@@ -287,7 +268,6 @@ function inSeg(c: CrmCustomer, seg: string): boolean {
 
 export function AdminCrm() {
   const toast = useToast();
-  const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [data, setData] = useState<CrmCustomer[]>([]);
   // "Send today" greeting triggers (birthdays + first-order anniversaries),
   // computed server-side from real DOB / first-order data.
@@ -304,7 +284,6 @@ export function AdminCrm() {
   const [noteDraft, setNoteDraft] = useState("");
   const [emailDraft, setEmailDraft] = useState("");
   const [collecting, setCollecting] = useState(false);
-  const [clock, setClock] = useState("--:--:--");
   const [compose, setCompose] = useState<{ channel: "sms" | "email" } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -338,13 +317,6 @@ export function AdminCrm() {
         /* leave empty — the prompt just hides */
       }
     })();
-  }, []);
-
-  useEffect(() => {
-    const tick = () => setClock(new Date().toLocaleTimeString("en-GB"));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
   }, []);
 
   const selectedCustomer = useMemo(
@@ -604,216 +576,152 @@ export function AdminCrm() {
   }, [visible, selected, query]);
 
   const board = (
-    <div className={`crm-atlas${fullscreen ? " is-fullscreen" : ""}`}>
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Guest Engagement</span>
-        </div>
-        <GuestViewNav current="guests" />
-        <div className="crm-ctl">
-          <span className="crm-ctl-lbl">Loc</span>
-          <SegControl
-            ariaLabel="Location"
-            options={LOCS.map((l) => ({ value: l.key, label: l.label }))}
-            value={loc}
-            onChange={setLoc}
-          />
-        </div>
-        <div className="cmd-spacer" />
-        <button type="button" className="cmd-btn" onClick={() => void load()} title="Refresh">
-          <RefreshCw className={loading ? "crm-spin" : ""} /> Refresh
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          onClick={() => (fullscreen ? exitFs() : enterFs())}
-          title="Toggle fullscreen"
-        >
-          {fullscreen ? "Exit" : "Fullscreen"}
-        </button>
-        <div className="cmd-clock tabular">{clock}</div>
-      </header>
-
-      <section className="crm-bar" aria-label="Customer book">
-        <SectionEyebrow icon={<Users className="h-3 w-3" />} label="Customer book">
-          <span className="crm-kpis">
-            {kpis.map((k) => (
-              <span key={k.l} className={`crm-kpi ${k.cls}`}>
-                <span className="crm-kpi-v tabular">{k.v}</span>
-                <span className="crm-kpi-l">{k.l}</span>
-              </span>
-            ))}
-          </span>
-        </SectionEyebrow>
-
-        <div className="crm-controls">
-          <label className={`crm-search${query ? " has-q" : ""}`}>
-            <Search />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, phone or email…"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            {query && (
-              <button type="button" className="crm-clr" onClick={() => setQuery("")} aria-label="Clear">
-                ×
+    <CoreShell
+      active="guest"
+      crumbs={
+        <>
+          Core / <b>Guest Engagement</b>
+        </>
+      }
+      viewnav={<GuestViewNav current="guests" counts={{ guests: data.length }} />}
+      topbarRight={
+        <>
+          <button type="button" className="btn ghost icon" onClick={() => void load()} title="Refresh">
+            <RefreshCw className={loading ? "crm-spin" : ""} />
+          </button>
+          <div className="seg">
+            {LOCS.map((l) => (
+              <button key={l.key} type="button" className={loc === l.key ? "on" : ""} onClick={() => setLoc(l.key)}>
+                {l.label}
               </button>
-            )}
-          </label>
-          <div className="crm-segchips" role="group" aria-label="Segment filter">
-            {SEGS.map((s, i) =>
-              "sep" in s ? (
-                <span key={`sep-${i}`} className="crm-segsep" aria-hidden />
-              ) : (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={`crm-segchip ${s.cls}`}
-                  aria-pressed={seg === s.key}
-                  onClick={() => setSeg(s.key)}
-                >
-                  {s.key !== "all" && <i />}
-                  <span>{s.label}</span>
-                  <span className="crm-sc-n tabular">{locPool.filter((c) => inSeg(c, s.key)).length}</span>
-                </button>
-              ),
-            )}
+            ))}
           </div>
-          <div className="crm-sort">
-            <span className="crm-ctl-lbl">Sort</span>
-            <SegControl
-              ariaLabel="Sort by"
-              options={SORTS.map((s) => ({ value: s.key, label: s.label }))}
-              value={sort}
-              onChange={(v) => setSort(v as SortKey)}
-            />
+        </>
+      }
+    >
+      <div className="crm">
+        <section className="book" aria-label="Customer book">
+          <div className="book-kpis">
+            {kpis.map((k) => (
+              <div key={k.l} className={`bk${k.cls ? ` ${k.cls}` : ""}`}>
+                <div className="l">{k.l}</div>
+                <div className="v tnum">{k.v}</div>
+              </div>
+            ))}
           </div>
-        </div>
+          <div className="book-filters">
+            <div className="book-search">
+              <Search />
+              <input
+                className="input"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, phone, email…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+            <div className="filters">
+              {SEGS.map((s) =>
+                "sep" in s ? null : (
+                  <button
+                    key={s.key}
+                    type="button"
+                    className={`fchip${seg === s.key ? " on" : ""}`}
+                    aria-pressed={seg === s.key}
+                    onClick={() => setSeg(s.key)}
+                  >
+                    {s.label}
+                    <span className="n">{locPool.filter((c) => inSeg(c, s.key)).length}</span>
+                  </button>
+                ),
+              )}
+            </div>
+            <div className="filters">
+              <button
+                type="button"
+                className={`fchip${chan === "all" ? " on" : ""}`}
+                aria-pressed={chan === "all"}
+                onClick={() => setChan("all")}
+              >
+                All<span className="n">{locPool.length}</span>
+              </button>
+              {CHANNEL_ORDER.map((k) => {
+                const m = CHANNEL_META[k];
+                const n = locPool.filter((c) => c.channels.includes(k)).length;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`fchip${chan === k ? " on" : ""}`}
+                    aria-pressed={chan === k}
+                    onClick={() => setChan(k)}
+                  >
+                    <span className="cdot" style={{ background: m.color }} />
+                    {k}
+                    <span className="n">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div className="seg" style={{ flex: 1 }}>
+                {PERIODS.map((p) => (
+                  <button key={p.key} type="button" className={period === p.key ? "on" : ""} onClick={() => setPeriod(p.key)}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="seg">
+                {SORTS.map((s) => (
+                  <button key={s.key} type="button" className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key as SortKey)}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-        <div className="crm-channels">
-          <span className="crm-ctl-lbl">Channel</span>
-          <div className="crm-chanchips" role="group" aria-label="Channel filter">
-            <button
-              type="button"
-              className={`crm-chanchip${chan === "all" ? " on" : ""}`}
-              aria-pressed={chan === "all"}
-              onClick={() => setChan("all")}
-            >
-              <span>All</span>
-              <span className="crm-cc-n tabular">{locPool.length}</span>
-            </button>
-            {CHANNEL_ORDER.map((k) => {
-              const m = CHANNEL_META[k];
-              const n = locPool.filter((c) => c.channels.includes(k)).length;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  className={`crm-chanchip${chan === k ? " on" : ""}`}
-                  aria-pressed={chan === k}
-                  style={{ "--cc": m.color } as React.CSSProperties}
-                  onClick={() => setChan(k)}
-                >
-                  <i style={{ background: m.color }} />
-                  <span>{k}</span>
-                  <span className="crm-cc-n tabular">{n}</span>
-                </button>
-              );
-            })}
-          </div>
-          <span className="crm-sep2" />
-          <span className="crm-ctl-lbl">Period</span>
-          <SegControl
-            ariaLabel="Period"
-            options={PERIODS.map((p) => ({ value: p.key, label: p.label }))}
-            value={period}
-            onChange={setPeriod}
-          />
-        </div>
-      </section>
-
-      <div className="crm-workspace">
-        <section className="crm-list" aria-label="Customers">
-          <div className="crm-list-head">
-            <span>
-              <b>{visible.length}</b> {visible.length === 1 ? "customer" : "customers"}
-            </span>
-            <span className="crm-list-sort">
-              {chan === "all" ? "All channels" : chan} · by {SORTS.find((s) => s.key === sort)?.label}
-            </span>
-          </div>
           {triggers.length > 0 && (
-            <button
-              type="button"
-              className="crm-promo"
-              onClick={() => setSelected(triggers[0].phone)}
-              title="Reach out with a greeting today"
-            >
+            <button type="button" className="promo" onClick={() => setSelected(triggers[0].phone)} title="Reach out with a greeting today">
               <Cake />
-              <span className="crm-promo-txt">Send today · {triggerSummary(triggers)}</span>
-              <span className="crm-promo-go">Open →</span>
+              <span style={{ flex: 1, fontSize: "12.5px" }}>Send today · {triggerSummary(triggers)}</span>
+              <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--platinum)" }}>Open →</span>
             </button>
           )}
-          <div className="crm-list-scroll" ref={listRef}>
+
+          <div className="book-list" ref={listRef}>
             {loading ? (
-              <div className="crm-list-empty">Loading customer book…</div>
+              <div className="pane-msg">Loading customer book…</div>
             ) : visible.length === 0 ? (
-              <div className="crm-list-empty">
-                <Coffee className="crm-le-emoji" />
-                No customers match.
-              </div>
+              <div className="pane-msg">No customers match.</div>
             ) : (
               <>
-                <div className="crm-grp">
-                  <div className="crm-feed-head">
-                    <span className="crm-fh-grp">
-                      <span className="crm-fh-ic agentic">
-                        <Bot />
-                      </span>
-                      Agentic customers
-                    </span>
-                    <span className="crm-fh-sub">{agentic.length}</span>
-                  </div>
-                  {agentic.length ? (
-                    <div className="crm-book">
-                      {agentic.map((c) => (
-                        <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="crm-feed-empty">No WhatsApp customers match.</div>
-                  )}
+                <div className="grp-h">
+                  <Bot width={13} height={13} /> Agentic · WhatsApp / Voice
+                  <span style={{ marginLeft: "auto" }}>{agentic.length}</span>
                 </div>
-                <div className="crm-grp">
-                  <div className="crm-feed-head">
-                    <span className="crm-fh-grp">
-                      <span className="crm-fh-ic">
-                        <Users />
-                      </span>
-                      Customers
-                    </span>
-                    <span className="crm-fh-sub">{regular.length}</span>
-                  </div>
-                  {regular.length ? (
-                    <div className="crm-book">
-                      {regular.map((c) => (
-                        <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="crm-feed-empty">No customers match.</div>
-                  )}
+                {agentic.length ? (
+                  agentic.map((c) => <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />)
+                ) : (
+                  <div className="pane-msg">No agentic customers match.</div>
+                )}
+                <div className="grp-h">
+                  <Users width={13} height={13} /> Customers · staff channels
+                  <span style={{ marginLeft: "auto" }}>{regular.length}</span>
                 </div>
+                {regular.length ? (
+                  regular.map((c) => <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />)
+                ) : (
+                  <div className="pane-msg">No customers match.</div>
+                )}
               </>
             )}
           </div>
         </section>
 
-        <section className="crm-detail" aria-label="Customer detail">
+        <section className="profile" aria-label="Customer detail">
           {selectedCustomer ? (
             <Detail
               c={selectedCustomer}
@@ -836,33 +744,16 @@ export function AdminCrm() {
               onErase={() => void eraseCustomer(selectedCustomer)}
             />
           ) : (
-            <div className="crm-detail-empty">
-              <span className="crm-de-emoji">🍕</span>
-              <span>Select a customer to see their profile.</span>
-            </div>
+            <div className="thread-empty">Select a customer to see their profile.</div>
           )}
         </section>
       </div>
-
-      <footer className="crm-foot">
-        <div className="crm-legend">
-          <span><i style={{ background: "var(--crm-gold)" }} />VIP</span>
-          <span><i style={{ background: "var(--cmd-ready)" }} />Active</span>
-          <span><i style={{ background: "var(--cmd-risk)" }} />Repeat</span>
-          <span><i style={{ background: "var(--cmd-firing)" }} />New</span>
-          <span><i style={{ background: "var(--cmd-late)" }} />Lapsed</span>
-        </div>
-        <div className="crm-kbd-hint">
-          <span className="crm-kbd">↑</span>
-          <span className="crm-kbd">↓</span> move · <span className="crm-kbd">Esc</span> clear
-        </div>
-      </footer>
-    </div>
+    </CoreShell>
   );
 
   return (
     <>
-      {fullscreen ? createPortal(board, document.body) : board}
+      {board}
       {compose && selectedCustomer &&
         createPortal(
           <ComposeModal
@@ -878,25 +769,6 @@ export function AdminCrm() {
 }
 
 /* ====================== Customer row ====================== */
-function ChannelChips({ channels }: { channels: string[] }) {
-  return (
-    <span className="crm-chans">
-      {channels.map((ch) => {
-        const m = CHANNEL_META[ch] ?? { color: "var(--cmd-faint)", soft: "transparent" };
-        return (
-          <span
-            key={ch}
-            className="crm-ch-chip"
-            title={ch}
-            style={{ color: m.color, borderColor: `${m.color}55`, background: m.soft }}
-          >
-            <ChannelIcon ch={ch} />
-          </span>
-        );
-      })}
-    </span>
-  );
-}
 function ChannelIcon({ ch }: { ch: string }) {
   if (ch === "WhatsApp") return <MessageCircle />;
   if (ch === "Delivery") return <MapPin />;
@@ -905,55 +777,36 @@ function ChannelIcon({ ch }: { ch: string }) {
 }
 
 function CustRow({ c, active, onSelect }: { c: CrmCustomer; active: boolean; onSelect: (p: string) => void }) {
-  const seg = c.vip ? "vip" : c.lifecycle;
   const h = health(c);
-  const cold = c.lastDays != null && c.lastDays > 45;
+  const ht = healthTier(h);
+  const firstCh = c.channels[0];
+  const m = firstCh ? CHANNEL_META[firstCh] : null;
   return (
-    <button
-      type="button"
-      className={`crm-cust seg-${seg}${active ? " active" : ""}`}
-      onClick={() => onSelect(c.phone)}
-    >
-      <span className="crm-avatar">{initials(c.name)}</span>
-      <span className="crm-c-main">
-        <span className="crm-c-row1">
-          <span className="crm-c-name">{c.name}</span>
-          {c.vip && <span className="crm-c-vip">VIP</span>}
-          {c.noShows > 0 && (
-            <span className="crm-c-warn" title={`${c.noShows} order(s) cancelled`}>
-              ⚠ {c.noShows}
+    <button type="button" className={`cust${active ? " on" : ""}`} onClick={() => onSelect(c.phone)}>
+      <span className="av">{initials(c.name)}</span>
+      <span style={{ minWidth: 0 }}>
+        <span className="nm">
+          <span>{c.name}</span>
+          {c.vip && (
+            <span className="badge brand" style={{ height: 15, fontSize: 9, padding: "0 5px" }}>
+              VIP
             </span>
           )}
-          <ChannelChips channels={c.channels} />
+          {c.noShows > 0 && <span className="warnpill">⚠ {c.noShows}</span>}
         </span>
-        <span className="crm-c-sub">
-          <span className="crm-c-phone">{c.phone}</span>
-          <span className="crm-c-dot" />
-          <span className={`crm-c-seen${cold ? " cold" : ""}`}>{seenLabel(c.lastDays)}</span>
-          <span className="crm-c-dot" />
-          <span className="tabular">{c.orderCount} ord</span>
-          {!c.email && (
-            <>
-              <span className="crm-c-dot" />
-              <span className="crm-c-noem">no email</span>
-            </>
-          )}
+        <span className="sub">
+          {m && <span className="cdot" style={{ background: m.color }} />}
+          <span>{firstCh ?? "—"}</span>
+          <span>· {c.orderCount} ord</span>
+          <span>· {seenLabel(c.lastDays)}</span>
+          {!c.email && <span style={{ color: "var(--warning)" }}>· no email</span>}
         </span>
       </span>
-      <span className="crm-c-fig">
-        <span className="crm-c-ltv tabular">{fmtPLN0(c.totalSpent)}</span>
-        {c.member ? (
-          <span className="crm-c-pts tabular">
-            <Star /> {c.points.toLocaleString("pl-PL")}
-          </span>
-        ) : (
-          <span className="crm-c-contact" title={`Captured via ${c.source}`}>
-            Contact
-          </span>
-        )}
-      </span>
-      <span className="crm-c-health">
-        <i style={{ width: `${h}%`, background: healthTier(h).color }} />
+      <span className="right">
+        <span className="ltv">{fmtPLN0(c.totalSpent)}</span>
+        <span className="hp">
+          <i style={{ width: `${h}%`, background: ht.color }} />
+        </span>
       </span>
     </button>
   );
@@ -999,291 +852,195 @@ function Detail({
   onExport: () => void;
   onErase: () => void;
 }) {
-  const seg = c.vip ? "vip" : c.lifecycle;
-  const segLabel: Record<string, string> = {
-    vip: "VIP",
-    active: "Active",
-    repeat: "Repeat",
-    new: "New",
-    lapsed: "Lapsed",
-  };
   const h = health(c);
   const ht = healthTier(h);
   const { r, f, m, rel } = rfm(c);
   const bd = daysToBirthday(c.birthday);
   const nba = nextBestAction(c);
-  const flags = healthFlags(c);
-  const R = 52;
+  const R = 37;
   const CIRC = 2 * Math.PI * R;
   const arc = ((h / 100) * CIRC).toFixed(1);
-  const completeChecks = [!!c.name && c.name !== "Guest", true, !!c.email, c.smsOptIn || c.emailOptIn];
-  const have = completeChecks.filter(Boolean).length;
   const earlier = Math.max(0, c.orderCount - c.recent.length);
 
-  const fct = (lbl: string, v: number) => (
-    <div className="crm-factor">
-      <span className="crm-fc-lbl">
-        {lbl}
-        <b className="tabular">{v}</b>
-      </span>
-      <span className="crm-fc-track">
-        <i style={{ width: `${v}%`, background: barColor(v) }} />
-      </span>
-    </div>
-  );
-
-  // Real identity signals only — phone (always), email (if held), WhatsApp
-  // (if they've ordered via the agent). No fabricated card/device hashes.
   const signals: { label: string; val: string; tag: string }[] = [
     { label: "Phone", val: c.phone, tag: "Primary key" },
   ];
   if (c.email) signals.push({ label: "Email", val: c.email, tag: c.emailOptIn ? "Opted in" : "" });
   if (c.channels.includes("WhatsApp")) signals.push({ label: "WhatsApp", val: c.phone, tag: "Verified" });
 
+  const factor = (lbl: string, v: number) => (
+    <div className="rfm-row">
+      <span>{lbl}</span>
+      <span className="meter">
+        <i style={{ width: `${v}%`, background: barColor(v) }} />
+      </span>
+      <span className="num">{v}</span>
+    </div>
+  );
+
   return (
-    <div className="crm-detail-scroll">
-      <div className={`crm-prof${c.vip ? " is-vip" : ""}`}>
-        <div className="crm-prof-top">
-          <span className="crm-prof-av">{initials(c.name)}</span>
-          <div className="crm-prof-id">
-            <div className="crm-prof-name-row">
-              <span className="crm-prof-name">{c.name}</span>
-              <span className={`crm-badge seg-${seg}`}>{seg === "vip" ? "★ VIP" : segLabel[c.lifecycle]}</span>
-              {c.member ? (
-                <span className="crm-badge member">
-                  <Star /> Member · {c.tier}
-                </span>
-              ) : (
-                <span className="crm-badge contact">Contact · not enrolled</span>
-              )}
-            </div>
-            <div className="crm-prof-meta">
-              <span className="crm-pm mono">{c.phone}</span>
-              <span className="crm-pipe" />
-              <span className="crm-pm">
-                <ChannelChips channels={c.channels} /> {c.channels.join(" · ") || "—"}
+    <>
+      <div className="pf-head">
+        <div className="pf-av">{initials(c.name)}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="pf-name">
+            {c.name}
+            {c.vip && (
+              <span className="badge brand">
+                <span className="d" />
+                VIP
               </span>
-              {c.locations.length > 0 && (
-                <>
-                  <span className="crm-pipe" />
-                  <span className="crm-pm">
-                    <MapPin /> {c.locations.join(", ")}
-                  </span>
-                </>
-              )}
-              <span className="crm-pipe" />
-              {c.email ? (
-                <span className="crm-pm">
-                  <Mail /> {c.email}
-                </span>
-              ) : (
-                <span className="crm-pm" style={{ color: "var(--cmd-warn)" }}>
-                  <Mail /> no email on file
-                </span>
-              )}
-              {c.firstOrderAt && (
-                <>
-                  <span className="crm-pipe" />
-                  <span className="crm-pm">Since {fmtDate(c.firstOrderAt)}</span>
-                </>
-              )}
-              {bd != null && bd <= 30 && (
-                <>
-                  <span className="crm-pipe" />
-                  <span className="crm-pm" style={{ color: "var(--crm-gold)" }}>
-                    <Cake /> Birthday in {bd}d
-                  </span>
-                </>
-              )}
-            </div>
+            )}
+            {c.member ? (
+              <span className="badge platinum">
+                <span className="d" />
+                {c.tier}
+              </span>
+            ) : (
+              <span className="badge neutral">Contact</span>
+            )}
+          </div>
+          <div className="pf-meta">
+            <span className="mono">{c.phone}</span>
+            {c.email ? <span>{c.email}</span> : <span style={{ color: "var(--warning)" }}>no email on file</span>}
+            {c.locations.length > 0 && <span>{c.locations.join(", ")}</span>}
+            {c.firstOrderAt && <span>Since {fmtDate(c.firstOrderAt)}</span>}
+            {bd != null && bd <= 30 && <span style={{ color: "var(--platinum)" }}>Birthday in {bd}d</span>}
           </div>
         </div>
-
-        {c.noShows > 0 && (
-          <div className="crm-noshow-banner">
-            <AlertTriangle />
-            <span className="crm-nb-text">
-              <b>
-                {c.noShows} cancelled order{c.noShows > 1 ? "s" : ""}
-              </b>{" "}
-              — reliability {c.reliability}%. Confirm the next order before firing it.
-            </span>
-          </div>
-        )}
-
-        <div className="crm-actions">
-          <button
-            className="crm-act-btn primary"
-            type="button"
-            disabled={!c.smsOptIn}
-            onClick={() => onCompose("sms")}
-            title={c.smsOptIn ? "Send an SMS" : "Customer opted out of SMS"}
-          >
+        <div className="pf-actions">
+          <button className="btn primary" type="button" disabled={!c.smsOptIn} onClick={() => onCompose("sms")}>
             <MessageCircle /> {c.smsOptIn ? "Text" : "SMS off"}
           </button>
           {c.email ? (
-            <button
-              className="crm-act-btn"
-              type="button"
-              disabled={!c.emailOptIn}
-              onClick={() => onCompose("email")}
-            >
+            <button className="btn" type="button" disabled={!c.emailOptIn} onClick={() => onCompose("email")}>
               <Mail /> Email
             </button>
           ) : (
-            <button className="crm-act-btn warnbtn" type="button" onClick={() => setCollecting(true)}>
+            <button className="btn" type="button" onClick={() => setCollecting(true)}>
               <Mail /> Collect email
             </button>
           )}
           {c.member ? (
-            <button className="crm-act-btn" type="button" onClick={onPoints}>
-              <Star /> +50 points
+            <button className="btn" type="button" onClick={onPoints}>
+              <Star /> +50 pts
             </button>
           ) : (
-            <button className="crm-act-btn goldbtn" type="button" onClick={onInvite}>
-              <Star /> Invite to loyalty
+            <button className="btn" type="button" onClick={onInvite}>
+              <Star /> Invite
             </button>
           )}
         </div>
       </div>
 
-      {/* Relationship health */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Relationship health <span className="crm-sh-sep" />
-          <span className="crm-health-badge" style={{ color: ht.color, borderColor: ht.color }}>
-            {ht.label}
-          </span>
+      {c.noShows > 0 && (
+        <div className="pf-cancel">
+          {c.noShows} cancelled order{c.noShows > 1 ? "s" : ""} — reliability {c.reliability}%. Confirm the next
+          order before firing it.
         </div>
-        <div className="crm-health-card">
-          <div className="crm-health-left">
-            <div className="crm-gauge">
-              <svg viewBox="0 0 128 128" className="crm-gauge-svg">
-                <circle className="crm-gauge-track" cx="64" cy="64" r={R} />
+      )}
+
+      <div className="pf-grid">
+        <div className="panel">
+          <div className="eyebrow">Relationship health</div>
+          <div className="health">
+            <div className="ring">
+              <svg viewBox="0 0 84 84" style={{ transform: "rotate(-90deg)" }}>
+                <circle cx="42" cy="42" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="8" />
                 <circle
-                  className="crm-gauge-fill"
-                  cx="64"
-                  cy="64"
+                  cx="42"
+                  cy="42"
                   r={R}
-                  style={{ stroke: ht.color, strokeDasharray: `${arc} ${CIRC.toFixed(1)}` }}
+                  fill="none"
+                  stroke={ht.color}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${arc} ${CIRC.toFixed(1)}`}
                 />
               </svg>
-              <div className="crm-gauge-center">
-                <span className="crm-gauge-num tabular" style={{ color: ht.color }}>
-                  {h}
-                </span>
-                <span className="crm-gauge-max">/100</span>
+              <div className="c">
+                <b style={{ color: ht.color }}>{h}</b>
+                <span>{ht.label}</span>
               </div>
             </div>
-            <span className="crm-gauge-tier" style={{ color: ht.color }}>
-              {ht.label}
-            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="tier" style={{ color: ht.color }}>
+                {ht.label}
+              </div>
+              <div className="diag">{diagnosis(c)}</div>
+            </div>
           </div>
-          <div className="crm-health-right">
-            <p className="crm-diag">{diagnosis(c)}</p>
-            <div className="crm-factors">
-              {fct("Recency", r)}
-              {fct("Frequency", f)}
-              {fct("Monetary", m)}
-              {fct("Reliability", rel)}
-            </div>
-            <div className="crm-flags">
-              {flags.map((fl, i) => (
-                <span key={i} className={`crm-flag ${fl.cls}`}>
-                  {fl.t}
-                </span>
-              ))}
-            </div>
+          <div className="rfm" style={{ marginTop: 14 }}>
+            {factor("Recency", r)}
+            {factor("Frequency", f)}
+            {factor("Monetary", m)}
+            {factor("Reliability", rel)}
           </div>
         </div>
-      </div>
 
-      {/* Next best action */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Next best action <span className="crm-sh-sep" />
-        </div>
-        <div className="crm-ai-card">
-          <div className="crm-ai-head">
-            <span className="crm-ai-badge">
-              <Sparkles /> AI
-            </span>
-            <span className="crm-ai-title">Recommended for {c.name.split(" ")[0]}</span>
-            <span className={`crm-ai-risk ${nba.cls}`}>churn {nba.risk}%</span>
+        <div className="panel nba">
+          <div className="eyebrow">Next best action</div>
+          <div className="risk">
+            Churn risk <b>{nba.risk}%</b>
           </div>
-          <button className="crm-ai-offer" type="button" onClick={() => onNba(nba.act)}>
-            <span className="crm-ai-of-main">
-              <span className="crm-ai-of-title">{nba.title}</span>
-              <span className="crm-ai-of-sub">{nba.sub}</span>
-            </span>
-            <span className="crm-ai-of-cta">{nba.cta}</span>
+          <div className="rec">{nba.title}</div>
+          <p className="subtle" style={{ fontSize: "12.5px", lineHeight: 1.5 }}>
+            {nba.sub}
+          </p>
+          <button className="btn primary" type="button" style={{ marginTop: 12 }} onClick={() => onNba(nba.act)}>
+            {nba.cta}
           </button>
         </div>
-      </div>
 
-      {/* Lifetime */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Lifetime <span className="crm-sh-sep" />
-        </div>
-        <div className="crm-stats">
-          <div className="crm-stat">
-            <span className="crm-s-val tabular">{fmtPLN0(c.totalSpent)}</span>
-            <span className="crm-s-lbl">Lifetime value</span>
-          </div>
-          <div className="crm-stat">
-            <span className="crm-s-val tabular">{c.orderCount}</span>
-            <span className="crm-s-lbl">Orders</span>
-          </div>
-          <div className="crm-stat">
-            <span className="crm-s-val tabular">{fmtPLN(c.avgOrderValue)}</span>
-            <span className="crm-s-lbl">Avg order</span>
-          </div>
-          <div className={`crm-stat${c.noShows > 0 ? " warnstat" : ""}`}>
-            <span className="crm-s-val tabular">{c.noShows}</span>
-            <span className="crm-s-lbl">Cancelled</span>
-            <span className="crm-s-sub">{c.reliability}% reliable</span>
-          </div>
-          <div className="crm-stat">
-            <span className="crm-s-val tabular">{seenLabel(c.lastDays)}</span>
-            <span className="crm-s-lbl">Last order</span>
-            <span className="crm-s-sub">{fmtDate(c.lastOrderAt)}</span>
+        <div className="panel span2">
+          <div className="eyebrow">Lifetime</div>
+          <div className="stat-grid">
+            <div className="s">
+              <div className="l">Lifetime value</div>
+              <div className="v tnum">{fmtPLN0(c.totalSpent)}</div>
+            </div>
+            <div className="s">
+              <div className="l">Orders</div>
+              <div className="v tnum">{c.orderCount}</div>
+            </div>
+            <div className="s">
+              <div className="l">Avg order</div>
+              <div className="v tnum">{fmtPLN(c.avgOrderValue)}</div>
+            </div>
+            <div className="s">
+              <div className="l">Reliability</div>
+              <div className="v tnum">{c.reliability}%</div>
+            </div>
+            <div className="s">
+              <div className="l">Last order</div>
+              <div className="v">{seenLabel(c.lastDays)}</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Contact & data */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Contact &amp; data <span className="crm-sh-sep" />
-          <span className={`crm-comp-pill ${have < 4 ? "partial" : "full"}`}>{have}/4 on file</span>
-        </div>
-        <div className="crm-comp-bar">
-          <i style={{ width: `${Math.round((have / 4) * 100)}%` }} />
-        </div>
-        <div className="crm-data-grid">
-          <div className="crm-data-row">
-            <span className="crm-dr-ic">
-              <Phone />
-            </span>
-            <span className="crm-dr-k">Phone</span>
-            <span className="crm-dr-v mono">{c.phone}</span>
-            <span className="crm-dr-ok">on file</span>
-          </div>
-          <div className={`crm-data-row${c.email ? "" : " missing"}`}>
-            <span className="crm-dr-ic">
-              <Mail />
-            </span>
-            <span className="crm-dr-k">Email</span>
-            {c.email ? (
-              <>
-                <span className="crm-dr-v">{c.email}</span>
-                <span className="crm-dr-ok">on file</span>
-              </>
-            ) : collecting ? (
-              <span className="crm-collect-inline">
+        <div className="panel">
+          <div className="eyebrow">Identity &amp; channels</div>
+          <div className="ident">
+            {signals.map((s) => (
+              <div key={s.label} className="id-row">
+                <span className="ic">
+                  {s.label === "Phone" ? <Phone /> : s.label === "Email" ? <Mail /> : <MessageCircle />}
+                </span>
+                <span>
+                  <span style={{ color: "var(--fg-subtle)" }}>{s.label}</span>{" "}
+                  <span className="v mono">{s.val}</span>
+                </span>
+                {s.tag && (
+                  <span className="tag badge neutral" style={{ marginLeft: "auto" }}>
+                    {s.tag}
+                  </span>
+                )}
+              </div>
+            ))}
+            {!c.email && collecting && (
+              <div className="id-row">
                 <input
-                  className="crm-note-input"
+                  className="input"
                   type="email"
                   value={emailDraft}
                   placeholder="name@email.com"
@@ -1291,227 +1048,144 @@ function Detail({
                   onKeyDown={(e) => e.key === "Enter" && onSaveEmail()}
                   autoFocus
                 />
-                <button className="crm-note-save" type="button" onClick={onSaveEmail}>
+                <button className="btn primary" type="button" onClick={onSaveEmail}>
                   Save
                 </button>
-              </span>
-            ) : (
-              <>
-                <span className="crm-dr-v crm-dr-missing">Not collected yet</span>
-                <button className="crm-collect-btn" type="button" onClick={() => setCollecting(true)}>
-                  Collect
-                </button>
-              </>
+              </div>
             )}
           </div>
-          <div className="crm-data-row">
-            <span className="crm-dr-ic">
-              <Sparkles />
-            </span>
-            <span className="crm-dr-k">Captured via</span>
-            <span className="crm-dr-v">{c.source}</span>
-          </div>
-          <div className="crm-data-row">
-            <span className="crm-dr-ic">
-              <Users />
-            </span>
-            <span className="crm-dr-k">Channels</span>
-            <span className="crm-dr-v" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <ChannelChips channels={c.channels} /> {c.channels.join(" · ") || "—"}
-            </span>
-          </div>
         </div>
-        <div className="crm-consent">
-          <button
-            className="crm-toggle"
-            type="button"
-            aria-pressed={c.smsOptIn}
-            onClick={() => onToggleConsent("sms")}
-          >
-            <span className="crm-sw" />
-            <MessageCircle /> SMS marketing
-          </button>
-          <button
-            className="crm-toggle"
-            type="button"
-            aria-pressed={c.emailOptIn}
-            disabled={!c.email}
-            onClick={() => onToggleConsent("email")}
-          >
-            <span className="crm-sw" />
-            <Mail /> Email marketing
-          </button>
-        </div>
-      </div>
 
-      {/* Loyalty */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Loyalty <span className="crm-sh-sep" />
-        </div>
-        {c.member ? (
-          <div className="crm-loyalty-card">
-            <div className="crm-lc-top">
-              <span className={`crm-tier-pill tier-${c.tier}`}>{c.tier}</span>
-              <span className="crm-lc-pts tabular">{c.points.toLocaleString("pl-PL")} pts</span>
-              <span className="crm-lc-value tabular">≈ {fmtPLN(c.points * 10)} in rewards</span>
+        <div className="panel">
+          <div className="eyebrow">Favourites &amp; loyalty</div>
+          {c.favourites.length > 0 && (
+            <div className="taglist" style={{ marginBottom: 12 }}>
+              {c.favourites.map((fv) => (
+                <span key={fv.name} className="tg">
+                  {fv.name} <span className="mono">×{fv.qty}</span>
+                </span>
+              ))}
             </div>
-            <div className="crm-lc-note">
-              Earning points on every order. 1 pt per zł spent + manual bonuses.
+          )}
+          {c.member ? (
+            <div className="kv">
+              <span className="k">Points</span>
+              <span className="v mono">
+                {c.points.toLocaleString("pl-PL")} · ≈ {fmtPLN(c.points * 10)}
+              </span>
             </div>
-          </div>
-        ) : (
-          <div className="crm-loyalty-card nonmember">
-            <div className="crm-nm-text">
-              Not enrolled — first captured via <b>{c.source}</b>. We hold their contact data, but they aren&apos;t
-              earning points yet.
-            </div>
-            <button className="crm-nm-invite" type="button" onClick={onInvite}>
-              Invite to loyalty →
+          ) : (
+            <button className="btn" type="button" onClick={onInvite}>
+              <Star /> Invite to loyalty
             </button>
+          )}
+          <div className="consent-row">
+            <span>SMS marketing</span>
+            <button
+              type="button"
+              className={`sw-toggle${c.smsOptIn ? " on" : ""}`}
+              aria-pressed={c.smsOptIn}
+              aria-label="Toggle SMS marketing"
+              onClick={() => onToggleConsent("sms")}
+            />
           </div>
-        )}
-      </div>
+          <div className="consent-row">
+            <span>Email marketing</span>
+            <button
+              type="button"
+              className={`sw-toggle${c.emailOptIn ? " on" : ""}`}
+              aria-pressed={c.emailOptIn}
+              aria-label="Toggle email marketing"
+              disabled={!c.email}
+              onClick={() => onToggleConsent("email")}
+            />
+          </div>
+        </div>
 
-      {/* Identity & channels (real signals) */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Identity &amp; channels <span className="crm-sh-sep" />
-          <span className="crm-id-conf">
-            {signals.length} signal{signals.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div className="crm-id-graph">
-          {signals.map((s) => (
-            <div key={s.label} className="crm-id-sig">
-              <span className="crm-id-ic">
-                {s.label === "Phone" ? <Phone /> : s.label === "Email" ? <Mail /> : <MessageCircle />}
-              </span>
-              <span className="crm-id-body">
-                <span className="crm-id-k">{s.label}</span>
-                <span className="crm-id-v mono">{s.val}</span>
-              </span>
-              {s.tag && <span className="crm-id-tag">{s.tag}</span>}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Favourites */}
-      {c.favourites.length > 0 && (
-        <div className="crm-sec">
-          <div className="crm-sec-head">
-            Favourites <span className="crm-sh-sep" />
-          </div>
-          <div className="crm-favs">
-            {c.favourites.map((fv) => (
-              <span key={fv.name} className="crm-fav">
-                {fv.name}
-                <span className="crm-fv-n tabular">×{fv.qty}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Order history */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Order history <span className="crm-sh-n tabular">{c.orderCount}</span>
-          <span className="crm-sh-sep" />
-        </div>
-        {c.recent.length === 0 ? (
-          <div className="crm-note-empty">No orders yet.</div>
-        ) : (
-          <div className="crm-hist">
-            {c.recent.map((o) => (
-              <div key={o.id} className="crm-horder">
-                <span className="crm-ho-chan" title={o.fulfillment}>
-                  <ChannelIcon ch={o.fulfillment} />
-                </span>
-                <span className="crm-ho-body">
-                  <span className="crm-ho-items">
-                    {o.items.map((i) => (i.qty > 1 ? `${i.qty}× ` : "") + i.name).join(", ")}
-                  </span>
-                  <span className="crm-ho-meta">
-                    {fmtDate(o.createdAt)} · {o.fulfillment} · {o.location}
-                  </span>
-                </span>
-                <span className="crm-ho-total tabular">{fmtPLN(o.total)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {earlier > 0 && (
-          <div className="crm-hist-more">
-            + {earlier} earlier order{earlier === 1 ? "" : "s"} · {fmtPLN0(c.totalSpent)} lifetime
-          </div>
-        )}
-      </div>
-
-      {/* Notes */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Notes <span className="crm-sh-n tabular">{notes.length}</span>
-          <span className="crm-sh-sep" />
-        </div>
-        <div className="crm-notes">
+        <div className="panel span2">
+          <div className="eyebrow">Concierge notes</div>
           {notes.length ? (
             notes.map((n) => (
-              <div key={n.id} className="crm-note">
-                <div className="crm-note-head">
+              <div key={n.id} className="note">
+                {n.body}
+                <div className="a">
                   <b>{n.authoredBy ?? "admin"}</b> · {fmtDate(n.createdAt)}
                   <button
                     type="button"
-                    className="crm-note-del"
+                    className="btn ghost icon"
+                    style={{ marginLeft: "auto", height: 24, width: 24 }}
                     onClick={() => onRemoveNote(n.id)}
                     aria-label="Delete note"
                   >
                     <Trash2 />
                   </button>
                 </div>
-                <div className="crm-note-body">{n.body}</div>
               </div>
             ))
           ) : (
-            <div className="crm-note-empty">No notes yet — add context the next operator should know.</div>
+            <p className="subtle" style={{ fontSize: "12.5px" }}>
+              No notes yet — add context the next operator should know.
+            </p>
+          )}
+          <div className="note-add">
+            <input
+              className="input"
+              type="text"
+              value={noteDraft}
+              placeholder={`Add a note about ${c.name.split(" ")[0]}…`}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && onAddNote()}
+            />
+            <button className="btn primary" type="button" onClick={onAddNote}>
+              Save
+            </button>
+          </div>
+        </div>
+
+        <div className="panel span2">
+          <div className="eyebrow">Recent orders</div>
+          {c.recent.length === 0 ? (
+            <p className="subtle" style={{ fontSize: "12.5px" }}>
+              No orders yet.
+            </p>
+          ) : (
+            c.recent.map((o) => (
+              <div key={o.id} className="ord">
+                <span className="dt">{fmtDate(o.createdAt)}</span>
+                <span className="ic" style={{ color: "var(--platinum)" }}>
+                  <ChannelIcon ch={o.fulfillment} />
+                </span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {o.items.map((i) => (i.qty > 1 ? `${i.qty}× ` : "") + i.name).join(", ")}
+                </span>
+                <span className="amt">{fmtPLN(o.total)}</span>
+              </div>
+            ))
+          )}
+          {earlier > 0 && (
+            <p className="subtle" style={{ fontSize: "11.5px", marginTop: 8 }}>
+              + {earlier} earlier order{earlier === 1 ? "" : "s"} · {fmtPLN0(c.totalSpent)} lifetime
+            </p>
           )}
         </div>
-        <div className="crm-note-add">
-          <input
-            className="crm-note-input"
-            type="text"
-            value={noteDraft}
-            placeholder={`Add a note about ${c.name.split(" ")[0]}…`}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onAddNote()}
-          />
-          <button className="crm-note-save" type="button" onClick={onAddNote}>
-            Save
-          </button>
-        </div>
-      </div>
 
-      {/* GDPR — DSAR export + Art. 17 erase, wired to /api/admin/gdpr/*. */}
-      <div className="crm-sec">
-        <div className="crm-sec-head">
-          Privacy · GDPR
-          <span className="crm-sh-sep" />
-        </div>
-        <div className="crm-gdpr">
-          <button type="button" className="crm-gdpr-btn" onClick={onExport}>
-            <Download /> Export data (DSAR)
-          </button>
-          <button type="button" className="crm-gdpr-btn danger" onClick={onErase}>
-            <ShieldAlert /> Erase customer
-          </button>
-        </div>
-        <div className="crm-gdpr-note">
-          Export hands the guest their full record (Art. 15). Erase permanently deletes every
-          row tied to this phone (Art. 17) — owner-only, irreversible.
+        <div className="panel span2">
+          <div className="eyebrow">Privacy · GDPR</div>
+          <div className="gdpr">
+            <button type="button" className="btn" onClick={onExport}>
+              <Download /> Export data (DSAR)
+            </button>
+            <button type="button" className="btn ghost" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={onErase}>
+              <ShieldAlert /> Erase customer
+            </button>
+          </div>
+          <p className="subtle" style={{ fontSize: 11, marginTop: 9, lineHeight: 1.5 }}>
+            Export hands the guest their full record (Art. 15). Erase permanently deletes every row tied to
+            this phone (Art. 17) — owner-only, irreversible.
+          </p>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
