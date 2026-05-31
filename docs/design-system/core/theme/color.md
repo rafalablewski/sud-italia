@@ -78,7 +78,7 @@ are shared between KDS, POS, CRM, Concierge, and WhatsApp:
   controls scoped to Core.
 
 These classes only live on Core surfaces (wrapped by `.kds-atlas`,
-`.pos-tabs`, `.crm-atlas`, `.cncrg-atlas`, `.wa-atlas`). They don't
+`.pos-tabs`, `.crm-atlas`, `.cncrg-atlas`, `.wa-console`). They don't
 leak into Admin.
 
 ## What this colour system is not

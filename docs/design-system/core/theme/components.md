@@ -195,7 +195,7 @@ The EU-14 grid — the only place emoji appear in the system (per
 - Header row: the emoji pictogram + the 2-letter allergen code.
 - This is the legal-affordance surface — the emoji are not decoration.
 
-## WhatsApp — `.wa-atlas`
+## WhatsApp — `.wa-console`
 
 ### Thread card
 
