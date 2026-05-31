@@ -12,26 +12,15 @@ import { createPortal } from "react-dom";
 import {
   Archive,
   ArchiveRestore,
-  ArrowDownToLine,
-  BarChart3,
-  CheckCircle2,
-  Circle,
-  Clock,
-  CreditCard,
   ExternalLink,
-  MapPin,
   Maximize2,
-  Megaphone,
   Minimize2,
   Pin,
   PinOff,
   RotateCw,
   Search,
-  Send,
-  Settings as SettingsIcon,
-  ShoppingCart,
-  Truck,
 } from "lucide-react";
+import { CoreShell } from "./core/CoreShell";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
@@ -361,7 +350,6 @@ function AdminWhatsAppDesktop() {
 
   // Fullscreen kiosk
   const [kiosk, setKiosk] = useState(false);
-  const [clock, setClock] = useState("--:--:--");
 
   // Chat simulator (owner toggle in Settings). When on, the console flags
   // itself with a Sandbox tag next to the wordmark.
@@ -706,16 +694,6 @@ function AdminWhatsAppDesktop() {
     };
   }, [kiosk]);
 
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const p = (n: number) => String(n).padStart(2, "0");
-      setClock(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // ---- keyboard ---------------------------------------------------------
 
@@ -765,102 +743,81 @@ function AdminWhatsAppDesktop() {
   ];
 
   const page = (
-    <div className={`wa-console${kiosk ? " is-fullscreen" : ""}`}>
-      {loading && <div className="v2-page-loading">Loading WhatsApp…</div>}
-      {/* Header */}
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">Guest Engagement</span>
-          {simEnabled && <span className="wa-sim-tag">Sandbox</span>}
+    <CoreShell
+      active="guest"
+      crumbs={<>Core / <b>Guest Engagement</b></>}
+      viewnav={<GuestViewNav current="inbox" counts={{ inbox: counts.inbox }} />}
+      topbarRight={
+        <>
+          {simEnabled && (
+            <span className="badge platinum">
+              <span className="d" />
+              Sandbox
+            </span>
+          )}
+          <button
+            type="button"
+            className={`badge ${settings?.enabled ? "success" : "neutral"}`}
+            style={{ cursor: "pointer", border: 0 }}
+            onClick={toggleEnabled}
+            disabled={!settings}
+            title={settings?.enabled ? "Channel live — click to disable" : "Channel off — click to enable"}
+          >
+            <span className="d" />
+            WhatsApp {settings?.enabled ? "live" : "off"}
+          </button>
+          <button type="button" className="btn ghost" onClick={() => setFunnelOpen(true)}>
+            Funnel
+          </button>
+          <button type="button" className="btn ghost" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </button>
+          <button type="button" className="btn primary" onClick={() => setBroadcastOpen(true)}>
+            Broadcast
+          </button>
+          <button
+            type="button"
+            className="btn icon"
+            onClick={kiosk ? exitKiosk : enterKiosk}
+            title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen (F)"}
+          >
+            {kiosk ? <Minimize2 /> : <Maximize2 />}
+          </button>
+        </>
+      }
+    >
+      <div className="kpis">
+        <div className="stat">
+          <div className="l">Orders · 7d</div>
+          <div className="v tnum">{m7 ? m7.orders.paid : "—"}</div>
+          <div className="h">paid via WhatsApp</div>
         </div>
-        <GuestViewNav current="inbox" counts={{ inbox: counts.inbox }} />
-        <button
-          type="button"
-          className="cmd-btn wa-power"
-          aria-pressed={!!settings?.enabled}
-          onClick={toggleEnabled}
-          disabled={!settings}
-          title={settings?.enabled ? "Channel live — click to disable" : "Channel off — click to enable"}
-        >
-          <span className={`wa-power-dot${settings?.enabled ? " on" : ""}`} />
-          {settings?.enabled ? "Live" : "Off"}
-        </button>
-        <div className="cmd-spacer" />
-        <button
-          type="button"
-          className="cmd-btn"
-          onClick={() => setBroadcastOpen(true)}
-          title="Broadcast campaign"
-        >
-          <Megaphone />
-          <span>Broadcast</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          onClick={() => setFunnelOpen(true)}
-          title="Conversion funnel"
-        >
-          <BarChart3 />
-          <span>Funnel</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          onClick={() => setSettingsOpen(true)}
-          title="Channel settings"
-        >
-          <SettingsIcon />
-          <span>Settings</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen (F)"}
-        >
-          {kiosk ? <Minimize2 /> : <Maximize2 />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="cmd-clock tnum">{clock}</div>
-      </header>
-
-      {/* KPI strip — five channel headline metrics as cards (guest.html). */}
-      <div className="wa-kpis" role="group" aria-label="Channel metrics">
-        <div className="wa-kpi">
-          <span className="wa-kpi-l">Orders · 7d</span>
-          <span className="wa-kpi-v tnum">{m7 ? m7.orders.paid : "—"}</span>
-          <span className="wa-kpi-h">paid via WhatsApp</span>
+        <div className="stat good">
+          <div className="l">Conversion · 7d</div>
+          <div className="v tnum">{m7 ? pct(m7.conversionRate) : "—"}</div>
+          <div className="h">chat → paid</div>
         </div>
-        <div className="wa-kpi good">
-          <span className="wa-kpi-l">Conversion · 7d</span>
-          <span className="wa-kpi-v tnum">{m7 ? pct(m7.conversionRate) : "—"}</span>
-          <span className="wa-kpi-h">chat → paid</span>
+        <div className="stat">
+          <div className="l">Active sessions</div>
+          <div className="v tnum">{af ? af.totalSessions : "—"}</div>
         </div>
-        <div className="wa-kpi">
-          <span className="wa-kpi-l">Active sessions</span>
-          <span className="wa-kpi-v tnum">{af ? af.totalSessions : "—"}</span>
+        <div className="stat warn">
+          <div className="l">Awaiting pay</div>
+          <div className="v tnum">{af ? af.awaitingPayment : "—"}</div>
         </div>
-        <div className="wa-kpi warn">
-          <span className="wa-kpi-l">Awaiting pay</span>
-          <span className="wa-kpi-v tnum">{af ? af.awaitingPayment : "—"}</span>
-        </div>
-        <div className="wa-kpi">
-          <span className="wa-kpi-l">Lifetime paid</span>
-          <span className="wa-kpi-v tnum">{mLife ? mLife.orders.paid : "—"}</span>
+        <div className="stat">
+          <div className="l">Lifetime paid</div>
+          <div className="v tnum">{mLife ? mLife.orders.paid : "—"}</div>
         </div>
       </div>
 
-      {/* 3-pane editor */}
-      <div className="wa-editor">
-        {/* LEFT — conversation list */}
-        <aside className="wa-list" aria-label="Conversations">
-          <div className="wa-list-search">
-            <div className="wa-search-box">
+      <div className="guest">
+        <section className="convs">
+          <div className="convs-h">
+            <div className="conv-search">
               <Search />
               <input
+                className="input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name, phone, order…"
@@ -868,36 +825,32 @@ function AdminWhatsAppDesktop() {
                 aria-label="Search conversations"
               />
             </div>
-            <button type="button" className="wa-list-refresh" onClick={() => void loadAll()} title="Refresh">
-              <RotateCw />
-            </button>
           </div>
-          <div className="wa-conv-tabs" role="group" aria-label="Conversation filters">
+          <div className="conv-tabs">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
                 type="button"
-                className="wa-conv-tab"
+                className={`conv-tab${filter === f.value ? " on" : ""}`}
                 aria-pressed={filter === f.value}
                 onClick={() => setFilter(f.value)}
               >
-                {f.label}
-                <span className="wa-chip-count tnum">{f.count}</span>
+                {f.label} <span className="n">{f.count}</span>
               </button>
             ))}
           </div>
-          <div className="wa-list-scroll">
+          <div className="conv-list">
             {loading ? (
-              <div className="wa-list-msg">Loading conversations…</div>
+              <div className="pane-msg">Loading conversations…</div>
             ) : filtered.length === 0 ? (
-              <div className="wa-list-msg">
+              <div className="pane-msg">
                 {conversations.length === 0
                   ? "No conversations yet. Inbound WhatsApp messages appear here."
                   : "No conversations match this filter."}
               </div>
             ) : (
               filtered.map((c) => (
-                <ConvItem
+                <ConvCard
                   key={c.phone}
                   conv={c}
                   active={c.phone === selectedPhone}
@@ -907,56 +860,80 @@ function AdminWhatsAppDesktop() {
               ))
             )}
           </div>
-        </aside>
+        </section>
 
-        {/* CENTER — chat thread */}
-        <section className="wa-thread" aria-label="Conversation thread">
+        <section className="thread">
           {!selected ? (
-            <div className="wa-empty">
-              <span className="wa-empty-emoji">💬</span>
-              <span className="wa-empty-text">Select a conversation to read and reply.</span>
-            </div>
+            <div className="thread-empty">Select a conversation to read and reply.</div>
           ) : (
             <>
-              <div className="wa-thread-head">
-                <span className={`wa-th-dot${selected.hasActiveSession ? " live" : ""}`} />
-                <span className="wa-th-id tnum">{selected.phone}</span>
-                {selected.customerName && <span className="wa-th-name">{selected.customerName}</span>}
-                {selected.simulated && <span className="wa-th-badge sim">sandbox</span>}
-                {selected.locationSlug && (
-                  <span className="wa-th-badge loc">{selected.locationSlug}</span>
-                )}
-                <span className={`wa-th-badge window${windowOpen ? " open" : ""}`}>
-                  <Clock /> {windowOpen ? "24h open" : "window closed"}
+              <div className="thread-h">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="nm">{selected.customerName || selected.phone}</div>
+                  <div className="subtle" style={{ fontSize: 11 }}>
+                    {selected.phone} · WhatsApp
+                    {selected.simulated && " · sandbox"}
+                    {selected.locationSlug && ` · ${selected.locationSlug}`}
+                  </div>
+                </div>
+                <span className={`win ${windowOpen ? "open" : "closed"}`}>
+                  24h window · {windowOpen ? "open" : "closed"}
                 </span>
+                <button
+                  type="button"
+                  className="btn ghost icon"
+                  title={pinnedSet.has(selected.phone) ? "Unpin" : "Pin to inbox"}
+                  onClick={() => void setFlag(selected.phone, { pinned: !pinnedSet.has(selected.phone) })}
+                >
+                  {pinnedSet.has(selected.phone) ? <PinOff /> : <Pin />}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost icon"
+                  title={archivedSet.has(selected.phone) ? "Unarchive" : "Archive"}
+                  onClick={() => void setFlag(selected.phone, { archived: !archivedSet.has(selected.phone) })}
+                >
+                  {archivedSet.has(selected.phone) ? <ArchiveRestore /> : <Archive />}
+                </button>
+                {selected.hasActiveSession && (
+                  <button
+                    type="button"
+                    className="btn ghost icon"
+                    title="Reset session"
+                    onClick={() => void resetSession(selected.phone)}
+                  >
+                    <RotateCw />
+                  </button>
+                )}
               </div>
 
-              <div className="wa-msgs" ref={msgsRef}>
+              <div className="thread-body" ref={msgsRef}>
                 {threadLoading && thread.length === 0 ? (
-                  <div className="wa-list-msg">Loading transcript…</div>
+                  <div className="pane-msg">Loading transcript…</div>
                 ) : thread.length === 0 ? (
-                  <div className="wa-list-msg">No messages yet.</div>
+                  <div className="pane-msg">No messages yet.</div>
                 ) : (
                   thread.map((m, i) => {
                     const day = dayLabel(m.at);
                     const prevDay = i > 0 ? dayLabel(thread[i - 1].at) : null;
                     return (
                       <Fragment key={i}>
-                        {day && day !== prevDay && <div className="wa-day">{day}</div>}
-                        <ThreadBubble message={m} />
+                        {day && day !== prevDay && <div className="day">{day}</div>}
+                        <Bubble message={m} />
                       </Fragment>
                     );
                   })
                 )}
               </div>
 
-              <div className="wa-composer">
-                <div className="wa-quick" role="group" aria-label="Quick replies">
+              <div className="composer">
+                <div className="composer-quick">
                   {QUICK_REPLIES.map((q) => (
                     <button
                       key={q.label}
                       type="button"
-                      className="wa-quick-chip"
+                      className="chip"
+                      disabled={q.label === "Re-open template" && (!templateName || sending)}
                       onClick={() => {
                         if (q.label === "Re-open template") {
                           void sendTemplate();
@@ -972,78 +949,99 @@ function AdminWhatsAppDesktop() {
                         }
                         setReply((r) => (r ? `${r} ${q.text}` : q.text));
                       }}
-                      disabled={q.label === "Re-open template" && (!templateName || sending)}
                     >
                       {q.label}
                     </button>
                   ))}
                 </div>
-                <textarea
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  rows={2}
-                  maxLength={1024}
-                  placeholder={
-                    windowOpen
-                      ? "Type a reply…"
-                      : "Window closed — send the re-open template, then reply."
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      void send();
+                <div className="composer-row">
+                  <textarea
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    maxLength={1024}
+                    placeholder={
+                      windowOpen
+                        ? "Type a reply…"
+                        : "Window closed — send the re-open template, then reply."
                     }
-                  }}
-                />
-                <div className="wa-composer-row">
-                  <span className="wa-composer-hint">
-                    {templateName ? (
-                      <>
-                        Re-open template: <code>{templateName}</code>
-                      </>
-                    ) : (
-                      "No re-open template set (Settings)."
-                    )}
-                  </span>
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        void send();
+                      }
+                    }}
+                  />
                   <button
                     type="button"
-                    className="wa-tmpl-btn"
-                    onClick={() => void sendTemplate()}
-                    disabled={!templateName || sending}
-                  >
-                    <ArrowDownToLine />
-                    <span>Template</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="wa-send-btn"
+                    className="btn primary lg"
                     onClick={() => void send()}
                     disabled={!reply.trim() || sending}
                   >
-                    <Send />
-                    <span>Send</span>
+                    Send
                   </button>
+                </div>
+                <div className="hint">
+                  {windowOpen ? (
+                    <>Inside 24h service window — free-text allowed.</>
+                  ) : (
+                    <>
+                      Window closed — only the <b>{templateName || "welcome_back"}</b> template can re-open.
+                    </>
+                  )}
                 </div>
               </div>
             </>
           )}
         </section>
 
-        {/* RIGHT — context + actions */}
-        <aside className="wa-context" aria-label="Conversation context">
-          {!selected ? (
-            <div className="wa-empty">
-              <span className="wa-empty-text">No conversation selected.</span>
-            </div>
-          ) : (
+        <aside className="ctx">
+          {selected && (
             <>
-              <div className="wa-ctx-sec">
-                <div className="wa-ctx-eyebrow">Guest</div>
-                <div className="wa-gp">
-                  <span className="wa-gp-av">{initials(guest?.name ?? selected.customerName, selected.phone)}</span>
-                  <div className="wa-gp-id">
-                    <div className="wa-gp-nm">{guest?.name ?? selected.customerName ?? selected.phone}</div>
-                    <div className="wa-gp-sub">
+              <div className="ctx-sec">
+                <div className="eyebrow">Live order</div>
+                <div className="kv">
+                  <span className="k">Location</span>
+                  <span className="v">{selected.locationSlug || "—"}</span>
+                </div>
+                <div className="kv">
+                  <span className="k">Cart</span>
+                  <span className="v mono">
+                    {selected.cartCount > 0
+                      ? `${selected.cartCount} items · ${formatPrice(selected.cartSubtotalGrosze)}`
+                      : "empty"}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span className="k">Fulfillment</span>
+                  <span className="v">{selected.fulfillmentType || "—"}</span>
+                </div>
+                <div className="kv">
+                  <span className="k">Pending order</span>
+                  <span className="v mono">{selected.pendingOrderId || "—"}</span>
+                </div>
+                {selected.pendingPaymentUrl && (
+                  <a className="paylink" href={selected.pendingPaymentUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink /> Open Stripe pay link →
+                  </a>
+                )}
+              </div>
+              {selected.hasActiveSession && (
+                <div className="ctx-sec">
+                  <div className="eyebrow">Conversion funnel</div>
+                  <Check label="Location set" done={!!selected.locationSlug} />
+                  <Check label="Cart has items" done={selected.cartCount > 0} />
+                  <Check label="Fulfillment chosen" done={!!selected.fulfillmentType} />
+                  <Check label="Slot picked" done={!!selected.slotId} />
+                  <Check label="Awaiting payment" done={!!selected.pendingPaymentUrl} />
+                </div>
+              )}
+              <div className="ctx-sec" style={{ borderBottom: 0 }}>
+                <div className="eyebrow">Guest</div>
+                <div className="gp">
+                  <div className="av">{initials(guest?.name ?? selected.customerName, selected.phone)}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="nm">{guest?.name ?? selected.customerName ?? selected.phone}</div>
+                    <div className="sub">
                       {[
                         guest?.isMember ? guest.tier : null,
                         guest && guest.visits > 0
@@ -1056,103 +1054,19 @@ function AdminWhatsAppDesktop() {
                     </div>
                   </div>
                 </div>
-                <div className="wa-gp-stats">
-                  <div className="wa-gp-stat">
-                    <span className="l">Lifetime value</span>
-                    <span className="v tnum">{guest ? formatPrice(guest.ltv) : "—"}</span>
+                <div className="gp-stats">
+                  <div className="gp-stat">
+                    <div className="l">Lifetime value</div>
+                    <div className="v">{guest ? formatPrice(guest.ltv) : "—"}</div>
                   </div>
-                  <div className="wa-gp-stat">
-                    <span className="l">Avg spend</span>
-                    <span className="v tnum">{guest ? formatPrice(guest.avg) : "—"}</span>
+                  <div className="gp-stat">
+                    <div className="l">Avg spend</div>
+                    <div className="v">{guest ? formatPrice(guest.avg) : "—"}</div>
                   </div>
                 </div>
-                <a className="wa-gp-link" href="/admin/guest?view=guests">
+                <a className="gp-link" href="/admin/guest?view=guests">
                   Open full profile →
                 </a>
-                <div className="wa-ctx-row">
-                  <span className="k">Phone</span>
-                  <span className="v tnum">{selected.phone}</span>
-                </div>
-                <div className="wa-ctx-row">
-                  <span className="k">Last activity</span>
-                  <span className="v" title={fmtFull(selected.lastAt)}>{fmtAgo(selected.lastAt)} ago</span>
-                </div>
-              </div>
-
-              <div className="wa-ctx-sec">
-                <div className="wa-ctx-eyebrow">Order in progress</div>
-                <div className="wa-ctx-row">
-                  <span className="k"><MapPin /> Location</span>
-                  <span className="v">{selected.locationSlug || "—"}</span>
-                </div>
-                <div className="wa-ctx-row">
-                  <span className="k"><ShoppingCart /> Cart</span>
-                  <span className="v">
-                    {selected.cartCount > 0
-                      ? `${selected.cartCount} · ${formatPrice(selected.cartSubtotalGrosze)}`
-                      : "empty"}
-                  </span>
-                </div>
-                <div className="wa-ctx-row">
-                  <span className="k"><Truck /> Fulfillment</span>
-                  <span className="v">{selected.fulfillmentType || "—"}</span>
-                </div>
-                <div className="wa-ctx-row">
-                  <span className="k"><CreditCard /> Pending</span>
-                  <span className="v">{selected.pendingOrderId || "—"}</span>
-                </div>
-                {selected.pendingPaymentUrl && (
-                  <a
-                    className="wa-ctx-link"
-                    href={selected.pendingPaymentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink /> Open Stripe pay link
-                  </a>
-                )}
-              </div>
-
-              {selected.hasActiveSession && (
-                <div className="wa-ctx-sec">
-                  <div className="wa-ctx-eyebrow">Funnel</div>
-                  <div className="wa-funnel">
-                    <FunnelStep label="Location set" done={!!selected.locationSlug} />
-                    <FunnelStep label="Has cart" done={selected.cartCount > 0} />
-                    <FunnelStep label="Fulfillment" done={!!selected.fulfillmentType} />
-                    <FunnelStep label="Slot picked" done={!!selected.slotId} />
-                    <FunnelStep label="Awaiting payment" done={!!selected.pendingPaymentUrl} />
-                  </div>
-                </div>
-              )}
-
-              <div className="wa-ctx-actions">
-                <button
-                  type="button"
-                  className="wa-act-btn neutral"
-                  onClick={() => void setFlag(selected.phone, { pinned: !pinnedSet.has(selected.phone) })}
-                >
-                  {pinnedSet.has(selected.phone) ? <PinOff /> : <Pin />}
-                  <span>{pinnedSet.has(selected.phone) ? "Unpin" : "Pin to inbox"}</span>
-                </button>
-                <button
-                  type="button"
-                  className="wa-act-btn neutral"
-                  onClick={() => void setFlag(selected.phone, { archived: !archivedSet.has(selected.phone) })}
-                >
-                  {archivedSet.has(selected.phone) ? <ArchiveRestore /> : <Archive />}
-                  <span>{archivedSet.has(selected.phone) ? "Unarchive" : "Archive"}</span>
-                </button>
-                {selected.hasActiveSession && (
-                  <button
-                    type="button"
-                    className="wa-act-btn"
-                    onClick={() => void resetSession(selected.phone)}
-                  >
-                    <RotateCw />
-                    <span>Reset session</span>
-                  </button>
-                )}
               </div>
             </>
           )}
@@ -1166,7 +1080,7 @@ function AdminWhatsAppDesktop() {
       />
       <WhatsAppFunnelDialog open={funnelOpen} onClose={() => setFunnelOpen(false)} />
       <WhatsAppBroadcastDialog open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
-    </div>
+    </CoreShell>
   );
 
   // Kiosk renders through a portal to document.body so the edge-to-edge console
@@ -1177,7 +1091,7 @@ function AdminWhatsAppDesktop() {
 
 // ---- subcomponents ------------------------------------------------------
 
-function ConvItem({
+function ConvCard({
   conv,
   active,
   pinned,
@@ -1189,34 +1103,31 @@ function ConvItem({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`wa-conv${active ? " active" : ""}${conv.hasActiveSession ? " live" : ""}`}
-      onClick={onSelect}
-    >
-      <span className={`wa-conv-av${conv.hasActiveSession ? " live" : " idle"}`}>
+    <button type="button" className={`conv${active ? " on" : ""}`} onClick={onSelect}>
+      <div className={`av${conv.hasActiveSession ? "" : " idle"}`}>
         {initials(conv.customerName, conv.phone)}
-        <span className="wa-conv-av-ch" />
-      </span>
-      <div className="wa-conv-main">
-        <div className="wa-conv-top">
-          <span className="wa-conv-name">{conv.customerName || conv.phone}</span>
-          {pinned && <Pin className="wa-conv-pin" />}
+        <span className="ch" />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div className="nm">
+          {conv.customerName || conv.phone}
+          {pinned && <Pin width={12} height={12} style={{ color: "var(--fg-subtle)" }} />}
         </div>
-        {conv.customerName && <div className="wa-conv-sub tnum">{conv.phone}</div>}
-        <div className="wa-conv-snip">{conv.lastBody || "—"}</div>
-        <div className="wa-conv-tags">
-          {conv.simulated && <span className="wa-chip-mini sim">sim</span>}
-          {conv.locationSlug && <span className="wa-chip-mini loc">{conv.locationSlug}</span>}
+        <div className="msg">{conv.lastBody || "—"}</div>
+        <div className="ctags">
+          {conv.simulated && <span className="mtag sim">sim</span>}
+          {conv.locationSlug && <span className="mtag">{conv.locationSlug}</span>}
           {conv.cartCount > 0 && (
-            <span className="wa-chip-mini">{conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}</span>
+            <span className="mtag">
+              {conv.cartCount} item{conv.cartCount === 1 ? "" : "s"}
+            </span>
           )}
-          {conv.pendingPaymentUrl && <span className="wa-chip-mini pay">awaiting pay</span>}
+          {conv.pendingPaymentUrl && <span className="mtag pay">awaiting pay</span>}
         </div>
       </div>
-      <span className="wa-conv-meta">
-        <span className="wa-conv-ago tnum">{fmtAgo(conv.lastAt)}</span>
-      </span>
+      <div className="meta">
+        <div className="tm">{fmtAgo(conv.lastAt)}</div>
+      </div>
     </button>
   );
 }
@@ -1231,40 +1142,39 @@ function initials(name: string | null, phone: string): string {
   return phone.replace(/\D/g, "").slice(-2) || "··";
 }
 
-function ThreadBubble({ message }: { message: WaMessage }) {
-  const isOut = message.direction === "out";
-  const variant =
-    message.actor === "operator"
-      ? "operator"
-      : message.actor === "system"
-        ? "system"
-        : isOut
-          ? "out"
-          : "in";
+function Bubble({ message }: { message: WaMessage }) {
+  if (message.actor === "system") {
+    return (
+      <div className="sys">
+        <span className="l" />
+        {message.body || "—"}
+        <span className="l" />
+      </div>
+    );
+  }
+  const variant = message.actor === "operator" ? "out" : message.actor === "bot" ? "bot" : "in";
   const kind = kindLabel(message);
   return (
-    <div className={`wa-bubble-row ${isOut ? "out" : "in"}`}>
-      <div className={`wa-bubble ${variant}`}>
-        <div className="wa-bubble-meta">
-          <span>{actorLabel(message)}</span>
-          {kind && <span className="wa-bubble-kind">{kind}</span>}
-          <span className="wa-bubble-time tnum" title={fmtFull(message.at)}>
-            {fmtAgo(message.at)}
-          </span>
-        </div>
-        <div className="wa-bubble-body">
-          {message.body || <span className="wa-bubble-empty">(empty)</span>}
-        </div>
+    <div className={`bub ${variant}`}>
+      <div className="meta">
+        <span className="who" style={variant === "bot" ? { color: "var(--info)" } : undefined}>
+          {actorLabel(message)}
+        </span>
+        {kind && <span className="kind">{kind}</span>}
+      </div>
+      {message.body || "(empty)"}
+      <div className="t" title={fmtFull(message.at)}>
+        {fmtAgo(message.at)}
       </div>
     </div>
   );
 }
 
-function FunnelStep({ label, done }: { label: string; done: boolean }) {
+function Check({ label, done }: { label: string; done: boolean }) {
   return (
-    <div className={`wa-funnel-step${done ? " done" : ""}`}>
-      {done ? <CheckCircle2 /> : <Circle />}
-      <span>{label}</span>
+    <div className={`check${done ? " done" : ""}`}>
+      <span className="b">{done ? "✓" : ""}</span>
+      {label}
     </div>
   );
 }

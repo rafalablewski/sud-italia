@@ -22,6 +22,12 @@ interface Props {
 
 const BARE_ROUTES = ["/admin/login"];
 
+// Core suite surfaces render their own full-viewport shell (the mockup's SI
+// sidebar + topbar), so the admin chrome steps aside — but the data providers
+// (location, toast, shell context) stay so the Core components keep working.
+// Routes are added here as each surface is rebuilt onto the Core suite shell.
+const CORE_ROUTES = ["/admin/guest"];
+
 export function AdminShell({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -101,6 +107,19 @@ export function AdminShell({ children }: Props) {
 
   if (isBare) {
     return <>{children}</>;
+  }
+
+  const isCore = CORE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  if (isCore) {
+    // Providers only — no Sidebar / Topbar / palette. The Core page owns the
+    // viewport via its own CoreShell (.core-suite is a fixed full-screen layer).
+    return (
+      <AdminLocationProvider>
+        <ShellContext.Provider value={ctxValue}>
+          <ToastProvider>{children}</ToastProvider>
+        </ShellContext.Provider>
+      </AdminLocationProvider>
+    );
   }
 
   return (
