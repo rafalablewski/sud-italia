@@ -188,12 +188,7 @@ export function AdminHandover() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter
-            variant="dropdown"
-            value={pageLoc}
-            onChange={setPageLoc}
-            ariaLabel="Handover location"
-          />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
         </div>
       </header>
 

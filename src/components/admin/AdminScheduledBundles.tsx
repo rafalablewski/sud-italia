@@ -98,7 +98,7 @@ export function AdminScheduledBundles() {
         </div>
       </header>
 
-      <LocationFilter variant="tabs" value={activeLocation} onChange={setActiveLocation} />
+      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
 
       <Tabs
         value={statusFilter}

@@ -93,7 +93,7 @@ export function AdminUpsell() {
         </div>
       </header>
 
-      <LocationFilter variant="tabs" value={activeLocation} onChange={setActiveLocation} />
+      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
 
       <Tabs
         value={tab}

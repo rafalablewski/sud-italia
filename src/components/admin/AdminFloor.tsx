@@ -331,7 +331,7 @@ export function AdminFloor() {
       </header>
 
       <div className="v2-filters">
-        <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
+        <LocationFilter value={pageLoc} onChange={setPageLoc} />
         {view === "reservations" && <DatePager unit="day" value={date} onChange={setDate} />}
         <Button
           size="sm"

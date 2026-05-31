@@ -173,12 +173,7 @@ function AdminCashDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter
-            variant="dropdown"
-            value={pageLoc}
-            onChange={setPageLoc}
-            ariaLabel="Cash session location"
-          />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Button
             variant="primary"
             size="sm"

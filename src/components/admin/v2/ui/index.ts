@@ -13,6 +13,6 @@ export { Tooltip } from "./Tooltip";
 export { InfoButton } from "./InfoButton";
 export { Tabs } from "./Tabs";
 export { DatePager, type DatePagerUnit } from "./DatePager";
-export { LocationFilter, type LocationFilterVariant } from "./LocationFilter";
+export { LocationFilter } from "./LocationFilter";
 export { Table, type Column } from "./Table";
 export { ToastProvider, useToast } from "./Toast";

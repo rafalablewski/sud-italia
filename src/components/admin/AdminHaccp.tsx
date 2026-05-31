@@ -138,12 +138,7 @@ export function AdminHaccp() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter
-            variant="dropdown"
-            value={pageLoc}
-            onChange={setPageLoc}
-            ariaLabel="HACCP location"
-          />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
         </div>
       </header>
 

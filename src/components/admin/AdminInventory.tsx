@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   Boxes,
   History,
-  Package,
   PackageMinus,
   PackagePlus,
   Plus,
@@ -384,7 +383,7 @@ function AdminInventoryDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} icon={Package} />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}

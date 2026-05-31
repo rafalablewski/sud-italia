@@ -289,7 +289,7 @@ function AdminTruckDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Tabs
             value={tab}
             onChange={(v) => setTab(v as Tab)}

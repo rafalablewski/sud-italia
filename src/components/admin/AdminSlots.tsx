@@ -313,7 +313,7 @@ function AdminSlotsDesktop() {
       </header>
 
       <div className="v2-filters">
-        <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
+        <LocationFilter value={pageLoc} onChange={setPageLoc} />
         <DatePager unit={view} value={date} onChange={setDate} />
         <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
       </div>

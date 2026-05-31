@@ -8,7 +8,6 @@ import {
   Search,
   Send,
   Trash2,
-  Truck,
   X,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -295,7 +294,7 @@ function AdminPurchaseOrdersDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} icon={Truck} />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}

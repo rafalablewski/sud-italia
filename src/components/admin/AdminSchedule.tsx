@@ -230,7 +230,7 @@ function AdminScheduleDesktop() {
           </p>
         </div>
         <div className="v2-page-actions">
-          <LocationFilter variant="dropdown" value={pageLoc} onChange={setPageLoc} />
+          <LocationFilter value={pageLoc} onChange={setPageLoc} />
           <DatePager unit="week" value={weekStart} onChange={setWeekStart} />
         </div>
       </header>
