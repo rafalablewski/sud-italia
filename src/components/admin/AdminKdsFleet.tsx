@@ -69,6 +69,22 @@ const TONE_ORDER: Record<TicketTone, number> = { late: 0, risk: 1, warn: 2, firi
 
 /* ============================ SVG bits ============================ */
 
+function Sparkline({ points, color }: { points: number[]; color: string }) {
+  if (!points || points.length < 2) return <span className="sparkbox" aria-hidden />;
+  const w = 64; const h = 26;
+  const max = Math.max(...points, 1); const min = Math.min(...points, 0);
+  const span = max - min || 1; const step = w / (points.length - 1);
+  const pts = points.map((p, i) => `${(i * step).toFixed(1)} ${(h - 2 - ((p - min) / span) * (h - 6)).toFixed(1)}`);
+  const line = `M${pts.join(" L ")}`;
+  const area = `${line} L ${w} ${h} L 0 ${h} Z`;
+  return (
+    <svg className="sparkbox" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
+      <path d={area} fill={color} fillOpacity={0.12} />
+      <path d={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /* ============================ Component ============================ */
 
 export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => void }) {
