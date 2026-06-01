@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
 import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
-import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 import { CohortSandbox } from "./CohortSandbox";
@@ -306,57 +306,64 @@ function AdminCohortReportDesktop() {
         />
       </section>
 
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>How to read these numbers</h2>
-            <span className="v2-detail-head-hint">A cohort = everyone whose first order landed in the same month</span>
-          </div>
-          <p style={{ margin: "2px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)" }}>
+      <PageExplainer
+        hint="A cohort = everyone whose first order landed in the same month"
+        description={
+          <>
             This page groups every customer by the month they <strong>first</strong>{" "}
             ordered, then follows each group over time — so you can see whether
             customers stick around (retention) and how much they&apos;re worth
             (CLTV), and whether newer months are healthier than older ones.
+          </>
+        }
+        institutional={
+          <p style={{ margin: 0 }}>
+            Cohort retention and CLTV are the unit-economics backbone every consumer
+            investor underwrites: a book that retains is a compounding asset, one that
+            doesn&apos;t is a leaky bucket no acquisition budget can fill. The QSR /
+            fast-casual benchmark is a <strong>month-1 repeat of 25%+</strong> and a
+            retention curve that <strong>flattens</strong> (rather than trending to
+            zero) by month&nbsp;3–4 — a flat tail is the signature of a habit, and the
+            gate for funding acquisition. Read recent cohorts against older ones:
+            decay in the newest months is the earliest warning that the product or
+            operation regressed, visible here long before the blended average moves.
           </p>
-
-          <PlainTalk>
-            <p style={{ margin: 0 }}>
-              Think of each row as a class that started in a given month. The{" "}
-              <strong>retention matrix</strong> reads left-to-right: of the people who
-              first ordered in January, what % came back in month&nbsp;1, month&nbsp;2,
-              and so on. A line that <strong>stays high</strong> = you built a habit; a
-              line that <strong>nosedives</strong> = you&apos;re renting customers, not
-              keeping them. The <strong>repeat rate</strong> up top is the blunt version
-              of the same thing: <strong>25%+</strong> is a healthy sit-down-quality
-              number for QSR. <strong>CLTV</strong> is what an average customer has spent
-              by 30/60/90/180/365 days in — watch the 365-day column climb as a cohort
-              matures.
-            </p>
-          </PlainTalk>
-
-          <Methodology>
-            <p style={{ margin: 0 }}>
-              Cohorts are keyed by each customer&apos;s <strong>first paid order</strong>{" "}
-              (pending/cancelled orders are ignored). Retention for month N = cohort
-              members who ordered in month N ÷ cohort size. CLTV = cumulative revenue
-              per cohort customer through each day-horizon. All computed live from the
-              orders table by <code>buildCohortReport</code> (the same engine behind{" "}
-              <Link href="/admin/reports/ltv-cac" className="v2-link">LTV / CAC</Link>).
-              Young cohorts under-state the 365-day column simply because they
-              haven&apos;t lived a full year yet.
-            </p>
-          </Methodology>
-
-          <Tips>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Fix the month-1 drop first.</strong> The biggest retention loss is always between the 1st and 2nd order — a timely &ldquo;come back this week&rdquo; nudge moves it most.</li>
-              <li><strong>Compare cohorts, not just the average.</strong> If recent months retain worse than older ones, something changed (menu, pricing, a bad delivery window) — find it.</li>
-              <li><strong>Feed acquisition spend</strong> into <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link> so these cohorts also get a CAC + payback on the LTV/CAC page.</li>
-              <li><strong>Champion your champions.</strong> The segment mix below flags your most valuable repeat buyers — give them the loyalty perks that keep the curve flat.</li>
-            </ul>
-          </Tips>
-        </CardBody>
-      </Card>
+        }
+        plain={
+          <p style={{ margin: 0 }}>
+            Think of each row as a class that started in a given month. The{" "}
+            <strong>retention matrix</strong> reads left-to-right: of the people who
+            first ordered in January, what % came back in month&nbsp;1, month&nbsp;2,
+            and so on. A line that <strong>stays high</strong> = you built a habit; a
+            line that <strong>nosedives</strong> = you&apos;re renting customers, not
+            keeping them. The <strong>repeat rate</strong> up top is the blunt version
+            of the same thing: <strong>25%+</strong> is a healthy sit-down-quality
+            number for QSR. <strong>CLTV</strong> is what an average customer has spent
+            by 30/60/90/180/365 days in — watch the 365-day column climb as a cohort
+            matures.
+          </p>
+        }
+        tips={
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Fix the month-1 drop first.</strong> The biggest retention loss is always between the 1st and 2nd order — a timely &ldquo;come back this week&rdquo; nudge moves it most.</li>
+            <li><strong>Compare cohorts, not just the average.</strong> If recent months retain worse than older ones, something changed (menu, pricing, a bad delivery window) — find it.</li>
+            <li><strong>Feed acquisition spend</strong> into <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link> so these cohorts also get a CAC + payback on the LTV/CAC page.</li>
+            <li><strong>Champion your champions.</strong> The segment mix below flags your most valuable repeat buyers — give them the loyalty perks that keep the curve flat.</li>
+          </ul>
+        }
+        methodology={
+          <p style={{ margin: 0 }}>
+            Cohorts are keyed by each customer&apos;s <strong>first paid order</strong>{" "}
+            (pending/cancelled orders are ignored). Retention for month N = cohort
+            members who ordered in month N ÷ cohort size. CLTV = cumulative revenue
+            per cohort customer through each day-horizon. All computed live from the
+            orders table by <code>buildCohortReport</code> (the same engine behind{" "}
+            <Link href="/admin/reports/ltv-cac" className="v2-link">LTV / CAC</Link>).
+            Young cohorts under-state the 365-day column simply because they
+            haven&apos;t lived a full year yet.
+          </p>
+        }
+      />
 
       {segmentCounts && Object.keys(segmentCounts).length > 0 && (
         <Card>

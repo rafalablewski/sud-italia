@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, Coins, TrendingUp, Boxes, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Select, Badge, InfoButton, type BadgeTone } from "./v2/ui";
-import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
@@ -479,36 +479,52 @@ export function MenuEngineeringSandbox() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>How this projects</h2>
-            <span className="v2-detail-head-hint">Real seed, transparent math</span>
-          </div>
-          <PlainTalk>
-            <p style={{ margin: 0 }}>
-              Every dish has a real price, cost and how many you sold. Raise a price and you make
-              more on each one — but sell a few fewer. Promote a high-margin &ldquo;puzzle&rdquo; and
-              you sell more of your best earners. This adds it all up so you can see whether a menu
-              change <em>grows total profit</em> before you commit.
-            </p>
-          </PlainTalk>
-          <Methodology>
-            <p style={{ margin: 0 }}>
-              Per-unit price/cost are recovered from each item&apos;s revenue ÷ units. A price change
-              multiplies unit price and applies a demand response of <code>(1 + Δprice)^(−elasticity)</code>;
-              promoting puzzles multiplies their velocity; removing dogs zeroes their units.
-              Contribution = projected revenue − cost, summed across the menu.
-            </p>
-          </Methodology>
-          <Tips>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Reprice plowhorses up.</strong> High-volume, low-margin dishes give small per-unit gains × big volume.</li>
-              <li><strong>Promote puzzles, don&apos;t discount them.</strong> They already carry margin; they just need velocity.</li>
-            </ul>
-          </Tips>
-        </CardBody>
-      </Card>
+      <PageExplainer
+        title="How this projects"
+        hint="Real seed, transparent math"
+        description={
+          <>
+            A what-if on the menu: reprice, promote or cut individual dishes and watch
+            total <strong>contribution</strong> (margin złoty, not revenue) respond — so
+            you can see whether a menu change grows profit before you commit to it.
+          </>
+        }
+        institutional={
+          <p style={{ margin: 0 }}>
+            Menu engineering is the classic profit lever in food service because it
+            moves margin with <strong>zero incremental acquisition spend</strong> — the
+            cheapest złoty of profit you can find. The discipline is to optimise{" "}
+            <strong>contribution</strong> (price − cost × volume), not headline revenue
+            or per-item margin alone: a small price rise on a high-volume
+            &ldquo;plowhorse&rdquo; usually beats a big rise on a low-volume star. The
+            number to respect is <strong>price elasticity</strong> — push price past
+            what demand tolerates and contribution falls even as per-unit margin rises,
+            so treat the elasticity assumption as the gate on every repricing.
+          </p>
+        }
+        plain={
+          <p style={{ margin: 0 }}>
+            Every dish has a real price, cost and how many you sold. Raise a price and you make
+            more on each one — but sell a few fewer. Promote a high-margin &ldquo;puzzle&rdquo; and
+            you sell more of your best earners. This adds it all up so you can see whether a menu
+            change <em>grows total profit</em> before you commit.
+          </p>
+        }
+        tips={
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Reprice plowhorses up.</strong> High-volume, low-margin dishes give small per-unit gains × big volume.</li>
+            <li><strong>Promote puzzles, don&apos;t discount them.</strong> They already carry margin; they just need velocity.</li>
+          </ul>
+        }
+        methodology={
+          <p style={{ margin: 0 }}>
+            Per-unit price/cost are recovered from each item&apos;s revenue ÷ units. A price change
+            multiplies unit price and applies a demand response of <code>(1 + Δprice)^(−elasticity)</code>;
+            promoting puzzles multiplies their velocity; removing dogs zeroes their units.
+            Contribution = projected revenue − cost, summed across the menu.
+          </p>
+        }
+      />
     </div>
   );
 }

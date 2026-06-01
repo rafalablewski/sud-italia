@@ -87,8 +87,32 @@ tokens — never hard-code colours in a page.
 `.admin-bg > *` sets `position: relative; z-index: 1` on every direct child,
 which creates a stacking context that **traps fixed-position elements**.
 Every modal, drawer, popover, toast, or dropdown menu in admin must mount
-via `createPortal(node, document.body)`. Relying on `z-index` alone will
-silently break in production.
+via `createPortal`. Relying on `z-index` alone will silently break in
+production.
+
+**Portal target: `#admin-portal-root`, not `<body>`.** The shared v2 overlays
+(`Dialog` / `ConfirmDialog` / `InfoButton` / `Popover` / `Tooltip` / `Toast`)
+use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
+admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
+wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
+**and** the element that carries the `--font-admin-*` next/font vars. It also
+repairs the font tokens (in `themes/admin/index.css`) so the admin subtree
+renders in the right typefaces. Why repair is needed: `--font-ui` /
+`--font-display` are declared up on `[data-admin-theme]` (`<html>`) as
+`var(--font-admin-body|display), …`, but the `--font-admin-*` vars only exist on
+`#admin-portal-root`, and a `var()` inside a custom property resolves at the
+element where it's *declared* — so the tokens compute **empty** on `<html>` and
+inherit down empty, making every `font-family: var(--font-ui)` /
+`var(--font-display)` rule silently fall back to the browser-default serif. The
+fix re-declares both tokens on `#admin-portal-root` (so consumers like the shell
+and the sidebar brand wordmark resolve — wordmark → Fraunces, body → Inter) and
+*also* sets `font-family: var(--font-admin-body), …` directly on the wrapper, so
+overlays portaled in (siblings of `.v2-shell`, with no `--font-ui` rule of their
+own) inherit Inter. Portaling to `<body>`
+escapes the trap but lands *outside* the admin font scope, so the overlay
+renders serif. Use the helper for any new admin overlay. (Mobile's
+`BottomSheet` / `MobileCommandPalette` mount inside `MobileShell`, which is
+itself in-scope.)
 
 ## Capabilities — the source of truth
 

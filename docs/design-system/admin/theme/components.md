@@ -213,8 +213,39 @@ Key rules:
 
 ## Dialogs / overlays
 
-- Portaled to `document.body`. The admin layout traps fixed elements
-  otherwise — see `CLAUDE.md` rule #4.
+- **Portaled to `#admin-portal-root` (the admin layout wrapper), falling back
+  to `document.body`** — via the shared `adminOverlayTarget()` helper in
+  `v2/ui/portal.ts`. Every portaled admin overlay uses it: `Dialog` /
+  `ConfirmDialog` / `InfoButton` (which build on `Dialog`), plus `Popover`,
+  `Tooltip` and the `Toast` stack. The wrapper is an ancestor of `.admin-bg`,
+  so an overlay portaled here still escapes the `.admin-bg > *` stacking trap
+  (`CLAUDE.md` rule #4) — but it is *also* where the `--font-admin-*` next/font
+  vars are declared **and** (since the font-scope fix) carries an explicit
+  `font-family` rule, so the overlay inherits **Inter** instead of the
+  browser-default **serif**. Two things were both required: (1) portal *into*
+  `#admin-portal-root` so the overlay is inside the admin font scope, and
+  (2) the `#admin-portal-root { font-family: var(--font-admin-body), … }` rule
+  in `themes/admin/index.css`. The subtlety behind (2): the theme's `--font-ui`
+  token is declared on `[data-admin-theme]` (= `<html>`) as
+  `var(--font-admin-body), …`, but `--font-admin-body` is only defined on
+  `#admin-portal-root` — and a `var()` inside a custom property is substituted
+  at the element where that property is *declared*. So `--font-ui` resolves to
+  empty up on `<html>` and inherits down empty; **every** `font-family:
+  var(--font-ui)` rule (the shell, the `.v2-page-loading` pill, the overlays)
+  silently failed and fell back to serif. The fix sets `font-family` directly
+  from `var(--font-admin-body)` (which *is* defined on `#admin-portal-root`),
+  so the wrapper renders Inter and the broken `var(--font-ui)` consumers below
+  it fall back to `inherit` → Inter. Verified in a real browser with
+  `getComputedStyle` (page card and dialog body both resolve to Inter).
+  Same escape hatch the KDS loading pill uses (see the loading-state note
+  below). All four overlays use `position: fixed` and `#admin-portal-root`
+  carries no transform, so the move doesn't shift their viewport-anchored
+  coordinates. `--font-display` had the **same** var-scope bug (the only admin
+  consumers are the sidebar brand wordmark `.v2-brand-name-line` /
+  `.as-brand-name`), so it's repaired the same way: `#admin-portal-root`
+  re-declares **both** `--font-ui` and `--font-display`, so the brand wordmark
+  now resolves to **Fraunces** while body/overlays stay Inter (verified via
+  `getComputedStyle`).
 - Backdrop: `rgba(0,0,0,.55)` + `backdrop-filter: saturate(120%) blur(4px)`.
 - Dialog box: `--surface-1` + `--border-strong` + `--shadow-lg` +
   `--radius-xl` (16px).
@@ -237,12 +268,24 @@ order, with these labels** — the **CLAUDE.md Rule #12** contract:
 
 - **Build it from `MetricExplainer`** (`Explainers.tsx`) — it fixes the order
   and labels and its five props are all required, so a half-written
-  explanation won't compile. The individual blocks (`InstitutionalAnalysis` /
-  `PlainTalk` / `Tips` / `Methodology`) are exported for the page-level "How to
-  read these numbers" / "How this projects" cards; `Tips` defaults its
-  headline to "Tips — how to push this lever" (override via the `headline`
-  prop). The Calculator's `HELP` registry is the origin of this vocabulary and
-  imports the same shared blocks.
+  explanation won't compile.
+- **Page-level intro cards use `PageExplainer`** (`Explainers.tsx`) — the
+  "How to read these numbers" / "How this projects" card that sits below the
+  KPI row on every report and sandbox. It renders the **same five sections in
+  the same order with the same labels** as `MetricExplainer`, wrapped in a
+  `<Card>` with a heading + optional hint (`title` defaults to "How to read
+  these numbers"; pass `title`/`hint` to override). Its five content props are
+  all required too, so a page intro can't ship missing the institutional
+  framing or with the sections reordered — the page intro and the per-metric ⓘ
+  dialog read as one voice. **Never hand-assemble** the individual blocks into
+  a card; reach for `PageExplainer`. As of the 2026-06 unification all five
+  intro cards (Cohort report, LTV/CAC report, Cohort/LTV-CAC/Menu-engineering
+  sandboxes) are built from it.
+- The individual blocks (`InstitutionalAnalysis` / `PlainTalk` / `Tips` /
+  `Methodology`) remain exported as the shared primitives both wrappers
+  compose, and `Tips` defaults its headline to "Tips — how to push this lever"
+  (override via the `headline` prop). The Calculator's `HELP` registry is the
+  origin of this vocabulary and imports the same shared blocks.
 - **Colour exception:** the four accent left-rails are intentional semantic
   hex (orange/slate/green/blue), *not* theme tokens — the one sanctioned
   deviation from "all colour from tokens", because the rails are a fixed,

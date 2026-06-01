@@ -173,6 +173,36 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Font scope — the fix for "admin renders in serif" (verified in a real
+   browser via getComputedStyle).
+   Root cause: `--font-ui` / `--font-display` are declared on
+   `[data-admin-theme]` (= <html>) as `var(--font-admin-body|display), …`, but
+   the `--font-admin-*` next/font vars are only defined on THIS wrapper
+   (src/app/admin/layout.tsx applies the next/font `.variable` classes here,
+   not on <html>). A `var()` inside a custom property is substituted at the
+   element where that property is *declared* — so up on <html>
+   `var(--font-admin-*)` is undefined, which makes the whole token
+   invalid-at-computed-value-time. It then inherits down *empty* and is never
+   re-evaluated where `--font-admin-*` exists. Net effect: every
+   `font-family: var(--font-ui)` rule (the shell, the `.v2-page-loading` pill,
+   overlays) and every `var(--font-display)` rule (the sidebar brand wordmark)
+   resolved to nothing and fell back to the browser-default serif.
+   Fix, two parts:
+   1. Re-declare both tokens HERE, at the scope where `--font-admin-*` exist, so
+      the indirection resolves for every consumer in the admin subtree (the
+      shell, the brand wordmark `.v2-brand-name-line` / `.as-brand-name`, etc.).
+   2. Also set `font-family` directly from `var(--font-admin-body)` on the
+      wrapper itself — proven to render next/font Inter — so overlays portaled
+      into `#admin-portal-root` (siblings of `.v2-shell`, which miss the shell's
+      own font rule) inherit Inter even though they have no `--font-ui` rule of
+      their own.
+   Keep these values in sync with the `[data-admin-theme]` definitions. */
+#admin-portal-root {
+  --font-ui: var(--font-admin-body), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-admin-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-admin-body), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 /* ============================
    ADMIN v2 — SHELL (sidebar + topbar)
    Mounted by AdminShell. Uses tokens from [data-admin-theme].

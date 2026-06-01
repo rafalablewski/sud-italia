@@ -178,7 +178,11 @@ Higher-level (operator-only) actions live in the topbar:
 
 > **Shell note:** the three dialogs (`WhatsApp{Settings,Broadcast,Funnel}
 > Dialog.tsx`) render through the shared admin `Dialog` (v2), which
-> portals to `document.body`. They pass **`theme="core"`**, which tags
+> portals to `#admin-portal-root` (falling back to `document.body`) via
+> `adminOverlayTarget()` — see the Dialogs/overlays note in
+> [`admin/theme/components.md`](../../admin/theme/components.md#dialogs--overlays)
+> for why (font scope + the `.admin-bg` stacking trap). They pass
+> **`theme="core"`**, which tags
 > the portal root `.v2-dialog-core`; a scoped block in `suite.css`
 > redefines the admin token vars (`--surface-*` / `--fg` / `--border` /
 > `--text-muted`) to the warm-neutral dark palette, so the dialog chrome

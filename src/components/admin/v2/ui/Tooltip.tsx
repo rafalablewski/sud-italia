@@ -2,6 +2,7 @@
 
 import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { adminOverlayTarget } from "./portal";
 
 interface Props {
   label: ReactNode;
@@ -107,7 +108,7 @@ export function Tooltip({ label, children, side = "top", delay = 350 }: Props) {
           <div ref={tipRef} role="tooltip" style={style} className="v2-tooltip">
             {label}
           </div>,
-          document.body,
+          adminOverlayTarget(),
         )}
     </>
   );

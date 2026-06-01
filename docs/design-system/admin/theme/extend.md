@@ -150,9 +150,23 @@ Don't hand-roll it:
    `MetricExplainer` itself if the contract genuinely needs to change, and
    update [`components.md`](./components.md#metric-explainers--the--contract)
    + Rule #12 in the same commit.
-4. Wrap the trigger with `InfoButton` (`size="sm"` in a KPI-card label). The
-   page-level "How to read these numbers" card may use the individual blocks
-   (`InstitutionalAnalysis` / `PlainTalk` / `Tips` / `Methodology`) directly.
+4. Wrap the trigger with `InfoButton` (`size="sm"` in a KPI-card label).
+
+### The page-level intro card (the "How to read these numbers" card)
+
+The intro card below the KPI row on a report or sandbox follows the **same
+five-section contract** — build it from **`PageExplainer`**
+(`src/components/admin/Explainers.tsx`), not by hand-assembling the individual
+blocks. `PageExplainer` shares `MetricExplainer`'s required-prop shape
+(`description`, `institutional`, `plain`, `tips`, `methodology`) and renders
+the same sections in the same order, wrapped in a `<Card>` with a heading.
+Pass `title` (defaults to "How to read these numbers") and an optional `hint`.
+This keeps the page intro and the per-metric ⓘ dialogs in one voice and stops
+an intro card from silently dropping the institutional framing or reordering
+sections. If the contract itself must change, edit both `MetricExplainer` and
+`PageExplainer` together and update
+[`components.md`](./components.md#metric-explainers--the--contract) + Rule #12
+in the same commit.
 
 The full block contract — colours, icons, the colour-token exception — lives
 in [`components.md`](./components.md#metric-explainers--the--contract).

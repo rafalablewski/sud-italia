@@ -27,7 +27,9 @@ required sections in a fixed order with fixed labels: a one-line
 TO PUSH THIS LEVER**, and **METHODOLOGY — HOW THIS IS DETERMINED**.
 `MetricExplainer`'s five props are all required, so a half-written metric
 explanation won't compile. This is in addition to the page-level "How to read
-these numbers" / "How this projects" explainer.
+these numbers" / "How this projects" intro card, which is built from
+**`PageExplainer`** (`Explainers.tsx`) and renders the **same five sections in
+the same order** — so the page intro and the per-metric ⓘ read as one voice.
 
 | Page                          | Code                                              | Role-gate | Embedded sandbox |
 | ----------------------------- | ------------------------------------------------- | --------- | ---------------- |
@@ -103,10 +105,12 @@ The retention triangle + the customer-lifetime-value curve.
   surfaces the cohort size + median + p10/p90 band.
 - **Compare two cohorts** — pin one, click another, the second renders
   as an overlay curve. Useful for "did the new pricing change retention?".
-- **"How to read these numbers" explainer** (below the KPI row): the
-  shared `PlainTalk` / `Methodology` / `Tips` callout blocks from
-  `src/components/admin/Explainers.tsx` — plain-English walkthrough of
-  cohorts, the retention matrix, repeat rate, and CLTV horizons, in the
+- **"How to read these numbers" explainer** (below the KPI row): built from
+  **`PageExplainer`** (`src/components/admin/Explainers.tsx`), which renders
+  the **same five sections in the same order as the per-metric ⓘ** (CLAUDE.md
+  Rule #12) — description → INSTITUTIONAL ANALYSIS → IN PLAIN TERMS → TIPS →
+  METHODOLOGY. A walkthrough of cohorts, the retention matrix, repeat rate, and
+  CLTV horizons, with the cohort retention/CLTV institutional framing, in the
   same voice as the Calculator and the LTV/CAC page.
 
 ### Cohort & CLTV sandbox (`CohortSandbox.tsx`)
@@ -126,7 +130,10 @@ returns). Self-gates on `cohortSimulationEnabled`; self-seeds.
   `Simulated` (green), scaled by the repeat-rate ratio (capped 100%).
 - **Math (in the explainer):** CLTV = orders/customer × value/order; the
   repeat lever holds "extra orders per repeater" constant and re-derives
-  orders/customer. Shares the `PlainTalk` / `Methodology` / `Tips` blocks.
+  orders/customer. The "How this projects" intro card is built from
+  **`PageExplainer`** (`title="How this projects"`), so it carries the full
+  five-section contract — including the institutional "this is a planning
+  sandbox, not a booked forecast" framing.
 - **`Reset levers`** ghost action restores every lever to baseline.
 
 ## LTV / CAC — `/admin/reports/ltv-cac`
@@ -136,13 +143,13 @@ Acquisition economics — the "what's your LTV:CAC?" answer in one screen.
 - **KPI row** (`v2-kpi-grid` + `KpiCard`): LTV:CAC ratio (tone green ≥ 3×,
   amber ≥ 1×, red below), Blended CAC, Blended LTV (margin-adjusted),
   CAC payback in months (green ≤ 3, red > 12).
-- **"How to read these numbers" explainer** (below the KPI row): a card
-  with the shared `PlainTalk` / `Methodology` / `Tips` callout blocks
-  (`src/components/admin/Explainers.tsx`) — the same orange/blue/green
-  left-rail vocabulary the Calculator (`/admin/simulation`) uses, so the
-  analytics surfaces explain things in one voice. Plain-English
-  walkthrough of LTV, CAC, the ratio benchmark, and payback, with złoty
-  examples and operator actions.
+- **"How to read these numbers" explainer** (below the KPI row): built from
+  **`PageExplainer`** (`src/components/admin/Explainers.tsx`) — the same
+  five-section contract and orange/slate/green/blue left-rail vocabulary the
+  Calculator (`/admin/simulation`) and the per-metric ⓘ use, so the analytics
+  surfaces explain things in one voice. Walkthrough of LTV, CAC, the ratio
+  benchmark, and payback, with the LTV:CAC ≥ 3× / 3–6-month-payback
+  institutional gate, złoty examples, and operator actions.
 - **Data sources, both real:** LTV from the cohort CLTV engine
   (`buildCohortReport`) × a blended gross margin computed from paid-order
   line-item price/cost; CAC from the **marketing-category** rows of the
@@ -176,6 +183,9 @@ Rendered at the foot of the LTV/CAC report. Self-gates on
   assumed seed and points to Business costs → Marketing.
 - **Math:** revenue-LTV recovered as LTV ÷ margin, scaled by the retention +
   AOV levers, re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV.
+- **"How this projects" intro card:** built from **`PageExplainer`**
+  (`title="How this projects"`) — full five-section contract, including the
+  institutional LTV:CAC ≥ 3× / 3–6-month-payback gate framing.
 
 ## Menu engineering — `/admin/menu-engineering`
 
@@ -222,6 +232,10 @@ Rendered at the foot of the matrix. Self-gates on
   change applies a demand response of `(1+Δprice)^(−elasticity)`; promoting
   puzzles multiplies their velocity; removing dogs zeroes their units;
   contribution = projected revenue − cost summed across the menu.
+- **"How this projects" intro card:** built from **`PageExplainer`**
+  (`title="How this projects"`) — full five-section contract, including the
+  institutional framing on optimising *contribution* (not revenue) and
+  respecting price elasticity as the gate on every repricing.
 
 ## AI Insights — `/admin/ai`
 

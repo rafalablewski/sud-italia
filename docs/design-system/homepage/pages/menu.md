@@ -129,7 +129,7 @@ filter the grid in place.
 - **Per-location live activity strip** (`.v8-live-act`) — italic
   Cormorant line with a pulsing basil pip, "X orders in the last
   hour · X ordini nell'ultima ora", a separator dot, and
-  "Trending · in tendenza: <item>" with the trending item in
+  "Trending · in tendenza <item>" with the trending item in
   italic oxblood. Reads from `simulateLiveActivity(locationSlug)`,
   refreshes every 30s, mount-gated to avoid the SSR/client
   Math.random() mismatch.
