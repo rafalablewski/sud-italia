@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getOrders, getTables } from "@/lib/store";
+import { getFloorEvents, getOrders, getTables } from "@/lib/store";
 import { buildFloorTwin } from "@/lib/floor-twin";
 
 /**
@@ -17,10 +17,17 @@ export const GET = withAdmin(
   async (_req, _ctx, { locationSlug }) => {
     if (!locationSlug) return NextResponse.json({ error: "location is required" }, { status: 400 });
 
-    const [tables, allOrders] = await Promise.all([getTables(locationSlug), getOrders()]);
+    // Measured-dwell instrumentation: 30 days of status transitions.
+    const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const [tables, allOrders, events] = await Promise.all([
+      getTables(locationSlug),
+      getOrders(),
+      getFloorEvents(locationSlug, since),
+    ]);
     const orders = allOrders.filter((o) => o.locationSlug === locationSlug);
 
     const twin = buildFloorTwin({
+      transitions: events.map((e) => ({ tableId: e.tableId, from: e.from, to: e.to, at: e.at })),
       tables: tables.map((t) => ({
         id: t.id,
         number: t.number,

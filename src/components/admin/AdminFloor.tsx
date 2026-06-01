@@ -633,7 +633,15 @@ function FloorTwinView({ twin, loading }: { twin: FloorTwin | null; loading: boo
     {
       key: "turn",
       header: "Median turn",
-      cell: (t) => (t.medianDwellMin != null ? <span className="tabular">{t.medianDwellMin}m</span> : <span className="v2-muted">—</span>),
+      cell: (t) =>
+        t.medianDwellMin == null ? (
+          <span className="v2-muted">—</span>
+        ) : (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span className="tabular">{t.medianDwellMin}m</span>
+            {t.dwellSource === "measured" && <Badge tone="info" variant="soft">measured</Badge>}
+          </span>
+        ),
       sortValue: (t) => t.medianDwellMin ?? 0,
     },
     {

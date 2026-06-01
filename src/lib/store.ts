@@ -11298,6 +11298,37 @@ export async function getTables(locationSlug?: string): Promise<FloorTable[]> {
   );
 }
 
+/**
+ * Floor event — a logged table status transition (seated / cleared, with a
+ * timestamp). The §4.2 instrumentation behind the Floor Twin's *measured*
+ * turn-time: pairing seated→cleared events gives real seat-occupancy dwell
+ * (pre-order wait + bussing), not just the order-timeline proxy. JSON-store
+ * backed (like floor-tables itself).
+ */
+export interface FloorEvent {
+  id: string;
+  locationSlug: string;
+  tableId: string;
+  from: string;
+  to: string;
+  at: string;
+}
+
+export async function getFloorEvents(locationSlug?: string, sinceIso?: string): Promise<FloorEvent[]> {
+  const all = await readJSON<FloorEvent[]>("floor-events.json", []);
+  return all.filter(
+    (e) => (!locationSlug || e.locationSlug === locationSlug) && (!sinceIso || e.at >= sinceIso),
+  );
+}
+
+export async function recordFloorEvent(event: FloorEvent): Promise<void> {
+  await withLock("floor-events.json", async () => {
+    const list = await readJSON<FloorEvent[]>("floor-events.json", []);
+    list.push(event);
+    await writeJSON("floor-events.json", list);
+  });
+}
+
 export async function saveTable(
   input: Omit<FloorTable, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<FloorTable> {
@@ -11313,9 +11344,22 @@ export async function saveTable(
       createdAt: input.createdAt ?? new Date().toISOString(),
     };
     const i = list.findIndex((t) => t.id === table.id);
+    const prevStatus = i >= 0 ? list[i].status : null;
     if (i >= 0) list[i] = table;
     else list.push(table);
     await writeJSON("floor-tables.json", list);
+    // Instrument the status transition for the Floor Twin's measured dwell.
+    // Fire-and-forget: a logging failure must never fail the table save.
+    if (prevStatus && prevStatus !== table.status) {
+      void recordFloorEvent({
+        id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        locationSlug: table.locationSlug,
+        tableId: table.id,
+        from: prevStatus,
+        to: table.status,
+        at: new Date().toISOString(),
+      }).catch(() => {});
+    }
     return table;
   });
 }

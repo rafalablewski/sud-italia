@@ -172,6 +172,13 @@ instrumentation.
   `recommendSeating(twin, party)` so it updates as the operator types.
 - **Live tables table** (v2 `Table`): per-table state (open / seated + party),
   predicted free-in (median turn − elapsed), median turn, spend/hr, turns.
+- **Turn-time has two sources.** **Measured** seat-occupancy is the §4.2
+  instrumentation: every table status change is logged (`saveTable` →
+  `recordFloorEvent` → `floor-events.json`), and seated→cleared pairs give true
+  dwell (pre-order wait + bussing); a still-open seated run gives an exact live
+  seat time. When a table has no transition history yet, it falls back to the
+  dine-in order-timeline proxy (`createdAt → paidAt`). Measured rows wear a
+  `measured` badge.
 - **Engine:** `src/lib/floor-twin.ts` (`buildFloorTwin` + `recommendSeating`,
   pure-compute, unit-tested; dwell guardrails 5–360m drop stale tabs / clock
   skew); `GET /api/admin/floor-twin?location=`, staff+. Read-only intelligence

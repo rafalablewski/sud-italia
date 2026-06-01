@@ -108,6 +108,37 @@ test("summary occupancy ignores out-of-service tables", () => {
   assert.equal(twin.summary.occupancyPct, 50);
 });
 
+test("measured dwell from transitions is preferred over the order proxy", () => {
+  const seatedAt = new Date(NOW.getTime() - 4 * 3_600_000);
+  const clearedAt = new Date(seatedAt.getTime() + 50 * 60_000); // 50-min measured turn
+  const twin = buildFloorTwin({
+    tables: [table({ id: "t1", seats: 2 })],
+    // order proxy would say 70m; the instrumented transition says 50m and wins.
+    orders: [completed("t1", 70, 10000)],
+    transitions: [
+      { tableId: "t1", from: "available", to: "seated", at: seatedAt.toISOString() },
+      { tableId: "t1", from: "seated", to: "available", at: clearedAt.toISOString() },
+    ],
+    now: NOW,
+  });
+  assert.equal(twin.tables[0].dwellSource, "measured");
+  assert.equal(twin.tables[0].medianDwellMin, 50);
+});
+
+test("a still-open seated transition sets an exact live seat time", () => {
+  const seatedAt = new Date(NOW.getTime() - 25 * 60_000); // seated 25m ago, no clear yet
+  const twin = buildFloorTwin({
+    tables: [table({ id: "t1", seats: 4, status: "seated" })],
+    orders: [completed("t1", 90, 12000), completed("t1", 90, 12000)], // median 90
+    transitions: [{ tableId: "t1", from: "available", to: "seated", at: seatedAt.toISOString() }],
+    now: NOW,
+  });
+  const t1 = twin.tables[0];
+  assert.equal(t1.occupied, true);
+  assert.equal(t1.elapsedMin, 25);
+  assert.equal(t1.predictedFreeInMin, 65); // 90 − 25
+});
+
 test("recommendSeating: open best-fit first, then soonest-freeing", () => {
   const twin = buildFloorTwin({
     tables: [

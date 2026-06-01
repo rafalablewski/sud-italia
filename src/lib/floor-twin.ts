@@ -42,10 +42,21 @@ export interface TwinOrderInput {
   simulated?: boolean;
 }
 
+/** A logged table status transition (from the floor-events instrumentation). */
+export interface FloorTransitionInput {
+  tableId: string;
+  from: string;
+  to: string;
+  at: string;
+}
+
 export interface FloorTwinInput {
   tables: TwinTableInput[];
   /** All orders; the engine keeps dine-in only. */
   orders: TwinOrderInput[];
+  /** Table status transitions — when present, give *measured* seat→clear dwell
+   *  (preferred over the order-timeline proxy) and an exact live seat time. */
+  transitions?: FloorTransitionInput[];
   now?: Date;
 }
 
@@ -60,6 +71,8 @@ export interface TwinTableRow {
   // realized physics (from this table's completed dine-in orders)
   turns: number;
   medianDwellMin: number | null;
+  /** Where the turn-time came from: instrumented transitions vs the order proxy. */
+  dwellSource: "measured" | "orders" | null;
   avgSpendGrosze: number | null;
   spendVelocityPerHourGrosze: number | null;
   // live state
@@ -142,7 +155,34 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
       pushTo(spendByTable, o.tableId, o.totalAmount);
     }
   }
-  const floorMedianTurn = median(allDwell);
+  // Measured dwell from instrumented transitions: pair each →seated with the
+  // next seated→cleared. A still-open seated run gives an exact live seat time.
+  const measuredByTable = new Map<string, number[]>();
+  const liveSinceByTable = new Map<string, string>();
+  if (input.transitions?.length) {
+    const evByTable = new Map<string, FloorTransitionInput[]>();
+    for (const e of input.transitions) {
+      const arr = evByTable.get(e.tableId);
+      if (arr) arr.push(e);
+      else evByTable.set(e.tableId, [e]);
+    }
+    for (const [tableId, evs] of evByTable) {
+      evs.sort((a, b) => a.at.localeCompare(b.at));
+      let openStart: number | null = null;
+      for (const e of evs) {
+        if (e.to === "seated") openStart = new Date(e.at).getTime();
+        else if (e.from === "seated" && openStart != null) {
+          const dwellMin = (new Date(e.at).getTime() - openStart) / MIN;
+          if (dwellMin >= MIN_DWELL_MIN && dwellMin <= MAX_DWELL_MIN) pushTo(measuredByTable, tableId, dwellMin);
+          openStart = null;
+        }
+      }
+      if (openStart != null) liveSinceByTable.set(tableId, new Date(openStart).toISOString());
+    }
+  }
+  const allMeasured = [...measuredByTable.values()].flat();
+  // Floor-wide turn-time prefers measured samples when we have any.
+  const floorMedianTurn = median(allMeasured.length ? allMeasured : allDwell);
 
   // Open checks → who's seated right now, and since when.
   const openByTable = new Map<string, TwinOrderInput>();
@@ -156,17 +196,27 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
   }
 
   const rows: TwinTableRow[] = input.tables.map((t) => {
-    const dwell = dwellByTable.get(t.id) ?? [];
+    const measured = measuredByTable.get(t.id) ?? [];
+    const orderDwell = dwellByTable.get(t.id) ?? [];
+    // Prefer instrumented (measured) dwell; fall back to the order proxy.
+    const samples = measured.length ? measured : orderDwell;
+    const dwellSource: "measured" | "orders" | null = measured.length
+      ? "measured"
+      : orderDwell.length
+        ? "orders"
+        : null;
     const spend = spendByTable.get(t.id) ?? [];
-    const medianDwellMin = median(dwell);
+    const medianDwellMin = median(samples);
     const avgSpendGrosze = spend.length ? Math.round(spend.reduce((a, b) => a + b, 0) / spend.length) : null;
     const turnMin = medianDwellMin ?? floorMedianTurn;
     const spendVelocityPerHourGrosze =
       avgSpendGrosze != null && turnMin && turnMin > 0 ? Math.round(avgSpendGrosze / (turnMin / 60)) : null;
 
+    // Exact live seat time from transitions wins over the open check's createdAt.
+    const liveSince = liveSinceByTable.get(t.id) ?? null;
     const open = openByTable.get(t.id);
-    const occupied = !!open || t.status === "seated";
-    const occupiedSince = open?.createdAt ?? null;
+    const occupied = !!liveSince || !!open || t.status === "seated";
+    const occupiedSince = liveSince ?? open?.createdAt ?? null;
     const elapsedMin = occupiedSince ? Math.max(0, (nowMs - new Date(occupiedSince).getTime()) / MIN) : null;
     const predictedFreeInMin =
       elapsedMin != null && turnMin ? Math.max(0, Math.round(turnMin - elapsedMin)) : null;
@@ -177,8 +227,9 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
       seats: t.seats,
       zone: t.zone,
       status: t.status,
-      turns: dwell.length,
+      turns: samples.length,
       medianDwellMin: medianDwellMin != null ? Math.round(medianDwellMin) : null,
+      dwellSource,
       avgSpendGrosze,
       spendVelocityPerHourGrosze,
       occupied,

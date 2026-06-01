@@ -264,11 +264,13 @@ The twin fuses `floor.ts` (room state) with `kds-prediction.ts` (per-ticket
 > (`src/lib/floor-twin.ts`, `GET /api/admin/floor-twin`) derives per-table
 > realized turn-time + spend velocity, live occupancy and a predicted free-in
 > time, and a **predictive-seating recommender** (party size → best-fit open,
-> then soonest-to-free). v1 uses the always-present realized signal — the
-> dine-in order timeline (`createdAt → paidAt`) — so it needs no instrumentation.
-> Next: explicit seat→clear table-transition logging for true seat-occupancy
-> (vs the order-timeline proxy), and the Phase-2 acts — predictive-seating moves
-> + bottleneck pre-emption (fusing the live KDS pace engine into the floor).
+> then soonest-to-free). **Realized dwell is now instrumented** (§4.2): table
+> status transitions are logged (`saveTable` → `recordFloorEvent` →
+> `floor-events.json`) and seated→cleared pairs give *measured* seat-occupancy
+> turn-time + an exact live seat time; tables with no transition history yet
+> fall back to the dine-in order-timeline proxy (`createdAt → paidAt`).
+> Remaining: the Phase-2 acts — predictive-seating moves + bottleneck
+> pre-emption (fusing the live KDS pace engine into the floor).
 
 ### 4.3 Smarter with volume
 Turn-time and dwell predictions sharpen per table and per server with every
