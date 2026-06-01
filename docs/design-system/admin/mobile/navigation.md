@@ -300,8 +300,8 @@ Per-page mapping of how each route is reached on mobile:
 | `/admin/kds` | KDS tab (kitchen role) or More → Overview → KDS |
 | `/admin/menu` | More → Operations → Menu |
 | `/admin/recipes` | More → Operations → Recipes |
-| `/admin/slots` | Core → Slots |
-| `/admin/floor` | Core → Floor |
+| `/admin/slots` | Core → Service → Slots view (redirects to `/admin/service?view=slots`) |
+| `/admin/floor` | Core → Service → Floor view (redirects to `/admin/service?view=floor`) |
 | `/admin/inventory` | Stock tab |
 | `/admin/suppliers` | Stock screen → Suppliers sub-tab |
 | `/admin/purchase-orders` | Stock screen → POs sub-tab |

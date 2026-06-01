@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminFloor } from "@/components/admin/AdminFloor";
 
-export default async function AdminFloorPage() {
-  if (!(await isAuthenticated())) {
-    redirect("/admin/login");
-  }
-  return <AdminFloor />;
+// Floor is now the Floor view of the merged Service surface.
+export default function AdminFloorPage() {
+  redirect("/admin/service?view=floor");
 }

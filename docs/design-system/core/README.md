@@ -8,15 +8,10 @@ runs on:
 - **Guest** — the unified guest hub: CRM (customer book), Loyalty (member
   roster + wallets + redemptions), Concierge (AI capability layer + EU-14
   allergen matrix), WhatsApp (inbox + funnel)
-- **Service** (`/admin/service`) — the merged Floor + Slots surface; the
-  booking console books a dine-in slot + assigns a table in one step (Floor /
-  Slots / Demand / Twin views folding in)
-
-The **Core nav group** (`src/components/admin/v2/nav.config.ts`) also carries
-**Floor** (`/admin/floor` — tables + reservations) and **Slots**
-(`/admin/slots` — booking capacity): the foundation of running a restaurant.
-These two render on the **Admin** theme (not the Core suite shell) but belong
-to the platform's root, so they're grouped under Core in the nav.
+- **Service** (`/admin/service`) — the merged Floor + Slots surface, on the
+  Core suite shell. Three views: **Book** (dine-in slot + table in one step),
+  **Floor** (live room + twin), **Slots** (capacity + demand). The old
+  `/admin/floor` and `/admin/slots` redirect in (`?view=floor|slots`).
 
 Core is a **separate theme**. It does not inherit from Admin or Homepage,
 and changes to those themes must not leak into Core. The doctrine is the

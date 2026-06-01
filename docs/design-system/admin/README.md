@@ -6,11 +6,11 @@ Loyalty + Concierge + WhatsApp) is our IP and runs under its own theme — see
 the Core theme docs for those surfaces; this doc covers the everything-else
 that runs the business behind the till.
 
-> **Nav vs theme:** the **Core nav group** also surfaces **Floor**
-> (`/admin/floor`) and **Slots** (`/admin/slots`) — they're the foundation of
-> running a restaurant — but those two are **admin-themed** pages, so their
-> anatomy is documented here (see [`sections/operations.md`](./sections/operations.md)),
-> not under the Core theme. Group membership ≠ theme ownership.
+> **Floor + Slots are now Core, not admin.** They were merged and rebuilt on
+> the Core suite theme as the **Service** surface (`/admin/service`); the old
+> `/admin/floor` and `/admin/slots` redirect there. Their anatomy lives under
+> the Core theme ([`../core/modules/service.md`](../core/modules/service.md)),
+> no longer here.
 
 **Code is the source of truth.** The shell lives at
 `src/components/admin/v2/AdminShell.tsx`; nav at
@@ -24,7 +24,7 @@ What this doc covers (the admin back-office):
 | Section       | Pages                                                                  |
 | ------------- | ---------------------------------------------------------------------- |
 | Overview      | Dashboard, Orders                                                      |
-| Operations    | Menu, Recipes, HACCP log, Waste log, Shift handover (+ Slots & Floor — admin-themed, surfaced under the Core nav group) |
+| Operations    | Menu, Recipes, HACCP log, Waste log, Shift handover (Slots + Floor merged into the Core **Service** surface) |
 | Inventory     | Stock, Suppliers, Purchase orders                                      |
 | People        | Staff, Schedule                                                        |
 | Customers     | Customers, Corporate, Feedback                                         |
@@ -119,7 +119,7 @@ listed there is invisible to operators — treat the missing entry as a bug.
 Each admin section has its own design doc under [`sections/`](./sections/).
 Progress:
 
-- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), HACCP log, waste log, shift handover, plus slots + floor (admin-themed, now surfaced under the Core nav group)
+- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), HACCP log, waste log, shift handover (slots + floor merged into the Core Service surface — `../core/modules/service.md`)
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
 - [`sections/customers.md`](./sections/customers.md) — customers, corporate, feedback (loyalty moved to the Core Guest hub — see `../core/modules/loyalty.md`)

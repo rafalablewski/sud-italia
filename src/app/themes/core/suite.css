@@ -991,10 +991,53 @@
 .core-suite .svc-res-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .core-suite .svc-res-meta { font-size: 11px; color: var(--fg-subtle); margin-top: 2px; }
 .core-suite .svc-res .badge { margin-left: auto; flex: none; }
+.core-suite .svc-res-x { flex: none; width: 22px; height: 22px; border-radius: 6px; border: 0; background: transparent; color: var(--fg-subtle); font-size: 16px; line-height: 1; cursor: pointer; }
+.core-suite .svc-res-x:hover { background: var(--danger-soft); color: var(--danger); }
 @media (max-width: 1000px) {
   .core-suite .svc-grid { grid-template-columns: 1fr; }
   .core-suite .svc-side { position: static; }
   .core-suite .svc-fields { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---- Service › Floor view ---- */
+.core-suite .flr { padding: 16px 18px 22px; }
+.core-suite .flr-kitchen { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-md); margin-bottom: 14px; flex-wrap: wrap; border: 1px solid var(--warning); background: var(--warning-soft); color: var(--fg); }
+.core-suite .flr-kitchen.risk { border-color: var(--danger); background: var(--danger-soft); }
+.core-suite .flr-kitchen svg { color: var(--warning); flex: none; }
+.core-suite .flr-kitchen.risk svg { color: var(--danger); }
+.core-suite .flr-kitchen-note { font-size: 12px; color: var(--fg-muted); }
+.core-suite .flr-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.core-suite .flr-kpis .bk .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
+.core-suite .flr-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.core-suite .flr-rec { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--fg-muted); flex-wrap: wrap; }
+.core-suite .flr-rec > svg { color: var(--platinum); }
+.core-suite .flr-recs { display: flex; gap: 6px; flex-wrap: wrap; }
+.core-suite .flr-bar-actions { display: flex; align-items: center; gap: 8px; }
+.core-suite .flr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.core-suite .flr-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 13px 14px; display: flex; flex-direction: column; gap: 9px; }
+.core-suite .flr-card.seated { border-color: var(--warning); background: color-mix(in oklab, var(--warning-soft) 40%, var(--surface-1)); }
+.core-suite .flr-card.oos { opacity: .55; }
+.core-suite .flr-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.core-suite .flr-num { font-family: var(--display); font-size: 19px; font-weight: 600; color: var(--fg); background: transparent; border: 0; cursor: pointer; padding: 0; }
+.core-suite .flr-num:hover { color: var(--brand-bright); }
+.core-suite .flr-live { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--fg-muted); }
+.core-suite .flr-live .muted { color: var(--fg-subtle); }
+.core-suite .flr-actions { display: flex; justify-content: flex-end; }
+
+/* ---- Service › Slots view ---- */
+.core-suite .slt { padding: 16px 18px 22px; }
+.core-suite .slt-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.core-suite .slt-bar-actions { display: flex; align-items: center; gap: 8px; }
+.core-suite .slt-list { display: flex; flex-direction: column; gap: 8px; }
+.core-suite .slt-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-md); }
+.core-suite .slt-time { font-size: 14px; font-weight: 600; width: 52px; flex: none; }
+.core-suite .slt-cap { font-size: 13px; color: var(--fg-muted); width: 52px; flex: none; }
+.core-suite .slt-types { display: flex; gap: 5px; flex-wrap: wrap; }
+.core-suite .slt-type { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--fg-muted); }
+.core-suite .slt-row-actions { margin-left: auto; display: flex; gap: 6px; }
+.core-suite .slt-demand-sum { font-size: 12.5px; color: var(--fg-muted); margin-bottom: 12px; }
+@media (max-width: 1000px) {
+  .core-suite .flr-kpis { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ============================================================

@@ -1,11 +1,6 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminSlots } from "@/components/admin/AdminSlots";
 
-export default async function AdminSlotsPage() {
-  if (!(await isAuthenticated())) {
-    redirect("/admin/login");
-  }
-
-  return <AdminSlots />;
+// Slots is now the Slots view of the merged Service surface.
+export default function AdminSlotsPage() {
+  redirect("/admin/service?view=slots");
 }

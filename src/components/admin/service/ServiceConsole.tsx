@@ -1,178 +1,59 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Check, RefreshCw, Sparkles, Users } from "lucide-react";
-import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
-import { findReservationConflicts } from "@/lib/floor";
+import { useEffect, useState } from "react";
+import { CalendarDays } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { CoreShell } from "../core/CoreShell";
-import { useToast } from "../v2/ui/Toast";
+import { ServiceViewNav, type ServiceView } from "./ServiceViewNav";
+import { BookView } from "./BookView";
+import { FloorView } from "./FloorView";
+import { SlotsView } from "./SlotsView";
 
 /**
- * Service — the merged Floor + Slots booking console, on the Core suite theme.
- * Book a dine-in time slot AND assign a table in one step: the slot list shows
- * remaining booking capacity, the table list lights up fit / conflict live (via
- * the same pure findReservationConflicts the server enforces), and Book posts
- * /api/admin/booking — conflict-checked on both. See
+ * Service — the merged Floor + Slots Core surface (CoreShell / `.core-suite`).
+ * One shell, three views via the topbar `.viewnav`: Book (slot + table in one
+ * step), Floor (live room + twin), Slots (capacity + demand). The old
+ * /admin/floor and /admin/slots redirect in with ?view=. See
  * docs/design-system/core/modules/service.md.
  */
 
 const LOCS = getActiveLocations().map((l) => ({ key: l.slug, label: l.name }));
 const FALLBACK = LOCS[0]?.key ?? "krakow";
-const RES_HOLDS = new Set<Reservation["status"]>(["booked", "seated"]);
-const DURATION_MIN = 90;
+const VIEW_LABEL: Record<ServiceView, string> = { book: "Book", floor: "Floor", slots: "Slots" };
 
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+function isoToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+function isView(v: string | null): v is ServiceView {
+  return v === "book" || v === "floor" || v === "slots";
 }
 
 export function ServiceConsole() {
-  const toast = useToast();
+  const [view, setView] = useState<ServiceView>("book");
   const [loc, setLoc] = useState<string>(FALLBACK);
-  const [date, setDate] = useState<string>(() => isoDate(new Date()));
+  const [date, setDate] = useState<string>(isoToday);
 
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [slotId, setSlotId] = useState<string | null>(null);
-  const [tableId, setTableId] = useState<string | null>(null);
-  const [party, setParty] = useState("2");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState("");
-  const [override, setOverride] = useState(false);
-  const [booking, setBooking] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [s, t, r] = await Promise.all([
-        fetch(`/api/admin/slots?location=${loc}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
-        fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`).then((x) => (x.ok ? x.json() : [])),
-        fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}&date=${date}`).then((x) => (x.ok ? x.json() : [])),
-      ]);
-      setSlots(Array.isArray(s) ? s : []);
-      setTables(Array.isArray(t) ? t : []);
-      setReservations(Array.isArray(r) ? r : []);
-    } finally {
-      setLoading(false);
-    }
-  }, [loc, date]);
-
+  // Seed the view from ?view= (so /admin/floor → ?view=floor lands right).
   useEffect(() => {
-    void load();
-  }, [load]);
+    const q = new URLSearchParams(window.location.search).get("view");
+    if (isView(q)) setView(q);
+  }, []);
 
-  // Reset the selection when the day/location changes.
-  useEffect(() => {
-    setSlotId(null);
-    setTableId(null);
-  }, [loc, date]);
-
-  const partyN = Math.max(1, Math.min(50, Math.round(Number(party) || 0)));
-
-  const dineInSlots = useMemo(
-    () =>
-      slots
-        .filter((s) => s.status === "active" && s.fulfillmentTypes.includes("dine-in"))
-        .sort((a, b) => a.time.localeCompare(b.time)),
-    [slots],
-  );
-
-  const bookedBySlot = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of reservations) {
-      if (r.slotId && RES_HOLDS.has(r.status)) m.set(r.slotId, (m.get(r.slotId) ?? 0) + 1);
-    }
-    return m;
-  }, [reservations]);
-
-  const selectedSlot = dineInSlots.find((s) => s.id === slotId) ?? null;
-
-  // Per-table availability for the chosen slot (fit + no double-booking).
-  const tableState = useCallback(
-    (t: FloorTable): { ok: boolean; label: string } => {
-      if (t.status === "out-of-service") return { ok: false, label: "out of service" };
-      if (t.seats < partyN) return { ok: false, label: `${t.seats} seats — too small` };
-      if (!selectedSlot) return { ok: true, label: `${t.seats} seats` };
-      const conflicts = findReservationConflicts(reservations, {
-        id: "new",
-        locationSlug: loc,
-        tableId: t.id,
-        date: selectedSlot.date,
-        time: selectedSlot.time,
-        durationMin: DURATION_MIN,
-      });
-      if (conflicts.length) return { ok: false, label: "booked this time" };
-      return { ok: true, label: `${t.seats} seats${t.zone ? ` · ${t.zone}` : ""}` };
-    },
-    [selectedSlot, partyN, reservations, loc],
-  );
-
-  const recommend = () => {
-    const fit = tables
-      .filter((t) => tableState(t).ok)
-      .sort((a, b) => a.seats - b.seats)[0];
-    if (fit) setTableId(fit.id);
-    else toast.error("No table fits", `Nothing open for a party of ${partyN}.`);
+  const selectView = (v: ServiceView) => {
+    setView(v);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", v);
+    window.history.replaceState(null, "", url.toString());
   };
-
-  const canBook = !!selectedSlot && !!tableId && !!name.trim() && partyN >= 1 && !booking;
-
-  const book = async () => {
-    if (!selectedSlot || !tableId) return;
-    setBooking(true);
-    try {
-      const res = await fetch(`/api/admin/booking?location=${encodeURIComponent(loc)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slotId: selectedSlot.id,
-          tableId,
-          customerName: name.trim(),
-          customerPhone: phone.trim() || undefined,
-          partySize: partyN,
-          durationMin: DURATION_MIN,
-          notes: notes.trim() || undefined,
-          override,
-        }),
-      });
-      if (res.ok) {
-        toast.success("Booked", `${name.trim()} · ${partyN}p · ${selectedSlot.time}`);
-        setName("");
-        setPhone("");
-        setNotes("");
-        setTableId(null);
-        setOverride(false);
-        await load();
-      } else {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        const msg = REASONS[j.error ?? ""] ?? j.error ?? "Could not book";
-        toast.error(res.status === 409 ? "Conflict" : "Couldn't book", msg);
-      }
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  const todays = useMemo(
-    () =>
-      [...reservations]
-        .filter((r) => RES_HOLDS.has(r.status))
-        .sort((a, b) => a.time.localeCompare(b.time)),
-    [reservations],
-  );
-  const tableLabel = (id?: string) => tables.find((t) => t.id === id)?.number ?? "—";
 
   return (
     <CoreShell
       crumbs={
         <>
-          Core / <b>Service</b> · Book
+          Core / <b>Service</b> · {VIEW_LABEL[view]}
         </>
       }
+      viewnav={<ServiceViewNav current={view} onSelect={selectView} />}
       topbarRight={
         <>
           <div className="seg">
@@ -182,162 +63,22 @@ export function ServiceConsole() {
               </button>
             ))}
           </div>
-          <label className="svc-date">
-            <CalendarDays width={14} height={14} />
-            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-          </label>
-          <button type="button" className="btn ghost icon" title="Refresh" onClick={() => void load()}>
-            <RefreshCw className={loading ? "crm-spin" : ""} />
-          </button>
+          {view !== "floor" && (
+            <label className="svc-date">
+              <CalendarDays width={14} height={14} />
+              <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            </label>
+          )}
         </>
       }
     >
-      <div className="svc">
-        <div className="svc-grid">
-          {/* ---- booking form ---- */}
-          <section className="svc-form" aria-label="New booking">
-            <div className="svc-block">
-              <div className="eyebrow">When · pick a slot</div>
-              {dineInSlots.length === 0 ? (
-                <div className="pane-msg">
-                  No dine-in slots open on {date}. Open dine-in slots in Slots first.
-                </div>
-              ) : (
-                <div className="filters">
-                  {dineInSlots.map((s) => {
-                    const left = s.maxOrders - (bookedBySlot.get(s.id) ?? 0);
-                    const full = left <= 0;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`fchip${slotId === s.id ? " on" : ""}${full ? " svc-full" : ""}`}
-                        aria-pressed={slotId === s.id}
-                        disabled={full && !override}
-                        onClick={() => setSlotId(s.id)}
-                      >
-                        {s.time}
-                        <span className="n">{full ? "full" : `${left} left`}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="svc-block">
-              <div className="svc-block-head">
-                <div className="eyebrow">Where · assign a table</div>
-                <button type="button" className="btn ghost svc-rec" onClick={recommend} disabled={!selectedSlot}>
-                  <Sparkles width={13} height={13} /> Recommend
-                </button>
-              </div>
-              <div className="filters">
-                {tables.length === 0 ? (
-                  <div className="pane-msg">No tables yet. Add tables in Floor first.</div>
-                ) : (
-                  tables.map((t) => {
-                    const st = tableState(t);
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={`fchip${tableId === t.id ? " on" : ""}${st.ok ? "" : " svc-full"}`}
-                        aria-pressed={tableId === t.id}
-                        disabled={!st.ok && !override}
-                        onClick={() => setTableId(t.id)}
-                        title={st.label}
-                      >
-                        {t.number}
-                        <span className="n">{t.seats}p</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="svc-block">
-              <div className="eyebrow">Who</div>
-              <div className="svc-fields">
-                <label className="svc-field svc-party">
-                  <span><Users width={13} height={13} /> Party</span>
-                  <input
-                    type="number"
-                    className="input"
-                    min={1}
-                    max={50}
-                    value={party}
-                    onChange={(e) => setParty(e.target.value)}
-                  />
-                </label>
-                <label className="svc-field">
-                  <span>Name</span>
-                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest name" />
-                </label>
-                <label className="svc-field">
-                  <span>Phone</span>
-                  <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48…" />
-                </label>
-                <label className="svc-field svc-wide">
-                  <span>Notes</span>
-                  <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="High chair, window…" />
-                </label>
-              </div>
-            </div>
-
-            <div className="svc-actions">
-              <label className="svc-override">
-                <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-                Override conflicts &amp; capacity
-              </label>
-              <button type="button" className="btn primary" disabled={!canBook} onClick={() => void book()}>
-                <Check width={15} height={15} />
-                {booking ? "Booking…" : "Book slot + table"}
-              </button>
-            </div>
-          </section>
-
-          {/* ---- today's bookings ---- */}
-          <section className="svc-side" aria-label="Today's bookings">
-            <div className="eyebrow">Booked · {todays.length}</div>
-            {loading ? (
-              <div className="pane-msg">Loading…</div>
-            ) : todays.length === 0 ? (
-              <div className="pane-msg">No bookings yet for this day.</div>
-            ) : (
-              <div className="svc-list">
-                {todays.map((r) => (
-                  <div key={r.id} className="svc-res">
-                    <span className="svc-res-time mono">{r.time}</span>
-                    <div className="svc-res-main">
-                      <div className="svc-res-name">{r.customerName}</div>
-                      <div className="svc-res-meta">
-                        {r.partySize}p · table {tableLabel(r.tableId)}
-                      </div>
-                    </div>
-                    <span className={`badge ${r.status === "seated" ? "success" : "info"}`}>
-                      <i className="d" />
-                      {r.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
+      {view === "book" ? (
+        <BookView loc={loc} date={date} />
+      ) : view === "floor" ? (
+        <FloorView loc={loc} />
+      ) : (
+        <SlotsView loc={loc} date={date} />
+      )}
     </CoreShell>
   );
 }
-
-const REASONS: Record<string, string> = {
-  slot_not_found: "That slot no longer exists.",
-  table_not_found: "That table no longer exists.",
-  slot_inactive: "That slot isn't active.",
-  slot_not_dinein: "That slot doesn't accept dine-in.",
-  invalid_party: "Enter a valid party size.",
-  table_too_small: "That table is too small for the party.",
-  table_conflict: "That table is already booked for this time — tick Override to force it.",
-  slot_full: "That slot is fully booked — tick Override to force it.",
-};

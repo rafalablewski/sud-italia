@@ -14,14 +14,12 @@ handed over cleanly.
 | `/admin/waste`     | `src/components/admin/AdminWaste.tsx`                                | staff+      |
 | `/admin/handover`  | `src/components/admin/AdminHandover.tsx`                             | manager+    |
 
-> **Slots & Floor live under the Core nav group now.** `/admin/slots`
-> (`AdminSlots.tsx`) and `/admin/floor` (`AdminFloor.tsx`) are the
-> foundation of running a restaurant, so they were moved out of the
-> Operations nav section into **Core** (see
-> [`../../core/README.md`](../../core/README.md)). They remain
-> **admin-themed** pages — same v2 components, same per-location rules — so
-> their anatomy stays documented here (below). Group membership ≠ theme
-> ownership.
+> **Slots & Floor are now the Core Service surface.** They were merged and
+> rebuilt on the Core suite theme (CoreShell) as the **Service** surface —
+> book a dine-in slot + assign a table in one step, plus Floor (live room +
+> twin) and Slots (capacity + demand) views. `/admin/slots` and `/admin/floor`
+> `redirect()` into `/admin/service?view=…`; their anatomy now lives in
+> [`../../core/modules/service.md`](../../core/modules/service.md), not here.
 
 ## Common rules across the section
 
@@ -80,137 +78,15 @@ The recipe board — one card per dish (deduped by base slug; CLAUDE rule
 - **Ingredient catalogue** is shared chain-wide; never expose a
   per-location ingredient list.
 
-## Slots — `/admin/slots`
+## Slots & Floor — moved to the Core Service surface
 
-> Surfaced under the **Core** nav group (foundation of restaurant ops);
-> admin-themed page, documented here.
-
-Time-slot availability — operators control which pickup / delivery
-windows accept orders today, this week, or are paused.
-
-- **Header:** `Time slots` (h1), location switcher, `+ New slot` primary
-  button.
-- **Each slot:** the time window, status (`active` / `draft` /
-  `paused`), the booking count, primary action (`Activate` / `Draft`).
-- **One-tap status toggle** (`persistSlot` writes immediately, toast
-  confirms — "Slot activated" / "Slot drafted").
-- **Delete** soft-confirms (small portalled dialog), then removes with
-  toast — no "are you sure" full-screen interstitial.
-- **Per-location.** A Kraków slot doesn't exist for Warszawa.
-
-### Demand view — the yield layer (Module 2)
-
-A third view tab (Day / Week / **Demand**) turns the capacity grid into a
-**Demand Exchange** (see
-[`../../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
-§3). It forecasts covers per slot from real same-weekday order history and
-compares them against the kitchen's *demonstrated* ceiling (busiest realized
-covers/hour over the last 90 days), then prescribes the yield action.
-
-- **KPI strip** (reuses `SlotKpi` / `v2-kpi-grid`): predicted covers + fill
-  forecast %, advertised capacity, kitchen ceiling (covers/hr), missed demand.
-- **Per-slot yield table** (v2 `Table`): each slot's demand tier
-  (`under` / `healthy` / `tight` / `over` / `kitchen-capped`), forecast vs
-  capacity (+ kitchen ceiling), walked-guest count, and the recommended action
-  (`raise → N` / `trim → N` / `protect` / `hold`) as a toned `Badge`, plus a
-  notes list for the actionable slots.
-- **Two yield levers.** For demand the kitchen *can* take, the action is
-  capacity (`raise → N` / `trim → N`). For **kitchen-capped** (`protect`) slots
-  — demand above the kitchen's ceiling — raising volume isn't an option, so the
-  lever is **price**: a recommended **minimum spend** (sized from the slot's
-  realized AOV × 1.5, rounded to 5 zł) shown as a `min N zł` badge. Push the
-  average ticket up so fewer, bigger orders fit the line.
-- **Apply the recommendation (Phase 2 — the act).** Each changed row carries an
-  **Apply** button that writes the demand-matched capacity **and** minimum spend
-  (`POST /api/admin/demand-exchange { slotId, maxOrders, minSpendGrosze }` →
-  `updateSlot`, audit-logged `slots.resize`); the header's **Apply all (N)** is
-  the autonomy lever — it re-derives the board server-side and applies every
-  changed slot in one confirmed click. Capacity is never dropped below what's
-  already booked; a slot that's no longer capped has its minimum cleared.
-- **The minimum is real, not cosmetic.** `TimeSlot.minSpendGrosze` (additive
-  `min_spend_grosze` column) is exposed on the public `/api/slots`
-  (`SlotPicker` shows "min N zł") and **enforced server-side at checkout** —
-  `createOrder` returns `below_min_spend` when the food subtotal is under it.
-- **Rejected demand is instrumented.** Every checkout that hits a full slot
-  logs a demand signal (`createOrder` → `recordDemandSignal` →
-  `demand-signals.json`), so the board can show demand that *exceeded* supply —
-  the data a fill-rate counter throws away.
-- **Engine:** `src/lib/demand-exchange.ts` (pure-compute, unit-tested);
-  `GET /api/admin/demand-exchange?location=&date=`, manager+. No new theme CSS
-  — the view is built from existing v2 primitives.
-
-## Floor — `/admin/floor`
-
-> Surfaced under the **Core** nav group (foundation of restaurant ops);
-> admin-themed page, documented here.
-
-The dine-in seating map: tables + status, drag/drop layout, party
-attribution.
-
-- **Header:** `Floor` (h1), location switcher, `+ Add table` primary.
-- **Table card:** number, seats, current status (`open` / `seated` /
-  `reserved` / `cleaning` / `out-of-service`), party name (if seated),
-  open-tab indicator if a POS tab is attached.
-- **Status badges** use the canonical `BadgeTone` ramp (`success`,
-  `warning`, `danger`, `info`, `default`) — never invent a new tone.
-- **Delete is destructive** — confirmation dialog required
-  (`pendingTableDelete`), portalled per the admin portal rule.
-
-### Unified booking — slot + table in one step
-
-The merged Floor + Slots flow: a dine-in booking picks a **time slot** and a
-**table** together, conflict-checked on **both** — the slot's booking capacity
-(active reservations < `maxOrders`) and table double-booking
-(`findReservationConflicts`) — with an operator `override` that forces past
-both. The reservation links the slot (`Reservation.slotId` supplies date/time +
-capacity) and the table (the seat); a reservation consumes the slot *by count*
-and never touches `slot.currentOrders` (which tracks online/POS orders), so a
-guest who books then orders isn't double-counted.
-
-- **Customer auto-assign:** dine-in checkout now assigns the best-fit open table
-  (`pickOpenTable`, the Twin's logic) and seats it — booking a dine-in slot also
-  gets the guest a table, no manual step. Best-effort; never blocks the order.
-- **Engine:** `src/lib/booking.ts` (`validateBooking` pure + `createBooking`
-  orchestration) + `pickOpenTable` in `floor-twin.ts`, unit-tested;
-  `POST /api/admin/booking?location=`, manager+ (409 on overridable conflicts).
-- The unified **Core surface** that hosts this flow (CoreShell, `.core-suite`)
-  is being built — see the blueprint; this section documents the engine that
-  backs it.
-
-### Twin view — the live digital twin (Module 3)
-
-A third view tab (Tables / Reservations / **Twin**) turns the floor into a
-live economic simulation of the room (see
-[`../../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
-§4). All derived from **real dine-in orders** — the §4.2 realized-dwell signal
-is the order timeline (`createdAt → paidAt`), already captured, no
-instrumentation.
-
-- **KPI strip** (`FloorKpi` / `v2-kpi-grid`): occupancy %, open tables, median
-  turn-time, floor spend/hour.
-- **Predictive seating recommender:** type a party size → ranked tables
-  (best-fit open first, then soonest-to-free), computed live client-side via
-  `recommendSeating(twin, party)` so it updates as the operator types.
-- **Live tables table** (v2 `Table`): per-table state (open / seated + party),
-  predicted free-in (median turn − elapsed), median turn, spend/hr, turns.
-- **Turn-time has two sources.** **Measured** seat-occupancy is the §4.2
-  instrumentation: every table status change is logged (`saveTable` →
-  `recordFloorEvent` → `floor-events.json`), and seated→cleared pairs give true
-  dwell (pre-order wait + bussing); a still-open seated run gives an exact live
-  seat time. When a table has no transition history yet, it falls back to the
-  dine-in order-timeline proxy (`createdAt → paidAt`). Measured rows wear a
-  `measured` badge.
-- **The acts (Phase 2).** **Seat / Clear** buttons on each table row (and a
-  **Seat** on open recommendations) flip the status via `POST
-  /api/admin/floor-twin` → `saveTable`, which logs the transition — so seating
-  from the Twin *is* what feeds the measured-dwell loop. **Bottleneck
-  pre-emption:** the view runs the live KDS pace engine (`analyzeTruck`) and
-  shows a "Kitchen filling up / overloaded — pace new seating" banner (with the
-  bottleneck station + utilisation) when the line can't absorb more covers.
-- **Engine:** `src/lib/floor-twin.ts` (`buildFloorTwin` + `recommendSeating`,
-  pure-compute, unit-tested; dwell guardrails 5–360m drop stale tabs / clock
-  skew); `GET/POST /api/admin/floor-twin?location=`, staff+. No new theme CSS —
-  built from existing v2 primitives.
+Time-slot capacity, the dining floor (tables + reservations), the live Floor
+Twin, the Demand Exchange yield board, and the unified slot+table booking now
+live on the **Core** theme as the **Service** surface (CoreShell). `/admin/slots`
+and `/admin/floor` redirect into `/admin/service?view=slots|floor`. See
+[`../../core/modules/service.md`](../../core/modules/service.md) for the anatomy,
+and [`../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
+for the Demand Exchange (Module 2) + Floor Twin (Module 3) theses.
 
 ## HACCP temperature log — `/admin/haccp`
 
@@ -270,5 +146,5 @@ End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
 
 Operations is the **state of the menu, the recipes, and the compliance /
 handover logs** — the things an operator must keep correct so service can
-run. (Slots + Floor are documented here too, but the nav surfaces them
-under the Core group.)
+run. (Slots + Floor merged into the Core **Service** surface — see
+[`../../core/modules/service.md`](../../core/modules/service.md).)

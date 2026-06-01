@@ -609,7 +609,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Three ordering modes (takeout / delivery / dine-in)",
           status: "live",
-          href: "/admin/slots",
+          href: "/admin/service?view=slots",
           summary:
             "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /admin/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
         },
@@ -1019,7 +1019,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor — tables + reservations",
           status: "live",
-          href: "/admin/floor",
+          href: "/admin/service?view=floor",
           summary:
             "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
           caveats:
@@ -1028,7 +1028,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor Twin — live room digital twin",
           status: "live",
-          href: "/admin/floor",
+          href: "/admin/service?view=floor",
           summary:
             "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time, spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Turn-time has two sources: MEASURED seat-occupancy (the §4.2 instrumentation — table status transitions are now logged on every save via saveTable → recordFloorEvent → floor-events.json, and seated→cleared pairs give true dwell incl. pre-order wait + bussing; a still-open seated run gives an exact live seat time) and, as a fallback when a table has no transition history, the dine-in order-timeline proxy (createdAt→paidAt). Measured rows are tagged. Phase 2 — the acts: predictive-seating moves (Seat / Clear a table straight from the Twin table or the recommender — POST /api/admin/floor-twin flips the status via saveTable, which logs the transition, closing the loop with the measured-dwell instrumentation) and bottleneck pre-emption (the Twin runs the live KDS pace engine, analyzeTruck, and shows a 'Kitchen filling up / overloaded — pace new seating' banner with the bottleneck station + utilisation when the line can't absorb more covers). Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 7 unit tests, dwell guardrails 5–360m); GET/POST /api/admin/floor-twin?location=, staff+.",
         },
@@ -1196,13 +1196,13 @@ export default async function CapabilitiesPage() {
         {
           name: "Slots",
           status: "live",
-          href: "/admin/slots",
+          href: "/admin/service?view=slots",
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
           name: "Demand Exchange — per-slot yield",
           status: "live",
-          href: "/admin/slots",
+          href: "/admin/service?view=slots",
           summary:
             "Module 2 (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /admin/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Phase 2 — the act, two yield levers: for demand the kitchen can take, one-click 'Apply' resizes capacity (never below what's already booked); for kitchen-capped (protect) slots, where volume can't go up, it sets a MINIMUM SPEND sized from the slot's realized AOV (raise price, not volume). 'Apply all' is the autonomy lever — re-derives the board server-side and applies capacity + min-spend to every changed slot, audit-logged as slots.resize. The minimum is real end-to-end: TimeSlot.minSpendGrosze (additive min_spend_grosze column) is exposed on the public /api/slots (the SlotPicker shows 'min N zł') and ENFORCED server-side at checkout (createOrder returns below_min_spend if the food subtotal is under it). Pure-compute engine src/lib/demand-exchange.ts (9 unit tests); GET/POST /api/admin/demand-exchange?location=&date=, manager+.",
         },

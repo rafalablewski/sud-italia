@@ -6,7 +6,6 @@ import {
   UtensilsCrossed,
   FlaskConical,
   Calendar,
-  CalendarDays,
   CalendarRange,
   BarChart3,
   Boxes,
@@ -35,7 +34,6 @@ import {
   Layers,
   Wallet,
   Receipt,
-  Armchair,
   Contact,
   type LucideIcon,
 } from "lucide-react";
@@ -101,12 +99,10 @@ export const NAV_SECTIONS: NavSection[] = [
       // redirect here.
       { href: "/admin/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
       // Service is the merged Floor + Slots surface on the Core suite shell:
-      // book a dine-in slot + assign a table in one step. Floor and Slots
-      // (admin-themed) are folding into it as views; until that completes they
-      // stay reachable for table/slot configuration.
+      // book a dine-in slot + assign a table in one step, plus Floor (live room
+      // + twin) and Slots (capacity + demand) as views. The old /admin/floor
+      // and /admin/slots redirect into it (?view=floor|slots).
       { href: "/admin/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
-      { href: "/admin/floor", label: "Floor", icon: Armchair, requiredRole: "manager" },
-      { href: "/admin/slots", label: "Slots", icon: CalendarDays, requiredRole: "manager" },
     ],
   },
   {

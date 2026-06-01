@@ -2,17 +2,28 @@
 
 The unified **Core** surface that collapses Slots (time-slot capacity) and Floor
 (tables + reservations) into one place, on the `.core-suite` theme (CoreShell),
-so it reads like POS / Guest / KDS. Its first view is the **booking console**:
-book a dine-in time slot **and** assign a table in one step.
+so it reads like POS / Guest / KDS. Three views ride the topbar `.viewnav`
+(`ServiceViewNav`, same pattern as the Guest hub):
+
+- **Book** — book a dine-in slot **and** assign a table in one step.
+- **Floor** — the live room (Module 3's Twin): tables, occupancy, predicted
+  free-in, seat/clear, the seating recommender, the bottleneck banner, table CRUD.
+- **Slots** — time-slot capacity management + the Demand Exchange yield board.
+
+The old `/admin/floor` and `/admin/slots` routes now `redirect()` into
+`/admin/service?view=floor|slots`; the separate nav entries are gone.
 
 ← back to [Core README](../README.md)
 
 > **Live code:** `src/app/admin/service/page.tsx` (CoreShell route — in
-> `CORE_ROUTES`, so AdminShell steps its chrome aside), UI
-> `src/components/admin/service/ServiceConsole.tsx`, styles under the `SERVICE`
-> block in `src/app/themes/core/suite.css` (`.svc-*`). Booking engine:
-> `src/lib/booking.ts` + `POST /api/admin/booking` (see
-> [operations.md → Unified booking](../../admin/sections/operations.md)).
+> `CORE_ROUTES`, so AdminShell steps its chrome aside), shell
+> `ServiceConsole.tsx` + `ServiceViewNav.tsx`, views `BookView.tsx` /
+> `FloorView.tsx` / `SlotsView.tsx` (all in
+> `src/components/admin/service/`), styles under the `SERVICE` block in
+> `src/app/themes/core/suite.css` (`.svc-*` / `.flr-*` / `.slt-*`). Booking
+> engine `src/lib/booking.ts` + `POST /api/admin/booking`; Floor reuses
+> `/api/admin/floor-twin` + `/api/admin/floor/tables`; Slots reuses
+> `/api/admin/slots` + `/api/admin/demand-exchange`.
 
 ## Why merge them
 
@@ -39,6 +50,30 @@ preview is convenience, not the gate); a 409 returns the overridable reason.
 The right rail (`.svc-side`) lists the day's bookings (time · party · table ·
 status), sticky.
 
+## Floor view
+
+The live room as a Core surface (Module 3's Twin, folded in) — `.flr-*`:
+
+- `.flr-kitchen` bottleneck banner (warn / risk) from the KDS pace engine.
+- `.flr-kpis` (`.bk` cards): occupancy, open, median turn, spend/hr.
+- `.flr-rec` seating recommender — type a party size, `recommendSeating` ranks
+  best-fit open tables as `.fchip`s; click to **Seat**.
+- `.flr-grid` of `.flr-card` tables: number (click → edit), status badge, live
+  facts (predicted free-in, median turn + `✓` when measured, spend/hr), and
+  **Seat / Clear** (`POST /api/admin/floor-twin` → logs the transition).
+- Table CRUD via a `Dialog theme="core"`.
+
+## Slots view
+
+Capacity management + yield (`.slt-*`), with a `.seg` sub-toggle:
+
+- **Manage** — `.slt-row` per slot (time · `current/max` · fulfilment types ·
+  min-spend · status), Activate/Draft + Delete, and a New-slot dialog (single or
+  bulk). `/api/admin/slots`.
+- **Demand** — the Demand Exchange board (`.tbl`): per-slot tier + forecast +
+  recommendation, **Apply** / **Apply all** (capacity + min-spend).
+  `/api/admin/demand-exchange`.
+
 ## Theme notes
 
 - Renders **inside `.core-suite`** (CoreShell), so it uses core primitives
@@ -46,13 +81,6 @@ status), sticky.
   `.btn`, `.badge`, `.eyebrow`, `.pane-msg` — plus the `.svc-*` layout classes.
 - `findReservationConflicts` (`src/lib/floor.ts`) is pure (types only), so it's
   safe to import into this client component for the live conflict preview.
-
-## What's folding in next
-
-Floor (tables + Twin) and Slots (capacity + Demand) become additional views of
-this surface (a CoreShell `.viewnav`, like the Guest hub), at which point the
-separate `/admin/floor` and `/admin/slots` entries collapse into Service and
-redirect here. Until then they remain reachable for table/slot configuration.
 
 ## What Service is not
 
