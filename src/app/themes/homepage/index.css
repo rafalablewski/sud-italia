@@ -4221,6 +4221,16 @@ body.v8-cart-open { overflow: hidden; }
 }
 .v8-cart-slot.is-on .v8-cart-slot-scarce { color: var(--color-ochre-light); }
 .v8-cart-slot-scarce em { font-style: italic; opacity: 0.85; }
+/* Demand Exchange min-spend lever — surfaced on slots that carry a minimum. */
+.v8-cart-slot-min {
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ochre);
+}
+.v8-cart-slot.is-on .v8-cart-slot-min { color: var(--color-ochre-light); }
 
 .v8-cart-slots-skel {
   display: grid;

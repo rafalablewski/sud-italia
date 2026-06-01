@@ -51,12 +51,14 @@ async function loadBoard(locationSlug: string, date: string): Promise<DemandBoar
       currentOrders: s.currentOrders,
       fulfillmentTypes: s.fulfillmentTypes,
       status: s.status,
+      minSpendGrosze: s.minSpendGrosze,
     })),
     orders: locOrders.map((o) => ({
       slotDate: o.slotDate,
       slotTime: o.slotTime,
       status: o.status,
       simulated: o.simulated,
+      totalAmount: o.totalAmount,
     })),
     signals: signals.map((s) => ({ date: s.date, time: s.time })),
     kitchenCoversPerHour,
@@ -76,7 +78,11 @@ export const GET = withAdmin(
   },
 );
 
-const ApplySchema = z.object({ slotId: z.string().min(1), maxOrders: z.number().int().min(1).max(1000) });
+const ApplySchema = z.object({
+  slotId: z.string().min(1),
+  maxOrders: z.number().int().min(1).max(1000),
+  minSpendGrosze: z.number().int().min(0).max(1_000_000).optional(),
+});
 
 export const POST = withAdmin(
   { roles: ["manager"], locationParam: "location" },
@@ -91,8 +97,13 @@ export const POST = withAdmin(
       const board = await loadBoard(locationSlug, dateParam(req));
       let applied = 0;
       for (const r of board.slots) {
-        if (r.recommendedMaxOrders === r.maxOrders) continue;
-        const updated = await updateSlot(r.slotId, { maxOrders: r.recommendedMaxOrders });
+        const changed =
+          r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze;
+        if (!changed) continue;
+        const updated = await updateSlot(r.slotId, {
+          maxOrders: r.recommendedMaxOrders,
+          minSpendGrosze: r.recommendedMinSpendGrosze || undefined,
+        });
         if (updated) {
           applied += 1;
           await appendAuditLog({
@@ -100,8 +111,12 @@ export const POST = withAdmin(
             action: "slots.resize",
             entityType: "slot",
             entityId: r.slotId,
-            before: { maxOrders: r.maxOrders },
-            after: { maxOrders: r.recommendedMaxOrders, source: "demand-exchange.apply-all" },
+            before: { maxOrders: r.maxOrders, minSpendGrosze: r.minSpendGrosze },
+            after: {
+              maxOrders: r.recommendedMaxOrders,
+              minSpendGrosze: r.recommendedMinSpendGrosze,
+              source: "demand-exchange.apply-all",
+            },
           });
         }
       }
@@ -112,7 +127,10 @@ export const POST = withAdmin(
     if (!parsed.success) {
       return NextResponse.json({ error: "invalid body", issues: parsed.error.issues }, { status: 400 });
     }
-    const updated = await updateSlot(parsed.data.slotId, { maxOrders: parsed.data.maxOrders });
+    const updated = await updateSlot(parsed.data.slotId, {
+      maxOrders: parsed.data.maxOrders,
+      minSpendGrosze: parsed.data.minSpendGrosze || undefined,
+    });
     if (!updated) return NextResponse.json({ error: "slot not found" }, { status: 404 });
 
     await appendAuditLog({
@@ -120,7 +138,11 @@ export const POST = withAdmin(
       action: "slots.resize",
       entityType: "slot",
       entityId: parsed.data.slotId,
-      after: { maxOrders: parsed.data.maxOrders, source: "demand-exchange" },
+      after: {
+        maxOrders: parsed.data.maxOrders,
+        minSpendGrosze: parsed.data.minSpendGrosze ?? 0,
+        source: "demand-exchange",
+      },
     });
     return NextResponse.json({ ok: true, slot: updated });
   },

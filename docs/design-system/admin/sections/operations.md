@@ -114,13 +114,23 @@ covers/hour over the last 90 days), then prescribes the yield action.
   capacity (+ kitchen ceiling), walked-guest count, and the recommended action
   (`raise → N` / `trim → N` / `protect` / `hold`) as a toned `Badge`, plus a
   notes list for the actionable slots.
+- **Two yield levers.** For demand the kitchen *can* take, the action is
+  capacity (`raise → N` / `trim → N`). For **kitchen-capped** (`protect`) slots
+  — demand above the kitchen's ceiling — raising volume isn't an option, so the
+  lever is **price**: a recommended **minimum spend** (sized from the slot's
+  realized AOV × 1.5, rounded to 5 zł) shown as a `min N zł` badge. Push the
+  average ticket up so fewer, bigger orders fit the line.
 - **Apply the recommendation (Phase 2 — the act).** Each changed row carries an
-  **Apply** button that resizes the slot to the demand-matched capacity
-  (`POST /api/admin/demand-exchange { slotId, maxOrders }` → `updateSlot`,
-  audit-logged `slots.resize`); the header's **Apply all (N)** is the autonomy
-  lever — it re-derives the board server-side and resizes every changed slot in
-  one confirmed click. Recommendations never drop a slot below what's already
-  booked.
+  **Apply** button that writes the demand-matched capacity **and** minimum spend
+  (`POST /api/admin/demand-exchange { slotId, maxOrders, minSpendGrosze }` →
+  `updateSlot`, audit-logged `slots.resize`); the header's **Apply all (N)** is
+  the autonomy lever — it re-derives the board server-side and applies every
+  changed slot in one confirmed click. Capacity is never dropped below what's
+  already booked; a slot that's no longer capped has its minimum cleared.
+- **The minimum is real, not cosmetic.** `TimeSlot.minSpendGrosze` (additive
+  `min_spend_grosze` column) is exposed on the public `/api/slots`
+  (`SlotPicker` shows "min N zł") and **enforced server-side at checkout** —
+  `createOrder` returns `below_min_spend` when the food subtotal is under it.
 - **Rejected demand is instrumented.** Every checkout that hits a full slot
   logs a demand signal (`createOrder` → `recordDemandSignal` →
   `demand-signals.json`), so the board can show demand that *exceeded* supply —

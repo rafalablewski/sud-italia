@@ -95,6 +95,7 @@ export type CreateOrderResult =
         | "slot_fulfillment_mismatch"
         | "item_unavailable"
         | "invalid_quantity"
+        | "below_min_spend"
         | "slot_capacity_lost";
       message: string;
       detail?: string;
@@ -250,6 +251,17 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       comboName = comboResult.activeDeal?.name ?? null;
       calculatedTotal = calculatedTotal - comboDiscount;
     }
+  }
+
+  // Demand Exchange yield lever — a kitchen-capped slot can carry a minimum
+  // order value. Enforced here against the food subtotal (before delivery fee
+  // / tip), the same number the customer's cart shows.
+  if (slot.minSpendGrosze && calculatedTotal < slot.minSpendGrosze) {
+    return {
+      ok: false,
+      code: "below_min_spend",
+      message: `This time slot needs a minimum order of ${formatPrice(slot.minSpendGrosze)}.`,
+    };
   }
 
   const segmentCustomer = await getCustomer(phoneE164);

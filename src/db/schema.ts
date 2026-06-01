@@ -100,6 +100,9 @@ export const slots = pgTable(
     // as text[] not jsonb so the admin filter can use GIN if we add one later.
     fulfillmentTypes: text("fulfillment_types").array().notNull(),
     status: text("status").notNull().default("draft"),
+    // Demand Exchange yield lever — minimum order value (grosze) to book the
+    // slot; null = no minimum. Added via ADD COLUMN IF NOT EXISTS migration.
+    minSpendGrosze: integer("min_spend_grosze"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

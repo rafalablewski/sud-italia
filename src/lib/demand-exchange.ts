@@ -22,6 +22,8 @@ export interface DemandSlotInput {
   currentOrders: number;
   fulfillmentTypes: FulfillmentType[];
   status: "draft" | "active";
+  /** Current minimum order value (grosze); 0 / undefined = none. */
+  minSpendGrosze?: number;
 }
 
 export interface DemandOrderInput {
@@ -29,6 +31,8 @@ export interface DemandOrderInput {
   slotTime: string;
   status: OrderStatus;
   simulated?: boolean;
+  /** Order value (grosze) — used to learn the AOV that sizes the min-spend lever. */
+  totalAmount?: number;
 }
 
 /** A logged rejection — a guest who wanted a slot that was full (real demand > supply). */
@@ -70,6 +74,11 @@ export interface DemandSlotRow {
   kitchenUtil: number | null;
   tier: DemandTier;
   recommendedMaxOrders: number;
+  /** Current minimum order value (grosze); 0 = none. */
+  minSpendGrosze: number;
+  /** Recommended minimum order value (grosze) — > 0 only for kitchen-capped
+   *  (protect) slots, where raising price beats raising volume. 0 otherwise. */
+  recommendedMinSpendGrosze: number;
   action: DemandAction;
   /** Logged rejections at this slot time (demand that walked). */
   missedDemand: number;
@@ -138,16 +147,35 @@ export function buildDemandBoard(input: DemandBoardInput): DemandBoard {
   // (weekday, time), denominated by how often the truck was open that weekday.
   const counted = input.orders.filter(isCounted);
   const countByDateTime = new Map<string, number>(); // "date|time" -> covers
+  const revByTime = new Map<string, number>(); // "time" -> revenue (grosze)
+  const coversByTime = new Map<string, number>(); // "time" -> covers
   const openDatesByWeekday = new Map<number, Set<string>>(); // weekday -> {dates open}
+  let totalRev = 0;
+  let totalCovers = 0;
   for (const o of counted) {
     if (o.slotDate === input.date) continue; // don't leak the target date into its own forecast
     const key = `${o.slotDate}|${o.slotTime}`;
     countByDateTime.set(key, (countByDateTime.get(key) ?? 0) + 1);
+    const rev = o.totalAmount ?? 0;
+    revByTime.set(o.slotTime, (revByTime.get(o.slotTime) ?? 0) + rev);
+    coversByTime.set(o.slotTime, (coversByTime.get(o.slotTime) ?? 0) + 1);
+    totalRev += rev;
+    totalCovers += 1;
     const wd = weekdayOf(o.slotDate);
     const set = openDatesByWeekday.get(wd) ?? new Set<string>();
     set.add(o.slotDate);
     openDatesByWeekday.set(wd, set);
   }
+  const overallAov = totalCovers > 0 ? totalRev / totalCovers : null;
+
+  // Min-spend lever for protect slots: push the average ticket up ~50% (rounded
+  // to 5 zł, floored at 40 zł) so fewer-but-bigger orders fit the kitchen.
+  const recommendMinSpend = (time: string): number => {
+    const covers = coversByTime.get(time) ?? 0;
+    const aov = covers > 0 ? (revByTime.get(time) ?? 0) / covers : overallAov;
+    const base = aov && aov > 0 ? aov : 6000;
+    return Math.max(4000, Math.round((base * 1.5) / 500) * 500);
+  };
 
   const openDates = openDatesByWeekday.get(targetWeekday);
   const predictDemand = (time: string, bookedFloor: number): number => {
@@ -197,11 +225,14 @@ export function buildDemandBoard(input: DemandBoardInput): DemandBoard {
         Math.min(Math.ceil(predicted * 1.1), ceil),
       );
 
+      const minSpendGrosze = s.minSpendGrosze ?? 0;
+      const recommendedMinSpendGrosze = kitchenCapped ? recommendMinSpend(s.time) : 0;
+
       let action: DemandAction;
       let note: string;
       if (kitchenCapped) {
         action = "protect";
-        note = `Demand ~${predicted} exceeds the kitchen's ~${throughputCapacity}/slot ceiling — raise minimum spend, prioritise high-value guests, deflect overflow to pickup.`;
+        note = `Demand ~${predicted} exceeds the kitchen's ~${throughputCapacity}/slot ceiling — cap capacity at ${recommendedMaxOrders} and set a ${Math.round(recommendedMinSpendGrosze / 100)} zł minimum so fewer, bigger orders fit.`;
       } else if (predicted > s.maxOrders) {
         action = "raise";
         note = `Demand ~${predicted} exceeds capacity ${s.maxOrders}${missed ? ` (${missed} already walked)` : ""} — raise to ${recommendedMaxOrders}.`;
@@ -226,6 +257,8 @@ export function buildDemandBoard(input: DemandBoardInput): DemandBoard {
         kitchenUtil,
         tier,
         recommendedMaxOrders,
+        minSpendGrosze,
+        recommendedMinSpendGrosze,
         action,
         missedDemand: missed,
         note,

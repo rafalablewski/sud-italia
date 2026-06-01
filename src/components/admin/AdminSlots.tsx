@@ -132,19 +132,28 @@ function AdminSlotsDesktop() {
     if (view === "demand") void fetchDemand();
   }, [view, fetchDemand]);
 
-  const applyResize = async (slotId: string, maxOrders: number) => {
-    setApplyingSlot(slotId);
+  const applyResize = async (row: DemandBoard["slots"][number]) => {
+    setApplyingSlot(row.slotId);
     try {
       const res = await fetch(`/api/admin/demand-exchange?location=${pageLoc}&date=${date}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId, maxOrders }),
+        body: JSON.stringify({
+          slotId: row.slotId,
+          maxOrders: row.recommendedMaxOrders,
+          minSpendGrosze: row.recommendedMinSpendGrosze,
+        }),
       });
       if (res.ok) {
-        toast.success("Capacity resized", `→ ${maxOrders} orders`);
+        toast.success(
+          "Slot updated",
+          row.recommendedMinSpendGrosze > 0
+            ? `cap ${row.recommendedMaxOrders} · min ${Math.round(row.recommendedMinSpendGrosze / 100)} zł`
+            : `→ ${row.recommendedMaxOrders} orders`,
+        );
         await Promise.all([fetchDemand(), fetchSlots()]);
       } else {
-        toast.error("Could not resize slot");
+        toast.error("Could not update slot");
       }
     } finally {
       setApplyingSlot(null);
@@ -379,7 +388,7 @@ function AdminSlotsDesktop() {
           loading={demandLoading}
           applyingSlot={applyingSlot}
           applyingAll={applyingAll}
-          onApply={(r) => applyResize(r.slotId, r.recommendedMaxOrders)}
+          onApply={(r) => applyResize(r)}
           onApplyAll={() => setConfirmApplyAll(true)}
         />
       ) : (
@@ -512,9 +521,11 @@ function AdminSlotsDesktop() {
         onClose={() => setConfirmApplyAll(false)}
         onConfirm={applyAllResizes}
         title="Apply all recommended capacities?"
-        description={`Resizes ${
-          demand?.slots.filter((s) => s.recommendedMaxOrders !== s.maxOrders).length ?? 0
-        } slot(s) to the demand-matched capacity (never below what's already booked). You can still edit any slot afterwards.`}
+        description={`Applies the demand-matched capacity + minimum-spend to ${
+          demand?.slots.filter(
+            (s) => s.recommendedMaxOrders !== s.maxOrders || s.recommendedMinSpendGrosze !== s.minSpendGrosze,
+          ).length ?? 0
+        } slot(s) (capacity never below what's already booked). You can still edit any slot afterwards.`}
         confirmLabel="Apply all"
       />
     </div>
@@ -655,13 +666,17 @@ function DemandView({
       key: "action",
       header: "Recommendation",
       cell: (r) => {
-        const changed = r.recommendedMaxOrders !== r.maxOrders;
+        const changed =
+          r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze;
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <Badge tone={ACTION_TONE[r.action]} variant="soft">
               {ACTION_LABEL[r.action]}
-              {changed && ` → ${r.recommendedMaxOrders}`}
+              {(r.action === "raise" || r.action === "trim") && ` → ${r.recommendedMaxOrders}`}
             </Badge>
+            {r.recommendedMinSpendGrosze > 0 && (
+              <Badge tone="warning" variant="soft">min {Math.round(r.recommendedMinSpendGrosze / 100)} zł</Badge>
+            )}
             {changed && (
               <Button
                 size="sm"
@@ -679,7 +694,9 @@ function DemandView({
     },
   ];
   const actionable = board.slots.filter((r) => r.action !== "hold");
-  const changeCount = board.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders).length;
+  const changeCount = board.slots.filter(
+    (r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze,
+  ).length;
   return (
     <>
       <section className="v2-kpi-grid">

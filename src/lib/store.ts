@@ -153,9 +153,12 @@ const SLOTS_DDL = [
     current_orders integer NOT NULL DEFAULT 0,
     fulfillment_types text[] NOT NULL,
     status text NOT NULL DEFAULT 'draft',
+    min_spend_grosze integer,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // Additive migration for tables created before the Demand Exchange lever.
+  `ALTER TABLE slots ADD COLUMN IF NOT EXISTS min_spend_grosze integer`,
   `CREATE UNIQUE INDEX IF NOT EXISTS slots_location_date_time_unique
     ON slots (location_slug, date, time)`,
   `CREATE INDEX IF NOT EXISTS slots_location_date_idx
@@ -179,6 +182,7 @@ function rowToSlot(row: SlotRow): TimeSlot {
     currentOrders: row.currentOrders,
     fulfillmentTypes: row.fulfillmentTypes as TimeSlot["fulfillmentTypes"],
     status: row.status as TimeSlot["status"],
+    minSpendGrosze: row.minSpendGrosze ?? undefined,
   };
 }
 
@@ -192,6 +196,7 @@ function slotToValues(slot: TimeSlot) {
     currentOrders: slot.currentOrders,
     fulfillmentTypes: slot.fulfillmentTypes,
     status: slot.status,
+    minSpendGrosze: slot.minSpendGrosze ?? null,
   };
 }
 

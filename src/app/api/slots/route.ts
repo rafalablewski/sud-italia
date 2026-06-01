@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     time: s.time,
     fulfillmentTypes: s.fulfillmentTypes,
     spotsLeft: s.maxOrders - s.currentOrders,
+    // Minimum order value (grosze) to book this slot; 0 = none. Enforced
+    // server-side at checkout, surfaced here so the picker can show it.
+    minSpend: s.minSpendGrosze ?? 0,
   }));
 
   // Sort by time

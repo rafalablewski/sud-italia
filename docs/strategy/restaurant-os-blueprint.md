@@ -185,11 +185,16 @@ forecast can't fill.
 > and prescribes the yield action (raise / trim / protect / hold). It
 > **instruments rejected demand** — every checkout that hits a full slot logs a
 > signal (`recordDemandSignal` → `demand-signals.json`), so fill-rate becomes a
-> real demand curve. **Phase 2 (the act) is live:** one-click **Apply** resizes
-> a slot to the demand-matched capacity and **Apply all** re-derives the board
-> server-side and resizes every changed slot (audit-logged `slots.resize`,
-> never below booked). Next: per-category / per-station resolution + auto-raise
-> minimum-spend on `protect` slots.
+> real demand curve. **Phase 2 (the act) is live with both yield levers:**
+> one-click **Apply** resizes capacity for demand the kitchen can take, and for
+> **kitchen-capped (`protect`)** slots it sets a **minimum spend** (sized from
+> the slot's realized AOV) — raise price when you can't raise volume. **Apply
+> all** re-derives the board server-side and applies capacity + min-spend to
+> every changed slot (audit-logged `slots.resize`, capacity never below booked).
+> The minimum is enforced end-to-end: exposed on the public `/api/slots`,
+> shown on the cart slot picker, and gated server-side at checkout
+> (`below_min_spend`). **Module 2 is product-complete.** Future refinement:
+> per-category / per-station demand resolution.
 
 ### 3.4 AI workflows that remove decisions
 - **Dynamic capacity:** auto-open/close and auto-resize `maxOrders` from
@@ -363,9 +368,9 @@ This is the SaaS→OS transition: the product stops informing and starts operati
 > (`getSmsProvider`/`getEmailProvider`, opt-outs honoured, audit-logged); **Send
 > all reachable** runs the whole queue in one click — the decay-to-autonomy
 > lever. Sends degrade to a logged no-op when no provider is configured.
-> **Demand Exchange Phase 2 is also live** — one-click capacity resize +
-> "apply all" (`slots.resize`). Remaining Phase-2 decisions: minimum-spend on
-> `protect` slots, and seating moves (Floor Twin).
+> **Demand Exchange Phase 2 is complete** — capacity resize + minimum-spend on
+> `protect` slots + "apply all" (`slots.resize`), with the minimum enforced at
+> checkout. Remaining Phase-2 decision: seating moves (Floor Twin).
 
 **Phase 3 — Network (infrastructure).** Population priors, cross-restaurant
 benchmarks, the demand exchange, and cross-venue customer identity. This is the

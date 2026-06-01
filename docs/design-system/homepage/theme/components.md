@@ -1089,6 +1089,10 @@ Date strip + slot grid in the V8 paper-card vocabulary.
   scarcity line below (bilingual: "Only 2 left · ultimi 2",
   "Last spot · ultimo!", "N slots · liberi"). Critical slots tint
   oxblood, low-stock slots tint ochre.
+- `.v8-cart-slot-min` — ochre uppercase "min N zł" line, shown only on
+  slots that carry a Demand-Exchange minimum spend (`minSpend` from
+  `/api/slots`). The minimum is enforced server-side at checkout; this is
+  the heads-up so the guest isn't surprised at pay.
 - `.v8-cart-slots-empty` — parchment-deep dashed card with italic
   Cormorant "Fully booked today · pieno" + terracotta italic
   day-rollover link.

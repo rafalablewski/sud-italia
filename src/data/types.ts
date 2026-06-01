@@ -367,6 +367,12 @@ export interface TimeSlot {
   currentOrders: number;
   fulfillmentTypes: FulfillmentType[]; // which types this slot supports
   status: SlotStatus; // "draft" until admin approves, then "active"
+  /**
+   * Minimum order value (grosze) to book this slot. The Demand Exchange yield
+   * lever for kitchen-capped slots: raise price when you can't raise volume.
+   * Unset / 0 = no minimum. Enforced server-side at checkout.
+   */
+  minSpendGrosze?: number;
 }
 
 // --- Feedback ---

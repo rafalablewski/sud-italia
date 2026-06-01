@@ -126,6 +126,32 @@ test("pending / cancelled / simulated orders are not counted as demand", () => {
   assert.equal(board.slots[0].predictedDemand, 0); // no counted history
 });
 
+test("kitchen-capped slots get a min-spend recommendation sized from AOV", () => {
+  // 4 Fridays × 5 covers at 18:00, each a 6000 grosze (60 zł) ticket → AOV 60 zł.
+  const orders: DemandOrderInput[] = [];
+  for (const d of FRIDAYS) for (let i = 0; i < 5; i++) {
+    orders.push({ slotDate: d, slotTime: "18:00", status: "completed", totalAmount: 6000 });
+  }
+  const board = buildDemandBoard({
+    date: TARGET,
+    slots: [
+      slot({ time: "17:30", maxOrders: 10 }),
+      slot({ time: "18:00", maxOrders: 10 }),
+      slot({ time: "18:30", maxOrders: 10 }),
+      slot({ time: "19:00", maxOrders: 10 }),
+    ],
+    orders,
+    kitchenCoversPerHour: 8, // ceiling 4/slot → 18:00 (demand 5) is kitchen-capped
+  });
+  const dinner = board.slots.find((s) => s.time === "18:00")!;
+  assert.equal(dinner.tier, "kitchen-capped");
+  // AOV 6000 × 1.5 = 9000 → 90 zł min-spend.
+  assert.equal(dinner.recommendedMinSpendGrosze, 9000);
+  // non-capped slots carry no min-spend recommendation.
+  const lunch = board.slots.find((s) => s.time === "17:30")!;
+  assert.equal(lunch.recommendedMinSpendGrosze, 0);
+});
+
 test("recommendation never drops below already-booked orders", () => {
   // currentOrders 6 but kitchen ceiling is only 4 → can't un-sell; recommend 6.
   const board = buildDemandBoard({
