@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Inbox, Sparkles, UsersRound } from "lucide-react";
+import { Heart, Inbox, Sparkles, UsersRound } from "lucide-react";
 
 /**
- * The three views of the unified Guest Engagement hub, rendered into the
- * CoreShell topbar's `.viewnav` slot. CRM, Concierge and WhatsApp used to be
- * three separate sidebar entries; they now read as Inbox / Guests / Concierge
- * under one surface (`/admin/guest`), and the old routes redirect here.
+ * The views of the unified Guest Engagement hub, rendered into the
+ * CoreShell topbar's `.viewnav` slot. CRM, Concierge, WhatsApp and Loyalty
+ * used to be separate sidebar entries; they now read as Inbox / Guests /
+ * Loyalty / Concierge under one surface (`/admin/guest`), and the old routes
+ * (`/admin/whatsapp`, `/admin/crm`, `/admin/loyalty`, `/admin/concierge`)
+ * redirect here.
  */
-export type GuestView = "inbox" | "guests" | "concierge";
+export type GuestView = "inbox" | "guests" | "loyalty" | "concierge";
 
 const VIEWS: { id: GuestView; label: string; icon: typeof Inbox }[] = [
   { id: "inbox", label: "Inbox", icon: Inbox },
   { id: "guests", label: "Guests", icon: UsersRound },
+  { id: "loyalty", label: "Loyalty", icon: Heart },
   { id: "concierge", label: "Concierge", icon: Sparkles },
 ];
 

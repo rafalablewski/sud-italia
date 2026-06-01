@@ -10,6 +10,7 @@ import {
 import { AdminWhatsApp } from "@/components/admin/AdminWhatsApp";
 import { AdminCrm } from "@/components/admin/AdminCrm";
 import { AdminConcierge } from "@/components/admin/AdminConcierge";
+import { AdminLoyalty } from "@/components/admin/AdminLoyalty";
 import type { GuestView } from "@/components/admin/guest/GuestViewNav";
 
 /**
@@ -17,11 +18,12 @@ import type { GuestView } from "@/components/admin/guest/GuestViewNav";
  * `?view=` selects the module:
  *   - inbox      → WhatsApp inbox (live conversations + order context + funnel)
  *   - guests     → CRM customer book
+ *   - loyalty    → loyalty roster + family wallets + redemptions
  *   - concierge  → AI capability layer + EU-14 allergen matrix
  *
- * The legacy /admin/whatsapp, /admin/crm and /admin/concierge routes redirect
- * here so the three modules read as one system (see docs/design-system/core/
- * modules/guest.md).
+ * The legacy /admin/whatsapp, /admin/crm, /admin/loyalty and /admin/concierge
+ * routes redirect here so the modules read as one system (see
+ * docs/design-system/core/modules/guest.md).
  */
 export default async function AdminGuestPage({
   searchParams,
@@ -35,9 +37,17 @@ export default async function AdminGuestPage({
   // take the first so a duplicated param doesn't silently fall back to inbox.
   const viewStr = Array.isArray(view) ? view[0] : view;
   const v: GuestView =
-    viewStr === "guests" ? "guests" : viewStr === "concierge" ? "concierge" : "inbox";
+    viewStr === "guests"
+      ? "guests"
+      : viewStr === "loyalty"
+        ? "loyalty"
+        : viewStr === "concierge"
+          ? "concierge"
+          : "inbox";
 
   if (v === "guests") return <AdminCrm />;
+
+  if (v === "loyalty") return <AdminLoyalty />;
 
   if (v === "concierge") {
     const slugs = ["krakow", "warszawa"] as const;

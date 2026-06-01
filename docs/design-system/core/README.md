@@ -5,8 +5,15 @@ runs on:
 
 - **POS** (`/admin/pos`) — cashier order-entry with the coursing model + tab rail
 - **KDS** (`/admin/kds`) — kitchen display, role triad, coursing-aware tickets
-- **Guest** — the unified guest hub: CRM (customer book), Concierge (AI
-  capability layer + EU-14 allergen matrix), WhatsApp (inbox + funnel)
+- **Guest** — the unified guest hub: CRM (customer book), Loyalty (member
+  roster + wallets + redemptions), Concierge (AI capability layer + EU-14
+  allergen matrix), WhatsApp (inbox + funnel)
+
+The **Core nav group** (`src/components/admin/v2/nav.config.ts`) also carries
+**Floor** (`/admin/floor` — tables + reservations) and **Slots**
+(`/admin/slots` — booking capacity): the foundation of running a restaurant.
+These two render on the **Admin** theme (not the Core suite shell) but belong
+to the platform's root, so they're grouped under Core in the nav.
 
 Core is a **separate theme**. It does not inherit from Admin or Homepage,
 and changes to those themes must not leak into Core. The doctrine is the
@@ -23,6 +30,7 @@ core/
     ├── kds.md
     ├── guest.md       ← the unified Guest hub
     ├── crm.md         ← module under Guest
+    ├── loyalty.md     ← module under Guest
     ├── concierge.md   ← module under Guest
     ├── whatsapp.md    ← module under Guest
     └── receipt-printer.md  ← ESC/POS receipt printing + go-live guide
@@ -48,13 +56,15 @@ mockup** design (`public/mockups/core-suite/`):
   (`/admin/guest`, `/admin/pos`, `/admin/kds`) while keeping the data
   providers.
 - **Surfaces:** **POS** (`/admin/pos`, `pos.html`) and the **Guest
-  Engagement hub** (`/admin/guest`, three views Inbox · Guests ·
-  Concierge — the old `/admin/crm`, `/admin/concierge`, `/admin/whatsapp`
-  redirect in) render on the `.core-suite` theme. **KDS** (`/admin/kds`,
-  `kds*.html`) is the full-screen kitchen-wall display.
+  Engagement hub** (`/admin/guest`, four views Inbox · Guests · Loyalty ·
+  Concierge — the old `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,
+  `/admin/whatsapp` redirect in) render on the `.core-suite` theme.
+  **KDS** (`/admin/kds`, `kds*.html`) is the full-screen kitchen-wall
+  display.
 - **Guest hub views:** the cross-view switcher (`<GuestViewNav>`) rides
   the CoreShell topbar `.viewnav`; Inbox = `AdminWhatsApp`, Guests =
-  `AdminCrm`, Concierge = `AdminConcierge`, each a body inside one shell.
+  `AdminCrm`, Loyalty = `AdminLoyalty`, Concierge = `AdminConcierge`, each
+  a body inside one shell.
 
 ## Authority
 

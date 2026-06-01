@@ -2,9 +2,15 @@
 
 The design language for the **back-office admin** — every `/admin/*` surface
 that is *not* one of the Core modules. Core (POS, KDS, Guest = CRM +
-Concierge + WhatsApp) is our IP and runs under its own theme — see the
-Core theme docs for those surfaces; this doc covers the everything-else
+Loyalty + Concierge + WhatsApp) is our IP and runs under its own theme — see
+the Core theme docs for those surfaces; this doc covers the everything-else
 that runs the business behind the till.
+
+> **Nav vs theme:** the **Core nav group** also surfaces **Floor**
+> (`/admin/floor`) and **Slots** (`/admin/slots`) — they're the foundation of
+> running a restaurant — but those two are **admin-themed** pages, so their
+> anatomy is documented here (see [`sections/operations.md`](./sections/operations.md)),
+> not under the Core theme. Group membership ≠ theme ownership.
 
 **Code is the source of truth.** The shell lives at
 `src/components/admin/v2/AdminShell.tsx`; nav at
@@ -18,10 +24,10 @@ What this doc covers (the admin back-office):
 | Section       | Pages                                                                  |
 | ------------- | ---------------------------------------------------------------------- |
 | Overview      | Dashboard, Orders                                                      |
-| Operations    | Menu, Recipes, Slots, Floor                                            |
+| Operations    | Menu, Recipes, HACCP log, Waste log, Shift handover (+ Slots & Floor — admin-themed, surfaced under the Core nav group) |
 | Inventory     | Stock, Suppliers, Purchase orders                                      |
 | People        | Staff, Schedule                                                        |
-| Customers     | Customers, Loyalty, Corporate, Feedback                                |
+| Customers     | Customers, Corporate, Feedback                                         |
 | Finance       | Reports, Cash, Business costs, Calculator                              |
 | Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Truck ops            |
 | Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
@@ -29,9 +35,10 @@ What this doc covers (the admin back-office):
 
 What this doc does **not** cover:
 
-- **Core modules** (POS, KDS, CRM, Concierge, WhatsApp) — the productised
-  IP, documented under the Core theme. Operator-pressure surfaces with
-  their own density rules.
+- **Core modules** (POS, KDS, CRM, Loyalty, Concierge, WhatsApp) — the
+  productised IP, documented under the Core theme. Operator-pressure
+  surfaces with their own density rules. (Loyalty moved here from the
+  admin Customers section — it's now the 4th Guest-hub view.)
 - **Public storefront** (the guest ordering site) — documented under the
   Homepage theme.
 - **Shared foundations** — there are none in the target architecture. Each
@@ -112,10 +119,10 @@ listed there is invisible to operators — treat the missing entry as a bug.
 Each admin section has its own design doc under [`sections/`](./sections/).
 Progress:
 
-- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), slots, floor, HACCP log, waste log, shift handover
+- [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), HACCP log, waste log, shift handover, plus slots + floor (admin-themed, now surfaced under the Core nav group)
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
-- [`sections/customers.md`](./sections/customers.md) — customers, loyalty, corporate, feedback
+- [`sections/customers.md`](./sections/customers.md) — customers, corporate, feedback (loyalty moved to the Core Guest hub — see `../core/modules/loyalty.md`)
 - [`sections/finance.md`](./sections/finance.md) — reports, cash, business costs, calculator
 - [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, truck ops
 - [`sections/intelligence.md`](./sections/intelligence.md) — multi-location, manage-locations, cohort/CLTV, menu engineering, AI insights, expansion

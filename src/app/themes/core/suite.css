@@ -840,6 +840,55 @@
 .core-suite .note-add { display: flex; gap: 8px; margin-top: 10px; }
 
 /* ============================================================
+   LOYALTY (Guest › Loyalty — the 4th hub view)
+   ============================================================ */
+.core-suite .loy { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.core-suite .loy-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px 18px 4px; }
+.core-suite .loy-kpis .bk .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
+.core-suite .loy-sub { font-size: 12px; color: var(--fg-muted); padding: 6px 18px 4px; max-width: 820px; line-height: 1.5; }
+.core-suite .loy-sub a { color: var(--brand-bright); }
+.core-suite .loy-head { display: flex; align-items: center; gap: 12px; padding: 8px 18px 2px; }
+.core-suite .loy-head .seg button .n { font: 600 11px var(--mono); opacity: .6; margin-left: 6px; }
+.core-suite .loy-filters { display: flex; align-items: center; gap: 12px; padding: 8px 18px; flex-wrap: wrap; }
+.core-suite .loy-filters .book-search { position: relative; flex: 1; min-width: 220px; max-width: 360px; }
+.core-suite .loy-filters .filters { display: flex; gap: 7px; flex-wrap: wrap; }
+.core-suite .loy-body { padding: 4px 18px 22px; }
+.core-suite .loy-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.core-suite .loy-card .tbl { background: transparent; }
+.core-suite .th-sort { background: transparent; border: 0; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.core-suite .th-sort:hover { color: var(--fg); }
+.core-suite .loy-member { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
+.core-suite .loy-member .nm { font-size: 13px; font-weight: 600; }
+.core-suite .loy-member .sub { font-size: 11px; color: var(--fg-subtle); }
+.core-suite .loy-member:hover .nm { color: var(--brand-bright); }
+.core-suite .loy-link { color: var(--fg-muted); text-decoration: none; }
+.core-suite .loy-link:hover { color: var(--brand-bright); }
+.core-suite .loy-empty { padding: 56px 18px; text-align: center; color: var(--fg-muted); }
+.core-suite .loy-empty svg { width: 30px; height: 30px; color: var(--fg-subtle); margin-bottom: 12px; }
+.core-suite .loy-empty .t { font-family: var(--display); font-size: 18px; color: var(--fg); margin-bottom: 5px; }
+.core-suite .loy-empty .d { font-size: 12.5px; }
+.core-suite .loy-wallets { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; padding: 10px 18px 22px; }
+.core-suite .loy-wallet { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.core-suite .loy-wallet-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.core-suite .loy-wallet-h > svg { color: var(--platinum); flex: none; }
+.core-suite .loy-wallet-h .id { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.core-suite .loy-wallet-h .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 2px; }
+.core-suite .loy-wallet-h .btn { margin-left: auto; }
+.core-suite .loy-wallet-members { list-style: none; margin: 0; padding: 10px 14px 13px; display: flex; flex-direction: column; gap: 8px; }
+.core-suite .loy-wallet-members li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.core-suite .loy-wallet-members .nm { color: var(--fg-muted); }
+.core-suite .loy-wallet-members .badge { margin-left: auto; }
+/* Tier badge tones — silver/gold/bronze complete the .badge ramp (platinum exists). */
+.core-suite .badge.bronze { background: rgba(184,115,64,.16); color: #cd8e5a; }
+.core-suite .badge.silver { background: rgba(170,176,188,.16); color: #c2c8d2; }
+.core-suite .badge.gold { background: rgba(212,170,55,.16); color: #e2bb4c; }
+/* Points-adjust dialog body (rendered into the .v2-dialog-core portal). */
+.v2-dialog-core .loy-dialog-form { display: flex; flex-direction: column; gap: 14px; }
+.v2-dialog-core .loy-field { display: flex; flex-direction: column; gap: 6px; }
+.v2-dialog-core .loy-field-label { font-size: 12.5px; font-weight: 600; }
+.v2-dialog-core .loy-field-hint { font-size: 11px; opacity: .6; }
+
+/* ============================================================
    POS (ported from pos.html)
    ============================================================ */
 .core-suite .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }

@@ -148,16 +148,21 @@ The bump / ready / undo button on a ticket.
 
 ## POS · Guest — now `.core-suite` (`suite.css`)
 
-POS and the Guest hub (CRM · Concierge · WhatsApp) were rebuilt onto the
-**`.core-suite`** vocabulary ported from the mockup's `system.css` — the
-`.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-console` thread classes documented
-here previously are **removed**. Their component anatomy now lives in the
-module docs, which describe the real shipped markup:
+POS and the Guest hub (CRM · Loyalty · Concierge · WhatsApp) were rebuilt
+onto the **`.core-suite`** vocabulary ported from the mockup's
+`system.css` — the `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-console`
+thread classes documented here previously are **removed**. Their
+component anatomy now lives in the module docs, which describe the real
+shipped markup:
 
 - **POS** — `../modules/pos.md` (`.tabrail` / `.cat-rail` / `.prod` /
   `.ticket` / `.course` / `.tk`-style ticket lines).
 - **CRM** (Guests) — `../modules/crm.md` (`.book` / `.cust` / `.profile`
   / `.panel` / health ring + RFM `.rfm`).
+- **Loyalty** — `../modules/loyalty.md` (`.loy` shell + `.loy-kpis` `.bk`
+  cards + `.loy-filters` + `.tbl` roster + `.loy-wallets` cards + the
+  `.badge.bronze` / `.silver` / `.gold` tier tones that complete the
+  `.badge` ramp).
 - **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
   allergen grid).
 - **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`

@@ -282,7 +282,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/guest",
           summary:
-            "One surface for the relationship layer (/admin/guest) with three views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and all three share the canonical customer record, identity-merge rules and loyalty-points ledger.",
+            "One surface for the relationship layer (/admin/guest) with four views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Loyalty, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/loyalty, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
         },
         {
           name: "CRM — Regulars customer book",
@@ -292,6 +292,13 @@ export default async function CapabilitiesPage() {
             "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. A 'Send today' prompt surfaces today's birthdays + first-order anniversaries (GET /api/admin/campaigns/triggers). Each profile carries a GDPR panel — Export (DSAR, Art. 15, GET /api/admin/gdpr/export) and Erase (Art. 17, owner-only, POST /api/admin/gdpr/delete). Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
             "Relationship-health score and next-best-action are heuristics computed from RFM + reliability, not an ML churn model. No-shows are derived from cancelled orders.",
+        },
+        {
+          name: "Loyalty — roster, wallets & redemptions",
+          status: "live",
+          href: "/admin/guest?view=loyalty",
+          summary:
+            "The fourth Guest-hub view (/admin/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Concierge — agent commerce (MCP + WhatsApp)",
@@ -645,8 +652,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty points",
           status: "live",
-          href: "/admin/loyalty",
-          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live at /admin/loyalty; the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+          href: "/admin/guest?view=loyalty",
+          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/admin/guest?view=loyalty — /admin/loyalty redirects there); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Referral codes",
@@ -753,7 +760,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty rewards reshape",
           status: "live",
-          href: "/admin/loyalty",
+          href: "/admin/growth",
           summary: "Audit §3 — removed the strictly-dominated 'PLN 10 Off' reward (100 points → 10 zł value vs Free Drink at 50 pts → up to 11.90 zł — customers spot the bad ratio and avoid it, dragging perceived loyalty value). New ladder: Free Drink 50pts, Free Garlic Bread 70pts, Free Dessert 120pts, Free Personal Pizza 180pts, Free Pizza 280pts, 25 PLN Off 280pts. No rung is strictly dominated by another (each unlocks a different category or threshold). Value-per-point declines as customers save up — that's intentional save-up incentive economics, with the higher rungs (Free Pizza, 25 zł Off) acting as aspirational targets while the 50-pt entry stays attractive for fast redeem.",
         },
         {

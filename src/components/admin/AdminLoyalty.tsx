@@ -3,37 +3,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Award,
   Coins,
-  Crown,
-  Gem,
   Heart,
   Plus,
+  RefreshCw,
   Search,
   Sparkles,
   Trash2,
-  Users,
   Wallet,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { CoreShell } from "./core/CoreShell";
+import { GuestViewNav } from "./guest/GuestViewNav";
+import { Button, Dialog } from "./v2/ui";
 import { useToast } from "./v2/ui/Toast";
-
-import {
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  ConfirmDialog,
-  Dialog,
-  EmptyState,
-  Input,
-  Tabs,
-  Table,
-  Textarea,
-  type Column,
-} from "./v2/ui";
-import { KpiCard } from "./v2/charts";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
@@ -76,13 +58,7 @@ interface Redemption {
 
 type TierFilter = "all" | LoyaltyTier;
 type TabKey = "members" | "wallets" | "redemptions";
-
-const TIER_TONE: Record<LoyaltyTier, "neutral" | "info" | "warning" | "success"> = {
-  bronze: "warning",
-  silver: "neutral",
-  gold: "warning",
-  platinum: "info",
-};
+type SortKey = "name" | "tier" | "points" | "orders" | "spent" | "last";
 
 const TIER_LABEL: Record<LoyaltyTier, string> = {
   bronze: "Bronze",
@@ -91,20 +67,49 @@ const TIER_LABEL: Record<LoyaltyTier, string> = {
   platinum: "Platinum",
 };
 
+/** Tier → core-suite `.badge` tone class (bronze/silver/gold added in suite.css). */
+const TIER_BADGE: Record<LoyaltyTier, string> = {
+  bronze: "bronze",
+  silver: "silver",
+  gold: "gold",
+  platinum: "platinum",
+};
+
+const fmtPLN0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
+const fmtNum = (n: number) => n.toLocaleString("pl-PL");
+
 function fmtDate(iso?: string): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString();
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   } catch {
     return iso;
   }
 }
 
-export function AdminLoyalty() {
-  return <AdminLoyaltyDesktop />;
+function fmtDateTime(iso?: string): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("en-GB", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
 }
 
-function AdminLoyaltyDesktop() {
+/**
+ * Loyalty — the fourth view of the unified Guest Engagement hub (Inbox /
+ * Guests / Loyalty / Concierge). It shares the canonical customer record and
+ * the one loyalty-points ledger with the other Guest modules (see
+ * docs/design-system/core/modules/loyalty.md). The roster, family wallets and
+ * redemption log live here; the programme *config* (tiers / rewards / referral)
+ * is edited at /admin/growth.
+ */
+export function AdminLoyalty() {
   const toast = useToast();
   const [tab, setTab] = useState<TabKey>("members");
 
@@ -115,6 +120,7 @@ function AdminLoyaltyDesktop() {
 
   const [query, setQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "points", dir: "desc" });
 
   const [pointsDialog, setPointsDialog] = useState<MemberRow | null>(null);
   const [pendingDeleteWallet, setPendingDeleteWallet] = useState<WalletSummary | null>(null);
@@ -147,6 +153,37 @@ function AdminLoyaltyDesktop() {
       return m.name.toLowerCase().includes(q) || m.phone.includes(q);
     });
   }, [members, query, tierFilter]);
+
+  const sortedMembers = useMemo(() => {
+    const { key, dir } = sort;
+    const tierRank: Record<LoyaltyTier, number> = { bronze: 0, silver: 1, gold: 2, platinum: 3 };
+    const val = (m: MemberRow): number | string => {
+      switch (key) {
+        case "name":
+          return m.name || "";
+        case "tier":
+          return tierRank[m.tier];
+        case "points":
+          return m.points;
+        case "orders":
+          return m.orders;
+        case "spent":
+          return m.totalSpent;
+        case "last":
+          return m.lastOrder || "";
+      }
+    };
+    const arr = [...filteredMembers].sort((a, b) => {
+      const av = val(a);
+      const bv = val(b);
+      const cmp =
+        typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av).localeCompare(String(bv));
+      return dir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filteredMembers, sort]);
 
   const tierCounts = useMemo(() => {
     const c: Record<LoyaltyTier, number> & { all: number } = {
@@ -199,309 +236,330 @@ function AdminLoyaltyDesktop() {
     setPendingDeleteWallet(null);
   };
 
-  const memberCols: Column<MemberRow>[] = [
-    {
-      key: "name",
-      header: "Member",
-      cell: (m) => (
-        <Link href={`/admin/customers/${encodeURIComponent(m.phone)}`} className="v2-link-cell">
-          <div className="v2-cell-stack">
-            <span>{m.name || "Guest"}</span>
-            <span className="v2-cell-sub mono">{m.phone}</span>
-          </div>
-        </Link>
-      ),
-      sortValue: (m) => m.name,
-    },
-    {
-      key: "tier",
-      header: "Tier",
-      cell: (m) => (
-        <Badge tone={TIER_TONE[m.tier]} variant="soft" dot>
-          {TIER_LABEL[m.tier]}
-        </Badge>
-      ),
-      sortValue: (m) => m.tier,
-    },
-    {
-      key: "points",
-      header: "Points",
-      align: "right",
-      cell: (m) => m.points.toLocaleString(),
-      sortValue: (m) => m.points,
-    },
-    {
-      key: "orders",
-      header: "Orders",
-      align: "right",
-      cell: (m) => m.orders.toLocaleString(),
-      sortValue: (m) => m.orders,
-    },
-    {
-      key: "spent",
-      header: "Lifetime spend",
-      align: "right",
-      cell: (m) => formatPrice(m.totalSpent),
-      sortValue: (m) => m.totalSpent,
-    },
-    {
-      key: "last",
-      header: "Last order",
-      cell: (m) => <span className="v2-muted">{fmtDate(m.lastOrder)}</span>,
-      sortValue: (m) => m.lastOrder,
-    },
-    {
-      key: "actions",
-      header: "",
-      cell: (m) => (
-        <Button size="sm" variant="ghost" leadingIcon={<Coins className="h-3.5 w-3.5" />} onClick={() => setPointsDialog(m)}>
-          Adjust
-        </Button>
-      ),
-    },
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "name" || key === "tier" || key === "last" ? "asc" : "desc" },
+    );
+
+  const sortArrow = (key: SortKey) => (sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "");
+
+  const kpis: { l: string; v: string; sub?: string }[] = [
+    { l: "Total members", v: fmtNum(members.length), sub: `${totals.repeat} repeat buyers` },
+    { l: "Platinum", v: fmtNum(tierCounts.platinum) },
+    { l: "Gold", v: fmtNum(tierCounts.gold) },
+    { l: "Lifetime spend", v: fmtPLN0(totals.spent) },
+  ];
+
+  const TABS: { key: TabKey; label: string; count: number }[] = [
+    { key: "members", label: "Members", count: members.length },
+    { key: "wallets", label: "Family wallets", count: wallets.length },
+    { key: "redemptions", label: "Redemptions", count: redemptions.length },
+  ];
+
+  const TIER_CHIPS: { key: TierFilter; label: string; count: number }[] = [
+    { key: "all", label: "All", count: tierCounts.all },
+    { key: "platinum", label: "Platinum", count: tierCounts.platinum },
+    { key: "gold", label: "Gold", count: tierCounts.gold },
+    { key: "silver", label: "Silver", count: tierCounts.silver },
+    { key: "bronze", label: "Bronze", count: tierCounts.bronze },
   ];
 
   return (
-    <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Loyalty</h1>
-          <p className="v2-page-subtitle">
-            Members, family wallets, and redemptions. Tiers calculated from earned + manually-adjusted points. To edit the programme itself — tier labels / thresholds / multipliers / perks + the rewards catalogue — go to <Link href="/admin/growth" className="v2-link">/admin/growth</Link>.
-          </p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "members", label: "Members", icon: <Heart className="h-3.5 w-3.5" />, count: members.length },
-            { value: "wallets", label: "Family wallets", icon: <Wallet className="h-3.5 w-3.5" />, count: wallets.length },
-            { value: "redemptions", label: "Redemptions", icon: <Sparkles className="h-3.5 w-3.5" />, count: redemptions.length },
-          ]}
-          variant="pill"
-          ariaLabel="Loyalty view"
-        />
-      </header>
-
-      <section className="v2-kpi-grid">
-        <KpiCard
-          label="Total members"
-          value={members.length}
-          icon={Users}
-          tone="info"
-          hint={`${totals.repeat} repeat buyers`}
-        />
-        <KpiCard
-          label="Platinum"
-          value={tierCounts.platinum}
-          icon={Gem}
-          tone="info"
-        />
-        <KpiCard
-          label="Gold"
-          value={tierCounts.gold}
-          icon={Crown}
-          tone="warning"
-        />
-        <KpiCard
-          label="Lifetime spend"
-          value={totals.spent / 100}
-          format={(n) => `${Math.round(n).toLocaleString("pl-PL")} zł`}
-          icon={Award}
-          tone="brand"
-        />
-      </section>
-
-      {tab === "members" && (
+    <CoreShell
+      active="guest"
+      crumbs={
         <>
-          <div className="v2-filters">
-            <div className="v2-filter-search">
-              <Input
-                placeholder="Search by name or phone…"
-                leadingAdornment={<Search className="h-3.5 w-3.5" />}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <Tabs
-              value={tierFilter}
-              onChange={(v) => setTierFilter(v as TierFilter)}
-              tabs={[
-                { value: "all", label: "All", count: tierCounts.all },
-                { value: "platinum", label: "Platinum", count: tierCounts.platinum },
-                { value: "gold", label: "Gold", count: tierCounts.gold },
-                { value: "silver", label: "Silver", count: tierCounts.silver },
-                { value: "bronze", label: "Bronze", count: tierCounts.bronze },
-              ]}
-              variant="pill"
-              ariaLabel="Tier filter"
-            />
-          </div>
-
-          {loading ? (
-            <div className="v2-page-loading">Loading Loyalty…</div>
-          ) : filteredMembers.length === 0 ? (
-            <Card>
-              <CardBody>
-                <EmptyState
-                  icon={Heart}
-                  title={members.length === 0 ? "No members yet" : "No matches"}
-                  description={
-                    members.length === 0
-                      ? "Members are auto-enrolled when they place a phone-verified order."
-                      : "Try clearing filters."
-                  }
-                />
-              </CardBody>
-            </Card>
-          ) : (
-            <Card padding="none">
-              <CardBody>
-                <Table rows={filteredMembers} columns={memberCols} rowKey={(m) => m.phone} defaultSort={{ key: "points", dir: "desc" }} />
-              </CardBody>
-            </Card>
-          )}
+          Core / <b>Guest Engagement</b>
         </>
-      )}
+      }
+      viewnav={<GuestViewNav current="loyalty" counts={{ loyalty: members.length }} />}
+      topbarRight={
+        <button type="button" className="btn ghost icon" onClick={() => void fetchAll()} title="Refresh">
+          <RefreshCw className={loading ? "crm-spin" : ""} />
+        </button>
+      }
+    >
+      <div className="loy">
+        <div className="loy-kpis">
+          {kpis.map((k) => (
+            <div key={k.l} className="bk">
+              <div className="l">{k.l}</div>
+              <div className="v tnum">{k.v}</div>
+              {k.sub && <div className="sub">{k.sub}</div>}
+            </div>
+          ))}
+        </div>
 
-      {tab === "wallets" && (
-        <WalletsPanel wallets={wallets} onDissolve={setPendingDeleteWallet} />
-      )}
+        <p className="loy-sub">
+          Members, family wallets and redemptions. Tiers are calculated from earned + manually-adjusted
+          points — the same ledger guests earn on at the POS, online, or by WhatsApp. To edit the
+          programme itself (tier labels / thresholds / multipliers / perks + the rewards catalogue),
+          go to <Link href="/admin/growth">/admin/growth</Link>.
+        </p>
 
-      {tab === "redemptions" && (
-        <RedemptionsPanel rows={redemptions} />
-      )}
+        <div className="loy-head">
+          <div className="seg">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={tab === t.key ? "on" : ""}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+                <span className="n">{t.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <PointsDialog
-        member={pointsDialog}
-        onClose={() => setPointsDialog(null)}
-        onSubmit={submitPoints}
-      />
+        {tab === "members" && (
+          <>
+            <div className="loy-filters">
+              <div className="book-search">
+                <Search />
+                <input
+                  className="input"
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by name or phone…"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="filters">
+                {TIER_CHIPS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    className={`fchip${tierFilter === c.key ? " on" : ""}`}
+                    aria-pressed={tierFilter === c.key}
+                    onClick={() => setTierFilter(c.key)}
+                  >
+                    {c.label}
+                    <span className="n">{c.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      <ConfirmDialog
+            <div className="loy-body">
+              {loading ? (
+                <div className="pane-msg">Loading Loyalty…</div>
+              ) : sortedMembers.length === 0 ? (
+                <div className="loy-empty">
+                  <Heart />
+                  <div className="t">{members.length === 0 ? "No members yet" : "No matches"}</div>
+                  <div className="d">
+                    {members.length === 0
+                      ? "Members are auto-enrolled when they place a phone-verified order."
+                      : "Try clearing the search or tier filter."}
+                  </div>
+                </div>
+              ) : (
+                <div className="loy-card">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("name")}>
+                            Member{sortArrow("name")}
+                          </button>
+                        </th>
+                        <th>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("tier")}>
+                            Tier{sortArrow("tier")}
+                          </button>
+                        </th>
+                        <th style={{ textAlign: "right" }}>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("points")}>
+                            Points{sortArrow("points")}
+                          </button>
+                        </th>
+                        <th style={{ textAlign: "right" }}>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("orders")}>
+                            Orders{sortArrow("orders")}
+                          </button>
+                        </th>
+                        <th style={{ textAlign: "right" }}>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("spent")}>
+                            Lifetime spend{sortArrow("spent")}
+                          </button>
+                        </th>
+                        <th>
+                          <button type="button" className="th-sort" onClick={() => toggleSort("last")}>
+                            Last order{sortArrow("last")}
+                          </button>
+                        </th>
+                        <th aria-label="Actions" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedMembers.map((m) => (
+                        <tr key={m.phone}>
+                          <td>
+                            <Link href={`/admin/customers/${encodeURIComponent(m.phone)}`} className="loy-member">
+                              <span className="nm">{m.name || "Guest"}</span>
+                              <span className="mono sub">{m.phone}</span>
+                            </Link>
+                          </td>
+                          <td>
+                            <span className={`badge ${TIER_BADGE[m.tier]}`}>
+                              <i className="d" />
+                              {TIER_LABEL[m.tier]}
+                            </span>
+                          </td>
+                          <td className="num" style={{ textAlign: "right" }}>
+                            {fmtNum(m.points)}
+                          </td>
+                          <td className="num" style={{ textAlign: "right" }}>
+                            {fmtNum(m.orders)}
+                          </td>
+                          <td className="num" style={{ textAlign: "right" }}>
+                            {fmtPLN0(m.totalSpent)}
+                          </td>
+                          <td className="muted">{fmtDate(m.lastOrder)}</td>
+                          <td style={{ textAlign: "right" }}>
+                            <button type="button" className="btn ghost" onClick={() => setPointsDialog(m)}>
+                              <Coins width={14} height={14} />
+                              Adjust
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === "wallets" &&
+          (loading ? (
+            <div className="loy-body">
+              <div className="pane-msg">Loading wallets…</div>
+            </div>
+          ) : wallets.length === 0 ? (
+            <div className="loy-body">
+              <div className="loy-empty">
+                <Wallet />
+                <div className="t">No family wallets yet</div>
+                <div className="d">Members can pair up to 6 phones into a shared points wallet via the customer site.</div>
+              </div>
+            </div>
+          ) : (
+            <div className="loy-wallets">
+              {wallets.map((w) => (
+                <div key={w.id} className="loy-wallet">
+                  <div className="loy-wallet-h">
+                    <Wallet width={15} height={15} />
+                    <div>
+                      <div className="id mono">{w.id.slice(-6).toUpperCase()}</div>
+                      <div className="sub">Head {w.headPhone}</div>
+                    </div>
+                    <button type="button" className="btn ghost" onClick={() => setPendingDeleteWallet(w)}>
+                      <Trash2 width={14} height={14} />
+                      Dissolve
+                    </button>
+                  </div>
+                  <ul className="loy-wallet-members">
+                    {w.members.map((m) => (
+                      <li key={m.phone}>
+                        <span className="mono">{m.phone}</span>
+                        {m.name && <span className="nm">{m.name}</span>}
+                        <span className={`badge ${m.status === "active" ? "success" : "warning"}`}>
+                          <i className="d" />
+                          {m.status}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {tab === "redemptions" && (
+          <div className="loy-body">
+            {loading ? (
+              <div className="pane-msg">Loading redemptions…</div>
+            ) : redemptions.length === 0 ? (
+              <div className="loy-empty">
+                <Sparkles />
+                <div className="t">No redemptions yet</div>
+                <div className="d">When members redeem rewards, the log appears here.</div>
+              </div>
+            ) : (
+              <div className="loy-card">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Customer</th>
+                      <th>Wallet</th>
+                      <th>Reward</th>
+                      <th style={{ textAlign: "right" }}>Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...redemptions]
+                      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                      .map((r) => (
+                        <tr key={r.id}>
+                          <td className="muted">{fmtDateTime(r.createdAt)}</td>
+                          <td>
+                            <Link href={`/admin/customers/${encodeURIComponent(r.phone)}`} className="mono loy-link">
+                              {r.phone}
+                            </Link>
+                          </td>
+                          <td>
+                            {r.walletId ? (
+                              <span className="mono">{r.walletId.slice(-6).toUpperCase()}</span>
+                            ) : (
+                              <span className="muted">solo</span>
+                            )}
+                          </td>
+                          <td>{r.rewardId}</td>
+                          <td className="num" style={{ textAlign: "right" }}>
+                            −{fmtNum(r.points)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <PointsDialog member={pointsDialog} onClose={() => setPointsDialog(null)} onSubmit={submitPoints} />
+
+      <Dialog
         open={pendingDeleteWallet !== null}
         onClose={() => setPendingDeleteWallet(null)}
-        onConfirm={dissolveWallet}
+        theme="core"
+        size="sm"
         title="Dissolve family wallet?"
         description="All members of this wallet keep their orders and points individually. The shared pool ends."
-        confirmLabel="Dissolve"
-        destructive
-      />
-    </div>
-  );
-}
-
-interface WalletsPanelProps {
-  wallets: WalletSummary[];
-  onDissolve: (w: WalletSummary) => void;
-}
-
-function WalletsPanel({ wallets, onDissolve }: WalletsPanelProps) {
-  if (wallets.length === 0) {
-    return (
-      <Card>
-        <CardBody>
-          <EmptyState
-            icon={Wallet}
-            title="No family wallets yet"
-            description="Members can pair up to 3 phones into a shared points wallet via the customer site."
-          />
-        </CardBody>
-      </Card>
-    );
-  }
-  return (
-    <div className="v2-wallets-grid">
-      {wallets.map((w) => (
-        <Card key={w.id} padding="none">
-          <CardHeader
-            title={
-              <div className="v2-wallet-title">
-                <Wallet className="h-3.5 w-3.5 v2-muted" />
-                <span className="mono">{w.id.slice(-6).toUpperCase()}</span>
-              </div>
-            }
-            description={`Head ${w.headPhone}`}
-            actions={
-              <Button size="sm" variant="ghost" leadingIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => onDissolve(w)}>
-                Dissolve
-              </Button>
-            }
-          />
-          <CardBody>
-            <ul className="v2-wallet-members">
-              {w.members.map((m) => (
-                <li key={m.phone}>
-                  <span className="mono">{m.phone}</span>
-                  <span className="v2-muted">{m.name || ""}</span>
-                  <Badge tone={m.status === "active" ? "success" : "warning"} variant="soft" dot>
-                    {m.status}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </CardBody>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function RedemptionsPanel({ rows }: { rows: Redemption[] }) {
-  const cols: Column<Redemption>[] = [
-    {
-      key: "createdAt",
-      header: "When",
-      cell: (r) => (
-        <span className="v2-muted">{new Date(r.createdAt).toLocaleString()}</span>
-      ),
-      sortValue: (r) => r.createdAt,
-    },
-    {
-      key: "phone",
-      header: "Customer",
-      cell: (r) => (
-        <Link href={`/admin/customers/${encodeURIComponent(r.phone)}`} className="v2-link-cell mono">
-          {r.phone}
-        </Link>
-      ),
-      sortValue: (r) => r.phone,
-    },
-    {
-      key: "wallet",
-      header: "Wallet",
-      cell: (r) => (r.walletId ? <span className="mono">{r.walletId.slice(-6).toUpperCase()}</span> : <span className="v2-muted">solo</span>),
-    },
-    {
-      key: "reward",
-      header: "Reward",
-      cell: (r) => r.rewardId,
-      sortValue: (r) => r.rewardId,
-    },
-    {
-      key: "points",
-      header: "Points",
-      align: "right",
-      cell: (r) => <span className="tabular">−{r.points.toLocaleString()}</span>,
-      sortValue: (r) => r.points,
-    },
-  ];
-
-  if (rows.length === 0) {
-    return (
-      <Card>
-        <CardBody>
-          <EmptyState icon={Sparkles} title="No redemptions yet" description="When members redeem rewards, the log appears here." />
-        </CardBody>
-      </Card>
-    );
-  }
-  return (
-    <Card padding="none">
-      <CardBody>
-        <Table rows={rows} columns={cols} rowKey={(r) => r.id} defaultSort={{ key: "createdAt", dir: "desc" }} />
-      </CardBody>
-    </Card>
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPendingDeleteWallet(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={dissolveWallet} leadingIcon={<Trash2 className="h-3.5 w-3.5" />}>
+              Dissolve
+            </Button>
+          </>
+        }
+      >
+        <div />
+      </Dialog>
+    </CoreShell>
   );
 }
 
@@ -524,7 +582,7 @@ function PointsDialog({ member, onClose, onSubmit }: PointsDialogProps) {
     }
   }, [member]);
 
-  if (!member) return <Dialog open={false} onClose={onClose} />;
+  if (!member) return <Dialog open={false} onClose={onClose} theme="core" />;
 
   const submit = async () => {
     const amt = Number(amountStr);
@@ -538,27 +596,44 @@ function PointsDialog({ member, onClose, onSubmit }: PointsDialogProps) {
     <Dialog
       open
       onClose={onClose}
+      theme="core"
       size="sm"
       title={`Adjust points · ${member.name || member.phone}`}
-      description={`Current balance: ${member.points.toLocaleString()} pts (${TIER_LABEL[member.tier]}).`}
+      description={`Current balance: ${member.points.toLocaleString("pl-PL")} pts (${TIER_LABEL[member.tier]}).`}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
           <Button variant="primary" onClick={submit} loading={busy} leadingIcon={<Plus className="h-3.5 w-3.5" />}>
             Apply adjustment
           </Button>
         </>
       }
     >
-      <div className="v2-stack-12">
-        <Input
-          label="Amount"
-          type="number"
-          value={amountStr}
-          onChange={(e) => setAmountStr(e.target.value)}
-          description="Signed integer — positive grants, negative deducts."
-        />
-        <Textarea label="Reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. 'Compensation for cold pizza'" />
+      <div className="loy-dialog-form">
+        <label className="loy-field">
+          <span className="loy-field-label">Amount</span>
+          <input
+            className="v2-input"
+            type="number"
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            placeholder="e.g. 50 or -20"
+          />
+          <span className="loy-field-hint">Signed integer — positive grants, negative deducts.</span>
+        </label>
+        <label className="loy-field">
+          <span className="loy-field-label">Reason</span>
+          <textarea
+            className="v2-input"
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. 'Compensation for cold pizza'"
+            style={{ resize: "none" }}
+          />
+        </label>
       </div>
     </Dialog>
   );

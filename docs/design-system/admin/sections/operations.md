@@ -2,25 +2,32 @@
 
 ← back to [Admin README](../README.md)
 
-The four pages an operator hits during service to keep the menu live, the
-recipes consistent across locations, the available time slots correct,
-and the dining floor up to date.
+The pages an operator hits during service to keep the menu live, the
+recipes consistent across locations, the kitchen compliant, and the shift
+handed over cleanly.
 
 | Page               | Code                                                                 | Role-gate   |
 | ------------------ | -------------------------------------------------------------------- | ----------- |
 | `/admin/menu`      | `src/components/admin/AdminMenu.tsx`                                 | manager+    |
 | `/admin/recipes`   | `src/components/admin/AdminRecipes.tsx`                              | manager+    |
-| `/admin/slots`     | `src/components/admin/AdminSlots.tsx`                                | manager+    |
-| `/admin/floor`     | `src/components/admin/AdminFloor.tsx`                                | manager+    |
 | `/admin/haccp`     | `src/components/admin/AdminHaccp.tsx`                                | staff+      |
 | `/admin/waste`     | `src/components/admin/AdminWaste.tsx`                                | staff+      |
 | `/admin/handover`  | `src/components/admin/AdminHandover.tsx`                             | manager+    |
 
+> **Slots & Floor live under the Core nav group now.** `/admin/slots`
+> (`AdminSlots.tsx`) and `/admin/floor` (`AdminFloor.tsx`) are the
+> foundation of running a restaurant, so they were moved out of the
+> Operations nav section into **Core** (see
+> [`../../core/README.md`](../../core/README.md)). They remain
+> **admin-themed** pages — same v2 components, same per-location rules — so
+> their anatomy stays documented here (below). Group membership ≠ theme
+> ownership.
+
 ## Common rules across the section
 
-1. **Live edits, not staged.** Every page in Operations writes through
-   to the database on save (no draft-then-publish workflow). Operators
-   need today's menu live now, not on next deploy.
+1. **Live edits, not staged.** Every page here writes through to the
+   database on save (no draft-then-publish workflow). Operators need
+   today's menu live now, not on next deploy.
 2. **Per-location reads, chain-wide writes for recipes only.** Menu /
    slots / floor are per-location; recipes are chain-wide (CLAUDE rule
    10) — a Margherita's formula is the same in Kraków and Warszawa.
@@ -75,6 +82,9 @@ The recipe board — one card per dish (deduped by base slug; CLAUDE rule
 
 ## Slots — `/admin/slots`
 
+> Surfaced under the **Core** nav group (foundation of restaurant ops);
+> admin-themed page, documented here.
+
 Time-slot availability — operators control which pickup / delivery
 windows accept orders today, this week, or are paused.
 
@@ -89,6 +99,9 @@ windows accept orders today, this week, or are paused.
 - **Per-location.** A Kraków slot doesn't exist for Warszawa.
 
 ## Floor — `/admin/floor`
+
+> Surfaced under the **Core** nav group (foundation of restaurant ops);
+> admin-themed page, documented here.
 
 The dine-in seating map: tables + status, drag/drop layout, party
 attribution.
@@ -158,5 +171,7 @@ End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
   Core module, not an admin page.
 - It is **not** marketing / promotions — those live under Growth.
 
-Operations is the **state of the menu, the recipes, the slots, and the
-floor** — the things an operator must keep correct so service can run.
+Operations is the **state of the menu, the recipes, and the compliance /
+handover logs** — the things an operator must keep correct so service can
+run. (Slots + Floor are documented here too, but the nav surfaces them
+under the Core group.)
