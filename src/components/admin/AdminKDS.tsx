@@ -94,9 +94,11 @@ export function AdminKDS() {
   const { isMobile, ready } = useIsMobile();
   const { setLocation } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
-  // Owners always land on the fleet; the only way to a single-location floor
-  // board is drilling into a truck, which flips this to "floor" for that truck.
-  const [mode, setMode] = useState<"fleet" | "floor">("fleet");
+  // Owners always land on the fleet; drilling into a truck flips this to that
+  // truck's "floor" board, and the header viewswitch lets the owner flip on to
+  // the "chef" line for the same truck (owner/master sees every lens, unlike a
+  // scoped manager or kitchen role which is pinned to one).
+  const [mode, setMode] = useState<"fleet" | "floor" | "chef">("fleet");
 
   useEffect(() => {
     let cancelled = false;
@@ -116,12 +118,12 @@ export function AdminKDS() {
     };
   }, []);
 
-  // Drilling into a single truck's floor board is a dedicated kitchen-screen
-  // view, so hide the admin sidebar and let the board run full-width. The
-  // fleet/landing view keeps the nav; stepping back to fleet (or leaving the
-  // page) drops the class via cleanup.
+  // Drilling into a single truck's floor / chef board is a dedicated
+  // kitchen-screen view, so hide the admin sidebar and let the board run
+  // full-width. The fleet/landing view keeps the nav; stepping back to fleet
+  // (or leaving the page) drops the class via cleanup.
   useEffect(() => {
-    if (role !== "owner" || mode !== "floor") return;
+    if (role !== "owner" || mode === "fleet") return;
     document.body.classList.add("kds-immersive");
     return () => document.body.classList.remove("kds-immersive");
   }, [role, mode]);
@@ -143,14 +145,23 @@ export function AdminKDS() {
   }
 
   // Owner — Atlas fleet command is the default. Drilling into a truck swaps
-  // this same window down to that truck's floor board. The Atlas board reflows
-  // to its responsive layout on a phone; its floor view is the dedicated mobile
-  // KDS there and the desktop floor board otherwise.
+  // this same window down to that truck's floor board; the viewswitch then
+  // flips between Floor (manager ops header) and Chef (station line) for that
+  // truck. The Atlas board reflows to its responsive layout on a phone; its
+  // drilled-in view is the dedicated mobile KDS there and the desktop board
+  // otherwise.
   const floorView =
     ready && isMobile ? (
       <MobileKDS />
     ) : (
-      <AdminKDSDesktop opsHeader fleetContext onExitFleet={() => setMode("fleet")} />
+      <AdminKDSDesktop
+        opsHeader={mode === "floor"}
+        chefStrip={mode === "chef"}
+        fleetContext
+        lens={mode === "chef" ? "chef" : "floor"}
+        onLens={(l) => setMode(l)}
+        onExitFleet={() => setMode("fleet")}
+      />
     );
 
   return (
@@ -173,6 +184,8 @@ function AdminKDSDesktop({
   opsHeader = false,
   chefStrip = false,
   fleetContext = false,
+  lens,
+  onLens,
   onExitFleet,
 }: {
   opsHeader?: boolean;
@@ -180,6 +193,12 @@ function AdminKDSDesktop({
   /** True when an owner reached this board by drilling in from the fleet wall —
    *  the header keeps the "Fleet command" identity, scoped to the location. */
   fleetContext?: boolean;
+  /** Owner-only: the active drilled-in lens, so the viewswitch can highlight
+   *  Floor vs Chef. Absent for scoped (manager / kitchen) roles. */
+  lens?: "floor" | "chef";
+  /** Owner-only: switch the drilled-in lens (Floor ↔ Chef). When provided the
+   *  viewswitch becomes interactive; absent = role-pinned, decorative. */
+  onLens?: (lens: "floor" | "chef") => void;
   /** Owner-only: jump back to the Atlas fleet wall (the viewswitch "Fleet" tab). */
   onExitFleet?: () => void;
 }) {
@@ -518,11 +537,19 @@ function AdminKDSDesktop({
                 Fleet
               </button>
             )}
-            <button type="button" className={viewLabel === "Floor" ? "on" : ""}>
+            <button
+              type="button"
+              className={(onLens ? lens === "floor" : viewLabel === "Floor") ? "on" : ""}
+              onClick={onLens ? () => onLens("floor") : undefined}
+            >
               Floor
             </button>
-            {chefStrip && (
-              <button type="button" className="on">
+            {(onLens || chefStrip) && (
+              <button
+                type="button"
+                className={(onLens ? lens === "chef" : true) ? "on" : ""}
+                onClick={onLens ? () => onLens("chef") : undefined}
+              >
                 Chef
               </button>
             )}

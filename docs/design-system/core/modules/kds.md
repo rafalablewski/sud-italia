@@ -70,18 +70,22 @@ the Floor + manager boards still run station-agnostic (`station = "all"`).
 ## The role triad
 
 The KDS is a **single live order stream seen through three role lenses.**
-In the live app the user's role picks one automatically; the mockups expose
-a switcher.
+A scoped role (manager, kitchen) is pinned to its one lens; the
+**owner / master is not** — they see every lens and the header
+**`.kds-viewswitch`** is a live switcher for them (Fleet ⇄ Floor ⇄ Chef).
 
-| Role | View | Answers |
-|---|---|---|
-| **Owner** | **Fleet** (`kds-fleet.html`) — cross-truck overview: health rings, throughput sparklines, pace gauges, capacity meter, promise-accuracy benchmark, drill-in. | *Which location needs help right now?* |
-| **Manager / franchisee** | **Floor** (`kds.html`) — full 3-lane board for one truck + ops header (SLA rollup + 86 / out-of-stock) + recall tray + predictive at-risk. | *What's the state of my kitchen and what's slipping?* |
-| **Kitchen / staff** | **Chef** (`kds-chef.html`) — single station queue + stage switcher + queue depth + 86 + sound + fullscreen. | *What do I cook next at my station?* |
+| Role | Lands on | Can switch to | Answers |
+|---|---|---|---|
+| **Owner / master** | **Fleet** (`kds-fleet.html`) — cross-truck overview: health rings, throughput sparklines, pace gauges, capacity meter, promise-accuracy benchmark, drill-in. | **Floor** + **Chef** for any truck it drills into — the viewswitch is interactive. | *Which location needs help, and let me drop onto its floor or its line.* |
+| **Manager / franchisee** | **Floor** (`kds.html`) — full 3-lane board for one truck + ops header (SLA rollup + 86 / out-of-stock) + recall tray + predictive at-risk. | — (pinned) | *What's the state of my kitchen and what's slipping?* |
+| **Kitchen / staff** | **Chef** (`kds-chef.html`) — single station queue + stage switcher + queue depth + 86 + sound + fullscreen. | — (pinned) | *What do I cook next at my station?* |
 
 Same data, progressively narrower focus and bigger touch targets as you
-approach the heat. The shared **`.viewswitch`** control (Fleet / Floor /
-Chef) sits in the header of all three.
+approach the heat. The owner reaches Floor by drilling into a truck from the
+Fleet wall (`onDrillIn` → `mode: "floor"`), then the viewswitch flips that
+truck between Floor (`opsHeader`) and Chef (`chefStrip`) via `onLens`; both
+drilled-in lenses run immersive (no SI sidebar). For a scoped role the
+viewswitch carries no `onLens` and stays decorative — the role *is* the lens.
 
 ## Lane headers — monochrome
 
