@@ -74,7 +74,15 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-.core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; }
+/* Aggressive margin/padding reset for the mockup-ported core content — but the
+   shared admin sidebar (.app-sidebar) is rendered inside .core-suite and is NOT
+   mockup content, so exempt it + its descendants or it loses its padding (the
+   active pill + LocationSwitcher bled to the edge). box-sizing above still
+   applies to it; Tailwind preflight still handles structural resets. :where()
+   keeps the selector at the same specificity so core page rules are unchanged. */
+.core-suite *:where(:not(.app-sidebar, .app-sidebar *)),
+.core-suite *::before, .core-suite *::after { margin: 0; padding: 0; }
 .core-suite ::selection { background: var(--brand-soft-strong); }
 /* No visible scrollbars anywhere in the core surface — content still scrolls. */
 .core-suite, .core-suite * { scrollbar-width: none; }

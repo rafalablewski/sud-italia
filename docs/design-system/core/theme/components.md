@@ -183,6 +183,13 @@ rules are dead (pending cleanup); `.core-suite .eyebrow` survives as a general
 type helper. KDS is the deliberate exception — its own `.kds-core` wall with no
 sidebar (see [KDS](../modules/kds.md)).
 
+**Reset exemption:** `.core-suite *` zeroes margin/padding on mockup-ported
+content, which clobbered the shared sidebar's padding (the active pill +
+LocationSwitcher bled to the edge). The reset now exempts `.app-sidebar` + its
+descendants via `:where(:not(.app-sidebar, .app-sidebar *))` (same specificity,
+so core page rules are unchanged) while still applying `box-sizing: border-box`
+to everything. Tailwind preflight still handles structural resets inside it.
+
 ### Dialogs — `theme="core"`
 
 Dialogs opened from a Core surface pass **`theme="core"`** to the shared
