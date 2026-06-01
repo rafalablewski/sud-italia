@@ -10,7 +10,7 @@ The Core theme ships in **two** stylesheets, both loaded only by
 
 1. **`src/app/themes/core/suite.css`** — the **current** design, a 1:1
    port of the core-suite mockup (`public/mockups/core-suite/
-   system.css` + the per-page layout styles). All rules are scoped under
+   system.css` + the per-page layout styles). Most rules are scoped under
    **`.core-suite`** so its deliberately-generic class names (`.card` /
    `.btn` / `.badge` / `.seg` / `.stat` / `.shell` / `.prod` / `.conv` /
    …) can't leak into Admin or Homepage. This is what **POS** and the
@@ -19,15 +19,21 @@ The Core theme ships in **two** stylesheets, both loaded only by
    + topbar as a fixed full-viewport layer. Tokens are redeclared on
    `.core-suite` (same warm-neutral / burgundy / platinum values as
    `--cmd-*`, under the mockup's generic names `--bg` / `--fg` /
-   `--brand` / `--surface-*`).
+   `--brand` / `--surface-*`). **`suite.css` also carries the rebuilt
+   desktop KDS** — the `.kds-core` kitchen-wall surface (its own dark
+   `body.kds` token block, *not* `.core-suite`) with `.cmdbar` / `.truck`
+   / `.mt` (Fleet), `.kds-board` / `.tk` (Floor) and `.kds-chefstrip` /
+   `.kds-queue` / `.ct` (Chef). See [`../modules/kds.md`](../modules/kds.md).
 2. **`src/app/themes/core/index.css`** — the original `--cmd-*` palette
-   at `:root` plus the `.cmd-*` / `.kds-*` / `.ka-*` surfaces. This now
-   backs the **KDS** kitchen-wall display (`.kds-atlas`, full-bleed via
-   `.kds-bleed`) and **Mobile KDS**. The dead `.pos-*` / `.crm-*` /
-   `.cncrg-*` families were pruned when POS/Guest moved to `suite.css`
-   (1560 → 680 lines); the surviving non-`.cmd-`/`.kds-` rules are the
-   `.wa-console` / `.wa-fa-*` / `.wa-cfg-*` classes for the WhatsApp
-   Settings / Broadcast / Funnel dialogs.
+   at `:root` plus the `.cmd-*` / `.kds-atlas` / `.ka-*` surfaces. This now
+   backs **only the Mobile KDS** (`MobileKDS`, via `.kds-atlas` / `.ka-*`,
+   full-bleed via `.kds-bleed`) and the shared `Ring` it imports from
+   `KdsTicketCard`; the **desktop** KDS moved to `suite.css` `.kds-core`
+   (layer 1). The dead `.pos-*` / `.crm-*` / `.cncrg-*` families were
+   pruned when POS/Guest moved to `suite.css` (1560 → 680 lines); the
+   surviving non-`.cmd-`/`.kds-` rules are the `.wa-console` / `.wa-fa-*`
+   / `.wa-cfg-*` classes for the WhatsApp Settings / Broadcast / Funnel
+   dialogs.
 
 - **JS-side token mirror:** `src/app/themes/core/theme.ts` exports the
   `--cmd-*` values as typed constants (for future Recharts / canvas
@@ -35,9 +41,11 @@ The Core theme ships in **two** stylesheets, both loaded only by
 - **Fonts:** loaded in `src/app/admin/layout.tsx` (`--font-admin-body`
   Inter, `--font-admin-display` Fraunces, `--font-admin-mono` JetBrains
   Mono). The **`.core-suite`** surfaces (POS / Guest) **do** use Fraunces
-  for display text (KPI values, dish + guest names) per the mockup; the
-  **KDS** (`.cmd-*`) surface stays workhorse-Inter — density over flourish
-  on the line.
+  for display text (KPI values, dish + guest names) per the mockup, and so
+  does the rebuilt **`.kds-core`** desktop KDS for **dish names only**
+  (`.tk-nm` / `.ct-nm`); everything else on the line — labels, timers,
+  ids — stays Inter / JetBrains Mono. The legacy **`.cmd-*` / Mobile KDS**
+  surface stays workhorse-Inter throughout.
 
 ## Core-specific rules
 

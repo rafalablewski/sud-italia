@@ -2,13 +2,16 @@
 
 ← back to [Core README](../README.md)
 
-Core splits by surface. **KDS** (the `.cmd-*` kitchen wall) is a pure
-workhorse — **Inter + JetBrains Mono only**, no display serif: on the
-line, density wins and ornament has no room. **POS and the Guest hub**
-(the `.core-suite` surfaces ported from the mockup) **do** use the
-**Fraunces** display serif, sparingly, for the focal numbers and names —
-KPI values, dish names, guest names — exactly where the mockup leads
-with type. Body, labels, buttons and data stay Inter / mono everywhere.
+Core splits by surface. **POS and the Guest hub** (the `.core-suite`
+surfaces ported from the mockup) use the **Fraunces** display serif,
+sparingly, for the focal numbers and names — KPI values, dish names,
+guest names — exactly where the mockup leads with type. The rebuilt
+**desktop KDS** (`.kds-core`) follows the same mockup and uses Fraunces
+for **dish names only** (`.tk-nm` / `.ct-nm`) — the one focal element the
+line reads first; its ids, timers, labels and the whole **legacy `.cmd-*`
+Mobile KDS** stay a pure **Inter + JetBrains Mono** workhorse, where
+density wins and ornament has no room. Body, labels, buttons and data stay
+Inter / mono everywhere.
 
 ## The three faces
 
@@ -16,7 +19,7 @@ with type. Body, labels, buttons and data stay Inter / mono everywhere.
 | ------------------- | -------------------------------------------------- |
 | **Inter**           | Every label, button, heading, body text. Workhorse — the default on every surface. |
 | **JetBrains Mono**  | Code-like data: order IDs (`#4821`), prices, tab tokens, table-row numerals where alignment matters. |
-| **Fraunces**        | Display only, `.core-suite` (POS / Guest) only: KPI values (`.stat .v`, `.kpi-value`), dish + guest names (`.prod h3`, `.gp .nm`, `.pf-name`). Never on KDS. |
+| **Fraunces**        | Display only: on `.core-suite` (POS / Guest) — KPI values (`.stat .v`, `.kpi-value`), dish + guest names (`.prod h3`, `.gp .nm`, `.pf-name`); on the `.kds-core` desktop KDS — **dish names only** (`.tk-nm` / `.ct-nm`). Never on the legacy `.cmd-*` / Mobile KDS. |
 
 Loaded via `next/font` in `src/app/admin/layout.tsx` as
 `--font-admin-body` (Inter), `--font-admin-mono` (JetBrains Mono) and

@@ -16,13 +16,17 @@ and earns or loses operator trust on every one.
   / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
   plus per-page layout (`.prod`, `.conv`, `.cust`, `.panel`, …). Generic
   names, all scoped under `.core-suite`.
-- **`.cmd-*` chrome** (`index.css`) — used by **KDS** (the kitchen
-  wall): the header / eyebrow / subbar / segmented / button / chip
-  documented below, plus `.ka-*` ticket primitives.
+- **`.cmd-*` / `.ka-*` chrome** (`index.css`) — now backs the **Mobile
+  KDS** (`MobileKDS`) and the legacy command component: the header /
+  eyebrow / subbar / segmented / button / chip documented below, plus the
+  `.ka-*` ticket primitives. The **desktop** KDS kitchen wall no longer
+  uses these — it was rebuilt onto `suite.css` `.kds-core` (`.tk` / `.ct`
+  / `.cmdbar`; see [`../modules/kds.md`](../modules/kds.md)).
 
 The two share token *values* (warm-neutral, burgundy, platinum) but not
-class names. Everything below is the `.cmd-*` set (KDS); the
-`.core-suite` set mirrors `public/mockups/core-suite/system.css` 1:1.
+class names. Everything below is the `.cmd-*` set (Mobile KDS + legacy
+chrome); the `.core-suite` set mirrors
+`public/mockups/core-suite/system.css` 1:1.
 
 ## Shared chrome (every Core module uses)
 

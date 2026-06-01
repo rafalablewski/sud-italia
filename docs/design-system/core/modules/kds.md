@@ -230,6 +230,15 @@ All ctrl buttons are 34px square, 7px radius, hairline border, neutral.
 Active = `--raised` bg + bright text. Real `requestFullscreen` is wired in
 on the live app and the mockup.
 
+When the owner-only sandbox simulator is on, a **`.kds-badge.platinum`**
+pill (soft-platinum fill + a 6px dot, the mockup's `.badge.platinum`
+re-scoped to `.kds-core` since the core-suite badge lives under
+`.core-suite`) flags the board next to the wordmark — never a loud colour,
+just the platinum jewellery tone. The owner's `[Fleet/Floor/Chef]`
+viewswitch is a **live switcher** (see the role triad); for scoped roles it
+stays decorative. Fleet revenue figures use a compact złoty (`1,8k zł`) so
+the dense `.cstat` / `.met` tiles don't overflow with real takings.
+
 ## What the kitchen never has to think about
 
 - Brand colour — there is none on the board.

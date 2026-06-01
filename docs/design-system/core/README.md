@@ -34,11 +34,13 @@ The live Core surfaces are being rebuilt 1:1 onto the **core-suite
 mockup** design (`public/mockups/core-suite/`):
 
 - **Theme:** `src/app/themes/core/suite.css` — a 1:1 port of the mockup's
-  `system.css` (+ per-page layout styles), scoped under `.core-suite`.
-  Generic class names (`.card` / `.btn` / `.badge` / `.shell`) live only
-  inside that scope. Uses Fraunces (display) + JetBrains Mono via the
-  admin next/font vars. `src/app/themes/core/index.css` still backs the
-  KDS `.kds-atlas` / `.ka-*` / `.cmd-*` chrome (the kitchen-wall surface).
+  `system.css` (+ per-page layout styles), mostly scoped under
+  `.core-suite`. Generic class names (`.card` / `.btn` / `.badge` /
+  `.shell`) live only inside that scope. Uses Fraunces (display) +
+  JetBrains Mono via the admin next/font vars. `suite.css` **also** holds
+  the rebuilt **desktop KDS** (`.kds-core` — Fleet / Floor / Chef).
+  `src/app/themes/core/index.css` now backs **only the Mobile KDS**
+  (`.kds-atlas` / `.ka-*`) plus the WhatsApp dialog `.wa-*` chrome.
 - **Shell:** `<CoreShell>` (`src/components/admin/core/CoreShell.tsx`)
   renders the mockup's SI sidebar + topbar as a fixed full-viewport layer
   for POS + Guest. KDS is full-bleed with its own dark top bar (no
