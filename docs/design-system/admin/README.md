@@ -57,9 +57,9 @@ The shell owns:
   hamburger drawer (`Topbar` → `v2-mobile-drawer`) and pages reflow via their
   own `@media (max-width: 720px)` rules; there is no separate phone UI. Admin
   is **1:1 across phone / tablet / desktop**. The old divergent `MobileShell`
-  (bottom-nav + per-page `Mobile*` components) is **retired** — `useIsMobile()`
-  is now a desktop-only shim. See [`mobile/`](./mobile/) for the historical
-  shape and the retirement note.
+  (bottom-nav + per-page `Mobile*` components) has been **deleted** —
+  `useIsMobile()` is gone and `AdminShell` renders one chrome for every width.
+  See [`mobile/`](./mobile/) for the historical shape + the deletion note.
 
 Login (`/admin/login`) is the only bare route — it renders without the shell.
 
