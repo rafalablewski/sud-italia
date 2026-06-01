@@ -371,6 +371,7 @@
   --warn: #e0a93f; --late: #e5484d; --ready: #4ea882;
   --queued: #6a655f; --firing: #4d90e8; --risk: #e0a93f;
   --platinum: #cbb48a;
+  --platinum-soft: rgba(203, 180, 138, 0.14);
   --ui: var(--font-admin-body), ui-sans-serif, system-ui, sans-serif;
   --display: var(--font-admin-display), Georgia, serif;
   --mono: var(--font-admin-mono), ui-monospace, monospace;
@@ -400,6 +401,11 @@
 .kds-ctrl:hover { color: var(--t); border-color: var(--hair-2); }
 .kds-ctrl.on { color: var(--t); border-color: var(--hair-2); background: var(--raised); }
 .kds-ctrl svg { width: 16px; height: 16px; }
+/* Sandbox / status pill in the KDS header — the mockup's `.badge.platinum`,
+   re-scoped to `.kds-core` (the core-suite badge lives under `.core-suite`). */
+.kds-badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 99px; font: 600 11px var(--ui); letter-spacing: .02em; }
+.kds-badge .d { width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+.kds-badge.platinum { background: var(--platinum-soft); color: var(--platinum); }
 
 .kds-ops { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; }
 .kds-ops-stats { display: flex; gap: 7px; flex-wrap: wrap; }

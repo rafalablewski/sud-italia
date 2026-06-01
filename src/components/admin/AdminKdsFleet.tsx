@@ -208,7 +208,8 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => voi
             )}
           </div>
           {simEnabled && (
-            <span className="kds-ctrl" style={{ color: "var(--platinum)", borderColor: "var(--platinum)" }}>
+            <span className="kds-badge platinum">
+              <span className="d" />
               Sandbox
             </span>
           )}
