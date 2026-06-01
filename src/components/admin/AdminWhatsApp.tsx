@@ -150,6 +150,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ---- helpers ------------------------------------------------------------
 
+/** "since 2023" from a first-order timestamp — null for a missing or
+ *  unparseable date (so a malformed timestamp never renders "since NaN"). */
+function sinceYear(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : `since ${d.getFullYear()}`;
+}
+
 function fmtAgo(iso: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return iso || "—";
@@ -1037,7 +1045,7 @@ function AdminWhatsAppDesktop() {
                         guest && guest.visits > 0
                           ? `${guest.visits} visit${guest.visits === 1 ? "" : "s"}`
                           : "New guest",
-                        guest?.firstOrderAt ? `since ${new Date(guest.firstOrderAt).getFullYear()}` : null,
+                        sinceYear(guest?.firstOrderAt),
                       ]
                         .filter(Boolean)
                         .join(" · ")}

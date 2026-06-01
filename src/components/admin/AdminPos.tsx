@@ -877,6 +877,24 @@ export function AdminPos({
         <div>
           <div className="nm">{m.name}</div>
           <div className="each tnum">{fmtPLN(m.price)} each</div>
+          {drag && (
+            // Touch-friendly recourse: the HTML5 drag handle above doesn't
+            // fire on iPad/tablet POS terminals, so every coursed line also
+            // carries a native course picker (works on touch + mouse + keys).
+            <select
+              className="line-course"
+              value={courseOf(l)}
+              aria-label={`Move ${m.name} to another course`}
+              title="Move to another course"
+              onChange={(e) => recourse(m.id, e.target.value as PosCourse)}
+            >
+              {POS_COURSE_ORDER.map((c) => (
+                <option key={c} value={c}>
+                  {POS_COURSE_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="qstep">
           <button type="button" onClick={() => changeQty(m.id, -1)} aria-label="Decrease">

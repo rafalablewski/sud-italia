@@ -922,6 +922,10 @@
 .core-suite .line .grip { width: 8px; height: 13px; background-image: radial-gradient(var(--fg-subtle) 1px, transparent 1px); background-size: 4px 4px; opacity: .35; }
 .core-suite .line .nm { font-size: 13px; font-weight: 500; }
 .core-suite .line .each { font-size: 11px; color: var(--fg-subtle); }
+/* Touch-friendly recourse picker — the drag handle doesn't work on iPad POS,
+   so coursed lines carry a native course <select> as the reliable path. */
+.core-suite .line .line-course { margin-top: 4px; font-size: 11px; padding: 2px 6px; border-radius: var(--r-sm, 6px); background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); cursor: pointer; max-width: 130px; }
+.core-suite .line .line-course:hover { border-color: var(--border-strong); color: var(--fg); }
 .core-suite .line .lp { font-family: var(--mono); font-size: 13px; text-align: right; min-width: 60px; }
 .core-suite .qstep { display: flex; align-items: center; gap: 4px; }
 .core-suite .qstep button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--fg-muted); font-size: 13px; cursor: pointer; }

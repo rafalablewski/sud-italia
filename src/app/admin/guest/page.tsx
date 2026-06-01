@@ -26,13 +26,16 @@ import type { GuestView } from "@/components/admin/guest/GuestViewNav";
 export default async function AdminGuestPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string | string[] }>;
 }) {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
   const { view } = await searchParams;
+  // searchParams values can be string | string[] (e.g. ?view=a&view=b) —
+  // take the first so a duplicated param doesn't silently fall back to inbox.
+  const viewStr = Array.isArray(view) ? view[0] : view;
   const v: GuestView =
-    view === "guests" ? "guests" : view === "concierge" ? "concierge" : "inbox";
+    viewStr === "guests" ? "guests" : viewStr === "concierge" ? "concierge" : "inbox";
 
   if (v === "guests") return <AdminCrm />;
 

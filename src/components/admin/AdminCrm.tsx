@@ -306,16 +306,20 @@ export function AdminCrm() {
 
   // Load today's greeting triggers once (birthdays + anniversaries).
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
         const r = await fetch("/api/admin/campaigns/triggers");
-        if (!r.ok) return;
+        if (!r.ok || cancelled) return;
         const d = (await r.json()) as { triggers?: { phone: string; trigger: "birthday" | "anniversary" }[] };
-        setTriggers(Array.isArray(d.triggers) ? d.triggers : []);
+        if (!cancelled) setTriggers(Array.isArray(d.triggers) ? d.triggers : []);
       } catch {
         /* leave empty — the prompt just hides */
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selectedCustomer = useMemo(

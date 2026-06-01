@@ -161,13 +161,18 @@ a future revision could split tickets per course. The fire also stamps
 **"courses held"** hint (see [`kds.md`](./kds.md)) so the line knows more
 is coming.
 
-### Drag-to-recourse
+### Re-course a line (drag **or** tap)
 
-Each un-fired line is `draggable` (`.pos-line.coursable`); the four
-`.pos-course` sections are drop zones (`.pos-course.drop` highlights on
-hover). Dropping calls `recourse(menuItemId, course)`, which patches the
-line's `course` and persists via the tabs PUT — re-pacing a held item
-without retyping and without un-firing what's already away.
+Each un-fired line is `draggable` (`.line.drag`); the `.course` sections are
+drop zones (`.course.drop` highlights on hover). Dropping calls
+`recourse(menuItemId, course)`, which patches the line's `course` and
+persists via the tabs PUT — re-pacing a held item without retyping and
+without un-firing what's already away.
+
+Because POS is **iPad-first** and the HTML5 drag API doesn't fire on touch,
+every un-fired coursed line *also* carries a native course `<select>`
+(`.line-course`) — the reliable touch/keyboard path to the same `recourse`
+call. Drag is the desktop power-user shortcut; the picker is the floor.
 
 ## Fulfilment channel + table assignment
 
