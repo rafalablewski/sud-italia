@@ -549,12 +549,16 @@
 .brow .lead { font: 600 10px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--ready); margin-left: 7px; }
 .trucks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .truck { background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-xl); overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
-.thead { display: flex; align-items: center; gap: 14px; padding: 15px 17px; border-bottom: 1px solid var(--hair); cursor: pointer; width: 100%; background: transparent; border-left: 0; border-right: 0; border-top: 0; text-align: left; color: inherit; }
-.thead:hover { background: var(--raised); }
+.thead { display: flex; align-items: stretch; border-bottom: 1px solid var(--hair); }
+.thead-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 15px 17px; cursor: pointer; width: 100%; background: transparent; border: 0; text-align: left; color: inherit; }
+.thead-open:hover { background: var(--raised); }
 .thead .city { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .thead .open { font-size: 11px; color: var(--faint); }
-.thead .drill { margin-left: auto; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
-.thead:hover .drill { color: var(--t); }
+.thead .drill { margin-left: auto; padding-left: 14px; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+.thead-open:hover .drill { color: var(--t); }
+.thead .drill-chef { flex: none; align-self: center; margin: 0 13px; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--hair-2); background: var(--panel); color: var(--dim); font: 600 12px var(--ui); cursor: pointer; white-space: nowrap; transition: color .12s, border-color .12s; }
+.thead .drill-chef:hover { color: var(--t); border-color: var(--t); }
+.thead .drill-chef svg { flex: none; }
 .truck .ring { position: relative; width: 54px; height: 54px; flex: none; }
 .truck .ring .sc { position: absolute; inset: 0; display: grid; place-items: center; }
 .truck .ring .sc b { font-family: var(--display); font-size: 18px; font-weight: 600; }

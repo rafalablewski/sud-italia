@@ -39,7 +39,10 @@ SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
 - **Fleet** (`AdminKdsFleet`, `kds-fleet.html`): `.cmdbar` (7 tiles),
   per-truck promise-accuracy `.bench`, and `.truck` cards (health `.ring`,
   5-cell stat row, `.pacehead` + capacity meter, per-station `.gauges`,
-  compact `.mt` ticket stack). Drill-in flips to that truck's floor.
+  compact `.mt` ticket stack). Each truck `.thead` carries **two drill
+  targets** (owner-only): the big `.thead-open` hit (ring + title) opens that
+  truck's **Floor**, and the `.drill-chef` pill ("Chef line →") jumps straight
+  to its **Chef** line — both via `onDrillIn(slug, lens)`.
 
 The old `.kds-atlas` / `.ka-*` chrome is retired; `KdsTicketCard` survives
 only because it still exports the shared `Ring` (+ the mobile KDS). **Known

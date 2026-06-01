@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Maximize2, Minimize2, RefreshCw } from "lucide-react";
+import { ChefHat, ChevronLeft, Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import type { MenuCategory, OrderStatus } from "@/data/types";
 import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
@@ -95,7 +95,7 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
 
 /* ============================ Component ============================ */
 
-export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string) => void }) {
+export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?: "floor" | "chef") => void }) {
   const toast = useToast();
   // The sandbox simulator is a global setting, so the fleet wall flags it the
   // same way the floor board does (the fleet feed opts into simulated tickets).
@@ -397,7 +397,7 @@ function TruckBoard({
   toneOf: (t: WireTicket) => TicketTone;
   advancingId: string | null;
   onAdvance: (t: WireTicket) => void;
-  onDrillIn?: (slug: string) => void;
+  onDrillIn?: (slug: string, lens?: "floor" | "chef") => void;
 }) {
   void advancingId;
   void onAdvance;
@@ -437,29 +437,42 @@ function TruckBoard({
 
   return (
     <div className="truck">
-      <button
-        type="button"
-        className="thead"
-        onClick={onDrillIn ? () => onDrillIn(tile.slug) : undefined}
-        title={onDrillIn ? `Drill into ${tile.name}'s floor board` : undefined}
-      >
-        <div className="ring">
-          <Ring size={54} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
-          <span className="sc">
-            <b style={{ color: healthColor }}>{liveHealth.health}</b>
-          </span>
-        </div>
-        <div>
-          <div className="city">{tile.name}</div>
-          <div className="open">
-            Open · {activeCount} active ·{" "}
-            <span className="health-state" style={{ color: healthColor }}>
-              {liveHealth.state}
+      <div className="thead">
+        <button
+          type="button"
+          className="thead-open"
+          onClick={onDrillIn ? () => onDrillIn(tile.slug, "floor") : undefined}
+          title={onDrillIn ? `Open ${tile.name}'s floor board` : undefined}
+        >
+          <div className="ring">
+            <Ring size={54} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
+            <span className="sc">
+              <b style={{ color: healthColor }}>{liveHealth.health}</b>
             </span>
           </div>
-        </div>
-        {onDrillIn && <span className="drill">Open floor →</span>}
-      </button>
+          <div>
+            <div className="city">{tile.name}</div>
+            <div className="open">
+              Open · {activeCount} active ·{" "}
+              <span className="health-state" style={{ color: healthColor }}>
+                {liveHealth.state}
+              </span>
+            </div>
+          </div>
+          {onDrillIn && <span className="drill">Open floor →</span>}
+        </button>
+        {onDrillIn && (
+          <button
+            type="button"
+            className="drill-chef"
+            onClick={() => onDrillIn(tile.slug, "chef")}
+            title={`Open ${tile.name}'s chef line`}
+          >
+            <ChefHat width={14} height={14} />
+            Chef line →
+          </button>
+        )}
+      </div>
 
       <div className="trow2">
         <div className="tcell">

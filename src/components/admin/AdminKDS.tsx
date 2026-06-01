@@ -168,9 +168,9 @@ export function AdminKDS() {
     <div>
       {mode === "fleet" ? (
         <AdminKdsFleet
-          onDrillIn={(slug) => {
+          onDrillIn={(slug, lens) => {
             setLocation(slug);
-            setMode("floor");
+            setMode(lens ?? "floor");
           }}
         />
       ) : (
