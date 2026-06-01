@@ -5,6 +5,7 @@ import { Badge, Card, CardBody, CardHeader, Tabs } from "@/components/admin/v2/u
 import { core as coreTokens } from "@/app/themes/core/theme";
 import { homepage as homepageTokens } from "@/app/themes/homepage/theme";
 import { palette as adminPalette } from "@/components/admin/v2/theme";
+import designSystem from "@/generated/design-system.json";
 
 /**
  * /admin/settings → Themes tab.
@@ -20,6 +21,12 @@ import { palette as adminPalette } from "@/components/admin/v2/theme";
  * components/admin/v2/theme.ts) so the swatches always match what
  * the code actually ships. If the CSS and TS mirror disagree, the
  * mirror is the bug (CSS wins on the page).
+ *
+ * The per-theme metadata (blurb, files, routes, fonts, selectors) comes from
+ * docs/design-system/themes.manifest.json via the build-time generated
+ * src/generated/design-system.json (scripts/gen-design-system-manifest.ts),
+ * which also computes each file's live line count — so nothing here is a
+ * hand-typed snapshot that can go stale.
  */
 
 type ThemeKey = "core" | "admin" | "homepage";
@@ -41,106 +48,11 @@ interface ThemeInfo {
   sourceDir: string;
 }
 
-const THEME_INFO: Record<ThemeKey, ThemeInfo> = {
-  core: {
-    label: "Core",
-    blurb:
-      "The productised IP — POS, KDS, and the unified Guest hub (CRM + Concierge + WhatsApp). Operational clarity outranks brand expression.",
-    files: [
-      {
-        path: "src/app/themes/core/suite.css",
-        description:
-          "Current design — 1:1 port of the core-suite mockup (.core-suite scope): .shell / .card / .btn / .stat / .tk / .kds-* rules for POS + Guest + KDS, via CoreShell.",
-        lines: 859,
-      },
-      {
-        path: "src/app/themes/core/index.css",
-        description:
-          "Legacy --cmd-* palette + .cmd-* / .ka-* / .kds-* kitchen chrome + .wa-console/.wa-fa-* dialog classes (KDS + MobileKDS + WhatsApp dialogs). Dead .pos-/.crm-/.cncrg- families pruned.",
-        lines: 680,
-      },
-      {
-        path: "src/app/themes/core/theme.ts",
-        description:
-          "Typed JS mirror of the --cmd-* palette. Imported into the swatches below.",
-        lines: 51,
-      },
-    ],
-    routes: [
-      "/admin/pos",
-      "/admin/kds",
-      "/admin/guest",
-    ],
-    fonts:
-      "Admin next/font vars (--font-admin-body Inter, --font-admin-display Fraunces, --font-admin-mono JetBrains Mono). POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
-    selectorPrefixes: [".core-suite", ".shell", ".tk", ".cmd-*", ".kds-*", ".ka-*", ".wa-console"],
-    docs: "docs/design-system/core/",
-    sourceDir: "src/app/themes/core/",
-  },
-  admin: {
-    label: "Admin",
-    blurb:
-      "The back-office around the Core modules: Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System. Glassmorphism + warm-neutral dark canvas.",
-    files: [
-      {
-        path: "src/app/themes/admin/index.css",
-        description:
-          "Full Admin CSS surface: [data-admin-theme=\"dark\"|\"light\"] token blocks + AdminShell + glass-* + v2-* + admin mobile (.v2-m-*).",
-        lines: 7974,
-      },
-      {
-        path: "src/components/admin/v2/theme.ts",
-        description:
-          "Typed mirror of the [data-admin-theme] tokens for Recharts + inline SVG + the boot script that sets the theme attribute before paint.",
-        lines: 97,
-      },
-    ],
-    routes: ["/admin/*", "/kitchen, /kitchen/*", "/franchisee"],
-    fonts:
-      "src/app/admin/layout.tsx loads its own Inter + Fraunces as --font-admin-body and --font-admin-display. /kitchen and /franchisee layouts load the same independently so a kitchen-only font change wouldn't drift admin.",
-    selectorPrefixes: ["[data-admin-theme]", ".v2-*", ".glass-*", ".admin-*", ".v2-m-*"],
-    docs: "docs/design-system/admin/",
-    sourceDir: "src/app/themes/admin/",
-  },
-  homepage: {
-    label: "Homepage",
-    blurb:
-      "The public storefront — /, /menu, /checkout, /order, /rewards, location pages. Hospitality outranks density; warm cream canvas + deep burgundy brand.",
-    files: [
-      {
-        path: "src/app/themes/homepage/tokens.css",
-        description:
-          "@theme inline block. @import-ed by globals.css so Tailwind v4 generates bg-italia-* / text-italia-* utilities (ships globally, ~50 lines).",
-        lines: 48,
-      },
-      {
-        path: "src/app/themes/homepage/index.css",
-        description:
-          ".pub-* form classes, body styling, delivery-* keyframes. JS-imported by (public)/layout.tsx, route-scoped.",
-        lines: 101,
-      },
-      {
-        path: "src/app/themes/homepage/theme.ts",
-        description:
-          "Typed JS mirror of --color-italia-* tokens. Imported into the swatches below.",
-        lines: 43,
-      },
-    ],
-    routes: [
-      "/",
-      "/locations/[slug]",
-      "/order-confirmation",
-      "/review/[orderId]",
-      "/rewards",
-      "/privacy",
-    ],
-    fonts:
-      "src/app/(public)/layout.tsx loads its own Lora + Cormorant Garamond as --font-homepage-body and --font-homepage-heading (V8 Trattoria editorial-serif duo). Independent next/font instances from admin so weight / subset changes don't drift across themes.",
-    selectorPrefixes: ["--color-italia-*", ".pub-*", ".delivery-*"],
-    docs: "docs/design-system/homepage/",
-    sourceDir: "src/app/themes/homepage/",
-  },
-};
+// Generated at build time from docs/design-system/themes.manifest.json (the
+// hand-maintained source of truth) by scripts/gen-design-system-manifest.ts,
+// which fills in each file's live line count. Edit the manifest, never this
+// object or the per-file numbers (they're computed). See docs/design-system/.
+const THEME_INFO = designSystem.themes as unknown as Record<ThemeKey, ThemeInfo>;
 
 function camelToKebab(s: string): string {
   return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
@@ -243,8 +155,9 @@ export function ThemesTab() {
             ))}
           </div>
           <p className="v2-muted text-xs" style={{ marginTop: "10px" }}>
-            Line counts are at-commit snapshots; they drift as files evolve. The
-            order of magnitude (50 lines vs 8,000) is the point.
+            Line counts are computed at build from the live files (regenerated
+            every deploy from docs/design-system/themes.manifest.json), so they
+            track the deployed code rather than a hand-typed snapshot.
           </p>
         </CardBody>
       </Card>

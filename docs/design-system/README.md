@@ -77,3 +77,16 @@ in [`CLAUDE.md` Rule #11](../../CLAUDE.md): every add / edit / write /
 delete / rename to theme code ships in the same commit as the matching
 edit under `docs/design-system/<theme>/`. Audits (`docs/audits/`) are
 historical snapshots and never edited retroactively.
+
+## The `/admin/settings` → Themes inspector
+
+The Themes tab is **data-driven**, not hand-maintained. Its per-theme
+metadata (blurb, files, routes, fonts, selectors, doc + source paths) lives
+in one source of truth — [`themes.manifest.json`](./themes.manifest.json) in
+this folder. A build step (`npm run gen:design-system`, wired into `prebuild`
+in `package.json`) reads the manifest, **computes each file's live line count**
+from disk, and emits `src/generated/design-system.json`, which `ThemesTab.tsx`
+imports. So the inspector refreshes every deploy and the line counts always
+match the deployed code — there is no static blob to update by hand. To change
+what the tab shows, edit the manifest (and keep it consistent with the rest of
+this folder per Rule #11); never edit the generated JSON or type line counts.
