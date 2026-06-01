@@ -30,9 +30,11 @@ mozzarella" mid-service, but they don't need to see supplier margins.
 4. **Reorder point per item, not per category.** `reorderPoint` is per
    ingredient — managers calibrate it from observed usage; the system
    never auto-sets it.
-5. **Mobile-native for stock; desktop-default for suppliers + POs.** Line
-   cooks pull stock on a phone during service (with barcode scan); POs
-   live on desktop for the supplier-call workflow.
+5. **One responsive layout for stock, suppliers + POs.** The same desktop
+   surfaces reflow on a phone (the mobile shell is retired — see
+   [`mobile/README.md`](../mobile/README.md)); line cooks pull stock on a
+   phone during service via the manual code field (camera scan retired with
+   the shell), and the supplier-call PO workflow reads the same on desktop.
 
 ## Inventory — `/admin/inventory`
 
@@ -70,8 +72,8 @@ The vendor book — who we buy from, contact details, default lead time.
 - **Delete soft-confirms** (`pendingDelete` state, portalled dialog),
   with awareness of in-flight POs ("X open POs from this supplier —
   archive instead?").
-- **Mobile variant** at `src/components/admin/mobile/MobileSuppliers.tsx`
-  — same data, sheet-based edit.
+- **Responsive** — the desktop suppliers surface reflows on a phone (the
+  dedicated `MobileSuppliers` variant was deleted with the retired shell).
 
 ## Purchase orders — `/admin/purchase-orders`
 

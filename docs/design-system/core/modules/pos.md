@@ -7,6 +7,15 @@ calm, and fast at once** — and the highest daily-use surface for staff.
 
 **Live code:** `src/components/admin/AdminPos.tsx`.
 **Mockups:** `pos.html` + `pos-tender.html` + `pos-tables.html`.
+**Theme:** renders on the Core suite shell (`<CoreShell active="pos">`,
+`.core-suite` in `src/app/themes/core/suite.css`) — the SI sidebar +
+topbar, with the channel + location segmented controls in the topbar.
+`/admin/pos` is in `CORE_ROUTES`, so the admin chrome steps aside. The
+tab rail, category rail, text-forward `.prod` cards and the coursing
+`.ticket` are all ported 1:1 from `pos.html`; tender is a `.core-suite-
+overlay` dialog, and table-assign / address use the shared v2 `Dialog`
+with `theme="core"` (dark `.v2-dialog-core` skin) so they match the dark
+surface.
 
 ## Layout — two-pane, iPad-first
 
@@ -26,6 +35,16 @@ calm, and fast at once** — and the highest daily-use surface for staff.
 - **Menu grid** — 3-column responsive grid of product cards (see below).
 - **Persistent live ticket** on the right (396px) — never disappears,
   never collapses. The ticket *is* the order.
+
+**Responsive.** The mobile shell is retired (`useIsMobile()` is a desktop
+shim), so the POS renders this same `.core-suite` layout at **every** width
+and reflows in CSS — there is no separate mobile POS. Tablet narrows the
+rails (cat-rail 64px, ticket 320px) and drops the menu to 2 cols; **phone
+(≤ 680px)** stacks it — the cat-rail becomes a horizontal scroller across the
+top, the menu goes 1-col, and the ticket drops below with its own capped
+(`46vh`) scroll. The CoreShell sidebar collapses to a 52px icon rail (it's
+the only nav out). See the breakpoint table in
+[`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
 
 ## Concurrent open checks — tab rail
 
@@ -96,49 +115,64 @@ header (platinum soft, inset platinum hairline ring).
 
 ## Coursing — dine-in only
 
-The defining POS feature for fine dining. **Coursing is per-order** and
-only for dine-in.
+The defining POS feature for fine dining. **Coursing is per-tab** and only
+for dine-in. Lines carry a `course` (`PosTabLine.course`:
+`starter | main | dessert | drink`, defaulted from the menu category by
+`defaultCourseForCategory` in `src/lib/pos-coursing.ts`); the tab carries
+a `coursed` flag (default true for dine-in) and a server-owned
+`firedCourses[]`.
 
 ### Kitchen-timing toggle
 
-An order-level segmented control sits between the table block and the
-ticket lines:
+An order-level segmented control (`.pos-coursing-toggle` over the shared
+`.cmd-seg-group`) sits above the ticket lines, dine-in only:
 
 ```
 Kitchen timing                                [ Coursed ] [ All together ]
 ```
 
-- **Coursed** — fire courses sequentially. Per-course **Fire / Hold** state.
-- **All together** — fire the whole table at once. The KDS ticket lands
-  tagged `All together` (platinum chip) with all course groups visible.
+- **Coursed** — the ticket splits into per-course sections, each fired on
+  its own. Toggling persists `coursed=true` on the tab.
+- **All together** — flat ticket; `Send to KDS` fires every course at
+  once (`coursed=false`).
 
 ### Course sections in the ticket
 
-Lines group into **Starters / Mains / Dessert / Drinks** sections, each
-with its own state pill:
+In coursed mode lines group into **Starters / Mains / Dessert / Drinks**
+sections (`.pos-course`, ordered by `POS_COURSE_ORDER`, empty courses
+dropped), each with a header state:
 
-| State | Pill |
+| State | Control |
 |---|---|
-| `Fired 19:44` | `--success-soft` green check + timestamp |
-| `Fire course` | A small brand-bordered button (the actionable one) |
-| `Holding` | neutral `--surface-3` grey |
-| `Sent` | success — for drinks fired immediately |
+| not yet fired | `.pos-course-fire` — a `--pos-firing` Fire button |
+| fired | `.pos-course-st.sent` — a green check + `Fired` |
 
-Firing a course pushes those items to KDS as one ticket tagged
-`2 · Mains` etc.
+### Incremental firing → KDS
 
-### Drag-to-recourse
+Firing a course `POST /api/admin/pos/orders { tabId, courses:[course] }`.
+The server **accumulates** it onto `firedCourses` and rebuilds the tab's
+linked Order from the union of fired courses' lines — so each fire grows
+the kitchen ticket and **held courses never hit the KDS**. A bare send
+(non-coursed tab, or `Send to KDS`) fires everything. **Charge bills the
+whole tab** regardless of what's been fired. One growing Order per tab
+(not a separate ticket per course) keeps the charge/totals model intact;
+a future revision could split tickets per course. The fire also stamps
+`Order.coursing = { fired, held }`, which the KDS ticket reads to show a
+**"courses held"** hint (see [`kds.md`](./kds.md)) so the line knows more
+is coming.
 
-Every line is `draggable="true"` with a grip affordance. Drop zones are
-the four `.course` sections. A small inline `<script>` does the
-move (permitted by the `/mockups/*` CSP).
+### Re-course a line (drag **or** tap)
 
-```js
-l.addEventListener('dragstart', e => { dragged = l; l.classList.add('dragging'); });
-c.addEventListener('drop', e => { e.preventDefault(); if (dragged) c.appendChild(dragged); });
-```
+Each un-fired line is `draggable` (`.line.drag`); the `.course` sections are
+drop zones (`.course.drop` highlights on hover). Dropping calls
+`recourse(menuItemId, course)`, which patches the line's `course` and
+persists via the tabs PUT — re-pacing a held item without retyping and
+without un-firing what's already away.
 
-The server can re-course on the fly without retyping.
+Because POS is **iPad-first** and the HTML5 drag API doesn't fire on touch,
+every un-fired coursed line *also* carries a native course `<select>`
+(`.line-course`) — the reliable touch/keyboard path to the same `recourse`
+call. Drag is the desktop power-user shortcut; the picker is the floor.
 
 ## Fulfilment channel + table assignment
 

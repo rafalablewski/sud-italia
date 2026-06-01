@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminCrm } from "@/components/admin/AdminCrm";
 
-export default async function AdminCrmPage() {
-  if (!(await isAuthenticated())) redirect("/admin/login");
-  return <AdminCrm />;
+// The CRM customer book is now the Guests view of the unified Guest hub.
+export default function AdminCrmPage() {
+  redirect("/admin/guest?view=guests");
 }

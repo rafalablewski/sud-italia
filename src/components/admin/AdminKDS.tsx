@@ -7,22 +7,17 @@ import {
   Bell,
   BellOff,
   ChefHat,
-  Flame,
-  MapPin,
+  ChevronLeft,
   Maximize2,
   Minimize2,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   RotateCcw,
-  Timer,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Button, Card, CardBody, Select } from "./v2/ui";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import {
   ACTIVE_STATUSES,
@@ -36,20 +31,15 @@ import {
   nextStatus,
   remainingSlaSeconds,
   ticketCategories,
+  toneForTicket,
   totalPrepSeconds,
 } from "./kds-board";
-import { KdsStatGrid, type KdsStat } from "./kds/KdsStatGrid";
-import { SectionEyebrow } from "./command";
+import { KdsCt } from "./kds/KdsCt";
 import { useFullscreen } from "./command/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
-import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
+import { buildKdsTicket, kdsShortId, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import type { AdminRole } from "@/lib/admin-roles";
-
-const MobileKDS = dynamic(
-  () => import("./mobile/MobileKDS").then((m) => m.MobileKDS),
-  { ssr: false },
-);
 
 /** One entry in the "Recall" tray — the last few tickets a cook bumped. */
 type BumpEntry = { orderId: string; label: string; bumpedAt: number };
@@ -91,15 +81,15 @@ function loadBumpHistory(loc: string): BumpEntry[] {
  *               a truck swaps the same window to that truck's floor board.
  *   • manager → Floor board (single location).
  *   • kitchen/staff → Floor board (the line view they've always had).
- * Mobile keeps the dedicated MobileKDS regardless of role.
  */
 export function AdminKDS() {
-  const { isMobile, ready } = useIsMobile();
   const { setLocation } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
-  // Owners always land on the fleet; the only way to a single-location floor
-  // board is drilling into a truck, which flips this to "floor" for that truck.
-  const [mode, setMode] = useState<"fleet" | "floor">("fleet");
+  // Owners always land on the fleet; drilling into a truck flips this to that
+  // truck's "floor" board, and the header viewswitch lets the owner flip on to
+  // the "chef" line for the same truck (owner/master sees every lens, unlike a
+  // scoped manager or kitchen role which is pinned to one).
+  const [mode, setMode] = useState<"fleet" | "floor" | "chef">("fleet");
 
   useEffect(() => {
     let cancelled = false;
@@ -119,12 +109,12 @@ export function AdminKDS() {
     };
   }, []);
 
-  // Drilling into a single truck's floor board is a dedicated kitchen-screen
-  // view, so hide the admin sidebar and let the board run full-width. The
-  // fleet/landing view keeps the nav; stepping back to fleet (or leaving the
-  // page) drops the class via cleanup.
+  // Drilling into a single truck's floor / chef board is a dedicated
+  // kitchen-screen view, so hide the admin sidebar and let the board run
+  // full-width. The fleet/landing view keeps the nav; stepping back to fleet
+  // (or leaving the page) drops the class via cleanup.
   useEffect(() => {
-    if (role !== "owner" || mode !== "floor") return;
+    if (role !== "owner" || mode === "fleet") return;
     document.body.classList.add("kds-immersive");
     return () => document.body.classList.remove("kds-immersive");
   }, [role, mode]);
@@ -136,28 +126,33 @@ export function AdminKDS() {
   const chef = role === "kitchen" || role === "staff";
 
   // Only owners get the Atlas fleet lens. Everyone else (incl. the pre-resolve
-  // null state) gets the floor board directly: the dedicated mobile KDS on a
-  // phone, the desktop floor board otherwise.
+  // null state) gets the floor board directly.
   if (role !== "owner") {
-    if (ready && isMobile) {
-      return <MobileKDS />;
-    }
     return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
 
   // Owner — Atlas fleet command is the default. Drilling into a truck swaps
-  // this same window down to that truck's floor board. The Atlas board reflows
-  // to its responsive layout on a phone; its floor view is the dedicated mobile
-  // KDS there and the desktop floor board otherwise.
-  const floorView = ready && isMobile ? <MobileKDS /> : <AdminKDSDesktop opsHeader fleetContext />;
+  // this same window down to that truck's floor board; the viewswitch then
+  // flips between Floor (manager ops header) and Chef (station line) for that
+  // truck. The Atlas board reflows to its responsive layout on a phone.
+  const floorView = (
+      <AdminKDSDesktop
+        opsHeader={mode === "floor"}
+        chefStrip={mode === "chef"}
+        fleetContext
+        lens={mode === "chef" ? "chef" : "floor"}
+        onLens={(l) => setMode(l)}
+        onExitFleet={() => setMode("fleet")}
+      />
+    );
 
   return (
     <div>
       {mode === "fleet" ? (
         <AdminKdsFleet
-          onDrillIn={(slug) => {
+          onDrillIn={(slug, lens) => {
             setLocation(slug);
-            setMode("floor");
+            setMode(lens ?? "floor");
           }}
         />
       ) : (
@@ -171,12 +166,23 @@ function AdminKDSDesktop({
   opsHeader = false,
   chefStrip = false,
   fleetContext = false,
+  lens,
+  onLens,
+  onExitFleet,
 }: {
   opsHeader?: boolean;
   chefStrip?: boolean;
   /** True when an owner reached this board by drilling in from the fleet wall —
    *  the header keeps the "Fleet command" identity, scoped to the location. */
   fleetContext?: boolean;
+  /** Owner-only: the active drilled-in lens, so the viewswitch can highlight
+   *  Floor vs Chef. Absent for scoped (manager / kitchen) roles. */
+  lens?: "floor" | "chef";
+  /** Owner-only: switch the drilled-in lens (Floor ↔ Chef). When provided the
+   *  viewswitch becomes interactive; absent = role-pinned, decorative. */
+  onLens?: (lens: "floor" | "chef") => void;
+  /** Owner-only: jump back to the Atlas fleet wall (the viewswitch "Fleet" tab). */
+  onExitFleet?: () => void;
 }) {
   const { location, activeLocations } = useAdminLocation();
   const toast = useToast();
@@ -196,9 +202,11 @@ function AdminKDSDesktop({
   // SIMULATION tickets and flags itself with a Sandbox tag next to the wordmark.
   const { enabled: simEnabled } = useKdsSimulator(location);
 
-  // The KDS shows every station; the per-station filter chips were retired, so
-  // the board (and the shared ticket cards) always render the full ticket.
-  const station: MenuCategory | "all" = "all";
+  // Station focus. The floor + manager boards always show every station
+  // ("all"); the chef line lets the cook narrow the queue to their station
+  // (Pizza / Pasta / Cold …) via the chip rail in the chef strip — real
+  // category filtering off `ticketCategories`, not a cosmetic toggle.
+  const [station, setStation] = useState<MenuCategory | "all">("all");
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
@@ -493,89 +501,114 @@ function AdminKDSDesktop({
     }
   };
 
+  const viewLabel = chefStrip ? "Chef" : "Floor";
   const page = (
-    <div className={`kds-atlas kds-floor-dark${kiosk ? " is-fullscreen" : ""}`}>
-      {/* Atlas chrome — same shell, chips and lane switcher the fleet board uses. */}
-      <header className="cmd-head">
-        <div className="cmd-brand">
-          <span className="cmd-wordmark">SUD ITALIA</span>
-          <span className="cmd-label">{brandLabel}</span>
-          {simEnabled && <span className="ka-sandbox">Sandbox</span>}
-        </div>
-        <div className="cmd-spacer" />
-        <button type="button" className="cmd-btn" onClick={refresh} title="Refresh now">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={kiosk}
-          onClick={kiosk ? exitKiosk : enterKiosk}
-          title={kiosk ? "Exit fullscreen kitchen display (Esc)" : "Open fullscreen kitchen display"}
-        >
-          {kiosk ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          <span>{kiosk ? "Exit" : "Fullscreen"}</span>
-        </button>
-        <div className="cmd-clock tabular">{clock}</div>
-      </header>
-
-      {/* Board controls — sound / pause live on a thin strip under the header
-          so the header keeps just refresh, fullscreen + clock. */}
-      <div className="cmd-subbar" role="group" aria-label="Board controls">
-        <button
-          type="button"
-          className="cmd-btn"
-          aria-pressed={soundOn}
-          onClick={() => setSoundOn((s) => !s)}
-          title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
-        >
-          {soundOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-          <span>{soundOn ? "Sound" : "Muted"}</span>
-        </button>
-        <button type="button" className="cmd-btn" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
-          {paused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
-          <span>{paused ? "Resume" : "Pause"}</span>
-        </button>
-      </div>
-
-      {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
-
-      {!kiosk && chefStrip && <KdsChefStrip orders={orders} station={station} location={location} />}
-
-      {/* Stage switcher — big, easily-tapped buttons sitting right above the
-          ticket cards (below floor command / 86'd) so the line can flip
-          between All / New / In progress / Ready · Expo at a glance. */}
-      <div className="kds-stage-switch" role="group" aria-label="Stage focus">
-        <button
-          type="button"
-          className="kds-stage-btn"
-          aria-pressed={lane === "all"}
-          onClick={() => setLane("all")}
-        >
-          <span className="kds-stage-label">All</span>
-          <span className="kds-stage-count tabular">{laneCounts.all}</span>
-        </button>
-        {KDS_COLUMNS.map((col) => (
-          <button
-            key={col.id}
-            type="button"
-            className="kds-stage-btn"
-            data-line={col.id === "ready" ? "ready" : col.id === "preparing" ? "prep" : "new"}
-            aria-pressed={lane === col.id}
-            onClick={() => setLane(col.id)}
-          >
-            <span className="kds-stage-label">{col.label}</span>
-            <span className="kds-stage-count tabular">{laneCounts[col.id]}</span>
+    <div className={`kds-core${kiosk ? " is-fullscreen" : ""}`}>
+      <div className="kds-wrap">
+        <div className="kds-top">
+          <div className="kds-id">
+            <div className="brand-mark">SI</div>
+            <div>
+              <div className="nm">Kitchen</div>
+              <div className="loc">{brandLabel}</div>
+            </div>
+          </div>
+          <div className="kds-viewswitch">
+            {fleetContext && onExitFleet && (
+              <button type="button" onClick={onExitFleet}>
+                Fleet
+              </button>
+            )}
+            <button
+              type="button"
+              className={(onLens ? lens === "floor" : viewLabel === "Floor") ? "on" : ""}
+              onClick={onLens ? () => onLens("floor") : undefined}
+            >
+              Floor
+            </button>
+            {(onLens || chefStrip) && (
+              <button
+                type="button"
+                className={(onLens ? lens === "chef" : true) ? "on" : ""}
+                onClick={onLens ? () => onLens("chef") : undefined}
+              >
+                Chef
+              </button>
+            )}
+          </div>
+          <div className="kds-stage" role="group" aria-label="Stage focus">
+            <button type="button" className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
+              All <span className="n">{laneCounts.all}</span>
+            </button>
+            {KDS_COLUMNS.map((col) => (
+              <button
+                key={col.id}
+                type="button"
+                className={lane === col.id ? "on" : ""}
+                onClick={() => setLane(col.id)}
+              >
+                {col.label} <span className="n">{laneCounts[col.id]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="kds-clock">{clock}</div>
+          {simEnabled && (
+            <span className="kds-badge platinum">
+              <span className="d" />
+              Sandbox
+            </span>
+          )}
+          <a href="/admin" className="kds-ctrl" title="Back to admin">
+            <ChevronLeft className="h-4 w-4" />
+          </a>
+          <button type="button" className="kds-ctrl" onClick={refresh} title="Refresh now">
+            <RefreshCw className="h-4 w-4" />
           </button>
-        ))}
-      </div>
+          <button
+            type="button"
+            className={`kds-ctrl${soundOn ? " on" : ""}`}
+            onClick={() => setSoundOn((s) => !s)}
+            title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
+          >
+            {soundOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className={`kds-ctrl${paused ? " on" : ""}`}
+            onClick={() => setPaused((p) => !p)}
+            title={paused ? "Resume" : "Pause"}
+          >
+            {paused ? <PlayCircle className="h-4 w-4" /> : <PauseCircle className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className={`kds-ctrl${kiosk ? " on" : ""}`}
+            onClick={kiosk ? exitKiosk : enterKiosk}
+            title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen kiosk"}
+          >
+            {kiosk ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        </div>
 
-      <div className="ka-floor-body">
+        {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+
+        {!kiosk && chefStrip && (
+          <KdsChefStrip orders={orders} station={station} onStation={setStation} location={location} />
+        )}
+
+        <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
         {loading ? (
           <div className="v2-page-loading">Loading Kitchen Display…</div>
         ) : orders.length === 0 ? (
           <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
+        ) : chefStrip ? (
+          <KdsChefQueue
+            columns={visibleByStatus}
+            lane={lane}
+            nowMs={now}
+            updatingId={updatingId}
+            onAdvance={advance}
+          />
         ) : lane === "all" ? (
           <KdsBoard
             columns={visibleByStatus}
@@ -583,20 +616,6 @@ function AdminKDSDesktop({
             nowMs={now}
             updatingId={updatingId}
             onAdvance={advance}
-            expoRecall={
-              bumpHistory.length > 0 ? (
-                <button
-                  type="button"
-                  className="ka-expo-recall"
-                  disabled={updatingId === bumpHistory[0].orderId}
-                  onClick={() => recall(bumpHistory[0].orderId)}
-                  title={`Recall ${bumpHistory[0].label} to the expo column`}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Recall</span>
-                </button>
-              ) : null
-            }
           />
         ) : (
           <KdsLane
@@ -616,6 +635,35 @@ function AdminKDSDesktop({
           when it crosses the promised-ready deadline. Same data-URI
           fallback so deployment doesn't depend on shipping an mp3. */}
       <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
+
+        <div className="kds-footrow">
+          {!chefStrip && bumpHistory.length > 0 && (
+            <div className="kds-recall">
+              <span className="lbl">Recall</span>
+              {bumpHistory.slice(0, 5).map((b) => (
+                <button
+                  key={b.orderId}
+                  type="button"
+                  className="chip"
+                  disabled={updatingId === b.orderId}
+                  onClick={() => recall(b.orderId)}
+                  title={`Recall ${b.label} to the expo column`}
+                >
+                  <RotateCcw className="h-3 w-3" />#{kdsShortId(b.orderId)}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="kds-legend">
+            <span className="k"><span className="sw" />On time</span>
+            <span className="k"><span className="sw" style={{ background: "var(--warn)" }} />Approaching SLA</span>
+            <span className="k"><span className="sw" style={{ background: "var(--late)" }} />Late</span>
+            <span>
+              Keys <b>1–9</b> bump · <b>F</b> kiosk
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -706,69 +754,57 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
   const eightySixed = (ops?.menu ?? []).filter((m) => !m.available);
   const availableItems = (ops?.menu ?? []).filter((m) => m.available);
 
-  const stats: KdsStat[] = [
-    { label: "Open", value: orders.length, sub: "active tickets" },
-    { label: "Late", value: late, sub: "over SLA", tone: late > 0 ? "alert" : "good" },
-    { label: "Due soon", value: soon, sub: "< 3 min", tone: soon > 0 ? "warn" : undefined },
-    { label: "Oldest", value: orders.length > 0 ? fmtClock(oldest) : "—", sub: "ticket age" },
-    { label: "Avg age", value: orders.length > 0 ? fmtClock(avg) : "—", sub: "per ticket" },
-    { label: "Done", value: ops ? ops.throughputLastHour : "…", sub: "last hr" },
-    { label: "On shift", value: ops ? ops.onShift : "…", sub: "staff" },
-  ];
-
   return (
-    <Card padding="compact" className="v2-kds-ops">
-      <CardBody>
-        <SectionEyebrow icon={<MapPin className="h-3 w-3" />} label="Floor command">
-          <b>{orders.length}</b> open
-        </SectionEyebrow>
-        <KdsStatGrid stats={stats} />
-
-        <div className="v2-kds-ops-86">
-          <span className="v2-kds-ops-86-label">86&apos;d</span>
-          {eightySixed.length === 0 ? (
-            <span className="v2-kds-ops-86-empty">Nothing — full menu available</span>
-          ) : (
-            eightySixed.map((m) => (
-              <Button
-                key={m.id}
-                size="sm"
-                variant="ghost"
-                disabled={busyId === m.id}
-                onClick={() => setAvailability(m.id, true)}
-                title={`Restore ${m.name}`}
-              >
-                <Badge tone="danger" variant="soft">{m.name}</Badge>
-                <span style={{ marginLeft: 6 }}>Restore</span>
-              </Button>
-            ))
-          )}
-          <div className="v2-kds-ops-86-pick">
-            <Select
-              aria-label="86 an item"
-              value={pick}
-              placeholder="86 an item…"
-              onChange={(e) => { if (e.target.value) void setAvailability(e.target.value, false); }}
-              options={availableItems.map((m) => ({ value: m.id, label: m.name }))}
-            />
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone?: "danger" | "warning" }) {
-  return (
-    <div className={`v2-kds-ops-stat${tone ? ` is-${tone}` : ""}`}>
-      <span className="v2-kds-ops-stat-icon">{icon}</span>
-      <span className="v2-kds-ops-stat-text">
-        <span className="v2-kds-ops-stat-value tabular">{value}</span>
-        <span className="v2-kds-ops-stat-label">{label}</span>
-      </span>
+    <div className="kds-ops">
+      <div className="kds-ops-stats">
+        <div className="ostat"><div className="l">Open</div><div className="v">{orders.length}</div></div>
+        <div className={`ostat${late > 0 ? " alert" : ""}`}><div className="l">Late</div><div className="v">{late}</div></div>
+        <div className={`ostat${soon > 0 ? " warn" : ""}`}><div className="l">Due &lt;3m</div><div className="v">{soon}</div></div>
+        <div className="ostat"><div className="l">Oldest</div><div className="v">{orders.length > 0 ? fmtClock(oldest) : "—"}</div></div>
+        <div className="ostat"><div className="l">Avg age</div><div className="v">{orders.length > 0 ? fmtClock(avg) : "—"}</div></div>
+        <div className="ostat good"><div className="l">Done/hr</div><div className="v">{ops ? ops.throughputLastHour : "…"}</div></div>
+        <div className="ostat"><div className="l">On shift</div><div className="v">{ops ? ops.onShift : "…"}</div></div>
+      </div>
+      <div className="kds-86">
+        <span className="lbl">86&apos;d</span>
+        {eightySixed.length === 0 ? (
+          <span style={{ color: "var(--faint)", fontSize: 12 }}>Nothing — full menu</span>
+        ) : (
+          eightySixed.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kds-restore"
+              disabled={busyId === m.id}
+              onClick={() => setAvailability(m.id, true)}
+              title={`Restore ${m.name}`}
+            >
+              <span className="dot" />
+              {m.name}
+              <span className="x">restore</span>
+            </button>
+          ))
+        )}
+        <select
+          className="kds-btn86"
+          aria-label="86 an item"
+          value={pick}
+          onChange={(e) => {
+            if (e.target.value) void setAvailability(e.target.value, false);
+          }}
+        >
+          <option value="">86 an item…</option>
+          {availableItems.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
+
 
 /**
  * Chef line strip. Shown to kitchen / staff on the board. Surfaces the
@@ -781,10 +817,12 @@ function OpsStat({ icon, value, label, tone }: { icon: React.ReactNode; value: s
 function KdsChefStrip({
   orders,
   station,
+  onStation,
   location,
 }: {
   orders: Order[];
   station: MenuCategory | "all";
+  onStation: (s: MenuCategory | "all") => void;
   location: string;
 }) {
   const toast = useToast();
@@ -839,7 +877,19 @@ function KdsChefStrip({
     const age = totalPrepSeconds(o);
     if (age > oldest) oldest = age;
   }
-  const stationLabel = STATION_FILTERS.find((s) => s.id === station)?.label ?? "All stations";
+
+  // Station chip rail: "All" plus every station that actually has a ticket on
+  // the line right now, with its live depth. Tapping a chip narrows the queue
+  // to that station (real category filter), so the cook sees only their pass.
+  const stationCounts = new Map<MenuCategory | "all", number>();
+  for (const o of orders) {
+    for (const cat of ticketCategories(o)) {
+      stationCounts.set(cat, (stationCounts.get(cat) ?? 0) + 1);
+    }
+  }
+  const stationChips = STATION_FILTERS.filter(
+    (s) => s.id === "all" || (stationCounts.get(s.id) ?? 0) > 0 || s.id === station,
+  );
 
   // Items currently on the active tickets (optionally narrowed to the
   // focused station) — the chef's one-tap 86 candidates.
@@ -855,44 +905,107 @@ function KdsChefStrip({
   }
 
   return (
-    <Card padding="compact" className="v2-kds-chef">
-      <CardBody>
-        <div className="v2-kds-ops-stats v2-kds-chef-row">
-          <span className="v2-kds-chef-station">
-            <ChefHat className="h-4 w-4" />
-            <span>{stationLabel}</span>
-          </span>
-          <OpsStat icon={<Flame className="h-4 w-4" />} value={String(focused.length)} label="In queue" />
-          <OpsStat icon={<Timer className="h-4 w-4" />} value={focused.length > 0 ? fmtClock(oldest) : "—"} label="Oldest" />
-          <div className="v2-kds-ops-86-pick">
-            <Select
-              aria-label="86 an item you've run out of"
-              value={pick}
-              placeholder="Out of an item? 86 it…"
-              onChange={(e) => { if (e.target.value) void toggle(e.target.value, false); }}
-              options={[...candidates.entries()].map(([id, name]) => ({ value: id, label: name }))}
-            />
-          </div>
+    <div className="kds-chefstrip">
+      <div className="kds-stations">
+        {stationChips.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`kds-station${station === s.id ? " on" : ""}`}
+            onClick={() => onStation(s.id)}
+          >
+            {s.id === "all" ? <ChefHat className="h-4 w-4" /> : null}
+            {s.label}
+            <span className="n">{s.id === "all" ? orders.length : stationCounts.get(s.id) ?? 0}</span>
+          </button>
+        ))}
+      </div>
+      <div className="kds-qdepth">
+        <div className="kds-qd"><div className="l">In queue</div><div className="v">{focused.length}</div></div>
+        <div className={`kds-qd${oldest >= 480 ? " warn" : ""}`}>
+          <div className="l">Oldest</div>
+          <div className="v">{focused.length > 0 ? fmtClock(oldest) : "—"}</div>
         </div>
-        {eightySixed.length > 0 && (
-          <div className="v2-kds-ops-86">
-            <span className="v2-kds-ops-86-label">86&apos;d</span>
-            {eightySixed.map((m) => (
-              <Button
-                key={m.id}
-                size="sm"
-                variant="ghost"
-                disabled={busyId === m.id}
-                onClick={() => toggle(m.id, true)}
-                title={`Restore ${m.name}`}
-              >
-                <Badge tone="danger" variant="soft">{m.name}</Badge>
-                <span style={{ marginLeft: 6 }}>Restore</span>
-              </Button>
-            ))}
-          </div>
+      </div>
+      <div className="kds-chef-86">
+        <span className="lbl">86&apos;d</span>
+        {eightySixed.length === 0 ? (
+          <span style={{ color: "var(--faint)", fontSize: 12 }}>Nothing 86&apos;d</span>
+        ) : (
+          eightySixed.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kds-restore"
+              disabled={busyId === m.id}
+              onClick={() => toggle(m.id, true)}
+              title={`Restore ${m.name}`}
+            >
+              <span className="dot" />
+              {m.name}
+              <span className="x">restore</span>
+            </button>
+          ))
         )}
-      </CardBody>
-    </Card>
+        <select
+          className="kds-btn86"
+          aria-label="86 an item you've run out of"
+          value={pick}
+          onChange={(e) => {
+            if (e.target.value) void toggle(e.target.value, false);
+          }}
+        >
+          <option value="">Out of an item? 86 it…</option>
+          {[...candidates.entries()].map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Chef-line queue — the dense, large-type `.kds-queue` of `.ct` cards
+ * (kds-chef.html). One flat grid sized for reading across the line, oldest
+ * ticket first, honouring the stage filter from the header. Distinct from the
+ * 3-column floor board: the line cook works a single station, not the whole
+ * floor, so there are no status columns here.
+ */
+function KdsChefQueue({
+  columns,
+  lane,
+  nowMs,
+  updatingId,
+  onAdvance,
+}: {
+  columns: Map<OrderStatus, KdsTicket[]>;
+  lane: OrderStatus | "all";
+  nowMs: number;
+  updatingId: string | null;
+  onAdvance: (t: KdsTicket) => void;
+}) {
+  const tickets =
+    lane === "all" ? KDS_COLUMNS.flatMap((c) => columns.get(c.id) ?? []) : columns.get(lane) ?? [];
+  const sorted = [...tickets].sort((a, b) => a.paidAtMs - b.paidAtMs);
+
+  if (sorted.length === 0) {
+    return <div className="kds-empty">No tickets on this station.</div>;
+  }
+  return (
+    <div className="kds-queue">
+      {sorted.map((t) => (
+        <KdsCt
+          key={t.id}
+          t={t}
+          now={nowMs}
+          tone={toneForTicket(t, nowMs)}
+          advancing={updatingId === t.id}
+          onAdvance={onAdvance}
+        />
+      ))}
+    </div>
   );
 }

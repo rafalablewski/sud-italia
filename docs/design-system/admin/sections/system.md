@@ -12,7 +12,7 @@ chain-wide configuration.
 | `/admin/compliance`               | `src/components/admin/AdminCompliance.tsx`                | manager+  |
 | `/admin/regulatory-compliance`    | `src/app/admin/regulatory-compliance/page.tsx`            | **owner**   |
 | `/admin/soc2`                     | `src/components/admin/AdminSoc2.tsx`                      | **owner**   |
-| `/admin/audit-log`                | `src/components/admin/AdminAuditLog.tsx`                  | manager+  |
+| `/admin/audit-log`                | `src/components/admin/AuditLog.tsx`                  | manager+  |
 | `/admin/capabilities`             | `src/app/admin/capabilities/page.tsx`                     | manager+  |
 | `/admin/currency`                 | `src/components/admin/AdminCurrency.tsx`                  | **owner**   |
 | `/admin/languages`                | `src/components/admin/AdminLanguages.tsx`                 | **owner**   |

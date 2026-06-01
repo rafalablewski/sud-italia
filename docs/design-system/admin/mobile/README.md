@@ -1,19 +1,22 @@
 # Admin — mobile shape
 
-> **⚠️ RETIRED (superseded).** The separate, hand-built phone shell this
-> folder describes — `MobileShell` + `BottomNav` + `MoreDrawer` + the
-> per-page `Mobile*` components under `src/components/admin/v2/mobile/`
-> — is **no longer served**. Operators required that the mobile admin
-> reflect the desktop admin **1:1**, and a divergent phone UI can't
-> guarantee that. So `useIsMobile()` is now a desktop-only shim: phones,
-> tablets and desktops all render the same responsive `v2-shell` chrome
-> (sidebar → hamburger drawer below 900px, pages reflow via their own
-> `@media (max-width: 720px)` rules). **Code wins:** the `Mobile*` code
-> still exists but is dead (never reached) pending a cleanup PR, and the
-> sub-docs below (`audit.md`, `ux-strategy.md`, `navigation.md`,
-> `tokens.md`, `final-review.md`, `next-steps.md`) are kept only as a
-> **historical record** of that retired shape — do not treat them as the
-> current spec.
+> **⚠️ RETIRED + DELETED.** The separate, hand-built phone shell this
+> folder describes — `MobileShell` + `BottomNav` + `MoreDrawer` +
+> `MobileTopbar` + `MobileCommandPalette` + the ~30 per-page `Mobile*`
+> components — has been **deleted from the codebase**. Operators required
+> that the mobile admin reflect the desktop admin **1:1**, and a divergent
+> phone UI can't guarantee that. `useIsMobile()` and the `forceDesktop`
+> toggle are **gone**; `AdminShell` now renders one responsive `v2-shell`
+> chrome for every viewport (sidebar → hamburger drawer below 900px, pages
+> reflow via their own `@media (max-width: 720px)` rules). The Core surfaces
+> (POS / KDS / Guest) reflow their own `.core-suite` / `.kds-core` layouts
+> (see [`../../core/theme/README.md`](../../core/theme/README.md#responsive--phone--tablet--web)).
+> The only survivors are a few list/page/chip primitives in
+> `src/components/admin/v2/mobile/` that back the standalone `/admin/alerts`
+> page (`MobileAlerts`, a 1-column notifications list). The sub-docs below
+> (`audit.md`, `ux-strategy.md`, `navigation.md`, `tokens.md`,
+> `final-review.md`, `next-steps.md`) are kept only as a **historical
+> record** of the deleted shape — do not treat them as the current spec.
 
 The mobile shape of the Admin theme. Same theme, same tokens, same
 operators — phone-shaped. Not a separate theme: the `AdminShell` *used

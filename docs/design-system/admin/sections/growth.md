@@ -10,7 +10,7 @@ the truck-stop route plan.
 | ----------------------------- | ------------------------------------------------- | --------- |
 | `/admin/growth`               | `src/components/admin/AdminGrowth.tsx`            | manager+  |
 | `/admin/upsell`               | `src/components/admin/AdminUpsell.tsx`            | manager+  |
-| `/admin/crosssell`            | `src/components/admin/AdminCrosssell.tsx`         | manager+  |
+| `/admin/crosssell`            | `src/components/admin/AdminCrossSell.tsx`         | manager+  |
 | `/admin/scheduled-bundles`    | `src/components/admin/AdminScheduledBundles.tsx`  | manager+  |
 | `/admin/truck`                | `src/components/admin/AdminTruck.tsx`             | manager+  |
 

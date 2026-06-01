@@ -28,14 +28,8 @@ import {
   type MenuCategory,
   type NutritionInfo,
 } from "@/data/types";
-import dynamic from "next/dynamic";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileRecipes = dynamic(
-  () => import("./mobile/MobileRecipes").then((m) => m.MobileRecipes),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -288,10 +282,6 @@ const CATEGORY_ICON: Record<MenuCategory, LucideIcon> = {
 type TabKey = "recipes" | "ingredients";
 
 export function AdminRecipes() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileRecipes />;
-  }
   return <AdminRecipesDesktop />;
 }
 

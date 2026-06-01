@@ -15,15 +15,9 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileCustomerDetail = dynamic(
-  () => import("./mobile/MobileCustomerDetail").then((m) => m.MobileCustomerDetail),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -129,11 +123,6 @@ function fmtDateTime(iso?: string): string {
 }
 
 export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) {
-  const { isMobile, ready } = useIsMobile();
-  const phone = decodeURIComponent(phoneEncoded);
-  if (ready && isMobile) {
-    return <MobileCustomerDetail phone={phone} />;
-  }
   return <AdminCustomerDetailDesktop phoneEncoded={phoneEncoded} />;
 }
 

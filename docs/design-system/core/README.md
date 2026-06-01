@@ -30,20 +30,31 @@ core/
 
 ## What ships today
 
-- **CSS:** `src/app/themes/core/index.css` (1,443 lines). JS-imported
-  by `src/app/admin/layout.tsx` so it ships only on `/admin/*` routes,
-  not on the storefront.
-- **JS-side mirror:** `src/app/themes/core/theme.ts` exposes the
-  `--cmd-*` palette as typed constants (no JS consumers today; future
-  Recharts / canvas code imports from here).
-- **Fonts:** inherited from `admin/layout.tsx` (`--font-admin-body` /
-  `--font-admin-display`). Core surfaces don't use Fraunces — the
-  display serif is admin / homepage territory.
-- **Surfaces:** POS, KDS, CRM, Concierge, WhatsApp all live at
-  `/admin/{module}` but render the Core CSS, not admin chrome,
-  because their wrapping divs use `.kds-atlas` / `.pos-tabs` /
-  `.crm-atlas` / `.cncrg-atlas` / `.wa-atlas` (all scoped to the
-  Core block).
+The live Core surfaces are being rebuilt 1:1 onto the **core-suite
+mockup** design (`public/mockups/core-suite/`):
+
+- **Theme:** `src/app/themes/core/suite.css` — a 1:1 port of the mockup's
+  `system.css` (+ per-page layout styles), mostly scoped under
+  `.core-suite`. Generic class names (`.card` / `.btn` / `.badge` /
+  `.shell`) live only inside that scope. Uses Fraunces (display) +
+  JetBrains Mono via the admin next/font vars. `suite.css` **also** holds
+  the rebuilt **desktop KDS** (`.kds-core` — Fleet / Floor / Chef).
+  `src/app/themes/core/index.css` now backs **only the Mobile KDS**
+  (`.kds-atlas` / `.ka-*`) plus the WhatsApp dialog `.wa-*` chrome.
+- **Shell:** `<CoreShell>` (`src/components/admin/core/CoreShell.tsx`)
+  renders the mockup's SI sidebar + topbar as a fixed full-viewport layer
+  for POS + Guest. KDS is full-bleed with its own dark top bar (no
+  sidebar). `AdminShell` steps its chrome aside for `CORE_ROUTES`
+  (`/admin/guest`, `/admin/pos`, `/admin/kds`) while keeping the data
+  providers.
+- **Surfaces:** **POS** (`/admin/pos`, `pos.html`) and the **Guest
+  Engagement hub** (`/admin/guest`, three views Inbox · Guests ·
+  Concierge — the old `/admin/crm`, `/admin/concierge`, `/admin/whatsapp`
+  redirect in) render on the `.core-suite` theme. **KDS** (`/admin/kds`,
+  `kds*.html`) is the full-screen kitchen-wall display.
+- **Guest hub views:** the cross-view switcher (`<GuestViewNav>`) rides
+  the CoreShell topbar `.viewnav`; Inbox = `AdminWhatsApp`, Guests =
+  `AdminCrm`, Concierge = `AdminConcierge`, each a body inside one shell.
 
 ## Authority
 

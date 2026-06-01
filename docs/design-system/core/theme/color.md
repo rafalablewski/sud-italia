@@ -77,9 +77,9 @@ are shared between KDS, POS, CRM, Concierge, and WhatsApp:
 - `.cmd-btn`, `.cmd-chip`, `.cmd-seg*` — buttons, chips, segmented
   controls scoped to Core.
 
-These classes only live on Core surfaces (wrapped by `.kds-atlas`,
-`.pos-tabs`, `.crm-atlas`, `.cncrg-atlas`, `.wa-atlas`). They don't
-leak into Admin.
+These `--cmd-*` classes only live on the KDS Core surface (`.kds-atlas`
++ the `.wa-console` dialogs). POS + Guest moved to the `.core-suite`
+token set in `suite.css`. Neither leaks into Admin.
 
 ## What this colour system is not
 

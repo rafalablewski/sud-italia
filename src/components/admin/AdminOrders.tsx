@@ -34,15 +34,9 @@ import {
 import type { AdminRole } from "@/lib/admin-roles";
 import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileOrders = dynamic(
-  () => import("./mobile/MobileOrders").then((m) => m.MobileOrders),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -103,10 +97,6 @@ function fmtAgo(iso: string): string {
 }
 
 export function AdminOrders() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileOrders />;
-  }
   return <AdminOrdersDesktop />;
 }
 

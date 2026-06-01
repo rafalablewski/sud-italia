@@ -2,14 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Mail, Pencil, Phone, Plus, Search, Trash2 } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileSuppliers = dynamic(
-  () => import("./mobile/MobileSuppliers").then((m) => m.MobileSuppliers),
-  { ssr: false },
-);
 import {
   Button,
   Card,
@@ -40,10 +34,6 @@ interface DialogState {
 }
 
 export function AdminSuppliers() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileSuppliers />;
-  }
   return <AdminSuppliersDesktop />;
 }
 

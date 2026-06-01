@@ -2,20 +2,29 @@
 
 ← back to [Core README](../README.md)
 
-Core is a workhorse text surface. **Inter and JetBrains Mono only.**
-The Fraunces display serif that gives Admin and Homepage their
-hospitality "soul" never appears on a Core surface — display type is
-ornament, and Core has no room for ornament.
+Core splits by surface. **POS and the Guest hub** (the `.core-suite`
+surfaces ported from the mockup) use the **Fraunces** display serif,
+sparingly, for the focal numbers and names — KPI values, dish names,
+guest names — exactly where the mockup leads with type. The rebuilt
+**desktop KDS** (`.kds-core`) follows the same mockup and uses Fraunces
+for **dish names only** (`.tk-nm` / `.ct-nm`) — the one focal element the
+line reads first; its ids, timers, labels and the whole **legacy `.cmd-*`
+Mobile KDS** stay a pure **Inter + JetBrains Mono** workhorse, where
+density wins and ornament has no room. Body, labels, buttons and data stay
+Inter / mono everywhere.
 
-## The two faces
+## The three faces
 
 | Face                | Use on Core                                        |
 | ------------------- | -------------------------------------------------- |
-| **Inter**           | Every label, button, heading, body text. Workhorse. |
-| **JetBrains Mono**  | Code-like data: order IDs (`#4821`), tab tokens, table-row numerals where alignment matters. |
+| **Inter**           | Every label, button, heading, body text. Workhorse — the default on every surface. |
+| **JetBrains Mono**  | Code-like data: order IDs (`#4821`), prices, tab tokens, table-row numerals where alignment matters. |
+| **Fraunces**        | Display only: on `.core-suite` (POS / Guest) — KPI values (`.stat .v`, `.kpi-value`), dish + guest names (`.prod h3`, `.gp .nm`, `.pf-name`); on the `.kds-core` desktop KDS — **dish names only** (`.tk-nm` / `.ct-nm`). Never on the legacy `.cmd-*` / Mobile KDS. |
 
-Loaded once at the project root via `next/font` in `src/app/layout.tsx`
-— the same `--font-inter` and `--font-jetbrains` variables Admin uses.
+Loaded via `next/font` in `src/app/admin/layout.tsx` as
+`--font-admin-body` (Inter), `--font-admin-mono` (JetBrains Mono) and
+`--font-admin-display` (Fraunces); `suite.css` maps these to its
+`--ui` / `--mono` / `--display` vars.
 
 ## The weight ladder
 

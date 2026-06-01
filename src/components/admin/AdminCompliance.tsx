@@ -10,15 +10,9 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileCompliance = dynamic(
-  () => import("./mobile/MobileCompliance").then((m) => m.MobileCompliance),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -56,10 +50,6 @@ function statusTone(days: number): { tone: "success" | "warning" | "danger"; lab
 }
 
 export function AdminCompliance() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileCompliance />;
-  }
   return <AdminComplianceDesktop />;
 }
 

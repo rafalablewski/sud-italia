@@ -11,7 +11,15 @@ import {
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveComboDeals } from "@/lib/upsell";
-import type { CartItem, FulfillmentType, Order, PosTab } from "@/data/types";
+import { POS_COURSE_ORDER, courseOf } from "@/lib/pos-coursing";
+import type {
+  CartItem,
+  FulfillmentType,
+  Order,
+  PosCourse,
+  PosTab,
+  PosTabLine,
+} from "@/data/types";
 
 /**
  * POS order actuator. The counter-side bridge between an open check (a PosTab)
@@ -43,12 +51,16 @@ function pad(n: number) {
 async function buildOrderShape(
   tab: PosTab,
   locationSlug: string,
+  /** When set, only these lines are priced into the order — the coursing path
+   *  passes just the fired courses' lines so held courses never hit the KDS.
+   *  Defaults to the whole tab (the charge / together path). */
+  lines: PosTabLine[] = tab.items,
 ): Promise<
   | { error: string; status: number }
   | { items: CartItem[]; totalAmount: number; fulfillmentType: FulfillmentType }
 > {
   if (!tab.channel) return { error: "Pick a channel first", status: 400 };
-  if (tab.items.length === 0) return { error: "Tab has no items", status: 400 };
+  if (lines.length === 0) return { error: "Tab has no items", status: 400 };
   if (tab.channel === "delivery" && !tab.address?.trim()) {
     return { error: "Add a delivery address first", status: 400 };
   }
@@ -56,7 +68,7 @@ async function buildOrderShape(
   const menu = await getMenuWithOverrides(locationSlug);
   const byId = new Map(menu.map((m) => [m.id, m]));
   const items: CartItem[] = [];
-  for (const li of tab.items) {
+  for (const li of lines) {
     const m = byId.get(li.menuItemId);
     const qty = Math.max(1, Math.min(99, Math.round(li.quantity)));
     if (!m) continue;
@@ -115,16 +127,45 @@ export const POST = withAdmin(
       return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     }
 
-    const shape = await buildOrderShape(tab, locationSlug);
+    // Coursing: the body may name the courses to fire now. We accumulate them
+    // onto whatever's already been fired and rebuild the order from the union,
+    // so each "Fire course" grows the kitchen ticket and held courses stay off
+    // the line. A bare send (no courses, or a non-coursed tab) fires everything.
+    const coursesPresent = new Set<PosCourse>(tab.items.map((l) => courseOf(l)));
+    const requested = parseCourses(body?.courses);
+    const fireAll = !tab.coursed || body?.fireAll === true || requested.length === 0;
+    const firedSet = fireAll
+      ? coursesPresent
+      : new Set<PosCourse>([...(tab.firedCourses ?? []), ...requested].filter((c) => coursesPresent.has(c)));
+
+    const linesToFire = tab.items.filter((l) => firedSet.has(courseOf(l)));
+    const shape = await buildOrderShape(tab, locationSlug, linesToFire);
     if ("error" in shape) {
       return NextResponse.json({ error: shape.error }, { status: shape.status });
     }
 
-    const order = await persistTabOrder(tab, locationSlug, shape, false);
-    await linkPosTabOrder(tab.id, { orderId: order.id, sentKds: true, status: "pay" });
-    return NextResponse.json({ order, orderId: order.id });
+    const firedCourses = POS_COURSE_ORDER.filter((c) => firedSet.has(c));
+    // Coursing metadata for the KDS: which courses are away vs still held.
+    // Only meaningful for a coursed check; the kitchen hint shows held courses.
+    const coursing = tab.coursed
+      ? { fired: firedCourses, held: POS_COURSE_ORDER.filter((c) => coursesPresent.has(c) && !firedSet.has(c)) }
+      : undefined;
+    const order = await persistTabOrder(tab, locationSlug, shape, false, coursing);
+    await linkPosTabOrder(tab.id, {
+      orderId: order.id,
+      sentKds: true,
+      status: "pay",
+      firedCourses,
+    });
+    return NextResponse.json({ order, orderId: order.id, firedCourses });
   },
 );
+
+/** Validate a client-supplied list of course ids. */
+function parseCourses(input: unknown): PosCourse[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter((c): c is PosCourse => POS_COURSE_ORDER.includes(c as PosCourse));
+}
 
 // Charge a tab: ensure the order exists, mark it paid, then close the tab.
 export const PATCH = withAdmin(
@@ -160,6 +201,7 @@ async function persistTabOrder(
   locationSlug: string,
   shape: { items: CartItem[]; totalAmount: number; fulfillmentType: FulfillmentType },
   paid: boolean,
+  coursing?: Order["coursing"],
 ): Promise<Order> {
   const now = new Date();
   const partySize = tab.channel === "dine-in" ? tab.covers ?? 2 : undefined;
@@ -174,6 +216,7 @@ async function persistTabOrder(
       partySize,
       tableId,
       deliveryAddress,
+      ...(coursing !== undefined ? { coursing } : {}),
       ...(paid ? { paidAt: now.toISOString() } : {}),
     });
     if (patched) return patched;
@@ -192,6 +235,7 @@ async function persistTabOrder(
     partySize,
     tableId,
     deliveryAddress,
+    coursing,
     slotId: "walkin",
     slotDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
     slotTime: `${pad(now.getHours())}:${pad(now.getMinutes())}`,

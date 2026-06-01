@@ -12,7 +12,7 @@ Three steps, every Core surface picks one. Don't invent a fourth.
 
 | Step | Surface         | Used by                                                           |
 | ---- | --------------- | ----------------------------------------------------------------- |
-| 0    | `--cmd-canvas`  | The page background. `.kds-atlas`, `.pos-tabs`, `.crm-atlas`, `.cncrg-atlas`, `.wa-atlas` wrappers. |
+| 0    | `--cmd-canvas`  | The KDS page background (`.kds-atlas` + `.wa-console` dialogs). POS / Guest use the `.core-suite` `--bg` token in `suite.css`. |
 | 1    | `--cmd-panel`   | The chrome panels: command header (`.cmd-head`), sidebar / tabrail, sticky subbar (`.cmd-subbar`). |
 | 2    | `--cmd-raised`  | The content cards: KDS ticket (`.ka-ticket`), POS tab card (`.pos-tab`), CRM regular row when expanded, Concierge tool card, WhatsApp thread card. |
 

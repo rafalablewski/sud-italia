@@ -1,7 +1,8 @@
 import "../themes/admin/index.css";
 import "../themes/core/index.css";
+import "../themes/core/suite.css";
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import { AdminShell } from "@/components/admin/v2/AdminShell";
 import { AdminCurrencyGuard } from "@/components/admin/AdminCurrencyGuard";
 import { themeBootScript } from "@/components/admin/v2/theme";
@@ -21,6 +22,12 @@ const adminDisplay = Fraunces({
   variable: "--font-admin-display",
   display: "swap",
 });
+// Mono — the Core suite uses JetBrains Mono for prices / timers / ids.
+const adminMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-admin-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Admin | Sud Italia",
@@ -33,7 +40,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${adminBody.variable} ${adminDisplay.variable} flex flex-col flex-1`}>
+    <div className={`${adminBody.variable} ${adminDisplay.variable} ${adminMono.variable} flex flex-col flex-1`}>
       {/*
         Inline script runs synchronously during HTML parse to apply the
         persisted theme before paint. No flash of incorrect mode. This is the

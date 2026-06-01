@@ -8,6 +8,7 @@ import {
   getPointAdjustments,
 } from "@/lib/store";
 import { normalizePlPhoneE164 } from "@/lib/phone";
+import { loyaltyTier } from "@/lib/loyalty-tier";
 import type { Order } from "@/data/types";
 
 // The CRM ("Regulars") book — the system of record for every customer who
@@ -67,12 +68,7 @@ const FULFILLMENT_LABEL: Record<string, string> = {
   "dine-in": "Dine-in",
 };
 
-function tierOf(points: number): string {
-  if (points >= 5000) return "Platinum";
-  if (points >= 1500) return "Gold";
-  if (points >= 500) return "Silver";
-  return "Bronze";
-}
+const tierOf = loyaltyTier;
 
 function channelsFor(orders: Order[]): { labels: string[]; agentic: boolean } {
   const set = new Set<string>();

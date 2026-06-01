@@ -41,21 +41,13 @@ references.
 
 ## P1 — mobile completeness
 
-### 4. Mobile variants for capability surfaces
+### 4. ~~Mobile variants for capability surfaces~~ — OBSOLETE
 
-`Mobile<X>.tsx` exists for KDS / Orders / Customers but not for:
-
-- Concierge (no mobile view at all today)
-- Capabilities (admin page)
-- AI / Expansion / Compliance pages
-
-Build virtualised list + sheet-style profile for at least Concierge,
-since operators will glance at the capability toggles from their phone.
-
-### 5. Pull-to-refresh on the WhatsApp inbox mobile view
-
-`MobileWhatsApp.tsx` already exists; add the same PTR + native share
-patterns the CRM mobile view uses.
+**Dropped.** The separate per-page `Mobile*` approach was retired and the
+components deleted (operators required admin to be 1:1 with desktop). There
+are no more dedicated mobile views to build or backfill; every surface is the
+one responsive desktop layout, reflowed. See
+[`admin/mobile/README.md`](./admin/mobile/README.md).
 
 ## P2 — React port of the locked mockups
 

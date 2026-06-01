@@ -36,7 +36,7 @@ these numbers" / "How this projects" explainer.
 | `/admin/reports/cohort`       | `src/components/admin/AdminCohortReport.tsx`      | manager+  | `CohortSandbox.tsx` · `cohortSimulationEnabled` |
 | `/admin/reports/ltv-cac`      | `src/components/admin/AdminLtvCac.tsx`            | manager+  | `LtvCacSandbox.tsx` · `ltvCacSimulationEnabled` |
 | `/admin/menu-engineering`     | `src/components/admin/AdminMenuEngineering.tsx`   | manager+  | `MenuEngineeringSandbox.tsx` · `menuEngineeringSimulationEnabled` |
-| `/admin/ai`                   | `src/components/admin/AdminAi.tsx`                | manager+  | — |
+| `/admin/ai`                   | `src/components/admin/AdminAI.tsx`                | manager+  | — |
 | `/admin/expansion`            | `src/components/admin/AdminExpansion.tsx`         | **owner**   | — |
 
 Owner-gated pages here are deliberate — Multi-location and Expansion

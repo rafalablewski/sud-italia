@@ -280,6 +280,7 @@ export function WhatsAppSettingsDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      theme="core"
       size="lg"
       title="WhatsApp configuration"
       description="Channel state, messages, conversation lifecycle, the AI concierge and keyword auto-replies. Switches save immediately; everything else saves with the button below."

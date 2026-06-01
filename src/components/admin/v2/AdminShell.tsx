@@ -11,10 +11,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { ToastProvider } from "./ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
-import { useIsMobile, setForceDesktop } from "./mobile/useIsMobile";
-import { MobileShell } from "./mobile/MobileShell";
 import { ALL_NAV_ITEMS } from "./nav.config";
-import { Smartphone } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -22,11 +19,16 @@ interface Props {
 
 const BARE_ROUTES = ["/admin/login"];
 
+// Core suite surfaces render their own full-viewport shell (the mockup's SI
+// sidebar + topbar), so the admin chrome steps aside — but the data providers
+// (location, toast, shell context) stay so the Core components keep working.
+// Routes are added here as each surface is rebuilt onto the Core suite shell.
+const CORE_ROUTES = ["/admin/guest", "/admin/pos", "/admin/kds"];
+
 export function AdminShell({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const isBare = BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
-  const { isMobile, ready: isMobileReady, forcedDesktop, rawIsMobile } = useIsMobile();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -103,57 +105,50 @@ export function AdminShell({ children }: Props) {
     return <>{children}</>;
   }
 
+  const isCore = CORE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  // Core surfaces render their own full-viewport shell (.core-suite / .kds-core
+  // fixed layers), so the admin chrome steps aside — providers only. The Core
+  // pages reflow their desktop layout responsively (the mobile shell is
+  // retired; see docs/design-system/admin/mobile).
+  if (isCore) {
+    return (
+      <AdminLocationProvider>
+        <ShellContext.Provider value={ctxValue}>
+          <ToastProvider>{children}</ToastProvider>
+        </ShellContext.Provider>
+      </AdminLocationProvider>
+    );
+  }
+
   return (
     <AdminLocationProvider>
       <ShellContext.Provider value={ctxValue}>
         <ToastProvider>
-          {/* Until the matchMedia probe has fired, render a layout-neutral
-              container so SSR + first-paint never flash the wrong chrome. */}
-          {!isMobileReady ? (
-            <div className="v2-shell-boot" aria-hidden>
-              {children}
-            </div>
-          ) : isMobile ? (
-            <MobileShell>{children}</MobileShell>
-          ) : (
-            <div className="v2-shell">
-              <Sidebar />
+          <div className="v2-shell">
+            <Sidebar />
 
-              {mobileOpen && (
-                <div className="v2-mobile-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
-                  <div className="v2-mobile-scrim" onClick={() => setMobileOpen(false)} aria-hidden />
-                  <div className="v2-mobile-panel">
-                    <Sidebar isMobile onCloseMobile={() => setMobileOpen(false)} />
-                  </div>
+            {mobileOpen && (
+              <div className="v2-mobile-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
+                <div className="v2-mobile-scrim" onClick={() => setMobileOpen(false)} aria-hidden />
+                <div className="v2-mobile-panel">
+                  <Sidebar isMobile onCloseMobile={() => setMobileOpen(false)} />
                 </div>
-              )}
-
-              <div className="v2-main">
-                <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
-                <main className="v2-content">{children}</main>
               </div>
+            )}
 
-              <CommandPalette open={paletteOpen} onClose={closePalette} />
-              <NotificationPanel
-                open={notifOpen}
-                onClose={closeNotif}
-                onChanged={bumpNotifications}
-              />
-              <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
-              {forcedDesktop && rawIsMobile && (
-                <button
-                  type="button"
-                  onClick={() => setForceDesktop(false)}
-                  className="v2-exit-desktop-view"
-                  aria-label="Exit desktop view"
-                  title="Switch back to the mobile layout"
-                >
-                  <Smartphone className="h-4 w-4" aria-hidden />
-                  <span>Mobile view</span>
-                </button>
-              )}
+            <div className="v2-main">
+              <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
+              <main className="v2-content">{children}</main>
             </div>
-          )}
+
+            <CommandPalette open={paletteOpen} onClose={closePalette} />
+            <NotificationPanel
+              open={notifOpen}
+              onClose={closeNotif}
+              onChanged={bumpNotifications}
+            />
+            <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+          </div>
         </ToastProvider>
       </ShellContext.Provider>
     </AdminLocationProvider>

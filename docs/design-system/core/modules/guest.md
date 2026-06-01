@@ -45,6 +45,32 @@ one surface with three views.
    order, or manual admin adjustment (`getManualPointsTotal()` in
    `src/lib/store.ts` is summed with order points).
 
+## How it's wired (live code)
+
+- **Route:** `src/app/admin/guest/page.tsx` is the single hub surface. It
+  reads `?view=` and renders the matching module — `inbox` →
+  `<AdminWhatsApp>`, `guests` → `<AdminCrm>`, `concierge` →
+  `<AdminConcierge>` (the concierge server-side data load lives in the
+  hub page). Default view is `inbox`.
+- **Switcher:** `<GuestViewNav>`
+  (`src/components/admin/guest/GuestViewNav.tsx`) renders the
+  Inbox / Guests / Concierge segmented links (`.guest-viewnav` on the
+  shared `.cmd-seg-group`). Each module drops it into its `cmd-head` with
+  its own `current` view, and every module's `cmd-label` reads
+  **Guest Engagement** so the three read as one surface.
+- **Redirects:** `/admin/crm`, `/admin/concierge`, `/admin/whatsapp` are
+  now thin `redirect()` pages pointing at
+  `/admin/guest?view=guests|concierge|inbox`. The nav (Core group in
+  `src/components/admin/v2/nav.config.ts`) carries a single
+  **Guest Engagement** entry instead of three.
+- **Responsive:** the mobile shell is retired (`useIsMobile()` is a desktop
+  shim), so all three Guest modules render their `.core-suite` layout at
+  every width and reflow in CSS — no separate `Mobile*` screens. Phone (<
+  900px) collapses the Inbox 3-pane → 2 → 1, stacks Concierge and CRM to one
+  column, and shrinks the CoreShell sidebar to a 52px icon rail. Breakpoint
+  table in
+  [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
+
 ## Mockups
 
 The hub is mocked at `public/mockups/core-suite/index.html` — open
