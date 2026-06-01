@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { logger } from "@/lib/logger";
+import { withDbTimeout } from "@/lib/db-resilience";
 
 /**
  * Phase 1 substrate helpers. Every Phase 1 entity migration follows the same
@@ -40,8 +41,9 @@ export async function ensureTable(
     for (const stmt of ddl) {
       // Neon's HTTP driver doesn't accept multi-statement strings; one
       // round-trip per statement. Each is small + idempotent so the cost is
-      // bounded.
-      await sql.query(stmt);
+      // bounded. Timeout-guarded so a saturated/down Neon fails fast to the
+      // caller's fallback instead of hanging the build's static prerender.
+      await withDbTimeout(() => sql.query(stmt), `ensureTable:${name}`);
     }
     ensured.add(name);
   } catch (err) {

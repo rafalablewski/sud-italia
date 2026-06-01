@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { MenuItem } from "../types";
 import { getItemDetails } from "../kodawari";
 import {
@@ -8,6 +9,13 @@ import {
   getRecipes,
 } from "@/lib/store";
 import { getBaseSlug } from "@/lib/utils";
+
+// POS (and any multi-location render) calls getMenuWithOverrides once per
+// location, and each call re-reads the chain-wide recipe/ingredient/override
+// catalog — N identical Neon round-trips per request. React cache() memoizes
+// these for the lifetime of a single request so the shared catalog is read
+// once regardless of how many locations render. (No effect outside a request.)
+const getMenuOverridesOnce = cache(getMenuOverrides);
 
 // `getMenu` lives in a separate module so client components can read
 // the sync seed without pulling @/lib/store (and its node-only deps)
@@ -31,7 +39,7 @@ const RECIPE_MACRO_FIELDS: Array<[RecipeMacro, string]> = [
   ["fiber", "fiberPerUnit"],
   ["fat", "fatPerUnit"],
 ];
-async function getRecipeNutritionMap(): Promise<Map<string, Partial<Record<RecipeMacro, number>>>> {
+const getRecipeNutritionMap = cache(async (): Promise<Map<string, Partial<Record<RecipeMacro, number>>>> => {
   const [recipes, ingredients, products] = await Promise.all([
     getRecipes(),
     getIngredients(),
@@ -63,12 +71,12 @@ async function getRecipeNutritionMap(): Promise<Map<string, Partial<Record<Recip
     if (Object.keys(macros).length > 0) map.set(r.menuItemId, macros);
   }
   return map;
-}
+});
 
 export async function getMenuWithOverrides(locationSlug: string): Promise<MenuItem[]> {
   const base = getMenu(locationSlug);
   const [overrides, customItems, recipeNutritions] = await Promise.all([
-    getMenuOverrides(),
+    getMenuOverridesOnce(),
     getCustomMenuItems(locationSlug),
     getRecipeNutritionMap(),
   ]);

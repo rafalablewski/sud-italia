@@ -74,10 +74,19 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-.core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; }
+/* Aggressive margin/padding reset for the mockup-ported core content — but the
+   shared admin sidebar (.app-sidebar) is rendered inside .core-suite and is NOT
+   mockup content, so exempt it + its descendants or it loses its padding (the
+   active pill + LocationSwitcher bled to the edge). box-sizing above still
+   applies to it; Tailwind preflight still handles structural resets. :where()
+   keeps the selector at the same specificity so core page rules are unchanged. */
+.core-suite *:where(:not(.app-sidebar, .app-sidebar *)),
+.core-suite *::before, .core-suite *::after { margin: 0; padding: 0; }
 .core-suite ::selection { background: var(--brand-soft-strong); }
-.core-suite ::-webkit-scrollbar { width: 10px; height: 10px; }
-.core-suite ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 99px; border: 2px solid var(--bg); }
+/* No visible scrollbars anywhere in the core surface — content still scrolls. */
+.core-suite, .core-suite * { scrollbar-width: none; }
+.core-suite ::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* ---- type helpers ---- */
 .core-suite .display { font-family: var(--display); font-weight: 500; letter-spacing: .005em; }
@@ -90,7 +99,7 @@
 /* ============================================================
    SHELL — sidebar + topbar (shared by every module)
    ============================================================ */
-.core-suite .shell { display: grid; grid-template-columns: 244px 1fr; height: 100%; overflow: hidden; }
+.core-suite .shell { display: grid; grid-template-columns: 244px 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; overflow: hidden; }
 
 .core-suite .sidebar {
   background: var(--surface-1);
@@ -98,6 +107,9 @@
   display: flex; flex-direction: column;
   padding: 14px 12px;
   gap: 4px;
+  /* grid item must be allowed to shrink below content height, or the full nav
+     overflows the (hidden) shell and .sidebar-scroll never gets a scroll. */
+  min-height: 0;
 }
 .core-suite .brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 14px; text-decoration: none; color: inherit; }
 .core-suite .brand-mark {
@@ -110,7 +122,17 @@
 .core-suite .brand-name { font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1; }
 .core-suite .brand-sub { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-subtle); margin-top: 3px; }
 
+/* The nav lists the full admin tree now, so it scrolls between the fixed
+   brand (top) and the operator foot (bottom); the brand + foot stay put. */
+.core-suite .sidebar-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+  /* stay full-width even when the narrow rail sets align-items:center */
+  align-self: stretch;
+  margin: 0 -4px; padding: 0 4px;
+}
 .core-suite .nav-group { margin-top: 10px; }
+.core-suite .nav-group:first-child { margin-top: 2px; }
 .core-suite .nav-group > .eyebrow { padding: 6px 8px; font-size: 10px; }
 .core-suite .nav-item {
   display: flex; align-items: center; gap: 10px;

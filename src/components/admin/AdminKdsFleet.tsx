@@ -103,6 +103,11 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
   const [data, setData] = useState<FleetPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Gate the loading-pill portal on a client mount so the SSR pass (where
+  // `loading` is true but `document` doesn't exist) doesn't reach for
+  // document.body, and so the first client render matches the server.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [now, setNow] = useState(() => Date.now());
   const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
@@ -244,7 +249,13 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
         {data && <FleetBar data={data} now={now} toneOf={toneOf} />}
 
         {loading && !data ? (
-          <div className="fleet-empty">Loading Kitchen Display…</div>
+          // The loading pill is portaled to <body> below (not rendered here):
+          // inside .kds-core / .admin-bg the shell's stacking context traps the
+          // fixed pill (rule #4), so it never reaches the viewport bottom-center
+          // like every other admin tab. The wall stays empty until the first
+          // frame lands — error and "no active trucks" remain .fleet-empty
+          // messages since those are content, not a transient load.
+          null
         ) : error && !data ? (
           <div className="fleet-empty">Couldn’t load fleet — {error}</div>
         ) : data && data.tiles.length === 0 ? (
@@ -269,7 +280,25 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
     </div>
   );
 
-  return fullscreen ? createPortal(board, document.body) : board;
+  // The loading pill rides the same escape hatch as the fullscreen wall, but
+  // lands on the admin layout wrapper (`#admin-portal-root`) rather than
+  // <body>: it's an ancestor of .admin-bg (so the pill escapes the
+  // `.admin-bg > *` stacking trap) yet it holds the `--font-admin-*` next/font
+  // vars, so `.v2-page-loading`'s `font-family: var(--font-ui)` resolves to
+  // Inter. `.v2-shell` is gone on this core route and <body> sits outside the
+  // font scope (browser default serif), so neither works. Fall back to <body>.
+  return (
+    <>
+      {fullscreen ? createPortal(board, document.body) : board}
+      {loading &&
+        !data &&
+        mounted &&
+        createPortal(
+          <div className="v2-page-loading">Loading Kitchen Display…</div>,
+          document.getElementById("admin-portal-root") ?? document.body,
+        )}
+    </>
+  );
 }
 
 function mmssF(seconds: number): string {

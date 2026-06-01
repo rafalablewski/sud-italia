@@ -278,6 +278,55 @@ the containing block for fixed descendants. Two safe patterns:
 the pill renders full-width, clipped under the topbar instead of as a pill.
 (`AdminSimulation`/Calculator hit exactly this.)
 
+- **Core route → portal to `#admin-portal-root`.** Core surfaces (KDS) render a
+  fixed `.kds-core` overlay and AdminShell drops the `.v2-shell` chrome, so
+  there's no `.v2-page` to drop the pill into and rendering it inline traps it
+  in the `.admin-bg > *` stacking context (rule #4). Portal it instead:
+  `createPortal(<div className="v2-page-loading">…</div>, document.getElementById("admin-portal-root") ?? document.body)`,
+  gated on a client `mounted` flag. `#admin-portal-root` is the admin layout
+  wrapper (`src/app/admin/layout.tsx`) — an ancestor of `.admin-bg` (escapes the
+  trap), with no transform (the fixed pill anchors to the viewport), that holds
+  the `--font-admin-*` next/font vars. **Do not portal to `<body>`:** it's
+  outside that font scope, so `var(--font-ui)` can't resolve and the pill
+  renders in the browser-default **serif** (`AdminKDS`/`AdminKdsFleet` hit
+  exactly this). See [KDS → Loading pill](../../core/modules/kds.md#loading-pill).
+- **Core route Suspense fallback (`loading.tsx`) → wrap in `.core-suite`, not
+  `.v2-page`.** `.v2-page`'s `min-height: calc(100vh - 53px)` reserves space for
+  the admin topbar; core routes don't render one, so the fallback came up 53px
+  short and a strip of the layer behind showed at the bottom. Paint the same
+  full-viewport `.core-suite` surface the real page uses
+  (`src/app/admin/pos/loading.tsx`).
+
+The pill **declares `font-family: var(--font-ui)` itself** so it doesn't depend
+on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
+core-route case above, harmless everywhere else (it already resolves to Inter
+inside the shell).
+
+## Sidebar — one component, one vocabulary (`.app-sidebar`)
+
+There is a **single** sidebar: `components/admin/v2/Sidebar.tsx`, class
+`.app-sidebar` (`.as-brand` / `.as-eyebrow` / `.as-item` / `.as-scroll` /
+`.as-foot`). Both **AdminShell** and **CoreShell** (POS / Guest) render it, so
+the nav is pixel-identical everywhere. The Core suite was the source of truth
+for the look; the old parallel `.v2-sidebar` / `.v2-brand-name-sub` markup is
+retired (its CSS is dead, pending cleanup). `.app-sidebar` styles live here in
+admin CSS but use only tokens that resolve in **both** the `[data-admin-theme]`
+and `.core-suite` scopes, so the one component looks right in either shell.
+
+- **Full nav, role-filtered**, from `useNavSections()`
+  (`components/admin/v2/useNavSections.ts`); active state by `pathname`.
+- **No `g`-key chips** (the old `.v2-nav-kbd`). The `g`+letter shortcuts still
+  work via the global handler in `AdminShell.tsx` off `nav.config`, and the
+  full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep
+  `shortcut` in `nav.config`; it feeds the handler + the modal.
+- **Footer:** `LocationSwitcher` + Log out, on every surface (POS/Guest gained
+  these; the old core avatar foot is retired).
+- **Scrolls with no visible scrollbar** (`.as-scroll`: `overflow-y:auto` +
+  `scrollbar-width:none`). KDS is the exception — its own full-screen wall, no
+  sidebar.
+
+See the core side in [core components → Sidebar](../../core/theme/components.md#sidebar--the-shared-app-sidebar).
+
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /

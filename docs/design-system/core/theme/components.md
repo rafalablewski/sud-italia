@@ -10,7 +10,8 @@ and earns or loses operator trust on every one.
 
 - **`.core-suite` primitives** (`suite.css`, ported from the mockup's
   `system.css`) — used by **POS** and the **Guest hub** inside
-  `<CoreShell>`: `.shell` / `.sidebar` / `.topbar` / `.viewnav` (shell),
+  `<CoreShell>`: `.shell` / `.topbar` / `.viewnav` (shell — the sidebar is now
+  the shared `.app-sidebar`, see [Sidebar](#sidebar--the-shared-app-sidebar)),
   `.card` / `.btn` (`.primary` / `.ghost` / `.lg` / `.xl` / `.icon`) /
   `.badge` (`.brand` / `.platinum` / `.success` / …) / `.input` / `.seg`
   / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
@@ -167,6 +168,28 @@ module docs, which describe the real shipped markup:
 The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
 / `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
 listed in [the README](./README.md#two-css-layers-mid-migration).
+
+### Sidebar — the shared `.app-sidebar`
+
+`<CoreShell>` no longer has its own sidebar markup: it renders the **same
+`<Sidebar>` component** (`components/admin/v2/Sidebar.tsx`, class `.app-sidebar`)
+that AdminShell renders, so POS / Guest and the rest of admin are pixel-identical
+— one source of truth. CoreShell now owns only the `.shell` grid + topbar; the
+sidebar fills grid column 1. The Core suite was the *source of truth* for the
+look (`.brand` / eyebrow / nav-item vocabulary, now `.as-*`), but the styling
+lives in admin CSS so it can be shared (see
+[admin components → Sidebar](../../admin/theme/components.md#sidebar--one-component-one-vocabulary-app-sidebar)).
+The old `.core-suite .sidebar` / `.sidebar-scroll` / `.nav-item` / `.avatar`
+rules are dead (pending cleanup); `.core-suite .eyebrow` survives as a general
+type helper. KDS is the deliberate exception — its own `.kds-core` wall with no
+sidebar (see [KDS](../modules/kds.md)).
+
+**Reset exemption:** `.core-suite *` zeroes margin/padding on mockup-ported
+content, which clobbered the shared sidebar's padding (the active pill +
+LocationSwitcher bled to the edge). The reset now exempts `.app-sidebar` + its
+descendants via `:where(:not(.app-sidebar, .app-sidebar *))` (same specificity,
+so core page rules are unchanged) while still applying `box-sizing: border-box`
+to everything. Tailwind preflight still handles structural resets inside it.
 
 ### Dialogs — `theme="core"`
 

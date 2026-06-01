@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "gen:design-system": "tsx scripts/gen-design-system-manifest.ts",
+    "prebuild": "npm run gen:design-system",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

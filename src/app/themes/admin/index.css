@@ -198,7 +198,8 @@
    viewport and page scroll is locked (the board scrolls internally) so no
    stray scrollbar shows on the right. */
 body.kds-immersive .v2-shell { grid-template-columns: 1fr; }
-body.kds-immersive .v2-shell > .v2-sidebar { display: none; }
+body.kds-immersive .v2-shell > .v2-sidebar,
+body.kds-immersive .v2-shell > .app-sidebar { display: none; }
 body.kds-immersive .v2-topbar { display: none; }
 body.kds-immersive .v2-content { min-height: 100vh; }
 body.kds-immersive { overflow: hidden; }
@@ -223,7 +224,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   padding: 12px 8px 14px;
 }
 .v2-sidebar[data-collapsed="true"] .v2-nav-label,
-.v2-sidebar[data-collapsed="true"] .v2-nav-kbd,
 .v2-sidebar[data-collapsed="true"] .v2-sidebar-section-label,
 .v2-sidebar[data-collapsed="true"] .v2-brand-name,
 .v2-sidebar[data-collapsed="true"] .v2-loc-label,
@@ -236,7 +236,8 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-sidebar[data-collapsed="true"] .v2-sidebar-logout { justify-content: center; padding: 8px; }
 
 @media (max-width: 900px) {
-  .v2-shell > .v2-sidebar { display: none; }
+  .v2-shell > .v2-sidebar,
+  .v2-shell > .app-sidebar { display: none; }
 }
 
 .v2-sidebar-header {
@@ -303,7 +304,10 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   gap: 12px;
   padding-bottom: 8px;
+  /* Scrolls, but no visible scrollbar (matches the core sidebar). */
+  scrollbar-width: none;
 }
+.v2-sidebar-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .v2-sidebar-section { display: flex; flex-direction: column; gap: 2px; }
 .v2-sidebar-section-label {
   padding: 4px 8px 2px;
@@ -323,8 +327,10 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   border-radius: var(--radius-md);
   color: var(--fg-muted);
   text-decoration: none;
-  font-size: var(--text-base);
-  font-weight: 500;
+  /* 13px / 450 — matches the Core suite sidebar (.core-suite .nav-item) so the
+     admin and core shells render one identical sidebar. */
+  font-size: 13px;
+  font-weight: 450;
   transition: background var(--duration-fast), color var(--duration-fast);
   position: relative;
 }
@@ -346,17 +352,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 }
 .v2-nav-icon { width: 16px; height: 16px; flex-shrink: 0; color: currentColor; opacity: 0.85; }
 .v2-nav-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.v2-nav-kbd {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  padding: 1px 5px;
-  white-space: nowrap;
-}
-.v2-nav-link:hover .v2-nav-kbd { color: var(--fg-muted); }
 
 .v2-sidebar-footer { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
 
@@ -377,6 +372,77 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 }
 .v2-sidebar-logout:hover { background: var(--surface-hover); color: var(--fg); }
 .v2-sidebar-logout svg { flex-shrink: 0; }
+
+/* ============================================================
+   Unified sidebar — ONE component (`Sidebar.tsx`, class `.app-sidebar`)
+   rendered by both AdminShell and CoreShell. The Core suite is the source
+   of truth for the look (brand / eyebrow / nav-item vocabulary), so it lives
+   here in tokens that resolve in BOTH the [data-admin-theme] and .core-suite
+   scopes (--surface-1 / --border / --brand / --fg* / --surface-3 /
+   --surface-hover / --font-display all exist in both). Radii + transitions are
+   literal so they don't depend on a scope-only token.
+   ============================================================ */
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+}
+.app-sidebar .as-brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 14px; text-decoration: none; color: inherit; }
+.app-sidebar .as-brand-mark {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
+  box-shadow: 0 1px 3px rgba(0,0,0,.38), 0 1px 2px rgba(0,0,0,.22);
+}
+.app-sidebar .as-brand-text { display: flex; flex-direction: column; min-width: 0; }
+.app-sidebar .as-brand-name { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; }
+.app-sidebar .as-brand-sub { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-subtle); margin-top: 3px; }
+
+/* nav scrolls between fixed brand + foot, no visible scrollbar */
+.app-sidebar .as-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; align-self: stretch;
+  display: flex; flex-direction: column; gap: 4px;
+  scrollbar-width: none;
+}
+.app-sidebar .as-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.app-sidebar .as-group { margin-top: 10px; }
+.app-sidebar .as-group:first-child { margin-top: 2px; }
+.app-sidebar .as-eyebrow { padding: 6px 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-subtle); }
+.app-sidebar .as-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 9px; border-radius: 8px;
+  color: var(--fg-muted); font-size: 13px; font-weight: 450;
+  text-decoration: none; cursor: pointer; position: relative;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.app-sidebar .as-item:hover { background: var(--surface-hover); color: var(--fg); }
+.app-sidebar .as-item.is-active { background: var(--surface-3); color: var(--fg); font-weight: 500; }
+.app-sidebar .as-item.is-active::before {
+  content: ""; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px; border-radius: 0 3px 3px 0; background: var(--brand);
+}
+.app-sidebar .as-ico { width: 16px; height: 16px; opacity: 0.8; flex: none; }
+.app-sidebar .as-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+.app-sidebar .as-logout {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 9px; border-radius: 8px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--fg-muted); font-size: 13px; font-weight: 450;
+  cursor: pointer; text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.app-sidebar .as-logout:hover { background: var(--surface-hover); color: var(--fg); }
+.app-sidebar .as-logout svg { flex: none; }
+/* mobile drawer: the panel handles position, the sidebar just fills it */
+.v2-mobile-panel .app-sidebar { position: static; height: 100%; border-right: 0; }
 
 /* --- Location switcher --- */
 .v2-loc-trigger {
@@ -1766,6 +1832,11 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   color: var(--fg-muted);
+  /* Self-sufficient font: inline tabs inherit --font-ui from .v2-shell, but
+     when this chip is portaled out of the shell (e.g. the KDS core route,
+     which has no .v2-shell) it must declare the UI font itself or it falls
+     back to the browser default serif. */
+  font-family: var(--font-ui);
   font-size: var(--text-xs);
   box-shadow: var(--shadow-sm);
   z-index: 30;
