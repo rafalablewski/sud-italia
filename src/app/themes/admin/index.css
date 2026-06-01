@@ -223,7 +223,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   padding: 12px 8px 14px;
 }
 .v2-sidebar[data-collapsed="true"] .v2-nav-label,
-.v2-sidebar[data-collapsed="true"] .v2-nav-kbd,
 .v2-sidebar[data-collapsed="true"] .v2-sidebar-section-label,
 .v2-sidebar[data-collapsed="true"] .v2-brand-name,
 .v2-sidebar[data-collapsed="true"] .v2-loc-label,
@@ -323,8 +322,10 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   border-radius: var(--radius-md);
   color: var(--fg-muted);
   text-decoration: none;
-  font-size: var(--text-base);
-  font-weight: 500;
+  /* 13px / 450 — matches the Core suite sidebar (.core-suite .nav-item) so the
+     admin and core shells render one identical sidebar. */
+  font-size: 13px;
+  font-weight: 450;
   transition: background var(--duration-fast), color var(--duration-fast);
   position: relative;
 }
@@ -346,17 +347,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 }
 .v2-nav-icon { width: 16px; height: 16px; flex-shrink: 0; color: currentColor; opacity: 0.85; }
 .v2-nav-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.v2-nav-kbd {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  padding: 1px 5px;
-  white-space: nowrap;
-}
-.v2-nav-link:hover .v2-nav-kbd { color: var(--fg-muted); }
 
 .v2-sidebar-footer { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
 

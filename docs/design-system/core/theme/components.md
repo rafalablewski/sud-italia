@@ -168,6 +168,22 @@ The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
 / `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
 listed in [the README](./README.md#two-css-layers-mid-migration).
 
+### Sidebar — one nav across admin + core (`CoreShell.tsx`)
+
+`<CoreShell>`'s `.sidebar` renders the **full** admin navigation, not a
+stripped core list: it pulls `useNavSections()` (`components/admin/v2/useNavSections.ts`)
+— the same role-filtered source AdminShell's `.v2-sidebar` uses — so every
+page + subpage is reachable from POS / Guest and the two shells read as one
+sidebar. Active state is by `pathname` (the legacy `active` prop is ignored).
+Because the list is long, the nav groups sit in a **`.sidebar-scroll`** flex
+column (`flex: 1; overflow-y: auto`, `align-self: stretch` so it stays
+full-width in the narrow icon-rail) between the fixed `.brand` and
+`.sidebar-foot`. The chrome (`.shell` / `.nav-group` / `.eyebrow` /
+`.nav-item` / `.nav-ico`) is unchanged. KDS is the deliberate exception — it
+runs its own `.kds-core` wall with no sidebar (see [KDS](../modules/kds.md)).
+The matching admin-side note (the `.v2-sidebar` dropped its `g`-key chips to
+match this look) lives in [admin components → Sidebar](../../admin/theme/components.md#sidebar--shared-nav-no-shortcut-chips).
+
 ### Dialogs — `theme="core"`
 
 Dialogs opened from a Core surface pass **`theme="core"`** to the shared

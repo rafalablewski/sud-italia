@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, LogOut, PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { filterNavForRole, NAV_SECTIONS } from "./nav.config";
-import type { AdminRole } from "@/lib/admin-roles";
+import { useCallback, useEffect, useState } from "react";
+import { useNavSections } from "./useNavSections";
 import { LocationSwitcher } from "./LocationSwitcher";
 
 const COLLAPSE_KEY = "sud-admin-sidebar-collapsed";
@@ -18,13 +17,7 @@ interface Props {
 export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [role, setRole] = useState<AdminRole | null>(null);
-  // null = settings not loaded yet (distinct from an explicit `false`). Until
-  // we know, treat the flag as on so a slow/failed settings fetch can't
-  // momentarily hide a flagged item (e.g. Calculator) after role resolves.
-  const [simulationEnabled, setSimulationEnabled] = useState<boolean | null>(
-    null,
-  );
+  const sections = useNavSections();
 
   useEffect(() => {
     try {
@@ -33,52 +26,6 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
       /* non-fatal */
     }
   }, []);
-
-  // m2_31: fetch the current role once per mount so we can filter the nav.
-  // While the request is in flight we show the unfiltered nav — flicker is
-  // visible briefly but the alternative (empty sidebar) is worse UX. The
-  // server still enforces the actual permissions, so showing extra links
-  // is cosmetic only.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!cancelled && j?.role) setRole(j.role as AdminRole);
-      })
-      .catch(() => {
-        /* non-fatal */
-      });
-    const loadSettings = () => {
-      fetch("/api/admin/settings")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => {
-          if (!cancelled && j) {
-            setSimulationEnabled(!!j.simulationEnabled);
-          }
-        })
-        .catch(() => {
-          /* non-fatal */
-        });
-    };
-    loadSettings();
-    // AdminSettings dispatches this when a toggle persists so the nav
-    // updates without a full page reload.
-    window.addEventListener("sud-admin-settings-updated", loadSettings);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("sud-admin-settings-updated", loadSettings);
-    };
-  }, []);
-
-  // If we have a role, filter; otherwise show everything (pre-fetch state).
-  const sections = useMemo(
-    () =>
-      role
-        ? filterNavForRole(role, { simulation: simulationEnabled ?? true })
-        : NAV_SECTIONS,
-    [role, simulationEnabled],
-  );
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
@@ -148,9 +95,6 @@ export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
                     >
                       <Icon className="v2-nav-icon" aria-hidden />
                       <span className="v2-nav-label">{item.label}</span>
-                      {item.shortcut && (
-                        <span className="v2-nav-kbd" aria-hidden>g {item.shortcut}</span>
-                      )}
                     </Link>
                   </li>
                 );

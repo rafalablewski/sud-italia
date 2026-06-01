@@ -1,28 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Armchair, ChefHat, ChevronLeft, Receipt, UsersRound, UtensilsCrossed } from "lucide-react";
+import { useNavSections } from "../v2/useNavSections";
 
 /**
  * The Core suite shell — the mockup's SI sidebar + topbar (system.css `.shell`).
  * It owns the full viewport (`.core-suite` is a fixed layer) and replaces the
- * admin chrome on /admin/pos, /admin/kds and /admin/guest (AdminShell steps
- * aside for those routes). Ported from public/mockups/core-suite/*.html.
+ * admin chrome on /admin/pos and /admin/guest (AdminShell steps aside for those
+ * routes; KDS runs its own `.kds-core` wall with no sidebar). Ported from
+ * public/mockups/core-suite/*.html.
+ *
+ * The sidebar renders the **full** admin navigation (`useNavSections`, the same
+ * source AdminShell uses) so every page + subpage is reachable from POS / Guest,
+ * not just a stripped core list — matching the one-sidebar look the rest of
+ * admin uses.
  */
 
 type CoreKey = "pos" | "kds" | "guest";
-
-const CORE_NAV: { key: CoreKey; href: string; label: string; icon: typeof Receipt }[] = [
-  { key: "pos", href: "/admin/pos", label: "POS", icon: Receipt },
-  { key: "kds", href: "/admin/kds", label: "KDS", icon: ChefHat },
-  { key: "guest", href: "/admin/guest", label: "Guest Engagement", icon: UsersRound },
-];
-
-const OPS_NAV: { href: string; label: string; icon: typeof Receipt }[] = [
-  { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
-  { href: "/admin/floor", label: "Floor", icon: Armchair },
-];
 
 function initials(name?: string | null): string {
   const n = (name ?? "").trim();
@@ -32,13 +28,17 @@ function initials(name?: string | null): string {
 }
 
 export function CoreShell({
-  active,
   crumbs,
   viewnav,
   topbarRight,
   children,
 }: {
-  active: CoreKey;
+  /**
+   * Legacy: which core surface is active. The sidebar now highlights by
+   * pathname (it lists every route), so this no longer drives the active
+   * state — kept optional so existing call sites don't need to change.
+   */
+  active?: CoreKey;
   /** Breadcrumb content, e.g. <>Core / <b>Guest Engagement</b></>. */
   crumbs: ReactNode;
   /** Optional sub-view switcher (rendered in the topbar `.viewnav` slot). */
@@ -47,6 +47,8 @@ export function CoreShell({
   topbarRight?: ReactNode;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const sections = useNavSections();
   const [me, setMe] = useState<{ name?: string; role?: string } | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +63,11 @@ export function CoreShell({
     };
   }, []);
 
+  const isItemActive = (href: string) => {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+
   return (
     <div className="core-suite">
       <div className="shell">
@@ -73,38 +80,27 @@ export function CoreShell({
             </div>
           </Link>
 
-          <div className="nav-group">
-            <div className="eyebrow">Core</div>
-            {CORE_NAV.map((n) => {
-              const Icon = n.icon;
-              return (
-                <Link key={n.key} href={n.href} className={`nav-item${active === n.key ? " active" : ""}`}>
-                  <Icon className="nav-ico" />
-                  {n.label}
-                </Link>
-              );
-            })}
+          <div className="sidebar-scroll">
+            {sections.map((section) => (
+              <div key={section.id} className="nav-group">
+                <div className="eyebrow">{section.label}</div>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={isItemActive(item.href) ? "page" : undefined}
+                      className={`nav-item${isItemActive(item.href) ? " active" : ""}`}
+                    >
+                      <Icon className="nav-ico" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
-
-          <div className="nav-group">
-            <div className="eyebrow">Operations</div>
-            {OPS_NAV.map((n) => {
-              const Icon = n.icon;
-              return (
-                <Link key={n.href} href={n.href} className="nav-item">
-                  <Icon className="nav-ico" />
-                  {n.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div style={{ flex: 1 }} />
-
-          <Link href="/admin" className="nav-item">
-            <ChevronLeft className="nav-ico" />
-            All admin
-          </Link>
 
           <div className="sidebar-foot">
             <div className="avatar">{initials(me?.name)}</div>

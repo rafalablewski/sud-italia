@@ -296,6 +296,24 @@ on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
 core-route case above, harmless everywhere else (it already resolves to Inter
 inside the shell).
 
+## Sidebar — shared nav, no shortcut chips
+
+The admin sidebar (`.v2-sidebar`, `components/admin/v2/Sidebar.tsx`) and the
+Core suite sidebar (`.core-suite .sidebar`, `CoreShell.tsx`) are now **one
+look**. Both pull the same role-filtered tree from `useNavSections()`
+(`components/admin/v2/useNavSections.ts`), and `.v2-nav-link` is set to **13px /
+450** to match `.core-suite .nav-item`.
+
+- **No `g`-key chips.** The `.v2-nav-kbd` hint chips were removed (the class is
+  gone from CSS too). The `g`+letter shortcuts still work — they're driven by a
+  global key handler in `AdminShell.tsx` off `nav.config`, and the full list is
+  discoverable in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`), not on each
+  row. Keep `shortcut` in `nav.config`; it feeds the handler + the modal.
+- **Footer differs by shell, by design.** Admin keeps the `LocationSwitcher` +
+  Log out; Core keeps the operator avatar foot. Nav area is identical.
+
+See the core side in [core components → Sidebar](../../core/theme/components.md#sidebar--one-nav-across-admin--core-coreshelltsx).
+
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /
