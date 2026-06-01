@@ -13,7 +13,7 @@ docs/
 │   ├── core/              ← Core IP theme (POS, KDS, Guest)
 │   │   ├── README.md
 │   │   ├── theme/         ← Core-only tokens (backlog today)
-│   │   ├── modules/       ← pos.md, kds.md, guest.md, crm.md, concierge.md, whatsapp.md
+│   │   ├── modules/       ← pos.md, kds.md, guest.md, crm.md, loyalty.md, concierge.md, whatsapp.md, receipt-printer.md
 │   │   └── canonical-orders.md
 │   ├── admin/             ← back-office theme (everything else under /admin/*)
 │   │   ├── README.md      ← shell anatomy + per-section taxonomy
@@ -23,6 +23,8 @@ docs/
 │   │   ├── README.md
 │   │   └── theme/         ← homepage-only tokens (backlog today)
 │   └── backlog.md         ← cross-theme cleanup inventory
+├── strategy/              ← forward-looking product/architecture theses
+│   └── restaurant-os-blueprint.md   ← Loyalty/Slots/Floor → category-defining OS
 └── audits/                ← dated, scoped audits of specific surfaces
 ```
 
@@ -44,6 +46,17 @@ The rule: **a token, font, component, or layout belongs to exactly one
 theme.** Changes to one theme must not move the other two. The code
 today only partially enforces this — see the design-system README for
 the gap list and the code-split work that closes it.
+
+## `strategy/`
+
+Forward-looking product + architecture theses — *where a surface is going*,
+not just what it is today. Grounded in the real data model so the roadmap is
+executable.
+
+- [`strategy/restaurant-os-blueprint.md`](./strategy/restaurant-os-blueprint.md)
+  — turning the Loyalty, Slots and Floor modules into a category-defining
+  restaurant operating system (proprietary data, network effects, the
+  SaaS → OS → infrastructure roadmap, and the keystone build status).
 
 ## `audits/`
 

@@ -65,7 +65,7 @@ Every member row carries an **Intelligence** action (brain icon) beside
 **Adjust**. It opens a `Dialog theme="core"` (portaled per CLAUDE rule #4)
 showing a behavioural graph derived **live from that guest's real orders** —
 the keystone of the Customer Identity Network
-([blueprint](../../strategy/restaurant-os-blueprint.md)).
+([blueprint](../../../strategy/restaurant-os-blueprint.md)).
 
 > **Live code:** engine `src/lib/customer-intelligence.ts`
 > (`buildCustomerIntelligence`, pure-compute, unit-tested in
@@ -93,7 +93,7 @@ inside this dialog; they won't paint.
 ## Win-back — auto-retention (Phase 2)
 
 The **Win-back** tab turns the keystone from informing into *operating*
-([blueprint Phase 2](../../strategy/restaurant-os-blueprint.md)). It runs the
+([blueprint Phase 2](../../../strategy/restaurant-os-blueprint.md)). It runs the
 intelligence engine across every guest, queues the ones whose churn hazard says
 they're slipping (`high` / `lost`), ranks by **value-at-risk** (hazard ×
 lifetime spend), and prescribes the whole action per guest: incentive size,
