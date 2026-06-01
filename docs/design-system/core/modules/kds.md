@@ -222,20 +222,29 @@ station chips fixed while the dense queue scrolls.
 ## Loading pill
 
 The first-frame loading chip is the shared admin **`.v2-page-loading`** pill —
-but it is **portaled to `document.body`** (`AdminKDS.tsx`), not rendered inside
-the board. The `.kds-core` overlay lives under `.admin-bg`, whose
+but it is **portaled to `.v2-shell`** (`AdminKDS.tsx`), not rendered inside the
+board. The `.kds-core` overlay lives under `.admin-bg`, whose
 `> * { position: relative; z-index: 1 }` rule traps a `position: fixed` child
 (rule #4); rendered inline the pill never reaches the viewport bottom-center
 the way it does on every `.v2-page` tab (those get the
-`.admin-bg:has(.v2-page) > * { z-index: auto }` escape hatch). Portaling it to
-`<body>` — the same escape hatch the kiosk view already uses — lands it as the
-identical bottom-center chip. The portal is gated on a client `mounted` flag so
-the SSR pass never reaches for `document.body`. While loading, the
-`.ka-floor-body` stays empty (showing the "Kitchen is clear" empty state before
-the first frame arrives would be a lie).
+`.admin-bg:has(.v2-page) > * { z-index: auto }` escape hatch).
+
+**Why `.v2-shell` and not `<body>`:** the pill has no `font-family` of its own —
+it inherits Inter from `.v2-shell` (`font-family: var(--font-ui)`), which only
+resolves inside the admin font scope, since `--font-ui → var(--font-admin-body)`
+and `--font-admin-body` is set by `next/font` on the admin layout wrapper, not
+on `<body>`. Portaling to `<body>` would land the pill outside that scope and
+render it in the browser default font instead of Inter. `.v2-shell` is an
+*ancestor* of `.admin-bg` (so the pill still escapes the trap) and a plain grid
+(no transform — a fixed child still anchors to the viewport), so it keeps the
+exact font + position the chip has on every other tab. Falls back to `<body>`
+defensively. The portal is gated on a client `mounted` flag so the SSR pass
+never reaches for the DOM. While loading, the `.ka-floor-body` stays empty
+(showing the "Kitchen is clear" empty state before the first frame arrives
+would be a lie).
 
 The **Fleet** wall (`AdminKdsFleet.tsx`) does the same: its first-load state
-portals the `.v2-page-loading` pill to `<body>` (gated on `mounted`), and the
+portals the `.v2-page-loading` pill to `.v2-shell` (gated on `mounted`), and the
 wall stays empty until the first frame. Its `error` ("Couldn't load fleet") and
 empty ("No active trucks") states stay as centered **`.fleet-empty`** messages —
 those are content, not a transient load, so they live inside the wall.

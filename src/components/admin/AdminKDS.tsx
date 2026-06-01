@@ -683,9 +683,13 @@ function AdminKDSDesktop({
   // the component subtree — and all its state, hooks and context — stays
   // mounted, so the SSE stream, hotkeys and timers keep running uninterrupted.
   //
-  // The loading pill rides the same escape hatch: portaled to <body> it lands
-  // as the standard bottom-center `.v2-page-loading` chip (matching every
-  // other admin tab) instead of being trapped inside the .kds-core overlay.
+  // The loading pill rides the same escape hatch, but lands on `.v2-shell`
+  // rather than <body>: .v2-shell is an ancestor of .admin-bg (so the pill
+  // escapes the `.admin-bg > *` stacking trap), yet it sits inside the admin
+  // font scope and sets `font-family: var(--font-ui)`. Portaling to <body>
+  // would drop the pill out of the `--font-admin-body` scope and render it in
+  // the browser default font — the same `.v2-page-loading` chip every other
+  // tab shows in Inter would look wrong here. Fall back to <body> defensively.
   return (
     <>
       {kiosk ? createPortal(page, document.body) : page}
@@ -693,7 +697,7 @@ function AdminKDSDesktop({
         mounted &&
         createPortal(
           <div className="v2-page-loading">Loading Kitchen Display…</div>,
-          document.body,
+          document.querySelector(".v2-shell") ?? document.body,
         )}
     </>
   );

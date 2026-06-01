@@ -280,10 +280,13 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
     </div>
   );
 
-  // The loading pill rides the same escape hatch as the fullscreen wall:
-  // portaled to <body> it lands as the standard bottom-center
-  // `.v2-page-loading` chip (matching every other admin tab) instead of being
-  // trapped inside the .kds-core overlay.
+  // The loading pill rides the same escape hatch as the fullscreen wall, but
+  // lands on `.v2-shell` rather than <body>: .v2-shell is an ancestor of
+  // .admin-bg (so the pill escapes the `.admin-bg > *` stacking trap) yet sits
+  // inside the admin font scope and sets `font-family: var(--font-ui)`.
+  // Portaling to <body> would drop it out of the `--font-admin-body` scope and
+  // render it in the browser default font instead of Inter. Fall back to
+  // <body> defensively.
   return (
     <>
       {fullscreen ? createPortal(board, document.body) : board}
@@ -292,7 +295,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
         mounted &&
         createPortal(
           <div className="v2-page-loading">Loading Kitchen Display…</div>,
-          document.body,
+          document.querySelector(".v2-shell") ?? document.body,
         )}
     </>
   );
