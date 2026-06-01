@@ -220,22 +220,29 @@ Key rules:
   `Tooltip` and the `Toast` stack. The wrapper is an ancestor of `.admin-bg`,
   so an overlay portaled here still escapes the `.admin-bg > *` stacking trap
   (`CLAUDE.md` rule #4) — but it is *also* where the `--font-admin-*` next/font
-  vars are declared **and** (since the font-scope fix) carries
-  `font-family: var(--font-ui)` itself, so the overlay inherits **Inter**
-  instead of the browser-default **serif**. Two things were both required:
-  (1) portal *into* `#admin-portal-root` so `var(--font-admin-body)` resolves
-  at all, and (2) a `#admin-portal-root { font-family: var(--font-ui); }` rule
-  in `themes/admin/index.css` so the font is actually *applied* — next/font's
-  `.variable` class only declares the custom property, it does not set
-  `font-family`, and the portaled overlay is a sibling of `.v2-shell` so it
-  misses the shell's own font rule. Portaling straight to `<body>` (the old
-  target) put overlays *outside* the admin font scope, so `var(--font-ui)`
-  couldn't resolve and they rendered in serif while the in-scope page content
-  rendered sans — the two read as different typefaces.
+  vars are declared **and** (since the font-scope fix) carries an explicit
+  `font-family` rule, so the overlay inherits **Inter** instead of the
+  browser-default **serif**. Two things were both required: (1) portal *into*
+  `#admin-portal-root` so the overlay is inside the admin font scope, and
+  (2) the `#admin-portal-root { font-family: var(--font-admin-body), … }` rule
+  in `themes/admin/index.css`. The subtlety behind (2): the theme's `--font-ui`
+  token is declared on `[data-admin-theme]` (= `<html>`) as
+  `var(--font-admin-body), …`, but `--font-admin-body` is only defined on
+  `#admin-portal-root` — and a `var()` inside a custom property is substituted
+  at the element where that property is *declared*. So `--font-ui` resolves to
+  empty up on `<html>` and inherits down empty; **every** `font-family:
+  var(--font-ui)` rule (the shell, the `.v2-page-loading` pill, the overlays)
+  silently failed and fell back to serif. The fix sets `font-family` directly
+  from `var(--font-admin-body)` (which *is* defined on `#admin-portal-root`),
+  so the wrapper renders Inter and the broken `var(--font-ui)` consumers below
+  it fall back to `inherit` → Inter. Verified in a real browser with
+  `getComputedStyle` (page card and dialog body both resolve to Inter).
   Same escape hatch the KDS loading pill uses (see the loading-state note
   below). All four overlays use `position: fixed` and `#admin-portal-root`
   carries no transform, so the move doesn't shift their viewport-anchored
-  coordinates.
+  coordinates. (`--font-display` has the same latent var-scope bug — display
+  headings currently fall back rather than rendering Fraunces — left untouched
+  here to avoid a broad restyle; fix separately if wanted.)
 - Backdrop: `rgba(0,0,0,.55)` + `backdrop-filter: saturate(120%) blur(4px)`.
 - Dialog box: `--surface-1` + `--border-strong` + `--shadow-lg` +
   `--radius-xl` (16px).

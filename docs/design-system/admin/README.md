@@ -96,15 +96,21 @@ use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
 admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
 wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
 **and** the element that carries the `--font-admin-*` next/font vars. It also
-sets `font-family: var(--font-ui)` on itself (in `themes/admin/index.css`) —
-necessary because next/font's `.variable` class only *declares* the custom
-property, so without an explicit `font-family` rule the wrapper (and anything
-portaled into it that sits outside `.v2-shell`) would inherit the
-browser-default serif from `<html>`. So an overlay portaled here inherits
-Inter. Portaling to `<body>` escapes the trap but lands *outside* the admin
-font scope, so the overlay renders serif. Use the helper for any new admin
-overlay. (Mobile's `BottomSheet` / `MobileCommandPalette` mount inside
-`MobileShell`, which is itself in-scope.)
+sets `font-family: var(--font-admin-body), …` on itself (in
+`themes/admin/index.css`) so overlays inherit Inter. That direct
+`var(--font-admin-body)` is deliberate: the `--font-ui` token is declared up on
+`[data-admin-theme]` (`<html>`) as `var(--font-admin-body), …`, but
+`--font-admin-body` only exists on `#admin-portal-root`, and a `var()` inside a
+custom property resolves at the element where it's *declared* — so `--font-ui`
+computes empty on `<html>` and inherits down empty, making every
+`font-family: var(--font-ui)` rule silently fall back to the browser-default
+serif. Setting `font-family` from `var(--font-admin-body)` directly on the
+wrapper (where it *is* defined) sidesteps that; the broken `var(--font-ui)`
+consumers below then `inherit` Inter from the wrapper. Portaling to `<body>`
+escapes the trap but lands *outside* the admin font scope, so the overlay
+renders serif. Use the helper for any new admin overlay. (Mobile's
+`BottomSheet` / `MobileCommandPalette` mount inside `MobileShell`, which is
+itself in-scope.)
 
 ## Capabilities — the source of truth
 
