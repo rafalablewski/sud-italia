@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarPlus,
   Clock,
+  Gauge,
   Package,
   Plus,
   RefreshCw,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
+import type { DemandBoard, DemandTier, DemandAction } from "@/lib/demand-exchange";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 
@@ -28,8 +30,10 @@ import {
   EmptyState,
   Input,
   Select,
+  Table,
   Tabs,
   LocationFilter,
+  type Column,
 } from "./v2/ui";
 
 interface SlotOrder {
@@ -85,7 +89,7 @@ function utilTone(u: number): "success" | "info" | "warning" | "danger" {
   return "success";
 }
 
-type View = "day" | "week";
+type View = "day" | "week" | "demand";
 
 export function AdminSlots() {
   return <AdminSlotsDesktop />;
@@ -107,6 +111,23 @@ function AdminSlotsDesktop() {
   const [bulkCreating, setBulkCreating] = useState(false);
   const [editing, setEditing] = useState<SlotData | null>(null);
   const [pendingDelete, setPendingDelete] = useState<SlotData | null>(null);
+  const [demand, setDemand] = useState<DemandBoard | null>(null);
+  const [demandLoading, setDemandLoading] = useState(false);
+
+  const fetchDemand = useCallback(async () => {
+    setDemandLoading(true);
+    try {
+      const res = await fetch(`/api/admin/demand-exchange?location=${pageLoc}&date=${date}`);
+      const j = res.ok ? await res.json() : null;
+      setDemand((j?.board as DemandBoard) ?? null);
+    } finally {
+      setDemandLoading(false);
+    }
+  }, [pageLoc, date]);
+
+  useEffect(() => {
+    if (view === "demand") void fetchDemand();
+  }, [view, fetchDemand]);
 
   const fetchSlots = useCallback(async () => {
     setLoading(true);
@@ -289,6 +310,7 @@ function AdminSlotsDesktop() {
             tabs={[
               { value: "day", label: "Day" },
               { value: "week", label: "Week" },
+              { value: "demand", label: "Demand" },
             ]}
             variant="pill"
             ariaLabel="View"
@@ -304,10 +326,14 @@ function AdminSlotsDesktop() {
 
       <div className="v2-filters">
         <LocationFilter value={pageLoc} onChange={setPageLoc} />
-        <DatePager unit={view} value={date} onChange={setDate} />
-        <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "v2-spin" : ""}`} />} onClick={fetchSlots}>Refresh</Button>
+        <DatePager unit={view === "week" ? "week" : "day"} value={date} onChange={setDate} />
+        <Button size="sm" variant="secondary" leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${loading || demandLoading ? "v2-spin" : ""}`} />} onClick={view === "demand" ? fetchDemand : fetchSlots}>Refresh</Button>
       </div>
 
+      {view === "demand" ? (
+        <DemandView board={demand} loading={demandLoading} />
+      ) : (
+        <>
       <section className="v2-kpi-grid">
         <SlotKpi label="Slots" value={dayMetrics.slots} />
         <SlotKpi label="Capacity (orders)" value={dayMetrics.capacity} />
@@ -382,6 +408,8 @@ function AdminSlotsDesktop() {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       <SlotDialog
@@ -461,6 +489,146 @@ function SlotKpi({
         )}
       </div>
     </div>
+  );
+}
+
+// =============================================================
+// Demand Exchange view
+// =============================================================
+
+const TIER_TONE: Record<DemandTier, "success" | "info" | "warning" | "danger"> = {
+  under: "info",
+  healthy: "success",
+  tight: "warning",
+  over: "danger",
+  "kitchen-capped": "danger",
+};
+const TIER_LABEL: Record<DemandTier, string> = {
+  under: "Under-demand",
+  healthy: "Healthy",
+  tight: "Tight",
+  over: "Over-demand",
+  "kitchen-capped": "Kitchen-capped",
+};
+const ACTION_TONE: Record<DemandAction, "success" | "info" | "warning" | "danger"> = {
+  raise: "info",
+  trim: "warning",
+  protect: "danger",
+  hold: "success",
+};
+const ACTION_LABEL: Record<DemandAction, string> = {
+  raise: "Raise capacity",
+  trim: "Trim / promote",
+  protect: "Protect kitchen",
+  hold: "Hold",
+};
+
+type DemandRow = DemandBoard["slots"][number];
+
+function DemandView({ board, loading }: { board: DemandBoard | null; loading: boolean }) {
+  if (loading) return <div className="v2-page-loading">Forecasting demand…</div>;
+  if (!board || board.slots.length === 0) {
+    return (
+      <Card>
+        <CardBody>
+          <EmptyState
+            icon={Gauge}
+            title="No demand to forecast"
+            description="No slots on this date. Create slots, then the Demand view forecasts covers vs capacity from real same-weekday order history."
+          />
+        </CardBody>
+      </Card>
+    );
+  }
+  const s = board.summary;
+  const cols: Column<DemandRow>[] = [
+    {
+      key: "time",
+      header: "Slot",
+      cell: (r) => <span className="mono">{r.time}</span>,
+      sortValue: (r) => r.time,
+    },
+    {
+      key: "tier",
+      header: "Demand",
+      cell: (r) => (
+        <Badge tone={TIER_TONE[r.tier]} variant="soft" dot>
+          {TIER_LABEL[r.tier]}
+        </Badge>
+      ),
+      sortValue: (r) => r.predictedDemand,
+    },
+    {
+      key: "fig",
+      header: "Forecast / capacity",
+      cell: (r) => (
+        <span className="tabular">
+          ~{r.predictedDemand} / {r.maxOrders}
+          {r.throughputCapacity != null && <span className="v2-muted"> · kitchen {r.throughputCapacity}</span>}
+        </span>
+      ),
+      sortValue: (r) => r.advertisedUtil,
+    },
+    {
+      key: "missed",
+      header: "Walked",
+      align: "right",
+      cell: (r) => (r.missedDemand > 0 ? <Badge tone="danger" variant="soft">{r.missedDemand}</Badge> : <span className="v2-muted">—</span>),
+      sortValue: (r) => r.missedDemand,
+    },
+    {
+      key: "action",
+      header: "Recommendation",
+      cell: (r) => (
+        <Badge tone={ACTION_TONE[r.action]} variant="soft">
+          {ACTION_LABEL[r.action]}
+          {(r.action === "raise" || r.action === "trim") && ` → ${r.recommendedMaxOrders}`}
+        </Badge>
+      ),
+    },
+  ];
+  const actionable = board.slots.filter((r) => r.action !== "hold");
+  return (
+    <>
+      <section className="v2-kpi-grid">
+        <SlotKpi
+          label="Predicted covers"
+          value={Math.round(s.predictedCovers)}
+          hint={`${s.fillForecastPct}% of capacity`}
+          tone={s.fillForecastPct > 90 ? "warning" : "info"}
+        />
+        <SlotKpi label="Advertised capacity" value={s.advertisedCapacity} />
+        <SlotKpi
+          label="Kitchen ceiling"
+          valueFormatted={board.kitchenCoversPerHour != null ? `${board.kitchenCoversPerHour}/hr` : "—"}
+          hint={board.kitchenCoversPerHour != null ? "demonstrated peak" : "not enough history"}
+        />
+        <SlotKpi
+          label="Missed demand"
+          value={s.missedDemand}
+          hint={s.missedDemand > 0 ? "guests who walked" : "none logged"}
+          tone={s.missedDemand > 0 ? "danger" : "success"}
+        />
+      </section>
+      <Card padding="none">
+        <CardHeader
+          title="Per-slot yield"
+          description={`Demand forecast from same-weekday history vs the kitchen's demonstrated ceiling — ${s.overCount} over · ${s.underCount} under · ${s.kitchenCappedCount} kitchen-capped.`}
+        />
+        <CardBody>
+          <Table rows={board.slots} columns={cols} rowKey={(r) => r.slotId} defaultSort={{ key: "time", dir: "asc" }} />
+          {actionable.length > 0 && (
+            <ul className="v2-stack-12" style={{ marginTop: 14, listStyle: "none", padding: 0 }}>
+              {actionable.slice(0, 8).map((r) => (
+                <li key={r.slotId} style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                  <span className="mono">{r.time}</span> <span className="v2-muted">{r.note}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+    </>
   );
 }
 

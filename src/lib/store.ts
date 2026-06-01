@@ -4830,6 +4830,38 @@ export async function recordRetentionOutreach(entry: RetentionOutreach): Promise
   });
 }
 
+/**
+ * Demand signal — a logged rejection: a guest who tried to book a slot that was
+ * full (real demand the static counter throws away). The proprietary dataset
+ * behind the Demand Exchange (src/lib/demand-exchange.ts): fill-rate only sees
+ * supply; this captures demand > supply. JSON-store backed (like slots/floor).
+ */
+export interface DemandSignal {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  fulfillmentType: string;
+  slotId: string;
+  outcome: "slot_full";
+  createdAt: string;
+}
+
+export async function getDemandSignals(locationSlug?: string, date?: string): Promise<DemandSignal[]> {
+  const all = await readJSON<DemandSignal[]>("demand-signals.json", []);
+  return all.filter(
+    (s) => (!locationSlug || s.locationSlug === locationSlug) && (!date || s.date === date),
+  );
+}
+
+export async function recordDemandSignal(sig: DemandSignal): Promise<void> {
+  await withLock("demand-signals.json", async () => {
+    const list = await readJSON<DemandSignal[]>("demand-signals.json", []);
+    list.push(sig);
+    await writeJSON("demand-signals.json", list);
+  });
+}
+
 export async function getManualPointsTotal(phone: string): Promise<number> {
   const all = await getPointAdjustments();
   const canonical = normalizePlPhoneE164(phone);

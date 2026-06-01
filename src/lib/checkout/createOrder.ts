@@ -10,6 +10,7 @@ import {
   getSlotById,
   getUpsellSettings,
   incrementSlotOrders,
+  recordDemandSignal,
 } from "@/lib/store";
 import { resolveCustomerVariant } from "@/lib/experiments-server";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
@@ -284,6 +285,19 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   const orderId = generateOrderId();
 
   if (!(await incrementSlotOrders(input.slotId))) {
+    // Rejected demand — a real guest who wanted this slot but it was full.
+    // Logged for the Demand Exchange (demand > supply). Fire-and-forget: a
+    // failure here must never affect the checkout response.
+    void recordDemandSignal({
+      id: `dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      locationSlug: input.locationSlug,
+      date: input.slotDate,
+      time: input.slotTime,
+      fulfillmentType: input.fulfillmentType,
+      slotId: input.slotId,
+      outcome: "slot_full",
+      createdAt: new Date().toISOString(),
+    }).catch(() => {});
     return {
       ok: false,
       code: "slot_capacity_lost",

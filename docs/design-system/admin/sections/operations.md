@@ -98,6 +98,31 @@ windows accept orders today, this week, or are paused.
   toast — no "are you sure" full-screen interstitial.
 - **Per-location.** A Kraków slot doesn't exist for Warszawa.
 
+### Demand view — the yield layer (Module 2)
+
+A third view tab (Day / Week / **Demand**) turns the capacity grid into a
+**Demand Exchange** (see
+[`../../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
+§3). It forecasts covers per slot from real same-weekday order history and
+compares them against the kitchen's *demonstrated* ceiling (busiest realized
+covers/hour over the last 90 days), then prescribes the yield action.
+
+- **KPI strip** (reuses `SlotKpi` / `v2-kpi-grid`): predicted covers + fill
+  forecast %, advertised capacity, kitchen ceiling (covers/hr), missed demand.
+- **Per-slot yield table** (v2 `Table`): each slot's demand tier
+  (`under` / `healthy` / `tight` / `over` / `kitchen-capped`), forecast vs
+  capacity (+ kitchen ceiling), walked-guest count, and the recommended action
+  (`raise → N` / `trim → N` / `protect` / `hold`) as a toned `Badge`, plus a
+  notes list for the actionable slots. Read-only recommendations (one-click
+  auto-resize is the Phase-2 follow-on).
+- **Rejected demand is instrumented.** Every checkout that hits a full slot
+  logs a demand signal (`createOrder` → `recordDemandSignal` →
+  `demand-signals.json`), so the board can show demand that *exceeded* supply —
+  the data a fill-rate counter throws away.
+- **Engine:** `src/lib/demand-exchange.ts` (pure-compute, unit-tested);
+  `GET /api/admin/demand-exchange?location=&date=`, manager+. No new theme CSS
+  — the view is built from existing v2 primitives.
+
 ## Floor — `/admin/floor`
 
 > Surfaced under the **Core** nav group (foundation of restaurant ops);

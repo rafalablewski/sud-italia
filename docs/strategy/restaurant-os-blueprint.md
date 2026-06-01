@@ -178,6 +178,16 @@ build pushes it to **per-slot, per-category** resolution so we can predict
 *which station* a given evening will bottleneck — a gap the current daily-only
 forecast can't fill.
 
+> **Status — keystone shipped (v1).** The **Demand view** on `/admin/slots`
+> (`src/lib/demand-exchange.ts`, `GET /api/admin/demand-exchange`) forecasts
+> covers per slot from same-weekday history, compares against the kitchen's
+> *demonstrated* covers/hour ceiling, and prescribes the yield action
+> (raise / trim / protect / hold). Critically it **instruments rejected
+> demand** — every checkout that hits a full slot logs a signal
+> (`recordDemandSignal` → `demand-signals.json`), so fill-rate becomes a real
+> demand curve. Next: one-click auto-resize (Phase 2) + per-category /
+> per-station resolution.
+
 ### 3.4 AI workflows that remove decisions
 - **Dynamic capacity:** auto-open/close and auto-resize `maxOrders` from
   predicted demand × kitchen throughput — promotes `pace-steering.ts`

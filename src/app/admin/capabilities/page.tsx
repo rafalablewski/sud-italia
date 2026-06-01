@@ -1186,6 +1186,13 @@ export default async function CapabilitiesPage() {
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
+          name: "Demand Exchange — per-slot yield",
+          status: "live",
+          href: "/admin/slots",
+          summary:
+            "Module 2 keystone (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /admin/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling → raise min-spend / deflect to pickup), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Pure-compute engine src/lib/demand-exchange.ts (7 unit tests); GET /api/admin/demand-exchange?location=&date=, manager+. Read-only recommendations for now; one-click auto-resize is the Phase-2 follow-on.",
+        },
+        {
           name: "Refunds + comp controls (Stripe)",
           status: has("STRIPE_SECRET_KEY") ? "live" : "needs-config",
           href: "/admin/orders",
