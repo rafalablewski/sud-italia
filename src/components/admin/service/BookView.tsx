@@ -161,6 +161,32 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
     } else toast.error("Could not cancel");
   };
 
+  // Inline status edit — override:true skips the self conflict-check, slotId
+  // (sent through) keeps the booking's slot link intact.
+  const setStatus = async (r: Reservation, status: Reservation["status"]) => {
+    const res = await fetch(`/api/admin/floor/reservations?location=${encodeURIComponent(loc)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: r.id,
+        customerName: r.customerName,
+        customerPhone: r.customerPhone,
+        partySize: r.partySize,
+        date: r.date,
+        time: r.time,
+        durationMin: r.durationMin,
+        tableId: r.tableId,
+        slotId: r.slotId,
+        status,
+        override: true,
+      }),
+    });
+    if (res.ok) {
+      toast.success("Updated", status);
+      await load();
+    } else toast.error("Could not update");
+  };
+
   const todays = useMemo(
     () => [...reservations].filter((r) => RES_HOLDS.has(r.status)).sort((a, b) => a.time.localeCompare(b.time)),
     [reservations],
@@ -284,10 +310,17 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
                     <div className="svc-res-name">{r.customerName}</div>
                     <div className="svc-res-meta">{r.partySize}p · table {tableLabel(r.tableId)}</div>
                   </div>
-                  <span className={`badge ${r.status === "seated" ? "success" : "info"}`}>
-                    <i className="d" />
-                    {r.status}
-                  </span>
+                  <select
+                    className={`svc-res-status ${r.status === "seated" ? "is-seated" : ""}`}
+                    value={r.status}
+                    onChange={(e) => void setStatus(r, e.target.value as Reservation["status"])}
+                    aria-label="Booking status"
+                  >
+                    <option value="booked">booked</option>
+                    <option value="seated">seated</option>
+                    <option value="completed">completed</option>
+                    <option value="no-show">no-show</option>
+                  </select>
                   <button type="button" className="svc-res-x" title="Cancel booking" onClick={() => void cancel(r.id)}>
                     ×
                   </button>

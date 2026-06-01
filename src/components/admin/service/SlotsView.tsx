@@ -29,9 +29,20 @@ const ACTION_LABEL: Record<DemandAction, string> = {
 };
 const zl0 = (g: number) => `${Math.round(g / 100)} zł`;
 
+/** The 7 ISO dates (Mon→Sun) of the week containing `d`. */
+function weekDates(d: string): string[] {
+  const base = new Date(`${d}T00:00:00Z`);
+  const monOffset = (base.getUTCDay() + 6) % 7; // Mon = 0
+  const mon = base.getTime() - monOffset * 86_400_000;
+  return Array.from({ length: 7 }, (_, i) => new Date(mon + i * 86_400_000).toISOString().slice(0, 10));
+}
+const dayLabel = (d: string) =>
+  new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
 export function SlotsView({ loc, date }: { loc: string; date: string }) {
   const toast = useToast();
   const [tab, setTab] = useState<"manage" | "demand">("manage");
+  const [range, setRange] = useState<"day" | "week">("day");
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,13 +52,16 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
   const loadSlots = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/admin/slots?location=${loc}&date=${date}`);
+      // Week view needs the whole location's slots (grouped client-side); day
+      // view scopes to the date.
+      const url = range === "week" ? `/api/admin/slots?location=${loc}` : `/api/admin/slots?location=${loc}&date=${date}`;
+      const r = await fetch(url);
       const j = r.ok ? await r.json() : [];
-      setSlots(Array.isArray(j) ? j.sort((a: TimeSlot, b: TimeSlot) => a.time.localeCompare(b.time)) : []);
+      setSlots(Array.isArray(j) ? j : []);
     } finally {
       setLoading(false);
     }
-  }, [loc, date]);
+  }, [loc, date, range]);
 
   const loadDemand = useCallback(async () => {
     const r = await fetch(`/api/admin/demand-exchange?location=${loc}&date=${date}`);
@@ -120,6 +134,30 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
     [board],
   );
 
+  const slotRow = (s: TimeSlot) => (
+    <div key={s.id} className="slt-row">
+      <span className="slt-time mono">{s.time}</span>
+      <span className="tnum slt-cap">{s.currentOrders}/{s.maxOrders}</span>
+      <div className="slt-types">
+        {s.fulfillmentTypes.map((f) => (
+          <span key={f} className="slt-type">{f}</span>
+        ))}
+      </div>
+      {typeof s.minSpendGrosze === "number" && s.minSpendGrosze > 0 && (
+        <span className="badge warning"><i className="d" />min {zl0(s.minSpendGrosze)}</span>
+      )}
+      <span className={`badge ${s.status === "active" ? "success" : "neutral"}`}><i className="d" />{s.status}</span>
+      <div className="slt-row-actions">
+        <button type="button" className="btn ghost" disabled={acting === s.id} onClick={() => void toggleStatus(s)}>
+          {s.status === "active" ? "Draft" : "Activate"}
+        </button>
+        <button type="button" className="btn ghost" disabled={acting === s.id} onClick={() => void del(s)}>Delete</button>
+      </div>
+    </div>
+  );
+
+  const byTime = (a: TimeSlot, b: TimeSlot) => a.time.localeCompare(b.time);
+
   return (
     <div className="svc slt">
       <div className="slt-bar">
@@ -127,6 +165,12 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
           <button type="button" className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
           <button type="button" className={tab === "demand" ? "on" : ""} onClick={() => setTab("demand")}>Demand</button>
         </div>
+        {tab === "manage" && (
+          <div className="seg">
+            <button type="button" className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
+            <button type="button" className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
+          </div>
+        )}
         <div className="slt-bar-actions">
           <button type="button" className="btn ghost icon" title="Refresh" onClick={() => void (tab === "demand" ? loadDemand() : loadSlots())}>
             <RefreshCw className={loading ? "crm-spin" : ""} />
@@ -142,32 +186,26 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
       {tab === "manage" ? (
         loading ? (
           <div className="pane-msg">Loading slots…</div>
-        ) : slots.length === 0 ? (
+        ) : range === "week" ? (
+          <div className="slt-week">
+            {weekDates(date).map((d) => {
+              const daySlots = slots.filter((s) => s.date === d).sort(byTime);
+              return (
+                <div key={d} className="slt-day">
+                  <div className="slt-day-h">{dayLabel(d)}<span className="n">{daySlots.length}</span></div>
+                  {daySlots.length === 0 ? (
+                    <div className="pane-msg slt-day-empty">No slots</div>
+                  ) : (
+                    <div className="slt-list">{daySlots.map(slotRow)}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : slots.filter((s) => s.date === date).length === 0 ? (
           <div className="pane-msg">No slots on {date}. Create one to open bookings.</div>
         ) : (
-          <div className="slt-list">
-            {slots.map((s) => (
-              <div key={s.id} className="slt-row">
-                <span className="slt-time mono">{s.time}</span>
-                <span className="tnum slt-cap">{s.currentOrders}/{s.maxOrders}</span>
-                <div className="slt-types">
-                  {s.fulfillmentTypes.map((f) => (
-                    <span key={f} className="slt-type">{f}</span>
-                  ))}
-                </div>
-                {typeof s.minSpendGrosze === "number" && s.minSpendGrosze > 0 && (
-                  <span className="badge warning"><i className="d" />min {zl0(s.minSpendGrosze)}</span>
-                )}
-                <span className={`badge ${s.status === "active" ? "success" : "neutral"}`}><i className="d" />{s.status}</span>
-                <div className="slt-row-actions">
-                  <button type="button" className="btn ghost" disabled={acting === s.id} onClick={() => void toggleStatus(s)}>
-                    {s.status === "active" ? "Draft" : "Activate"}
-                  </button>
-                  <button type="button" className="btn ghost" disabled={acting === s.id} onClick={() => void del(s)}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="slt-list">{slots.filter((s) => s.date === date).sort(byTime).map(slotRow)}</div>
         )
       ) : !board || board.slots.length === 0 ? (
         <div className="pane-msg">No slots to forecast on {date}.</div>

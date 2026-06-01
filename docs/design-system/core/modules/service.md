@@ -47,8 +47,10 @@ Three steps, left-to-right, then **Book slot + table**:
 
 `POST /api/admin/booking` is conflict-checked again server-side (the client
 preview is convenience, not the gate); a 409 returns the overridable reason.
-The right rail (`.svc-side`) lists the day's bookings (time · party · table ·
-status), sticky.
+The right rail (`.svc-side`) lists the day's bookings (time · party · table),
+sticky. Each booking has an **inline status** `.svc-res-status` select
+(booked → seated → completed / no-show; `POST /api/admin/floor/reservations`
+with `override` + `slotId` preserved) and a `.svc-res-x` cancel.
 
 ## Floor view
 
@@ -67,9 +69,11 @@ The live room as a Core surface (Module 3's Twin, folded in) — `.flr-*`:
 
 Capacity management + yield (`.slt-*`), with a `.seg` sub-toggle:
 
-- **Manage** — `.slt-row` per slot (time · `current/max` · fulfilment types ·
-  min-spend · status), Activate/Draft + Delete, and a New-slot dialog (single or
-  bulk). `/api/admin/slots`.
+- **Manage** — a **Day / Week** range toggle. Day = `.slt-row` per slot for the
+  date; Week = `.slt-week` of `.slt-day` groups (Mon→Sun of the selected week).
+  Each row: time · `current/max` · fulfilment types · min-spend · status, with
+  Activate/Draft + Delete, and a New-slot dialog (single or bulk).
+  `/api/admin/slots`.
 - **Demand** — the Demand Exchange board (`.tbl`): per-slot tier + forecast +
   recommendation, **Apply** / **Apply all** (capacity + min-spend).
   `/api/admin/demand-exchange`.

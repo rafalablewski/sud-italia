@@ -79,6 +79,8 @@ export const POST = withAdmin(
       time,
       durationMin,
       tableId,
+      // Preserve the merged-booking slot link on update (Service Book flow).
+      slotId: body.slotId ? String(body.slotId) : undefined,
       status,
       notes: body.notes ? String(body.notes).trim() : undefined,
     });

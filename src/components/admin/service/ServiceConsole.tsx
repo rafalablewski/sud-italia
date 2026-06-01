@@ -17,7 +17,8 @@ import { SlotsView } from "./SlotsView";
  * docs/design-system/core/modules/service.md.
  */
 
-const LOCS = getActiveLocations().map((l) => ({ key: l.slug, label: l.name }));
+// Label with the city (Kraków / Warszawa) to match the POS & Guest topbars.
+const LOCS = getActiveLocations().map((l) => ({ key: l.slug, label: l.city }));
 const FALLBACK = LOCS[0]?.key ?? "krakow";
 const VIEW_LABEL: Record<ServiceView, string> = { book: "Book", floor: "Floor", slots: "Slots" };
 
