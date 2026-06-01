@@ -263,6 +263,22 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
 }
 
 /**
+ * Best-fit open table for a party: the smallest currently-available table that
+ * still seats everyone (least wasted seats). Null when nothing fits. Pure —
+ * used by the customer dine-in auto-assign and the operator booking flow.
+ */
+export function pickOpenTable<T extends { seats: number; status: TableStatus }>(
+  tables: T[],
+  partySize: number,
+): T | null {
+  return (
+    tables
+      .filter((t) => t.status === "available" && t.seats >= partySize)
+      .sort((a, b) => a.seats - b.seats)[0] ?? null
+  );
+}
+
+/**
  * Predictive seating — given a party size, rank where to seat them: open
  * tables that fit (best-fit, least wasted seats) first, then seated tables
  * that fit by soonest predicted free-in. Pure, so the UI can run it live as

@@ -589,6 +589,13 @@ export interface Reservation {
   time: string; // HH:MM
   durationMin: number;
   tableId?: string;
+  /**
+   * Links the booking to a dine-in time slot (the merged Floor+Slots flow):
+   * the slot supplies the date/time and the booking capacity, the table the
+   * seat. Set when created via the unified booking flow; absent on legacy
+   * manually-timed reservations.
+   */
+  slotId?: string;
   status: ReservationStatus;
   notes?: string;
   createdAt: string;

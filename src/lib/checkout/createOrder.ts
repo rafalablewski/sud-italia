@@ -8,10 +8,13 @@ import {
   getLoyaltySettings,
   getSettings,
   getSlotById,
+  getTables,
   getUpsellSettings,
   incrementSlotOrders,
   recordDemandSignal,
+  saveTable,
 } from "@/lib/store";
+import { pickOpenTable } from "@/lib/floor-twin";
 import { resolveCustomerVariant } from "@/lib/experiments-server";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
@@ -317,6 +320,26 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     };
   }
 
+  // Dine-in: auto-assign the best-fit open table (the Floor Twin's pick) and
+  // seat it, so booking a dine-in slot also gets the guest a table — no manual
+  // step. Best-effort: never block the order on floor state.
+  const dineInParty =
+    input.fulfillmentType === "dine-in" && typeof input.partySize === "number"
+      ? Math.max(1, Math.min(50, Math.round(input.partySize)))
+      : undefined;
+  let assignedTableId: string | undefined;
+  if (input.fulfillmentType === "dine-in") {
+    try {
+      const pick = pickOpenTable(await getTables(input.locationSlug), dineInParty ?? 1);
+      if (pick) {
+        assignedTableId = pick.id;
+        void saveTable({ ...pick, status: "seated" }).catch(() => {}); // logs the seat transition
+      }
+    } catch {
+      // floor unavailable — leave unassigned, the host can seat manually
+    }
+  }
+
   const order: Order = {
     id: orderId,
     locationSlug: input.locationSlug,
@@ -328,10 +351,8 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     fulfillmentType: input.fulfillmentType,
     deliveryAddress:
       input.fulfillmentType === "delivery" ? (input.deliveryAddress ?? "").trim() : undefined,
-    partySize:
-      input.fulfillmentType === "dine-in" && typeof input.partySize === "number"
-        ? Math.max(1, Math.min(50, Math.round(input.partySize)))
-        : undefined,
+    partySize: dineInParty,
+    tableId: assignedTableId,
     slotId: input.slotId,
     slotDate: input.slotDate,
     slotTime: input.slotTime,

@@ -156,6 +156,27 @@ attribution.
 - **Delete is destructive** — confirmation dialog required
   (`pendingTableDelete`), portalled per the admin portal rule.
 
+### Unified booking — slot + table in one step
+
+The merged Floor + Slots flow: a dine-in booking picks a **time slot** and a
+**table** together, conflict-checked on **both** — the slot's booking capacity
+(active reservations < `maxOrders`) and table double-booking
+(`findReservationConflicts`) — with an operator `override` that forces past
+both. The reservation links the slot (`Reservation.slotId` supplies date/time +
+capacity) and the table (the seat); a reservation consumes the slot *by count*
+and never touches `slot.currentOrders` (which tracks online/POS orders), so a
+guest who books then orders isn't double-counted.
+
+- **Customer auto-assign:** dine-in checkout now assigns the best-fit open table
+  (`pickOpenTable`, the Twin's logic) and seats it — booking a dine-in slot also
+  gets the guest a table, no manual step. Best-effort; never blocks the order.
+- **Engine:** `src/lib/booking.ts` (`validateBooking` pure + `createBooking`
+  orchestration) + `pickOpenTable` in `floor-twin.ts`, unit-tested;
+  `POST /api/admin/booking?location=`, manager+ (409 on overridable conflicts).
+- The unified **Core surface** that hosts this flow (CoreShell, `.core-suite`)
+  is being built — see the blueprint; this section documents the engine that
+  backs it.
+
 ### Twin view — the live digital twin (Module 3)
 
 A third view tab (Tables / Reservations / **Twin**) turns the floor into a

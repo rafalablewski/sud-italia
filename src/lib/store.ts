@@ -11399,6 +11399,7 @@ export async function saveReservation(
       time: input.time,
       durationMin: input.durationMin,
       tableId: input.tableId,
+      slotId: input.slotId,
       status: input.status,
       notes: input.notes,
       createdAt: input.createdAt ?? new Date().toISOString(),
