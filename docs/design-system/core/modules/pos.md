@@ -36,14 +36,16 @@ surface.
 - **Persistent live ticket** on the right (396px) — never disappears,
   never collapses. The ticket *is* the order.
 
-**Responsive** (POS has no dedicated `Mobile*` component — it renders this
-`.core-suite` layout at every width). Tablet narrows the rails (cat-rail
-64px, ticket 320px) and drops the menu to 2 cols; **phone (≤ 680px)**
-stacks it — the cat-rail becomes a horizontal scroller across the top, the
-menu goes 1-col, and the ticket drops below the menu with its own capped
-(`46vh`) scroll. Below 900px the fixed `.core-suite` layer is pulled up off
-the MobileShell bottom nav so it stays reachable. See the breakpoint table
-in [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
+**Responsive.** On a **phone (< 900px)** `AdminPos` swaps to a dedicated
+**`MobilePOS`** (via `useIsMobile`) — a focused till on the same endpoints:
+a tab strip, channel segment, category chips + tap-to-add menu, a sticky
+order bar, and an order sheet with qty steppers, the real combo discount,
+*Send to kitchen* (`POST pos/orders`) and a cash/card tender
+(`PATCH pos/orders`); edits persist via the debounced `PUT pos/tabs`, so a
+check is the same on phone and iPad. On **tablet (≥ 900px)** the desktop
+`.core-suite` layout reflows in CSS — rails narrow (cat-rail 64px, ticket
+320px), menu drops to 2 cols. See the breakpoint table in
+[`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
 
 ## Concurrent open checks — tab rail
 

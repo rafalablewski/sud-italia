@@ -66,16 +66,17 @@ The desktop layouts are the design source of truth (the mockups are
 desktop). Two devices reach the Core surfaces differently:
 
 - **Phone (< 900px, `useIsMobile`)** — `AdminShell` wraps the page in
-  `MobileShell` (bottom nav). **KDS** and the **Inbox** swap to dedicated
-  `Mobile*` components (`MobileKDS`, `MobileWhatsApp`). **POS, CRM (Guests)
-  and Concierge have no `Mobile*` component**, so they render the
-  `.core-suite` layout at phone width — which is why `suite.css` carries
-  phone reflow for them (and why the fixed `.core-suite` layer is pulled up
-  off the `~60px` bottom nav below 900px, so the nav never gets trapped).
+  `MobileShell` (bottom nav) and **every Core surface swaps to a dedicated,
+  first-class `Mobile*` component** (each `Admin*` does the `useIsMobile`
+  swap): `MobilePOS`, `MobileKDS`, and the Guest trio `MobileWhatsApp`
+  (Inbox) · `MobileCrm` (Guests) · `MobileConcierge`. They reuse the same
+  server endpoints — these are purpose-built phone screens, not the desktop
+  layout shrunk down.
 - **Tablet / narrow desktop (900–1280px)** — the full `.core-suite` /
   `.kds-core` desktop surfaces render; CSS reflows the multi-pane layouts
-  down. `forcedDesktop` can also put the desktop surface on a phone, so the
-  sub-900 reflow tiers stay live.
+  down (this is what the `suite.css` media tiers below are for).
+  `forcedDesktop` can also put the desktop surface on a phone, so the
+  sub-900 reflow tiers stay live as a fallback.
 
 | Breakpoint | POS | Guest | KDS (`.kds-core`) |
 |---|---|---|---|
