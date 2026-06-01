@@ -302,7 +302,10 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   gap: 12px;
   padding-bottom: 8px;
+  /* Scrolls, but no visible scrollbar (matches the core sidebar). */
+  scrollbar-width: none;
 }
+.v2-sidebar-nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .v2-sidebar-section { display: flex; flex-direction: column; gap: 2px; }
 .v2-sidebar-section-label {
   padding: 4px 8px 2px;

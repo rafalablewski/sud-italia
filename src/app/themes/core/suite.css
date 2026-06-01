@@ -76,8 +76,9 @@
 }
 .core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; margin: 0; padding: 0; }
 .core-suite ::selection { background: var(--brand-soft-strong); }
-.core-suite ::-webkit-scrollbar { width: 10px; height: 10px; }
-.core-suite ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 99px; border: 2px solid var(--bg); }
+/* No visible scrollbars anywhere in the core surface — content still scrolls. */
+.core-suite, .core-suite * { scrollbar-width: none; }
+.core-suite ::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* ---- type helpers ---- */
 .core-suite .display { font-family: var(--display); font-weight: 500; letter-spacing: .005em; }
@@ -90,7 +91,7 @@
 /* ============================================================
    SHELL — sidebar + topbar (shared by every module)
    ============================================================ */
-.core-suite .shell { display: grid; grid-template-columns: 244px 1fr; height: 100%; overflow: hidden; }
+.core-suite .shell { display: grid; grid-template-columns: 244px 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; overflow: hidden; }
 
 .core-suite .sidebar {
   background: var(--surface-1);
@@ -98,6 +99,9 @@
   display: flex; flex-direction: column;
   padding: 14px 12px;
   gap: 4px;
+  /* grid item must be allowed to shrink below content height, or the full nav
+     overflows the (hidden) shell and .sidebar-scroll never gets a scroll. */
+  min-height: 0;
 }
 .core-suite .brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 14px; text-decoration: none; color: inherit; }
 .core-suite .brand-mark {
@@ -119,8 +123,6 @@
   align-self: stretch;
   margin: 0 -4px; padding: 0 4px;
 }
-.core-suite .sidebar-scroll::-webkit-scrollbar { width: 7px; }
-.core-suite .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 .core-suite .nav-group { margin-top: 10px; }
 .core-suite .nav-group:first-child { margin-top: 2px; }
 .core-suite .nav-group > .eyebrow { padding: 6px 8px; font-size: 10px; }
