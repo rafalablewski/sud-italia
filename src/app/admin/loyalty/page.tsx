@@ -1,11 +1,6 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminLoyalty } from "@/components/admin/AdminLoyalty";
 
-export default async function AdminLoyaltyPage() {
-  if (!(await isAuthenticated())) {
-    redirect("/admin/login");
-  }
-
-  return <AdminLoyalty />;
+// Loyalty is now the Loyalty view of the unified Guest Engagement hub.
+export default function AdminLoyaltyPage() {
+  redirect("/admin/guest?view=loyalty");
 }

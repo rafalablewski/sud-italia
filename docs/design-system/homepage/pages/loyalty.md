@@ -7,8 +7,8 @@ challenges, referral, family wallet. Lives at `/rewards` in
 `src/app/(public)/rewards/page.tsx`. Reads from `useCustomer()` for
 identity + points; fetches the programme config (tier ladder + active
 rewards catalogue) from `/api/settings/public` via
-`fetchPublicSettings()` so operator edits in `/admin/loyalty` flow
-through without a deploy. The pure-compute helpers in
+`fetchPublicSettings()` so operator edits to the programme config in
+`/admin/growth` flow through without a deploy. The pure-compute helpers in
 `src/lib/loyalty.ts` (`calculateTier`, `pointsToNextTier`,
 `calculatePointsForOrder`) take the tier ladder as a parameter — no
 hardcoded thresholds remain in the helper module.
@@ -240,9 +240,10 @@ refresh via `identify()` after every mutation).
 
 ## What loyalty is not
 
-- It is **not** the admin loyalty surface. That's
-  `/admin/loyalty` (member-list management, manual adjustments) — see
-  [`../../admin/sections/customers.md`](../../admin/sections/customers.md).
+- It is **not** the admin loyalty surface. That's the Core Guest hub's
+  Loyalty view, `/admin/guest?view=loyalty` (member roster, family
+  wallets, manual adjustments) — see
+  [`../../core/modules/loyalty.md`](../../core/modules/loyalty.md).
 - It is **not** account management. There's no account to manage —
   identity is the cookie, history is the order log.
 - It is **not** a tier-comparison shopping experience. The customer

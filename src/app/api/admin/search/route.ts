@@ -87,9 +87,9 @@ export const GET = withAdmin({}, async (req) => {
       type: "customer",
       label: `${m.name || ""} ${m.lastName || ""}`.trim() || m.nickname || m.phone,
       sublabel: m.phone,
-      // Customer detail page ships in Phase 14. Until then deep-link to loyalty
-      // search with the phone in the hash so the page can focus that member.
-      href: `/admin/loyalty#${encodeURIComponent(m.phone)}`,
+      // Deep-link to the customer detail page (loyalty is now a Guest-hub view
+      // and no longer reads a phone hash).
+      href: `/admin/customers/${encodeURIComponent(m.phone)}`,
     }));
 
   // MENU ITEMS — across every active truck. Read through getMenuWithOverrides

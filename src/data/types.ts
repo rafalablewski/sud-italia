@@ -367,6 +367,12 @@ export interface TimeSlot {
   currentOrders: number;
   fulfillmentTypes: FulfillmentType[]; // which types this slot supports
   status: SlotStatus; // "draft" until admin approves, then "active"
+  /**
+   * Minimum order value (grosze) to book this slot. The Demand Exchange yield
+   * lever for kitchen-capped slots: raise price when you can't raise volume.
+   * Unset / 0 = no minimum. Enforced server-side at checkout.
+   */
+  minSpendGrosze?: number;
 }
 
 // --- Feedback ---
@@ -583,6 +589,13 @@ export interface Reservation {
   time: string; // HH:MM
   durationMin: number;
   tableId?: string;
+  /**
+   * Links the booking to a dine-in time slot (the merged Floor+Slots flow):
+   * the slot supplies the date/time and the booking capacity, the table the
+   * seat. Set when created via the unified booking flow; absent on legacy
+   * manually-timed reservations.
+   */
+  slotId?: string;
   status: ReservationStatus;
   notes?: string;
   createdAt: string;

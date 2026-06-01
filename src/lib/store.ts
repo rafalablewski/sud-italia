@@ -153,9 +153,12 @@ const SLOTS_DDL = [
     current_orders integer NOT NULL DEFAULT 0,
     fulfillment_types text[] NOT NULL,
     status text NOT NULL DEFAULT 'draft',
+    min_spend_grosze integer,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // Additive migration for tables created before the Demand Exchange lever.
+  `ALTER TABLE slots ADD COLUMN IF NOT EXISTS min_spend_grosze integer`,
   `CREATE UNIQUE INDEX IF NOT EXISTS slots_location_date_time_unique
     ON slots (location_slug, date, time)`,
   `CREATE INDEX IF NOT EXISTS slots_location_date_idx
@@ -179,6 +182,7 @@ function rowToSlot(row: SlotRow): TimeSlot {
     currentOrders: row.currentOrders,
     fulfillmentTypes: row.fulfillmentTypes as TimeSlot["fulfillmentTypes"],
     status: row.status as TimeSlot["status"],
+    minSpendGrosze: row.minSpendGrosze ?? undefined,
   };
 }
 
@@ -192,6 +196,7 @@ function slotToValues(slot: TimeSlot) {
     currentOrders: slot.currentOrders,
     fulfillmentTypes: slot.fulfillmentTypes,
     status: slot.status,
+    minSpendGrosze: slot.minSpendGrosze ?? null,
   };
 }
 
@@ -4791,6 +4796,75 @@ export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
   // Manual adjustments shift loyaltyPointsBalance + manualPointsAdjust on
   // the customer rollup — keep that in sync.
   void recomputeCustomerRollup(adj.phone);
+}
+
+/**
+ * Win-back outreach log (Phase 2 retention — see src/lib/retention.ts). One row
+ * per executed win-back action: the incentive granted + the drafted message +
+ * the chosen channel. Powers the cooldown (don't re-nag the same guest) and the
+ * audit trail of who the system reached out to. JSON-store backed (like
+ * floor/slots) — no dedicated table needed at truck volumes.
+ */
+export interface RetentionOutreach {
+  id: string;
+  phone: string;
+  channel: "sms" | "email" | "none";
+  bonusPoints: number;
+  message: string;
+  risk: string;
+  valueAtRiskGrosze: number;
+  actedBy: string;
+  actedAt: string;
+  /** Whether the message actually went out a live provider (vs noop/log-only/skipped). */
+  sent?: boolean;
+  /** Provider status: "queued"/"sent" (live), "noop" (no provider), "skipped" (opt-out), "none". */
+  providerStatus?: string;
+  /** Opaque provider message id when sent. */
+  providerMessageId?: string;
+}
+
+export async function getRetentionOutreach(): Promise<RetentionOutreach[]> {
+  return readJSON<RetentionOutreach[]>("retention-outreach.json", []);
+}
+
+export async function recordRetentionOutreach(entry: RetentionOutreach): Promise<void> {
+  await withLock("retention-outreach.json", async () => {
+    const list = await readJSON<RetentionOutreach[]>("retention-outreach.json", []);
+    list.push(entry);
+    await writeJSON("retention-outreach.json", list);
+  });
+}
+
+/**
+ * Demand signal — a logged rejection: a guest who tried to book a slot that was
+ * full (real demand the static counter throws away). The proprietary dataset
+ * behind the Demand Exchange (src/lib/demand-exchange.ts): fill-rate only sees
+ * supply; this captures demand > supply. JSON-store backed (like slots/floor).
+ */
+export interface DemandSignal {
+  id: string;
+  locationSlug: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  fulfillmentType: string;
+  slotId: string;
+  outcome: "slot_full";
+  createdAt: string;
+}
+
+export async function getDemandSignals(locationSlug?: string, date?: string): Promise<DemandSignal[]> {
+  const all = await readJSON<DemandSignal[]>("demand-signals.json", []);
+  return all.filter(
+    (s) => (!locationSlug || s.locationSlug === locationSlug) && (!date || s.date === date),
+  );
+}
+
+export async function recordDemandSignal(sig: DemandSignal): Promise<void> {
+  await withLock("demand-signals.json", async () => {
+    const list = await readJSON<DemandSignal[]>("demand-signals.json", []);
+    list.push(sig);
+    await writeJSON("demand-signals.json", list);
+  });
 }
 
 export async function getManualPointsTotal(phone: string): Promise<number> {
@@ -11224,6 +11298,37 @@ export async function getTables(locationSlug?: string): Promise<FloorTable[]> {
   );
 }
 
+/**
+ * Floor event — a logged table status transition (seated / cleared, with a
+ * timestamp). The §4.2 instrumentation behind the Floor Twin's *measured*
+ * turn-time: pairing seated→cleared events gives real seat-occupancy dwell
+ * (pre-order wait + bussing), not just the order-timeline proxy. JSON-store
+ * backed (like floor-tables itself).
+ */
+export interface FloorEvent {
+  id: string;
+  locationSlug: string;
+  tableId: string;
+  from: string;
+  to: string;
+  at: string;
+}
+
+export async function getFloorEvents(locationSlug?: string, sinceIso?: string): Promise<FloorEvent[]> {
+  const all = await readJSON<FloorEvent[]>("floor-events.json", []);
+  return all.filter(
+    (e) => (!locationSlug || e.locationSlug === locationSlug) && (!sinceIso || e.at >= sinceIso),
+  );
+}
+
+export async function recordFloorEvent(event: FloorEvent): Promise<void> {
+  await withLock("floor-events.json", async () => {
+    const list = await readJSON<FloorEvent[]>("floor-events.json", []);
+    list.push(event);
+    await writeJSON("floor-events.json", list);
+  });
+}
+
 export async function saveTable(
   input: Omit<FloorTable, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<FloorTable> {
@@ -11239,9 +11344,22 @@ export async function saveTable(
       createdAt: input.createdAt ?? new Date().toISOString(),
     };
     const i = list.findIndex((t) => t.id === table.id);
+    const prevStatus = i >= 0 ? list[i].status : null;
     if (i >= 0) list[i] = table;
     else list.push(table);
     await writeJSON("floor-tables.json", list);
+    // Instrument the status transition for the Floor Twin's measured dwell.
+    // Fire-and-forget: a logging failure must never fail the table save.
+    if (prevStatus && prevStatus !== table.status) {
+      void recordFloorEvent({
+        id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        locationSlug: table.locationSlug,
+        tableId: table.id,
+        from: prevStatus,
+        to: table.status,
+        at: new Date().toISOString(),
+      }).catch(() => {});
+    }
     return table;
   });
 }
@@ -11281,6 +11399,7 @@ export async function saveReservation(
       time: input.time,
       durationMin: input.durationMin,
       tableId: input.tableId,
+      slotId: input.slotId,
       status: input.status,
       notes: input.notes,
       createdAt: input.createdAt ?? new Date().toISOString(),

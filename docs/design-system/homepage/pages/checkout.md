@@ -79,6 +79,11 @@ The default state when the drawer opens.
 - **Slot states:** `available` (selectable), `selected` (highlighted
   brand-red), `unavailable` (greyed, disabled), `peak` (still
   selectable, tagged "filling up").
+- **Minimum spend:** slots that the Demand Exchange has yield-capped carry
+  a `minSpend` (grosze) from `/api/slots`, shown as a "min N zł" line on the
+  tile. The minimum is **enforced server-side at checkout** (`createOrder`
+  returns `below_min_spend` with a friendly message if the food subtotal is
+  under it); the tile label is the upfront heads-up.
 - **No slots message:** "All slots are booked for this day —
   try another date" with the date strip still visible.
 - **Slot selection persists** even if the visitor switches between

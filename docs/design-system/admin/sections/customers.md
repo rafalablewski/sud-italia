@@ -2,21 +2,28 @@
 
 ← back to [Admin README](../README.md)
 
-The four pages for the relationship layer on the admin side — note that
-the **operational** relationship layer (Concierge, CRM book, WhatsApp
-inbox) lives in the Core Guest hub. These pages are the back-office
-view: the book of records, the loyalty programme, B2B accounts, and
-post-order feedback.
+The three pages for the relationship layer on the admin side — note that
+the **operational** relationship layer (Concierge, CRM book, Loyalty
+roster, WhatsApp inbox) lives in the Core Guest hub. These pages are the
+back-office view: the book of records, B2B accounts, and post-order
+feedback.
 
 | Page                | Code                                              | Role-gate |
 | ------------------- | ------------------------------------------------- | --------- |
 | `/admin/customers`  | `src/components/admin/AdminCustomers.tsx`         | **staff+** (phone-order lookups) |
-| `/admin/loyalty`    | `src/components/admin/AdminLoyalty.tsx`           | **staff+** (wallet lookups at the till) |
 | `/admin/corporate`  | `src/components/admin/AdminCorporate.tsx`         | manager+  |
 | `/admin/feedback`   | `src/components/admin/AdminFeedback.tsx`          | manager+  |
 
-The role gate matters: **customers + loyalty are staff-visible** because
-phone orders and till lookups need the record; **corporate + feedback are
+> **Loyalty moved to the Core Guest hub.** The member roster + family
+> wallets + redemption log are now the **Loyalty** view of Guest
+> Engagement (`/admin/guest?view=loyalty`; `/admin/loyalty` redirects
+> there), rebuilt onto the Core suite theme — see
+> [`../../core/modules/loyalty.md`](../../core/modules/loyalty.md). The
+> programme **config** (tiers / rewards / referral) is still edited under
+> [Growth](./growth.md).
+
+The role gate matters: **customers are staff-visible** because phone
+orders and till lookups need the record; **corporate + feedback are
 manager+** because they touch pricing and reputation.
 
 ## Common rules across the section
@@ -32,7 +39,8 @@ manager+** because they touch pricing and reputation.
 3. **One ledger for loyalty.** Points earned at POS (order-based, 1 pt
    per PLN), online, or via manual admin adjustment (`getManualPointsTotal()`)
    are summed into one balance. Never split into "POS points" vs "online
-   points".
+   points". (The loyalty tier badge surfaces here; the roster + manual
+   adjustment live in the Core Guest hub's Loyalty view.)
 4. **RFM-style status, not "VIP / regular" labels.** Customer status is
    derived from observed order recency + frequency + monetary value
    (the visible "Status" column on `AdminCustomers`); never editable
@@ -62,30 +70,15 @@ The book of records: every customer who paid, ranked by lifetime spend.
   number is required, name is required, email is optional. The record
   merges into an existing identity if the phone matches.
 
-## Loyalty — `/admin/loyalty`
+## Loyalty — moved to the Core Guest hub
 
-The wallet list — every active loyalty member with balance + tier.
-This page is the **roster + adjustment** surface; the **programme
-config itself** (tier ladder, rewards catalogue, referral mechanics)
-lives at `/admin/growth` — see `growth.md → Programme`. The subtitle
-on the page links across.
-
-- **Header:** `Loyalty` (h1), search, tier filter chips with counts
-  (`all` / `Bronze` / `Silver` / `Gold` / `Platinum`), `+ Adjust points`
-  primary (manager+ confirmation).
-- **Tier badges** use the canonical mapping: bronze → warning, silver →
-  neutral, gold → warning, platinum → info (per `TIER_TONE` in
-  `AdminLoyalty.tsx`). The bronze/gold visual overlap is deliberate —
-  both are warm metallics; tier *name* disambiguates.
-- **Table:** member name + phone, tier badge, point balance, lifetime
-  earned, last earn date, next-tier-at line ("Gold at 2,500 — needs 312
-  more").
-- **Manual point adjustment** opens a portalled dialog — quantity (±),
-  reason (free text, required), expiry (optional). Lands in the
-  customer's ledger with the admin's name attached.
-- **No "deduct as punishment".** Points adjustments are for reconciling
-  missed earns or running a goodwill credit — they aren't a moderation
-  tool.
+The loyalty roster (members / family wallets / redemptions) + manual
+point adjustment is now the **Loyalty** view of Guest Engagement
+(`/admin/guest?view=loyalty`), rebuilt onto the Core suite theme. Its
+anatomy is documented at
+[`../../core/modules/loyalty.md`](../../core/modules/loyalty.md). The
+programme **config** (tier ladder, rewards catalogue, referral mechanics)
+stays under [Growth](./growth.md) (`/admin/growth`).
 
 ## Corporate — `/admin/corporate`
 
@@ -123,9 +116,11 @@ The post-order review inbox.
 ## What Customers is not
 
 - It is **not** the live relationship layer — searching, conversation,
-  AI recommendations live in the **Core Guest hub** (`/admin/crm`,
-  `/admin/concierge`, `/admin/whatsapp`) which is the productised IP,
-  not the admin back-office.
+  AI recommendations, and the loyalty roster live in the **Core Guest
+  hub** (`/admin/guest` — Inbox / Guests / Loyalty / Concierge), which is
+  the productised IP, not the admin back-office.
+- It is **not** the loyalty roster — members / wallets / redemptions are
+  the Guest hub's Loyalty view (`/admin/guest?view=loyalty`).
 - It is **not** marketing — campaigns, upsells, bundles live under
   Growth.
 - It is **not** analytics — cohort, CLTV, segmentation live under
@@ -133,5 +128,5 @@ The post-order review inbox.
 - It is **not** support tickets — feedback here is post-order signal;
   live support flows through the Guest hub's WhatsApp surface.
 
-Customers is the **book of records + the points wallet + the B2B ledger
-+ the feedback inbox** — the back-office view of who we sell to.
+Customers is the **book of records + the B2B ledger + the feedback
+inbox** — the back-office view of who we sell to.

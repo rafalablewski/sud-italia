@@ -300,14 +300,15 @@ Per-page mapping of how each route is reached on mobile:
 | `/admin/kds` | KDS tab (kitchen role) or More → Overview → KDS |
 | `/admin/menu` | More → Operations → Menu |
 | `/admin/recipes` | More → Operations → Recipes |
-| `/admin/slots` | More → Operations → Slots |
+| `/admin/slots` | Core → Service → Slots view (redirects to `/admin/service?view=slots`) |
+| `/admin/floor` | Core → Service → Floor view (redirects to `/admin/service?view=floor`) |
 | `/admin/inventory` | Stock tab |
 | `/admin/suppliers` | Stock screen → Suppliers sub-tab |
 | `/admin/purchase-orders` | Stock screen → POs sub-tab |
 | `/admin/staff` | More → People → Staff |
 | `/admin/schedule` | More → People → Schedule |
 | `/admin/customers` | More → Customers → Customers (or Customers tab if staff) |
-| `/admin/loyalty` | More → Customers → Loyalty |
+| `/admin/loyalty` | Core → Guest Engagement → Loyalty view (redirects to `/admin/guest?view=loyalty`) |
 | `/admin/corporate` | More → Customers → Corporate |
 | `/admin/feedback` | More → Customers → Feedback |
 | `/admin/whatsapp` | More → Customers → WhatsApp |

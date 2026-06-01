@@ -6,14 +6,12 @@ import {
   UtensilsCrossed,
   FlaskConical,
   Calendar,
-  CalendarDays,
   CalendarRange,
   BarChart3,
   Boxes,
   Building2,
   CalendarCheck2,
   HardHat,
-  Heart,
   History,
   Coins,
   Languages,
@@ -36,7 +34,6 @@ import {
   Layers,
   Wallet,
   Receipt,
-  Armchair,
   Contact,
   type LucideIcon,
 } from "lucide-react";
@@ -88,16 +85,24 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     // The proprietary operating systems the truck actually runs on, grouped
-    // so the till, the line and the unified guest hub (CRM + Concierge +
-    // WhatsApp) all read as one "Core" platform.
+    // so the till, the line, the unified guest hub (CRM + Loyalty + Concierge +
+    // WhatsApp) and the foundational floor + slots primitives all read as one
+    // "Core" platform — the root of running a restaurant.
     id: "core",
     label: "Core",
     items: [
       { href: "/admin/pos", label: "POS", icon: Receipt, shortcut: "g", requiredRole: "staff" },
       { href: "/admin/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
-      // CRM, Concierge and WhatsApp are unified into one Guest Engagement hub
-      // (Inbox / Guests / Concierge views); the old routes redirect here.
+      // CRM, Loyalty, Concierge and WhatsApp are unified into one Guest
+      // Engagement hub (Inbox / Guests / Loyalty / Concierge views); the old
+      // /admin/crm, /admin/loyalty, /admin/concierge, /admin/whatsapp routes
+      // redirect here.
       { href: "/admin/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
+      // Service is the merged Floor + Slots surface on the Core suite shell:
+      // book a dine-in slot + assign a table in one step, plus Floor (live room
+      // + twin) and Slots (capacity + demand) as views. The old /admin/floor
+      // and /admin/slots redirect into it (?view=floor|slots).
+      { href: "/admin/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
     ],
   },
   {
@@ -106,8 +111,6 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, shortcut: "m", requiredRole: "manager" },
       { href: "/admin/recipes", label: "Recipes", icon: FlaskConical, requiredRole: "manager" },
-      { href: "/admin/slots", label: "Slots", icon: CalendarDays, requiredRole: "manager" },
-      { href: "/admin/floor", label: "Floor", icon: Armchair, requiredRole: "manager" },
       { href: "/admin/haccp", label: "HACCP log", icon: Thermometer, requiredRole: "staff" },
       { href: "/admin/waste", label: "Waste log", icon: Trash2, requiredRole: "staff" },
       { href: "/admin/handover", label: "Shift handover", icon: ClipboardCheck, requiredRole: "manager" },
@@ -139,7 +142,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       // Staff need to look up customers during phone orders.
       { href: "/admin/customers", label: "Customers", icon: Users, shortcut: "c", requiredRole: "staff" },
-      { href: "/admin/loyalty", label: "Loyalty", icon: Heart, shortcut: "l", requiredRole: "staff" },
+      // Loyalty moved into the Core Guest Engagement hub (/admin/guest?view=loyalty).
       { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
     ],

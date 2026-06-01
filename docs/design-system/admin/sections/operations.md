@@ -2,25 +2,30 @@
 
 ← back to [Admin README](../README.md)
 
-The four pages an operator hits during service to keep the menu live, the
-recipes consistent across locations, the available time slots correct,
-and the dining floor up to date.
+The pages an operator hits during service to keep the menu live, the
+recipes consistent across locations, the kitchen compliant, and the shift
+handed over cleanly.
 
 | Page               | Code                                                                 | Role-gate   |
 | ------------------ | -------------------------------------------------------------------- | ----------- |
 | `/admin/menu`      | `src/components/admin/AdminMenu.tsx`                                 | manager+    |
 | `/admin/recipes`   | `src/components/admin/AdminRecipes.tsx`                              | manager+    |
-| `/admin/slots`     | `src/components/admin/AdminSlots.tsx`                                | manager+    |
-| `/admin/floor`     | `src/components/admin/AdminFloor.tsx`                                | manager+    |
 | `/admin/haccp`     | `src/components/admin/AdminHaccp.tsx`                                | staff+      |
 | `/admin/waste`     | `src/components/admin/AdminWaste.tsx`                                | staff+      |
 | `/admin/handover`  | `src/components/admin/AdminHandover.tsx`                             | manager+    |
 
+> **Slots & Floor are now the Core Service surface.** They were merged and
+> rebuilt on the Core suite theme (CoreShell) as the **Service** surface —
+> book a dine-in slot + assign a table in one step, plus Floor (live room +
+> twin) and Slots (capacity + demand) views. `/admin/slots` and `/admin/floor`
+> `redirect()` into `/admin/service?view=…`; their anatomy now lives in
+> [`../../core/modules/service.md`](../../core/modules/service.md), not here.
+
 ## Common rules across the section
 
-1. **Live edits, not staged.** Every page in Operations writes through
-   to the database on save (no draft-then-publish workflow). Operators
-   need today's menu live now, not on next deploy.
+1. **Live edits, not staged.** Every page here writes through to the
+   database on save (no draft-then-publish workflow). Operators need
+   today's menu live now, not on next deploy.
 2. **Per-location reads, chain-wide writes for recipes only.** Menu /
    slots / floor are per-location; recipes are chain-wide (CLAUDE rule
    10) — a Margherita's formula is the same in Kraków and Warszawa.
@@ -73,34 +78,15 @@ The recipe board — one card per dish (deduped by base slug; CLAUDE rule
 - **Ingredient catalogue** is shared chain-wide; never expose a
   per-location ingredient list.
 
-## Slots — `/admin/slots`
+## Slots & Floor — moved to the Core Service surface
 
-Time-slot availability — operators control which pickup / delivery
-windows accept orders today, this week, or are paused.
-
-- **Header:** `Time slots` (h1), location switcher, `+ New slot` primary
-  button.
-- **Each slot:** the time window, status (`active` / `draft` /
-  `paused`), the booking count, primary action (`Activate` / `Draft`).
-- **One-tap status toggle** (`persistSlot` writes immediately, toast
-  confirms — "Slot activated" / "Slot drafted").
-- **Delete** soft-confirms (small portalled dialog), then removes with
-  toast — no "are you sure" full-screen interstitial.
-- **Per-location.** A Kraków slot doesn't exist for Warszawa.
-
-## Floor — `/admin/floor`
-
-The dine-in seating map: tables + status, drag/drop layout, party
-attribution.
-
-- **Header:** `Floor` (h1), location switcher, `+ Add table` primary.
-- **Table card:** number, seats, current status (`open` / `seated` /
-  `reserved` / `cleaning` / `out-of-service`), party name (if seated),
-  open-tab indicator if a POS tab is attached.
-- **Status badges** use the canonical `BadgeTone` ramp (`success`,
-  `warning`, `danger`, `info`, `default`) — never invent a new tone.
-- **Delete is destructive** — confirmation dialog required
-  (`pendingTableDelete`), portalled per the admin portal rule.
+Time-slot capacity, the dining floor (tables + reservations), the live Floor
+Twin, the Demand Exchange yield board, and the unified slot+table booking now
+live on the **Core** theme as the **Service** surface (CoreShell). `/admin/slots`
+and `/admin/floor` redirect into `/admin/service?view=slots|floor`. See
+[`../../core/modules/service.md`](../../core/modules/service.md) for the anatomy,
+and [`../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
+for the Demand Exchange (Module 2) + Floor Twin (Module 3) theses.
 
 ## HACCP temperature log — `/admin/haccp`
 
@@ -158,5 +144,7 @@ End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
   Core module, not an admin page.
 - It is **not** marketing / promotions — those live under Growth.
 
-Operations is the **state of the menu, the recipes, the slots, and the
-floor** — the things an operator must keep correct so service can run.
+Operations is the **state of the menu, the recipes, and the compliance /
+handover logs** — the things an operator must keep correct so service can
+run. (Slots + Floor merged into the Core **Service** surface — see
+[`../../core/modules/service.md`](../../core/modules/service.md).)

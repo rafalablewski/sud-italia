@@ -8,9 +8,13 @@ import {
   getLoyaltySettings,
   getSettings,
   getSlotById,
+  getTables,
   getUpsellSettings,
   incrementSlotOrders,
+  recordDemandSignal,
+  saveTable,
 } from "@/lib/store";
+import { pickOpenTable } from "@/lib/floor-twin";
 import { resolveCustomerVariant } from "@/lib/experiments-server";
 import type { CartItem, FulfillmentType, Order } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
@@ -94,6 +98,7 @@ export type CreateOrderResult =
         | "slot_fulfillment_mismatch"
         | "item_unavailable"
         | "invalid_quantity"
+        | "below_min_spend"
         | "slot_capacity_lost";
       message: string;
       detail?: string;
@@ -251,6 +256,17 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     }
   }
 
+  // Demand Exchange yield lever — a kitchen-capped slot can carry a minimum
+  // order value. Enforced here against the food subtotal (before delivery fee
+  // / tip), the same number the customer's cart shows.
+  if (slot.minSpendGrosze && calculatedTotal < slot.minSpendGrosze) {
+    return {
+      ok: false,
+      code: "below_min_spend",
+      message: `This time slot needs a minimum order of ${formatPrice(slot.minSpendGrosze)}.`,
+    };
+  }
+
   const segmentCustomer = await getCustomer(phoneE164);
   const appSettings = await getSettings();
   const loyalty = await getLoyaltySettings();
@@ -284,11 +300,44 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   const orderId = generateOrderId();
 
   if (!(await incrementSlotOrders(input.slotId))) {
+    // Rejected demand — a real guest who wanted this slot but it was full.
+    // Logged for the Demand Exchange (demand > supply). Fire-and-forget: a
+    // failure here must never affect the checkout response.
+    void recordDemandSignal({
+      id: `dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      locationSlug: input.locationSlug,
+      date: input.slotDate,
+      time: input.slotTime,
+      fulfillmentType: input.fulfillmentType,
+      slotId: input.slotId,
+      outcome: "slot_full",
+      createdAt: new Date().toISOString(),
+    }).catch(() => {});
     return {
       ok: false,
       code: "slot_capacity_lost",
       message: "This time slot just filled up. Please select another.",
     };
+  }
+
+  // Dine-in: auto-assign the best-fit open table (the Floor Twin's pick) and
+  // seat it, so booking a dine-in slot also gets the guest a table — no manual
+  // step. Best-effort: never block the order on floor state.
+  const dineInParty =
+    input.fulfillmentType === "dine-in" && typeof input.partySize === "number"
+      ? Math.max(1, Math.min(50, Math.round(input.partySize)))
+      : undefined;
+  let assignedTableId: string | undefined;
+  if (input.fulfillmentType === "dine-in") {
+    try {
+      const pick = pickOpenTable(await getTables(input.locationSlug), dineInParty ?? 1);
+      if (pick) {
+        assignedTableId = pick.id;
+        void saveTable({ ...pick, status: "seated" }).catch(() => {}); // logs the seat transition
+      }
+    } catch {
+      // floor unavailable — leave unassigned, the host can seat manually
+    }
   }
 
   const order: Order = {
@@ -302,10 +351,8 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     fulfillmentType: input.fulfillmentType,
     deliveryAddress:
       input.fulfillmentType === "delivery" ? (input.deliveryAddress ?? "").trim() : undefined,
-    partySize:
-      input.fulfillmentType === "dine-in" && typeof input.partySize === "number"
-        ? Math.max(1, Math.min(50, Math.round(input.partySize)))
-        : undefined,
+    partySize: dineInParty,
+    tableId: assignedTableId,
     slotId: input.slotId,
     slotDate: input.slotDate,
     slotTime: input.slotTime,

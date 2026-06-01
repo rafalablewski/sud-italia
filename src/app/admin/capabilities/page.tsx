@@ -282,7 +282,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin/guest",
           summary:
-            "One surface for the relationship layer (/admin/guest) with three views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and all three share the canonical customer record, identity-merge rules and loyalty-points ledger.",
+            "One surface for the relationship layer (/admin/guest) with four views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Loyalty, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/loyalty, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
         },
         {
           name: "CRM — Regulars customer book",
@@ -292,6 +292,43 @@ export default async function CapabilitiesPage() {
             "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. A 'Send today' prompt surfaces today's birthdays + first-order anniversaries (GET /api/admin/campaigns/triggers). Each profile carries a GDPR panel — Export (DSAR, Art. 15, GET /api/admin/gdpr/export) and Erase (Art. 17, owner-only, POST /api/admin/gdpr/delete). Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
             "Relationship-health score and next-best-action are heuristics computed from RFM + reliability, not an ML churn model. No-shows are derived from cancelled orders.",
+        },
+        {
+          name: "Loyalty — roster, wallets & redemptions",
+          status: "live",
+          href: "/admin/guest?view=loyalty",
+          summary:
+            "The fourth Guest-hub view (/admin/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+        },
+        {
+          name: "Customer Intelligence — per-guest behavioural graph",
+          status: "live",
+          href: "/admin/guest?view=loyalty",
+          summary:
+            "Keystone of the Customer Identity Network (docs/strategy/restaurant-os-blueprint.md). Every member row in the Loyalty view has an Intelligence action that opens a per-guest behavioural graph derived live from real orders (no mock data): go-to dishes + category, the temporal signature in Europe/Warsaw time (the 'Friday ~18:30' pattern), visit cadence → predicted next visit + a churn-hazard assessment (low / watch / high / lost, aligned to the 90-day lapse line), conditional attach rules ('adds Tiramisù when party ≥ 4' with lift + support), channel mix, average order value, and a one-line next-order prediction headline. Pure-compute engine src/lib/customer-intelligence.ts (unit-tested, 10 cases) over getOrdersByPhone(); served by GET /api/admin/customer-intelligence?phone= (withAdmin, staff+, chain-wide per guest). Confidence is gated by order count so a thin history never over-claims.",
+        },
+        {
+          name: "Win-back — auto-retention (Phase 2)",
+          // The queue + incentive grant always work; auto-send goes live the
+          // moment an SMS (Twilio) or email (Mailgun) provider is configured.
+          // Until then sends degrade to a logged no-op, so introspect rather
+          // than claim "live" delivery.
+          status: has("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM")
+            ? "live"
+            : has("MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM")
+              ? "live"
+              : "needs-config",
+          href: "/admin/guest?view=loyalty",
+          envVars: [
+            "TWILIO_ACCOUNT_SID",
+            "TWILIO_AUTH_TOKEN",
+            "TWILIO_FROM",
+            "MAILGUN_API_KEY",
+            "MAILGUN_DOMAIN",
+            "MAILGUN_FROM",
+          ],
+          summary:
+            "Turns the Customer Intelligence keystone from informing into operating (blueprint Phase 2). The Win-back tab in the Loyalty view runs the intelligence engine across every guest, queues the ones whose churn hazard says they're slipping (high/lost), and ranks them by value-at-risk (hazard × lifetime spend) so comp dollars go where the money is. For each it prescribes the whole action: an incentive sized to lifetime value, the consented channel (SMS / email, respecting the per-channel opt-out flags — or flags 'needs consent'), and a message drafted from the guest's own go-to dish. Approve → the system grants the points on the real loyalty ledger (addPointAdjustment) AND sends the message on the consented channel through getSmsProvider()/getEmailProvider() (opt-outs honoured, audit-logged as comms.win_back), then logs the outreach (retention-outreach.json) so a 30-day cooldown holds. 'Send all reachable' runs the whole queue in one click — the decay-to-autonomy lever. When no SMS/email provider is configured the send degrades to a logged no-op (the incentive still applies), so it never breaks without creds; the tab shows which channels are live vs logged-only. Engine src/lib/retention.ts (pure-compute, 6 unit tests); GET/POST /api/admin/retention, manager+.",
         },
         {
           name: "Concierge — agent commerce (MCP + WhatsApp)",
@@ -572,7 +609,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Three ordering modes (takeout / delivery / dine-in)",
           status: "live",
-          href: "/admin/slots",
+          href: "/admin/service?view=slots",
           summary:
             "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /admin/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
         },
@@ -645,8 +682,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty points",
           status: "live",
-          href: "/admin/loyalty",
-          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live at /admin/loyalty; the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+          href: "/admin/guest?view=loyalty",
+          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/admin/guest?view=loyalty — /admin/loyalty redirects there); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Referral codes",
@@ -753,7 +790,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty rewards reshape",
           status: "live",
-          href: "/admin/loyalty",
+          href: "/admin/growth",
           summary: "Audit §3 — removed the strictly-dominated 'PLN 10 Off' reward (100 points → 10 zł value vs Free Drink at 50 pts → up to 11.90 zł — customers spot the bad ratio and avoid it, dragging perceived loyalty value). New ladder: Free Drink 50pts, Free Garlic Bread 70pts, Free Dessert 120pts, Free Personal Pizza 180pts, Free Pizza 280pts, 25 PLN Off 280pts. No rung is strictly dominated by another (each unlocks a different category or threshold). Value-per-point declines as customers save up — that's intentional save-up incentive economics, with the higher rungs (Free Pizza, 25 zł Off) acting as aspirational targets while the 50-pt entry stays attractive for fast redeem.",
         },
         {
@@ -982,11 +1019,25 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor — tables + reservations",
           status: "live",
-          href: "/admin/floor",
+          href: "/admin/service?view=floor",
           summary:
             "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
           caveats:
             "Tables + reservations persist via the JSON store (readJSON/writeJSON) like slots/suppliers — no dedicated Postgres table yet, fine at truck volumes. Reservations are independent of the time-Slots system (they don't reserve a checkout slot). No spatial floor-map / drag layout — tables are a list/grid.",
+        },
+        {
+          name: "Floor Twin — live room digital twin",
+          status: "live",
+          href: "/admin/service?view=floor",
+          summary:
+            "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time, spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Turn-time has two sources: MEASURED seat-occupancy (the §4.2 instrumentation — table status transitions are now logged on every save via saveTable → recordFloorEvent → floor-events.json, and seated→cleared pairs give true dwell incl. pre-order wait + bussing; a still-open seated run gives an exact live seat time) and, as a fallback when a table has no transition history, the dine-in order-timeline proxy (createdAt→paidAt). Measured rows are tagged. Phase 2 — the acts: predictive-seating moves (Seat / Clear a table straight from the Twin table or the recommender — POST /api/admin/floor-twin flips the status via saveTable, which logs the transition, closing the loop with the measured-dwell instrumentation) and bottleneck pre-emption (the Twin runs the live KDS pace engine, analyzeTruck, and shows a 'Kitchen filling up / overloaded — pace new seating' banner with the bottleneck station + utilisation when the line can't absorb more covers). Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 7 unit tests, dwell guardrails 5–360m); GET/POST /api/admin/floor-twin?location=, staff+.",
+        },
+        {
+          name: "Unified booking — slot + table in one step",
+          status: "live",
+          href: "/admin/service",
+          summary:
+            "Lives on the new merged Floor + Slots Core surface (/admin/service, CoreShell / .core-suite, like POS & Guest): a booking console where the operator picks a dine-in slot (with live remaining capacity) and a table (lit up live for fit + conflict via the same findReservationConflicts the server enforces), with a Recommend button that auto-picks the best-fit table, then Book. The merged Floor + Slots flow: book a dine-in time slot AND assign a table in a single operation, conflict-checked on BOTH the slot's booking capacity (active reservations < maxOrders) and table double-booking (findReservationConflicts), with an operator override that forces past both. The reservation links the slot (Reservation.slotId — supplies date/time + capacity) and the table (the seat). Capacity model avoids double-counting: a reservation consumes the slot by count, never touching slot.currentOrders (which tracks online/POS orders). Customer dine-in checkout now AUTO-ASSIGNS the best-fit open table via the Floor Twin's pickOpenTable (and seats it, logging the transition) so booking a dine-in slot also gets the guest a table with no manual step — best-effort, never blocks the order. Pure validation (validateBooking) + pickOpenTable are unit-tested; orchestration in src/lib/booking.ts; POST /api/admin/booking?location= (manager+, 409 on overridable conflicts).",
         },
         {
           name: "Inventory + recipes + stock + distributor offerings",
@@ -1145,8 +1196,15 @@ export default async function CapabilitiesPage() {
         {
           name: "Slots",
           status: "live",
-          href: "/admin/slots",
+          href: "/admin/service?view=slots",
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
+        },
+        {
+          name: "Demand Exchange — per-slot yield",
+          status: "live",
+          href: "/admin/service?view=slots",
+          summary:
+            "Module 2 (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /admin/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Phase 2 — the act, two yield levers: for demand the kitchen can take, one-click 'Apply' resizes capacity (never below what's already booked); for kitchen-capped (protect) slots, where volume can't go up, it sets a MINIMUM SPEND sized from the slot's realized AOV (raise price, not volume). 'Apply all' is the autonomy lever — re-derives the board server-side and applies capacity + min-spend to every changed slot, audit-logged as slots.resize. The minimum is real end-to-end: TimeSlot.minSpendGrosze (additive min_spend_grosze column) is exposed on the public /api/slots (the SlotPicker shows 'min N zł') and ENFORCED server-side at checkout (createOrder returns below_min_spend if the food subtotal is under it). Pure-compute engine src/lib/demand-exchange.ts (9 unit tests); GET/POST /api/admin/demand-exchange?location=&date=, manager+.",
         },
         {
           name: "Refunds + comp controls (Stripe)",

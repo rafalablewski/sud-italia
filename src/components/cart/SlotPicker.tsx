@@ -10,6 +10,8 @@ interface ClientSlot {
   time: string;
   fulfillmentTypes: string[];
   spotsLeft: number;
+  /** Minimum order value (grosze) to book this slot; 0 / absent = none. */
+  minSpend?: number;
 }
 
 interface SlotPickerProps {
@@ -166,6 +168,11 @@ export function SlotPicker({ locationSlug, fulfillmentType }: SlotPickerProps) {
                         ? <>Only <span className="num">{slot.spotsLeft}</span> left · <em>ultimi {slot.spotsLeft}</em></>
                         : <><span className="num">{slot.spotsLeft}</span> slots · <em>liberi</em></>}
                   </span>
+                  {slot.minSpend && slot.minSpend > 0 ? (
+                    <span className="v8-cart-slot-min">
+                      min <span className="num">{Math.round(slot.minSpend / 100)}</span> zł
+                    </span>
+                  ) : null}
                 </button>
               );
             })}

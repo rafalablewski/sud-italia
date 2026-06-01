@@ -148,18 +148,30 @@ The bump / ready / undo button on a ticket.
 
 ## POS · Guest — now `.core-suite` (`suite.css`)
 
-POS and the Guest hub (CRM · Concierge · WhatsApp) were rebuilt onto the
-**`.core-suite`** vocabulary ported from the mockup's `system.css` — the
-`.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-console` thread classes documented
-here previously are **removed**. Their component anatomy now lives in the
-module docs, which describe the real shipped markup:
+POS and the Guest hub (CRM · Loyalty · Concierge · WhatsApp) were rebuilt
+onto the **`.core-suite`** vocabulary ported from the mockup's
+`system.css` — the `.pos-*` / `.crm-*` / `.cncrg-*` / `.wa-console`
+thread classes documented here previously are **removed**. Their
+component anatomy now lives in the module docs, which describe the real
+shipped markup:
 
 - **POS** — `../modules/pos.md` (`.tabrail` / `.cat-rail` / `.prod` /
   `.ticket` / `.course` / `.tk`-style ticket lines).
 - **CRM** (Guests) — `../modules/crm.md` (`.book` / `.cust` / `.profile`
   / `.panel` / health ring + RFM `.rfm`).
+- **Loyalty** — `../modules/loyalty.md` (`.loy` shell + `.loy-kpis` `.bk`
+  cards + `.loy-filters` + `.tbl` roster + `.loy-wallets` cards + the
+  `.badge.bronze` / `.silver` / `.gold` tier tones that complete the
+  `.badge` ramp). The **Customer Intelligence** dialog adds self-contained
+  `.ci-*` classes + `.ci-badge` tones scoped under `.v2-dialog-core` (the
+  portal is outside `.core-suite`, so it can't inherit core primitives). The
+  **Win-back** tab (Phase-2 retention) adds `.wb-*` classes — and, since it
+  renders inside `.core-suite`, uses the core `.badge` tones directly.
 - **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
   allergen grid).
+- **Service** — `../modules/service.md` (the merged Floor + Slots booking
+  console: `.svc` shell + `.svc-grid` / `.svc-block` form + `.fchip` slot/table
+  pickers + `.svc-side` bookings rail). Built from core primitives — no v2.
 - **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`
   bubbles / `.ctx` order context). The `.wa-console` / `.wa-fa-*` /
   `.wa-cfg-*` classes in `index.css` survive only for the Settings /
