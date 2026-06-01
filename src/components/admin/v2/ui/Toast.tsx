@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { adminOverlayTarget } from "./portal";
 import {
   createContext,
   useCallback,
@@ -134,7 +135,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               );
             })}
           </div>,
-          document.body,
+          adminOverlayTarget(),
         )}
     </ToastContext.Provider>
   );

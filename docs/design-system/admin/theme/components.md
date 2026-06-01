@@ -213,8 +213,22 @@ Key rules:
 
 ## Dialogs / overlays
 
-- Portaled to `document.body`. The admin layout traps fixed elements
-  otherwise — see `CLAUDE.md` rule #4.
+- **Portaled to `#admin-portal-root` (the admin layout wrapper), falling back
+  to `document.body`** — via the shared `adminOverlayTarget()` helper in
+  `v2/ui/portal.ts`. Every portaled admin overlay uses it: `Dialog` /
+  `ConfirmDialog` / `InfoButton` (which build on `Dialog`), plus `Popover`,
+  `Tooltip` and the `Toast` stack. The wrapper is an ancestor of `.admin-bg`,
+  so an overlay portaled here still escapes the `.admin-bg > *` stacking trap
+  (`CLAUDE.md` rule #4) — but it is *also* where the `--font-admin-*` next/font
+  vars are declared, so the overlay's `font-family: var(--font-ui)` resolves to
+  **Inter** instead of the browser-default **serif**. Portaling straight to
+  `<body>` (the old target) put overlays *outside* the admin font scope, so
+  `var(--font-ui)` couldn't resolve and they rendered in serif while the
+  in-scope page content rendered sans — the two read as different typefaces.
+  Same escape hatch the KDS loading pill uses (see the loading-state note
+  below). All four overlays use `position: fixed` and `#admin-portal-root`
+  carries no transform, so the move doesn't shift their viewport-anchored
+  coordinates.
 - Backdrop: `rgba(0,0,0,.55)` + `backdrop-filter: saturate(120%) blur(4px)`.
 - Dialog box: `--surface-1` + `--border-strong` + `--shadow-lg` +
   `--radius-xl` (16px).

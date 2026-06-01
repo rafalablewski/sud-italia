@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { adminOverlayTarget } from "./portal";
 import {
   cloneElement,
   isValidElement,
@@ -140,7 +141,7 @@ export function Popover({
           >
             {typeof children === "function" ? children(close) : children}
           </div>,
-          document.body,
+          adminOverlayTarget(),
         )}
     </>
   );

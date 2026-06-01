@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { Button } from "./Button";
+import { adminOverlayTarget } from "./portal";
 
 interface Props {
   open: boolean;
@@ -108,7 +109,7 @@ export function Dialog({
         {footer && <footer className="v2-dialog-footer">{footer}</footer>}
       </div>
     </div>,
-    document.body,
+    adminOverlayTarget(),
   );
 }
 

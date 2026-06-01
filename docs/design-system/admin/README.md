@@ -87,8 +87,20 @@ tokens — never hard-code colours in a page.
 `.admin-bg > *` sets `position: relative; z-index: 1` on every direct child,
 which creates a stacking context that **traps fixed-position elements**.
 Every modal, drawer, popover, toast, or dropdown menu in admin must mount
-via `createPortal(node, document.body)`. Relying on `z-index` alone will
-silently break in production.
+via `createPortal`. Relying on `z-index` alone will silently break in
+production.
+
+**Portal target: `#admin-portal-root`, not `<body>`.** The shared v2 overlays
+(`Dialog` / `ConfirmDialog` / `InfoButton` / `Popover` / `Tooltip` / `Toast`)
+use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
+admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
+wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
+**and** the element that carries the `--font-admin-*` next/font vars — so an
+overlay's `font-family: var(--font-ui)` resolves to Inter. Portaling to
+`<body>` escapes the trap but lands *outside* the admin font scope, so the
+overlay renders in the browser-default serif. Use the helper for any new
+admin overlay. (Mobile's `BottomSheet` / `MobileCommandPalette` mount inside
+`MobileShell`, which is itself in-scope.)
 
 ## Capabilities — the source of truth
 

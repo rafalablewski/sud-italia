@@ -213,6 +213,12 @@ dialog body. Used by the WhatsApp Settings / Broadcast / Funnel dialogs
 and the POS table-assign / address dialogs. The full-screen tender pad is
 a bespoke `.core-suite-overlay` instead.
 
+Like every shared v2 overlay, these portal to `#admin-portal-root` (via
+`adminOverlayTarget()` in `v2/ui/portal.ts`), not `<body>` — that wrapper
+also wraps Core routes, so it keeps the dialog inside the `--font-admin-*`
+font scope. See the Dialogs/overlays note in
+[`admin/theme/components.md`](../../admin/theme/components.md#dialogs--overlays).
+
 ## What this component set is not
 
 - It is **not** the Admin component set. Admin has `glass-card`,
