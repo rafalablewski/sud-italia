@@ -63,20 +63,21 @@ The Core theme ships in **two** stylesheets, both loaded only by
 ## Responsive — phone / tablet / web
 
 The desktop layouts are the design source of truth (the mockups are
-desktop). Two devices reach the Core surfaces differently:
+desktop), and — per the **retired mobile shell** (`useIsMobile()` is now a
+hardwired desktop shim; see
+[`../../admin/mobile/README.md`](../../admin/mobile/README.md)) — phones get
+the **same layout, reflowed 1:1**, not a separate `Mobile*` screen. The
+`Mobile*` components are dead code pending a cleanup PR; **do not add new
+ones or wire `useIsMobile` swaps** on Core surfaces.
 
-- **Phone (< 900px, `useIsMobile`)** — `AdminShell` wraps the page in
-  `MobileShell` (bottom nav) and **every Core surface swaps to a dedicated,
-  first-class `Mobile*` component** (each `Admin*` does the `useIsMobile`
-  swap): `MobilePOS`, `MobileKDS`, and the Guest trio `MobileWhatsApp`
-  (Inbox) · `MobileCrm` (Guests) · `MobileConcierge`. They reuse the same
-  server endpoints — these are purpose-built phone screens, not the desktop
-  layout shrunk down.
-- **Tablet / narrow desktop (900–1280px)** — the full `.core-suite` /
-  `.kds-core` desktop surfaces render; CSS reflows the multi-pane layouts
-  down (this is what the `suite.css` media tiers below are for).
-  `forcedDesktop` can also put the desktop surface on a phone, so the
-  sub-900 reflow tiers stay live as a fallback.
+- **Phone (< 900px)** — the `.core-suite` / `.kds-core` desktop surface
+  renders and the `suite.css` media tiers below reflow it: panes collapse to
+  one column, side rails become horizontal scrollers, headers `flex-wrap`.
+  Core routes own the viewport (no admin chrome), so the **CoreShell sidebar
+  collapses to a 52px icon rail** (never hidden — it's the only way to
+  navigate out); KDS keeps its in-header "Admin" back link.
+- **Tablet / narrow desktop (900–1280px)** — the full desktop surfaces
+  render; the same media tiers thin the multi-pane layouts down.
 
 | Breakpoint | POS | Guest | KDS (`.kds-core`) |
 |---|---|---|---|
@@ -84,7 +85,7 @@ desktop). Two devices reach the Core surfaces differently:
 | ≤ 1100 | — | Inbox drops profile (`.ctx`) | `.cmdbar` 4-col, trucks 1-col |
 | ≤ 1024 | ticket pane 320px | Inbox 2-pane, Concierge 1-col | — |
 | ≤ 1000 | — | — | board 1-col |
-| ≤ 900 | (phone) sidebar gone | CRM 1-col, Inbox 1-pane | header wraps |
+| ≤ 900 | sidebar → 52px icon rail | CRM 1-col, Inbox 1-pane | header wraps |
 | ≤ 820 | — | — | cmdbar 2-col, stats 3-col, capmeter full |
 | ≤ 680 | stacks: cat-rail scrolls top, ticket below | — | — |
 | ≤ 560 | — | — | viewswitch on its own row, queue 1-col |

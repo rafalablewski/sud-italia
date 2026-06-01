@@ -965,11 +965,19 @@
   .core-suite .pos-body { grid-template-columns: 64px 1fr 320px; }
 }
 @media (max-width: 900px) {
-  /* phone: MobileShell's bottom nav (z-30, ~60px) is present — stop the
-     fixed Core layer above it so the nav stays tappable, never trapped. */
-  .core-suite { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
-  .core-suite .shell { grid-template-columns: 1fr; }
-  .core-suite .sidebar { display: none; }
+  /* phone: Core routes own the viewport (no separate mobile shell), so the
+     CoreShell sidebar IS the only nav — collapse it to an icon rail instead
+     of hiding it, so the user can always navigate out. The desktop layout
+     reflows 1:1, just denser. */
+  .core-suite .shell { grid-template-columns: 52px 1fr; }
+  .core-suite .sidebar { padding: 12px 6px; align-items: center; }
+  .core-suite .sidebar .brand { justify-content: center; padding: 4px 0 12px; gap: 0; }
+  .core-suite .sidebar .brand > div,
+  .core-suite .sidebar .nav-group > .eyebrow,
+  .core-suite .sidebar-foot { display: none; }
+  .core-suite .nav-item { justify-content: center; gap: 0; font-size: 0; padding: 9px 0; }
+  .core-suite .nav-item .dot { display: none; }
+  .core-suite .nav-ico { width: 18px; height: 18px; opacity: 1; }
   .core-suite .kpis { grid-template-columns: repeat(3, 1fr); }
   .core-suite .guest { grid-template-columns: 1fr; }
   .core-suite .convs { border-right: 0; }

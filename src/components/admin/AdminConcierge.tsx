@@ -17,8 +17,6 @@ import Link from "next/link";
 import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
 import { useToast } from "./v2/ui/Toast";
-import { useIsMobile } from "./v2/mobile";
-import { MobileConcierge } from "./mobile/MobileConcierge";
 
 type CapId =
   | "get_menu"
@@ -79,15 +77,7 @@ function syntaxJson(obj: unknown): string {
   );
 }
 
-export function AdminConcierge(props: Props) {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileConcierge {...props} />;
-  }
-  return <AdminConciergeDesktop {...props} />;
-}
-
-function AdminConciergeDesktop({ meta, settings, byLocation, waConfigured }: Props) {
+export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Props) {
   const toast = useToast();
   const [exposure, setExposure] = useState<Record<string, boolean>>(settings.exposure);
   const [loc, setLoc] = useState("krakow");

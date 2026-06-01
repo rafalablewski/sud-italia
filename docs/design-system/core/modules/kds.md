@@ -234,8 +234,9 @@ one tap from any lens. `.kds-top` is `position: sticky; top: 0` and
 clock / ctrls drop to a second line (≤ 560px puts the switch on its own
 row). All ctrl buttons are 34px square, 7px radius, hairline border,
 neutral. Active = `--raised` bg + bright text. Real `requestFullscreen` is
-wired in on the live app and the mockup. (Phones get the dedicated
-`MobileKDS` instead; these reflow tiers cover tablet + `forcedDesktop`.)
+wired in on the live app and the mockup. (The mobile shell is retired, so
+`.kds-core` renders at every width and these reflow tiers carry phone +
+tablet; `MobileKDS` is dead code pending cleanup.)
 
 When the owner-only sandbox simulator is on, a **`.kds-badge.platinum`**
 pill (soft-platinum fill + a 6px dot, the mockup's `.badge.platinum`

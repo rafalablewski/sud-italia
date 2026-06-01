@@ -22,8 +22,6 @@ import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
 import { Button, Dialog } from "./v2/ui";
 import { useToast } from "./v2/ui/Toast";
-import { useIsMobile } from "./v2/mobile";
-import { MobileCrm } from "./mobile/MobileCrm";
 
 /* ====================== Types (mirror /api/admin/crm) ====================== */
 interface CrmCustomer {
@@ -268,14 +266,6 @@ function inSeg(c: CrmCustomer, seg: string): boolean {
 }
 
 export function AdminCrm() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileCrm />;
-  }
-  return <AdminCrmDesktop />;
-}
-
-function AdminCrmDesktop() {
   const toast = useToast();
   const [data, setData] = useState<CrmCustomer[]>([]);
   // "Send today" greeting triggers (birthdays + first-order anniversaries),

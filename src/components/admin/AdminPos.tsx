@@ -39,8 +39,6 @@ import {
 import type { CartItem, PosCourse } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
-import { useIsMobile } from "./v2/mobile";
-import { MobilePOS } from "./mobile/MobilePOS";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
 const TABLE_STATUS_TONE: Record<FloorTable["status"], BadgeTone> = {
@@ -116,18 +114,7 @@ interface Offer {
   apply: () => void;
 }
 
-export function AdminPos(props: {
-  menusByLocation: Record<string, MenuItem[]>;
-  upsellByLocation: Record<string, UpsellConfig | null>;
-}) {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobilePOS {...props} />;
-  }
-  return <AdminPosDesktop {...props} />;
-}
-
-function AdminPosDesktop({
+export function AdminPos({
   menusByLocation,
   upsellByLocation,
 }: {
