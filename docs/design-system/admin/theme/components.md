@@ -240,9 +240,12 @@ Key rules:
   Same escape hatch the KDS loading pill uses (see the loading-state note
   below). All four overlays use `position: fixed` and `#admin-portal-root`
   carries no transform, so the move doesn't shift their viewport-anchored
-  coordinates. (`--font-display` has the same latent var-scope bug — display
-  headings currently fall back rather than rendering Fraunces — left untouched
-  here to avoid a broad restyle; fix separately if wanted.)
+  coordinates. `--font-display` had the **same** var-scope bug (the only admin
+  consumers are the sidebar brand wordmark `.v2-brand-name-line` /
+  `.as-brand-name`), so it's repaired the same way: `#admin-portal-root`
+  re-declares **both** `--font-ui` and `--font-display`, so the brand wordmark
+  now resolves to **Fraunces** while body/overlays stay Inter (verified via
+  `getComputedStyle`).
 - Backdrop: `rgba(0,0,0,.55)` + `backdrop-filter: saturate(120%) blur(4px)`.
 - Dialog box: `--surface-1` + `--border-strong` + `--shadow-lg` +
   `--radius-xl` (16px).
