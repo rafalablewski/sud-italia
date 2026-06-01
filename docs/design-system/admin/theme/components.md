@@ -302,23 +302,30 @@ on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
 core-route case above, harmless everywhere else (it already resolves to Inter
 inside the shell).
 
-## Sidebar — shared nav, no shortcut chips
+## Sidebar — one component, one vocabulary (`.app-sidebar`)
 
-The admin sidebar (`.v2-sidebar`, `components/admin/v2/Sidebar.tsx`) and the
-Core suite sidebar (`.core-suite .sidebar`, `CoreShell.tsx`) are now **one
-look**. Both pull the same role-filtered tree from `useNavSections()`
-(`components/admin/v2/useNavSections.ts`), and `.v2-nav-link` is set to **13px /
-450** to match `.core-suite .nav-item`.
+There is a **single** sidebar: `components/admin/v2/Sidebar.tsx`, class
+`.app-sidebar` (`.as-brand` / `.as-eyebrow` / `.as-item` / `.as-scroll` /
+`.as-foot`). Both **AdminShell** and **CoreShell** (POS / Guest) render it, so
+the nav is pixel-identical everywhere. The Core suite was the source of truth
+for the look; the old parallel `.v2-sidebar` / `.v2-brand-name-sub` markup is
+retired (its CSS is dead, pending cleanup). `.app-sidebar` styles live here in
+admin CSS but use only tokens that resolve in **both** the `[data-admin-theme]`
+and `.core-suite` scopes, so the one component looks right in either shell.
 
-- **No `g`-key chips.** The `.v2-nav-kbd` hint chips were removed (the class is
-  gone from CSS too). The `g`+letter shortcuts still work — they're driven by a
-  global key handler in `AdminShell.tsx` off `nav.config`, and the full list is
-  discoverable in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`), not on each
-  row. Keep `shortcut` in `nav.config`; it feeds the handler + the modal.
-- **Footer differs by shell, by design.** Admin keeps the `LocationSwitcher` +
-  Log out; Core keeps the operator avatar foot. Nav area is identical.
+- **Full nav, role-filtered**, from `useNavSections()`
+  (`components/admin/v2/useNavSections.ts`); active state by `pathname`.
+- **No `g`-key chips** (the old `.v2-nav-kbd`). The `g`+letter shortcuts still
+  work via the global handler in `AdminShell.tsx` off `nav.config`, and the
+  full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep
+  `shortcut` in `nav.config`; it feeds the handler + the modal.
+- **Footer:** `LocationSwitcher` + Log out, on every surface (POS/Guest gained
+  these; the old core avatar foot is retired).
+- **Scrolls with no visible scrollbar** (`.as-scroll`: `overflow-y:auto` +
+  `scrollbar-width:none`). KDS is the exception — its own full-screen wall, no
+  sidebar.
 
-See the core side in [core components → Sidebar](../../core/theme/components.md#sidebar--one-nav-across-admin--core-coreshelltsx).
+See the core side in [core components → Sidebar](../../core/theme/components.md#sidebar--the-shared-app-sidebar).
 
 ## Tables
 

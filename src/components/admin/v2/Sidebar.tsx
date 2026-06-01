@@ -2,113 +2,75 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, LogOut, PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 import { useNavSections } from "./useNavSections";
 import { LocationSwitcher } from "./LocationSwitcher";
-
-const COLLAPSE_KEY = "sud-admin-sidebar-collapsed";
 
 interface Props {
   onCloseMobile?: () => void;
   isMobile?: boolean;
 }
 
-export function Sidebar({ onCloseMobile, isMobile = false }: Props) {
+/**
+ * The single admin sidebar — one component, one vocabulary (`.app-sidebar` /
+ * `.as-*`), rendered by both AdminShell and CoreShell (POS / Guest). The Core
+ * suite is the source of truth for the look; the old parallel `.v2-sidebar` /
+ * `.v2-brand-name-sub` markup is retired. Footer is the location switcher +
+ * Log out (functional on every surface). KDS keeps its own full-screen wall.
+ */
+export function Sidebar({ onCloseMobile }: Props) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const sections = useNavSections();
-
-  useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((c) => {
-      const next = !c;
-      try {
-        localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
-      } catch {
-        /* non-fatal */
-      }
-      return next;
-    });
-  }, []);
-
-  const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/admin/login";
-  };
 
   const isItemActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  return (
-    <aside
-      data-collapsed={collapsed && !isMobile ? "true" : "false"}
-      className="v2-sidebar"
-      aria-label="Admin navigation"
-    >
-      <div className="v2-sidebar-header">
-        <Link href="/admin" className="v2-brand" onClick={onCloseMobile}>
-          <span className="v2-brand-mark" aria-hidden>SI</span>
-          <span className="v2-brand-name">
-            <span className="v2-brand-name-line">Sud Italia</span>
-            <span className="v2-brand-name-sub">Operations</span>
-          </span>
-        </Link>
-        {!isMobile && (
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand" : "Collapse"}
-            className="v2-sidebar-collapse"
-          >
-            {collapsed ? <PanelLeft className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-        )}
-      </div>
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    window.location.href = "/admin/login";
+  };
 
-      <nav className="v2-sidebar-nav" aria-label="Sections">
+  return (
+    <aside className="app-sidebar" aria-label="Admin navigation">
+      <Link href="/admin" className="as-brand" onClick={onCloseMobile}>
+        <span className="as-brand-mark" aria-hidden>SI</span>
+        <span className="as-brand-text">
+          <span className="as-brand-name">Sud Italia</span>
+          <span className="as-brand-sub">Operations</span>
+        </span>
+      </Link>
+
+      <nav className="as-scroll" aria-label="Sections">
         {sections.map((section) => (
-          <div key={section.id} className="v2-sidebar-section">
-            <div className="v2-sidebar-section-label">{section.label}</div>
-            <ul>
-              {section.items.map((item) => {
-                const active = isItemActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onCloseMobile}
-                      aria-current={active ? "page" : undefined}
-                      title={collapsed ? item.label : undefined}
-                      className={`v2-nav-link ${active ? "is-active" : ""}`}
-                    >
-                      <Icon className="v2-nav-icon" aria-hidden />
-                      <span className="v2-nav-label">{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+          <div key={section.id} className="as-group">
+            <div className="as-eyebrow">{section.label}</div>
+            {section.items.map((item) => {
+              const active = isItemActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onCloseMobile}
+                  aria-current={active ? "page" : undefined}
+                  className={`as-item ${active ? "is-active" : ""}`}
+                >
+                  <Icon className="as-ico" aria-hidden />
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>
 
-      <div className="v2-sidebar-footer">
+      <div className="as-foot">
         <LocationSwitcher />
-        <button type="button" onClick={handleLogout} className="v2-sidebar-logout">
+        <button type="button" onClick={handleLogout} className="as-logout">
           <LogOut className="h-3.5 w-3.5" />
-          <span className="v2-nav-label">Log out</span>
+          Log out
         </button>
       </div>
     </aside>

@@ -168,21 +168,20 @@ The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
 / `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
 listed in [the README](./README.md#two-css-layers-mid-migration).
 
-### Sidebar — one nav across admin + core (`CoreShell.tsx`)
+### Sidebar — the shared `.app-sidebar`
 
-`<CoreShell>`'s `.sidebar` renders the **full** admin navigation, not a
-stripped core list: it pulls `useNavSections()` (`components/admin/v2/useNavSections.ts`)
-— the same role-filtered source AdminShell's `.v2-sidebar` uses — so every
-page + subpage is reachable from POS / Guest and the two shells read as one
-sidebar. Active state is by `pathname` (the legacy `active` prop is ignored).
-Because the list is long, the nav groups sit in a **`.sidebar-scroll`** flex
-column (`flex: 1; overflow-y: auto`, `align-self: stretch` so it stays
-full-width in the narrow icon-rail) between the fixed `.brand` and
-`.sidebar-foot`. The chrome (`.shell` / `.nav-group` / `.eyebrow` /
-`.nav-item` / `.nav-ico`) is unchanged. KDS is the deliberate exception — it
-runs its own `.kds-core` wall with no sidebar (see [KDS](../modules/kds.md)).
-The matching admin-side note (the `.v2-sidebar` dropped its `g`-key chips to
-match this look) lives in [admin components → Sidebar](../../admin/theme/components.md#sidebar--shared-nav-no-shortcut-chips).
+`<CoreShell>` no longer has its own sidebar markup: it renders the **same
+`<Sidebar>` component** (`components/admin/v2/Sidebar.tsx`, class `.app-sidebar`)
+that AdminShell renders, so POS / Guest and the rest of admin are pixel-identical
+— one source of truth. CoreShell now owns only the `.shell` grid + topbar; the
+sidebar fills grid column 1. The Core suite was the *source of truth* for the
+look (`.brand` / eyebrow / nav-item vocabulary, now `.as-*`), but the styling
+lives in admin CSS so it can be shared (see
+[admin components → Sidebar](../../admin/theme/components.md#sidebar--one-component-one-vocabulary-app-sidebar)).
+The old `.core-suite .sidebar` / `.sidebar-scroll` / `.nav-item` / `.avatar`
+rules are dead (pending cleanup); `.core-suite .eyebrow` survives as a general
+type helper. KDS is the deliberate exception — its own `.kds-core` wall with no
+sidebar (see [KDS](../modules/kds.md)).
 
 ### Dialogs — `theme="core"`
 
