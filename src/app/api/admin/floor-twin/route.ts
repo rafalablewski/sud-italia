@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withAdmin } from "@/lib/api-middleware";
-import { getFloorEvents, getOrders, getTables } from "@/lib/store";
+import { getFloorEvents, getOrders, getTables, saveTable } from "@/lib/store";
 import { buildFloorTwin } from "@/lib/floor-twin";
+import { analyzeTruck } from "@/lib/kds-prediction";
+import { MENU_CATEGORY_LABELS } from "@/data/types";
 
 /**
  * Floor Twin — the live economic simulation of the room (Module 3 keystone;
@@ -47,6 +50,39 @@ export const GET = withAdmin(
       })),
     });
 
-    return NextResponse.json({ twin });
+    // Bottleneck pre-emption — fuse the live KDS pace engine onto the floor so
+    // the host knows when to slow seating. analyzeTruck filters to active
+    // orders + reads the real per-station load.
+    const bn = analyzeTruck(orders, Date.now()).bottleneck;
+    const kitchen =
+      bn && bn.tier !== "calm"
+        ? { tier: bn.tier, station: bn.id as string, label: MENU_CATEGORY_LABELS[bn.id] ?? bn.id, util: Math.round(bn.util * 100) }
+        : { tier: "calm" as const, station: null, label: null, util: bn ? Math.round(bn.util * 100) : 0 };
+
+    return NextResponse.json({ twin, kitchen });
+  },
+);
+
+const ActionSchema = z.object({ action: z.enum(["seat", "clear"]), tableId: z.string().min(1) });
+
+/**
+ * Seat / clear a table from the Twin — the predictive-seating act. Flips the
+ * table status, which `saveTable` logs as a transition (feeding the measured
+ * dwell loop). Staff+ (a service-floor decision).
+ */
+export const POST = withAdmin(
+  { roles: ["staff"], locationParam: "location" },
+  async (req, _ctx, { locationSlug }) => {
+    if (!locationSlug) return NextResponse.json({ error: "location is required" }, { status: 400 });
+    const parsed = ActionSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid body", issues: parsed.error.issues }, { status: 400 });
+    }
+    const table = (await getTables(locationSlug)).find((t) => t.id === parsed.data.tableId);
+    if (!table) return NextResponse.json({ error: "table not found" }, { status: 404 });
+
+    const status = parsed.data.action === "seat" ? "seated" : "available";
+    await saveTable({ ...table, status }); // logs the seat/clear transition
+    return NextResponse.json({ ok: true, status });
   },
 );

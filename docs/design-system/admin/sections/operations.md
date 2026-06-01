@@ -179,11 +179,17 @@ instrumentation.
   seat time. When a table has no transition history yet, it falls back to the
   dine-in order-timeline proxy (`createdAt → paidAt`). Measured rows wear a
   `measured` badge.
+- **The acts (Phase 2).** **Seat / Clear** buttons on each table row (and a
+  **Seat** on open recommendations) flip the status via `POST
+  /api/admin/floor-twin` → `saveTable`, which logs the transition — so seating
+  from the Twin *is* what feeds the measured-dwell loop. **Bottleneck
+  pre-emption:** the view runs the live KDS pace engine (`analyzeTruck`) and
+  shows a "Kitchen filling up / overloaded — pace new seating" banner (with the
+  bottleneck station + utilisation) when the line can't absorb more covers.
 - **Engine:** `src/lib/floor-twin.ts` (`buildFloorTwin` + `recommendSeating`,
   pure-compute, unit-tested; dwell guardrails 5–360m drop stale tabs / clock
-  skew); `GET /api/admin/floor-twin?location=`, staff+. Read-only intelligence
-  (predictive-seating moves + bottleneck pre-emption are the Phase-2 acts). No
-  new theme CSS — built from existing v2 primitives.
+  skew); `GET/POST /api/admin/floor-twin?location=`, staff+. No new theme CSS —
+  built from existing v2 primitives.
 
 ## HACCP temperature log — `/admin/haccp`
 

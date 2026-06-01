@@ -33,6 +33,14 @@ import {
 
 type View = "tables" | "reservations" | "twin";
 
+/** Live kitchen-load summary from the pace engine, for bottleneck pre-emption. */
+interface KitchenLoad {
+  tier: "calm" | "warn" | "risk";
+  station: string | null;
+  label: string | null;
+  util: number;
+}
+
 interface ConflictHit {
   id: string;
   customerName: string;
@@ -104,13 +112,16 @@ export function AdminFloor() {
 
   // The live Floor Twin loads lazily when its tab opens (it scans orders).
   const [twin, setTwin] = useState<FloorTwin | null>(null);
+  const [kitchen, setKitchen] = useState<KitchenLoad | null>(null);
   const [twinLoading, setTwinLoading] = useState(false);
+  const [actingTable, setActingTable] = useState<string | null>(null);
   const fetchTwin = useCallback(async () => {
     setTwinLoading(true);
     try {
       const res = await fetch(`/api/admin/floor-twin?location=${encodeURIComponent(pageLoc)}`);
       const j = res.ok ? await res.json() : null;
       setTwin((j?.twin as FloorTwin) ?? null);
+      setKitchen((j?.kitchen as KitchenLoad) ?? null);
     } finally {
       setTwinLoading(false);
     }
@@ -119,6 +130,25 @@ export function AdminFloor() {
   useEffect(() => {
     if (view === "twin") void fetchTwin();
   }, [view, fetchTwin]);
+
+  const seatClear = async (tableId: string, action: "seat" | "clear") => {
+    setActingTable(tableId);
+    try {
+      const res = await fetch(`/api/admin/floor-twin?location=${encodeURIComponent(pageLoc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, tableId }),
+      });
+      if (res.ok) {
+        toast.success(action === "seat" ? "Table seated" : "Table cleared");
+        await fetchTwin();
+      } else {
+        toast.error("Could not update table");
+      }
+    } finally {
+      setActingTable(null);
+    }
+  };
 
   const [tableDialog, setTableDialog] = useState<{ open: boolean; table: FloorTable | null }>({
     open: false,
@@ -373,7 +403,13 @@ export function AdminFloor() {
       {error && <div className="v2-muted">{error}</div>}
 
       {view === "twin" ? (
-        <FloorTwinView twin={twin} loading={twinLoading} />
+        <FloorTwinView
+          twin={twin}
+          kitchen={kitchen}
+          loading={twinLoading}
+          acting={actingTable}
+          onAction={seatClear}
+        />
       ) : view === "tables" ? (
         loadingTables ? (
           <div className="v2-page-loading">Loading Floor…</div>
@@ -569,7 +605,19 @@ function FloorKpi({
 
 type TwinRow = FloorTwin["tables"][number];
 
-function FloorTwinView({ twin, loading }: { twin: FloorTwin | null; loading: boolean }) {
+function FloorTwinView({
+  twin,
+  kitchen,
+  loading,
+  acting,
+  onAction,
+}: {
+  twin: FloorTwin | null;
+  kitchen: KitchenLoad | null;
+  loading: boolean;
+  acting: string | null;
+  onAction: (tableId: string, action: "seat" | "clear") => void;
+}) {
   const [party, setParty] = useState("2");
 
   if (loading) return <div className="v2-page-loading">Modelling the floor…</div>;
@@ -658,10 +706,51 @@ function FloorTwinView({ twin, loading }: { twin: FloorTwin | null; loading: boo
       cell: (t) => <span className="tabular v2-muted">{t.turns}</span>,
       sortValue: (t) => t.turns,
     },
+    {
+      key: "act",
+      header: "",
+      align: "right",
+      cell: (t) =>
+        t.status === "out-of-service" ? null : t.occupied ? (
+          <Button size="sm" variant="secondary" loading={acting === t.id} onClick={() => onAction(t.id, "clear")}>
+            Clear
+          </Button>
+        ) : (
+          <Button size="sm" variant="primary" loading={acting === t.id} onClick={() => onAction(t.id, "seat")}>
+            Seat
+          </Button>
+        ),
+    },
   ];
 
   return (
     <>
+      {kitchen && kitchen.tier !== "calm" && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 14px",
+            borderRadius: 10,
+            marginBottom: 4,
+            flexWrap: "wrap",
+            border: "1px solid var(--admin-border, rgba(0,0,0,.1))",
+            background: "var(--admin-surface-2, rgba(0,0,0,.03))",
+          }}
+        >
+          <Gauge className="h-4 w-4" />
+          <span style={{ fontWeight: 600 }}>
+            Kitchen {kitchen.tier === "risk" ? "overloaded" : "filling up"}
+          </span>
+          <Badge tone={kitchen.tier === "risk" ? "danger" : "warning"} variant="soft" dot>
+            {kitchen.label} · {kitchen.util}%
+          </Badge>
+          <span className="v2-muted" style={{ fontSize: 12 }}>
+            Pace new seating — the line can&apos;t absorb more covers right now.
+          </span>
+        </div>
+      )}
       <section className="v2-kpi-grid">
         <FloorKpi label="Occupancy" value={`${s.occupancyPct}%`} hint={`${s.seated}/${s.totalTables} seated`} tone={s.occupancyPct >= 85 ? "warning" : "info"} />
         <FloorKpi label="Open now" value={String(s.openTables)} hint={`${s.freeingSoon15} freeing ≤15m`} tone="success" />
@@ -704,6 +793,16 @@ function FloorTwinView({ twin, loading }: { twin: FloorTwin | null; loading: boo
                     {r.readyInMin === 0 ? "open now" : `~${r.readyInMin}m`}
                   </Badge>
                   <span className="v2-muted" style={{ fontSize: 12 }}>{r.note}</span>
+                  {r.readyInMin === 0 && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      loading={acting === r.tableId}
+                      onClick={() => onAction(r.tableId, "seat")}
+                    >
+                      Seat
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

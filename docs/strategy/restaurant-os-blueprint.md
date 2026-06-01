@@ -269,8 +269,13 @@ The twin fuses `floor.ts` (room state) with `kds-prediction.ts` (per-ticket
 > `floor-events.json`) and seated→cleared pairs give *measured* seat-occupancy
 > turn-time + an exact live seat time; tables with no transition history yet
 > fall back to the dine-in order-timeline proxy (`createdAt → paidAt`).
-> Remaining: the Phase-2 acts — predictive-seating moves + bottleneck
-> pre-emption (fusing the live KDS pace engine into the floor).
+> **Phase 2 (the acts) is live:** Seat / Clear straight from the Twin (flips the
+> status, logs the transition — so operating the floor from the Twin is what
+> feeds the measured-dwell loop), and **bottleneck pre-emption** — the Twin runs
+> the live KDS pace engine (`analyzeTruck`) and warns "Kitchen overloaded — pace
+> new seating" with the bottleneck station. **Module 3 is product-complete.**
+> Future refinement: explicit reservation-arrival seating + auto-hold seating
+> when the kitchen is in the red.
 
 ### 4.3 Smarter with volume
 Turn-time and dwell predictions sharpen per table and per server with every
@@ -382,7 +387,10 @@ This is the SaaS→OS transition: the product stops informing and starts operati
 > lever. Sends degrade to a logged no-op when no provider is configured.
 > **Demand Exchange Phase 2 is complete** — capacity resize + minimum-spend on
 > `protect` slots + "apply all" (`slots.resize`), with the minimum enforced at
-> checkout. Remaining Phase-2 decision: seating moves (Floor Twin).
+> checkout. **Floor Twin Phase 2 is complete** — Seat / Clear from the Twin
+> (status transition → measured dwell) + bottleneck pre-emption from the live
+> pace engine. All three modules now have a shipped Phase-2 act; the SaaS→OS
+> transition is demonstrated across the whole platform.
 
 **Phase 3 — Network (infrastructure).** Population priors, cross-restaurant
 benchmarks, the demand exchange, and cross-venue customer identity. This is the
