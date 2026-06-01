@@ -156,6 +156,28 @@ attribution.
 - **Delete is destructive** — confirmation dialog required
   (`pendingTableDelete`), portalled per the admin portal rule.
 
+### Twin view — the live digital twin (Module 3)
+
+A third view tab (Tables / Reservations / **Twin**) turns the floor into a
+live economic simulation of the room (see
+[`../../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
+§4). All derived from **real dine-in orders** — the §4.2 realized-dwell signal
+is the order timeline (`createdAt → paidAt`), already captured, no
+instrumentation.
+
+- **KPI strip** (`FloorKpi` / `v2-kpi-grid`): occupancy %, open tables, median
+  turn-time, floor spend/hour.
+- **Predictive seating recommender:** type a party size → ranked tables
+  (best-fit open first, then soonest-to-free), computed live client-side via
+  `recommendSeating(twin, party)` so it updates as the operator types.
+- **Live tables table** (v2 `Table`): per-table state (open / seated + party),
+  predicted free-in (median turn − elapsed), median turn, spend/hr, turns.
+- **Engine:** `src/lib/floor-twin.ts` (`buildFloorTwin` + `recommendSeating`,
+  pure-compute, unit-tested; dwell guardrails 5–360m drop stale tabs / clock
+  skew); `GET /api/admin/floor-twin?location=`, staff+. Read-only intelligence
+  (predictive-seating moves + bottleneck pre-emption are the Phase-2 acts). No
+  new theme CSS — built from existing v2 primitives.
+
 ## HACCP temperature log — `/admin/haccp`
 
 Per-shift cold/hot-holding checks (audit §11.2). Staff+.

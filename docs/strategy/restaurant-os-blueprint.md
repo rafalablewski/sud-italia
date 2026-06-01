@@ -260,6 +260,16 @@ performance, bottleneck propagation. What we have vs. what to instrument:
 The twin fuses `floor.ts` (room state) with `kds-prediction.ts` (per-ticket
 `predictedReadyAtMs`, `atRisk`, bottleneck) into one forward simulation.
 
+> **Status — keystone shipped (v1).** The **Twin view** on `/admin/floor`
+> (`src/lib/floor-twin.ts`, `GET /api/admin/floor-twin`) derives per-table
+> realized turn-time + spend velocity, live occupancy and a predicted free-in
+> time, and a **predictive-seating recommender** (party size → best-fit open,
+> then soonest-to-free). v1 uses the always-present realized signal — the
+> dine-in order timeline (`createdAt → paidAt`) — so it needs no instrumentation.
+> Next: explicit seat→clear table-transition logging for true seat-occupancy
+> (vs the order-timeline proxy), and the Phase-2 acts — predictive-seating moves
+> + bottleneck pre-emption (fusing the live KDS pace engine into the floor).
+
 ### 4.3 Smarter with volume
 Turn-time and dwell predictions sharpen per table and per server with every
 cover; the room's behavioral physics (which sections turn fast, where service

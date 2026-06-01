@@ -1026,6 +1026,13 @@ export default async function CapabilitiesPage() {
             "Tables + reservations persist via the JSON store (readJSON/writeJSON) like slots/suppliers — no dedicated Postgres table yet, fine at truck volumes. Reservations are independent of the time-Slots system (they don't reserve a checkout slot). No spatial floor-map / drag layout — tables are a list/grid.",
         },
         {
+          name: "Floor Twin — live room digital twin",
+          status: "live",
+          href: "/admin/floor",
+          summary:
+            "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time (median dwell from completed dine-in orders' createdAt→paidAt — the §4.2 signal, already captured, no instrumentation), spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed, from the open check), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 5 unit tests, dwell guardrails 5–360m); GET /api/admin/floor-twin?location=, staff+. Read-only intelligence for now; predictive-seating moves + bottleneck pre-emption are the Phase-2 acts.",
+        },
+        {
           name: "Inventory + recipes + stock + distributor offerings",
           status: "live",
           href: "/admin/inventory",

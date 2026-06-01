@@ -1,33 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Armchair, CalendarClock, Plus, RefreshCw, Trash2, Users } from "lucide-react";
+import { Armchair, CalendarClock, Gauge, Plus, RefreshCw, Trash2, Users } from "lucide-react";
 import type {
   FloorTable,
   Reservation,
   ReservationStatus,
   TableStatus,
 } from "@/data/types";
+import { recommendSeating, type FloorTwin } from "@/lib/floor-twin";
 import { useAdminLocation } from "./v2/LocationContext";
 import {
   Badge,
   Button,
   Card,
   CardBody,
+  CardHeader,
   ConfirmDialog,
   DatePager,
   Dialog,
   EmptyState,
   Input,
   Select,
+  Table,
   Tabs,
   Textarea,
   useToast,
   type BadgeTone,
+  type Column,
   LocationFilter,
 } from "./v2/ui";
 
-type View = "tables" | "reservations";
+type View = "tables" | "reservations" | "twin";
 
 interface ConflictHit {
   id: string;
@@ -97,6 +101,24 @@ export function AdminFloor() {
   const [loadingTables, setLoadingTables] = useState(true);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // The live Floor Twin loads lazily when its tab opens (it scans orders).
+  const [twin, setTwin] = useState<FloorTwin | null>(null);
+  const [twinLoading, setTwinLoading] = useState(false);
+  const fetchTwin = useCallback(async () => {
+    setTwinLoading(true);
+    try {
+      const res = await fetch(`/api/admin/floor-twin?location=${encodeURIComponent(pageLoc)}`);
+      const j = res.ok ? await res.json() : null;
+      setTwin((j?.twin as FloorTwin) ?? null);
+    } finally {
+      setTwinLoading(false);
+    }
+  }, [pageLoc]);
+
+  useEffect(() => {
+    if (view === "twin") void fetchTwin();
+  }, [view, fetchTwin]);
 
   const [tableDialog, setTableDialog] = useState<{ open: boolean; table: FloorTable | null }>({
     open: false,
@@ -306,6 +328,7 @@ export function AdminFloor() {
             tabs={[
               { value: "tables", label: "Tables", count: tables.length },
               { value: "reservations", label: "Reservations", count: reservations.length },
+              { value: "twin", label: "Twin" },
             ]}
             variant="pill"
             ariaLabel="Floor view"
@@ -318,7 +341,7 @@ export function AdminFloor() {
             >
               Add table
             </Button>
-          ) : (
+          ) : view === "reservations" ? (
             <Button
               variant="primary"
               leadingIcon={<Plus className="h-3.5 w-3.5" />}
@@ -326,7 +349,7 @@ export function AdminFloor() {
             >
               New reservation
             </Button>
-          )}
+          ) : null}
         </div>
       </header>
 
@@ -338,10 +361,10 @@ export function AdminFloor() {
           variant="secondary"
           leadingIcon={
             <RefreshCw
-              className={`h-3.5 w-3.5 ${loadingTables || loadingReservations ? "v2-spin" : ""}`}
+              className={`h-3.5 w-3.5 ${loadingTables || loadingReservations || twinLoading ? "v2-spin" : ""}`}
             />
           }
-          onClick={view === "tables" ? fetchTables : fetchReservations}
+          onClick={view === "twin" ? fetchTwin : view === "tables" ? fetchTables : fetchReservations}
         >
           Refresh
         </Button>
@@ -349,7 +372,9 @@ export function AdminFloor() {
 
       {error && <div className="v2-muted">{error}</div>}
 
-      {view === "tables" ? (
+      {view === "twin" ? (
+        <FloorTwinView twin={twin} loading={twinLoading} />
+      ) : view === "tables" ? (
         loadingTables ? (
           <div className="v2-page-loading">Loading Floor…</div>
         ) : tables.length === 0 ? (
@@ -503,6 +528,191 @@ export function AdminFloor() {
         destructive
       />
     </div>
+  );
+}
+
+// =============================================================
+// Floor Twin view (Module 3 keystone)
+// =============================================================
+
+const zl = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
+
+function FloorKpi({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "success" | "info" | "warning" | "danger";
+}) {
+  return (
+    <div className="v2-kpi">
+      <div className="v2-kpi-top">
+        <div className="v2-kpi-label">{label}</div>
+      </div>
+      <div className="v2-kpi-value-row">
+        <span className="v2-kpi-value tabular">{value}</span>
+      </div>
+      <div className="v2-kpi-foot">
+        {hint && (
+          <span className={`v2-kpi-delta v2-kpi-delta-${tone === "danger" || tone === "warning" ? "down" : "up"}`}>
+            {hint}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type TwinRow = FloorTwin["tables"][number];
+
+function FloorTwinView({ twin, loading }: { twin: FloorTwin | null; loading: boolean }) {
+  const [party, setParty] = useState("2");
+
+  if (loading) return <div className="v2-page-loading">Modelling the floor…</div>;
+  if (!twin || twin.tables.length === 0) {
+    return (
+      <Card>
+        <CardBody>
+          <EmptyState
+            icon={Gauge}
+            title="No tables to model"
+            description="Add tables, then the Twin forecasts turn-times, spend velocity and seating from real dine-in orders."
+          />
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const s = twin.summary;
+  const partyN = Math.max(1, Math.min(50, Math.round(Number(party) || 0)));
+  const recs = recommendSeating(twin, partyN);
+
+  const cols: Column<TwinRow>[] = [
+    {
+      key: "number",
+      header: "Table",
+      cell: (t) => (
+        <span className="mono">
+          {t.number} <span className="v2-muted">· {t.seats}p</span>
+        </span>
+      ),
+      sortValue: (t) => t.number,
+    },
+    {
+      key: "state",
+      header: "State",
+      cell: (t) =>
+        t.status === "out-of-service" ? (
+          <Badge tone="neutral" variant="soft">out of service</Badge>
+        ) : t.occupied ? (
+          <Badge tone="warning" variant="soft" dot>
+            seated{t.party ? ` · ${t.party}p` : ""}
+          </Badge>
+        ) : (
+          <Badge tone="success" variant="soft" dot>open</Badge>
+        ),
+      sortValue: (t) => (t.occupied ? 1 : 0),
+    },
+    {
+      key: "freein",
+      header: "Frees in",
+      cell: (t) =>
+        t.predictedFreeInMin == null ? (
+          <span className="v2-muted">—</span>
+        ) : t.predictedFreeInMin <= 0 ? (
+          <Badge tone="info" variant="soft">finishing</Badge>
+        ) : (
+          <span className="tabular">~{t.predictedFreeInMin}m</span>
+        ),
+      sortValue: (t) => t.predictedFreeInMin ?? 1e9,
+    },
+    {
+      key: "turn",
+      header: "Median turn",
+      cell: (t) => (t.medianDwellMin != null ? <span className="tabular">{t.medianDwellMin}m</span> : <span className="v2-muted">—</span>),
+      sortValue: (t) => t.medianDwellMin ?? 0,
+    },
+    {
+      key: "velocity",
+      header: "Spend / hr",
+      align: "right",
+      cell: (t) => (t.spendVelocityPerHourGrosze != null ? <span className="tabular">{zl(t.spendVelocityPerHourGrosze)}</span> : <span className="v2-muted">—</span>),
+      sortValue: (t) => t.spendVelocityPerHourGrosze ?? 0,
+    },
+    {
+      key: "turns",
+      header: "Turns",
+      align: "right",
+      cell: (t) => <span className="tabular v2-muted">{t.turns}</span>,
+      sortValue: (t) => t.turns,
+    },
+  ];
+
+  return (
+    <>
+      <section className="v2-kpi-grid">
+        <FloorKpi label="Occupancy" value={`${s.occupancyPct}%`} hint={`${s.seated}/${s.totalTables} seated`} tone={s.occupancyPct >= 85 ? "warning" : "info"} />
+        <FloorKpi label="Open now" value={String(s.openTables)} hint={`${s.freeingSoon15} freeing ≤15m`} tone="success" />
+        <FloorKpi label="Median turn" value={s.medianTurnMin != null ? `${s.medianTurnMin}m` : "—"} hint="realized" />
+        <FloorKpi label="Spend / hr" value={s.spendVelocityPerHourGrosze != null ? zl(s.spendVelocityPerHourGrosze) : "—"} hint="per occupied table-hour" />
+      </section>
+
+      <Card padding="none">
+        <CardHeader title="Where to seat the next party" description="Best-fit open tables first, then the soonest to free — computed live from the room's realized turn-times." />
+        <CardBody>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <Users className="h-4 w-4 v2-muted" />
+            <Input
+              type="number"
+              value={party}
+              onChange={(e) => setParty(e.target.value)}
+              style={{ width: 90 }}
+              aria-label="Party size"
+            />
+            <span className="v2-muted">party size</span>
+          </div>
+          {recs.length === 0 ? (
+            <div className="v2-muted">No table fits a party of {partyN}.</div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {recs.map((r) => (
+                <div
+                  key={r.tableId}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    border: "1px solid var(--admin-border, rgba(0,0,0,.1))",
+                  }}
+                >
+                  <span className="mono" style={{ fontWeight: 600 }}>{r.number}</span>
+                  <Badge tone={r.readyInMin === 0 ? "success" : "info"} variant="soft">
+                    {r.readyInMin === 0 ? "open now" : `~${r.readyInMin}m`}
+                  </Badge>
+                  <span className="v2-muted" style={{ fontSize: 12 }}>{r.note}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card padding="none">
+        <CardHeader
+          title="Live tables"
+          description={`${s.seated} seated · ${s.openTables} open · ${s.freeingSoon30} freeing within 30m.`}
+        />
+        <CardBody>
+          <Table rows={twin.tables} columns={cols} rowKey={(t) => t.id} defaultSort={{ key: "state", dir: "desc" }} />
+        </CardBody>
+      </Card>
+    </>
   );
 }
 
