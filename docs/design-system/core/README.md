@@ -8,6 +8,9 @@ runs on:
 - **Guest** — the unified guest hub: CRM (customer book), Loyalty (member
   roster + wallets + redemptions), Concierge (AI capability layer + EU-14
   allergen matrix), WhatsApp (inbox + funnel)
+- **Service** (`/admin/service`) — the merged Floor + Slots surface; the
+  booking console books a dine-in slot + assigns a table in one step (Floor /
+  Slots / Demand / Twin views folding in)
 
 The **Core nav group** (`src/components/admin/v2/nav.config.ts`) also carries
 **Floor** (`/admin/floor` — tables + reservations) and **Slots**
@@ -33,6 +36,7 @@ core/
     ├── loyalty.md     ← module under Guest
     ├── concierge.md   ← module under Guest
     ├── whatsapp.md    ← module under Guest
+    ├── service.md     ← the merged Floor + Slots surface
     └── receipt-printer.md  ← ESC/POS receipt printing + go-live guide
 ```
 
@@ -53,8 +57,8 @@ mockup** design (`public/mockups/core-suite/`):
   renders the mockup's SI sidebar + topbar as a fixed full-viewport layer
   for POS + Guest. KDS is full-bleed with its own dark top bar (no
   sidebar). `AdminShell` steps its chrome aside for `CORE_ROUTES`
-  (`/admin/guest`, `/admin/pos`, `/admin/kds`) while keeping the data
-  providers.
+  (`/admin/guest`, `/admin/pos`, `/admin/kds`, `/admin/service`) while
+  keeping the data providers.
 - **Surfaces:** **POS** (`/admin/pos`, `pos.html`) and the **Guest
   Engagement hub** (`/admin/guest`, four views Inbox · Guests · Loyalty ·
   Concierge — the old `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,

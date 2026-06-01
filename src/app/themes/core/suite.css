@@ -959,6 +959,45 @@
 .v2-dialog-core .loy-dialog-form textarea.v2-input { padding: 8px 12px; }
 
 /* ============================================================
+   SERVICE — merged Floor + Slots booking console (CoreShell)
+   ============================================================ */
+.core-suite .svc { flex: 1; min-height: 0; overflow-y: auto; }
+.core-suite .svc-date { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-muted); }
+.core-suite .svc-date .input { height: 30px; padding: 0 8px; }
+.core-suite .svc-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 18px; align-items: start; }
+.core-suite .svc-form { display: flex; flex-direction: column; gap: 16px; }
+.core-suite .svc-block { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; }
+.core-suite .svc-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 2px; }
+.core-suite .svc-block .eyebrow { margin-bottom: 11px; }
+.core-suite .svc-block-head .eyebrow { margin-bottom: 0; }
+.core-suite .svc-rec { height: 28px; font-size: 12px; }
+.core-suite .fchip:disabled { opacity: .38; cursor: not-allowed; }
+.core-suite .fchip.svc-full { text-decoration: line-through; }
+.core-suite .fchip.svc-full .n { text-decoration: none; }
+.core-suite .svc-fields { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 12px; }
+.core-suite .svc-field { display: flex; flex-direction: column; gap: 5px; }
+.core-suite .svc-field > span { font-size: 11px; color: var(--fg-subtle); display: inline-flex; align-items: center; gap: 5px; }
+.core-suite .svc-field.svc-wide { grid-column: 1 / -1; }
+.core-suite .svc-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 2px 2px 8px; flex-wrap: wrap; }
+.core-suite .svc-override { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-muted); cursor: pointer; }
+.core-suite .svc-actions .btn.primary { height: 40px; padding: 0 20px; font-size: 14px; }
+.core-suite .svc-side { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; position: sticky; top: 16px; }
+.core-suite .svc-side .eyebrow { margin-bottom: 12px; }
+.core-suite .svc-list { display: flex; flex-direction: column; gap: 8px; }
+.core-suite .svc-res { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); }
+.core-suite .svc-res:first-child { border-top: 0; }
+.core-suite .svc-res-time { font-size: 13px; font-weight: 600; width: 44px; flex: none; }
+.core-suite .svc-res-main { min-width: 0; flex: 1; }
+.core-suite .svc-res-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core-suite .svc-res-meta { font-size: 11px; color: var(--fg-subtle); margin-top: 2px; }
+.core-suite .svc-res .badge { margin-left: auto; flex: none; }
+@media (max-width: 1000px) {
+  .core-suite .svc-grid { grid-template-columns: 1fr; }
+  .core-suite .svc-side { position: static; }
+  .core-suite .svc-fields { grid-template-columns: 1fr 1fr; }
+}
+
+/* ============================================================
    POS (ported from pos.html)
    ============================================================ */
 .core-suite .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }

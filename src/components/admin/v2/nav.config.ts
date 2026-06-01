@@ -100,9 +100,11 @@ export const NAV_SECTIONS: NavSection[] = [
       // /admin/crm, /admin/loyalty, /admin/concierge, /admin/whatsapp routes
       // redirect here.
       { href: "/admin/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
-      // Floor (tables + reservations) and Slots (booking capacity) are the
-      // foundation of restaurant ops, so they live in Core. They render on the
-      // admin theme (not the Core suite shell) but belong to the platform.
+      // Service is the merged Floor + Slots surface on the Core suite shell:
+      // book a dine-in slot + assign a table in one step. Floor and Slots
+      // (admin-themed) are folding into it as views; until that completes they
+      // stay reachable for table/slot configuration.
+      { href: "/admin/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
       { href: "/admin/floor", label: "Floor", icon: Armchair, requiredRole: "manager" },
       { href: "/admin/slots", label: "Slots", icon: CalendarDays, requiredRole: "manager" },
     ],

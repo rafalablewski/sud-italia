@@ -169,6 +169,9 @@ shipped markup:
   renders inside `.core-suite`, uses the core `.badge` tones directly.
 - **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
   allergen grid).
+- **Service** — `../modules/service.md` (the merged Floor + Slots booking
+  console: `.svc` shell + `.svc-grid` / `.svc-block` form + `.fchip` slot/table
+  pickers + `.svc-side` bookings rail). Built from core primitives — no v2.
 - **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`
   bubbles / `.ctx` order context). The `.wa-console` / `.wa-fa-*` /
   `.wa-cfg-*` classes in `index.css` survive only for the Settings /
