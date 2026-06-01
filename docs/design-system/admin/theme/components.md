@@ -290,6 +290,12 @@ the pill renders full-width, clipped under the topbar instead of as a pill.
   outside that font scope, so `var(--font-ui)` can't resolve and the pill
   renders in the browser-default **serif** (`AdminKDS`/`AdminKdsFleet` hit
   exactly this). See [KDS → Loading pill](../../core/modules/kds.md#loading-pill).
+- **Core route Suspense fallback (`loading.tsx`) → wrap in `.core-suite`, not
+  `.v2-page`.** `.v2-page`'s `min-height: calc(100vh - 53px)` reserves space for
+  the admin topbar; core routes don't render one, so the fallback came up 53px
+  short and a strip of the layer behind showed at the bottom. Paint the same
+  full-viewport `.core-suite` surface the real page uses
+  (`src/app/admin/pos/loading.tsx`).
 
 The pill **declares `font-family: var(--font-ui)` itself** so it doesn't depend
 on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
