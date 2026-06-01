@@ -17,15 +17,9 @@ import type {
   PurchaseOrderStatus,
 } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobilePurchaseOrders = dynamic(
-  () => import("./mobile/MobilePurchaseOrders").then((m) => m.MobilePurchaseOrders),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -106,10 +100,6 @@ function fmtDate(iso?: string): string {
 }
 
 export function AdminPurchaseOrders() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobilePurchaseOrders />;
-  }
   return <AdminPurchaseOrdersDesktop />;
 }
 

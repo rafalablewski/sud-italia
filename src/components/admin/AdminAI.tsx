@@ -16,15 +16,9 @@ import {
   TrendingUp,
   Trash2,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileAI = dynamic(
-  () => import("./mobile/MobileAI").then((m) => m.MobileAI),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -107,10 +101,6 @@ function rollingAverage(values: number[], window: number): number[] {
 }
 
 export function AdminAI() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileAI />;
-  }
   return <AdminAIDesktop />;
 }
 

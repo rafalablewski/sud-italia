@@ -16,12 +16,12 @@ and earns or loses operator trust on every one.
   / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
   plus per-page layout (`.prod`, `.conv`, `.cust`, `.panel`, …). Generic
   names, all scoped under `.core-suite`.
-- **`.cmd-*` / `.ka-*` chrome** (`index.css`) — now backs the **Mobile
-  KDS** (`MobileKDS`) and the legacy command component: the header /
-  eyebrow / subbar / segmented / button / chip documented below, plus the
-  `.ka-*` ticket primitives. The **desktop** KDS kitchen wall no longer
-  uses these — it was rebuilt onto `suite.css` `.kds-core` (`.tk` / `.ct`
-  / `.cmdbar`; see [`../modules/kds.md`](../modules/kds.md)).
+- **`.cmd-*` / `.ka-*` chrome** (`index.css`) — **retired.** It backed the
+  phone `MobileKDS`, which was deleted in the mobile-shell cleanup; the
+  `.ka-*` ticket primitives documented below are no longer rendered. The
+  desktop KDS kitchen wall was rebuilt onto `suite.css` `.kds-core` (`.tk` /
+  `.ct` / `.cmdbar`; see [`../modules/kds.md`](../modules/kds.md)). This
+  section is kept as a record of the retired chrome.
 
 The two share token *values* (warm-neutral, burgundy, platinum) but not
 class names. Everything below is the `.cmd-*` set (Mobile KDS + legacy
@@ -110,8 +110,8 @@ The small dense pill — labels, status tags, role markers.
 > `.kds-core` core-suite surface — `.cmdbar` / `.truck` / `.mt` (Fleet),
 > `.kds-board` / `.tk` (Floor), `.kds-chefstrip` / `.kds-queue` / `.ct`
 > (Chef). Its anatomy lives in [`../modules/kds.md`](../modules/kds.md). The
-> `.kds-atlas` / `.ka-*` vocabulary below survives only as the **mobile** KDS
-> chrome (`MobileKDS`, `index.css`).
+> `.kds-atlas` / `.ka-*` vocabulary below is **retired** — its only renderer,
+> the phone `MobileKDS`, was deleted; kept here as a historical record.
 
 ### Ticket card — `.ka-ticket` (mobile)
 

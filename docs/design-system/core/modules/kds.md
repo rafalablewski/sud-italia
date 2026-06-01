@@ -8,9 +8,10 @@ on what's wrong.
 
 **Live code:** `src/components/admin/AdminKDS.tsx` + sub-components
 (`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTk.tsx` (floor `.tk`),
-`kds/KdsCt.tsx` (chef `.ct`), `kds/KdsTicketCard.tsx` (shared `Ring` +
-mobile), mobile `MobileKDS.tsx`). `KdsManagerOpsHeader` + `KdsChefStrip`
-live in `AdminKDS.tsx`.
+`kds/KdsCt.tsx` (chef `.ct`), `kds/KdsTicketCard.tsx` — now only exports the
+shared `Ring`; its `.ka-ticket` card is no longer rendered). `KdsManagerOpsHeader`
++ `KdsChefStrip` live in `AdminKDS.tsx`. (The retired phone KDS `MobileKDS`
+was deleted in the mobile-shell cleanup — the desktop KDS reflows responsively.)
 **Mockups:** `kds-fleet.html` → `kds.html` → `kds-chef.html`.
 **Theme:** rebuilt 1:1 onto the core-suite mockups on the **`.kds-core`**
 surface (a fixed full-viewport layer in `suite.css`) — the KDS is a
@@ -44,9 +45,9 @@ SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
   truck's **Floor**, and the `.drill-chef` pill ("Chef line →") jumps straight
   to its **Chef** line — both via `onDrillIn(slug, lens)`.
 
-The old `.kds-atlas` / `.ka-*` chrome is retired; `KdsTicketCard` survives
-only because it still exports the shared `Ring` (+ the mobile KDS). **Known
-gap:** ticket items group by *station/category*, not the mockup's per-course
+The old `.kds-atlas` / `.ka-*` chrome is retired (its mobile KDS consumer was
+deleted); `KdsTicketCard` survives only because it still exports the shared
+`Ring`. **Known gap:** ticket items group by *station/category*, not the mockup's per-course
 headers (KDS order items don't carry per-item course). The per-station chef
 filter is **live** again on the Chef view (the `.kds-station` chip rail) —
 the Floor + manager boards still run station-agnostic (`station = "all"`).
@@ -234,9 +235,9 @@ one tap from any lens. `.kds-top` is `position: sticky; top: 0` and
 clock / ctrls drop to a second line (≤ 560px puts the switch on its own
 row). All ctrl buttons are 34px square, 7px radius, hairline border,
 neutral. Active = `--raised` bg + bright text. Real `requestFullscreen` is
-wired in on the live app and the mockup. (The mobile shell is retired, so
+wired in on the live app and the mockup. (The mobile shell was deleted, so
 `.kds-core` renders at every width and these reflow tiers carry phone +
-tablet; `MobileKDS` is dead code pending cleanup.)
+tablet.)
 
 When the owner-only sandbox simulator is on, a **`.kds-badge.platinum`**
 pill (soft-platinum fill + a 6px dot, the mockup's `.badge.platinum`

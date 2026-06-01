@@ -225,7 +225,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/admin",
           summary:
-            "The admin serves the SAME responsive desktop layout on every viewport — phone, tablet and desktop are now 1:1. Below 900px the sidebar collapses into the hamburger drawer and pages reflow via their own @media (max-width: 720px) rules; there is no separate phone UI to drift. The old divergent mobile shell (bottom-nav + FAB + per-page Mobile* components) is RETIRED: useIsMobile() is a desktop-only shim and that code is dead pending a cleanup PR. See docs/design-system/admin/mobile/README.md for the retirement note.",
+            "The admin serves the SAME responsive desktop layout on every viewport — phone, tablet and desktop are now 1:1. Below 900px the sidebar collapses into the hamburger drawer and pages reflow via their own @media (max-width: 720px) rules; there is no separate phone UI to drift. The old divergent mobile shell (MobileShell + bottom-nav + MoreDrawer + the ~30 per-page Mobile* components) has now been DELETED — useIsMobile() is gone and AdminShell renders one chrome for every width. The only surviving mobile primitives back the standalone /admin/alerts list. See docs/design-system/admin/mobile/README.md.",
         },
         {
           name: "Mobile admin push notifications",

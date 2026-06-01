@@ -15,15 +15,9 @@ import {
 } from "lucide-react";
 import { BundleAnalyticsCard } from "./BundleAnalyticsCard";
 import { formatPrice } from "@/lib/utils";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileReports = dynamic(
-  () => import("./mobile/MobileReports").then((m) => m.MobileReports),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -118,10 +112,6 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 export function AdminReports() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileReports />;
-  }
   return <AdminReportsDesktop />;
 }
 

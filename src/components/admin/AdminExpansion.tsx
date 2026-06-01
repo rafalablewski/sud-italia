@@ -15,14 +15,8 @@ import {
 } from "lucide-react";
 import type { ExpansionChecklist, ExpansionChecklistItem } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
-import dynamic from "next/dynamic";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileExpansion = dynamic(
-  () => import("./mobile/MobileExpansion").then((m) => m.MobileExpansion),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -92,10 +86,6 @@ interface LocationCardData {
 }
 
 export function AdminExpansion() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileExpansion />;
-  }
   return <AdminExpansionDesktop />;
 }
 

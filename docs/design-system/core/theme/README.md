@@ -25,11 +25,13 @@ The Core theme ships in **two** stylesheets, both loaded only by
    / `.mt` (Fleet), `.kds-board` / `.tk` (Floor) and `.kds-chefstrip` /
    `.kds-queue` / `.ct` (Chef). See [`../modules/kds.md`](../modules/kds.md).
 2. **`src/app/themes/core/index.css`** — the original `--cmd-*` palette
-   at `:root` plus the `.cmd-*` / `.kds-atlas` / `.ka-*` surfaces. This now
-   backs **only the Mobile KDS** (`MobileKDS`, via `.kds-atlas` / `.ka-*`,
-   full-bleed via `.kds-bleed`) and the shared `Ring` it imports from
-   `KdsTicketCard`; the **desktop** KDS moved to `suite.css` `.kds-core`
-   (layer 1). The dead `.pos-*` / `.crm-*` / `.cncrg-*` families were
+   at `:root` plus the legacy `.cmd-*` / `.kds-atlas` / `.ka-*` surfaces.
+   Its only renderer — the phone `MobileKDS` — was **deleted** in the
+   mobile-shell cleanup, so that `.kds-atlas` / `.ka-*` KDS chrome is now
+   dead (its desktop replacement is `suite.css` `.kds-core`, layer 1;
+   `KdsTicketCard` lingers only to export the shared `Ring`). The still-live
+   rules in this file are the `.wa-console` / `.wa-fa-*` WhatsApp dialog
+   classes. The dead `.pos-*` / `.crm-*` / `.cncrg-*` families were
    pruned when POS/Guest moved to `suite.css` (1560 → 680 lines); the
    surviving non-`.cmd-`/`.kds-` rules are the `.wa-console` / `.wa-fa-*`
    / `.wa-cfg-*` classes for the WhatsApp Settings / Broadcast / Funnel

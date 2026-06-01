@@ -20,15 +20,9 @@ import type {
   TruckRoute,
   TruckStop,
 } from "@/data/types";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileTruck = dynamic(
-  () => import("./mobile/MobileTruck").then((m) => m.MobileTruck),
-  { ssr: false },
-);
 import {
   Badge,
   Button,
@@ -77,10 +71,6 @@ function fmtDate(iso?: string): string {
 }
 
 export function AdminTruck() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileTruck />;
-  }
   return <AdminTruckDesktop />;
 }
 

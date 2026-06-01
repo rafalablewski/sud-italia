@@ -16,9 +16,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
-import dynamic from "next/dynamic";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import {
@@ -42,11 +40,6 @@ import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, kdsShortId, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import type { AdminRole } from "@/lib/admin-roles";
-
-const MobileKDS = dynamic(
-  () => import("./mobile/MobileKDS").then((m) => m.MobileKDS),
-  { ssr: false },
-);
 
 /** One entry in the "Recall" tray — the last few tickets a cook bumped. */
 type BumpEntry = { orderId: string; label: string; bumpedAt: number };
@@ -88,10 +81,8 @@ function loadBumpHistory(loc: string): BumpEntry[] {
  *               a truck swaps the same window to that truck's floor board.
  *   • manager → Floor board (single location).
  *   • kitchen/staff → Floor board (the line view they've always had).
- * Mobile keeps the dedicated MobileKDS regardless of role.
  */
 export function AdminKDS() {
-  const { isMobile, ready } = useIsMobile();
   const { setLocation } = useAdminLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
   // Owners always land on the fleet; drilling into a truck flips this to that
@@ -135,25 +126,16 @@ export function AdminKDS() {
   const chef = role === "kitchen" || role === "staff";
 
   // Only owners get the Atlas fleet lens. Everyone else (incl. the pre-resolve
-  // null state) gets the floor board directly: the dedicated mobile KDS on a
-  // phone, the desktop floor board otherwise.
+  // null state) gets the floor board directly.
   if (role !== "owner") {
-    if (ready && isMobile) {
-      return <MobileKDS />;
-    }
     return <AdminKDSDesktop opsHeader={managerControls} chefStrip={chef} />;
   }
 
   // Owner — Atlas fleet command is the default. Drilling into a truck swaps
   // this same window down to that truck's floor board; the viewswitch then
   // flips between Floor (manager ops header) and Chef (station line) for that
-  // truck. The Atlas board reflows to its responsive layout on a phone; its
-  // drilled-in view is the dedicated mobile KDS there and the desktop board
-  // otherwise.
-  const floorView =
-    ready && isMobile ? (
-      <MobileKDS />
-    ) : (
+  // truck. The Atlas board reflows to its responsive layout on a phone.
+  const floorView = (
       <AdminKDSDesktop
         opsHeader={mode === "floor"}
         chefStrip={mode === "chef"}

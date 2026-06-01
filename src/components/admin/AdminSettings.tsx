@@ -14,15 +14,9 @@ import {
   Sprout,
   Truck,
 } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useIsMobile } from "./v2/mobile";
 import { useAdminPush } from "./v2/useAdminPush";
 import { useToast } from "./v2/ui/Toast";
 
-const MobileSettings = dynamic(
-  () => import("./mobile/MobileSettings").then((m) => m.MobileSettings),
-  { ssr: false },
-);
 import { ThemesTab } from "./settings/ThemesTab";
 import {
   Badge,
@@ -226,10 +220,6 @@ function fmtTime(iso: string): string {
 }
 
 export function AdminSettings() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileSettings />;
-  }
   return <AdminSettingsDesktop />;
 }
 

@@ -6,15 +6,9 @@ import { RotateCcw, TrendingUp, Users } from "lucide-react";
 import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
 import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
-import dynamic from "next/dynamic";
 import { formatPrice } from "@/lib/utils";
-import { useIsMobile } from "./v2/mobile";
 import { CohortSandbox } from "./CohortSandbox";
 
-const MobileCohortReport = dynamic(
-  () => import("./mobile/MobileCohortReport").then((m) => m.MobileCohortReport),
-  { ssr: false },
-);
 
 interface CohortRow {
   cohortMonth: string;
@@ -66,10 +60,6 @@ function kpiInfo(text: string, body: ReactNode): ReactNode {
 }
 
 export function AdminCohortReport() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileCohortReport />;
-  }
   return <AdminCohortReportDesktop />;
 }
 

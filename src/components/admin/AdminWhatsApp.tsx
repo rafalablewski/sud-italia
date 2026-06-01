@@ -21,15 +21,9 @@ import {
   Search,
 } from "lucide-react";
 import { CoreShell } from "./core/CoreShell";
-import dynamic from "next/dynamic";
-import { useIsMobile } from "./v2/mobile";
 import { useToast } from "./v2/ui/Toast";
 import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
-const MobileWhatsApp = dynamic(
-  () => import("./mobile/MobileWhatsApp").then((m) => m.MobileWhatsApp),
-  { ssr: false },
-);
 import { formatPrice } from "@/lib/utils";
 import { loyaltyTier } from "@/lib/loyalty-tier";
 import { GuestViewNav } from "./guest/GuestViewNav";
@@ -301,10 +295,6 @@ function mergeConversations(
 // ---- main component -----------------------------------------------------
 
 export function AdminWhatsApp() {
-  const { isMobile, ready } = useIsMobile();
-  if (ready && isMobile) {
-    return <MobileWhatsApp />;
-  }
   return <AdminWhatsAppDesktop />;
 }
 

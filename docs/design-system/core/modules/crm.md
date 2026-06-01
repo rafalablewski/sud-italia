@@ -188,9 +188,12 @@ through `/api/admin/customers/{phone}/send`:
 
 ## Mobile
 
-`MobileCustomers.tsx` + `MobileCustomerDetail.tsx` provide a virtualised
-list + pull-to-refresh + native share. Same data model; collapsed
-controls; tap-to-call/sms/mailto quick actions.
+No separate mobile surface — the mobile shell is retired (see
+[`../../admin/mobile/README.md`](../../admin/mobile/README.md)). The Guests
+book renders its `.core-suite` layout at every width and reflows
+responsively on a phone (single column, sidebar → icon rail). The old
+`MobileCustomers` / `MobileCustomerDetail` components were deleted in the
+cleanup.
 
 ## What this module is not
 
