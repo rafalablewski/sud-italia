@@ -219,6 +219,21 @@ takes `flex: 1; overflow-y: auto` and scrolls internally under the pinned
 chef strip, rather than growing the page — the line cook keeps the strip and
 station chips fixed while the dense queue scrolls.
 
+## Loading pill
+
+The first-frame loading chip is the shared admin **`.v2-page-loading`** pill —
+but it is **portaled to `document.body`** (`AdminKDS.tsx`), not rendered inside
+the board. The `.kds-core` overlay lives under `.admin-bg`, whose
+`> * { position: relative; z-index: 1 }` rule traps a `position: fixed` child
+(rule #4); rendered inline the pill never reaches the viewport bottom-center
+the way it does on every `.v2-page` tab (those get the
+`.admin-bg:has(.v2-page) > * { z-index: auto }` escape hatch). Portaling it to
+`<body>` — the same escape hatch the kiosk view already uses — lands it as the
+identical bottom-center chip. The portal is gated on a client `mounted` flag so
+the SSR pass never reaches for `document.body`. While loading, the
+`.ka-floor-body` stays empty (showing the "Kitchen is clear" empty state before
+the first frame arrives would be a lie).
+
 ## Top controls
 
 Pinned in the sticky topbar, in this order:

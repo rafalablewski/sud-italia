@@ -229,6 +229,11 @@ function AdminKDSDesktop({
   const { orders: streamedOrders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  // Gate the loading-pill portal on a client mount so the SSR pass (where
+  // `loading` is true but `document` doesn't exist) doesn't reach for
+  // document.body, and so the first client render matches the server.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Optimistic-advance overrides keyed by order id. While an advance/recall PUT
   // is in flight, the SSE stream can still carry the pre-change status; we
@@ -598,7 +603,13 @@ function AdminKDSDesktop({
 
         <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
         {loading ? (
-          <div className="v2-page-loading">Loading Kitchen Display…</div>
+          // The loading pill is portaled to <body> below (not rendered here):
+          // inside .kds-core / .admin-bg the shell's stacking context traps the
+          // fixed pill (rule #4), so it never reaches the viewport bottom-center
+          // like every other admin tab. The body stays empty while we load —
+          // showing the "Kitchen is clear" empty state before the first frame
+          // lands would be a lie.
+          null
         ) : orders.length === 0 ? (
           <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
         ) : chefStrip ? (
@@ -671,7 +682,21 @@ function AdminKDSDesktop({
   // display escapes the admin shell's stacking context (CLAUDE.md rule #4);
   // the component subtree — and all its state, hooks and context — stays
   // mounted, so the SSE stream, hotkeys and timers keep running uninterrupted.
-  return kiosk ? createPortal(page, document.body) : page;
+  //
+  // The loading pill rides the same escape hatch: portaled to <body> it lands
+  // as the standard bottom-center `.v2-page-loading` chip (matching every
+  // other admin tab) instead of being trapped inside the .kds-core overlay.
+  return (
+    <>
+      {kiosk ? createPortal(page, document.body) : page}
+      {loading &&
+        mounted &&
+        createPortal(
+          <div className="v2-page-loading">Loading Kitchen Display…</div>,
+          document.body,
+        )}
+    </>
+  );
 }
 
 interface FloorOps {
