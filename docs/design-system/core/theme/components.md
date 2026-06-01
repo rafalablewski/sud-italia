@@ -10,7 +10,8 @@ and earns or loses operator trust on every one.
 
 - **`.core-suite` primitives** (`suite.css`, ported from the mockup's
   `system.css`) — used by **POS** and the **Guest hub** inside
-  `<CoreShell>`: `.shell` / `.sidebar` / `.topbar` / `.viewnav` (shell),
+  `<CoreShell>`: `.shell` / `.topbar` / `.viewnav` (shell — the sidebar is now
+  the shared `.app-sidebar`, see [Sidebar](#sidebar--the-shared-app-sidebar)),
   `.card` / `.btn` (`.primary` / `.ghost` / `.lg` / `.xl` / `.icon`) /
   `.badge` (`.brand` / `.platinum` / `.success` / …) / `.input` / `.seg`
   / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
