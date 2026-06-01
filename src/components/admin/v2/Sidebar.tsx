@@ -22,10 +22,21 @@ export function Sidebar({ onCloseMobile }: Props) {
   const pathname = usePathname();
   const sections = useNavSections();
 
-  const isItemActive = (href: string) => {
+  // An item matches if the pathname equals its href or sits beneath it.
+  // But because nav hrefs nest (`/admin/locations` is a prefix of
+  // `/admin/locations/manage`), a plain prefix test highlights both the
+  // parent and the child. Resolve to the single most-specific match — the
+  // longest matching href wins — so only one item lights up.
+  const matches = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname === href || pathname.startsWith(href + "/");
   };
+  const activeHref = sections
+    .flatMap((section) => section.items.map((item) => item.href))
+    .filter(matches)
+    .sort((a, b) => b.length - a.length)[0];
+
+  const isItemActive = (href: string) => href === activeHref;
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
