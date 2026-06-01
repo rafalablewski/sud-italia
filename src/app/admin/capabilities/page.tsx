@@ -309,10 +309,26 @@ export default async function CapabilitiesPage() {
         },
         {
           name: "Win-back — auto-retention (Phase 2)",
-          status: "live",
+          // The queue + incentive grant always work; auto-send goes live the
+          // moment an SMS (Twilio) or email (Mailgun) provider is configured.
+          // Until then sends degrade to a logged no-op, so introspect rather
+          // than claim "live" delivery.
+          status: has("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM")
+            ? "live"
+            : has("MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM")
+              ? "live"
+              : "needs-config",
           href: "/admin/guest?view=loyalty",
+          envVars: [
+            "TWILIO_ACCOUNT_SID",
+            "TWILIO_AUTH_TOKEN",
+            "TWILIO_FROM",
+            "MAILGUN_API_KEY",
+            "MAILGUN_DOMAIN",
+            "MAILGUN_FROM",
+          ],
           summary:
-            "Turns the Customer Intelligence keystone from informing into operating (blueprint Phase 2). The Win-back tab in the Loyalty view runs the intelligence engine across every guest, queues the ones whose churn hazard says they're slipping (high/lost), and ranks them by value-at-risk (hazard × lifetime spend) so comp dollars go where the money is. For each it prescribes the whole action: an incentive sized to lifetime value, the consented channel (SMS / email, respecting the per-channel opt-out flags — or flags 'needs consent'), and a message drafted from the guest's own go-to dish. Approve → the system grants the points on the real loyalty ledger (addPointAdjustment) and logs the outreach (retention-outreach.json) so a 30-day cooldown holds and it's audited. Engine src/lib/retention.ts (pure-compute, 6 unit tests) over getOrders + the customers consent rollup; GET/POST /api/admin/retention, manager+. Auto-send on the consented channel is the next decay-to-autonomy step; v1 grants + drafts so it never depends on unconfigured providers.",
+            "Turns the Customer Intelligence keystone from informing into operating (blueprint Phase 2). The Win-back tab in the Loyalty view runs the intelligence engine across every guest, queues the ones whose churn hazard says they're slipping (high/lost), and ranks them by value-at-risk (hazard × lifetime spend) so comp dollars go where the money is. For each it prescribes the whole action: an incentive sized to lifetime value, the consented channel (SMS / email, respecting the per-channel opt-out flags — or flags 'needs consent'), and a message drafted from the guest's own go-to dish. Approve → the system grants the points on the real loyalty ledger (addPointAdjustment) AND sends the message on the consented channel through getSmsProvider()/getEmailProvider() (opt-outs honoured, audit-logged as comms.win_back), then logs the outreach (retention-outreach.json) so a 30-day cooldown holds. 'Send all reachable' runs the whole queue in one click — the decay-to-autonomy lever. When no SMS/email provider is configured the send degrades to a logged no-op (the incentive still applies), so it never breaks without creds; the tab shows which channels are live vs logged-only. Engine src/lib/retention.ts (pure-compute, 6 unit tests); GET/POST /api/admin/retention, manager+.",
         },
         {
           name: "Concierge — agent commerce (MCP + WhatsApp)",

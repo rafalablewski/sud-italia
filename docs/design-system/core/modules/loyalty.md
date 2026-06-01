@@ -104,14 +104,21 @@ cooldown so the same guest isn't re-nagged).
 > **Live code:** engine `src/lib/retention.ts` (`buildWinBackQueue`, pure-compute,
 > unit-tested in `retention.test.ts`); route `GET/POST /api/admin/retention`
 > (`withAdmin`, manager+) — GET builds the queue from `getOrders` + the customers
-> consent rollup + the outreach log; POST grants points (`addPointAdjustment`) +
-> records the outreach (`recordRetentionOutreach` → `retention-outreach.json`).
-> UI `WinBackCard` in `AdminLoyalty.tsx`, styled with `.wb-*` classes in
-> `suite.css`. Unlike the Intelligence dialog, this tab renders **inside**
-> `.core-suite`, so it uses the core `.badge` tones directly.
+> consent rollup + the outreach log, and returns which channels can deliver
+> (`comms`); POST grants points (`addPointAdjustment`), **sends** on the consented
+> channel (`getSmsProvider`/`getEmailProvider`, opt-outs honoured, audit-logged
+> `comms.win_back`), and records the outreach (`recordRetentionOutreach` →
+> `retention-outreach.json`). UI `WinBackCard` in `AdminLoyalty.tsx`, styled with
+> `.wb-*` classes in `suite.css`. Unlike the Intelligence dialog, this tab renders
+> **inside** `.core-suite`, so it uses the core `.badge` tones directly.
 
-Auto-send on the consented channel is the next decay-to-autonomy step; v1 grants
-the incentive + drafts the message so it never depends on unconfigured providers.
+**Auto-send (the autonomy lever).** Approving a card grants the incentive **and**
+sends the message on the consented channel. **Send all reachable** runs the whole
+queue server-side in one click (`POST { mode: "all" }`) — the decay-to-autonomy
+step where the operator stops deciding per-guest. When no SMS (Twilio) / email
+(Mailgun) provider is configured, sends degrade to a **logged no-op** (the
+incentive still applies) so nothing breaks without creds; the tab's `.wb-comms`
+line shows which channels are live vs logged-only.
 
 ## Shared rules
 

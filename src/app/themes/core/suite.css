@@ -860,6 +860,8 @@
 .core-suite .wb-stat .l { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
 .core-suite .wb-stat .v { font-family: var(--display); font-size: 20px; font-weight: 500; }
 .core-suite .wb-needs { font-family: var(--ui); font-size: 11.5px; font-weight: 500; color: var(--warning); }
+.core-suite .wb-summary-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.core-suite .wb-comms { font-size: 11.5px; color: var(--fg-subtle); padding: 0 2px 14px; margin-top: -6px; }
 .core-suite .wb-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
 .core-suite .wb-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 15px; display: flex; flex-direction: column; gap: 9px; }
 .core-suite .wb-card-head { display: flex; align-items: center; gap: 10px; }

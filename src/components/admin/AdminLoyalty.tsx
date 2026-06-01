@@ -138,7 +138,10 @@ export function AdminLoyalty() {
   // time the operator opens the tab, and refreshes after an action.
   const [winback, setWinback] = useState<WinBackQueue | null>(null);
   const [winbackLoading, setWinbackLoading] = useState(false);
+  const [comms, setComms] = useState<{ sms: boolean; email: boolean } | null>(null);
   const [actingPhone, setActingPhone] = useState<string | null>(null);
+  const [confirmSendAll, setConfirmSendAll] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
 
   const loadWinback = useCallback(async () => {
     setWinbackLoading(true);
@@ -146,6 +149,7 @@ export function AdminLoyalty() {
       const res = await fetch("/api/admin/retention");
       const j = res.ok ? await res.json() : null;
       setWinback((j?.queue as WinBackQueue) ?? null);
+      setComms((j?.comms as { sms: boolean; email: boolean }) ?? null);
     } finally {
       setWinbackLoading(false);
     }
@@ -171,7 +175,13 @@ export function AdminLoyalty() {
         }),
       });
       if (res.ok) {
-        toast.success("Win-back sent", `+${cand.bonusPoints} pts · ${cand.name}`);
+        const j = (await res.json().catch(() => ({}))) as { sent?: boolean };
+        toast.success(
+          j.sent ? "Win-back sent" : "Incentive granted",
+          j.sent
+            ? `${(cand.channel ?? "").toUpperCase()} · +${cand.bonusPoints} pts · ${cand.name}`
+            : `+${cand.bonusPoints} pts · ${cand.name}${cand.channel ? " · message logged (no provider)" : ""}`,
+        );
         setWinback((q) => {
           if (!q) return q;
           const candidates = q.candidates.filter((c) => c.phone !== cand.phone);
@@ -191,6 +201,27 @@ export function AdminLoyalty() {
       }
     } finally {
       setActingPhone(null);
+    }
+  };
+
+  const sendAllReachable = async () => {
+    setSendingAll(true);
+    try {
+      const res = await fetch("/api/admin/retention", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "all" }),
+      });
+      if (res.ok) {
+        const j = (await res.json()) as { processed: number; sent: number };
+        toast.success("Win-back run complete", `${j.sent}/${j.processed} sent`);
+        await loadWinback();
+      } else {
+        toast.error("Could not run win-back");
+      }
+    } finally {
+      setSendingAll(false);
+      setConfirmSendAll(false);
     }
   };
 
@@ -652,15 +683,26 @@ export function AdminLoyalty() {
                       )}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    style={{ marginLeft: "auto" }}
-                    onClick={() => void loadWinback()}
-                  >
-                    <RefreshCw width={14} height={14} /> Refresh
-                  </button>
+                  <div className="wb-summary-actions">
+                    {winback.summary.reachable > 0 && (
+                      <button
+                        type="button"
+                        className="btn primary"
+                        disabled={sendingAll}
+                        onClick={() => setConfirmSendAll(true)}
+                      >
+                        <Send width={14} height={14} />
+                        {sendingAll ? "Sending…" : `Send all reachable (${winback.summary.reachable})`}
+                      </button>
+                    )}
+                    <button type="button" className="btn ghost" onClick={() => void loadWinback()}>
+                      <RefreshCw width={14} height={14} /> Refresh
+                    </button>
+                  </div>
                 </div>
+                {comms && (!comms.sms || !comms.email) && (
+                  <div className="wb-comms">{commsLabel(comms)}</div>
+                )}
                 <div className="wb-list">
                   {winback.candidates.map((c) => (
                     <WinBackCard
@@ -680,6 +722,34 @@ export function AdminLoyalty() {
       <PointsDialog member={pointsDialog} onClose={() => setPointsDialog(null)} onSubmit={submitPoints} />
 
       <MemberIntelligenceDialog member={intelMember} onClose={() => setIntelMember(null)} />
+
+      <Dialog
+        open={confirmSendAll}
+        onClose={() => setConfirmSendAll(false)}
+        theme="core"
+        size="sm"
+        title="Send win-back to all reachable regulars?"
+        description={`Grants each their incentive and messages them on their consented channel${
+          winback ? ` (${winback.summary.reachable} reachable).` : "."
+        }`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmSendAll(false)} disabled={sendingAll}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={sendAllReachable}
+              loading={sendingAll}
+              leadingIcon={<Send className="h-3.5 w-3.5" />}
+            >
+              Send all
+            </Button>
+          </>
+        }
+      >
+        <div />
+      </Dialog>
 
       <Dialog
         open={pendingDeleteWallet !== null}
@@ -800,6 +870,15 @@ const pct = (share: number) => `${Math.round(share * 100)}%`;
 
 /* ====================== Win-back (Phase 2 retention) ====================== */
 
+function commsLabel(c: { sms: boolean; email: boolean }): string {
+  if (!c.sms && !c.email) {
+    return "Delivery is logged-only — set Twilio (SMS) and/or Mailgun (email) env to send for real. Incentives still apply.";
+  }
+  const live = [c.sms ? "SMS" : null, c.email ? "email" : null].filter(Boolean).join(" + ");
+  const off = [!c.sms ? "SMS" : null, !c.email ? "email" : null].filter(Boolean).join(" + ");
+  return `${live} live · ${off} logged-only (set the provider env to send).`;
+}
+
 function WinBackCard({
   c,
   busy,
@@ -849,7 +928,11 @@ function WinBackCard({
       <div className="wb-actions">
         <button type="button" className="btn primary" onClick={onApprove} disabled={busy}>
           <Send width={14} height={14} />
-          {busy ? "Sending…" : `Approve · grant ${c.bonusPoints} pts`}
+          {busy
+            ? "Working…"
+            : c.channel
+              ? `Approve & send · +${c.bonusPoints} pts`
+              : `Grant +${c.bonusPoints} pts`}
         </button>
       </div>
     </div>

@@ -4810,6 +4810,12 @@ export interface RetentionOutreach {
   valueAtRiskGrosze: number;
   actedBy: string;
   actedAt: string;
+  /** Whether the message actually went out a live provider (vs noop/log-only/skipped). */
+  sent?: boolean;
+  /** Provider status: "queued"/"sent" (live), "noop" (no provider), "skipped" (opt-out), "none". */
+  providerStatus?: string;
+  /** Opaque provider message id when sent. */
+  providerMessageId?: string;
 }
 
 export async function getRetentionOutreach(): Promise<RetentionOutreach[]> {
