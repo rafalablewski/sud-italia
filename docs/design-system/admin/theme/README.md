@@ -11,8 +11,9 @@ edit a token here to fix another theme's surface.
   `[data-admin-theme]`, the command palette, the colour rules ("no
   gradient, no glow", platinum = jewellery, brand ≠ status).
 - [`typography.md`](./typography.md) — Inter / Fraunces / JetBrains Mono +
-  where each face goes (today loaded once in `src/app/layout.tsx`; see
-  the gap note below).
+  where each face goes (loaded by `src/app/admin/layout.tsx` as
+  `--font-admin-*`, applied to the admin subtree via the `#admin-portal-root`
+  font-scope rule; see the gap note below).
 - [`material.md`](./material.md) — depth, hairlines, radius, motion.
 - [`components.md`](./components.md) — buttons, badges, inputs, segmented,
   cards, dialogs, tables, icons (the admin set).
@@ -31,7 +32,7 @@ straight from those tokens — never hard-code colours in a page.
 | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Colour tokens       | ✅ Scoped under `[data-admin-theme]`. Editing here only affects admin surfaces.                                  |
 | Material tokens     | ✅ Same scope.                                                                                                   |
-| Typography          | ⚠️ Inter / Fraunces / JetBrains Mono are loaded once in `src/app/layout.tsx` and applied via `next/font` to the body. Changing a face here changes every theme. |
+| Typography          | ✅ Inter / Fraunces / JetBrains Mono are loaded by `src/app/admin/layout.tsx` as `--font-admin-body` / `--font-admin-display` / `--font-admin-mono` (independent `next/font` instances from the storefront, so an admin face change can't drift the homepage). The theme tokens `--font-ui` / `--font-display` are declared on `[data-admin-theme]` as `var(--font-admin-*)`; because those next/font vars only exist on `#admin-portal-root`, that wrapper re-declares the tokens + sets `font-family` so the admin subtree (incl. portaled overlays) renders Inter/Fraunces instead of falling back to serif. See `typography.md` → *Font scope*. |
 | Components          | ⚠️ The glass-* utilities are also used by Core surfaces today (Core renders under admin). True per-theme component sets land with the code split. |
 
 ## Authority

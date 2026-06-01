@@ -2,17 +2,20 @@
 
 ← back to [README](../README.md)
 
-Loaded via `next/font` in `src/app/layout.tsx`. (Previously named in the
-stack but never imported — everything fell back to system fonts. Now they
-ship.)
+Loaded via `next/font` in **`src/app/admin/layout.tsx`** (not the root layout —
+each route group loads its own faces so an admin change can't drift the
+storefront). The loader exposes them as the `--font-admin-*` CSS variables on
+the `#admin-portal-root` wrapper; the theme tokens below read through those. See
+*Font scope* at the bottom for the indirection that makes this work (and the bug
+it fixes).
 
 ## The three faces
 
-| Face | Token | Role |
-|---|---|---|
-| **Inter** | `--font-ui` (via `--font-inter`) | UI workhorse. Everything operational: tables, tickets, forms, prices, KDS chrome, button labels. |
-| **Fraunces** | `--font-display` (via `--font-fraunces`) | The product's soul. High-contrast optical serif. Wordmark, hero headings, large display numerals, **and the dish name.** Used sparingly. |
-| **JetBrains Mono** | `--font-mono` | IDs, timers, prices, tabular figures. Anywhere a digit needs to not jitter. |
+| Face | Token | next/font var | Role |
+|---|---|---|---|
+| **Inter** | `--font-ui` | `--font-admin-body` | UI workhorse. Everything operational: tables, tickets, forms, prices, KDS chrome, button labels. |
+| **Fraunces** | `--font-display` | `--font-admin-display` | The product's soul. High-contrast optical serif. Wordmark, hero headings, large display numerals, **and the dish name.** Used sparingly. |
+| **JetBrains Mono** | `--font-mono` | `--font-admin-mono` | IDs, timers, prices, tabular figures. Anywhere a digit needs to not jitter. |
 
 ## Where each face goes
 
@@ -114,3 +117,45 @@ contrast — refined serif numerals on a flat dark background — is the
   Stay at 500.
 - Don't mix mono and Fraunces in the same numeric value. Pick one per
   context: mono for in-flow timers/prices, Fraunces for hero stat numerals.
+
+## Font scope (why the tokens are declared twice)
+
+The face tokens are defined on **two** elements, and the duplication is
+load-bearing — don't "tidy" it away.
+
+- `[data-admin-theme]` (= `<html>`) declares `--font-ui` / `--font-display` /
+  `--font-mono` as `var(--font-admin-body|display|mono), <fallbacks>`.
+- But `--font-admin-*` (the actual `next/font` families) are only defined on
+  **`#admin-portal-root`**, the admin layout wrapper, because `next/font`'s
+  `.variable` classes are applied there (so they don't leak to the storefront).
+
+A `var()` inside a custom property is substituted **at the element where that
+property is declared**. So up on `<html>`, `var(--font-admin-body)` is
+undefined → the whole `--font-ui` token becomes *invalid at computed-value
+time* → it inherits down **empty**, and is never re-evaluated where
+`--font-admin-*` actually exist. The symptom: every `font-family: var(--font-ui)`
+and `var(--font-display)` rule silently resolved to nothing and fell back to the
+**browser-default serif** — the admin shell, the `.v2-page-loading` pill,
+portaled overlays (`Dialog` / `Popover` / `Tooltip` / `Toast`), and the sidebar
+brand wordmark.
+
+**Fix** (in `src/app/themes/admin/index.css`, on `#admin-portal-root`):
+
+```css
+#admin-portal-root {
+  /* re-declare the tokens HERE, where --font-admin-* are defined, so the
+     indirection resolves for every consumer in the admin subtree */
+  --font-ui: var(--font-admin-body), "Inter", ui-sans-serif, system-ui, …;
+  --font-display: var(--font-admin-display), Georgia, "Times New Roman", serif;
+  /* and set font-family directly so overlays portaled into this wrapper —
+     siblings of .v2-shell, with no --font-ui rule of their own — inherit Inter */
+  font-family: var(--font-admin-body), "Inter", ui-sans-serif, system-ui, …;
+}
+```
+
+Keep these values in sync with the `[data-admin-theme]` definitions. Verified in
+a real browser (`getComputedStyle`): body + portaled dialog resolve to Inter,
+the sidebar wordmark to Fraunces. This is also why every admin overlay portals
+into `#admin-portal-root` rather than `<body>` — see the *Dialogs / overlays*
+note in [`components.md`](./components.md#dialogs--overlays) and the portal rule
+in the [admin README](../README.md#the-portal-rule-do-not-skip).
