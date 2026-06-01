@@ -226,9 +226,16 @@ Pinned in the sticky topbar, in this order:
 [Brand mark]  [Fleet/Floor/Chef view-switch]  [Stage tabs]  [Clock]  [↻ Refresh]  [♪ Sound]  [⏸ Pause]  [⤢ Fullscreen]
 ```
 
-All ctrl buttons are 34px square, 7px radius, hairline border, neutral.
-Active = `--raised` bg + bright text. Real `requestFullscreen` is wired in
-on the live app and the mockup.
+The **`[Fleet/Floor/Chef]` switch is present at the top on every KDS view**
+— Fleet shows all three (Floor/Chef drill into the first truck), and the
+drilled-in Floor/Chef keep the full triad — so the owner is never more than
+one tap from any lens. `.kds-top` is `position: sticky; top: 0` and
+`flex-wrap`s on narrow screens, so the switch stays reachable while the
+clock / ctrls drop to a second line (≤ 560px puts the switch on its own
+row). All ctrl buttons are 34px square, 7px radius, hairline border,
+neutral. Active = `--raised` bg + bright text. Real `requestFullscreen` is
+wired in on the live app and the mockup. (Phones get the dedicated
+`MobileKDS` instead; these reflow tiers cover tablet + `forcedDesktop`.)
 
 When the owner-only sandbox simulator is on, a **`.kds-badge.platinum`**
 pill (soft-platinum fill + a 6px dot, the mockup's `.badge.platinum`

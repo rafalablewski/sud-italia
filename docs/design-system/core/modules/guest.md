@@ -63,6 +63,13 @@ one surface with three views.
   `/admin/guest?view=guests|concierge|inbox`. The nav (Core group in
   `src/components/admin/v2/nav.config.ts`) carries a single
   **Guest Engagement** entry instead of three.
+- **Responsive:** on a phone (< 900px) the **Inbox** swaps to
+  `MobileWhatsApp`; **Guests (CRM)** and **Concierge** have no `Mobile*`
+  component, so their `.core-suite` layouts reflow in CSS — the Inbox
+  3-pane drops the context pane then collapses to one, Concierge stacks to
+  one column, CRM stacks book-over-detail, and the fixed Core layer lifts
+  off the bottom nav so it stays reachable. Breakpoint table in
+  [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
 
 ## Mockups
 

@@ -60,6 +60,39 @@ The Core theme ships in **two** stylesheets, both loaded only by
   shapes POS card layout and KDS ticket grouping; see the per-module
   docs.
 
+## Responsive — phone / tablet / web
+
+The desktop layouts are the design source of truth (the mockups are
+desktop). Two devices reach the Core surfaces differently:
+
+- **Phone (< 900px, `useIsMobile`)** — `AdminShell` wraps the page in
+  `MobileShell` (bottom nav). **KDS** and the **Inbox** swap to dedicated
+  `Mobile*` components (`MobileKDS`, `MobileWhatsApp`). **POS, CRM (Guests)
+  and Concierge have no `Mobile*` component**, so they render the
+  `.core-suite` layout at phone width — which is why `suite.css` carries
+  phone reflow for them (and why the fixed `.core-suite` layer is pulled up
+  off the `~60px` bottom nav below 900px, so the nav never gets trapped).
+- **Tablet / narrow desktop (900–1280px)** — the full `.core-suite` /
+  `.kds-core` desktop surfaces render; CSS reflows the multi-pane layouts
+  down. `forcedDesktop` can also put the desktop surface on a phone, so the
+  sub-900 reflow tiers stay live.
+
+| Breakpoint | POS | Guest | KDS (`.kds-core`) |
+|---|---|---|---|
+| ≤ 1200 | rails 72px, menu 2-col, KPIs 4-col | — | — |
+| ≤ 1100 | — | Inbox drops profile (`.ctx`) | `.cmdbar` 4-col, trucks 1-col |
+| ≤ 1024 | ticket pane 320px | Inbox 2-pane, Concierge 1-col | — |
+| ≤ 1000 | — | — | board 1-col |
+| ≤ 900 | (phone) sidebar gone | CRM 1-col, Inbox 1-pane | header wraps |
+| ≤ 820 | — | — | cmdbar 2-col, stats 3-col, capmeter full |
+| ≤ 680 | stacks: cat-rail scrolls top, ticket below | — | — |
+| ≤ 560 | — | — | viewswitch on its own row, queue 1-col |
+
+Reflow is CSS-only (no JS layout branching) — flex/grid columns collapse,
+side rails become horizontal scrollers, headers `flex-wrap`. The viewswitch
+(`Fleet / Floor / Chef`) stays pinned in the sticky `.kds-top` at every
+width.
+
 ## Per-token docs
 
 - [`philosophy.md`](./philosophy.md) — Core's operating principle: operational clarity outranks brand expression.

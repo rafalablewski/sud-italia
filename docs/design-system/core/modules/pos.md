@@ -36,6 +36,15 @@ surface.
 - **Persistent live ticket** on the right (396px) — never disappears,
   never collapses. The ticket *is* the order.
 
+**Responsive** (POS has no dedicated `Mobile*` component — it renders this
+`.core-suite` layout at every width). Tablet narrows the rails (cat-rail
+64px, ticket 320px) and drops the menu to 2 cols; **phone (≤ 680px)**
+stacks it — the cat-rail becomes a horizontal scroller across the top, the
+menu goes 1-col, and the ticket drops below the menu with its own capped
+(`46vh`) scroll. Below 900px the fixed `.core-suite` layer is pulled up off
+the MobileShell bottom nav so it stays reachable. See the breakpoint table
+in [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
+
 ## Concurrent open checks — tab rail
 
 A horizontal rail of tabs above the body. Each tab is a status pill:

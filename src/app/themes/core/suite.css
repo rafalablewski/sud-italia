@@ -383,7 +383,7 @@
 .kds-core *, .kds-core *::before, .kds-core *::after { box-sizing: border-box; }
 .kds-core.is-fullscreen { z-index: 2147483600; }
 .kds-wrap { min-height: 100%; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
-.kds-top { display: flex; align-items: center; gap: 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
+.kds-top { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
 .kds-top .kds-id { display: flex; align-items: center; gap: 11px; }
 .kds-top .brand-mark { width: 28px; height: 28px; border-radius: 9px; background: var(--brand, #a62d49); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 11px; letter-spacing: .04em; }
 .kds-top .kds-id .nm { font-family: var(--display); font-size: 17px; font-weight: 600; }
@@ -391,6 +391,7 @@
 .kds-viewswitch { display: inline-flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
 .kds-viewswitch a, .kds-viewswitch button { height: 30px; padding: 0 14px; border: 0; background: transparent; color: var(--dim); font: 600 12.5px var(--ui); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
 .kds-viewswitch a:hover, .kds-viewswitch button:hover { color: var(--t); }
+.kds-viewswitch button:disabled { opacity: .4; cursor: not-allowed; }
 .kds-viewswitch .on { background: var(--raised); color: var(--t); }
 .kds-stage { margin: 0 auto; display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
 .kds-stage button { height: 30px; padding: 0 15px; border: 0; background: transparent; color: var(--dim); font: 600 13px var(--ui); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -595,7 +596,30 @@
 .mt .riskpill { font: 600 9.5px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--risk); border: 1px solid var(--risk); border-radius: 99px; padding: 1px 6px; }
 .mt.warn .mtimer { color: var(--warn); } .mt.late .mtimer { color: var(--late); } .mt.risk .mtimer { color: var(--risk); } .mt.ready .mtimer { color: var(--ready); }
 .fleet-empty { grid-column: 1/-1; text-align: center; color: var(--faint); padding: 40px; }
-@media (max-width: 1100px) { .kds-core .cmdbar { grid-template-columns: repeat(4, 1fr); } .trucks { grid-template-columns: 1fr; } }
+
+/* ---- KDS responsive: phone + tablet reflow of the kitchen wall ---- */
+@media (max-width: 1100px) {
+  .kds-core .cmdbar { grid-template-columns: repeat(4, 1fr); }
+  .trucks { grid-template-columns: 1fr; }
+}
+@media (max-width: 820px) {
+  .kds-wrap { padding: 12px; }
+  .kds-top { margin: -12px -12px 0; padding: 12px 12px 10px; }
+  .kds-stage, .kds-clock { order: 5; }              /* keep brand + viewswitch on the first line */
+  .kds-stage { margin: 0; }
+  .kds-board { grid-template-columns: 1fr; }
+  .kds-core .cmdbar { grid-template-columns: repeat(2, 1fr); }
+  .trow2 { grid-template-columns: repeat(3, 1fr); }  /* 5 stat cells wrap to 3+2 */
+  .pacehead { flex-wrap: wrap; }
+  .pacehead .capmeter { flex-basis: 100%; margin-left: 0; }
+}
+@media (max-width: 560px) {
+  .kds-viewswitch { order: 9; flex: 1 0 100%; justify-content: center; }
+  .kds-core .cmdbar { grid-template-columns: repeat(2, 1fr); }
+  .kds-queue { grid-template-columns: 1fr; }
+  .grow { grid-template-columns: 64px 1fr 80px; gap: 8px; }
+  .brow { grid-template-columns: 84px 1fr 56px; gap: 8px; }
+}
 
 /* ============================================================
    GUEST · INBOX (ported from guest.html page styles)
@@ -922,19 +946,44 @@
 .core-suite .charge { padding: 0 14px 14px; }
 .core-suite .charge .btn { width: 100%; justify-content: center; }
 
-/* responsive — collapse the sidebar on narrow viewports */
+/* ===========================================================
+   Responsive — POS + Guest reflow for tablet & phone.
+   POS, CRM (Guests) and Concierge have NO dedicated Mobile*
+   component, so the .core-suite layout itself must degrade
+   gracefully at every width (the Inbox + KDS swap to Mobile*).
+   =========================================================== */
 @media (max-width: 1200px) {
   .core-suite .pos-body { grid-template-columns: 72px 1fr 340px; }
   .core-suite .menu-grid { grid-template-columns: repeat(2, 1fr); }
+  .core-suite .kpis { grid-template-columns: repeat(4, 1fr); }
 }
-@media (max-width: 1100px) {
-  .core-suite .guest { grid-template-columns: 280px 1fr; }
+@media (max-width: 1024px) {
+  /* tablet landscape: drop the right context pane, keep list + thread */
+  .core-suite .guest { grid-template-columns: 300px 1fr; }
   .core-suite .ctx { display: none; }
+  .core-suite .conc { grid-template-columns: 1fr; }
+  .core-suite .pos-body { grid-template-columns: 64px 1fr 320px; }
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
+  /* phone: MobileShell's bottom nav (z-30, ~60px) is present — stop the
+     fixed Core layer above it so the nav stays tappable, never trapped. */
+  .core-suite { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   .core-suite .shell { grid-template-columns: 1fr; }
   .core-suite .sidebar { display: none; }
   .core-suite .kpis { grid-template-columns: repeat(3, 1fr); }
   .core-suite .guest { grid-template-columns: 1fr; }
   .core-suite .convs { border-right: 0; }
+  .core-suite .crm { grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+  .core-suite .kpis { grid-template-columns: repeat(2, 1fr); }
+  .core-suite .menu-grid { grid-template-columns: 1fr; }
+  /* POS stacks: categories scroll across the top, menu in the middle, the
+     order ticket drops below with its own capped scroll. */
+  .core-suite .pos-body { display: flex; flex-direction: column; }
+  .core-suite .cat-rail { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px 10px; gap: 6px; }
+  .core-suite .menu-wrap { flex: 1 1 auto; min-height: 0; }
+  .core-suite .ticket { flex: none; max-height: 46vh; border-left: 0; border-top: 1px solid var(--border); box-shadow: none; }
+  .core-suite .ticket::before { display: none; }
+  .core-suite .tabrail { flex-wrap: nowrap; overflow-x: auto; }
 }

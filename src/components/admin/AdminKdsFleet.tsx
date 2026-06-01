@@ -203,9 +203,20 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
           </div>
           <div className="kds-viewswitch">
             <button type="button" className="on">Fleet</button>
-            {data?.tiles[0] && (
-              <button type="button" onClick={() => onDrillIn?.(data.tiles[0].slug)}>Floor</button>
-            )}
+            <button
+              type="button"
+              disabled={!data?.tiles[0]}
+              onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "floor")}
+            >
+              Floor
+            </button>
+            <button
+              type="button"
+              disabled={!data?.tiles[0]}
+              onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "chef")}
+            >
+              Chef
+            </button>
           </div>
           {simEnabled && (
             <span className="kds-badge platinum">
