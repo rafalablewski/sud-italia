@@ -882,11 +882,18 @@
 .core-suite .badge.bronze { background: rgba(184,115,64,.16); color: #cd8e5a; }
 .core-suite .badge.silver { background: rgba(170,176,188,.16); color: #c2c8d2; }
 .core-suite .badge.gold { background: rgba(212,170,55,.16); color: #e2bb4c; }
-/* Points-adjust dialog body (rendered into the .v2-dialog-core portal). */
+/* Points-adjust dialog body (rendered into the .v2-dialog-core portal). The
+   inputs are standalone (no .v2-input-wrap), so — like the POS-address
+   textarea rule above — they need an explicit field surface on the dark
+   dialog (the dialog-core token block recolors --surface-2 / --border-strong
+   / --fg to the dark palette). */
 .v2-dialog-core .loy-dialog-form { display: flex; flex-direction: column; gap: 14px; }
 .v2-dialog-core .loy-field { display: flex; flex-direction: column; gap: 6px; }
 .v2-dialog-core .loy-field-label { font-size: 12.5px; font-weight: 600; }
 .v2-dialog-core .loy-field-hint { font-size: 11px; opacity: .6; }
+.v2-dialog-core .loy-dialog-form .v2-input { width: 100%; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--r-md); color: var(--fg); }
+.v2-dialog-core .loy-dialog-form input.v2-input { height: 36px; padding: 0 12px; }
+.v2-dialog-core .loy-dialog-form textarea.v2-input { padding: 8px 12px; }
 
 /* ============================================================
    POS (ported from pos.html)

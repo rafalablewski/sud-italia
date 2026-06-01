@@ -162,13 +162,13 @@ export function AdminLoyalty() {
         case "name":
           return m.name || "";
         case "tier":
-          return tierRank[m.tier];
+          return tierRank[m.tier] ?? 0;
         case "points":
-          return m.points;
+          return m.points ?? 0;
         case "orders":
-          return m.orders;
+          return m.orders ?? 0;
         case "spent":
-          return m.totalSpent;
+          return m.totalSpent ?? 0;
         case "last":
           return m.lastOrder || "";
       }
@@ -184,6 +184,11 @@ export function AdminLoyalty() {
     });
     return arr;
   }, [filteredMembers, sort]);
+
+  const sortedRedemptions = useMemo(
+    () => [...redemptions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [redemptions],
+  );
 
   const tierCounts = useMemo(() => {
     const c: Record<LoyaltyTier, number> & { all: number } = {
@@ -506,9 +511,7 @@ export function AdminLoyalty() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...redemptions]
-                      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-                      .map((r) => (
+                    {sortedRedemptions.map((r) => (
                         <tr key={r.id}>
                           <td className="muted">{fmtDateTime(r.createdAt)}</td>
                           <td>
