@@ -22,6 +22,7 @@ import { getDb } from "@/db/client";
 import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientProducts as ingredientProductsTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
+import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
 import { getBaseSlug } from "@/lib/utils";
 import { estimateReadyAt } from "@/lib/eta";
 import { DEFAULT_REFUND_CONTROLS, type RefundControls } from "@/lib/refund-guard";
@@ -41,12 +42,15 @@ let dbInitialized = false;
 async function ensureDB() {
   if (dbInitialized) return;
   const db = sql();
-  await db`
+  await withDbTimeout(
+    () => db`
     CREATE TABLE IF NOT EXISTS kv_store (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL DEFAULT '[]'::jsonb
     )
-  `;
+  `,
+    "ensureDB",
+  );
   dbInitialized = true;
 }
 
@@ -91,10 +95,17 @@ async function ensureDataDir() {
 
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
   if (useDB) {
+    // Breaker open → Neon is unhealthy; skip it and serve the fallback
+    // immediately rather than timing out once per call (build-time prerender
+    // of 200+ pages would otherwise crawl into the 60s page limit).
+    if (dbBreakerOpen()) return fallback;
     try {
       await ensureDB();
       const db = sql();
-      const rows = await db`SELECT value FROM kv_store WHERE key = ${key}`;
+      const rows = await withDbTimeout(
+        () => db`SELECT value FROM kv_store WHERE key = ${key}`,
+        `readJSON:${key}`,
+      );
       if (rows.length === 0) return fallback;
       return rows[0].value as T;
     } catch (err) {
@@ -3580,10 +3591,13 @@ async function hydrateActiveOfferings(ings: Ingredient[]): Promise<Ingredient[]>
 
 export async function getIngredients(): Promise<Ingredient[]> {
   const db = getDb();
-  if (db) {
+  if (db && !dbBreakerOpen()) {
     try {
       await ensureIngredientsTable();
-      const rows = await db.select().from(ingredientsTable);
+      const rows = await withDbTimeout(
+        () => db.select().from(ingredientsTable),
+        "getIngredients",
+      );
       if (rows.length > 0) {
         const mapped = rows.map(rowToIngredient);
         // DB rows may still carry pre-migration cost/macros on the
@@ -3611,8 +3625,11 @@ export async function getIngredients(): Promise<Ingredient[]> {
   const fromKv = await readJSON<Ingredient[]>("ingredients.json", []);
   if (fromKv.length > 0) {
     bumpLazyBackfillHit("ingredients");
-    if (!backfilledIngredientProducts) await backfillIngredientProductsOnce(fromKv);
-    void Promise.all(fromKv.map((i) => dualWriteIngredient(i)));
+    // When Neon is unhealthy (breaker open) skip the lazy backfill + dual-write
+    // mirror — they'd only pile more doomed connections onto a saturated pool
+    // (the exact failure mode that breaks the build).
+    if (!backfilledIngredientProducts && !dbBreakerOpen()) await backfillIngredientProductsOnce(fromKv);
+    if (!dbBreakerOpen()) void Promise.all(fromKv.map((i) => dualWriteIngredient(i)));
   }
   return hydrateActiveOfferings(fromKv);
 }
