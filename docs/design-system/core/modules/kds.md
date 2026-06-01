@@ -234,6 +234,12 @@ the SSR pass never reaches for `document.body`. While loading, the
 `.ka-floor-body` stays empty (showing the "Kitchen is clear" empty state before
 the first frame arrives would be a lie).
 
+The **Fleet** wall (`AdminKdsFleet.tsx`) does the same: its first-load state
+portals the `.v2-page-loading` pill to `<body>` (gated on `mounted`), and the
+wall stays empty until the first frame. Its `error` ("Couldn't load fleet") and
+empty ("No active trucks") states stay as centered **`.fleet-empty`** messages —
+those are content, not a transient load, so they live inside the wall.
+
 ## Top controls
 
 Pinned in the sticky topbar, in this order:

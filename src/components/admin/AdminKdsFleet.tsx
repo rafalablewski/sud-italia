@@ -103,6 +103,11 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
   const [data, setData] = useState<FleetPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Gate the loading-pill portal on a client mount so the SSR pass (where
+  // `loading` is true but `document` doesn't exist) doesn't reach for
+  // document.body, and so the first client render matches the server.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [now, setNow] = useState(() => Date.now());
   const { active: fullscreen, enter: enterFs, exit: exitFs } = useFullscreen();
   const [advancingId, setAdvancingId] = useState<string | null>(null);
@@ -244,7 +249,13 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
         {data && <FleetBar data={data} now={now} toneOf={toneOf} />}
 
         {loading && !data ? (
-          <div className="fleet-empty">Loading Kitchen Display…</div>
+          // The loading pill is portaled to <body> below (not rendered here):
+          // inside .kds-core / .admin-bg the shell's stacking context traps the
+          // fixed pill (rule #4), so it never reaches the viewport bottom-center
+          // like every other admin tab. The wall stays empty until the first
+          // frame lands — error and "no active trucks" remain .fleet-empty
+          // messages since those are content, not a transient load.
+          null
         ) : error && !data ? (
           <div className="fleet-empty">Couldn’t load fleet — {error}</div>
         ) : data && data.tiles.length === 0 ? (
@@ -269,7 +280,22 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
     </div>
   );
 
-  return fullscreen ? createPortal(board, document.body) : board;
+  // The loading pill rides the same escape hatch as the fullscreen wall:
+  // portaled to <body> it lands as the standard bottom-center
+  // `.v2-page-loading` chip (matching every other admin tab) instead of being
+  // trapped inside the .kds-core overlay.
+  return (
+    <>
+      {fullscreen ? createPortal(board, document.body) : board}
+      {loading &&
+        !data &&
+        mounted &&
+        createPortal(
+          <div className="v2-page-loading">Loading Kitchen Display…</div>,
+          document.body,
+        )}
+    </>
+  );
 }
 
 function mmssF(seconds: number): string {
