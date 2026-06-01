@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
-import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { MetricExplainer, PageExplainer } from "./Explainers";
 import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
@@ -353,59 +353,65 @@ export function AdminLtvCac() {
         />
       </section>
 
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>How to read these numbers</h2>
-            <span className="v2-detail-head-hint">LTV is what a customer is worth; CAC is what you paid to get them</span>
-          </div>
-          <p style={{ margin: "2px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)" }}>
+      <PageExplainer
+        hint="LTV is what a customer is worth; CAC is what you paid to get them"
+        description={
+          <>
             Everything on this page is two numbers, sliced different ways: the
             profit an average customer leaves you over a year (<strong>LTV</strong>),
             and what you spent in marketing to win them (<strong>CAC</strong>). You
             want LTV to be at least <strong>3× CAC</strong>, and you want to earn the
             CAC back fast.
+          </>
+        }
+        institutional={
+          <p style={{ margin: 0 }}>
+            LTV:CAC is the single ratio that decides whether a consumer business can
+            buy growth profitably. The investor convention is <strong>≥ 3×</strong> on
+            a gross-margin LTV (below ~1× you destroy cash on every customer; far above
+            3× usually means you&apos;re <em>under</em>-investing in acquisition).
+            Payback matters as much as the ratio — a 3× book with an 18-month payback
+            still starves cash flow, so the gate is typically <strong>CAC recovered
+            inside 3–6 months</strong>. Watch the per-cohort ratio, not just the
+            blended one: a channel saturates at the margin first.
           </p>
-
-          <PlainTalk>
-            <p style={{ margin: 0 }}>
-              Say you spend <strong>4,000&nbsp;zł</strong> on ads in a month and{" "}
-              <strong>200 new customers</strong> show up — that&apos;s <strong>20&nbsp;zł</strong>{" "}
-              to buy each one (your CAC). If, over their first year, the average new
-              customer leaves you <strong>60&nbsp;zł of gross profit</strong> (their
-              margin-adjusted LTV), then <strong>60 ÷ 20 = 3.0×</strong>. You turned
-              1&nbsp;zł of marketing into 3&nbsp;zł of profit.{" "}
-              <strong>Green ≥ 3× </strong>(scale it), amber 1–3× (thin), <strong>red
-              &lt; 1×</strong> (you&apos;re paying more than they&apos;re worth — stop and fix).
-              <br />
-              <strong>Payback</strong> is the cash-flow twin: 20&nbsp;zł CAC earned back
-              from ~25&nbsp;zł of first-month margin ≈ <strong>1-month payback</strong>.
-              Short payback = you can reinvest fast without a war chest.
-            </p>
-          </PlainTalk>
-
-          <Methodology>
-            <p style={{ margin: 0 }}>
-              LTV = each cohort&apos;s <strong>365-day revenue per customer</strong> ×
-              your <strong>blended gross margin</strong> (computed from real order
-              line-item price − cost — margin, not revenue, because revenue
-              doesn&apos;t pay the kitchen). CAC = <strong>marketing-category spend</strong>{" "}
-              from <Link href="/admin/business-costs" className="v2-link">Business costs</Link> ÷ new customers
-              that month. When no spend is logged, CAC shows <strong>&ldquo;—&rdquo;</strong>{" "}
-              rather than a fabricated 0.
-            </p>
-          </Methodology>
-
-          <Tips>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Ratio under 3×?</strong> Lift repeat orders before cutting ads — raising LTV compounds; shrinking CAC doesn&apos;t.</li>
-              <li><strong>Payback over 3 months?</strong> Get the <em>second</em> order sooner (a &ldquo;come back this week&rdquo; nudge right after order #1).</li>
-              <li><strong>CAC creeping up month over month?</strong> You&apos;re saturating a channel — the cohort table shows it before the blended number does.</li>
-              <li><strong>Always log marketing spend</strong> in Business costs → Marketing, dated to the month it ran, so CAC lands on the right cohort.</li>
-            </ul>
-          </Tips>
-        </CardBody>
-      </Card>
+        }
+        plain={
+          <p style={{ margin: 0 }}>
+            Say you spend <strong>4,000&nbsp;zł</strong> on ads in a month and{" "}
+            <strong>200 new customers</strong> show up — that&apos;s <strong>20&nbsp;zł</strong>{" "}
+            to buy each one (your CAC). If, over their first year, the average new
+            customer leaves you <strong>60&nbsp;zł of gross profit</strong> (their
+            margin-adjusted LTV), then <strong>60 ÷ 20 = 3.0×</strong>. You turned
+            1&nbsp;zł of marketing into 3&nbsp;zł of profit.{" "}
+            <strong>Green ≥ 3× </strong>(scale it), amber 1–3× (thin), <strong>red
+            &lt; 1×</strong> (you&apos;re paying more than they&apos;re worth — stop and fix).
+            <br />
+            <strong>Payback</strong> is the cash-flow twin: 20&nbsp;zł CAC earned back
+            from ~25&nbsp;zł of first-month margin ≈ <strong>1-month payback</strong>.
+            Short payback = you can reinvest fast without a war chest.
+          </p>
+        }
+        tips={
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Ratio under 3×?</strong> Lift repeat orders before cutting ads — raising LTV compounds; shrinking CAC doesn&apos;t.</li>
+            <li><strong>Payback over 3 months?</strong> Get the <em>second</em> order sooner (a &ldquo;come back this week&rdquo; nudge right after order #1).</li>
+            <li><strong>CAC creeping up month over month?</strong> You&apos;re saturating a channel — the cohort table shows it before the blended number does.</li>
+            <li><strong>Always log marketing spend</strong> in Business costs → Marketing, dated to the month it ran, so CAC lands on the right cohort.</li>
+          </ul>
+        }
+        methodology={
+          <p style={{ margin: 0 }}>
+            LTV = each cohort&apos;s <strong>365-day revenue per customer</strong> ×
+            your <strong>blended gross margin</strong> (computed from real order
+            line-item price − cost — margin, not revenue, because revenue
+            doesn&apos;t pay the kitchen). CAC = <strong>marketing-category spend</strong>{" "}
+            from <Link href="/admin/business-costs" className="v2-link">Business costs</Link> ÷ new customers
+            that month. When no spend is logged, CAC shows <strong>&ldquo;—&rdquo;</strong>{" "}
+            rather than a fabricated 0.
+          </p>
+        }
+      />
 
       <Card>
         <CardBody>

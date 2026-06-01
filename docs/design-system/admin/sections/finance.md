@@ -112,7 +112,10 @@ reconcile to real numbers.
   callout blocks (`PlainTalk` / `InstitutionalAnalysis` / `Tips` /
   `Methodology`) are now imported from the shared
   `src/components/admin/Explainers.tsx` (they used to be defined locally in
-  `AdminSimulation.tsx`) so the Calculator, the reports and the sandboxes
+  `AdminSimulation.tsx`), and the two wrappers that compose them in the fixed
+  order — `MetricExplainer` (per-metric ⓘ dialogs) and `PageExplainer` (the
+  page-level "How to read these numbers" intro cards) — share one
+  required-prop shape, so the Calculator, the reports and the sandboxes
   can't drift.
 
 ## What Finance is not

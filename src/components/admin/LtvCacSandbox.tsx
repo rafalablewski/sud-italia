@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import { RotateCcw, TrendingUp, Wallet, Coins, Timer, AlertTriangle, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
-import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -479,33 +479,47 @@ export function LtvCacSandbox() {
         />
       </section>
 
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>How this projects</h2>
-            <span className="v2-detail-head-hint">Real seed, transparent math</span>
-          </div>
-          <PlainTalk>
-            <p style={{ margin: 0 }}>
-              You want each customer worth at least <strong>3×</strong> what you pay to win them.
-              Lifting retention or order value raises <strong>LTV</strong>; spending smarter lowers{" "}
-              <strong>CAC</strong>. The colour tells you where you stand: green ≥ 3×, amber 1–3×, red below 1×.
-            </p>
-          </PlainTalk>
-          <Methodology>
-            <p style={{ margin: 0 }}>
-              Revenue-LTV is recovered as LTV ÷ margin, scaled by the retention and AOV levers, then
-              re-margined. Ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV.
-            </p>
-          </Methodology>
-          <Tips>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Ratio under 3×?</strong> Lifting LTV (retention, AOV, margin) compounds; cutting CAC alone rarely closes the gap.</li>
-              <li><strong>Use the cohort sandbox first</strong> — the CLTV it projects is the LTV input here.</li>
-            </ul>
-          </Tips>
-        </CardBody>
-      </Card>
+      <PageExplainer
+        title="How this projects"
+        hint="Real seed, transparent math"
+        description={
+          <>
+            A what-if on the unit economics: move retention, order value, margin and
+            spend to watch the <strong>LTV:CAC ratio</strong> and payback period
+            respond — so you can pressure-test a growth plan before you fund it.
+          </>
+        }
+        institutional={
+          <p style={{ margin: 0 }}>
+            The same gate the report enforces, made interactive: an underwriteable
+            consumer book clears <strong>LTV:CAC ≥ 3×</strong> with CAC recovered
+            inside <strong>3–6 months</strong>. Use this to find the <em>cheapest</em>{" "}
+            path to that gate — because LTV is in the numerator, a point of retention
+            or margin almost always moves the ratio more than an equivalent cut to CAC,
+            and it compounds across every future cohort instead of being a one-off
+            saving. Keep the levers tied to changes you can actually execute.
+          </p>
+        }
+        plain={
+          <p style={{ margin: 0 }}>
+            You want each customer worth at least <strong>3×</strong> what you pay to win them.
+            Lifting retention or order value raises <strong>LTV</strong>; spending smarter lowers{" "}
+            <strong>CAC</strong>. The colour tells you where you stand: green ≥ 3×, amber 1–3×, red below 1×.
+          </p>
+        }
+        tips={
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Ratio under 3×?</strong> Lifting LTV (retention, AOV, margin) compounds; cutting CAC alone rarely closes the gap.</li>
+            <li><strong>Use the cohort sandbox first</strong> — the CLTV it projects is the LTV input here.</li>
+          </ul>
+        }
+        methodology={
+          <p style={{ margin: 0 }}>
+            Revenue-LTV is recovered as LTV ÷ margin, scaled by the retention and AOV levers, then
+            re-margined. Ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV.
+          </p>
+        }
+      />
     </div>
   );
 }

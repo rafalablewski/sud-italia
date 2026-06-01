@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, TrendingUp, Users, Repeat, Coins, FlaskConical } from "lucide-react";
 import { Button, Card, CardBody, Input, Badge, InfoButton } from "./v2/ui";
-import { PlainTalk, Methodology, Tips, MetricExplainer } from "./Explainers";
+import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard, LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
 
@@ -435,36 +435,50 @@ export function CohortSandbox() {
         </Card>
       )}
 
-      <Card>
-        <CardBody>
-          <div className="v2-detail-head">
-            <h2>How this projects</h2>
-            <span className="v2-detail-head-hint">Real seed, transparent math</span>
-          </div>
-          <PlainTalk>
-            <p style={{ margin: 0 }}>
-              Your customers each order <strong>{base.O0.toFixed(2)}</strong> times and are worth{" "}
-              <strong>{formatPrice(Math.round(base.meanCltv365))}</strong> over their first year. Win
-              more <em>repeat</em> business or lift the average order, and that lifetime value grows.
-              Annual cohort value just multiplies it by how many new customers you bring in monthly.
-            </p>
-          </PlainTalk>
-          <Methodology>
-            <p style={{ margin: 0 }}>
-              CLTV = orders/customer × value/order. The repeat lever holds &ldquo;extra orders per
-              repeater&rdquo; constant (<strong>{base.extraPerRepeater.toFixed(1)}</strong> here) and
-              re-derives orders/customer; AOV growth scales value/order. The retention curve is scaled
-              by the repeat-rate ratio, capped at 100%.
-            </p>
-          </Methodology>
-          <Tips>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li><strong>Repeat beats acquisition.</strong> A few points of repeat-rate uplift compounds across every future cohort.</li>
-              <li><strong>Feeds the LTV/CAC ratio.</strong> A higher CLTV here is exactly what lifts the ratio on the LTV/CAC sandbox.</li>
-            </ul>
-          </Tips>
-        </CardBody>
-      </Card>
+      <PageExplainer
+        title="How this projects"
+        hint="Real seed, transparent math"
+        description={
+          <>
+            A planning sandbox that takes your real cohort behaviour and lets you move
+            two levers — repeat rate and average order value — to see how lifetime
+            value and annual cohort value respond before you commit to a tactic.
+          </>
+        }
+        institutional={
+          <p style={{ margin: 0 }}>
+            This is a forward projection seeded from the live cohort engine, not a
+            booked forecast — treat it the way an analyst treats a model: move one
+            lever at a time, keep assumptions conservative, and confirm a modeled CLTV
+            lift is actually reachable from your current retention curve rather than
+            wished into the slider. It matters because the CLTV you project here is the{" "}
+            <strong>LTV input</strong> to the LTV:CAC ratio downstream, so an inflated
+            number here silently inflates the ratio you&apos;d underwrite spend against.
+          </p>
+        }
+        plain={
+          <p style={{ margin: 0 }}>
+            Your customers each order <strong>{base.O0.toFixed(2)}</strong> times and are worth{" "}
+            <strong>{formatPrice(Math.round(base.meanCltv365))}</strong> over their first year. Win
+            more <em>repeat</em> business or lift the average order, and that lifetime value grows.
+            Annual cohort value just multiplies it by how many new customers you bring in monthly.
+          </p>
+        }
+        tips={
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li><strong>Repeat beats acquisition.</strong> A few points of repeat-rate uplift compounds across every future cohort.</li>
+            <li><strong>Feeds the LTV/CAC ratio.</strong> A higher CLTV here is exactly what lifts the ratio on the LTV/CAC sandbox.</li>
+          </ul>
+        }
+        methodology={
+          <p style={{ margin: 0 }}>
+            CLTV = orders/customer × value/order. The repeat lever holds &ldquo;extra orders per
+            repeater&rdquo; constant (<strong>{base.extraPerRepeater.toFixed(1)}</strong> here) and
+            re-derives orders/customer; AOV growth scales value/order. The retention curve is scaled
+            by the repeat-rate ratio, capped at 100%.
+          </p>
+        }
+      />
     </div>
   );
 }

@@ -237,12 +237,24 @@ order, with these labels** — the **CLAUDE.md Rule #12** contract:
 
 - **Build it from `MetricExplainer`** (`Explainers.tsx`) — it fixes the order
   and labels and its five props are all required, so a half-written
-  explanation won't compile. The individual blocks (`InstitutionalAnalysis` /
-  `PlainTalk` / `Tips` / `Methodology`) are exported for the page-level "How to
-  read these numbers" / "How this projects" cards; `Tips` defaults its
-  headline to "Tips — how to push this lever" (override via the `headline`
-  prop). The Calculator's `HELP` registry is the origin of this vocabulary and
-  imports the same shared blocks.
+  explanation won't compile.
+- **Page-level intro cards use `PageExplainer`** (`Explainers.tsx`) — the
+  "How to read these numbers" / "How this projects" card that sits below the
+  KPI row on every report and sandbox. It renders the **same five sections in
+  the same order with the same labels** as `MetricExplainer`, wrapped in a
+  `<Card>` with a heading + optional hint (`title` defaults to "How to read
+  these numbers"; pass `title`/`hint` to override). Its five content props are
+  all required too, so a page intro can't ship missing the institutional
+  framing or with the sections reordered — the page intro and the per-metric ⓘ
+  dialog read as one voice. **Never hand-assemble** the individual blocks into
+  a card; reach for `PageExplainer`. As of the 2026-06 unification all five
+  intro cards (Cohort report, LTV/CAC report, Cohort/LTV-CAC/Menu-engineering
+  sandboxes) are built from it.
+- The individual blocks (`InstitutionalAnalysis` / `PlainTalk` / `Tips` /
+  `Methodology`) remain exported as the shared primitives both wrappers
+  compose, and `Tips` defaults its headline to "Tips — how to push this lever"
+  (override via the `headline` prop). The Calculator's `HELP` registry is the
+  origin of this vocabulary and imports the same shared blocks.
 - **Colour exception:** the four accent left-rails are intentional semantic
   hex (orange/slate/green/blue), *not* theme tokens — the one sanctioned
   deviation from "all colour from tokens", because the rails are a fixed,
