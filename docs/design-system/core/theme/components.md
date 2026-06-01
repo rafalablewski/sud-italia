@@ -162,7 +162,9 @@ shipped markup:
 - **Loyalty** — `../modules/loyalty.md` (`.loy` shell + `.loy-kpis` `.bk`
   cards + `.loy-filters` + `.tbl` roster + `.loy-wallets` cards + the
   `.badge.bronze` / `.silver` / `.gold` tier tones that complete the
-  `.badge` ramp).
+  `.badge` ramp). The **Customer Intelligence** dialog adds self-contained
+  `.ci-*` classes + `.ci-badge` tones scoped under `.v2-dialog-core` (the
+  portal is outside `.core-suite`, so it can't inherit core primitives).
 - **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
   allergen grid).
 - **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`

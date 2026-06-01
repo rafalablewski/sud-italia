@@ -301,6 +301,13 @@ export default async function CapabilitiesPage() {
             "The fourth Guest-hub view (/admin/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
+          name: "Customer Intelligence — per-guest behavioural graph",
+          status: "live",
+          href: "/admin/guest?view=loyalty",
+          summary:
+            "Keystone of the Customer Identity Network (docs/strategy/restaurant-os-blueprint.md). Every member row in the Loyalty view has an Intelligence action that opens a per-guest behavioural graph derived live from real orders (no mock data): go-to dishes + category, the temporal signature in Europe/Warsaw time (the 'Friday ~18:30' pattern), visit cadence → predicted next visit + a churn-hazard assessment (low / watch / high / lost, aligned to the 90-day lapse line), conditional attach rules ('adds Tiramisù when party ≥ 4' with lift + support), channel mix, average order value, and a one-line next-order prediction headline. Pure-compute engine src/lib/customer-intelligence.ts (unit-tested, 10 cases) over getOrdersByPhone(); served by GET /api/admin/customer-intelligence?phone= (withAdmin, staff+, chain-wide per guest). Confidence is gated by order count so a thin history never over-claims.",
+        },
+        {
           name: "Concierge — agent commerce (MCP + WhatsApp)",
           // Read capabilities (get_menu/check_availability/...) are always live
           // off the real menu, but the headline agent-commerce channel

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Brain,
   Coins,
   Heart,
   Plus,
@@ -16,6 +17,7 @@ import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
 import { Button, Dialog } from "./v2/ui";
 import { useToast } from "./v2/ui/Toast";
+import type { CustomerIntelligence } from "@/lib/customer-intelligence";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
@@ -123,6 +125,7 @@ export function AdminLoyalty() {
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "points", dir: "desc" });
 
   const [pointsDialog, setPointsDialog] = useState<MemberRow | null>(null);
+  const [intelMember, setIntelMember] = useState<MemberRow | null>(null);
   const [pendingDeleteWallet, setPendingDeleteWallet] = useState<WalletSummary | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -428,10 +431,21 @@ export function AdminLoyalty() {
                           </td>
                           <td className="muted">{fmtDate(m.lastOrder)}</td>
                           <td style={{ textAlign: "right" }}>
-                            <button type="button" className="btn ghost" onClick={() => setPointsDialog(m)}>
-                              <Coins width={14} height={14} />
-                              Adjust
-                            </button>
+                            <div className="loy-row-actions">
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                onClick={() => setIntelMember(m)}
+                                title="Customer intelligence"
+                              >
+                                <Brain width={14} height={14} />
+                                Intelligence
+                              </button>
+                              <button type="button" className="btn ghost" onClick={() => setPointsDialog(m)}>
+                                <Coins width={14} height={14} />
+                                Adjust
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -542,6 +556,8 @@ export function AdminLoyalty() {
 
       <PointsDialog member={pointsDialog} onClose={() => setPointsDialog(null)} onSubmit={submitPoints} />
 
+      <MemberIntelligenceDialog member={intelMember} onClose={() => setIntelMember(null)} />
+
       <Dialog
         open={pendingDeleteWallet !== null}
         onClose={() => setPendingDeleteWallet(null)}
@@ -638,6 +654,199 @@ function PointsDialog({ member, onClose, onSubmit }: PointsDialogProps) {
           />
         </label>
       </div>
+    </Dialog>
+  );
+}
+
+/* ====================== Customer Intelligence ====================== */
+
+const DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function confBadge(c: CustomerIntelligence["confidence"]): string {
+  return c === "high" ? "ok" : c === "medium" ? "info" : "muted";
+}
+function riskBadge(r: CustomerIntelligence["churn"]["risk"]): string {
+  return r === "low" ? "ok" : r === "watch" ? "warn" : "bad";
+}
+function prettyTemporal(t: CustomerIntelligence["temporal"]): string {
+  if (t.topDayOfWeek == null || !t.label) return "—";
+  const time = t.label.split("~")[1] ?? "";
+  return `${DOW_SHORT[t.topDayOfWeek]} ${time}`.trim();
+}
+const pct = (share: number) => `${Math.round(share * 100)}%`;
+
+function MemberIntelligenceDialog({
+  member,
+  onClose,
+}: {
+  member: MemberRow | null;
+  onClose: () => void;
+}) {
+  const [data, setData] = useState<CustomerIntelligence | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!member) {
+      setData(null);
+      setError(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    setData(null);
+    fetch(`/api/admin/customer-intelligence?phone=${encodeURIComponent(member.phone)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("load failed"))))
+      .then((j) => {
+        if (!cancelled) setData((j.intelligence as CustomerIntelligence) ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [member]);
+
+  if (!member) return <Dialog open={false} onClose={onClose} theme="core" />;
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      theme="core"
+      size="lg"
+      title={`Customer intelligence · ${member.name || member.phone}`}
+      description="Behavioural graph + next-order prediction, derived live from this guest's real order history."
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      {loading ? (
+        <div className="ci-msg">Reading order history…</div>
+      ) : error ? (
+        <div className="ci-msg">Couldn&apos;t load intelligence.</div>
+      ) : !data || data.orderCount === 0 ? (
+        <div className="ci-msg">No counted orders yet for this guest — nothing to model.</div>
+      ) : (
+        <div className="ci-body">
+          <div className="ci-headline">
+            <div className="ci-eyebrow">
+              <span>Next-order prediction</span>
+              <span className={`ci-badge ${confBadge(data.confidence)}`}>{data.confidence} confidence</span>
+            </div>
+            <div className="ci-headline-text">{data.nextOrder.headline}</div>
+            {data.nextOrder.when && (
+              <div className="ci-headline-when">
+                Expected around {fmtDate(data.nextOrder.when)}
+                {data.nextOrder.whenLabel ? ` · ${data.nextOrder.whenLabel}` : ""}
+              </div>
+            )}
+          </div>
+
+          <div className="ci-grid">
+            <div className="ci-panel">
+              <div className="ci-h">Rhythm &amp; retention</div>
+              <div className="ci-kv">
+                <span>Churn risk</span>
+                <span className={`ci-badge ${riskBadge(data.churn.risk)}`}>{data.churn.risk}</span>
+              </div>
+              <div className="ci-note">{data.churn.reason}</div>
+              <div className="ci-kv">
+                <span>Orders</span>
+                <b>{data.orderCount}</b>
+              </div>
+              {data.cadence.medianIntervalDays != null && (
+                <div className="ci-kv">
+                  <span>Cadence</span>
+                  <b>~{Math.round(data.cadence.medianIntervalDays)}d</b>
+                </div>
+              )}
+              {data.cadence.daysSinceLast != null && (
+                <div className="ci-kv">
+                  <span>Last order</span>
+                  <b>{Math.round(data.cadence.daysSinceLast)}d ago</b>
+                </div>
+              )}
+              <div className="ci-kv">
+                <span>Avg order</span>
+                <b>{fmtPLN0(data.avgOrderValueGrosze)}</b>
+              </div>
+            </div>
+
+            <div className="ci-panel">
+              <div className="ci-h">When &amp; how</div>
+              {data.temporal.label ? (
+                <div className="ci-kv">
+                  <span>Time pattern</span>
+                  <b>{prettyTemporal(data.temporal)}</b>
+                </div>
+              ) : (
+                <div className="ci-note">No clear time pattern yet.</div>
+              )}
+              {data.preferredChannel && (
+                <div className="ci-kv">
+                  <span>Prefers</span>
+                  <b>{data.preferredChannel}</b>
+                </div>
+              )}
+              <div className="ci-bars">
+                {data.channelMix.map((c) => (
+                  <div key={c.channel} className="ci-bar-row">
+                    <span className="ci-bar-lbl">{c.channel}</span>
+                    <div className="ci-bar">
+                      <i style={{ width: pct(c.share) }} />
+                    </div>
+                    <span className="ci-pct">{pct(c.share)}</span>
+                  </div>
+                ))}
+              </div>
+              {data.party.avg != null && (
+                <div className="ci-kv">
+                  <span>Avg party (dine-in)</span>
+                  <b>{data.party.avg.toFixed(1)}</b>
+                </div>
+              )}
+            </div>
+
+            <div className="ci-panel ci-span2">
+              <div className="ci-h">Go-to dishes</div>
+              <div className="ci-bars">
+                {data.topItems.map((it) => (
+                  <div key={it.name} className="ci-bar-row">
+                    <span className="ci-bar-lbl">{it.name}</span>
+                    <div className="ci-bar">
+                      <i style={{ width: pct(it.share) }} />
+                    </div>
+                    <span className="ci-pct">{pct(it.share)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {data.attachRules.length > 0 && (
+              <div className="ci-panel ci-span2">
+                <div className="ci-h">Attach patterns</div>
+                {data.attachRules.map((r) => (
+                  <div key={`${r.trigger}-${r.item}`} className="ci-attach">
+                    <Sparkles width={13} height={13} />
+                    <span>
+                      Adds <b>{r.item}</b> {r.trigger}
+                    </span>
+                    <span className="ci-lift">{r.lift.toFixed(1)}× lift</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

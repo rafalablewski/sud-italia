@@ -357,6 +357,17 @@ fully captured, (b) it is the strongest input to the other two engines, and
 (c) it produces a visible "wow" (the system predicting a regular's next order)
 that proves the thesis to operators and investors alike.
 
+> **Status — shipped (v1).** Engine `src/lib/customer-intelligence.ts`
+> (pure-compute, unit-tested), route `GET
+> /api/admin/customer-intelligence?phone=`, surfaced as the per-member
+> **Intelligence** dialog in the Loyalty view
+> (`docs/design-system/core/modules/loyalty.md`). v1 derives dish affinity,
+> the Warsaw-time temporal signature, cadence + churn hazard, conditional
+> attach rules, channel mix and the next-order headline. Next: fold these
+> features into a churn/next-order *model* scored against the baselines below,
+> then feed the graph into the Demand Exchange (who shows up) and Floor Twin
+> (predicted spend/dwell).
+
 **Success metrics (all measurable from existing data):**
 - Next-order *contents* top-3 hit-rate vs. naive "most-frequent-item" baseline.
 - Next-visit *timing* MAE (days) vs. average-interval baseline.

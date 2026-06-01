@@ -58,6 +58,37 @@ member's ledger and is summed with order-earned points
 Adjustments are for reconciling missed earns or goodwill credit — not a
 moderation tool.
 
+## Customer Intelligence (the per-guest behavioural graph)
+
+Every member row carries an **Intelligence** action (brain icon) beside
+**Adjust**. It opens a `Dialog theme="core"` (portaled per CLAUDE rule #4)
+showing a behavioural graph derived **live from that guest's real orders** —
+the keystone of the Customer Identity Network
+([blueprint](../../strategy/restaurant-os-blueprint.md)).
+
+> **Live code:** engine `src/lib/customer-intelligence.ts`
+> (`buildCustomerIntelligence`, pure-compute, unit-tested in
+> `customer-intelligence.test.ts`); route `GET
+> /api/admin/customer-intelligence?phone=` (`withAdmin`, staff+, reads
+> `getOrdersByPhone` chain-wide); UI `MemberIntelligenceDialog` in
+> `AdminLoyalty.tsx`.
+
+What it surfaces (all derived, never hardcoded):
+- **Next-order prediction** headline + a confidence badge (gated by order count).
+- **Rhythm & retention:** churn risk (low / watch / high / lost, aligned to the
+  90-day lapse line), order count, visit cadence (`~Nd`), days since last, AOV.
+- **When & how:** the temporal signature (`Fri 18:30`, computed in
+  Europe/Warsaw, not server UTC), preferred channel, channel-mix bars, avg party.
+- **Go-to dishes:** dish-affinity bars (share of units).
+- **Attach patterns:** conditional rules ("adds Tiramisù when party ≥ 4") with lift.
+
+**Styling note (important):** the dialog portals into `.v2-dialog-core`, which
+is **outside** `.core-suite`, so it cannot use `.core-suite` classes. Its
+markup uses self-contained `.ci-*` classes (and `.ci-badge` tones) defined
+**under `.v2-dialog-core`** in `suite.css` — the same discipline as the
+points-adjust dialog's `.loy-dialog-form`. Don't reach for `.badge` / `.bk`
+inside this dialog; they won't paint.
+
 ## Shared rules
 
 This view inherits every [Guest hub shared rule](./guest.md#shared-rules-apply-to-all-views):
