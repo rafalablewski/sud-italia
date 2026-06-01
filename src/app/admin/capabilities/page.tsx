@@ -308,6 +308,13 @@ export default async function CapabilitiesPage() {
             "Keystone of the Customer Identity Network (docs/strategy/restaurant-os-blueprint.md). Every member row in the Loyalty view has an Intelligence action that opens a per-guest behavioural graph derived live from real orders (no mock data): go-to dishes + category, the temporal signature in Europe/Warsaw time (the 'Friday ~18:30' pattern), visit cadence → predicted next visit + a churn-hazard assessment (low / watch / high / lost, aligned to the 90-day lapse line), conditional attach rules ('adds Tiramisù when party ≥ 4' with lift + support), channel mix, average order value, and a one-line next-order prediction headline. Pure-compute engine src/lib/customer-intelligence.ts (unit-tested, 10 cases) over getOrdersByPhone(); served by GET /api/admin/customer-intelligence?phone= (withAdmin, staff+, chain-wide per guest). Confidence is gated by order count so a thin history never over-claims.",
         },
         {
+          name: "Win-back — auto-retention (Phase 2)",
+          status: "live",
+          href: "/admin/guest?view=loyalty",
+          summary:
+            "Turns the Customer Intelligence keystone from informing into operating (blueprint Phase 2). The Win-back tab in the Loyalty view runs the intelligence engine across every guest, queues the ones whose churn hazard says they're slipping (high/lost), and ranks them by value-at-risk (hazard × lifetime spend) so comp dollars go where the money is. For each it prescribes the whole action: an incentive sized to lifetime value, the consented channel (SMS / email, respecting the per-channel opt-out flags — or flags 'needs consent'), and a message drafted from the guest's own go-to dish. Approve → the system grants the points on the real loyalty ledger (addPointAdjustment) and logs the outreach (retention-outreach.json) so a 30-day cooldown holds and it's audited. Engine src/lib/retention.ts (pure-compute, 6 unit tests) over getOrders + the customers consent rollup; GET/POST /api/admin/retention, manager+. Auto-send on the consented channel is the next decay-to-autonomy step; v1 grants + drafts so it never depends on unconfigured providers.",
+        },
+        {
           name: "Concierge — agent commerce (MCP + WhatsApp)",
           // Read capabilities (get_menu/check_availability/...) are always live
           // off the real menu, but the headline agent-commerce channel

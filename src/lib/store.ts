@@ -4793,6 +4793,37 @@ export async function addPointAdjustment(adj: PointAdjustment): Promise<void> {
   void recomputeCustomerRollup(adj.phone);
 }
 
+/**
+ * Win-back outreach log (Phase 2 retention — see src/lib/retention.ts). One row
+ * per executed win-back action: the incentive granted + the drafted message +
+ * the chosen channel. Powers the cooldown (don't re-nag the same guest) and the
+ * audit trail of who the system reached out to. JSON-store backed (like
+ * floor/slots) — no dedicated table needed at truck volumes.
+ */
+export interface RetentionOutreach {
+  id: string;
+  phone: string;
+  channel: "sms" | "email" | "none";
+  bonusPoints: number;
+  message: string;
+  risk: string;
+  valueAtRiskGrosze: number;
+  actedBy: string;
+  actedAt: string;
+}
+
+export async function getRetentionOutreach(): Promise<RetentionOutreach[]> {
+  return readJSON<RetentionOutreach[]>("retention-outreach.json", []);
+}
+
+export async function recordRetentionOutreach(entry: RetentionOutreach): Promise<void> {
+  await withLock("retention-outreach.json", async () => {
+    const list = await readJSON<RetentionOutreach[]>("retention-outreach.json", []);
+    list.push(entry);
+    await writeJSON("retention-outreach.json", list);
+  });
+}
+
 export async function getManualPointsTotal(phone: string): Promise<number> {
   const all = await getPointAdjustments();
   const canonical = normalizePlPhoneE164(phone);

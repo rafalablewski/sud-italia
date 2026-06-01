@@ -164,7 +164,9 @@ shipped markup:
   `.badge.bronze` / `.silver` / `.gold` tier tones that complete the
   `.badge` ramp). The **Customer Intelligence** dialog adds self-contained
   `.ci-*` classes + `.ci-badge` tones scoped under `.v2-dialog-core` (the
-  portal is outside `.core-suite`, so it can't inherit core primitives).
+  portal is outside `.core-suite`, so it can't inherit core primitives). The
+  **Win-back** tab (Phase-2 retention) adds `.wb-*` classes — and, since it
+  renders inside `.core-suite`, uses the core `.badge` tones directly.
 - **Concierge** — `../modules/concierge.md` (`.cap` rows + `.matrix`
   allergen grid).
 - **WhatsApp** (Inbox) — `../modules/whatsapp.md` (`.convs` / `.bub`

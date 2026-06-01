@@ -28,13 +28,14 @@ Core suite theme so it reads as one platform with the other three views.
 This mirrors the rest of the Guest hub: the hub is the *operational*
 relationship layer; *configuration* and *marketing* are Admin concerns.
 
-## Three tabs (one `.seg` switch)
+## Four tabs (one `.seg` switch)
 
 | Tab            | What it shows | Data source |
 | -------------- | ------------- | ----------- |
-| **Members**    | Every loyalty member — tier badge, point balance, orders, lifetime spend, last order. Name/phone search + tier-filter chips (`all` / Platinum / Gold / Silver / Bronze) + sortable columns. Each row links to the customer detail page; the row action opens the **adjust-points** dialog. | `GET /api/admin/members` |
+| **Members**    | Every loyalty member — tier badge, point balance, orders, lifetime spend, last order. Name/phone search + tier-filter chips (`all` / Platinum / Gold / Silver / Bronze) + sortable columns. Each row links to the customer detail page; the row actions open the **Intelligence** dialog + the **adjust-points** dialog. | `GET /api/admin/members` |
 | **Family wallets** | Each shared pool (head + up to 6 phones) with per-member status (`active` / `pending`); operator can **Dissolve** a wallet. | `GET /api/admin/wallets`, `DELETE /api/admin/wallets` |
 | **Redemptions** | The burn log — when, which customer, solo or wallet, which reward, points spent. | `GET /api/admin/wallet-redemptions` |
+| **Win-back** | The auto-retention worklist (Phase 2) — at-risk regulars ranked by value-at-risk, each a prescribed, approvable action. Loads lazily (heavier — scans all orders). | `GET/POST /api/admin/retention` |
 
 The KPI strip (`.loy-kpis` of `.bk` cards) reads from the same data:
 total members (+ repeat-buyer count), Platinum count, Gold count,
@@ -88,6 +89,29 @@ markup uses self-contained `.ci-*` classes (and `.ci-badge` tones) defined
 **under `.v2-dialog-core`** in `suite.css` — the same discipline as the
 points-adjust dialog's `.loy-dialog-form`. Don't reach for `.badge` / `.bk`
 inside this dialog; they won't paint.
+
+## Win-back — auto-retention (Phase 2)
+
+The **Win-back** tab turns the keystone from informing into *operating*
+([blueprint Phase 2](../../strategy/restaurant-os-blueprint.md)). It runs the
+intelligence engine across every guest, queues the ones whose churn hazard says
+they're slipping (`high` / `lost`), ranks by **value-at-risk** (hazard ×
+lifetime spend), and prescribes the whole action per guest: incentive size,
+consented channel, and a message drafted from their go-to dish. Approving a card
+grants the points on the real loyalty ledger and logs the outreach (30-day
+cooldown so the same guest isn't re-nagged).
+
+> **Live code:** engine `src/lib/retention.ts` (`buildWinBackQueue`, pure-compute,
+> unit-tested in `retention.test.ts`); route `GET/POST /api/admin/retention`
+> (`withAdmin`, manager+) — GET builds the queue from `getOrders` + the customers
+> consent rollup + the outreach log; POST grants points (`addPointAdjustment`) +
+> records the outreach (`recordRetentionOutreach` → `retention-outreach.json`).
+> UI `WinBackCard` in `AdminLoyalty.tsx`, styled with `.wb-*` classes in
+> `suite.css`. Unlike the Intelligence dialog, this tab renders **inside**
+> `.core-suite`, so it uses the core `.badge` tones directly.
+
+Auto-send on the consented channel is the next decay-to-autonomy step; v1 grants
+the incentive + drafts the message so it never depends on unconfigured providers.
 
 ## Shared rules
 

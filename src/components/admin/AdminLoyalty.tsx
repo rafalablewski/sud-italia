@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Brain,
   Coins,
   Heart,
+  Mail,
+  MessageCircle,
   Plus,
   RefreshCw,
   Search,
+  Send,
   Sparkles,
+  TrendingDown,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -18,6 +23,7 @@ import { GuestViewNav } from "./guest/GuestViewNav";
 import { Button, Dialog } from "./v2/ui";
 import { useToast } from "./v2/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
+import type { WinBackCandidate, WinBackQueue } from "@/lib/retention";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
@@ -59,7 +65,7 @@ interface Redemption {
 }
 
 type TierFilter = "all" | LoyaltyTier;
-type TabKey = "members" | "wallets" | "redemptions";
+type TabKey = "members" | "wallets" | "redemptions" | "winback";
 type SortKey = "name" | "tier" | "points" | "orders" | "spent" | "last";
 
 const TIER_LABEL: Record<LoyaltyTier, string> = {
@@ -127,6 +133,66 @@ export function AdminLoyalty() {
   const [pointsDialog, setPointsDialog] = useState<MemberRow | null>(null);
   const [intelMember, setIntelMember] = useState<MemberRow | null>(null);
   const [pendingDeleteWallet, setPendingDeleteWallet] = useState<WalletSummary | null>(null);
+
+  // Win-back queue is heavier (scans all orders), so it loads lazily the first
+  // time the operator opens the tab, and refreshes after an action.
+  const [winback, setWinback] = useState<WinBackQueue | null>(null);
+  const [winbackLoading, setWinbackLoading] = useState(false);
+  const [actingPhone, setActingPhone] = useState<string | null>(null);
+
+  const loadWinback = useCallback(async () => {
+    setWinbackLoading(true);
+    try {
+      const res = await fetch("/api/admin/retention");
+      const j = res.ok ? await res.json() : null;
+      setWinback((j?.queue as WinBackQueue) ?? null);
+    } finally {
+      setWinbackLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "winback" && winback === null && !winbackLoading) void loadWinback();
+  }, [tab, winback, winbackLoading, loadWinback]);
+
+  const approveWinBack = async (cand: WinBackCandidate) => {
+    setActingPhone(cand.phone);
+    try {
+      const res = await fetch("/api/admin/retention", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cand.phone,
+          bonusPoints: cand.bonusPoints,
+          channel: cand.channel ?? "none",
+          message: cand.message,
+          risk: cand.risk,
+          valueAtRiskGrosze: cand.valueAtRiskGrosze,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Win-back sent", `+${cand.bonusPoints} pts · ${cand.name}`);
+        setWinback((q) => {
+          if (!q) return q;
+          const candidates = q.candidates.filter((c) => c.phone !== cand.phone);
+          return {
+            ...q,
+            candidates,
+            summary: {
+              count: candidates.length,
+              totalValueAtRiskGrosze: candidates.reduce((s, c) => s + c.valueAtRiskGrosze, 0),
+              reachable: candidates.filter((c) => c.channel !== null).length,
+              needsConsent: candidates.filter((c) => c.channel === null).length,
+            },
+          };
+        });
+      } else {
+        toast.error("Could not run win-back");
+      }
+    } finally {
+      setActingPhone(null);
+    }
+  };
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -260,10 +326,11 @@ export function AdminLoyalty() {
     { l: "Lifetime spend", v: fmtPLN0(totals.spent) },
   ];
 
-  const TABS: { key: TabKey; label: string; count: number }[] = [
+  const TABS: { key: TabKey; label: string; count?: number }[] = [
     { key: "members", label: "Members", count: members.length },
     { key: "wallets", label: "Family wallets", count: wallets.length },
     { key: "redemptions", label: "Redemptions", count: redemptions.length },
+    { key: "winback", label: "Win-back", count: winback?.summary.count },
   ];
 
   const TIER_CHIPS: { key: TierFilter; label: string; count: number }[] = [
@@ -317,7 +384,7 @@ export function AdminLoyalty() {
                 onClick={() => setTab(t.key)}
               >
                 {t.label}
-                <span className="n">{t.count}</span>
+                {typeof t.count === "number" && <span className="n">{t.count}</span>}
               </button>
             ))}
           </div>
@@ -552,6 +619,62 @@ export function AdminLoyalty() {
             )}
           </div>
         )}
+        {tab === "winback" && (
+          <div className="loy-body">
+            {winbackLoading ? (
+              <div className="pane-msg">Scanning regulars for churn risk…</div>
+            ) : !winback || winback.candidates.length === 0 ? (
+              <div className="loy-empty">
+                <TrendingDown />
+                <div className="t">No regulars at risk right now</div>
+                <div className="d">
+                  When a high-value regular starts slipping, the system queues a win-back here — who,
+                  what incentive, which consented channel, and the drafted message.
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="wb-summary">
+                  <div className="wb-stat">
+                    <span className="l">Regulars at risk</span>
+                    <span className="v">{winback.summary.count}</span>
+                  </div>
+                  <div className="wb-stat">
+                    <span className="l">Value at risk</span>
+                    <span className="v">{fmtPLN0(winback.summary.totalValueAtRiskGrosze)}</span>
+                  </div>
+                  <div className="wb-stat">
+                    <span className="l">Reachable now</span>
+                    <span className="v">
+                      {winback.summary.reachable}
+                      {winback.summary.needsConsent > 0 && (
+                        <span className="wb-needs"> · {winback.summary.needsConsent} need consent</span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ marginLeft: "auto" }}
+                    onClick={() => void loadWinback()}
+                  >
+                    <RefreshCw width={14} height={14} /> Refresh
+                  </button>
+                </div>
+                <div className="wb-list">
+                  {winback.candidates.map((c) => (
+                    <WinBackCard
+                      key={c.phone}
+                      c={c}
+                      busy={actingPhone === c.phone}
+                      onApprove={() => approveWinBack(c)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <PointsDialog member={pointsDialog} onClose={() => setPointsDialog(null)} onSubmit={submitPoints} />
@@ -674,6 +797,64 @@ function prettyTemporal(t: CustomerIntelligence["temporal"]): string {
   return `${DOW_SHORT[t.topDayOfWeek]} ${time}`.trim();
 }
 const pct = (share: number) => `${Math.round(share * 100)}%`;
+
+/* ====================== Win-back (Phase 2 retention) ====================== */
+
+function WinBackCard({
+  c,
+  busy,
+  onApprove,
+}: {
+  c: WinBackCandidate;
+  busy: boolean;
+  onApprove: () => void;
+}) {
+  const ChannelIcon = c.channel === "email" ? Mail : c.channel === "sms" ? MessageCircle : AlertTriangle;
+  return (
+    <div className="wb-card">
+      <div className="wb-card-head">
+        <div className="wb-who">
+          <Link href={`/admin/customers/${encodeURIComponent(c.phone)}`} className="wb-name">
+            {c.name}
+          </Link>
+          <span className="wb-phone mono">{c.phone}</span>
+        </div>
+        <span className={`badge ${c.risk === "lost" ? "danger" : "warning"}`}>
+          <i className="d" />
+          {c.risk}
+        </span>
+        <div className="wb-var">
+          <span className="l">at risk</span>
+          <span className="v tnum">{fmtPLN0(c.valueAtRiskGrosze)}</span>
+        </div>
+      </div>
+      <div className="wb-meta">
+        <span>{c.orderCount} orders</span>
+        {c.cadenceDays != null && <span>~{c.cadenceDays}d cadence</span>}
+        <span>{c.daysSinceLast}d since last</span>
+        <span>{fmtPLN0(c.lifetimeSpendGrosze)} lifetime</span>
+        {c.topDish && <span>loves {c.topDish}</span>}
+      </div>
+      <div className="wb-reason">{c.reason}</div>
+      <div className="wb-msg">
+        <div className="wb-msg-head">
+          <span className={`wb-chan ${c.channel ?? "none"}`}>
+            <ChannelIcon width={12} height={12} />
+            {c.channel ? c.channel.toUpperCase() : "No consented channel"}
+          </span>
+          <span className="wb-bonus">+{c.bonusPoints} pts incentive</span>
+        </div>
+        <div className="wb-msg-body">{c.message}</div>
+      </div>
+      <div className="wb-actions">
+        <button type="button" className="btn primary" onClick={onApprove} disabled={busy}>
+          <Send width={14} height={14} />
+          {busy ? "Sending…" : `Approve · grant ${c.bonusPoints} pts`}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function MemberIntelligenceDialog({
   member,

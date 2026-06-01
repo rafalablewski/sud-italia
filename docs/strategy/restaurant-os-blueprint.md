@@ -341,6 +341,14 @@ auto-action with an approval gate that decays to full autonomy as accuracy is
 proven: auto-retention sends, auto-capacity/min-spend, auto-seating moves.
 This is the SaaS→OS transition: the product stops informing and starts operating.
 
+> **Status — first decision shipped.** Auto-retention v1 is live: the
+> **Win-back** worklist (`src/lib/retention.ts`, `GET/POST
+> /api/admin/retention`, the Win-back tab in the Loyalty view) decides *who* is
+> slipping (churn hazard), ranks by value-at-risk, and prescribes the incentive,
+> the consented channel and the drafted message. Approving grants the incentive
+> on the real ledger and logs the outreach (30-day cooldown). The approval gate
+> is the decay-to-autonomy lever; auto-send + capacity/seating decisions follow.
+
 **Phase 3 — Network (infrastructure).** Population priors, cross-restaurant
 benchmarks, the demand exchange, and cross-venue customer identity. This is the
 OS→infrastructure transition: the platform becomes more valuable to each
