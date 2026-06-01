@@ -1766,6 +1766,11 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   color: var(--fg-muted);
+  /* Self-sufficient font: inline tabs inherit --font-ui from .v2-shell, but
+     when this chip is portaled out of the shell (e.g. the KDS core route,
+     which has no .v2-shell) it must declare the UI font itself or it falls
+     back to the browser default serif. */
+  font-family: var(--font-ui);
   font-size: var(--text-xs);
   box-shadow: var(--shadow-sm);
   z-index: 30;

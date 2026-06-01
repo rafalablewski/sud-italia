@@ -278,6 +278,24 @@ the containing block for fixed descendants. Two safe patterns:
 the pill renders full-width, clipped under the topbar instead of as a pill.
 (`AdminSimulation`/Calculator hit exactly this.)
 
+- **Core route → portal to `#admin-portal-root`.** Core surfaces (KDS) render a
+  fixed `.kds-core` overlay and AdminShell drops the `.v2-shell` chrome, so
+  there's no `.v2-page` to drop the pill into and rendering it inline traps it
+  in the `.admin-bg > *` stacking context (rule #4). Portal it instead:
+  `createPortal(<div className="v2-page-loading">…</div>, document.getElementById("admin-portal-root") ?? document.body)`,
+  gated on a client `mounted` flag. `#admin-portal-root` is the admin layout
+  wrapper (`src/app/admin/layout.tsx`) — an ancestor of `.admin-bg` (escapes the
+  trap), with no transform (the fixed pill anchors to the viewport), that holds
+  the `--font-admin-*` next/font vars. **Do not portal to `<body>`:** it's
+  outside that font scope, so `var(--font-ui)` can't resolve and the pill
+  renders in the browser-default **serif** (`AdminKDS`/`AdminKdsFleet` hit
+  exactly this). See [KDS → Loading pill](../../core/modules/kds.md#loading-pill).
+
+The pill **declares `font-family: var(--font-ui)` itself** so it doesn't depend
+on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
+core-route case above, harmless everywhere else (it already resolves to Inter
+inside the shell).
+
 ## Tables
 
 - **48px row baseline.** Convergence target across Orders / Customers /

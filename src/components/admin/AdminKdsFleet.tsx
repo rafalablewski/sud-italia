@@ -281,12 +281,12 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
   );
 
   // The loading pill rides the same escape hatch as the fullscreen wall, but
-  // lands on `.v2-shell` rather than <body>: .v2-shell is an ancestor of
-  // .admin-bg (so the pill escapes the `.admin-bg > *` stacking trap) yet sits
-  // inside the admin font scope and sets `font-family: var(--font-ui)`.
-  // Portaling to <body> would drop it out of the `--font-admin-body` scope and
-  // render it in the browser default font instead of Inter. Fall back to
-  // <body> defensively.
+  // lands on the admin layout wrapper (`#admin-portal-root`) rather than
+  // <body>: it's an ancestor of .admin-bg (so the pill escapes the
+  // `.admin-bg > *` stacking trap) yet it holds the `--font-admin-*` next/font
+  // vars, so `.v2-page-loading`'s `font-family: var(--font-ui)` resolves to
+  // Inter. `.v2-shell` is gone on this core route and <body> sits outside the
+  // font scope (browser default serif), so neither works. Fall back to <body>.
   return (
     <>
       {fullscreen ? createPortal(board, document.body) : board}
@@ -295,7 +295,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
         mounted &&
         createPortal(
           <div className="v2-page-loading">Loading Kitchen Display…</div>,
-          document.querySelector(".v2-shell") ?? document.body,
+          document.getElementById("admin-portal-root") ?? document.body,
         )}
     </>
   );
