@@ -73,7 +73,7 @@ export function LiveTicker({ locationSlug = "chain" }: { locationSlug?: string }
         <Stat>
           <TrendingIcon />
           <span>
-            Trending<span className="v8-live-it">· in tendenza</span>{" "}
+            Trending<span className="v8-live-it"> · in tendenza</span>{" "}
             <strong>{mounted ? activity.popularItemNow : "—"}</strong>
           </span>
         </Stat>
@@ -81,7 +81,7 @@ export function LiveTicker({ locationSlug = "chain" }: { locationSlug?: string }
         <Stat>
           <BoltIcon />
           <span>
-            Avg prep<span className="v8-live-it">· tempo medio</span>{" "}
+            Avg prep<span className="v8-live-it"> · tempo medio</span>{" "}
             <strong className="num">{minutes(activity.avgPrepTimeMinutes)}</strong>
           </span>
         </Stat>
