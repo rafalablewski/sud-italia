@@ -95,11 +95,15 @@ production.
 use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
 admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
 wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
-**and** the element that carries the `--font-admin-*` next/font vars — so an
-overlay's `font-family: var(--font-ui)` resolves to Inter. Portaling to
-`<body>` escapes the trap but lands *outside* the admin font scope, so the
-overlay renders in the browser-default serif. Use the helper for any new
-admin overlay. (Mobile's `BottomSheet` / `MobileCommandPalette` mount inside
+**and** the element that carries the `--font-admin-*` next/font vars. It also
+sets `font-family: var(--font-ui)` on itself (in `themes/admin/index.css`) —
+necessary because next/font's `.variable` class only *declares* the custom
+property, so without an explicit `font-family` rule the wrapper (and anything
+portaled into it that sits outside `.v2-shell`) would inherit the
+browser-default serif from `<html>`. So an overlay portaled here inherits
+Inter. Portaling to `<body>` escapes the trap but lands *outside* the admin
+font scope, so the overlay renders serif. Use the helper for any new admin
+overlay. (Mobile's `BottomSheet` / `MobileCommandPalette` mount inside
 `MobileShell`, which is itself in-scope.)
 
 ## Capabilities — the source of truth

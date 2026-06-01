@@ -173,6 +173,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The admin layout wrapper (src/app/admin/layout.tsx) carries the
+   `--font-admin-*` next/font vars but next/font's `.variable` class only
+   *declares* those custom properties — it does not set `font-family`. Apply
+   the UI font here so the wrapper that owns the font scope also renders in it.
+   This matters for overlays: dialogs / popovers / tooltips / toasts portal
+   into `#admin-portal-root` (a sibling of `.v2-shell`, so they miss the
+   shell's own `font-family` rule below) — without this they'd inherit the
+   browser-default serif from <html>, where `var(--font-ui)` can't resolve.
+   `.v2-shell` and `.v2-page-loading` still self-declare the font so they're
+   correct even on the defensive `<body>` portal fallback. */
+#admin-portal-root {
+  font-family: var(--font-ui);
+}
+
 /* ============================
    ADMIN v2 — SHELL (sidebar + topbar)
    Mounted by AdminShell. Uses tokens from [data-admin-theme].
