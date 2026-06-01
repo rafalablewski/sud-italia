@@ -188,9 +188,14 @@ export function buildDemandBoard(input: DemandBoardInput): DemandBoard {
       else if (advertisedUtil < 0.5) tier = "under";
       else tier = "healthy";
 
-      // Right-size to demand, but never above the kitchen ceiling.
+      // Right-size to demand, but never above the kitchen ceiling and never
+      // below what's already booked (you can't un-sell a seat).
       const ceil = throughputCapacity ?? Number.POSITIVE_INFINITY;
-      const recommendedMaxOrders = Math.max(1, Math.min(Math.ceil(predicted * 1.1), ceil));
+      const recommendedMaxOrders = Math.max(
+        1,
+        s.currentOrders,
+        Math.min(Math.ceil(predicted * 1.1), ceil),
+      );
 
       let action: DemandAction;
       let note: string;

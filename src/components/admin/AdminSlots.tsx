@@ -113,6 +113,9 @@ function AdminSlotsDesktop() {
   const [pendingDelete, setPendingDelete] = useState<SlotData | null>(null);
   const [demand, setDemand] = useState<DemandBoard | null>(null);
   const [demandLoading, setDemandLoading] = useState(false);
+  const [applyingSlot, setApplyingSlot] = useState<string | null>(null);
+  const [applyingAll, setApplyingAll] = useState(false);
+  const [confirmApplyAll, setConfirmApplyAll] = useState(false);
 
   const fetchDemand = useCallback(async () => {
     setDemandLoading(true);
@@ -128,6 +131,46 @@ function AdminSlotsDesktop() {
   useEffect(() => {
     if (view === "demand") void fetchDemand();
   }, [view, fetchDemand]);
+
+  const applyResize = async (slotId: string, maxOrders: number) => {
+    setApplyingSlot(slotId);
+    try {
+      const res = await fetch(`/api/admin/demand-exchange?location=${pageLoc}&date=${date}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId, maxOrders }),
+      });
+      if (res.ok) {
+        toast.success("Capacity resized", `→ ${maxOrders} orders`);
+        await Promise.all([fetchDemand(), fetchSlots()]);
+      } else {
+        toast.error("Could not resize slot");
+      }
+    } finally {
+      setApplyingSlot(null);
+    }
+  };
+
+  const applyAllResizes = async () => {
+    setApplyingAll(true);
+    try {
+      const res = await fetch(`/api/admin/demand-exchange?location=${pageLoc}&date=${date}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "apply-all" }),
+      });
+      if (res.ok) {
+        const j = (await res.json()) as { applied: number };
+        toast.success("Capacities applied", `${j.applied} slot(s) resized to demand`);
+        await Promise.all([fetchDemand(), fetchSlots()]);
+      } else {
+        toast.error("Could not apply capacities");
+      }
+    } finally {
+      setApplyingAll(false);
+      setConfirmApplyAll(false);
+    }
+  };
 
   const fetchSlots = useCallback(async () => {
     setLoading(true);
@@ -331,7 +374,14 @@ function AdminSlotsDesktop() {
       </div>
 
       {view === "demand" ? (
-        <DemandView board={demand} loading={demandLoading} />
+        <DemandView
+          board={demand}
+          loading={demandLoading}
+          applyingSlot={applyingSlot}
+          applyingAll={applyingAll}
+          onApply={(r) => applyResize(r.slotId, r.recommendedMaxOrders)}
+          onApplyAll={() => setConfirmApplyAll(true)}
+        />
       ) : (
         <>
       <section className="v2-kpi-grid">
@@ -456,6 +506,17 @@ function AdminSlotsDesktop() {
         confirmLabel="Delete slot"
         destructive
       />
+
+      <ConfirmDialog
+        open={confirmApplyAll}
+        onClose={() => setConfirmApplyAll(false)}
+        onConfirm={applyAllResizes}
+        title="Apply all recommended capacities?"
+        description={`Resizes ${
+          demand?.slots.filter((s) => s.recommendedMaxOrders !== s.maxOrders).length ?? 0
+        } slot(s) to the demand-matched capacity (never below what's already booked). You can still edit any slot afterwards.`}
+        confirmLabel="Apply all"
+      />
     </div>
   );
 }
@@ -525,7 +586,21 @@ const ACTION_LABEL: Record<DemandAction, string> = {
 
 type DemandRow = DemandBoard["slots"][number];
 
-function DemandView({ board, loading }: { board: DemandBoard | null; loading: boolean }) {
+function DemandView({
+  board,
+  loading,
+  applyingSlot,
+  applyingAll,
+  onApply,
+  onApplyAll,
+}: {
+  board: DemandBoard | null;
+  loading: boolean;
+  applyingSlot: string | null;
+  applyingAll: boolean;
+  onApply: (r: DemandRow) => void;
+  onApplyAll: () => void;
+}) {
   if (loading) return <div className="v2-page-loading">Forecasting demand…</div>;
   if (!board || board.slots.length === 0) {
     return (
@@ -579,15 +654,32 @@ function DemandView({ board, loading }: { board: DemandBoard | null; loading: bo
     {
       key: "action",
       header: "Recommendation",
-      cell: (r) => (
-        <Badge tone={ACTION_TONE[r.action]} variant="soft">
-          {ACTION_LABEL[r.action]}
-          {(r.action === "raise" || r.action === "trim") && ` → ${r.recommendedMaxOrders}`}
-        </Badge>
-      ),
+      cell: (r) => {
+        const changed = r.recommendedMaxOrders !== r.maxOrders;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Badge tone={ACTION_TONE[r.action]} variant="soft">
+              {ACTION_LABEL[r.action]}
+              {changed && ` → ${r.recommendedMaxOrders}`}
+            </Badge>
+            {changed && (
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={applyingSlot === r.slotId}
+                disabled={applyingAll}
+                onClick={() => onApply(r)}
+              >
+                Apply
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
   const actionable = board.slots.filter((r) => r.action !== "hold");
+  const changeCount = board.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders).length;
   return (
     <>
       <section className="v2-kpi-grid">
@@ -614,6 +706,13 @@ function DemandView({ board, loading }: { board: DemandBoard | null; loading: bo
         <CardHeader
           title="Per-slot yield"
           description={`Demand forecast from same-weekday history vs the kitchen's demonstrated ceiling — ${s.overCount} over · ${s.underCount} under · ${s.kitchenCappedCount} kitchen-capped.`}
+          actions={
+            changeCount > 0 && (
+              <Button size="sm" variant="primary" loading={applyingAll} onClick={onApplyAll}>
+                Apply all ({changeCount})
+              </Button>
+            )
+          }
         />
         <CardBody>
           <Table rows={board.slots} columns={cols} rowKey={(r) => r.slotId} defaultSort={{ key: "time", dir: "asc" }} />

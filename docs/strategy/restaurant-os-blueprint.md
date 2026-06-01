@@ -178,15 +178,18 @@ build pushes it to **per-slot, per-category** resolution so we can predict
 *which station* a given evening will bottleneck — a gap the current daily-only
 forecast can't fill.
 
-> **Status — keystone shipped (v1).** The **Demand view** on `/admin/slots`
-> (`src/lib/demand-exchange.ts`, `GET /api/admin/demand-exchange`) forecasts
-> covers per slot from same-weekday history, compares against the kitchen's
-> *demonstrated* covers/hour ceiling, and prescribes the yield action
-> (raise / trim / protect / hold). Critically it **instruments rejected
-> demand** — every checkout that hits a full slot logs a signal
-> (`recordDemandSignal` → `demand-signals.json`), so fill-rate becomes a real
-> demand curve. Next: one-click auto-resize (Phase 2) + per-category /
-> per-station resolution.
+> **Status — keystone + first decision shipped.** The **Demand view** on
+> `/admin/slots` (`src/lib/demand-exchange.ts`, `GET/POST
+> /api/admin/demand-exchange`) forecasts covers per slot from same-weekday
+> history, compares against the kitchen's *demonstrated* covers/hour ceiling,
+> and prescribes the yield action (raise / trim / protect / hold). It
+> **instruments rejected demand** — every checkout that hits a full slot logs a
+> signal (`recordDemandSignal` → `demand-signals.json`), so fill-rate becomes a
+> real demand curve. **Phase 2 (the act) is live:** one-click **Apply** resizes
+> a slot to the demand-matched capacity and **Apply all** re-derives the board
+> server-side and resizes every changed slot (audit-logged `slots.resize`,
+> never below booked). Next: per-category / per-station resolution + auto-raise
+> minimum-spend on `protect` slots.
 
 ### 3.4 AI workflows that remove decisions
 - **Dynamic capacity:** auto-open/close and auto-resize `maxOrders` from
@@ -360,8 +363,9 @@ This is the SaaS→OS transition: the product stops informing and starts operati
 > (`getSmsProvider`/`getEmailProvider`, opt-outs honoured, audit-logged); **Send
 > all reachable** runs the whole queue in one click — the decay-to-autonomy
 > lever. Sends degrade to a logged no-op when no provider is configured.
-> Remaining Phase-2 decisions: capacity/min-spend (Demand Exchange) and seating
-> moves (Floor Twin).
+> **Demand Exchange Phase 2 is also live** — one-click capacity resize +
+> "apply all" (`slots.resize`). Remaining Phase-2 decisions: minimum-spend on
+> `protect` slots, and seating moves (Floor Twin).
 
 **Phase 3 — Network (infrastructure).** Population priors, cross-restaurant
 benchmarks, the demand exchange, and cross-venue customer identity. This is the

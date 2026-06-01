@@ -113,8 +113,14 @@ covers/hour over the last 90 days), then prescribes the yield action.
   (`under` / `healthy` / `tight` / `over` / `kitchen-capped`), forecast vs
   capacity (+ kitchen ceiling), walked-guest count, and the recommended action
   (`raise → N` / `trim → N` / `protect` / `hold`) as a toned `Badge`, plus a
-  notes list for the actionable slots. Read-only recommendations (one-click
-  auto-resize is the Phase-2 follow-on).
+  notes list for the actionable slots.
+- **Apply the recommendation (Phase 2 — the act).** Each changed row carries an
+  **Apply** button that resizes the slot to the demand-matched capacity
+  (`POST /api/admin/demand-exchange { slotId, maxOrders }` → `updateSlot`,
+  audit-logged `slots.resize`); the header's **Apply all (N)** is the autonomy
+  lever — it re-derives the board server-side and resizes every changed slot in
+  one confirmed click. Recommendations never drop a slot below what's already
+  booked.
 - **Rejected demand is instrumented.** Every checkout that hits a full slot
   logs a demand signal (`createOrder` → `recordDemandSignal` →
   `demand-signals.json`), so the board can show demand that *exceeded* supply —

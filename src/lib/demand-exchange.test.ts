@@ -126,6 +126,24 @@ test("pending / cancelled / simulated orders are not counted as demand", () => {
   assert.equal(board.slots[0].predictedDemand, 0); // no counted history
 });
 
+test("recommendation never drops below already-booked orders", () => {
+  // currentOrders 6 but kitchen ceiling is only 4 → can't un-sell; recommend 6.
+  const board = buildDemandBoard({
+    date: TARGET,
+    slots: [
+      slot({ time: "17:30", maxOrders: 10 }),
+      slot({ time: "18:00", maxOrders: 10, currentOrders: 6 }),
+      slot({ time: "18:30", maxOrders: 10 }),
+      slot({ time: "19:00", maxOrders: 10 }),
+    ],
+    orders: ordersAt("18:00", 5),
+    kitchenCoversPerHour: 8, // ceiling 4 per slot
+  });
+  const dinner = board.slots.find((s) => s.time === "18:00")!;
+  assert.equal(dinner.tier, "kitchen-capped");
+  assert.equal(dinner.recommendedMaxOrders, 6); // floored at booked, not the 4 ceiling
+});
+
 test("demonstratedCoversPerHour returns the sustained peak, null when thin", () => {
   assert.equal(demonstratedCoversPerHour([1, 2, 3]), null); // below minSamples
   // 6 hours × 5 covers each → sustained 5/hr
