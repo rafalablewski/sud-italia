@@ -127,8 +127,8 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Soft role-tinted initials avatar — gives the roster a professional first column. */
-function Avatar({ name, role }: { name: string; role: AdminRole }) {
+/** Role tint shared by the avatar + accents. */
+function roleColor(role: AdminRole): string {
   const tint: Record<AdminRole, string> = {
     owner: "var(--danger, #ef4444)",
     franchisee: "var(--info, #38bdf8)",
@@ -136,19 +136,24 @@ function Avatar({ name, role }: { name: string; role: AdminRole }) {
     staff: "var(--warning, #f59e0b)",
     kitchen: "var(--success, #34d399)",
   };
-  const c = tint[role] ?? "var(--info, #38bdf8)";
+  return tint[role] ?? "var(--info, #38bdf8)";
+}
+
+/** Soft role-tinted initials avatar — gives the roster a professional first column. */
+function Avatar({ name, role, size = 34 }: { name: string; role: AdminRole; size?: number }) {
+  const c = roleColor(role);
   return (
     <span
       aria-hidden
       style={{
         flex: "0 0 auto",
-        width: 34,
-        height: 34,
-        borderRadius: 10,
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.29),
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "0.72rem",
+        fontSize: size >= 44 ? "0.95rem" : "0.72rem",
         fontWeight: 700,
         letterSpacing: "0.02em",
         color: c,
@@ -655,77 +660,103 @@ function UserDetailDrawer({
   const posture = securityPosture(user);
   const locations = userLocationSlugs(user);
 
+  const panel: React.CSSProperties = {
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: 14,
+    background: "var(--surface-2, rgba(255,255,255,0.02))",
+  };
+
   return (
     <Dialog open onClose={onClose} size="lg" title={user.name}
-      footer={<Button variant="ghost" onClick={onClose}>Close</Button>}
+      footer={
+        <>
+          <Button variant="danger" leadingIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => onDelete(user)}>Remove</Button>
+          <span style={{ flex: 1 }} />
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="primary" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => onEdit(user)}>Edit account</Button>
+        </>
+      }
     >
-      <div className="v2-stack-12">
-        {/* Identity */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          {user.email && <span className="v2-muted">{user.email}</span>}
-          <Badge tone={ROLE_TONE[user.role]} variant="soft" dot>{ROLE_LABEL[user.role]}</Badge>
-          <Badge tone={user.status === "active" ? "success" : "neutral"} variant="soft" dot>{user.status}</Badge>
-          <Badge tone={posture.tone === "neutral" ? "info" : posture.tone} variant={posture.risk ? "soft" : "outline"} dot>
-            {posture.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {posture.label}
-          </Badge>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Identity header */}
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <Avatar name={user.name} role={user.role} size={48} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+            {user.email && (
+              <span className="v2-muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</span>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <Badge tone={ROLE_TONE[user.role]} variant="soft" dot>{ROLE_LABEL[user.role]}</Badge>
+              <Badge tone={user.status === "active" ? "success" : "neutral"} variant="soft" dot>{user.status}</Badge>
+              <PostureChip posture={posture} />
+            </div>
+          </div>
         </div>
 
-        {/* Locations */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <MapPin className="h-3.5 w-3.5 v2-muted" />
-          {locations.length === 0 ? (
-            <span className="v2-muted">All locations</span>
-          ) : (
-            locations.map((s) => <Badge key={s} tone="neutral" variant="outline">{s}</Badge>)
-          )}
-        </div>
-
-        {/* How they sign in */}
-        <div className="v2-note">
-          <KeyRound className="h-4 w-4" />
-          <span>
-            <strong>How they sign in</strong>
-            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+        {/* Two info panels */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+          {/* Sign-in */}
+          <section style={panel}>
+            <div className="v2-field-label" style={{ marginBottom: 8, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <KeyRound className="h-3.5 w-3.5" /> How they sign in
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: 4 }}>
               {login.methods.map((m, i) => <li key={i}>{m}</li>)}
             </ul>
-            {login.mfa && <div style={{ marginTop: 4 }}>Requires a 6-digit MFA code at every sign-in.</div>}
-            <div style={{ marginTop: 4 }}>Lands on <strong>{login.landing}</strong>.</div>
-          </span>
-        </div>
-
-        {/* Effective access */}
-        <div>
-          <div className="v2-field-label" style={{ marginBottom: 6 }}>
-            Effective access {eff.all ? "" : `· ${eff.keys.size}/${ALL_PERMISSION_KEYS.length}`}
-            {eff.custom ? " · custom grant" : user.role === "owner" ? "" : " · role default"}
-          </div>
-          {eff.all ? (
-            <Badge tone="brand" variant="soft">Full access — every capability</Badge>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
-              {PERMISSION_GROUPS.map((g) => {
-                const on = g.permissions.filter((p) => effectiveHas(eff, p.key)).length;
-                if (on === 0) return null;
-                return (
-                  <div key={g.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: "0.82rem" }}>
-                    <span>{g.label}</span>
-                    <span className="v2-muted">{on}/{g.permissions.length}</span>
-                  </div>
-                );
-              })}
+            {login.mfa && (
+              <div className="v2-muted" style={{ marginTop: 8, fontSize: "0.8rem" }}>Requires a 6-digit MFA code at every sign-in.</div>
+            )}
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, fontSize: "0.8rem" }}>
+              <span className="v2-muted">Lands on <strong style={{ color: "var(--fg)" }}>{login.landing}</strong></span>
+              <span className="v2-muted" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <MapPin className="h-3 w-3" />{locations.length === 0 ? "All locations" : locations.join(", ")}
+              </span>
             </div>
-          )}
+          </section>
+
+          {/* Effective access */}
+          <section style={panel}>
+            <div className="v2-field-label" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><ShieldCheck className="h-3.5 w-3.5" /> Effective access</span>
+              <span className="v2-muted" style={{ fontWeight: 500, fontSize: "0.72rem" }}>
+                {eff.all ? "Full" : `${eff.keys.size}/${ALL_PERMISSION_KEYS.length}`}
+                {eff.custom ? " · custom" : user.role === "owner" ? "" : " · default"}
+              </span>
+            </div>
+            {eff.all ? (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--danger, #ef4444)", fontSize: "0.85rem", fontWeight: 600 }}>
+                <ShieldCheck className="h-4 w-4" /> Every capability
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 7, maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
+                {PERMISSION_GROUPS.map((g) => {
+                  const on = g.permissions.filter((p) => effectiveHas(eff, p.key)).length;
+                  const pct = Math.round((on / g.permissions.length) * 100);
+                  return (
+                    <div key={g.id} style={{ fontSize: "0.8rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 3 }}>
+                        <span style={{ opacity: on === 0 ? 0.45 : 1 }}>{g.label}</span>
+                        <span className="v2-muted">{on}/{g.permissions.length}</span>
+                      </div>
+                      <div style={{ height: 4, borderRadius: 999, background: "color-mix(in srgb, var(--fg) 8%, transparent)" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: pct === 100 ? "var(--success, #34d399)" : "var(--info, #38bdf8)" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, borderTop: "1px solid var(--v2-border, rgba(255,255,255,0.08))", paddingTop: 12 }}>
-          <Button size="sm" variant="primary" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => onEdit(user)}>Edit</Button>
+        {/* Secondary security actions */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {isOwner && user.role !== "owner" && (
             <Button size="sm" variant="ghost" leadingIcon={<Lock className="h-3.5 w-3.5" />} onClick={() => onCredentials(user)}>Login & credentials</Button>
           )}
-          <Button size="sm" variant="ghost" leadingIcon={<Smartphone className="h-3.5 w-3.5" />} onClick={() => onMfa(user)}>MFA</Button>
-          <Button size="sm" variant="ghost" leadingIcon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => onKeys(user)}>Passkeys</Button>
-          <Button size="sm" variant="ghost" leadingIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => onDelete(user)}>Remove</Button>
+          <Button size="sm" variant="ghost" leadingIcon={<KeyRound className="h-3.5 w-3.5" />} onClick={() => onMfa(user)}>Two-factor (MFA)</Button>
+          <Button size="sm" variant="ghost" leadingIcon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => onKeys(user)}>Passkeys &amp; keys</Button>
         </div>
       </div>
     </Dialog>

@@ -65,12 +65,15 @@ actually reach.
 - **Security posture column:** a per-row chip from `securityPosture()` —
   `Secured` (personal password + a second factor), `Password only`, or
   `Shared pwd` (a flagged risk). Sortable by strength.
-- **Account detail drawer:** clicking a name opens a read-first profile
-  (`UserDetailDrawer`) — identity, role, status, location scope, the
-  "How they sign in" explainer, the account's **effective access** (grouped,
-  read-only, with per-group counts; `Full access` for owners), and the security
-  actions (Edit, Login & credentials, MFA, Passkeys, Remove) which open the
-  existing dialogs. One place to see and run everything for an account.
+- **Account detail drawer:** clicking the account opens a read-first profile
+  (`UserDetailDrawer`) — an identity header (large role-tinted `Avatar` + email
+  + role / status / posture chips) over **two info panels**: *How they sign in*
+  (the `describeLogin` method list, MFA note, landing surface + location scope)
+  and *Effective access* (per-permission-group rows with a count and a thin
+  proportion bar; `Every capability` for owners). Secondary security actions
+  (Login & credentials, MFA, Passkeys) sit in the body; the footer carries the
+  primary **Edit** and a left-aligned destructive **Remove**. Each action opens
+  the existing dialog. One place to see and run everything for an account.
 - **Table (consolidated, 5 columns + a kebab):** Deliberately decluttered so
   the roster reads at a glance rather than as a wall of buttons.
   - **Account** — a role-tinted initials `Avatar` + name + email; the whole
