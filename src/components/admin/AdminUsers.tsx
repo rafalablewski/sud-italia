@@ -499,12 +499,17 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
 
   if (!state.open) return <Dialog open={false} onClose={onClose} />;
 
-  const enableCustom = (on: boolean) => {
-    setCustomPerms(on);
-    // Seed the editor from the role's defaults the first time it's turned on so
-    // the operator edits a sensible baseline rather than an empty grant.
-    if (on && permSet.size === 0) setPermSet(new Set(roleDefaults));
+  // Changing the role while "Customize" is off must re-seed the editor's
+  // baseline to the NEW role's defaults — otherwise toggling Customize on later
+  // would show the previously-selected role's defaults. Handled in the change
+  // handler (not an effect) so we never clobber an existing custom grant: when
+  // Customize is on, the operator's edits are preserved across a role change.
+  const onRoleChange = (next: AdminRole) => {
+    setRole(next);
+    if (!customPerms) setPermSet(new Set(ROLE_DEFAULT_PERMISSIONS[next] ?? []));
   };
+
+  const enableCustom = (on: boolean) => setCustomPerms(on);
 
   const togglePerm = (key: string) =>
     setPermSet((prev) => {
@@ -582,7 +587,7 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
           <Select
             label="Role"
             value={role}
-            onChange={(e) => setRole(e.target.value as AdminRole)}
+            onChange={(e) => onRoleChange(e.target.value as AdminRole)}
             options={[
               { value: "owner", label: ROLE_LABEL.owner },
               { value: "manager", label: ROLE_LABEL.manager },

@@ -59,6 +59,15 @@ The shell owns:
   warrants it (single-key, lowercase).
 - **Notification panel** — operator-facing alerts; never marketing.
 - **Shortcuts help** (`?`) — auto-generated from `nav.config.ts`.
+- **Access gating** — the sidebar filters items by the session's effective
+  permissions (`filterNavForPermissions` for owners + custom-grant users;
+  `filterNavForRole` for role-default users), and the shell runs a client
+  page guard that bounces a custom-grant user away from a surface they
+  lack. Both read `/api/admin/me` and mirror the server gate in
+  `withAdmin`. The full granular-permission model — the 70-key catalog
+  (`src/lib/permissions.ts`), role-default presets, owner-only granting,
+  and the call-site defence-in-depth gates — lives in
+  [`sections/system.md`](./sections/system.md#granular-permissions-action-level-rbac).
 - **Responsive shell (one layout, all viewports)** — the `v2-shell` chrome is
   served on **every** screen size. Below 900px the sidebar collapses into the
   hamburger drawer (`Topbar` → `v2-mobile-drawer`) and pages reflow via their
