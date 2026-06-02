@@ -1,9 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
+import { KeyRound, Pencil, Plus, RotateCcw, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
+import {
+  ALL_PERMISSION_KEYS,
+  PERMISSION_GROUPS,
+  ROLE_DEFAULT_PERMISSIONS,
+} from "@/lib/permissions";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -16,6 +21,7 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Tabs,
   Table,
   Textarea,
@@ -137,6 +143,19 @@ function AdminUsersDesktop() {
       sortValue: (u) => u.role,
     },
     {
+      key: "access",
+      header: "Access",
+      cell: (u) =>
+        u.role === "owner" ? (
+          <Badge tone="brand" variant="soft">Full access</Badge>
+        ) : Array.isArray(u.permissions) ? (
+          <Badge tone="info" variant="outline">{`Custom · ${u.permissions.length}`}</Badge>
+        ) : (
+          <span className="v2-muted">Role default</span>
+        ),
+      sortValue: (u) => (Array.isArray(u.permissions) ? 1 : 0),
+    },
+    {
       key: "loc",
       header: "Location",
       cell: (u) =>
@@ -192,7 +211,7 @@ function AdminUsersDesktop() {
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Users & roles</h1>
           <p className="v2-page-subtitle">
-            Per-user accounts, role mappings, and two-factor auth. Users with an email log in with the shared password + their own role/location scope; enable MFA per account for a required 6-digit code. Admin APIs gate on owner / manager via the role helpers.
+            Per-user accounts, roles, granular permissions, and two-factor auth. Each non-owner account can either inherit its role&rsquo;s default permissions or carry a fully-custom, action-level grant. Permissions are enforced everywhere — the sidebar hides what a user can&rsquo;t reach and every admin API rejects calls they aren&rsquo;t granted. Owners always have full access.
           </p>
         </div>
         <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
@@ -259,7 +278,7 @@ function AdminUsersDesktop() {
         <div className="v2-note">
           <ShieldCheck className="h-4 w-4" />
           <span>
-            Role gate active on <span className="mono">/api/admin/users</span> writes (owner / manager). Other endpoints will adopt the same gate as per-user sessions land.
+            Granular permissions enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, and <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls server-side. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
           </span>
         </div>
       </Card>
@@ -452,20 +471,60 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
   const [locationSlug, setLocationSlug] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  // Granular permissions: `customPerms` off = inherit the role's defaults;
+  // on = `permSet` is the authoritative per-user grant.
+  const [customPerms, setCustomPerms] = useState(false);
+  const [permSet, setPermSet] = useState<Set<string>>(new Set());
+
+  const roleDefaults = ROLE_DEFAULT_PERMISSIONS[role] ?? [];
+  const isOwner = role === "owner";
 
   useEffect(() => {
     if (!state.open) return;
     const u = state.user;
+    const r = u?.role ?? "manager";
     setName(u?.name ?? "");
     setEmail(u?.email ?? "");
-    setRole(u?.role ?? "manager");
+    setRole(r);
     setStatus(u?.status ?? "active");
     setLocationSlug(u?.locationSlug ?? "");
     setNotes(u?.notes ?? "");
+    const hasCustom = Array.isArray(u?.permissions);
+    setCustomPerms(hasCustom);
+    setPermSet(
+      new Set(hasCustom ? u!.permissions! : ROLE_DEFAULT_PERMISSIONS[r] ?? []),
+    );
     setBusy(false);
   }, [state]);
 
   if (!state.open) return <Dialog open={false} onClose={onClose} />;
+
+  const enableCustom = (on: boolean) => {
+    setCustomPerms(on);
+    // Seed the editor from the role's defaults the first time it's turned on so
+    // the operator edits a sensible baseline rather than an empty grant.
+    if (on && permSet.size === 0) setPermSet(new Set(roleDefaults));
+  };
+
+  const togglePerm = (key: string) =>
+    setPermSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const setGroup = (keys: readonly string[], on: boolean) =>
+    setPermSet((prev) => {
+      const next = new Set(prev);
+      for (const k of keys) {
+        if (on) next.add(k);
+        else next.delete(k);
+      }
+      return next;
+    });
+
+  const resetToRoleDefaults = () => setPermSet(new Set(roleDefaults));
 
   const submit = async () => {
     if (!name.trim()) {
@@ -485,6 +544,10 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
           status,
           locationSlug: locationSlug || undefined,
           notes: notes.trim() || undefined,
+          // Owners are implicitly all-access, so we never persist a grant for
+          // them. Otherwise: a custom grant is sent as an array; "role default"
+          // is sent as null to clear any stored grant.
+          permissions: isOwner || !customPerms ? null : Array.from(permSet),
         }),
       });
       if (res.ok) {
@@ -503,7 +566,7 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
     <Dialog
       open
       onClose={onClose}
-      size="md"
+      size="lg"
       title={state.user ? `Edit ${state.user.name}` : "New user"}
       footer={
         <>
@@ -545,7 +608,111 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
           description="Future per-user filter: when set, the user only sees data for this location."
         />
         <Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+        <PermissionEditor
+          isOwner={isOwner}
+          role={role}
+          roleDefaultsCount={roleDefaults.length}
+          customPerms={customPerms}
+          onToggleCustom={enableCustom}
+          permSet={permSet}
+          onTogglePerm={togglePerm}
+          onSetGroup={setGroup}
+          onReset={resetToRoleDefaults}
+        />
       </div>
     </Dialog>
+  );
+}
+
+function PermissionEditor({
+  isOwner,
+  role,
+  roleDefaultsCount,
+  customPerms,
+  onToggleCustom,
+  permSet,
+  onTogglePerm,
+  onSetGroup,
+  onReset,
+}: {
+  isOwner: boolean;
+  role: AdminRole;
+  roleDefaultsCount: number;
+  customPerms: boolean;
+  onToggleCustom: (on: boolean) => void;
+  permSet: Set<string>;
+  onTogglePerm: (key: string) => void;
+  onSetGroup: (keys: readonly string[], on: boolean) => void;
+  onReset: () => void;
+}) {
+  const grantedCount = permSet.size;
+
+  return (
+    <div className="v2-stack-12" style={{ borderTop: "1px solid var(--v2-border, rgba(255,255,255,0.08))", paddingTop: 12 }}>
+      <div className="v2-perm-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Permissions</div>
+          <div className="v2-muted" style={{ fontSize: "0.8rem" }}>
+            {isOwner
+              ? "Owners have unrestricted access to every surface — permissions can’t be narrowed."
+              : customPerms
+                ? `Custom grant — ${grantedCount} of ${ALL_PERMISSION_KEYS.length} capabilities enabled.`
+                : `Inheriting ${ROLE_LABEL[role]} defaults — ${roleDefaultsCount} capabilities.`}
+          </div>
+        </div>
+        {!isOwner && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="v2-muted" style={{ fontSize: "0.8rem" }}>Customize</span>
+            <Switch checked={customPerms} onChange={onToggleCustom} label="Customize permissions" />
+          </div>
+        )}
+      </div>
+
+      {!isOwner && customPerms && (
+        <>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button size="sm" variant="ghost" leadingIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={onReset}>
+              Reset to {ROLE_LABEL[role]} defaults
+            </Button>
+          </div>
+          <div className="v2-perm-groups" style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
+            {PERMISSION_GROUPS.map((group) => {
+              const keys = group.permissions.map((p) => p.key);
+              const onCount = keys.filter((k) => permSet.has(k)).length;
+              const allOn = onCount === keys.length;
+              return (
+                <div key={group.id} className="v2-perm-group" style={{ border: "1px solid var(--v2-border, rgba(255,255,255,0.08))", borderRadius: 10, padding: "8px 12px" }}>
+                  <div className="v2-perm-group-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{group.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="v2-muted" style={{ fontSize: "0.72rem" }}>{onCount}/{keys.length}</span>
+                      <Button size="sm" variant="ghost" onClick={() => onSetGroup(keys, !allOn)}>
+                        {allOn ? "None" : "All"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="v2-perm-rows">
+                    {group.permissions.map((perm) => (
+                      <label key={perm.key} className="v2-perm-row" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "6px 0", cursor: "pointer" }}>
+                        <Switch
+                          checked={permSet.has(perm.key)}
+                          onChange={() => onTogglePerm(perm.key)}
+                          label={perm.label}
+                        />
+                        <span style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: "0.82rem" }}>{perm.label}</span>
+                          <span className="v2-muted" style={{ fontSize: "0.72rem" }}>{perm.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

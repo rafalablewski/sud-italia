@@ -46,14 +46,18 @@ on.
 
 ## Users & roles — `/admin/users`
 
-The admin-account list — who has admin access, what role.
+The admin-account list — who has admin access, what role, and the
+**granular, action-level permissions** that govern what each account can
+actually reach.
 
 - **Header:** `Users & roles` (h1), search, role filter
   (`all` / `owner` / `manager` / `staff` / `kitchen`), `New user`
   primary.
-- **Table:** name + email, role, location scope, status
-  (`active` / `disabled`), `MFA` (On / Off), row actions
-  (`MFA`, `Edit`, delete). Live code: `AdminUsers.tsx`.
+- **Table:** name + email, role, **Access** (`Full access` for owners,
+  `Custom · N` when the account carries a custom grant, else
+  `Role default`), location scope, status (`active` / `disabled`),
+  `MFA` (On / Off), row actions (`MFA`, `Edit`, delete). Live code:
+  `AdminUsers.tsx`.
 - **MFA (TOTP):** the `MFA` row action opens an enrollment dialog —
   Begin setup → add the shown secret to an authenticator app → confirm
   a 6-digit code to turn it on (or disable, with a current code; an
@@ -64,14 +68,67 @@ The admin-account list — who has admin access, what role.
   users API strips `totpSecret` from reads. Code:
   `src/app/api/admin/users/[id]/mfa/route.ts`,
   `src/app/admin/login/page.tsx`, `src/lib/totp.ts`.
-- **Edit** opens a dialog (name, email, role, status, location scope,
-  notes); save preserves the user's MFA fields rather than wiping them.
+- **Edit** opens an `lg` dialog (name, email, role, status, location
+  scope, notes, **permissions**); save preserves the user's MFA fields
+  rather than wiping them.
 - **The role enum is closed**: `staff` / `kitchen` / `manager` /
-  `owner`. Don't add roles ad-hoc — every new role is a `nav.config.ts`
-  + permission-matrix audit.
+  `owner` (`franchisee` exists in the rank table but isn't offered in
+  the upsert form). Don't add roles ad-hoc — every new role is a
+  `nav.config.ts` + permission-catalog audit.
 - **Distinguish admin user from staff** — `/admin/users` is for admin
   login accounts; `/admin/staff` is for the people who clock in. The
   same person can have both records (linked by email).
+
+### Granular permissions (action-level RBAC)
+
+The unit of authority is a **permission**, not a role. The catalog —
+**70 action-level keys** grouped by domain (orders, guests, menu,
+inventory, people, finance, growth, intelligence, system) — lives in
+`src/lib/permissions.ts` and is the **single source of truth that gates
+both the UI and the API**. Never hard-code a permission string at a call
+site; add/extend a key in the catalog so a typo fails to compile.
+
+- **Editor** (`PermissionEditor` inside `AdminUsers.tsx`): a `Customize`
+  `Switch` per non-owner account. Off = the account **inherits its
+  role's default preset** (`ROLE_DEFAULT_PERMISSIONS`, shown as
+  `Role default`); on = a **fully-custom grant** — one `Switch` per
+  capability, grouped into cards with an `All`/`None` toggle and an
+  `N/total` count per group, plus `Reset to <Role> defaults`. Owners
+  show a locked note — they're always all-access and never carry a
+  stored grant.
+- **Persistence:** the dialog sends `permissions` as an **array** (custom
+  grant), `null` (clear → fall back to role defaults), or omits it (leave
+  untouched) — mirroring the `totpSecret` set/clear/preserve pattern in
+  `saveAdminUser`. Stored on `AdminUser.permissions`; validated by
+  `adminUserUpsertSchema` (every entry must be a known key). Writes are
+  audited as `users.create` / `users.update`.
+- **Resolution** (`resolveEffectivePermissions`): owner / the legacy
+  shared `admin` session → `all` (god-mode, the lockout escape hatch); an
+  account with an array → `custom` (authoritative, **overrides role
+  rank**); everyone else → role-default preset. This is why the upgrade
+  is a no-op for existing accounts — no `permissions` field means
+  "behave exactly as before".
+- **Enforcement is end-to-end** (both UI + server, per the build spec):
+  - **Sidebar** — `filterNavForPermissions` (replaces the role-only
+    `filterNavForRole` in `useNavSections`) hides any nav item whose page
+    maps to a permission the user lacks. Mapping: `permissionForAdminPage`.
+  - **Page guard** — `AdminShell` resolves the session's permissions once
+    and `router.replace("/admin")` on direct navigation (typed URL /
+    stale bookmark) to a forbidden page. Cosmetic safety net only.
+  - **Server (the real boundary)** — `withAdmin` resolves the caller's
+    effective permissions and, for a **custom** user, requires the
+    permission that `permissionForApiPath(path, method)` infers for the
+    route (unmapped routes fall back to the declared role gate, never
+    wide open). Role-default users keep the legacy role-rank gate; owners
+    bypass both. GET→`.view`, mutating verbs→`.edit`/action keys
+    (`orders.refund`, `purchase_orders.approve`, `cash.manage`, …).
+  - `/api/admin/me` returns `{ allAccess, permissions }` so the client
+    gates on the exact set the server enforces.
+- **Adding a capability:** add the key to the right group in
+  `PERMISSION_GROUPS`, slot it into the relevant `ROLE_DEFAULT_PERMISSIONS`
+  preset(s), and extend `permissionForAdminPage` / `permissionForApiPath`
+  if it introduces a new page or route segment. The editor, nav filter,
+  page guard, and API gate all pick it up automatically.
 
 ## Compliance calendar — `/admin/compliance`
 

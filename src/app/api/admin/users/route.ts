@@ -27,6 +27,9 @@ async function upsertUser(req: NextRequest, actor: string) {
     status: body.status,
     locationSlug: body.locationSlug,
     notes: body.notes,
+    // `undefined` leaves the stored grant untouched, `null` resets to role
+    // defaults, an array sets a custom grant (see saveAdminUser).
+    permissions: body.permissions,
   });
   await appendAuditLog({
     actor,

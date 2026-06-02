@@ -6,6 +6,10 @@ import {
   LOCATION_SCOPE_ALL,
   ROLE_RANK,
 } from "@/lib/admin-auth";
+import {
+  permissionForApiPath,
+  resolveEffectivePermissions,
+} from "@/lib/permissions";
 import { logger } from "@/lib/logger";
 import { deriveRequestId, runWithRequestContext } from "@/lib/request-context";
 import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
@@ -65,6 +69,8 @@ export interface AdminAuthContext {
     name: string;
     email?: string;
     role: AdminRole;
+    /** Custom granular grant, when the account carries one (else undefined). */
+    permissions?: string[];
   };
   /** The location slug enforced for this request, or null when not scoped. */
   locationSlug: string | null;
@@ -147,10 +153,41 @@ export function withAdmin<RouteCtx = { params: Promise<Record<string, never>> }>
     });
     if (limited) return limited;
 
-    if (opts.roles && opts.roles.length > 0) {
-      const minRank = Math.min(...opts.roles.map((r) => ROLE_RANK[r]));
-      if (ROLE_RANK[user.role] < minRank) {
-        return forbidden(`Requires role ${opts.roles.join("|")}`);
+    // Authorization. Granular permissions and the legacy role-rank gate are
+    // reconciled here so the two systems never contradict each other:
+    //
+    //  - owner / legacy shared session → all-access, both gates skipped;
+    //  - a user with a CUSTOM permission grant → permissions are
+    //    authoritative. If this route's path maps to a permission, require it
+    //    (ignoring role rank, so an owner can grant a staff user a single
+    //    manager-tier capability). If the path is unmapped, fall back to the
+    //    declared role gate so an unmapped route is never left wide open;
+    //  - everyone else (role-default users) → the existing role-rank gate.
+    const eff = resolveEffectivePermissions(user);
+    if (!eff.all) {
+      const enforceRoleGate = () => {
+        if (opts.roles && opts.roles.length > 0) {
+          const minRank = Math.min(...opts.roles.map((r) => ROLE_RANK[r]));
+          if (ROLE_RANK[user.role] < minRank) {
+            return forbidden(`Requires role ${opts.roles.join("|")}`);
+          }
+        }
+        return null;
+      };
+
+      if (eff.custom) {
+        const needed = permissionForApiPath(req.nextUrl.pathname, req.method);
+        if (needed) {
+          if (!eff.keys.has(needed)) {
+            return forbidden(`Requires permission ${needed}`);
+          }
+        } else {
+          const denied = enforceRoleGate();
+          if (denied) return denied;
+        }
+      } else {
+        const denied = enforceRoleGate();
+        if (denied) return denied;
       }
     }
 

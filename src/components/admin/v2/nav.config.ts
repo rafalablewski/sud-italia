@@ -38,6 +38,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
+import { permissionForAdminPage } from "@/lib/permissions";
 
 export interface NavItem {
   href: string;
@@ -221,6 +222,37 @@ export function filterNavForRole(
     items: section.items.filter((item) => {
       if (item.requiredRole && ROLE_RANK[item.requiredRole] > userRank) return false;
       if (item.featureFlag && !flags?.[item.featureFlag]) return false;
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
+}
+
+/**
+ * Filter the nav by the session's effective granular permissions — the
+ * permission-aware successor to filterNavForRole. Each item's href is mapped to
+ * its `.view` permission via `permissionForAdminPage`; an item is shown when the
+ * user holds that permission (or the path is unmapped, e.g. the Dashboard).
+ * `allAccess` short-circuits the per-item check for owners. Feature-flag gating
+ * is preserved. Sections with no remaining items get dropped.
+ */
+export function filterNavForPermissions(
+  perms: Set<string> | string[] | null,
+  allAccess: boolean,
+  flags?: { simulation?: boolean },
+): NavSection[] {
+  if (!allAccess && !perms) return [];
+  const held = allAccess
+    ? null
+    : perms instanceof Set
+      ? perms
+      : new Set(perms ?? []);
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.featureFlag && !flags?.[item.featureFlag]) return false;
+      if (!held) return true; // owner / all-access
+      const need = permissionForAdminPage(item.href);
+      if (need && !held.has(need)) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);

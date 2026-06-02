@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { filterNavForRole, NAV_SECTIONS, type NavSection } from "./nav.config";
+import {
+  filterNavForPermissions,
+  filterNavForRole,
+  NAV_SECTIONS,
+  type NavSection,
+} from "./nav.config";
 import type { AdminRole } from "@/lib/admin-roles";
 
 /**
@@ -18,7 +23,12 @@ import type { AdminRole } from "@/lib/admin-roles";
  * out of the nav.
  */
 export function useNavSections(): NavSection[] {
-  const [role, setRole] = useState<AdminRole | null>(null);
+  const [perms, setPerms] = useState<{
+    role: AdminRole;
+    keys: string[];
+    allAccess: boolean;
+    custom: boolean;
+  } | null>(null);
   const [simulationEnabled, setSimulationEnabled] = useState<boolean | null>(
     null,
   );
@@ -28,7 +38,14 @@ export function useNavSections(): NavSection[] {
     fetch("/api/admin/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        if (!cancelled && j?.role) setRole(j.role as AdminRole);
+        if (!cancelled && j?.role) {
+          setPerms({
+            role: j.role as AdminRole,
+            keys: Array.isArray(j.permissions) ? j.permissions : [],
+            allAccess: !!j.allAccess,
+            custom: !!j.custom,
+          });
+        }
       })
       .catch(() => {
         /* non-fatal */
@@ -53,11 +70,14 @@ export function useNavSections(): NavSection[] {
     };
   }, []);
 
-  return useMemo(
-    () =>
-      role
-        ? filterNavForRole(role, { simulation: simulationEnabled ?? true })
-        : NAV_SECTIONS,
-    [role, simulationEnabled],
-  );
+  return useMemo(() => {
+    if (!perms) return NAV_SECTIONS; // still loading — over-render briefly
+    const flags = { simulation: simulationEnabled ?? true };
+    // Owner / all-access and custom-grant users gate on permissions; everyone
+    // else keeps the legacy role-rank nav so the upgrade is invisible to them.
+    if (perms.allAccess || perms.custom) {
+      return filterNavForPermissions(perms.keys, perms.allAccess, flags);
+    }
+    return filterNavForRole(perms.role, flags);
+  }, [perms, simulationEnabled]);
 }

@@ -3,6 +3,12 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { getSessionSigningSecret } from "@/lib/session-secret";
 import { getAdminUsers } from "@/lib/store";
 import { verifyPasswordHash, isPasswordHash } from "@/lib/password";
+import {
+  effectiveHas,
+  resolveEffectivePermissions,
+  type EffectivePermissions,
+  type PermissionKey,
+} from "@/lib/permissions";
 
 export const SESSION_COOKIE = "sud-italia-admin";
 export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
@@ -265,7 +271,14 @@ export async function hasLocationAccess(locationSlug: string): Promise<boolean> 
 
 /** Hydrates the AdminUser row that owns the current session. */
 export async function getCurrentAdminUser(): Promise<
-  { id: string; name: string; email?: string; role: AdminRole } | null
+  {
+    id: string;
+    name: string;
+    email?: string;
+    role: AdminRole;
+    /** Custom granular grant, when the account carries one (else undefined). */
+    permissions?: string[];
+  } | null
 > {
   const claims = await getClaims();
   if (!claims) return null;
@@ -278,7 +291,61 @@ export async function getCurrentAdminUser(): Promise<
   const users = await getAdminUsers();
   const hit = users.find((u) => u.id === claims.userId);
   if (!hit || hit.status !== "active") return null;
-  return { id: hit.id, name: hit.name, email: hit.email, role: hit.role };
+  return {
+    id: hit.id,
+    name: hit.name,
+    email: hit.email,
+    role: hit.role,
+    permissions: hit.permissions,
+  };
+}
+
+/**
+ * Resolves the effective granular permissions for the current session — the
+ * server-side companion to the client maps in permissions.ts. Owner / legacy
+ * sessions come back `all: true`; a user with a custom grant comes back
+ * `custom: true` (authoritative over role rank); everyone else falls back to
+ * their role's default preset.
+ */
+export async function getCurrentPermissions(): Promise<EffectivePermissions | null> {
+  const u = await getCurrentAdminUser();
+  if (!u) return null;
+  return resolveEffectivePermissions(u);
+}
+
+/** True when the current session holds (or implicitly has) `key`. */
+export async function hasPermission(key: PermissionKey): Promise<boolean> {
+  const eff = await getCurrentPermissions();
+  if (!eff) return false;
+  return effectiveHas(eff, key);
+}
+
+/**
+ * API-route guard: returns `null` on success or a 401/403 Response. Drop at the
+ * top of any admin handler that needs an explicit action-level permission
+ * beyond what withAdmin's path map infers.
+ */
+export async function requirePermission(
+  key: PermissionKey,
+): Promise<{ ok: true } | { error: Response }> {
+  const eff = await getCurrentPermissions();
+  if (!eff) {
+    return {
+      error: new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  }
+  if (!effectiveHas(eff, key)) {
+    return {
+      error: new Response(JSON.stringify({ error: `Requires permission ${key}` }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  }
+  return { ok: true };
 }
 
 export async function getCurrentRole(): Promise<AdminRole | null> {

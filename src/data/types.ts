@@ -931,6 +931,14 @@ export interface AdminUser {
   locationSlug?: string;
   notes?: string;
   createdAt: string;
+  /**
+   * Granular per-user permission grant (action-level keys from
+   * `src/lib/permissions.ts`). When set this is the authoritative, fully-custom
+   * grant and overrides role-rank gating for this user. When absent the user
+   * falls back to their role's default preset, so legacy accounts are
+   * unaffected. Owner is always all-access regardless of this field.
+   */
+  permissions?: string[];
   /** Base32 TOTP secret, set during enrollment (before it's confirmed). */
   totpSecret?: string;
   /** True once the user confirms a code — login then requires a TOTP. */
