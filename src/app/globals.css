@@ -8,7 +8,8 @@
    owns it:
 
      src/app/(public)/layout.tsx → themes/homepage/index.css
-     src/app/admin/layout.tsx    → themes/admin/index.css + themes/core/index.css
+     src/app/admin/layout.tsx    → themes/admin/index.css
+     src/app/core/layout.tsx     → themes/admin/index.css + themes/core/index.css + themes/core/suite.css
 
    The single exception is Tailwind v4's @theme directive: Tailwind only
    discovers @theme via the @import chain rooted at this entry CSS, so

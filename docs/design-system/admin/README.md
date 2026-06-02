@@ -82,10 +82,17 @@ Login (`/admin/login`, the owner-only admin door) is the only bare route
 door `/login`, the PIN `/terminal`, the `/manager` portal and the `/franchisee`
 portal are separate top-level routes outside the AdminShell, but they are
 **still admin-themed**: each ships its own `layout.tsx` that loads the Admin
-theme CSS + admin fonts and wraps children in `.admin-bg` (the same pattern as
+theme CSS + admin fonts and wraps children in a single
+`<div id="admin-portal-root" className="… admin-bg">` (the same pattern as
 `/kitchen`), so the shared `LoginForm`, the PIN keypad and the portal
 dashboards render with the real glass tokens rather than unstyled (see System →
-Login surfaces).
+Login surfaces). **The `id="admin-portal-root"` is load-bearing, not just a
+portal mount:** these layouts carry no theme-boot script, so `<html>` never
+gets `[data-admin-theme]` and the `--font-ui` / `--font-display` tokens only
+re-resolve from the element's `--font-admin-*` next/font vars at the
+`#admin-portal-root` scope (see [theme → typography](./theme/typography.md) /
+`themes/admin/index.css`). Drop the id and `.admin-bg` falls back to its generic
+`var(--font-ui, "Inter", …)` stack — the bundled Inter / Fraunces never load.
 
 The `/admin` HQ dashboard is **owner-only** (gated server-side in
 `src/app/admin/page.tsx`): a non-owner who reaches it is redirected to their own

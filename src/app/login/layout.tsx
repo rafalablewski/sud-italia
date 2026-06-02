@@ -31,7 +31,14 @@ export default function LoginLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${loginBody.variable} ${loginDisplay.variable} admin-bg`}>
+    // `id="admin-portal-root"` is required, not cosmetic: these `--font-admin-*`
+    // next/font vars live on THIS element, but `--font-ui` / `--font-display`
+    // (declared on `[data-admin-theme]`) only re-resolve from them on
+    // `#admin-portal-root` (see themes/admin/index.css). Without the id, and
+    // with no boot-script setting `data-admin-theme` on <html>, `.admin-bg`
+    // falls back to its generic `var(--font-ui, "Inter", …)` stack — the
+    // bundled Inter / Fraunces never load. Also the portal mount (rule #4).
+    <div id="admin-portal-root" className={`${loginBody.variable} ${loginDisplay.variable} admin-bg`}>
       {children}
     </div>
   );
