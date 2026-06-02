@@ -159,3 +159,15 @@ the sidebar wordmark to Fraunces. This is also why every admin overlay portals
 into `#admin-portal-root` rather than `<body>` — see the *Dialogs / overlays*
 note in [`components.md`](./components.md#dialogs--overlays) and the portal rule
 in the [admin README](../README.md#the-portal-rule-do-not-skip).
+
+**`#admin-portal-root` is not unique to the AdminShell wrapper.** Every
+admin-themed layout that renders *outside* AdminShell must put the id on its
+wrapper too — `/login`, `/terminal`, `/manager`, `/kitchen`, `/franchisee`, and
+the Core suite's `src/app/core/layout.tsx` all do. For those the id is even more
+load-bearing: they ship **no theme-boot script**, so `<html>` never gets the
+`[data-admin-theme]` attribute and the *only* place the font tokens re-resolve
+from `--font-admin-*` is `#admin-portal-root`. Drop the id and `.admin-bg` falls
+back to its own generic `font-family: var(--font-ui, "Inter", ui-sans-serif,
+system-ui, sans-serif)` — i.e. a **system sans** (not the browser serif, because
+of that fallback list, but still not the bundled Inter / Fraunces). See
+[system → Login surfaces](../sections/system.md).

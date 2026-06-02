@@ -145,8 +145,15 @@ actually reach.
   `userLocationSlugs()` (`src/lib/user-locations.ts`). At login the set is
   bound into the session as the comma-separated `locationScope` and enforced by
   `requireLocationAccess` on every admin route (owners stay unrestricted, `*`).
-  Owners can&rsquo;t be scoped. Terminal-PIN resolution honours the full set, so
-  a multi-site manager&rsquo;s PIN works at any of their terminals.
+  Owners can&rsquo;t be scoped. **Every login door mints that scope through one
+  resolver — `sessionLocationScope()` (`src/lib/user-locations.ts`)** — so an
+  account is scoped identically whether it signs in by password, terminal PIN,
+  or passkey. (The PIN + passkey paths once read the raw singular `locationSlug`
+  and fell back to `*` when it was empty, over-granting every site to a manager
+  whose locations lived in the array field; the shared resolver makes that drift
+  impossible — see `src/lib/user-locations.test.ts`.) Terminal-PIN *matching*
+  also honours the full set, so a multi-site manager&rsquo;s PIN works at any of
+  their terminals.
 - **The role enum is closed**: `staff` / `kitchen` / `manager` /
   `owner` (`franchisee` exists in the rank table but isn't offered in
   the upsert form). Don't add roles ad-hoc — every new role is a
@@ -174,10 +181,15 @@ actually reach.
   AdminShell, so each ships its own `layout.tsx` (`src/app/login/layout.tsx`,
   `src/app/terminal/layout.tsx`, `src/app/manager/layout.tsx`,
   `src/app/franchisee/layout.tsx`) that loads the Admin theme CSS + admin fonts
-  and wraps the page in `.admin-bg` — the same pattern `/kitchen` uses. Without
-  those layouts the `glass-*` / `admin-text` utilities have no theme to read
-  from and the forms render unstyled (invisible `glass-btn` text), which
-  previously blocked staff from signing in.
+  and wraps the page in a single
+  `<div id="admin-portal-root" className="… admin-bg">` — the same pattern
+  `/kitchen` uses. The **`id` is load-bearing, not just a portal mount**: these
+  layouts carry no theme-boot script, so the admin font tokens only re-resolve
+  at the `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
+  without it the bundled Inter/Fraunces never load. And without the layout
+  entirely the `glass-*` / `admin-text` utilities have no theme to read from and
+  the forms render unstyled (invisible `glass-btn` text), which previously
+  blocked staff from signing in.
 
   All mint the *same* signed, location-scoped session and route by role via
   `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/core/kds`,
