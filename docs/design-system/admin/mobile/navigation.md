@@ -7,7 +7,11 @@
 
 **Date:** 2026-05-17
 **Companion:** `design-system.md`, `ux-strategy.md`
-**Implementation:** `src/components/admin/v2/mobile/BottomNav.tsx`, `MoreDrawer.tsx`, `MobileTopbar.tsx`, `QuickActionSheet.tsx`
+**Implementation (removed):** the components this doc described —
+`BottomNav.tsx`, `MoreDrawer.tsx`, `MobileTopbar.tsx`, `QuickActionSheet.tsx`
+under `src/components/admin/v2/mobile/` — were deleted when the phone shell was
+retired. The surviving primitives in that folder are `Chip`, `MobilePage`, and
+`PullToRefresh` (see `src/components/admin/v2/mobile/index.ts`).
 
 ---
 
