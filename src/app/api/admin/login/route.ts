@@ -5,13 +5,13 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
   LOCATION_SCOPE_ALL,
+  sessionLocationScope,
 } from "@/lib/admin-auth";
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
 import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
 import { verifyTotp } from "@/lib/totp";
 import { verifyPasswordHash, isPasswordHash } from "@/lib/password";
 import { landingPathForRole } from "@/lib/staff-roles";
-import { userLocationSlugs } from "@/lib/user-locations";
 import type { AdminRole } from "@/lib/admin-roles";
 import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
 import { logger } from "@/lib/logger";
@@ -98,11 +98,9 @@ export async function POST(req: NextRequest) {
       auditActor = hit.email || hit.id;
       resolvedRole = hit.role;
       // A non-owner bound to one or more locations gets a comma-joined scope
-      // (a manager can run multiple sites); no binding = unrestricted.
-      if (hit.role !== "owner") {
-        const slugs = userLocationSlugs(hit);
-        if (slugs.length > 0) locationScope = slugs.join(",");
-      }
+      // (a manager can run multiple sites); no binding = unrestricted. The PIN
+      // + passkey logins mint scope through the same helper.
+      locationScope = sessionLocationScope(hit);
     } else {
       // No email → legacy shared-owner session, gated by the shared password.
       if (!verifyPassword(password)) {

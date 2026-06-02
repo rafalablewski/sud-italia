@@ -3,7 +3,7 @@ import {
   createSession,
   SESSION_COOKIE,
   SESSION_MAX_AGE,
-  LOCATION_SCOPE_ALL,
+  sessionLocationScope,
 } from "@/lib/admin-auth";
 import {
   appendAuditLog,
@@ -135,10 +135,9 @@ export async function POST(req: NextRequest) {
         verification.authenticationInfo.newCounter,
       );
 
-      const locationScope =
-        user.role === "owner" || !user.locationSlug
-          ? LOCATION_SCOPE_ALL
-          : user.locationSlug;
+      // One resolver for every login path so a passkey session is scoped
+      // exactly like the password login (and never over-grants every site).
+      const locationScope = sessionLocationScope(user);
       const token = createSession(user.id, locationScope);
 
       await appendAuditLog({

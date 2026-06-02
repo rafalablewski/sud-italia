@@ -51,6 +51,11 @@ function signPayload(payload: string): string {
 /** Sentinel for owner / unrestricted sessions. */
 export const LOCATION_SCOPE_ALL = "*";
 
+// The session location-scope resolver lives in the client-safe user-locations
+// leaf (so it's unit-testable without next/headers) and is re-exported here:
+// every login route imports it from admin-auth alongside createSession.
+export { sessionLocationScope } from "@/lib/user-locations";
+
 function sanitizeIdComponent(value: string): string {
   // `:` is the payload delimiter; replace defensively so a malicious id can't
   // smuggle extra fields into the token. The leading `_` is just a visible
