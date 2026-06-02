@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { hasLocationAccess } from "@/lib/admin-auth";
+import type { AdminRole } from "@/lib/admin-roles";
 import {
   appendAuditLog,
   appendCashDrop,
@@ -10,6 +11,14 @@ import {
   setCashSessionHidden,
 } from "@/lib/store";
 import { cashCloseSchema, cashDropSchema, cashPatchSchema } from "@/lib/api-schemas";
+import { userHasPermission } from "@/lib/permissions";
+
+/** Defence-in-depth capability gate shared by every cash mutation. */
+function requireCashManage(user: { role: AdminRole; permissions?: string[]; id?: string }) {
+  return userHasPermission(user, "cash.manage")
+    ? null
+    : NextResponse.json({ error: "Requires permission cash.manage" }, { status: 403 });
+}
 
 export const GET = withAdmin<{ params: Promise<{ id: string }> }>(
   {},
@@ -39,6 +48,8 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
   { roles: ["manager", "owner"] },
   async (req, { params }, { user }) => {
     const { id } = await params;
+    const denied = requireCashManage(user);
+    if (denied) return denied;
     const action = req.nextUrl.searchParams.get("action");
 
     const session = await getCashSessionById(id);
@@ -136,6 +147,8 @@ export const PATCH = withAdmin<{ params: Promise<{ id: string }> }>(
   { roles: ["manager", "owner"] },
   async (req, { params }, { user }) => {
     const { id } = await params;
+    const denied = requireCashManage(user);
+    if (denied) return denied;
     const session = await getCashSessionById(id);
     if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!(await hasLocationAccess(session.locationSlug))) {
@@ -175,6 +188,8 @@ export const DELETE = withAdmin<{ params: Promise<{ id: string }> }>(
   { roles: ["manager", "owner"] },
   async (_req, { params }, { user }) => {
     const { id } = await params;
+    const denied = requireCashManage(user);
+    if (denied) return denied;
     const session = await getCashSessionById(id);
     if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!(await hasLocationAccess(session.locationSlug))) {

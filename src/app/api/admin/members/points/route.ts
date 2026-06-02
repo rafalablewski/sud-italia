@@ -8,6 +8,7 @@ import {
 } from "@/lib/store";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { parseBody, pointsAdjustSchema } from "@/lib/api-schemas";
+import { userHasPermission } from "@/lib/permissions";
 
 // Manual point adjustments move loyalty currency — manager+. The adjustedBy
 // audit field now records the bound user instead of the hardcoded "admin"
@@ -15,6 +16,12 @@ import { parseBody, pointsAdjustSchema } from "@/lib/api-schemas";
 export const POST = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
+    if (!userHasPermission(user, "guest.loyalty_adjust")) {
+      return NextResponse.json(
+        { error: "Requires permission guest.loyalty_adjust" },
+        { status: 403 },
+      );
+    }
     const parsed = await parseBody(req, pointsAdjustSchema);
     if ("error" in parsed) return parsed.error;
     const { phone, amount, reason } = parsed.data;

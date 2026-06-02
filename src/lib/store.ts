@@ -7278,7 +7278,18 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 }
 
 export async function saveAdminUser(
-  input: Omit<AdminUser, "id" | "createdAt"> & { id?: string; createdAt?: string },
+  input: Omit<AdminUser, "id" | "createdAt" | "permissions"> & {
+    id?: string;
+    createdAt?: string;
+    /**
+     * Granular permission grant. Three cases, mirroring the totp pattern:
+     *  - an array → set this exact custom grant (authoritative for the user);
+     *  - `null`   → clear any custom grant so the user falls back to role
+     *               defaults;
+     *  - `undefined` (omitted) → leave whatever is already stored untouched.
+     */
+    permissions?: string[] | null;
+  },
 ): Promise<AdminUser> {
   return withLock("admin-users.json", async () => {
     const list = await readJSON<AdminUser[]>("admin-users.json", []);
@@ -7299,6 +7310,10 @@ export async function saveAdminUser(
       notes: input.notes,
       createdAt: input.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
+    if (input.permissions !== undefined) {
+      if (input.permissions === null) delete user.permissions;
+      else user.permissions = input.permissions;
+    }
     if (i >= 0) list[i] = user;
     else list.push(user);
     await writeJSON("admin-users.json", list);

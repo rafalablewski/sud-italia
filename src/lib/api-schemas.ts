@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { REFUND_REASON_CODES } from "@/data/types";
+import { isPermissionKey } from "@/lib/permissions";
 
 /**
  * Zod schemas for API request bodies. Every route that mutates state
@@ -589,6 +590,16 @@ export const adminUserUpsertSchema = z.object({
   status: adminUserStatusSchema,
   locationSlug: locationSlug.optional(),
   notes: z.string().max(2000).optional(),
+  /**
+   * Granular permission grant (action-level keys). An array sets a custom
+   * grant, `null` clears it back to role defaults, omitted leaves it
+   * untouched. Each entry must be a known permission key.
+   */
+  permissions: z
+    .array(z.string().refine(isPermissionKey, "Unknown permission key"))
+    .max(200)
+    .nullable()
+    .optional(),
 });
 
 // --- Admin: settings (brand-level) ---------------------------------------

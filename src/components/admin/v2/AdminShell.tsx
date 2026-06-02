@@ -12,6 +12,7 @@ import { Topbar } from "./Topbar";
 import { ToastProvider } from "./ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { ALL_NAV_ITEMS } from "./nav.config";
+import { permissionForAdminPage } from "@/lib/permissions";
 
 interface Props {
   children: ReactNode;
@@ -35,6 +36,46 @@ export function AdminShell({ children }: Props) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [notifVersion, setNotifVersion] = useState(0);
+
+  // Granular-permission page guard. The sidebar already hides forbidden items,
+  // but a user can still type a URL (or follow a stale bookmark) into a page
+  // they no longer have. We resolve their effective permissions once, then
+  // bounce any navigation to a page whose `.view` permission they lack back to
+  // the Dashboard (which is intentionally ungated). The server still enforces
+  // the real boundary on every /api/admin/* call — this is the UX layer.
+  const [permGate, setPermGate] = useState<{
+    keys: Set<string>;
+    custom: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled || !j?.role) return;
+        setPermGate({
+          keys: new Set<string>(Array.isArray(j.permissions) ? j.permissions : []),
+          custom: !!j.custom,
+        });
+      })
+      .catch(() => {
+        /* non-fatal — server still enforces */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Only custom-grant users are guarded client-side; role-default and
+    // all-access (owner) users keep their existing behaviour untouched.
+    if (!permGate || !permGate.custom) return;
+    const need = permissionForAdminPage(pathname);
+    if (need && !permGate.keys.has(need)) {
+      router.replace("/admin");
+    }
+  }, [pathname, permGate, router]);
 
   // Close drawers on route change
   useEffect(() => {
