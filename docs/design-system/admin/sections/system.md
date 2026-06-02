@@ -71,15 +71,25 @@ actually reach.
   read-only, with per-group counts; `Full access` for owners), and the security
   actions (Edit, Login & credentials, MFA, Passkeys, Remove) which open the
   existing dialogs. One place to see and run everything for an account.
-- **Table:** name + email, role, **Access** (`Full access` for owners,
-  `Custom · N` when the account carries a custom grant, else
-  `Role default`), **Locations** (one badge per assigned site, or `All` when
-  unscoped — a manager can run several), **Sign-in** (`Password` /
-  `Shared pwd` + a `PIN` chip when one is set + an `N keys` chip when passkeys
-  are registered, with a `→ KDS/POS/Admin` landing tag and a `· MFA` flag
-  underneath so each account's login is legible at a glance), status
-  (`active` / `disabled`), `MFA` (On / Off), row actions (`Login`, `MFA`,
-  `Keys`, `Edit`, delete). Live code: `AdminUsers.tsx`.
+- **Table (consolidated, 5 columns + a kebab):** Deliberately decluttered so
+  the roster reads at a glance rather than as a wall of buttons.
+  - **Account** — a role-tinted initials `Avatar` + name + email; the whole
+    cell is a button that opens the detail drawer.
+  - **Role & access** — role badge with an access sub-line (`Full access` for
+    owners, `Custom · N caps`, or `Role default`). (Access is no longer its own
+    column.)
+  - **Locations** — one badge per assigned site, or `All` when unscoped.
+  - **Status** — `active` / `disabled` dot badge.
+  - **Sign-in & security** — the security-posture chip (`Secured` /
+    `Password only` / `Shared pwd`) over a compact sub-line of method icons
+    (PIN / passkey count / MFA) and the `→ KDS/POS/Admin` landing tag. (This
+    merges the old separate Sign-in + MFA + Security columns.)
+  - **Actions** — a single `⋯` kebab (`Popover` + `IconButton`, portaled) →
+    *View details · Edit account · Login & credentials* (owner-only, non-owner
+    targets) *· Two-factor (MFA) · Passkeys & keys · Remove account*. Replaces
+    the old inline `Login / MFA / Keys / Edit / delete` button row.
+
+  Live code: `AdminUsers.tsx`.
 - **"How they sign in" explainer.** The `Login` dialog opens with a
   plain-language summary (`describeLogin`): the exact doors open to that
   account (own vs shared password at their door — `/admin/login` for owners,
@@ -87,8 +97,9 @@ actually reach.
   whether MFA is mandatory, the surface they land on
   (KDS / POS / dashboard via `landingPathForRole`), and any location
   restriction — so an operator can see precisely how each person gets in.
-- **Login & credentials (owner-only):** the `Login` row action (shown to
-  owners, for non-owner accounts) opens `CredentialsDialog` — set / clear a
+- **Login & credentials (owner-only):** the *Login & credentials* item in the
+  row kebab (shown to owners, for non-owner accounts) opens `CredentialsDialog`
+  — set / clear a
   per-user **password** (min 8) and a terminal **PIN** (4–10 digits, unique
   per location). Posts to `POST /api/admin/users/[id]/credentials`
   (owner-only, audited `users.credentials_set`). Once a personal password is

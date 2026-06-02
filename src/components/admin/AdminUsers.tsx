@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Fingerprint, KeyRound, Lock, MapPin, Pencil, Plus, Power, RotateCcw, Search, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
+import { Eye, Fingerprint, KeyRound, Lock, MapPin, MoreHorizontal, Pencil, Plus, Power, RotateCcw, Search, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
@@ -35,7 +35,9 @@ import {
   ConfirmDialog,
   Dialog,
   EmptyState,
+  IconButton,
   Input,
+  Popover,
   Select,
   Switch,
   Tabs,
@@ -116,6 +118,73 @@ function has2fa(u: AdminUserRow): boolean {
 }
 
 type SecurityFilter = "all" | "secured" | "no2fa" | "shared" | "passkey";
+
+/** Two-letter initials from a name, for the roster avatar. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Soft role-tinted initials avatar — gives the roster a professional first column. */
+function Avatar({ name, role }: { name: string; role: AdminRole }) {
+  const tint: Record<AdminRole, string> = {
+    owner: "var(--danger, #ef4444)",
+    franchisee: "var(--info, #38bdf8)",
+    manager: "var(--info, #38bdf8)",
+    staff: "var(--warning, #f59e0b)",
+    kitchen: "var(--success, #34d399)",
+  };
+  const c = tint[role] ?? "var(--info, #38bdf8)";
+  return (
+    <span
+      aria-hidden
+      style={{
+        flex: "0 0 auto",
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "0.72rem",
+        fontWeight: 700,
+        letterSpacing: "0.02em",
+        color: c,
+        background: `color-mix(in srgb, ${c} 16%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${c} 30%, transparent)`,
+      }}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+/** Full-width menu row for the row-actions kebab popover (reuses Button styling). */
+function RowMenuItem({
+  icon,
+  onClick,
+  danger,
+  children,
+}: {
+  icon: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      variant={danger ? "danger" : "ghost"}
+      size="sm"
+      leadingIcon={icon}
+      onClick={onClick}
+      style={{ width: "100%", justifyContent: "flex-start" }}
+    >
+      {children}
+    </Button>
+  );
+}
 
 const ROLE_TONE: Record<AdminRole, "info" | "brand" | "warning" | "success"> = {
   owner: "brand",
@@ -228,44 +297,42 @@ function AdminUsersDesktop() {
   const isOwner = me?.role === "owner";
   const cols: Column<AdminUserRow>[] = [
     {
-      key: "name",
-      header: "Name",
+      key: "account",
+      header: "Account",
       cell: (u) => (
         <button
           type="button"
           onClick={() => setDetail(u)}
-          className="v2-cell-stack"
-          style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", color: "inherit" }}
+          style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", color: "inherit" }}
           title="Open account details"
         >
-          <span style={{ fontWeight: 600 }}>{u.name}</span>
-          {u.email && <span className="v2-cell-sub">{u.email}</span>}
+          <Avatar name={u.name} role={u.role} />
+          <span className="v2-cell-stack">
+            <span style={{ fontWeight: 600 }}>{u.name}</span>
+            {u.email && <span className="v2-cell-sub">{u.email}</span>}
+          </span>
         </button>
       ),
       sortValue: (u) => u.name,
     },
     {
       key: "role",
-      header: "Role",
+      header: "Role & access",
       cell: (u) => (
-        <Badge tone={ROLE_TONE[u.role]} variant="soft" dot>
-          {ROLE_LABEL[u.role]}
-        </Badge>
+        <div className="v2-cell-stack">
+          <Badge tone={ROLE_TONE[u.role]} variant="soft" dot>
+            {ROLE_LABEL[u.role]}
+          </Badge>
+          <span className="v2-cell-sub">
+            {u.role === "owner"
+              ? "Full access"
+              : Array.isArray(u.permissions)
+                ? `Custom · ${u.permissions.length} caps`
+                : "Role default"}
+          </span>
+        </div>
       ),
       sortValue: (u) => u.role,
-    },
-    {
-      key: "access",
-      header: "Access",
-      cell: (u) =>
-        u.role === "owner" ? (
-          <Badge tone="brand" variant="soft">Full access</Badge>
-        ) : Array.isArray(u.permissions) ? (
-          <Badge tone="info" variant="outline">{`Custom · ${u.permissions.length}`}</Badge>
-        ) : (
-          <span className="v2-muted">Role default</span>
-        ),
-      sortValue: (u) => (Array.isArray(u.permissions) ? 1 : 0),
     },
     {
       key: "loc",
@@ -294,40 +361,23 @@ function AdminUsersDesktop() {
       sortValue: (u) => u.status,
     },
     {
-      key: "signin",
-      header: "Sign-in",
-      cell: (u) => (
-        <div className="v2-cell-stack">
-          {u.role === "owner" ? (
-            <span className="v2-muted">Password (own / shared)</span>
-          ) : (
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              <Badge tone={u.hasPassword ? "success" : "neutral"} variant={u.hasPassword ? "soft" : "outline"}>
-                {u.hasPassword ? "Password" : "Shared pwd"}
-              </Badge>
-              {u.hasPin && <Badge tone="info" variant="soft">PIN</Badge>}
-              {(u.webauthnKeys?.length ?? 0) > 0 && (
-                <Badge tone="brand" variant="soft">{`${u.webauthnKeys!.length} key${u.webauthnKeys!.length > 1 ? "s" : ""}`}</Badge>
-              )}
-            </div>
-          )}
-          {/* Where this account lands after sign-in, + MFA flag. */}
-          <span className="v2-cell-sub">
-            → {landingTag(u.role)}{u.totpEnabled ? " · MFA" : ""}
-          </span>
-        </div>
-      ),
-      sortValue: (u) => (u.hasPassword ? 1 : 0),
-    },
-    {
       key: "security",
-      header: "Security",
+      header: "Sign-in & security",
       cell: (u) => {
         const p = securityPosture(u);
+        const keys = u.webauthnKeys?.length ?? 0;
         return (
-          <Badge tone={p.tone === "neutral" ? "info" : p.tone} variant={p.risk ? "soft" : "outline"} dot>
-            {p.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {p.label}
-          </Badge>
+          <div className="v2-cell-stack" style={{ gap: 6 }}>
+            <Badge tone={p.tone === "neutral" ? "info" : p.tone} variant={p.risk ? "soft" : "outline"} dot>
+              {p.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {p.label}
+            </Badge>
+            <span className="v2-cell-sub" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {u.hasPin && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title="Terminal PIN"><Smartphone className="h-3 w-3" />PIN</span>}
+              {keys > 0 && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title={`${keys} passkey(s)`}><Fingerprint className="h-3 w-3" />{keys}</span>}
+              {u.totpEnabled && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title="MFA enabled"><KeyRound className="h-3 w-3" />MFA</span>}
+              <span title="Lands on">→ {landingTag(u.role)}</span>
+            </span>
+          </div>
         );
       },
       sortValue: (u) => (securityPosture(u).risk ? 0 : has2fa(u) ? 2 : 1),
@@ -335,26 +385,30 @@ function AdminUsersDesktop() {
     {
       key: "actions",
       header: "",
+      align: "right",
       cell: (u) => (
-        <div className="v2-row-actions">
-          {isOwner && u.role !== "owner" && (
-            <Button size="sm" variant="ghost" leadingIcon={<Lock className="h-3.5 w-3.5" />} onClick={() => setCredUser(u)}>
-              Login
-            </Button>
+        <Popover
+          placement="bottom-end"
+          trigger={
+            <IconButton label="Account actions" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </IconButton>
+          }
+        >
+          {(close) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 196 }}>
+              <RowMenuItem icon={<Eye className="h-3.5 w-3.5" />} onClick={() => { setDetail(u); close(); }}>View details</RowMenuItem>
+              <RowMenuItem icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => { setDialog({ open: true, user: u }); close(); }}>Edit account</RowMenuItem>
+              {isOwner && u.role !== "owner" && (
+                <RowMenuItem icon={<Lock className="h-3.5 w-3.5" />} onClick={() => { setCredUser(u); close(); }}>Login &amp; credentials</RowMenuItem>
+              )}
+              <RowMenuItem icon={<KeyRound className="h-3.5 w-3.5" />} onClick={() => { setMfaUser(u); close(); }}>Two-factor (MFA)</RowMenuItem>
+              <RowMenuItem icon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => { setKeysUser(u); close(); }}>Passkeys &amp; keys</RowMenuItem>
+              <div style={{ height: 1, background: "var(--border)", margin: "4px 2px" }} />
+              <RowMenuItem icon={<Trash2 className="h-3.5 w-3.5" />} danger onClick={() => { setPendingDelete(u); close(); }}>Remove account</RowMenuItem>
+            </div>
           )}
-          <Button size="sm" variant="ghost" leadingIcon={<KeyRound className="h-3.5 w-3.5" />} onClick={() => setMfaUser(u)}>
-            MFA
-          </Button>
-          <Button size="sm" variant="ghost" leadingIcon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => setKeysUser(u)}>
-            Keys
-          </Button>
-          <Button size="sm" variant="ghost" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: u })}>
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setPendingDelete(u)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        </Popover>
       ),
     },
   ];
