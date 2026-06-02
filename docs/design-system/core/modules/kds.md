@@ -17,8 +17,9 @@ was deleted in the mobile-shell cleanup — the desktop KDS reflows responsively
 surface (a fixed full-viewport layer in `suite.css`) — the KDS is a
 **full-screen kitchen wall** with its own dark `.kds-top` chrome and **no
 SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
-`/admin/kds` is in `CORE_ROUTES` so the admin chrome steps aside; an
-"Admin" back link in the header is the way out. The three views:
+`/core/kds` is a top-level `/core/*` route with its own layout (no admin
+chrome to begin with); an "Admin" back link in the header is the way out.
+The three views:
 
 - **Floor** (`AdminKDSDesktop`, `kds.html`): `.kds-top` (SI brand-mark +
   Fleet/Floor/Chef viewswitch + centred stage filter + clock +

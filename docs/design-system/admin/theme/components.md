@@ -338,7 +338,7 @@ the pill renders full-width, clipped under the topbar instead of as a pill.
   the admin topbar; core routes don't render one, so the fallback came up 53px
   short and a strip of the layer behind showed at the bottom. Paint the same
   full-viewport `.core-suite` surface the real page uses
-  (`src/app/admin/pos/loading.tsx`).
+  (`src/app/core/pos/loading.tsx`).
 
 The pill **declares `font-family: var(--font-ui)` itself** so it doesn't depend
 on inheriting Inter from a `.v2-shell` ancestor — required for the portaled

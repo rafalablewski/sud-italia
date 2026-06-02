@@ -85,9 +85,9 @@ export function staffRoleToAdminRole(role: StaffRole): AdminRole {
 export function landingPathForRole(role: AdminRole): string {
   switch (role) {
     case "kitchen":
-      return "/admin/kds";
+      return "/core/kds";
     case "staff":
-      return "/admin/pos";
+      return "/core/pos";
     case "manager":
       return "/manager";
     case "franchisee":

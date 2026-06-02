@@ -180,8 +180,8 @@ actually reach.
   previously blocked staff from signing in.
 
   All mint the *same* signed, location-scoped session and route by role via
-  `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/admin/kds`,
-  `staff` → `/admin/pos`, `manager` → `/manager`, `franchisee` → `/franchisee`,
+  `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/core/kds`,
+  `staff` → `/core/pos`, `manager` → `/manager`, `franchisee` → `/franchisee`,
   and **only `owner` → `/admin`**. The login APIs return the `landing` path so
   the redirect has one source of truth.
   **Unauthenticated `/admin/*` access redirects to `/login`** (the universal

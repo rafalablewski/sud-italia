@@ -152,7 +152,7 @@ If we keep going, this is the order that closes real value. Items above the line
 10. **Long-press nav peek** — Bottom-nav tabs reveal a tooltip with route + Open shortcut on long-press. Prefetches the route on pointerdown.
 11. **Idle-time route prefetch** — `useIdlePrefetch` warms bottom-nav routes via `requestIdleCallback` (setTimeout fallback).
 12. **Full-screen alerts view** — `/admin/alerts` route + `MobileAlerts`. Filter chips (Unread / Orders / Slots / Stock / Money), today/yesterday/older bucketing, mark-all-read. Reachable from Home action queue and **long-press of the topbar bell**.
-13. **Service-worker offline shell** — `sw.js` v2 caches `/admin`, `/admin/login`, `/admin/orders`, `/admin/kds`, `/admin/inventory` cache-first.
+13. **Service-worker offline shell** — `sw.js` v2 caches `/admin`, `/admin/login`, `/admin/orders`, `/core/kds`, `/admin/inventory` cache-first.
 14. **Background Sync API for KDS replay** — `useOfflineQueue` registers `sud-italia-admin-kds-queue` sync tag. SW posts `flush` message → page drains. Replays after the tab was closed (Chromium); falls back to `online` event on Safari.
 15. **Page transition animations** — `<PageTransition>` wraps shell content. Forward pushes slide-in-from-right, back navigations slide-in-from-left, both with iOS-style ease. Reduced-motion collapses to opacity-only.
 

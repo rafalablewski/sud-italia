@@ -1062,7 +1062,7 @@ function AdminWhatsAppDesktop() {
                     <div className="v">{guest ? formatPrice(guest.avg) : "—"}</div>
                   </div>
                 </div>
-                <a className="gp-link" href="/admin/guest?view=guests">
+                <a className="gp-link" href="/core/guest?view=guests">
                   Open full profile →
                 </a>
               </div>

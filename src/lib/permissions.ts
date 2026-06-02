@@ -293,10 +293,10 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   // Order matters where one path is a prefix of another's base.
   if (is("/admin/menu-engineering")) return "menu_engineering.view";
   if (is("/admin/orders")) return "orders.view";
-  if (is("/admin/pos")) return "pos.view";
-  if (is("/admin/kds")) return "kds.view";
-  if (is("/admin/guest")) return "guest.view";
-  if (is("/admin/service")) return "service.view";
+  if (is("/core/pos")) return "pos.view";
+  if (is("/core/kds")) return "kds.view";
+  if (is("/core/guest")) return "guest.view";
+  if (is("/core/service")) return "service.view";
   if (is("/admin/menu")) return "menu.view";
   if (is("/admin/recipes")) return "recipes.view";
   if (is("/admin/haccp")) return "haccp.view";

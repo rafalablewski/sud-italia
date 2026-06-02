@@ -10,8 +10,9 @@ calm, and fast at once** — and the highest daily-use surface for staff.
 **Theme:** renders on the Core suite shell (`<CoreShell active="pos">`,
 `.core-suite` in `src/app/themes/core/suite.css`) — the SI sidebar +
 topbar, with the channel + location segmented controls in the topbar.
-`/admin/pos` is in `CORE_ROUTES`, so the admin chrome steps aside. The
-tab rail, category rail, text-forward `.prod` cards and the coursing
+`/core/pos` is a top-level `/core/*` route with its own layout
+(`src/app/core/layout.tsx` + `CoreProviders`), so there's no admin chrome.
+The tab rail, category rail, text-forward `.prod` cards and the coursing
 `.ticket` are all ported 1:1 from `pos.html`; tender is a `.core-suite-
 overlay` dialog, and table-assign / address use the shared v2 `Dialog`
 with `theme="core"` (dark `.v2-dialog-core` skin) so they match the dark

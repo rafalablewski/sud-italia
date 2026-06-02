@@ -11,15 +11,16 @@ so it reads like POS / Guest / KDS. Three views ride the topbar `.viewnav`
 - **Slots** — time-slot capacity management + the Demand Exchange yield board.
 
 The old `/admin/floor` and `/admin/slots` routes now `redirect()` into
-`/admin/service?view=floor|slots`; the separate nav entries are gone.
+`/core/service?view=floor|slots`; the separate nav entries are gone.
 
 ← back to [Core README](../README.md)
 
-> **Live code:** `src/app/admin/service/page.tsx` (CoreShell route — in
-> `CORE_ROUTES`, so AdminShell steps its chrome aside), shell
-> `ServiceConsole.tsx` + `ServiceViewNav.tsx`, views `BookView.tsx` /
+> **Live code:** `src/app/core/service/page.tsx` (top-level `/core/*`
+> route under `src/app/core/layout.tsx` + `CoreProviders`, no admin
+> chrome), shell `ServiceConsole.tsx` + `ServiceViewNav.tsx`, views
+> `BookView.tsx` /
 > `FloorView.tsx` / `SlotsView.tsx` (all in
-> `src/components/admin/service/`), styles under the `SERVICE` block in
+> `src/components/core/service/`), styles under the `SERVICE` block in
 > `src/app/themes/core/suite.css` (`.svc-*` / `.flr-*` / `.slt-*`). Booking
 > engine `src/lib/booking.ts` + `POST /api/admin/booking`; Floor reuses
 > `/api/admin/floor-twin` + `/api/admin/floor/tables`; Slots reuses
@@ -88,7 +89,7 @@ Capacity management + yield (`.slt-*`), with a `.seg` sub-toggle:
 
 ## What Service is not
 
-- Not the POS — that's the till (`/admin/pos`); Service is bookings + floor state.
+- Not the POS — that's the till (`/core/pos`); Service is bookings + floor state.
 - Not the customer dine-in flow — the storefront cart books a slot and the
   checkout **auto-assigns** a table (`pickOpenTable`); this surface is the
   operator's side.

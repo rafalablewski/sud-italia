@@ -121,7 +121,7 @@ reconcile to real numbers.
 ## What Finance is not
 
 - It is **not** a POS — actual tender happens at the Core POS surface
-  (`/admin/pos`), not here.
+  (`/core/pos`), not here.
 - It is **not** invoicing — supplier invoices live under Inventory →
   Purchase orders; corporate invoices live under Customers → Corporate.
 - It is **not** real-time monitoring — the Dashboard (overview) covers

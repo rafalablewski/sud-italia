@@ -80,6 +80,13 @@ test("admin page paths map to their .view permission (dashboard is ungated)", ()
   assert.equal(permissionForAdminPage("/admin/compliance"), "compliance.view");
   assert.equal(permissionForAdminPage("/admin/regulatory-compliance"), "compliance.edit");
   assert.equal(permissionForAdminPage("/admin/soc2"), "compliance.edit");
+  // The Core suite moved to its own top-level /core/* segment but is still
+  // permission-gated (CoreProviders reuses this map). The deep paths matter
+  // because Guest carries ?view= sub-views under the same .view key.
+  assert.equal(permissionForAdminPage("/core/pos"), "pos.view");
+  assert.equal(permissionForAdminPage("/core/kds"), "kds.view");
+  assert.equal(permissionForAdminPage("/core/guest"), "guest.view");
+  assert.equal(permissionForAdminPage("/core/service"), "service.view");
 });
 
 test("admin API paths map to method-aware permissions", () => {

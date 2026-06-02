@@ -311,14 +311,14 @@ export default async function CapabilitiesPage() {
         {
           name: "Guest Engagement hub",
           status: "live",
-          href: "/admin/guest",
+          href: "/core/guest",
           summary:
-            "One surface for the relationship layer (/admin/guest) with four views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Loyalty, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/loyalty, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
+            "One surface for the relationship layer (/core/guest) with four views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Loyalty, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/loyalty, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
         },
         {
           name: "CRM — Regulars customer book",
           status: "live",
-          href: "/admin/guest?view=guests",
+          href: "/core/guest?view=guests",
           summary:
             "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. A 'Send today' prompt surfaces today's birthdays + first-order anniversaries (GET /api/admin/campaigns/triggers). Each profile carries a GDPR panel — Export (DSAR, Art. 15, GET /api/admin/gdpr/export) and Erase (Art. 17, owner-only, POST /api/admin/gdpr/delete). Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
@@ -327,14 +327,14 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty — roster, wallets & redemptions",
           status: "live",
-          href: "/admin/guest?view=loyalty",
+          href: "/core/guest?view=loyalty",
           summary:
-            "The fourth Guest-hub view (/admin/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+            "The fourth Guest-hub view (/core/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Customer Intelligence — per-guest behavioural graph",
           status: "live",
-          href: "/admin/guest?view=loyalty",
+          href: "/core/guest?view=loyalty",
           summary:
             "Keystone of the Customer Identity Network (docs/strategy/restaurant-os-blueprint.md). Every member row in the Loyalty view has an Intelligence action that opens a per-guest behavioural graph derived live from real orders (no mock data): go-to dishes + category, the temporal signature in Europe/Warsaw time (the 'Friday ~18:30' pattern), visit cadence → predicted next visit + a churn-hazard assessment (low / watch / high / lost, aligned to the 90-day lapse line), conditional attach rules ('adds Tiramisù when party ≥ 4' with lift + support), channel mix, average order value, and a one-line next-order prediction headline. Pure-compute engine src/lib/customer-intelligence.ts (unit-tested, 10 cases) over getOrdersByPhone(); served by GET /api/admin/customer-intelligence?phone= (withAdmin, staff+, chain-wide per guest). Confidence is gated by order count so a thin history never over-claims.",
         },
@@ -349,7 +349,7 @@ export default async function CapabilitiesPage() {
             : has("MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM")
               ? "live"
               : "needs-config",
-          href: "/admin/guest?view=loyalty",
+          href: "/core/guest?view=loyalty",
           envVars: [
             "TWILIO_ACCOUNT_SID",
             "TWILIO_AUTH_TOKEN",
@@ -370,7 +370,7 @@ export default async function CapabilitiesPage() {
           status: has("WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY")
             ? "live"
             : "needs-config",
-          href: "/admin/guest?view=concierge",
+          href: "/core/guest?view=concierge",
           summary:
             "One capability layer exposed to AI assistants over a public read endpoint and to guests over WhatsApp. Operator toggles per-capability exposure (toggle = saved) for get_menu / check_availability / get_allergens / locate_truck (served live from the real menu at /api/agent/<capability>) plus the conversational place_order / create_payment that run through the WhatsApp bot + Stripe checkout. Inspector shows the live JSON + an EU-14 allergen matrix from the real menu.",
           envVars: ["WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY"],
@@ -386,13 +386,13 @@ export default async function CapabilitiesPage() {
         {
           name: "Station routing",
           status: "live",
-          href: "/admin/kds",
+          href: "/core/kds",
           summary: "Per-station tickets (pizza / fryer / cold prep / drinks / expo).",
         },
         {
           name: "Fullscreen kitchen display + stage switcher",
           status: "live",
-          href: "/admin/kds",
+          href: "/core/kds",
           summary:
             "The floor board doubles as a wall-mountable kitchen-display appliance. A Fullscreen button takes it edge-to-edge (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4) and repaints into a dedicated always-dark, high-contrast 'kitchen OS' theme — oversized type, color-coded lanes, live wall-clock — regardless of the admin light/dark toggle, so it reads across a hot, bright kitchen. A stage switcher (All lanes · New · In prep · Ready, each with a live count) focuses one stage into a dense full-width grid or shows the three-column board. The component stays mounted across the portal, so the SSE stream, bump-bar hotkeys, sound and SLA timers keep running; Esc or the browser control exits fullscreen and drops kiosk. Decorative stat cards, the manager ops header and chef strip collapse in kiosk to maximize ticket space.",
           caveats:
@@ -436,7 +436,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Predicted-ready engine + Pace (capacity vs demand)",
           status: "live",
-          href: "/admin/kds",
+          href: "/core/kds",
           summary:
             "src/lib/kds-prediction.ts models every active ticket as a single-server FIFO queue per menu-category station, using real per-item prepTimeMinutes (the same basis as the promise SLA) plus the live queue depth the KDS already streams. It predicts each ticket's actual ready time and flags it AT RISK (the violet tier) when the model says the promise will be missed BEFORE the ticket is actually late. The Pace layer derives per-station capacity (units the station clears within the 15-min window at its real per-unit prep), current load (items on in-progress tickets) and forecast (queued/new tickets = incoming load); the bottleneck = max utilisation drives the truck's capacity meter. Health score = 100 − 18/late − 9/at-risk − 2·(target − promise-accuracy). Promise-accuracy + the throughput sparkline come from the kds_tickets ledger (getKdsServiceHistory: finished tickets vs promised_ready_at). Pure functions, no fabricated numbers — degrades to live-queue-only when no DB history exists. Surfaced on the owner Atlas fleet board via GET /api/admin/kds/fleet.",
           caveats:
@@ -449,7 +449,7 @@ export default async function CapabilitiesPage() {
           summary:
             "src/lib/pace-steering.ts turns the SAME analyzeTruck() Pace signal that paints the KDS bottleneck gauge into an actionable plan for the point of sale — the actuator end of the kitchen control loop. From the live per-station demand-vs-capacity it derives: a capacity-true promise time per station (queue depth ÷ throughput, not a flat number); a make-now set (items off the bottleneck station, ≈ free to make, ranked by contribution margin); a soft-throttle set (the lowest margin-per-bottleneck-second items that DO load the constraint — eased, never hidden); and a delivery intake cap (units the bottleneck can still absorb this 15-min window, so an aggregator dump can't detonate a hot line). Pure + deterministic, engages once the bottleneck leaves 'calm', every plan carries a human 'reason'. Unit-tested against analyzeTruck in src/lib/pace-steering.test.ts (run: npx tsx --test src/lib/pace-steering.test.ts). Served by GET /api/admin/pace/steering (staff+, per-location, real orders only — sims never steer the sell side).",
           caveats:
-            "The decision module + API are wired to real data and now drive the live /admin/pos Tabs terminal: the POS fetches GET /api/admin/pace/steering for the active truck and badges make-now / ease items, quotes per-category promise times on the category chips + active check, and shows the bottleneck strip + delivery-intake cap, all behind the header 'Steer' toggle (on by default). The objective is margin-per-bottleneck-second (textbook Theory of Constraints) and is not yet demand-weighted, so it eases a high-volume low-margin hero (e.g. Margherita) before a premium slow item — correct for yield-per-constraint, but a production version should weight by sales velocity. Promise times assume one server per station (same limitation as the Pace engine).",
+            "The decision module + API are wired to real data and now drive the live /core/pos Tabs terminal: the POS fetches GET /api/admin/pace/steering for the active truck and badges make-now / ease items, quotes per-category promise times on the category chips + active check, and shows the bottleneck strip + delivery-intake cap, all behind the header 'Steer' toggle (on by default). The objective is margin-per-bottleneck-second (textbook Theory of Constraints) and is not yet demand-weighted, so it eases a high-volume low-margin hero (e.g. Margherita) before a premium slow item — correct for yield-per-constraint, but a production version should weight by sales velocity. Promise times assume one server per station (same limitation as the Pace engine).",
         },
         {
           name: "Allergen surfacing + admin edit",
@@ -460,7 +460,7 @@ export default async function CapabilitiesPage() {
         {
           name: "KDS order simulator",
           status: "live",
-          href: "/admin/kds",
+          href: "/core/kds",
           summary:
             "Demo / training tool with no separate page: flip kdsSimulatorEnabled in /admin/settings (owner-only toggle) and the Kitchen Display shows a 'Sandbox — not real orders' badge beside the page title and manual Add 1 / Add 5 / Purge all controls in its top toolbar (desktop + mobile). There is NO auto-spawn or auto-advance — the operator adds a controlled batch of tickets, then works each one through the board with the normal Start prep / Mark ready / Bump buttons, so the demo is fully under their control rather than a random trickle. Every ticket is unmistakably marked — a purple dashed frame + 'SIMULATION — not a real order' tag per ticket, plus the sandbox badge beside the page title. Orders are built ONLY from the truck's real menu via getMenuWithOverrides() (no made-up products) through createSimulatedOrder(), which fires the same order-created SSE event a real checkout does so the board lights up live (the board also calls refresh() after each Add/Purge for instant feedback). Every order carries simulated:true, so getOrders() filters them out of EVERY non-KDS read by default: the dashboard, Orders list, /kitchen station + expo screens, the floor-ops + fleet roll-ups (promise-accuracy / throughput sparkline) and every report / CRM / analytics stay clean, and sims never trigger stock decrement, customer rollups or outbox SMS/email. Only the Kitchen Display boards opt in (?includeSimulated=1) — the floor board AND the owner Atlas fleet board, on both desktop and mobile. Advancing a sim on the board is routed through updateOrderStatus, which short-circuits all side effects for simulated:true. Targets the truck in the top-bar location selector; the endpoint self-caps active sims (40) and bounds reads to the last 24h. Turning the toggle off purges every simulated ticket.",
           caveats:
@@ -469,7 +469,7 @@ export default async function CapabilitiesPage() {
         {
           name: "WhatsApp chat simulator",
           status: "live",
-          href: "/admin/guest?view=inbox",
+          href: "/core/guest?view=inbox",
           summary:
             "Demo / training tool with no separate page (mirrors the KDS order simulator): flip whatsappSimulatorEnabled in /admin/settings (owner-only toggle) and the WhatsApp console shows a 'Sandbox' tag plus manual Add 1 / Add 5 / Purge controls on the stats/filter strip. There is NO auto-spawn — the operator adds a controlled batch, then reads/replies to each chat with the normal thread composer. Each spawn (POST /api/admin/whatsapp-simulator, action: spawn, count clamped 1–5) builds a synthetic-but-real conversation ONLY from a real truck menu via getMenuWithOverrides() (no made-up products), at a random funnel stage (browsing / cart / fulfillment+slot / awaiting payment), and writes it through saveSimulatedWaConversation() — a real WaSession (simulated:true) + a real transcript — so the console renders it exactly like a live chat. Sandbox chats use a reserved +48999XXXXXX phone range, carry a '(sim)' customer name and a purple 'sim' badge in the list + 'sandbox' badge in the thread head, and never send a real WhatsApp message (the simulator writes straight to the store, bypassing the Meta provider). Spawned phones are tracked in a whatsapp-sim-phones.json registry so Purge (action: purge) clears every sandbox session + transcript in one shot. Spread across active trucks for variety unless scoped to one location.",
           caveats:
@@ -478,7 +478,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Role-aware KDS — owner / manager / chef lenses",
           status: "live",
-          href: "/admin/kds",
+          href: "/core/kds",
           summary:
             "One live-order KDS engine, three lenses by role. OWNER lands on the Atlas Fleet command board — on desktop AND mobile (the dark fleet-command surface reflows to a single-column responsive layout on a phone, with the Fleet ↔ Floor toggle reflowing the same board to the phone): both trucks side by side on a dark fleet-command surface, each with a live health ring/score, a stat row (active / at-risk / late / ready / on-shift + a throughput sparkline), the per-truck Pace layer (covers/hr, revenue/hr, a bottleneck capacity meter, and per-station pace gauges), and a tone-sorted ticket stack with depleting SLA rings, the violet predicted-miss tier, allergen alerts and notes. A fleet command bar aggregates active / at-risk / late / ready / throughput / covers / revenue and a cross-truck promise-accuracy benchmark (per-truck bars vs target, leader-vs-lagger gap, throughput-weighted fleet mean). Header carries Refresh, a live clock, and Fullscreen (native Fullscreen API + a portaled overlay that escapes the admin shell per CLAUDE.md rule #4). Tickets advance inline (Start prep / Mark ready / Bump) through PUT /api/admin/orders; clicking a truck header drills into its floor board (sets location + switches lens). GET /api/admin/kds/fleet, owner-only, opts into simulated tickets (?includeSimulated=1, each marked with a dashed frame + 'SIMULATION' tag) so a sandbox rush lights up the board for demos, 1s live tick + 6s data refresh. MANAGER / FRANCHISEE (and an owner drilled into a truck) get the floor board plus a floor-control header: live open / late / due-soon / oldest / average-age from the active orders the board streams, with throughput (done last hour) + on-shift staff (open time-punches) + live 86 management (restore chips + '86 an item' picker) from GET /api/admin/kds/floor-ops. CHEF (kitchen / staff) get a line strip: live queue depth (tickets in queue + oldest age), and one-tap 86 of an item they've run out of (candidates are the items actually on the active tickets) + restore, via the kitchen-permitted GET/POST /api/admin/kds/eighty-six (audit-logged as menu.item_86). Every surface — the Atlas fleet board, the floor board (desktop + mobile, which keeps its New / In prep / Ready lanes) and the fullscreen kiosk — renders ONE shared KdsTicketCard (ring timer, predicted-ready line, violet at-risk tier, allergen alert, station-grouped items) built by buildKdsTicket and toned by the same analyzeTruck predictive engine, so the cards are byte-for-byte identical across the whole KDS. Both the floor board and the Atlas fleet board opt into simulated tickets (?includeSimulated=1) so the order simulator can stream a marked SIMULATION rush onto them; the floor-ops / fleet roll-ups (promise-accuracy + throughput sparkline, from the kds_tickets ledger) and every report stay real-only. Bump-time P95 reads getKdsStationAnalytics (real kds_tickets only).",
           caveats:
@@ -616,7 +616,7 @@ export default async function CapabilitiesPage() {
             "ANTHROPIC_API_KEY",
             "STRIPE_SECRET_KEY",
           ],
-          href: "/admin/guest?view=inbox",
+          href: "/core/guest?view=inbox",
           summary:
             "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. The /admin/whatsapp operator console is a KDS/POS-style command surface (3-pane inbox: live conversation list · chat thread with operator reply + re-open template · context panel showing cart/order/funnel), with a fullscreen kiosk mode. The Inbox/Live/Awaiting-pay/Archived filters drive an operator-side auto-archive: a chat with no new message for `autoArchiveMinutes` (default 5) drops to Archived — console-only, so the customer's 90-min bot session/cart is untouched and a new message restores it to the inbox. The Settings overlay (WhatsAppSettingsDialog) is the advanced config hub, all wired end-to-end via WaSettings: Channel (enable, default location, daily cap), Messages (welcome, opt-out keywords, re-open template), Conversation lifecycle (auto-archive minutes), AI concierge (enable/disable + extra system-prompt instructions appended to the base prompt in lib/whatsapp/turn.ts, plus an away message sent when AI is off), and Auto-replies/scripts (keyword→canned-reply pairs matched in the webhook BEFORE the LLM). Business hours (Europe/Warsaw, per-day open/close + closed days, computed in lib/whatsapp/hours.ts) gate the bot in the webhook — outside hours the away message is sent instead of taking an order, while auto-replies still answer 24/7. Operators can also manually Pin a chat (never auto-archives, stays in the inbox) or Archive it now from the context panel; a new inbound message un-archives automatically. Switches save instantly; text fields save with the button. A Funnel button opens conversion analytics: real stage instrumentation (started → location → cart → fulfillment → slot → pay-link → paid) emitted from the bot pipeline (first-touch in the webhook, stage transitions diffed in lib/whatsapp/turn.ts, paid from the Stripe webhook) into an appendWaFunnelEvent log, aggregated cumulatively per phone (a later stage counts toward earlier ones, so drop-off is monotonic and a missed intermediate event never breaks the funnel) over 7d/30d/all via GET /api/admin/whatsapp/funnel. Simulated chats bypass the live pipeline, so they never pollute the funnel. Abandoned-cart recovery (opt-in, Settings → Abandoned-cart recovery): when a customer builds a cart but doesn't pay, a record is upserted in the turn loop (persisted beyond the 90-min session) and cleared on paid (Stripe webhook) or escalation; the daily cron /api/admin/cron/whatsapp-abandoned-cart (registered in the dispatcher) sends the Meta re-open template once to carts idle ≥ delayHours and under 4 days old, marking each notified so customers are never spammed. Self-skips when disabled or no template is set. Broadcast campaigns (Broadcast button): send an approved Meta template to an opted-in customer segment — audience filters computed live from the customer rollup (all / active 60d / lapsed 90d+ / VIP ≥200 zł & ≥6 orders / new 14d), always excluding smsOptout + phoneless. POST /api/admin/whatsapp/broadcasts snapshots the audience into a campaign (capped 5000); the UI drives batched sends (25/tick) via /broadcasts/[id]/send with a live progress bar, and a daily /api/admin/cron/whatsapp-broadcast-drain backstop finishes any campaign left mid-send. Audit-logged on create. Scripted flows (Settings → Scripted flows): operator-authored deterministic sequences — a customer message containing the trigger word starts the flow (sends step 1) and each reply advances one step until the steps run out. Runs ahead of the LLM in lib/whatsapp/flows.ts (independent of the AI toggle), with per-session state on WaSession.activeFlow; replies are captured in the transcript. Great for feedback or info sequences without burning model calls.",
         },
@@ -640,7 +640,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Three ordering modes (takeout / delivery / dine-in)",
           status: "live",
-          href: "/admin/service?view=slots",
+          href: "/core/service?view=slots",
           summary:
             "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /admin/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
         },
@@ -713,8 +713,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty points",
           status: "live",
-          href: "/admin/guest?view=loyalty",
-          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/admin/guest?view=loyalty — /admin/loyalty redirects there); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+          href: "/core/guest?view=loyalty",
+          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/core/guest?view=loyalty — /admin/loyalty redirects there); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Referral codes",
@@ -1041,16 +1041,16 @@ export default async function CapabilitiesPage() {
         {
           name: "POS — Tabs terminal (counter order entry)",
           status: "live",
-          href: "/admin/pos",
+          href: "/core/pos",
           summary:
-            "Staff-facing point of sale at /admin/pos — rebuilt on the Core suite theme/shell (public/mockups/core-suite/pos.html): the SI sidebar + topbar (channel + location segmented controls), a concurrent OPEN CHECKS tab rail, an 86px category rail with capacity-true promise times, a text-forward menu grid and the persistent live coursing ticket. A rail of concurrent OPEN CHECKS (tabs) sits front and centre, each its own running total + status (open / parked / ready-to-pay) and channel colour (Takeout=blue, Delivery=amber, Dine-in=purple, grey until chosen); staff switch between them, open new ones (N), park, and send/charge each independently. Tabs are server-backed (PosTab in src/lib/store.ts → GET/POST/PUT/DELETE /api/admin/pos/tabs, per location) so they survive a refresh and are shared across tills — lines store menu-item ids + quantities only, never prices. Product grid is the truck's real menu (getMenuWithOverrides) with role badges / tags / category 'All' grouping; an in-column channel selector is required before send or charge (deliveryOnly SKUs only on Delivery). Dine-in tabs carry covers + a real floor table from /admin/floor (with cross-check table-conflict detection); delivery tabs capture an address. Combo deals (getActiveComboDeals, admin-configured in /admin/crosssell) auto-discount the live cart, an order-aware AI offers panel surfaces combo-completion + cross-sell (getCartSuggestions), and the Pace→POS steering feed (/api/admin/pace/steering) badges make-now / ease items + quotes capacity-true promise times when the line gets hot. 'Send to KDS' POSTs /api/admin/pos/orders {tabId}: the server rebuilds the order from the persisted tab + real menu + combo discount and calls createOrder (KDS ticket + stock decrement + Orders list), suppressNotifications + synthetic same-day 'walkin' slot; it's idempotent per tab (re-send re-syncs the same Order, no duplicate). Dine-in checks support COURSING (src/lib/pos-coursing.ts): each line carries a course (starter/main/dessert/drink, defaulted from its menu category), a 'Kitchen timing' toggle picks Coursed vs All-together (persisted as PosTab.coursed), and in coursed mode the ticket splits into per-course sections with a Fire button each + drag-to-recourse held lines between courses. Firing a course POSTs {tabId, courses:[course]} — the server accumulates it onto the server-owned PosTab.firedCourses and rebuilds the linked Order from the union of fired courses' lines, so each fire grows the kitchen ticket and held courses never hit the KDS. 'Charge' → tender (Cash / Card) PATCHes the same route to bill the WHOLE tab (fired or not), stamp the Order paid and close the tab. Fullscreen kiosk (portaled per CLAUDE.md rule #4). Staff+, per-location.",
+            "Staff-facing point of sale at /core/pos — rebuilt on the Core suite theme/shell (public/mockups/core-suite/pos.html): the SI sidebar + topbar (channel + location segmented controls), a concurrent OPEN CHECKS tab rail, an 86px category rail with capacity-true promise times, a text-forward menu grid and the persistent live coursing ticket. A rail of concurrent OPEN CHECKS (tabs) sits front and centre, each its own running total + status (open / parked / ready-to-pay) and channel colour (Takeout=blue, Delivery=amber, Dine-in=purple, grey until chosen); staff switch between them, open new ones (N), park, and send/charge each independently. Tabs are server-backed (PosTab in src/lib/store.ts → GET/POST/PUT/DELETE /api/admin/pos/tabs, per location) so they survive a refresh and are shared across tills — lines store menu-item ids + quantities only, never prices. Product grid is the truck's real menu (getMenuWithOverrides) with role badges / tags / category 'All' grouping; an in-column channel selector is required before send or charge (deliveryOnly SKUs only on Delivery). Dine-in tabs carry covers + a real floor table from /admin/floor (with cross-check table-conflict detection); delivery tabs capture an address. Combo deals (getActiveComboDeals, admin-configured in /admin/crosssell) auto-discount the live cart, an order-aware AI offers panel surfaces combo-completion + cross-sell (getCartSuggestions), and the Pace→POS steering feed (/api/admin/pace/steering) badges make-now / ease items + quotes capacity-true promise times when the line gets hot. 'Send to KDS' POSTs /api/admin/pos/orders {tabId}: the server rebuilds the order from the persisted tab + real menu + combo discount and calls createOrder (KDS ticket + stock decrement + Orders list), suppressNotifications + synthetic same-day 'walkin' slot; it's idempotent per tab (re-send re-syncs the same Order, no duplicate). Dine-in checks support COURSING (src/lib/pos-coursing.ts): each line carries a course (starter/main/dessert/drink, defaulted from its menu category), a 'Kitchen timing' toggle picks Coursed vs All-together (persisted as PosTab.coursed), and in coursed mode the ticket splits into per-course sections with a Fire button each + drag-to-recourse held lines between courses. Firing a course POSTs {tabId, courses:[course]} — the server accumulates it onto the server-owned PosTab.firedCourses and rebuilds the linked Order from the union of fired courses' lines, so each fire grows the kitchen ticket and held courses never hit the KDS. 'Charge' → tender (Cash / Card) PATCHes the same route to bill the WHOLE tab (fired or not), stamp the Order paid and close the tab. Fullscreen kiosk (portaled per CLAUDE.md rule #4). Staff+, per-location.",
           caveats:
             "Tender is a record-only step — Cash / Card stamps the Order paidAt; Stripe-terminal / cash-drawer integration is a later pass. Tabs default to 'Tab N' names (rename inline in the ticket header). Item modifiers (crust, extra toppings) aren't selectable from the POS yet — base items only. AI offers + steering are the existing heuristic / Theory-of-Constraints engines, not yet a trained model. Coursing fires into ONE growing Order per tab (held courses are added to the same KDS ticket as they fire, not a fresh ticket per course), so a course bumped 'ready' on the KDS can gain later-fired items — separate ticket-per-course is a future pass. The fire stamps Order.coursing {fired,held}; the KDS ticket shows a 'Coursed · X held' hint while courses are still held, but does not yet add a per-course header chip or group items by course name.",
         },
         {
           name: "Floor — tables + reservations",
           status: "live",
-          href: "/admin/service?view=floor",
+          href: "/core/service?view=floor",
           summary:
             "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
           caveats:
@@ -1059,16 +1059,16 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor Twin — live room digital twin",
           status: "live",
-          href: "/admin/service?view=floor",
+          href: "/core/service?view=floor",
           summary:
             "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time, spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Turn-time has two sources: MEASURED seat-occupancy (the §4.2 instrumentation — table status transitions are now logged on every save via saveTable → recordFloorEvent → floor-events.json, and seated→cleared pairs give true dwell incl. pre-order wait + bussing; a still-open seated run gives an exact live seat time) and, as a fallback when a table has no transition history, the dine-in order-timeline proxy (createdAt→paidAt). Measured rows are tagged. Phase 2 — the acts: predictive-seating moves (Seat / Clear a table straight from the Twin table or the recommender — POST /api/admin/floor-twin flips the status via saveTable, which logs the transition, closing the loop with the measured-dwell instrumentation) and bottleneck pre-emption (the Twin runs the live KDS pace engine, analyzeTruck, and shows a 'Kitchen filling up / overloaded — pace new seating' banner with the bottleneck station + utilisation when the line can't absorb more covers). Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 7 unit tests, dwell guardrails 5–360m); GET/POST /api/admin/floor-twin?location=, staff+.",
         },
         {
           name: "Unified booking — slot + table in one step",
           status: "live",
-          href: "/admin/service",
+          href: "/core/service",
           summary:
-            "Lives on the new merged Floor + Slots Core surface (/admin/service, CoreShell / .core-suite, like POS & Guest): a booking console where the operator picks a dine-in slot (with live remaining capacity) and a table (lit up live for fit + conflict via the same findReservationConflicts the server enforces), with a Recommend button that auto-picks the best-fit table, then Book. The merged Floor + Slots flow: book a dine-in time slot AND assign a table in a single operation, conflict-checked on BOTH the slot's booking capacity (active reservations < maxOrders) and table double-booking (findReservationConflicts), with an operator override that forces past both. The reservation links the slot (Reservation.slotId — supplies date/time + capacity) and the table (the seat). Capacity model avoids double-counting: a reservation consumes the slot by count, never touching slot.currentOrders (which tracks online/POS orders). Customer dine-in checkout now AUTO-ASSIGNS the best-fit open table via the Floor Twin's pickOpenTable (and seats it, logging the transition) so booking a dine-in slot also gets the guest a table with no manual step — best-effort, never blocks the order. Pure validation (validateBooking) + pickOpenTable are unit-tested; orchestration in src/lib/booking.ts; POST /api/admin/booking?location= (manager+, 409 on overridable conflicts).",
+            "Lives on the new merged Floor + Slots Core surface (/core/service, CoreShell / .core-suite, like POS & Guest): a booking console where the operator picks a dine-in slot (with live remaining capacity) and a table (lit up live for fit + conflict via the same findReservationConflicts the server enforces), with a Recommend button that auto-picks the best-fit table, then Book. The merged Floor + Slots flow: book a dine-in time slot AND assign a table in a single operation, conflict-checked on BOTH the slot's booking capacity (active reservations < maxOrders) and table double-booking (findReservationConflicts), with an operator override that forces past both. The reservation links the slot (Reservation.slotId — supplies date/time + capacity) and the table (the seat). Capacity model avoids double-counting: a reservation consumes the slot by count, never touching slot.currentOrders (which tracks online/POS orders). Customer dine-in checkout now AUTO-ASSIGNS the best-fit open table via the Floor Twin's pickOpenTable (and seats it, logging the transition) so booking a dine-in slot also gets the guest a table with no manual step — best-effort, never blocks the order. Pure validation (validateBooking) + pickOpenTable are unit-tested; orchestration in src/lib/booking.ts; POST /api/admin/booking?location= (manager+, 409 on overridable conflicts).",
         },
         {
           name: "Inventory + recipes + stock + distributor offerings",
@@ -1227,13 +1227,13 @@ export default async function CapabilitiesPage() {
         {
           name: "Slots",
           status: "live",
-          href: "/admin/service?view=slots",
+          href: "/core/service?view=slots",
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
           name: "Demand Exchange — per-slot yield",
           status: "live",
-          href: "/admin/service?view=slots",
+          href: "/core/service?view=slots",
           summary:
             "Module 2 (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /admin/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Phase 2 — the act, two yield levers: for demand the kitchen can take, one-click 'Apply' resizes capacity (never below what's already booked); for kitchen-capped (protect) slots, where volume can't go up, it sets a MINIMUM SPEND sized from the slot's realized AOV (raise price, not volume). 'Apply all' is the autonomy lever — re-derives the board server-side and applies capacity + min-spend to every changed slot, audit-logged as slots.resize. The minimum is real end-to-end: TimeSlot.minSpendGrosze (additive min_spend_grosze column) is exposed on the public /api/slots (the SlotPicker shows 'min N zł') and ENFORCED server-side at checkout (createOrder returns below_min_spend if the food subtotal is under it). Pure-compute engine src/lib/demand-exchange.ts (9 unit tests); GET/POST /api/admin/demand-exchange?location=&date=, manager+.",
         },

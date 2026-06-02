@@ -49,20 +49,20 @@ one surface with four views (Inbox / Guests / Loyalty / Concierge).
 
 ## How it's wired (live code)
 
-- **Route:** `src/app/admin/guest/page.tsx` is the single hub surface. It
+- **Route:** `src/app/core/guest/page.tsx` is the single hub surface. It
   reads `?view=` and renders the matching module — `inbox` →
   `<AdminWhatsApp>`, `guests` → `<AdminCrm>`, `loyalty` →
   `<AdminLoyalty>`, `concierge` → `<AdminConcierge>` (the concierge
   server-side data load lives in the hub page). Default view is `inbox`.
 - **Switcher:** `<GuestViewNav>`
-  (`src/components/admin/guest/GuestViewNav.tsx`) renders the
+  (`src/components/core/guest/GuestViewNav.tsx`) renders the
   Inbox / Guests / Loyalty / Concierge segmented links into the
   CoreShell topbar `.viewnav` slot. Each module drops it in with its own
   `current` view, and every module's breadcrumb reads
   **Guest Engagement** so the four read as one surface.
 - **Redirects:** `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,
   `/admin/whatsapp` are now thin `redirect()` pages pointing at
-  `/admin/guest?view=guests|loyalty|concierge|inbox`. The nav (Core group
+  `/core/guest?view=guests|loyalty|concierge|inbox`. The nav (Core group
   in `src/components/admin/v2/nav.config.ts`) carries a single
   **Guest Engagement** entry instead of four.
 - **Responsive:** the mobile shell is retired (`useIsMobile()` is a desktop

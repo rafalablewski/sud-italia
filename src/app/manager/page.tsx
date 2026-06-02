@@ -154,10 +154,10 @@ export default async function ManagerPortalPage() {
 
   const quickLinks = [
     { href: "/admin/orders", label: "Orders", desc: "Live tickets & history", icon: ClipboardList },
-    { href: "/admin/kds", label: "Kitchen Display", desc: "The line, by station", icon: Flame },
+    { href: "/core/kds", label: "Kitchen Display", desc: "The line, by station", icon: Flame },
     { href: "/admin/schedule", label: "Schedule", desc: "Shifts & rota", icon: CalendarDays },
     { href: "/admin/inventory", label: "Inventory", desc: "Stock & counts", icon: Boxes },
-    { href: "/admin/pos", label: "Point of sale", desc: "Take an order", icon: Receipt },
+    { href: "/core/pos", label: "Point of sale", desc: "Take an order", icon: Receipt },
     { href: "/admin/staff", label: "Team", desc: "Roster & hiring", icon: Users },
   ];
 

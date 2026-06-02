@@ -112,8 +112,9 @@
   line-height: 1.4;
 }
 /* Full-bleed kitchen-wall layer — the KDS renders as a standalone full-screen
-   display (the admin chrome steps aside on /admin/kds via CORE_ROUTES),
-   matching kds*.html. Below the kiosk z-index so admin toasts still show. */
+   display (/core/kds has its own top-level layout, so there's no admin chrome
+   to step aside), matching kds*.html. Below the kiosk z-index so admin toasts
+   still show. */
 .kds-atlas.kds-bleed {
   position: fixed;
   inset: 0;

@@ -30,7 +30,7 @@
 |---|---|:---:|---|
 | Dashboard `/admin` | Overview | High | 4×2 KPI grid, heatmap (7d × 24h), AreaChart + 2 tables; KPI row reflows but is unreadable. |
 | Orders `/admin/orders` | Overview | **Critical** | 5-column kanban + 8-column fallback table + detail modal with refund flow. Highest-traffic operator surface. |
-| KDS `/admin/kds` | Overview | **Critical** | 3-lane ticket display, 7+ station tabs, 1s timers, audio alerts. Used hands-busy in the kitchen — must run on a propped phone. |
+| KDS `/core/kds` | Overview | **Critical** | 3-lane ticket display, 7+ station tabs, 1s timers, audio alerts. Used hands-busy in the kitchen — must run on a propped phone. |
 | Menu `/admin/menu` | Operations | High | Unified rows × 5+ location chips per item, edit dialog (6+ fields). |
 | Recipes `/admin/recipes` | Operations | Medium | 6-col table, ingredient editor (5-col sub-table). Editing is intentionally desktop-first. |
 | Slots `/admin/slots` | Operations | Medium-high | Week grid (7 × 8 slots) does not fit; day view is salvageable. |

@@ -3,12 +3,12 @@
 The productised IP. Three customer-facing surfaces the truck actually
 runs on:
 
-- **POS** (`/admin/pos`) — cashier order-entry with the coursing model + tab rail
-- **KDS** (`/admin/kds`) — kitchen display, role triad, coursing-aware tickets
+- **POS** (`/core/pos`) — cashier order-entry with the coursing model + tab rail
+- **KDS** (`/core/kds`) — kitchen display, role triad, coursing-aware tickets
 - **Guest** — the unified guest hub: CRM (customer book), Loyalty (member
   roster + wallets + redemptions), Concierge (AI capability layer + EU-14
   allergen matrix), WhatsApp (inbox + funnel)
-- **Service** (`/admin/service`) — the merged Floor + Slots surface, on the
+- **Service** (`/core/service`) — the merged Floor + Slots surface, on the
   Core suite shell. Three views: **Book** (dine-in slot + table in one step),
   **Floor** (live room + twin), **Slots** (capacity + demand). The old
   `/admin/floor` and `/admin/slots` redirect in (`?view=floor|slots`).
@@ -51,14 +51,17 @@ mockup** design (`public/mockups/core-suite/`):
 - **Shell:** `<CoreShell>` (`src/components/admin/core/CoreShell.tsx`)
   renders the mockup's SI sidebar + topbar as a fixed full-viewport layer
   for POS + Guest. KDS is full-bleed with its own dark top bar (no
-  sidebar). `AdminShell` steps its chrome aside for `CORE_ROUTES`
-  (`/admin/guest`, `/admin/pos`, `/admin/kds`, `/admin/service`) while
-  keeping the data providers.
-- **Surfaces:** **POS** (`/admin/pos`, `pos.html`) and the **Guest
-  Engagement hub** (`/admin/guest`, four views Inbox · Guests · Loyalty ·
+  sidebar). The suite owns the top-level `/core/*` segment
+  (`/core/guest`, `/core/pos`, `/core/kds`, `/core/service`); its own
+  `src/app/core/layout.tsx` loads the Admin + Core theme CSS and
+  `CoreProviders` (`src/app/core/CoreProviders.tsx`) supplies the data
+  providers (location, toast, shell context). There is no admin chrome to
+  step aside — unlike the old `/admin/*` placement, where AdminShell did.
+- **Surfaces:** **POS** (`/core/pos`, `pos.html`) and the **Guest
+  Engagement hub** (`/core/guest`, four views Inbox · Guests · Loyalty ·
   Concierge — the old `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,
   `/admin/whatsapp` redirect in) render on the `.core-suite` theme.
-  **KDS** (`/admin/kds`, `kds*.html`) is the full-screen kitchen-wall
+  **KDS** (`/core/kds`, `kds*.html`) is the full-screen kitchen-wall
   display.
 - **Guest hub views:** the cross-view switcher (`<GuestViewNav>`) rides
   the CoreShell topbar `.viewnav`; Inbox = `AdminWhatsApp`, Guests =

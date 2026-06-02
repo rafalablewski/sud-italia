@@ -1328,7 +1328,7 @@ export async function createOrder(
 /**
  * KDS live-order simulator (admin-gated demo / training tool). Persists a
  * synthetic-but-real order so it streams onto the orders-driven Kitchen
- * Display (/admin/kds) exactly like a live ticket — where it is clearly
+ * Display (/core/kds) exactly like a live ticket — where it is clearly
  * marked as SIMULATION — but carries simulated:true so getOrders() hides it
  * from the dashboard, Orders list and every report. It also deliberately
  * SKIPS every side effect createOrder() runs for a paying customer: no stock

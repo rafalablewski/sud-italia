@@ -7,7 +7,7 @@ import { Heart, Inbox, Sparkles, UsersRound } from "lucide-react";
  * The views of the unified Guest Engagement hub, rendered into the
  * CoreShell topbar's `.viewnav` slot. CRM, Concierge, WhatsApp and Loyalty
  * used to be separate sidebar entries; they now read as Inbox / Guests /
- * Loyalty / Concierge under one surface (`/admin/guest`), and the old routes
+ * Loyalty / Concierge under one surface (`/core/guest`), and the old routes
  * (`/admin/whatsapp`, `/admin/crm`, `/admin/loyalty`, `/admin/concierge`)
  * redirect here.
  */
@@ -35,7 +35,7 @@ export function GuestViewNav({
         return (
           <Link
             key={v.id}
-            href={`/admin/guest?view=${v.id}`}
+            href={`/core/guest?view=${v.id}`}
             className={v.id === current ? "on" : undefined}
             aria-current={v.id === current ? "page" : undefined}
           >
