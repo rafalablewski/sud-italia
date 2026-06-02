@@ -199,9 +199,15 @@ actually reach.
   scope (no mock data), plus quick links into the operational pages
   (Orders, KDS, Schedule, Inventory, POS, Team) their granular permissions
   grant. The wall is **only** around the `/admin` HQ root — managers keep their
-  permission-scoped `/admin/*` tools. The client-side page guard in `AdminShell`
-  bounces a forbidden navigation to the user's own home (from `/api/admin/me` →
-  `signIn.landing`), never to the now owner-only `/admin`.
+  permission-scoped tools, but navigate them under **their own URL prefix**:
+  `/manager/*` (a franchisee `/franchisee/*`, the owner `/admin/*`), via
+  rewrites onto the shared `/admin/*` pages so the path reads as their space,
+  not "admin". The whole shell re-roots onto that prefix and a stray `/admin/*`
+  URL converges back to it (`src/lib/admin-base.ts` — see
+  [README → Role-prefixed back-office URLs](../README.md#role-prefixed-back-office-urls)).
+  The client-side page guard in `AdminShell` bounces a forbidden navigation to
+  the user's own home (from `/api/admin/me` → `signIn.landing`), never to the
+  now owner-only `/admin`.
 
 ### Granular permissions (action-level RBAC)
 

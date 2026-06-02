@@ -61,6 +61,17 @@ pages must:
 4. Have a **mobile variant** (or a graceful read-only state on small
    screens). Don't ship a desktop-only admin page.
 
+**Write paths as canonical `/admin/…`.** The page physically lives under
+`src/app/admin/*`; a manager / franchisee navigate it as `/manager/*` /
+`/franchisee/*` via rewrites. The nav href in `nav.config` stays `/admin/…` —
+`useNavSections` re-roots it per role automatically. For **in-page** navigation
+(a `<Link>`, a `router.push`, a notification deep-link), don't hardcode the
+prefix either: call `useAdminBase()` + `withAdminBase(base, "/admin/…")`
+(`src/lib/admin-base.ts`) so the link keeps the user in their own prefix. Server
+components read the base from the role via `adminBaseForRole(user.role)` (see the
+capabilities ledger). The `/api/admin/*` endpoints are **not** prefixed — leave
+those as-is. Full contract: [README → Role-prefixed back-office URLs](../README.md#role-prefixed-back-office-urls).
+
 The page header pattern (use, don't redesign):
 
 ```tsx

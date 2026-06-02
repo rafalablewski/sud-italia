@@ -359,6 +359,15 @@ and `.core-suite` scopes, so the one component looks right in either shell.
 
 - **Full nav, role-filtered**, from `useNavSections()`
   (`components/admin/v2/useNavSections.ts`); active state by `pathname`.
+- **Role-prefixed hrefs.** `nav.config` hrefs are canonical `/admin/*`, but
+  `useNavSections` re-roots each onto the prefix the page is served under
+  (`withAdminBase` — owner `/admin/*`, manager `/manager/*`, franchisee
+  `/franchisee/*`), and the brand link points at that base's home. So the
+  active-state `pathname` match lines up with the prefixed hrefs. The `g`+letter
+  shortcuts (`AdminShell.onGoto`) and the command palette prefix the same way.
+  See [README → Role-prefixed back-office URLs](../README.md#role-prefixed-back-office-urls)
+  and `src/lib/admin-base.ts`; the filter still gates on the canonical href, so
+  the prefix is cosmetic.
 - **No `g`-key chips** (the old `.v2-nav-kbd`). The `g`+letter shortcuts still
   work via the global handler in `AdminShell.tsx` off `nav.config`, and the
   full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep
