@@ -96,6 +96,16 @@ site; add/extend a key in the catalog so a typo fails to compile.
   `N/total` count per group, plus `Reset to <Role> defaults`. Owners
   show a locked note — they're always all-access and never carry a
   stored grant.
+- **Only an owner can grant** (the "only admin can grant" rule).
+  Managing admin accounts *is* the act of granting authority — role,
+  location scope, permissions — so every write on `/api/admin/users`
+  (POST / PUT / DELETE) is **owner-only**: `roles: ["owner"]` stops a
+  role-default manager at `withAdmin`, and an explicit `ownerOnly(user)`
+  check additionally blocks a custom-grant user who was handed
+  `users.edit` (for custom users permissions override role rank, so the
+  role gate alone wouldn't catch them). Reads (GET) stay any-auth so the
+  page can list the roster. The `users.*` catalog keys exist for the path
+  map but are effectively owner-only in practice.
 - **Persistence:** the dialog sends `permissions` as an **array** (custom
   grant), `null` (clear → fall back to role defaults), or omits it (leave
   untouched) — mirroring the `totpSecret` set/clear/preserve pattern in
@@ -122,8 +132,20 @@ site; add/extend a key in the catalog so a typo fails to compile.
     wide open). Role-default users keep the legacy role-rank gate; owners
     bypass both. GET→`.view`, mutating verbs→`.edit`/action keys
     (`orders.refund`, `purchase_orders.approve`, `cash.manage`, …).
-  - `/api/admin/me` returns `{ allAccess, permissions }` so the client
-    gates on the exact set the server enforces.
+  - `/api/admin/me` returns `{ allAccess, custom, permissions }` so the
+    client gates on the exact set the server enforces (and keeps the
+    legacy role-rank nav/guard for role-default users).
+  - **Defence in depth** — high-value handlers re-assert the *specific*
+    capability at the call site via `userHasPermission(user, key)` (which
+    reads the `withAdmin` auth context, no extra DB hit), on top of
+    `withAdmin`'s path-map inference: refunds (`orders.refund`), cash
+    open/close/drop/hide/delete (`cash.manage`), GDPR export
+    (`customers.export`), loyalty point adjustments
+    (`guest.loyalty_adjust`), purchase-order writes
+    (`purchase_orders.edit`), settings writes (`settings.edit`).
+    Irreversible GDPR erasure is deliberately **not** mapped to a
+    mid-tier key (`permissionForApiPath` returns `null` for it) so it
+    falls back to its owner-only role gate.
 - **Adding a capability:** add the key to the right group in
   `PERMISSION_GROUPS`, slot it into the relevant `ROLE_DEFAULT_PERMISSIONS`
   preset(s), and extend `permissionForAdminPage` / `permissionForApiPath`

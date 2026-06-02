@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { appendAuditLog } from "@/lib/store";
 import { exportCustomerData } from "@/lib/gdpr";
+import { userHasPermission } from "@/lib/permissions";
 
 /**
  * GDPR Article 15 DSAR endpoint. Returns a single JSON blob with every
@@ -15,6 +16,12 @@ import { exportCustomerData } from "@/lib/gdpr";
 export const GET = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
+    if (!userHasPermission(user, "customers.export")) {
+      return NextResponse.json(
+        { error: "Requires permission customers.export" },
+        { status: 403 },
+      );
+    }
     const phone = req.nextUrl.searchParams.get("phone");
     if (!phone) {
       return NextResponse.json({ error: "phone required" }, { status: 400 });

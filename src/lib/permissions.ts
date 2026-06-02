@@ -265,6 +265,19 @@ export function effectiveHas(
   return eff.all || eff.keys.has(key);
 }
 
+/**
+ * Convenience for route handlers that already hold the resolved `user` from
+ * `withAdmin`'s auth context — checks a single permission without a second
+ * cookie/DB read. Use for explicit, defence-in-depth action gates (e.g. a
+ * refund handler asserting `orders.refund` at the call site).
+ */
+export function userHasPermission(
+  user: { role: AdminRole; permissions?: readonly string[] | null; id?: string },
+  key: PermissionKey,
+): boolean {
+  return effectiveHas(resolveEffectivePermissions(user), key);
+}
+
 // --- Path → permission maps ----------------------------------------------
 //
 // One mapping for admin pages (nav filter + client page guard) and one for
@@ -357,6 +370,9 @@ export function permissionForApiPath(
       if (sub.includes("export") || sub.includes("gdpr") || sub.includes("erase")) return "customers.export";
       return write ? "customers.edit" : "customers.view";
     case "gdpr":
+      // Irreversible erasure stays owner-only — return null so withAdmin falls
+      // back to the route's owner role gate instead of a mid-tier grant.
+      if (sub.includes("delete") || sub.includes("erase")) return null;
       return "customers.export";
     case "corporate":
       return write ? "corporate.edit" : "corporate.view";

@@ -10,8 +10,17 @@ import {
   updatePurchaseOrderStatus,
 } from "@/lib/store";
 import type { PurchaseOrderStatus, PurchaseOrderLine } from "@/data/types";
+import type { AdminRole } from "@/lib/admin-roles";
+import { userHasPermission } from "@/lib/permissions";
 
 const VALID_STATUSES: PurchaseOrderStatus[] = ["draft", "sent", "received", "cancelled"];
+
+/** Defence-in-depth capability gate shared by every PO mutation. */
+function requirePoEdit(user: { role: AdminRole; permissions?: string[]; id?: string }) {
+  return userHasPermission(user, "purchase_orders.edit")
+    ? null
+    : NextResponse.json({ error: "Requires permission purchase_orders.edit" }, { status: 403 });
+}
 
 export const GET = withAdmin(
   { locationParam: "location" },
@@ -92,7 +101,9 @@ async function saveFromBody(body: { id?: string; supplierId?: string; locationSl
 
 export const POST = withAdmin(
   { roles: ["manager", "owner"] },
-  async (req) => {
+  async (req, _ctx, { user }) => {
+    const denied = requirePoEdit(user);
+    if (denied) return denied;
     try {
       return await saveFromBody(await req.json());
     } catch {
@@ -103,7 +114,9 @@ export const POST = withAdmin(
 
 export const PUT = withAdmin(
   { roles: ["manager", "owner"] },
-  async (req) => {
+  async (req, _ctx, { user }) => {
+    const denied = requirePoEdit(user);
+    if (denied) return denied;
     try {
       const body = await req.json();
       if (!body.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -124,7 +137,9 @@ export const PUT = withAdmin(
 
 export const DELETE = withAdmin(
   { roles: ["manager", "owner"] },
-  async (req) => {
+  async (req, _ctx, { user }) => {
+    const denied = requirePoEdit(user);
+    if (denied) return denied;
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
     const ok = await deletePurchaseOrder(id);

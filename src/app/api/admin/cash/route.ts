@@ -7,6 +7,7 @@ import {
   openCashSession,
 } from "@/lib/store";
 import { cashOpenSchema, parseBody } from "@/lib/api-schemas";
+import { userHasPermission } from "@/lib/permissions";
 
 export const GET = withAdmin(
   { locationParam: "location" },
@@ -24,6 +25,12 @@ export const GET = withAdmin(
 export const POST = withAdmin(
   { roles: ["manager", "owner"] },
   async (req, _ctx, { user }) => {
+    if (!userHasPermission(user, "cash.manage")) {
+      return NextResponse.json(
+        { error: "Requires permission cash.manage" },
+        { status: 403 },
+      );
+    }
     const parsed = await parseBody(req, cashOpenSchema);
     if ("error" in parsed) return parsed.error;
     const { locationSlug, openingFloat, openedBy, notes } = parsed.data;

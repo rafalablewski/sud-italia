@@ -109,7 +109,7 @@ function AdminUsersDesktop() {
       setList((arr) => arr.filter((u) => u.id !== pendingDelete.id));
       toast.success("Removed", pendingDelete.name);
     } else if (res.status === 403) {
-      toast.error("Forbidden", "Only owner / manager can remove users.");
+      toast.error("Forbidden", "Only an owner can remove users.");
     }
     setPendingDelete(null);
   };
@@ -278,7 +278,7 @@ function AdminUsersDesktop() {
         <div className="v2-note">
           <ShieldCheck className="h-4 w-4" />
           <span>
-            Granular permissions enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, and <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls server-side. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
+            <strong>Only an owner can manage users and grant permissions.</strong> Granular permissions are enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls, and high-value actions (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
           </span>
         </div>
       </Card>
@@ -553,7 +553,7 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
       if (res.ok) {
         onSaved();
       } else if (res.status === 403) {
-        toast.error("Forbidden", "Only owner / manager can edit users.");
+        toast.error("Forbidden", "Only an owner can create or edit users and grant permissions.");
       } else {
         toast.error("Could not save");
       }

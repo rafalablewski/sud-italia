@@ -8,6 +8,7 @@ import {
   permissionForAdminPage,
   permissionForApiPath,
   resolveEffectivePermissions,
+  userHasPermission,
 } from "./permissions";
 
 // Run with:  npx tsx --test src/lib/permissions.test.ts
@@ -94,4 +95,26 @@ test("admin API paths map to method-aware permissions", () => {
   // Non-admin and unmapped admin routes get no permission gate.
   assert.equal(permissionForApiPath("/api/public/menu", "GET"), null);
   assert.equal(permissionForApiPath("/api/admin/some-future-thing", "GET"), null);
+});
+
+test("irreversible GDPR erasure is not grantable via a mid-tier key", () => {
+  // Export maps to a mid-tier capability...
+  assert.equal(permissionForApiPath("/api/admin/gdpr/export", "GET"), "customers.export");
+  // ...but delete falls back to null so the owner-only role gate stands.
+  assert.equal(permissionForApiPath("/api/admin/gdpr/delete", "POST"), null);
+});
+
+test("userHasPermission gates off the withAdmin auth context (no DB read)", () => {
+  const owner = { role: "owner" as const };
+  assert.equal(userHasPermission(owner, "settings.edit"), true);
+
+  // Role-default manager keeps the manager preset (can refund, can't edit users).
+  const manager = { role: "manager" as const };
+  assert.equal(userHasPermission(manager, "orders.refund"), true);
+  assert.equal(userHasPermission(manager, "users.edit"), false);
+
+  // A custom staff grant is authoritative — only what was granted counts.
+  const customStaff = { role: "staff" as const, permissions: ["cash.view"] };
+  assert.equal(userHasPermission(customStaff, "cash.view"), true);
+  assert.equal(userHasPermission(customStaff, "cash.manage"), false);
 });

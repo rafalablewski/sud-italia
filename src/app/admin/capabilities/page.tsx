@@ -130,7 +130,7 @@ export default async function CapabilitiesPage() {
           name: "Granular permissions (action-level RBAC)",
           status: "live",
           href: "/admin/users",
-          summary: "Per-user, action-level permission grants (70 capability keys across orders, menu, finance, growth, system). Each non-owner account inherits its role's default preset or carries a fully-custom grant edited in the user dialog. Enforced end-to-end: the sidebar + a page guard hide forbidden surfaces and withAdmin rejects ungranted /api/admin/* calls server-side. Owners are always full-access; accounts left on 'role default' keep legacy role-rank behaviour. Catalog + maps: src/lib/permissions.ts.",
+          summary: "Per-user, action-level permission grants (70 capability keys across orders, menu, finance, growth, system). Only an owner can grant — user-management writes are owner-only. Each non-owner account inherits its role's default preset or carries a fully-custom grant edited in the user dialog. Enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, withAdmin rejects ungranted /api/admin/* calls, and high-value handlers (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. Owners are always full-access; accounts left on 'role default' keep legacy role-rank behaviour. Catalog + maps: src/lib/permissions.ts.",
         },
         {
           name: "Admin MFA (TOTP two-factor)",

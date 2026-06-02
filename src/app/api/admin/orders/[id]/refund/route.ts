@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { getCurrentActor, hasLocationAccess } from "@/lib/admin-auth";
+import { userHasPermission } from "@/lib/permissions";
 import {
   appendAuditLog,
   getActorCompTotalToday,
@@ -26,6 +27,17 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     const { id: orderId } = await params;
   if (!orderId) {
     return NextResponse.json({ error: "Missing order id" }, { status: 400 });
+  }
+
+  // Defence in depth: the role gate above admits managers, but the explicit
+  // capability gate is what actually authorizes a refund — so an operator who
+  // has been narrowed to a custom grant without `orders.refund` is blocked
+  // even if their role rank would otherwise pass.
+  if (!userHasPermission(user, "orders.refund")) {
+    return NextResponse.json(
+      { error: "Requires permission orders.refund" },
+      { status: 403 },
+    );
   }
 
   const parsed = await parseBody(req, refundBodySchema);
