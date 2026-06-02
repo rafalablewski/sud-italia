@@ -5,6 +5,7 @@ import { Fingerprint, KeyRound, Lock, Pencil, Plus, RotateCcw, Search, ShieldChe
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
+import { landingPathForRole } from "@/lib/staff-roles";
 
 /** A passkey / security key as listed by the API (no public key, no counter). */
 type WebauthnKey = { id: string; name?: string; createdAt: string; transports?: string[] };
@@ -47,6 +48,47 @@ const ROLE_LABEL: Record<AdminRole, string> = {
   staff: "Staff",
   kitchen: "Kitchen",
 };
+
+/** Human label for the surface a role lands on after sign-in. */
+function landingLabel(role: AdminRole): string {
+  const p = landingPathForRole(role);
+  if (p === "/admin/kds") return "the Kitchen Display (KDS)";
+  if (p === "/admin/pos") return "the POS till";
+  return "the admin dashboard";
+}
+
+/**
+ * Plain-language account of how a given account signs in — which doors are
+ * open (password / PIN / passkey), whether MFA is required, where they land,
+ * and any location restriction. Drives the per-row hint + the Login dialog so
+ * an operator can see exactly how each person gets in.
+ */
+function describeLogin(u: AdminUserRow): { methods: string[]; mfa: boolean; landing: string; locations: string[] } {
+  const methods: string[] = [];
+  if (u.role === "owner") {
+    methods.push(`Email + ${u.hasPassword ? "their own password" : "the shared owner password"} at /admin/login`);
+  } else {
+    methods.push(
+      u.hasPassword
+        ? "Email + their own password at /admin/login"
+        : "Email + the shared admin password at /admin/login (no personal password set yet)",
+    );
+  }
+  if (u.hasPin) methods.push("A 4–10 digit PIN on the shared terminal at /terminal");
+  if ((u.webauthnKeys?.length ?? 0) > 0) methods.push("A passkey / security key (YubiKey, Touch ID) at /admin/login — passwordless");
+  return {
+    methods,
+    mfa: !!u.totpEnabled,
+    landing: landingLabel(u.role),
+    locations: userLocationSlugs(u),
+  };
+}
+
+/** One-word landing tag for the dense table cell. */
+function landingTag(role: AdminRole): string {
+  const p = landingPathForRole(role);
+  return p === "/admin/kds" ? "KDS" : p === "/admin/pos" ? "POS" : "Admin";
+}
 
 const ROLE_TONE: Record<AdminRole, "info" | "brand" | "warning" | "success"> = {
   owner: "brand",
@@ -199,20 +241,27 @@ function AdminUsersDesktop() {
     {
       key: "signin",
       header: "Sign-in",
-      cell: (u) =>
-        u.role === "owner" ? (
-          <span className="v2-muted">Shared / own</span>
-        ) : (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <Badge tone={u.hasPassword ? "success" : "neutral"} variant={u.hasPassword ? "soft" : "outline"}>
-              {u.hasPassword ? "Password" : "No password"}
-            </Badge>
-            {u.hasPin && <Badge tone="info" variant="soft">PIN</Badge>}
-            {(u.webauthnKeys?.length ?? 0) > 0 && (
-              <Badge tone="brand" variant="soft">{`${u.webauthnKeys!.length} key${u.webauthnKeys!.length > 1 ? "s" : ""}`}</Badge>
-            )}
-          </div>
-        ),
+      cell: (u) => (
+        <div className="v2-cell-stack">
+          {u.role === "owner" ? (
+            <span className="v2-muted">Password (own / shared)</span>
+          ) : (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              <Badge tone={u.hasPassword ? "success" : "neutral"} variant={u.hasPassword ? "soft" : "outline"}>
+                {u.hasPassword ? "Password" : "Shared pwd"}
+              </Badge>
+              {u.hasPin && <Badge tone="info" variant="soft">PIN</Badge>}
+              {(u.webauthnKeys?.length ?? 0) > 0 && (
+                <Badge tone="brand" variant="soft">{`${u.webauthnKeys!.length} key${u.webauthnKeys!.length > 1 ? "s" : ""}`}</Badge>
+              )}
+            </div>
+          )}
+          {/* Where this account lands after sign-in, + MFA flag. */}
+          <span className="v2-cell-sub">
+            → {landingTag(u.role)}{u.totpEnabled ? " · MFA" : ""}
+          </span>
+        </div>
+      ),
       sortValue: (u) => (u.hasPassword ? 1 : 0),
     },
     {
@@ -561,14 +610,30 @@ function CredentialsDialog({
       footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
     >
       <div className="v2-stack-12">
-        <div className="v2-note">
-          <Lock className="h-4 w-4" />
-          <span>
-            Set this account&rsquo;s own password (email + password at <span className="mono">/admin/login</span>) and an optional terminal PIN (<span className="mono">/terminal</span>). Currently:{" "}
-            <strong>{user.hasPassword ? "password set" : "no password"}</strong>
-            {user.hasPin ? ", PIN set" : ", no PIN"}.
-          </span>
-        </div>
+        {/* Plain-language summary of exactly how this person gets in. */}
+        {(() => {
+          const d = describeLogin(user);
+          return (
+            <div className="v2-note">
+              <Lock className="h-4 w-4" />
+              <span>
+                <strong>How {user.name} signs in</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {d.methods.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+                {d.mfa && <div style={{ marginTop: 4 }}>Every sign-in also requires a 6-digit MFA code.</div>}
+                <div style={{ marginTop: 4 }}>
+                  Lands on <strong>{d.landing}</strong>
+                  {d.locations.length > 0
+                    ? `, limited to ${d.locations.join(", ")}.`
+                    : ", across all locations."}
+                </div>
+              </span>
+            </div>
+          );
+        })()}
 
         <Input
           label="New password"

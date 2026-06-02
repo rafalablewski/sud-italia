@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Grid3x3, KeyRound, Minus, Search, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
 import type { AdminRole, AdminUser } from "@/data/types";
+import { ROLE_RANK } from "@/lib/admin-roles";
 import {
   ALL_PERMISSION_KEYS,
   PERMISSION_GROUPS,
@@ -18,26 +19,42 @@ import { KpiCard } from "./v2/charts";
 /** Row shape from /api/admin/users (secrets stripped; `permissions` kept). */
 type UserRow = AdminUser & { hasPassword?: boolean; hasPin?: boolean };
 
-const ROLE_LABEL: Record<AdminRole, string> = {
+// Everything below derives from the live sources of truth so the matrix is
+// never hand-maintained:
+//  - roles      → ROLE_RANK keys (admin-roles.ts), sorted most-privileged first;
+//  - role grants→ ROLE_DEFAULT_PERMISSIONS (owner = ALL);
+//  - capabilities→ PERMISSION_GROUPS / ALL_PERMISSION_KEYS (permissions.ts);
+//  - users      → /api/admin/users (live).
+// Add or remove a role / permission / user anywhere upstream and this page
+// reflects it on next load — no edit here required.
+const ROLE_ORDER: AdminRole[] = (Object.keys(ROLE_RANK) as AdminRole[]).sort(
+  (a, b) => ROLE_RANK[b] - ROLE_RANK[a],
+);
+
+// Presentational only — labels/tones fall back gracefully so a brand-new role
+// still renders (capitalized, neutral tone) without a code change here.
+const ROLE_LABEL_MAP: Partial<Record<AdminRole, string>> = {
   owner: "Owner",
   franchisee: "Franchisee",
   manager: "Manager",
   staff: "Staff",
   kitchen: "Kitchen",
 };
-const ROLE_TONE: Record<AdminRole, "brand" | "info" | "warning" | "success"> = {
+const ROLE_TONE_MAP: Partial<Record<AdminRole, "brand" | "info" | "warning" | "success">> = {
   owner: "brand",
   franchisee: "info",
   manager: "info",
   staff: "warning",
   kitchen: "success",
 };
-// Columns for the role view, most-privileged first.
-const ROLE_ORDER: AdminRole[] = ["owner", "franchisee", "manager", "staff", "kitchen"];
+const roleLabel = (r: AdminRole): string =>
+  ROLE_LABEL_MAP[r] ?? r.charAt(0).toUpperCase() + r.slice(1);
+const roleTone = (r: AdminRole): "brand" | "info" | "warning" | "success" =>
+  ROLE_TONE_MAP[r] ?? "info";
 
 // Precompute the default grant as a Set per role (owner = everything).
 const ROLE_SETS: Record<AdminRole, Set<string>> = ROLE_ORDER.reduce((acc, r) => {
-  acc[r] = r === "owner" ? new Set(ALL_PERMISSION_KEYS) : new Set(ROLE_DEFAULT_PERMISSIONS[r]);
+  acc[r] = r === "owner" ? new Set(ALL_PERMISSION_KEYS) : new Set(ROLE_DEFAULT_PERMISSIONS[r] ?? []);
   return acc;
 }, {} as Record<AdminRole, Set<string>>);
 
@@ -88,10 +105,12 @@ export function AdminPermissions() {
     })).filter((g) => (group === "all" || g.id === group) && g.permissions.length > 0);
   }, [query, group]);
 
-  // Users sorted owners → rank → name, for stable columns.
+  // Users sorted owners → rank → name, for stable columns. Rank comes from the
+  // live ROLE_RANK table so a new role slots in automatically.
   const sortedUsers = useMemo(() => {
-    const rank: Record<AdminRole, number> = { owner: 5, franchisee: 4, manager: 3, staff: 2, kitchen: 1 };
-    return [...users].sort((a, b) => (rank[b.role] - rank[a.role]) || a.name.localeCompare(b.name));
+    return [...users].sort(
+      (a, b) => (ROLE_RANK[b.role] - ROLE_RANK[a.role]) || a.name.localeCompare(b.name),
+    );
   }, [users]);
 
   const customCount = useMemo(
@@ -279,7 +298,7 @@ function RoleMatrix({ groups }: { groups: Group[] }) {
                 {ROLE_ORDER.map((r) => (
                   <th key={r} style={th}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                      <Badge tone={ROLE_TONE[r]} variant="soft">{ROLE_LABEL[r]}</Badge>
+                      <Badge tone={roleTone(r)} variant="soft">{roleLabel(r)}</Badge>
                       <span className="v2-muted" style={{ fontSize: "0.68rem" }}>{ROLE_SETS[r].size}/{ALL_PERMISSION_KEYS.length}</span>
                     </div>
                   </th>
@@ -447,7 +466,7 @@ function UserMatrix({
                     <th key={u.id} style={th}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 92 }}>
                         <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}</span>
-                        <Badge tone={ROLE_TONE[u.role]} variant="soft">{ROLE_LABEL[u.role]}</Badge>
+                        <Badge tone={roleTone(u.role)} variant="soft">{roleLabel(u.role)}</Badge>
                         <span className="v2-muted" style={{ fontSize: "0.66rem" }}>
                           {u.role === "owner" ? "all" : `${meta.count}/${ALL_PERMISSION_KEYS.length}`}
                           {meta.custom ? " · custom" : ""}

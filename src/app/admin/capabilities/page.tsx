@@ -130,7 +130,7 @@ export default async function CapabilitiesPage() {
           name: "Permission matrix (live RBAC cross-tab)",
           status: "live",
           href: "/admin/permissions",
-          summary: "Owner-only live cross-tab of every capability against roles and real accounts — derived from the permission catalog, the role presets, and the current user list (nothing hand-maintained; a new key or user appears automatically). 'By role' shows each role's default grant; 'By user' shows each account's effective access (custom grants override role) and lets an owner click any cell to grant/revoke — persisting a custom grant through the owner-only /api/admin/users, the same gate the Users editor uses. Search + group filters; owners are always all-access and locked. Code: src/components/admin/AdminPermissions.tsx.",
+          summary: "Owner-only live cross-tab of every capability against roles and real accounts — derived from the permission catalog, the role table (ROLE_RANK) + presets, and the current user list (nothing hand-maintained; a new capability key, role, or user appears automatically on next load). 'By role' shows each role's default grant; 'By user' shows each account's effective access (custom grants override role) and lets an owner click any cell to grant/revoke — persisting a custom grant through the owner-only /api/admin/users, the same gate the Users editor uses. Search + group filters; owners are always all-access and locked. Code: src/components/admin/AdminPermissions.tsx.",
         },
         {
           name: "Hire-with-login (manager team provisioning)",

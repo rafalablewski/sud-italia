@@ -57,11 +57,18 @@ actually reach.
 - **Table:** name + email, role, **Access** (`Full access` for owners,
   `Custom · N` when the account carries a custom grant, else
   `Role default`), **Locations** (one badge per assigned site, or `All` when
-  unscoped — a manager can run several), **Sign-in** (`Password` / `No password`
-  + a `PIN` chip when one is set + an `N keys` chip when passkeys are
-  registered; owners read `Shared / own`), status (`active` / `disabled`),
-  `MFA` (On / Off), row actions (`Login`, `MFA`, `Keys`, `Edit`, delete). Live
-  code: `AdminUsers.tsx`.
+  unscoped — a manager can run several), **Sign-in** (`Password` /
+  `Shared pwd` + a `PIN` chip when one is set + an `N keys` chip when passkeys
+  are registered, with a `→ KDS/POS/Admin` landing tag and a `· MFA` flag
+  underneath so each account's login is legible at a glance), status
+  (`active` / `disabled`), `MFA` (On / Off), row actions (`Login`, `MFA`,
+  `Keys`, `Edit`, delete). Live code: `AdminUsers.tsx`.
+- **"How they sign in" explainer.** The `Login` dialog opens with a
+  plain-language summary (`describeLogin`): the exact doors open to that
+  account (own vs shared password at `/admin/login`, PIN at `/terminal`,
+  passwordless passkey), whether MFA is mandatory, the surface they land on
+  (KDS / POS / dashboard via `landingPathForRole`), and any location
+  restriction — so an operator can see precisely how each person gets in.
 - **Login & credentials (owner-only):** the `Login` row action (shown to
   owners, for non-owner accounts) opens `CredentialsDialog` — set / clear a
   per-user **password** (min 8) and a terminal **PIN** (4–10 digits, unique
@@ -206,11 +213,16 @@ site; add/extend a key in the catalog so a typo fails to compile.
 The **live** cross-tab of capabilities × access — a visualization (and control
 surface) over the same RBAC model the rest of the section configures. Owner-only.
 
-- **Nothing is hand-maintained.** Rows come from `PERMISSION_GROUPS`
-  (`src/lib/permissions.ts`), the columns and cells from the role presets
-  (`ROLE_DEFAULT_PERMISSIONS`) and the live `/api/admin/users` list resolved
-  through `resolveEffectivePermissions`. Add a capability key or a user and it
-  appears here automatically — never add a row/column by hand.
+- **Nothing is hand-maintained.** Every axis derives from a live source:
+  permission rows from `PERMISSION_GROUPS` / `ALL_PERMISSION_KEYS`
+  (`src/lib/permissions.ts`); the **role columns from `ROLE_RANK`**
+  (`src/lib/admin-roles.ts`), sorted most-privileged first, with labels/tones
+  that fall back gracefully so a brand-new role renders without editing this
+  page; role cells from `ROLE_DEFAULT_PERMISSIONS` (owner = ALL); user columns
+  from the live `/api/admin/users` list resolved through
+  `resolveEffectivePermissions`. Add or remove a capability, a role, or a user
+  anywhere upstream and the matrix reflects it on next load — never add a
+  row/column by hand.
 - **KPI row:** capability count, role count, user-account count, custom-grant
   count (`KpiCard`, no ⓘ — plain metrics).
 - **Two views** (`Tabs`): **By role** (columns = `owner` / `franchisee` /

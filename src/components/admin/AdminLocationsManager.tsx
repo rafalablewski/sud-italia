@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
-import type { Location } from "@/data/types";
+import type { AdminUser, Location } from "@/data/types";
+import { userCoversLocation } from "@/lib/user-locations";
 import { useToast } from "./v2/ui/Toast";
 import {
   Badge,
@@ -97,6 +98,8 @@ function formToPayload(form: FormState) {
 export function AdminLocationsManager() {
   const toast = useToast();
   const [list, setList] = useState<LocationRecord[]>([]);
+  // Managers (role === "manager") so each location row can show who runs it.
+  const [managers, setManagers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<{
     open: boolean;
@@ -114,10 +117,23 @@ export function AdminLocationsManager() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/locations");
-      if (!res.ok) throw new Error("fetch failed");
-      const data = (await res.json()) as { locations: LocationRecord[] };
+      const [locRes, usersRes] = await Promise.all([
+        fetch("/api/admin/locations"),
+        fetch("/api/admin/users"),
+      ]);
+      if (!locRes.ok) throw new Error("fetch failed");
+      const data = (await locRes.json()) as { locations: LocationRecord[] };
       setList(data.locations);
+      // Non-fatal: if the user list fails the table still renders, just without
+      // the manager column populated.
+      if (usersRes.ok) {
+        const users = (await usersRes.json()) as AdminUser[];
+        setManagers(
+          Array.isArray(users)
+            ? users.filter((u) => u.role === "manager" && u.status === "active")
+            : [],
+        );
+      }
     } catch {
       toast.error("Failed to load locations");
     } finally {
@@ -209,6 +225,26 @@ export function AdminLocationsManager() {
       { key: "name", header: "Name", cell: (l) => l.name },
       { key: "city", header: "City", cell: (l) => l.city },
       {
+        key: "manager",
+        header: "Manager",
+        cell: (l) => {
+          // Managers whose scope covers this site (a multi-site or all-scope
+          // manager shows on every location they cover).
+          const mgrs = managers.filter((m) => userCoversLocation(m, l.slug));
+          return mgrs.length ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {mgrs.map((m) => (
+                <Badge key={m.id} tone="info" variant="soft" title={m.email ?? m.name}>
+                  {m.name}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="v2-muted">Unassigned</span>
+          );
+        },
+      },
+      {
         key: "active",
         header: "Status",
         cell: (l) =>
@@ -247,7 +283,7 @@ export function AdminLocationsManager() {
         ),
       },
     ],
-    [],
+    [managers],
   );
 
   return (
