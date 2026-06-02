@@ -4,7 +4,7 @@ import { AdminScheduledBundles } from "@/components/admin/AdminScheduledBundles"
 
 export default async function AdminScheduledBundlesPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminScheduledBundles />;
 }

@@ -4,7 +4,7 @@ import { AdminRecipes } from "@/components/admin/AdminRecipes";
 
 export default async function AdminRecipesPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminRecipes />;

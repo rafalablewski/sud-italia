@@ -9,6 +9,10 @@ import {
 import { appendAuditLog, getAdminUsers } from "@/lib/store";
 import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
 import { verifyTotp } from "@/lib/totp";
+import { verifyPasswordHash, isPasswordHash } from "@/lib/password";
+import { landingPathForRole } from "@/lib/staff-roles";
+import { userLocationSlugs } from "@/lib/user-locations";
+import type { AdminRole } from "@/lib/admin-roles";
 import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
 import { logger } from "@/lib/logger";
 
@@ -46,21 +50,17 @@ export async function POST(req: NextRequest) {
 
   const parsed = await parseBody(req, adminLoginSchema);
   if ("error" in parsed) return parsed.error;
-  const { password, email, totp } = parsed.data;
-
-  if (!verifyPassword(password)) {
-    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
-  }
+  const { password, email, totp, portal } = parsed.data;
 
   try {
 
     let userId = "admin";
     let auditActor = "admin";
-    let resolvedRole: string | undefined;
-    // Owners + shared-password sessions get unrestricted scope; non-owners
-    // with a locationSlug get scoped to that one slug. AdminUser only models
-    // one slug per user today — Phase 3 will widen this to comma-joined
-    // multi-location membership when the franchisee model lands.
+    let resolvedRole: AdminRole | undefined;
+    // Owners + shared-password sessions get unrestricted scope; a non-owner
+    // bound to one or more locations gets a comma-joined scope (a manager can
+    // run several sites). The scope is HMAC-bound into the token and enforced
+    // by requireLocationAccess on every admin route.
     let locationScope: string = LOCATION_SCOPE_ALL;
 
     if (typeof email === "string" && email.trim().length > 0) {
@@ -72,6 +72,17 @@ export async function POST(req: NextRequest) {
           { error: "Email not found or user is disabled. Leave email blank to use the shared owner session." },
           { status: 401 },
         );
+      }
+      // Per-user password: when this account carries its own scrypt hash, that
+      // is the credential — it no longer rides the shared ADMIN_PASSWORD. Only
+      // accounts without a personal password (e.g. the bootstrap owner before
+      // they set one) fall back to the shared secret.
+      const passwordOk =
+        hit.passwordHash && isPasswordHash(hit.passwordHash)
+          ? verifyPasswordHash(password, hit.passwordHash)
+          : verifyPassword(password);
+      if (!passwordOk) {
+        return NextResponse.json({ error: "Invalid password" }, { status: 401 });
       }
       // Per-user MFA: when this account has confirmed TOTP, a valid code is
       // mandatory. The password alone is not enough.
@@ -86,10 +97,17 @@ export async function POST(req: NextRequest) {
       userId = hit.id;
       auditActor = hit.email || hit.id;
       resolvedRole = hit.role;
-      if (hit.role !== "owner" && hit.locationSlug) {
-        locationScope = hit.locationSlug;
+      // A non-owner bound to one or more locations gets a comma-joined scope
+      // (a manager can run multiple sites); no binding = unrestricted.
+      if (hit.role !== "owner") {
+        const slugs = userLocationSlugs(hit);
+        if (slugs.length > 0) locationScope = slugs.join(",");
       }
     } else {
+      // No email → legacy shared-owner session, gated by the shared password.
+      if (!verifyPassword(password)) {
+        return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+      }
       // Shared-password session MFA: when ADMIN_TOTP_SECRET is set, the
       // no-email owner session also requires a code.
       const sharedSecret = process.env.ADMIN_TOTP_SECRET?.trim();
@@ -101,6 +119,21 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Invalid MFA code" }, { status: 401 });
         }
       }
+    }
+
+    // Portal separation: the admin door (/admin/login) is owner-only. Managers,
+    // staff and kitchen sign in at the universal /login door. We reject here
+    // (before minting the cookie) so a non-owner can't establish a session via
+    // the admin portal — they're pointed at /login instead.
+    const role: AdminRole = resolvedRole ?? "owner";
+    if (portal === "admin" && role !== "owner") {
+      return NextResponse.json(
+        {
+          error: "This is the admin portal. Managers and staff sign in at /login.",
+          wrongPortal: true,
+        },
+        { status: 403 },
+      );
     }
 
     const token = createSession(userId, locationScope);
@@ -120,8 +153,11 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       success: true,
       userId,
-      role: resolvedRole ?? "owner",
+      role,
       locationScope,
+      // Where the client should land: kitchen → KDS, floor → POS, otherwise the
+      // dashboard. Keeps routing in one place (staff-roles.ts).
+      landing: landingPathForRole(role),
     });
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,

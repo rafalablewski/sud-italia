@@ -84,8 +84,14 @@ The owner's overhead view of every location's headline numbers.
 The CRUD for the location list itself.
 
 - **Header:** `Manage locations` (h1), `+ Add location` primary.
-- **Table:** slug, name, city, status (open / planned / closed),
-  service hours summary, currency, default tax band, row actions.
+- **Table:** slug, name, city, **Manager** (one `info` badge per active
+  `manager`-role account whose scope covers the site — a multi-site or
+  all-scope manager shows on every location they cover; `Unassigned` when
+  none), status (Active / Draft), coordinates, row actions. The manager column
+  reads the live `/api/admin/users` list and resolves coverage via
+  `userCoversLocation` (`src/lib/user-locations.ts`) — assign a manager to a
+  location in **Users & roles** and it appears here. Live code:
+  `AdminLocationsManager.tsx`.
 - **Adding a location** seeds the menu (empty), slot config (default),
   staff list (empty), and registers it in nav location switcher
   immediately.

@@ -4,7 +4,7 @@ import { AdminHandover } from "@/components/admin/AdminHandover";
 
 export default async function AdminHandoverPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminHandover />;
 }

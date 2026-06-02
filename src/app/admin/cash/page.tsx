@@ -4,7 +4,7 @@ import { AdminCash } from "@/components/admin/AdminCash";
 
 export default async function AdminCashPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminCash />;
 }

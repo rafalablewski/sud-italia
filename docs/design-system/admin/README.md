@@ -31,7 +31,7 @@ What this doc covers (the admin back-office):
 | Finance       | Reports, Cash, Business costs, Calculator                              |
 | Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Truck ops            |
 | Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
-| System        | Users & roles, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Currency, Languages, Settings |
+| System        | Users & roles, Permission matrix, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Currency, Languages, Settings |
 
 What this doc does **not** cover:
 
@@ -77,7 +77,10 @@ The shell owns:
   `useIsMobile()` is gone and `AdminShell` renders one chrome for every width.
   See [`mobile/`](./mobile/) for the historical shape + the deletion note.
 
-Login (`/admin/login`) is the only bare route — it renders without the shell.
+Login (`/admin/login`, the owner-only admin door) is the only bare route
+*inside* the admin shell — it renders without the chrome. The universal team
+door `/login` and the PIN `/terminal` are separate top-level routes outside the
+admin layout entirely (see System → Login surfaces).
 
 ## Theme + glass tokens
 

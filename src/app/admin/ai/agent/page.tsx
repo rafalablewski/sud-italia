@@ -5,7 +5,7 @@ import { gatewayConfigured } from "@/lib/ai/gateway";
 
 export default async function AdminAIAgentPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   const configured = gatewayConfigured();
   return <OpsAgentChat gatewayConfigured={configured} />;

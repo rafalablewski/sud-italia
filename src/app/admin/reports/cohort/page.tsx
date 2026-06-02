@@ -4,7 +4,7 @@ import { AdminCohortReport } from "@/components/admin/AdminCohortReport";
 
 export default async function AdminCohortReportPage() {
   const user = await getCurrentAdminUser();
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/login");
   if (ROLE_RANK[user.role] < ROLE_RANK.manager) {
     redirect("/admin");
   }

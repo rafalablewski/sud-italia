@@ -80,15 +80,21 @@ thing — don't reach for it per-page.)
 
 ## Add an icon
 
-We use **custom stroke icons**. Never emoji in UI chrome, never a third
-party icon font.
+We use the **`lucide-react`** stroke-icon set for UI chrome. Never emoji in
+UI chrome, never an icon font.
 
-1. Open `src/components/icons/index.tsx` (or the corresponding stroke
-   library).
-2. Add a new `forwardRef` component named for what it depicts
-   (`<RefreshIcon />`, not `<IconA1 />`).
-3. Geometry: 24×24 viewBox, `stroke="currentColor"`, `strokeWidth={1.5}`,
-   `fill="none"`, `strokeLinecap="round"`, `strokeLinejoin="round"`.
+1. Reach for `lucide-react` first — import the named icon for what it depicts
+   (`import { RefreshCw } from "lucide-react"`), not a generic one. The nav
+   config (`src/components/admin/v2/nav.config.ts`) is the canonical example of
+   icons wired per item.
+2. Only when lucide has no fitting glyph, hand-author a bespoke `forwardRef`
+   SVG named for what it depicts (`<RefreshIcon />`, not `<IconA1 />`) — see
+   the existing one-offs `src/components/FulfillmentIcon.tsx` and
+   `src/components/location/AllergenIcon.tsx`.
+3. Geometry for a bespoke icon: 24×24 viewBox, `stroke="currentColor"`,
+   `strokeWidth={1.5}`, `fill="none"`, `strokeLinecap="round"`,
+   `strokeLinejoin="round"` — so it sits beside the lucide set without
+   clashing.
 4. Test at 16px and 22px — anything that doesn't read at 16px is too
    ornate.
 

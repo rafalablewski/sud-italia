@@ -104,6 +104,7 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: "staff.view", label: "View staff", description: "See the staff roster and time punches." },
       { key: "staff.edit", label: "Manage staff", description: "Edit staff records, pay rates and punches." },
+      { key: "staff.hire", label: "Hire & provision logins", description: "Hire employees and create their staff/kitchen login accounts (own location only)." },
       { key: "schedule.view", label: "View schedule", description: "See the published shift schedule." },
       { key: "schedule.edit", label: "Edit schedule", description: "Build and publish shift schedules." },
     ],
@@ -322,6 +323,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/expansion")) return "expansion.view";
   if (is("/admin/ai")) return "insights.view";
   if (is("/admin/users")) return "users.view";
+  if (is("/admin/permissions")) return "users.view";
   // Owner-tier "rules" pages — gated by the stronger compliance.edit so a bare
   // compliance.view (held by managers) doesn't surface them; /admin/compliance
   // (the manager-tier calendar) keeps compliance.view.

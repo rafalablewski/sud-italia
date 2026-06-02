@@ -4,7 +4,7 @@ import { AdminReports } from "@/components/admin/AdminReports";
 
 export default async function AdminReportsPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminReports />;

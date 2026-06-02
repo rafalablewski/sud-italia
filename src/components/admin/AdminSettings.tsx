@@ -3,14 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bell,
+  Fingerprint,
   FlaskConical,
   History,
   KeyRound,
   LayoutGrid,
+  MapPin,
   Palette,
   Phone,
   Save,
   ShieldCheck,
+  Smartphone,
   Sprout,
   Truck,
 } from "lucide-react";
@@ -275,6 +278,23 @@ function AdminSettingsDesktop() {
   const [newPw, setNewPw] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
 
+  // The current operator's own sign-in facts (for the "How you sign in" panel).
+  const [me, setMe] = useState<{
+    name: string;
+    email?: string;
+    role: string;
+    locationScope?: string[] | null;
+    signIn?: {
+      door: string;
+      landing: string;
+      hasPassword: boolean;
+      hasPin: boolean;
+      passkeys: number;
+      mfa: boolean;
+      shared: boolean;
+    };
+  } | null>(null);
+
   const fetchSettings = useCallback(async () => {
     const res = await fetch("/api/admin/settings");
     if (!res.ok) return;
@@ -328,6 +348,10 @@ function AdminSettingsDesktop() {
   useEffect(() => {
     fetchSettings();
     fetchAudit();
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setMe(d))
+      .catch(() => {});
   }, [fetchSettings, fetchAudit]);
 
   const saveGeneral = async () => {
@@ -1114,8 +1138,88 @@ function AdminSettingsDesktop() {
       {tab === "themes" && <ThemesTab />}
 
       {tab === "security" && (
+        <div className="v2-stack-12">
+        {me?.signIn && (
+          <Card>
+            <CardHeader
+              title="How you sign in"
+              description="Your own account, the doors open to you, and where you land."
+            />
+            <CardBody>
+              <div className="v2-stack-12">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <strong>{me.name}</strong>
+                  {me.email && <span className="v2-muted">{me.email}</span>}
+                  <Badge tone="brand" variant="soft">{me.role}</Badge>
+                </div>
+
+                <div className="v2-note">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>
+                    You sign in at <span className="mono">{me.signIn.door}</span>
+                    {me.role === "owner"
+                      ? " — the owner / admin door."
+                      : " — the universal team door."}{" "}
+                    After sign-in you land on{" "}
+                    <strong>
+                      {me.signIn.landing === "/admin/kds"
+                        ? "the Kitchen Display (KDS)"
+                        : me.signIn.landing === "/admin/pos"
+                          ? "the POS till"
+                          : "the admin dashboard"}
+                    </strong>
+                    {Array.isArray(me.locationScope) && !me.locationScope.includes("*")
+                      ? `, scoped to ${me.locationScope.join(", ")}.`
+                      : ", across all locations."}
+                  </span>
+                </div>
+
+                <div>
+                  <div className="v2-field-label" style={{ marginBottom: 6 }}>Your active sign-in methods</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <Badge tone={me.signIn.shared ? "warning" : "success"} variant="soft" dot>
+                      <KeyRound className="h-3 w-3" />{" "}
+                      {me.signIn.shared ? "Shared password" : "Personal password"}
+                    </Badge>
+                    {me.signIn.hasPin && (
+                      <Badge tone="info" variant="soft" dot><Smartphone className="h-3 w-3" /> Terminal PIN</Badge>
+                    )}
+                    {me.signIn.passkeys > 0 && (
+                      <Badge tone="brand" variant="soft" dot>
+                        <Fingerprint className="h-3 w-3" /> {me.signIn.passkeys} passkey{me.signIn.passkeys > 1 ? "s" : ""}
+                      </Badge>
+                    )}
+                    <Badge tone={me.signIn.mfa ? "success" : "neutral"} variant={me.signIn.mfa ? "soft" : "outline"} dot>
+                      MFA {me.signIn.mfa ? "on" : "off"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {(me.signIn.shared || !me.signIn.mfa) && (
+                  <div className="v2-note">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>
+                      {me.signIn.shared && (
+                        <>You&rsquo;re using the <strong>shared password</strong> — set a personal password in <a className="underline" href="/admin/users">Users &amp; roles</a> (your row → Login). </>
+                      )}
+                      {!me.signIn.mfa && (
+                        <>Add <strong>MFA</strong> or a <strong>passkey</strong> (your row → MFA / Keys) for phishing-resistant sign-in.</>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                <p className="v2-muted" style={{ fontSize: "0.8rem" }}>
+                  Manage every account&rsquo;s credentials, passkeys, MFA and the full picture in{" "}
+                  <a className="underline" href="/admin/users">Users &amp; roles</a>.
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
         <Card>
-          <CardHeader title="Admin password" description="Rotate the master password used by the legacy single-user login. Phase 24 introduces per-user accounts." />
+          <CardHeader title="Shared admin password" description="Rotate the master password used by the legacy shared owner session (no-email login). Per-user passwords are set per account in Users & roles." />
           <CardBody>
             <div className="v2-stack-12">
               <Input
@@ -1140,6 +1244,7 @@ function AdminSettingsDesktop() {
             </div>
           </CardBody>
         </Card>
+        </div>
       )}
 
       {tab === "audit" && (

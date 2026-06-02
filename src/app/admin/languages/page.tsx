@@ -4,7 +4,7 @@ import { AdminLanguages } from "@/components/admin/AdminLanguages";
 
 export default async function AdminLanguagesPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminLanguages />;
 }

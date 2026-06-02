@@ -4,7 +4,7 @@ import { AdminMenuEngineering } from "@/components/admin/AdminMenuEngineering";
 
 export default async function AdminMenuEngineeringPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminMenuEngineering />;

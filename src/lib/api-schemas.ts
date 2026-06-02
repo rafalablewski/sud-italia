@@ -589,6 +589,9 @@ export const adminUserUpsertSchema = z.object({
   role: adminRoleSchema,
   status: adminUserStatusSchema,
   locationSlug: locationSlug.optional(),
+  // Multi-location scope (a manager can run several sites). An array sets the
+  // exact set, null clears it, omitted leaves it untouched.
+  locationSlugs: z.array(locationSlug).max(50).nullable().optional(),
   notes: z.string().max(2000).optional(),
   /**
    * Granular permission grant (action-level keys). An array sets a custom
@@ -633,6 +636,9 @@ export const adminLoginSchema = z.object({
   // Optional 6-digit TOTP code, required only when the resolved account (or the
   // shared session via ADMIN_TOTP_SECRET) has MFA enabled.
   totp: z.string().regex(/^\d{6}$/).optional().or(z.literal("")),
+  // Which door the request came from. "admin" (/admin/login) is owner-only;
+  // everyone else uses the universal "staff" door (/login). Defaults to staff.
+  portal: z.enum(["admin", "staff"]).optional(),
 });
 
 // --- Helpers -------------------------------------------------------------

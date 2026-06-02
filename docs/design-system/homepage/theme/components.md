@@ -1338,15 +1338,18 @@ Seven pre-V8 components were folded into inline V8 chrome by Steps
 importers. Listed here as a historical record so an archaeology dive
 into the git log knows where the markup went:
 
-| Deleted file                                          | Replaced by                                         |
-| ----------------------------------------------------- | --------------------------------------------------- |
-| `src/components/landing/CTASection.tsx`               | the V8 Soci rail closes the landing instead         |
-| `src/components/location/SpeedGuarantee.tsx`          | inline `.v8-guarantee` in `MenuSection.tsx`         |
-| `src/components/location/ComboDealsPreview.tsx`       | inline `.v8-combos` / `.v8-combo-card` in `MenuSection.tsx` |
-| `src/components/location/SurpriseMe.tsx`              | inline `.v8-surprise` pill with scroll-and-highlight in `MenuSection.tsx` |
-| `src/components/location/MenuCategoryNav.tsx`         | inline `.v8-cat-tabs` in `MenuSection.tsx`          |
-| `src/components/location/MenuItemImage.tsx`           | inline per-category SVG sketch (`.v8-mi-illus`) in `MenuItem.tsx` |
-| `src/components/loyalty/LoyaltyCard.tsx`              | inline `<LoyaltyCardSection />` in `rewards/page.tsx` |
+Paths below are **former** locations under `src/components/`, kept as a record
+of where the markup lived before deletion — these files no longer exist.
+
+| Deleted file (former path)        | Replaced by                                         |
+| --------------------------------- | --------------------------------------------------- |
+| `landing/CTASection.tsx`          | the V8 Soci rail closes the landing instead         |
+| `location/SpeedGuarantee.tsx`     | inline `.v8-guarantee` in `MenuSection.tsx`         |
+| `location/ComboDealsPreview.tsx`  | inline `.v8-combos` / `.v8-combo-card` in `MenuSection.tsx` |
+| `location/SurpriseMe.tsx`         | inline `.v8-surprise` pill with scroll-and-highlight in `MenuSection.tsx` |
+| `location/MenuCategoryNav.tsx`    | inline `.v8-cat-tabs` in `MenuSection.tsx`          |
+| `location/MenuItemImage.tsx`      | inline per-category SVG sketch (`.v8-mi-illus`) in `MenuItem.tsx` |
+| `loyalty/LoyaltyCard.tsx`         | inline `<LoyaltyCardSection />` in `rewards/page.tsx` |
 
 ### Cart family — all V8
 

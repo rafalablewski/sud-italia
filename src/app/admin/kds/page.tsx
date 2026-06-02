@@ -4,7 +4,7 @@ import { AdminKDS } from "@/components/admin/AdminKDS";
 
 export default async function AdminKDSPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminKDS />;
 }

@@ -4,7 +4,7 @@ import { AdminAI } from "@/components/admin/AdminAI";
 
 export default async function AdminAIPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminAI />;

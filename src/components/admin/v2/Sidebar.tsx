@@ -40,7 +40,7 @@ export function Sidebar({ onCloseMobile }: Props) {
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/admin/login";
+    window.location.href = "/login";
   };
 
   return (

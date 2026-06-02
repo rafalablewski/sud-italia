@@ -6,8 +6,10 @@ import {
   Clock,
   Coins,
   HardHat,
+  KeyRound,
   LogIn,
   LogOut,
+  Monitor,
   Pencil,
   Plus,
   Search,
@@ -18,6 +20,14 @@ import {
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
 import type { StaffMember, StaffRole, StaffStatus, TimePunch } from "@/data/types";
+import {
+  STAFF_ROLE_GROUP,
+  STAFF_ROLE_LABEL,
+  STAFF_ROLE_OPTIONS,
+  landingPathForStaffRole,
+  staffRoleToAdminRole,
+} from "@/lib/staff-roles";
+import { PIN_MAX_LENGTH, PIN_MIN_LENGTH } from "@/lib/password";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 import {
@@ -31,6 +41,7 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Tabs,
   Table,
   Textarea,
@@ -38,21 +49,26 @@ import {
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
-const ROLE_LABEL: Record<StaffRole, string> = {
-  manager: "Manager",
-  kitchen: "Kitchen",
-  front: "Front of house",
-  driver: "Driver",
-  courier: "Courier",
+const ROLE_LABEL = STAFF_ROLE_LABEL;
+
+const GROUP_TONE: Record<string, "info" | "warning" | "success" | "brand"> = {
+  management: "brand",
+  kitchen: "warning",
+  floor: "info",
+  delivery: "success",
 };
 
-const ROLE_TONE: Record<StaffRole, "info" | "warning" | "success" | "brand"> = {
-  manager: "brand",
-  kitchen: "warning",
-  front: "info",
-  driver: "success",
-  courier: "info",
-};
+function roleTone(role: StaffRole): "info" | "warning" | "success" | "brand" {
+  return GROUP_TONE[STAFF_ROLE_GROUP[role]] ?? "info";
+}
+
+/** Human label for where a job title lands after login. */
+function landingLabel(role: StaffRole): string {
+  const path = landingPathForStaffRole(role);
+  if (path === "/admin/kds") return "Kitchen display (KDS)";
+  if (path === "/admin/pos") return "Point of sale (POS)";
+  return "Admin dashboard";
+}
 
 const activeLocations = getActiveLocations();
 
@@ -74,6 +90,9 @@ export function AdminStaff() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [dialog, setDialog] = useState<DialogState>({ open: false, member: null });
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
+  // Whether the signed-in operator may provision logins (owner, or a manager
+  // with `staff.hire`). The server re-checks; this only gates the UI section.
+  const [canHire, setCanHire] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -93,6 +112,16 @@ export function AdminStaff() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setCanHire(!!d.allAccess || (Array.isArray(d.permissions) && d.permissions.includes("staff.hire")));
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -213,11 +242,24 @@ export function AdminStaff() {
       key: "role",
       header: "Role",
       cell: (s) => (
-        <Badge tone={ROLE_TONE[s.role]} variant="soft" dot>
+        <Badge tone={roleTone(s.role)} variant="soft" dot>
           {ROLE_LABEL[s.role]}
         </Badge>
       ),
       sortValue: (s) => s.role,
+    },
+    {
+      key: "login",
+      header: "Login",
+      cell: (s) =>
+        s.userId ? (
+          <Badge tone="success" variant="soft" dot>
+            {landingPathForStaffRole(s.role) === "/admin/kds" ? "KDS" : landingPathForStaffRole(s.role) === "/admin/pos" ? "POS" : "Admin"}
+          </Badge>
+        ) : (
+          <span className="v2-muted">No login</span>
+        ),
+      sortValue: (s) => (s.userId ? 1 : 0),
     },
     {
       key: "loc",
@@ -270,12 +312,12 @@ export function AdminStaff() {
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Staff</h1>
           <p className="v2-page-subtitle">
-            Roster, hourly rates, clock-in / clock-out. Labor cost over the last 7 days computed from real time punches.
+            Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches.
           </p>
         </div>
         <div className="v2-page-actions">
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })}>
-            New staff member
+            {canHire ? "Hire employee" : "New staff member"}
           </Button>
         </div>
       </header>
@@ -383,7 +425,7 @@ export function AdminStaff() {
         </CardBody>
       </Card>
 
-      <StaffDialog state={dialog} onClose={() => setDialog({ open: false, member: null })} onSaved={async () => {
+      <StaffDialog canHire={canHire} state={dialog} onClose={() => setDialog({ open: false, member: null })} onSaved={async () => {
         setDialog({ open: false, member: null });
         await fetchAll();
         toast.success("Saved");
@@ -402,12 +444,12 @@ export function AdminStaff() {
   );
 }
 
-function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose: () => void; onSaved: () => void }) {
+function StaffDialog({ canHire, state, onClose, onSaved }: { canHire: boolean; state: DialogState; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<StaffRole>("kitchen");
+  const [role, setRole] = useState<StaffRole>("pizzaiolo");
   const [loc, setLoc] = useState(activeLocations[0]?.slug ?? "krakow");
   const [rateStr, setRateStr] = useState("30.00");
   const [hireDate, setHireDate] = useState("");
@@ -416,19 +458,38 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // --- Login provisioning ---
+  const [grantLogin, setGrantLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+
+  // A manager job title can't be hired into a login here (owner-only via Users).
+  const accessRole = staffRoleToAdminRole(role);
+  const loginAllowed = canHire && accessRole !== "manager";
+  const hasLogin = !!userId;
+
   useEffect(() => {
     if (!state.open) return;
     const m = state.member;
     setName(m?.name ?? "");
     setPhone(m?.phone ?? "");
     setEmail(m?.email ?? "");
-    setRole(m?.role ?? "kitchen");
+    setRole(m?.role ?? "pizzaiolo");
     setLoc(m?.locationSlug ?? activeLocations[0]?.slug ?? "krakow");
     setRateStr(m ? (m.hourlyRateGrosze / 100).toFixed(2) : "30.00");
     setHireDate(m?.hireDate ?? "");
     setDob(m?.dob ?? "");
     setStatus(m?.status ?? "active");
     setNotes(m?.notes ?? "");
+    setUserId(m?.userId);
+    // Editing someone who already has a login → keep the section open so the
+    // operator can reset the password / PIN. Otherwise start collapsed.
+    setGrantLogin(!!m?.userId);
+    setLoginEmail(m?.email ?? "");
+    setPassword("");
+    setPin("");
     setBusy(false);
   }, [state]);
 
@@ -439,9 +500,29 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
       toast.warning("Name required");
       return;
     }
+    // Client-side guard rails mirroring the server (so we fail fast with a
+    // helpful toast instead of a 400/409).
+    if (grantLogin && loginAllowed) {
+      if (!loginEmail.trim() && !email.trim()) {
+        toast.warning("Email required for a login account");
+        return;
+      }
+      if (!hasLogin && !password && !pin) {
+        toast.warning("Set a password or a PIN for the new login");
+        return;
+      }
+      if (password && password.length < 8) {
+        toast.warning("Password must be at least 8 characters");
+        return;
+      }
+      if (pin && !/^\d{4,10}$/.test(pin)) {
+        toast.warning(`PIN must be ${PIN_MIN_LENGTH}–${PIN_MAX_LENGTH} digits`);
+        return;
+      }
+    }
     setBusy(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         id: state.member?.id,
         name: name.trim(),
         phone: phone.trim() || undefined,
@@ -453,14 +534,26 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
         dob: dob || undefined,
         status,
         notes: notes.trim() || undefined,
+        userId,
       };
+      if (grantLogin && loginAllowed) {
+        payload.login = {
+          enabled: true,
+          email: loginEmail.trim() || email.trim() || undefined,
+          password: password || undefined,
+          pin: pin || undefined,
+        };
+      }
       const res = await fetch("/api/admin/staff", {
         method: state.member ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) onSaved();
-      else toast.error("Could not save");
+      else {
+        const data = await res.json().catch(() => null);
+        toast.error("Could not save", data?.error || "");
+      }
     } finally {
       setBusy(false);
     }
@@ -487,15 +580,13 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
         </div>
         <div className="v2-form-row-2">
           <Select
-            label="Role"
+            label="Job title"
             value={role}
             onChange={(e) => setRole(e.target.value as StaffRole)}
-            options={[
-              { value: "manager", label: ROLE_LABEL.manager },
-              { value: "kitchen", label: ROLE_LABEL.kitchen },
-              { value: "front", label: ROLE_LABEL.front },
-              { value: "driver", label: ROLE_LABEL.driver },
-            ]}
+            options={STAFF_ROLE_OPTIONS.flatMap((g) =>
+              g.roles.map((r) => ({ value: r, label: `${g.group} · ${ROLE_LABEL[r]}` })),
+            )}
+            description={`Logs in to: ${landingLabel(role)}`}
           />
           <Select
             label="Location"
@@ -533,6 +624,65 @@ function StaffDialog({ state, onClose, onSaved }: { state: DialogState; onClose:
           ]}
         />
         <Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+        {loginAllowed && (
+          <div
+            className="v2-stack-12"
+            style={{ borderTop: "1px solid var(--v2-border, rgba(255,255,255,0.08))", paddingTop: 12 }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                  <KeyRound className="h-4 w-4" /> Login access
+                </div>
+                <div className="v2-muted" style={{ fontSize: "0.8rem" }}>
+                  {hasLogin
+                    ? "This employee already has a login — set a new password or PIN to reset it."
+                    : `Create a personal login. They'll land on the ${landingLabel(role)}.`}
+                </div>
+              </div>
+              <Switch checked={grantLogin} onChange={setGrantLogin} label="Give login access" />
+            </div>
+
+            {grantLogin && (
+              <>
+                <div className="v2-note">
+                  <Monitor className="h-4 w-4" />
+                  <span>
+                    Access tier: <strong>{accessRole}</strong> · lands on{" "}
+                    <strong>{landingLabel(role)}</strong>. They sign in with email + password at{" "}
+                    <span className="mono">/login</span>, or tap their PIN at the shared terminal{" "}
+                    <span className="mono">/terminal</span>.
+                  </span>
+                </div>
+                <Input
+                  label="Login email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  description="Used to sign in. Defaults to the contact email above."
+                />
+                <div className="v2-form-row-2">
+                  <Input
+                    label={hasLogin ? "New password (optional)" : "Password"}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    description="Min 8 characters."
+                  />
+                  <Input
+                    label={hasLogin ? "New PIN (optional)" : "Terminal PIN"}
+                    inputMode="numeric"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, PIN_MAX_LENGTH))}
+                    description={`${PIN_MIN_LENGTH}–${PIN_MAX_LENGTH} digits, unique at this location.`}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </Dialog>
   );

@@ -8,7 +8,7 @@ export default async function AdminMenuDetailPage({
   params: Promise<{ baseSlug: string }>;
 }) {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   const { baseSlug } = await params;
   return <AdminMenuDetail baseSlug={baseSlug} />;

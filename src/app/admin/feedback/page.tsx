@@ -4,7 +4,7 @@ import { AdminFeedback } from "@/components/admin/AdminFeedback";
 
 export default async function AdminFeedbackPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminFeedback />;

@@ -4,7 +4,7 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 
 export default async function AdminSettingsPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminSettings />;

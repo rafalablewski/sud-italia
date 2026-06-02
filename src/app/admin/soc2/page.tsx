@@ -13,7 +13,7 @@ import { AdminSoc2 } from "@/components/admin/AdminSoc2";
  */
 export default async function AdminSoc2Page() {
   const user = await getCurrentAdminUser();
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/login");
   if (ROLE_RANK[user.role] < ROLE_RANK.owner) redirect("/admin");
 
   // Recent audit window — enough to evidence "logging is active + durable"

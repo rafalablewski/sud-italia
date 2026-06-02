@@ -18,7 +18,7 @@ import { gatewayConfigured } from "@/lib/ai/gateway";
 
 export default async function CapabilitiesPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   const env = process.env;
@@ -124,13 +124,32 @@ export default async function CapabilitiesPage() {
           name: "Users & RBAC management",
           status: "live",
           href: "/admin/users",
-          summary: "Owner-only CRUD on admin accounts. Roles: staff, kitchen, manager, owner, franchisee.",
+          summary: "Owner-only CRUD on admin accounts, with an advanced roster: a KPI strip (accounts, active, 2FA/passkey coverage, on-shared-password risk), a per-row security-posture chip, security + location filters, and a click-through account detail drawer (identity, scope, how-they-sign-in, effective access, security actions). Each operator also gets a self 'How you sign in' panel in Settings → Security (fed by /api/admin/me). Roles: staff, kitchen, manager, owner, franchisee. Accounts can be scoped to one OR several locations (a manager can run multiple sites) via AdminUser.locationSlugs — none = all; the set is bound into the session's comma-separated locationScope and enforced by requireLocationAccess everywhere. Each account carries its own scrypt password + optional terminal PIN (owner sets/resets via the per-row 'Login' dialog → /api/admin/users/[id]/credentials); login no longer rides the shared ADMIN_PASSWORD once a personal password is set. Secrets (hash + PIN hash + TOTP) are never sent to the client.",
+        },
+        {
+          name: "Permission matrix (live RBAC cross-tab)",
+          status: "live",
+          href: "/admin/permissions",
+          summary: "Owner-only live cross-tab of every capability against roles and real accounts — derived from the permission catalog, the role table (ROLE_RANK) + presets, and the current user list (nothing hand-maintained; a new capability key, role, or user appears automatically on next load). 'By role' shows each role's default grant; 'By user' shows each account's effective access (custom grants override role) and lets an owner click any cell to grant/revoke — persisting a custom grant through the owner-only /api/admin/users, the same gate the Users editor uses. Search + group filters; owners are always all-access and locked. Code: src/components/admin/AdminPermissions.tsx.",
+        },
+        {
+          name: "Hire-with-login (manager team provisioning)",
+          status: "live",
+          href: "/admin/staff",
+          summary: "A manager (or anyone with the staff.hire permission) hires an employee by job title — pizzaiolo, chef, KP, waiter, driver, courier — and, in the same dialog, provisions a personal login scoped to their own location. The hire flow can only mint staff/kitchen tiers (manager/owner accounts stay owner-only via Users & roles) and is location-bound by withAdmin. Job title → access tier → landing surface is mapped once in src/lib/staff-roles.ts. Wired via POST /api/admin/staff { login } → provisionStaffLogin.",
+        },
+        {
+          name: "Per-person login + role routing (password, PIN, passkey)",
+          status: "live",
+          href: "/terminal",
+          envVars: ["WEBAUTHN_RP_ID", "WEBAUTHN_ORIGIN"],
+          summary: "Professional per-person sign-in across separate doors that all mint the same signed, location-scoped session and route by role (kitchen → KDS, floor → POS, manager/owner → dashboard). Doors: /admin/login is the OWNER-ONLY admin door; /login is the universal team door (managers, pizzaiolo, chef, KP, waiter — and owners) — both render the shared LoginForm and send a portal flag the API enforces (a non-owner is rejected at /admin/login and pointed to /login); /terminal is a fast numeric PIN for shared kitchen/POS devices (location-scoped, 5/min/IP). Methods: email + per-user scrypt password (optional TOTP); passwordless passkey / hardware security key (YubiKey, Touch ID) via WebAuthn (enrolled self-service in /admin/users → Keys, verified at /api/admin/webauthn/authenticate). Unauthenticated /admin/* redirects to /login. RP id/origin derive from the request host; override with WEBAUTHN_RP_ID + WEBAUTHN_ORIGIN behind a proxy. A linked staff login is auto-disabled when the roster row goes inactive or is removed.",
         },
         {
           name: "Granular permissions (action-level RBAC)",
           status: "live",
           href: "/admin/users",
-          summary: "Per-user, action-level permission grants (70 capability keys across orders, menu, finance, growth, system). Only an owner can grant — user-management writes are owner-only. Each non-owner account inherits its role's default preset or carries a fully-custom grant edited in the user dialog. Enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, withAdmin rejects ungranted /api/admin/* calls, and high-value handlers (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. Owners are always full-access; accounts left on 'role default' keep legacy role-rank behaviour. Catalog + maps: src/lib/permissions.ts.",
+          summary: "Per-user, action-level permission grants (71 capability keys across orders, menu, finance, growth, system). Only an owner can grant — user-management writes are owner-only. Each non-owner account inherits its role's default preset or carries a fully-custom grant edited in the user dialog. Enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, withAdmin rejects ungranted /api/admin/* calls, and high-value handlers (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. Owners are always full-access; accounts left on 'role default' keep legacy role-rank behaviour. Catalog + maps: src/lib/permissions.ts.",
         },
         {
           name: "Admin MFA (TOTP two-factor)",
