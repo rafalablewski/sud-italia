@@ -118,13 +118,15 @@ paths, are not rewritten). The contract lives in **`src/lib/admin-base.ts`**
   (sidebar items), `Sidebar` (brand), `CommandPalette` (page + search jumps),
   `Topbar` breadcrumbs, the `g`-then-key shortcuts, and every intra-page
   navigation (customer / order / menu links, notification deep-links). So a
-  manager who opens an order stays on `/manager/orders#…`, never `/admin`.
+  manager who opens an order stays on `/manager/orders#…`, never `/admin`. The
+  `/admin/capabilities` ledger (a server component) re-roots its links the same
+  way, from the role server-side (`adminBaseForRole(user.role)`).
 - `permissionForAdminPage` **normalises** any prefix back to `/admin` before the
   permission lookup, so the gate is prefix-agnostic.
-- `AdminShell` runs a **convergence redirect**: a non-owner who still lands on a
-  canonical `/admin/*` URL (a typed URL, an old bookmark, the capabilities
-  ledger, the full nav on a `/core` surface) is re-rooted onto their own prefix.
-  Owner is a no-op. The pages are identical either way (same rewrite target).
+- `AdminShell` runs a **convergence redirect** as the safety net: a non-owner who
+  still lands on a canonical `/admin/*` URL (a typed URL, an old bookmark, the
+  full nav on a `/core` surface) is re-rooted onto their own prefix. Owner is a
+  no-op. The pages are identical either way (same rewrite target).
 
 ## Theme + glass tokens
 

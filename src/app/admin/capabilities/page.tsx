@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { isAuthenticated } from "@/lib/admin-auth";
+import { getCurrentAdminUser } from "@/lib/admin-auth";
+import { adminBaseForRole, withAdminBase, type AdminBase } from "@/lib/admin-base";
 import { gatewayConfigured } from "@/lib/ai/gateway";
 
 /**
@@ -17,9 +18,15 @@ import { gatewayConfigured } from "@/lib/ai/gateway";
  */
 
 export default async function CapabilitiesPage() {
-  if (!(await isAuthenticated())) {
+  const user = await getCurrentAdminUser();
+  if (!user) {
     redirect("/login");
   }
+  // The ledger's "URL to use it" links are canonical /admin/*; re-root them onto
+  // the viewer's own prefix so they're zero-hop (a manager gets /manager/*, a
+  // franchisee /franchisee/*) instead of bouncing through AdminShell's
+  // convergence redirect. Computed once here, server-side, from the role.
+  const base = adminBaseForRole(user.role);
 
   const env = process.env;
   const has = (...keys: string[]): boolean => keys.every((k) => !!env[k]?.trim());
@@ -1617,7 +1624,7 @@ export default async function CapabilitiesPage() {
             <h2 className="admin-text text-base font-semibold mb-3">{group.title}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {group.items.map((item) => (
-                <CapabilityCard key={item.name} item={item} />
+                <CapabilityCard key={item.name} item={item} base={base} />
               ))}
             </div>
           </section>
@@ -1667,7 +1674,11 @@ interface CapabilityGroup {
   items: Capability[];
 }
 
-function CapabilityCard({ item }: { item: Capability }) {
+function CapabilityCard({ item, base }: { item: Capability; base: AdminBase }) {
+  // Re-root the canonical href onto the viewer's prefix (no-op for the owner,
+  // and for /api/*, /terminal + external links — withAdminBase only touches the
+  // /admin page namespace).
+  const href = item.href ? withAdminBase(base, item.href) : undefined;
   const toneClass =
     item.status === "live"
       ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
@@ -1711,9 +1722,9 @@ function CapabilityCard({ item }: { item: Capability }) {
           </code>
         </p>
       )}
-      {item.href && (
+      {href && (
         <p className="mt-2 text-[11px]">
-          <span className="text-[var(--info)] underline">{item.href}</span>
+          <span className="text-[var(--info)] underline">{href}</span>
         </p>
       )}
     </div>
@@ -1754,8 +1765,8 @@ function CapabilityCard({ item }: { item: Capability }) {
   // navigate the card).
   return (
     <div className="flex flex-col gap-1.5 h-full">
-      {item.href ? (
-        <Link href={item.href} className="block hover:opacity-90 transition-opacity">
+      {href ? (
+        <Link href={href} className="block hover:opacity-90 transition-opacity">
           {content}
         </Link>
       ) : (
