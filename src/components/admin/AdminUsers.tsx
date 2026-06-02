@@ -186,6 +186,47 @@ function RowMenuItem({
   );
 }
 
+/** Compact, fit-content security-posture chip (icon + label, tinted). */
+function PostureChip({ posture }: { posture: Posture }) {
+  const color =
+    posture.tone === "success"
+      ? "var(--success, #34d399)"
+      : posture.tone === "warning"
+        ? "var(--warning, #f59e0b)"
+        : "#94a3b8";
+  const Icon = posture.risk ? ShieldAlert : ShieldCheck;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "2px 9px",
+        borderRadius: 999,
+        fontSize: "0.72rem",
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        color,
+        background: `color-mix(in srgb, ${color} 13%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+      }}
+    >
+      <Icon className="h-3 w-3" />
+      {posture.label}
+    </span>
+  );
+}
+
+/** Small muted icon+label used in the sign-in method row. */
+function MethodTag({ icon, label, title }: { icon: React.ReactNode; label: string; title: string }) {
+  return (
+    <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+      {icon}
+      {label}
+    </span>
+  );
+}
+
 const ROLE_TONE: Record<AdminRole, "info" | "brand" | "warning" | "success"> = {
   owner: "brand",
   manager: "info",
@@ -367,15 +408,13 @@ function AdminUsersDesktop() {
         const p = securityPosture(u);
         const keys = u.webauthnKeys?.length ?? 0;
         return (
-          <div className="v2-cell-stack" style={{ gap: 6 }}>
-            <Badge tone={p.tone === "neutral" ? "info" : p.tone} variant={p.risk ? "soft" : "outline"} dot>
-              {p.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {p.label}
-            </Badge>
-            <span className="v2-cell-sub" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {u.hasPin && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title="Terminal PIN"><Smartphone className="h-3 w-3" />PIN</span>}
-              {keys > 0 && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title={`${keys} passkey(s)`}><Fingerprint className="h-3 w-3" />{keys}</span>}
-              {u.totpEnabled && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} title="MFA enabled"><KeyRound className="h-3 w-3" />MFA</span>}
-              <span title="Lands on">→ {landingTag(u.role)}</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
+            <PostureChip posture={p} />
+            <span className="v2-cell-sub" style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {u.hasPin && <MethodTag icon={<Smartphone className="h-3 w-3" />} label="PIN" title="Terminal PIN set" />}
+              {keys > 0 && <MethodTag icon={<Fingerprint className="h-3 w-3" />} label={String(keys)} title={`${keys} passkey${keys > 1 ? "s" : ""}`} />}
+              {u.totpEnabled && <MethodTag icon={<KeyRound className="h-3 w-3" />} label="MFA" title="Two-factor enabled" />}
+              <span style={{ opacity: 0.6 }} title="Lands on this surface">→&nbsp;{landingTag(u.role)}</span>
             </span>
           </div>
         );
