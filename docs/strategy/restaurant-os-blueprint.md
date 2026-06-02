@@ -260,7 +260,7 @@ performance, bottleneck propagation. What we have vs. what to instrument:
 The twin fuses `floor.ts` (room state) with `kds-prediction.ts` (per-ticket
 `predictedReadyAtMs`, `atRisk`, bottleneck) into one forward simulation.
 
-> **Status — keystone shipped (v1).** The **Twin view** (Service › Floor, `/admin/service?view=floor`)
+> **Status — keystone shipped (v1).** The **Twin view** (Service › Floor, `/core/service?view=floor`)
 > (`src/lib/floor-twin.ts`, `GET /api/admin/floor-twin`) derives per-table
 > realized turn-time + spend velocity, live occupancy and a predicted free-in
 > time, and a **predictive-seating recommender** (party size → best-fit open,

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useNavSections } from "./useNavSections";
+import { useAdminBase } from "./useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { LocationSwitcher } from "./LocationSwitcher";
 
 interface Props {
@@ -21,6 +23,12 @@ interface Props {
 export function Sidebar({ onCloseMobile }: Props) {
   const pathname = usePathname();
   const sections = useNavSections();
+  // Brand → the role's home root (owner /admin HQ, manager /manager portal,
+  // franchisee /franchisee). Nav item hrefs are already role-prefixed by
+  // useNavSections, so active-state below matches them against the prefixed
+  // pathname directly.
+  const base = useAdminBase();
+  const homeHref = withAdminBase(base, "/admin");
 
   // An item matches if the pathname equals its href or sits beneath it.
   // But because nav hrefs nest (`/admin/locations` is a prefix of
@@ -28,7 +36,7 @@ export function Sidebar({ onCloseMobile }: Props) {
   // parent and the child. Resolve to the single most-specific match — the
   // longest matching href wins — so only one item lights up.
   const matches = (href: string) => {
-    if (href === "/admin") return pathname === "/admin";
+    if (href === homeHref) return pathname === homeHref;
     return pathname === href || pathname.startsWith(href + "/");
   };
   const activeHref = sections
@@ -45,7 +53,7 @@ export function Sidebar({ onCloseMobile }: Props) {
 
   return (
     <aside className="app-sidebar" aria-label="Admin navigation">
-      <Link href="/admin" className="as-brand" onClick={onCloseMobile}>
+      <Link href={homeHref} className="as-brand" onClick={onCloseMobile}>
         <span className="as-brand-mark" aria-hidden>SI</span>
         <span className="as-brand-text">
           <span className="as-brand-name">Sud Italia</span>

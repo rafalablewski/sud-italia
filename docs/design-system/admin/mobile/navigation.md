@@ -60,7 +60,7 @@ The bottom nav adapts per `AdminRole` (from `/api/admin/me`). The four roles in 
 | **owner** | Home (`/admin`) | Orders (`/admin/orders`) | Quick | Stock (`/admin/inventory`) | More |
 | **manager** | Home | Orders | Quick | Stock | More |
 | **staff** | Home | Orders | Quick | Customers (`/admin/customers`) | More |
-| **kitchen** | KDS (`/admin/kds`) | Orders | Quick | Stock | More |
+| **kitchen** | KDS (`/core/kds`) | Orders | Quick | Stock | More |
 
 Tab choices follow the role's *primary daily action*. The "More" tab opens `MoreDrawer` listing every other nav item, grouped by section (same groups as the desktop sidebar).
 
@@ -301,18 +301,18 @@ Per-page mapping of how each route is reached on mobile:
 |---|---|
 | `/admin` | Home tab |
 | `/admin/orders` | Orders tab |
-| `/admin/kds` | KDS tab (kitchen role) or More → Overview → KDS |
+| `/core/kds` | KDS tab (kitchen role) or More → Overview → KDS |
 | `/admin/menu` | More → Operations → Menu |
 | `/admin/recipes` | More → Operations → Recipes |
-| `/admin/slots` | Core → Service → Slots view (redirects to `/admin/service?view=slots`) |
-| `/admin/floor` | Core → Service → Floor view (redirects to `/admin/service?view=floor`) |
+| `/admin/slots` | Core → Service → Slots view (redirects to `/core/service?view=slots`) |
+| `/admin/floor` | Core → Service → Floor view (redirects to `/core/service?view=floor`) |
 | `/admin/inventory` | Stock tab |
 | `/admin/suppliers` | Stock screen → Suppliers sub-tab |
 | `/admin/purchase-orders` | Stock screen → POs sub-tab |
 | `/admin/staff` | More → People → Staff |
 | `/admin/schedule` | More → People → Schedule |
 | `/admin/customers` | More → Customers → Customers (or Customers tab if staff) |
-| `/admin/loyalty` | Core → Guest Engagement → Loyalty view (redirects to `/admin/guest?view=loyalty`) |
+| `/admin/loyalty` | Core → Guest Engagement → Loyalty view (redirects to `/core/guest?view=loyalty`) |
 | `/admin/corporate` | More → Customers → Corporate |
 | `/admin/feedback` | More → Customers → Feedback |
 | `/admin/whatsapp` | More → Customers → WhatsApp |

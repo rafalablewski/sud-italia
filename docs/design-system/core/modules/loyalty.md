@@ -8,9 +8,9 @@ Core suite theme so it reads as one platform with the other three views.
 ← back to [Core README](../README.md) · [Guest hub](./guest.md)
 
 > **Live code:** `src/components/admin/AdminLoyalty.tsx` (the view),
-> `src/app/admin/guest/page.tsx` (renders it for `?view=loyalty`),
+> `src/app/core/guest/page.tsx` (renders it for `?view=loyalty`),
 > `src/app/admin/loyalty/page.tsx` (thin `redirect()` to
-> `/admin/guest?view=loyalty`). Styles live under the `LOYALTY` block in
+> `/core/guest?view=loyalty`). Styles live under the `LOYALTY` block in
 > `src/app/themes/core/suite.css` (`.loy*` + the `.badge.bronze/.silver/.gold`
 > tier tones).
 

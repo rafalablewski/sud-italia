@@ -322,14 +322,15 @@ the pill renders full-width, clipped under the topbar instead of as a pill.
 (`AdminSimulation`/Calculator hit exactly this.)
 
 - **Core route → portal to `#admin-portal-root`.** Core surfaces (KDS) render a
-  fixed `.kds-core` overlay and AdminShell drops the `.v2-shell` chrome, so
-  there's no `.v2-page` to drop the pill into and rendering it inline traps it
-  in the `.admin-bg > *` stacking context (rule #4). Portal it instead:
+  fixed `.kds-core` overlay and the `/core` layout carries no `.v2-shell` chrome
+  at all, so there's no `.v2-page` to drop the pill into and rendering it inline
+  traps it in the `.admin-bg > *` stacking context (rule #4). Portal it instead:
   `createPortal(<div className="v2-page-loading">…</div>, document.getElementById("admin-portal-root") ?? document.body)`,
-  gated on a client `mounted` flag. `#admin-portal-root` is the admin layout
-  wrapper (`src/app/admin/layout.tsx`) — an ancestor of `.admin-bg` (escapes the
-  trap), with no transform (the fixed pill anchors to the viewport), that holds
-  the `--font-admin-*` next/font vars. **Do not portal to `<body>`:** it's
+  gated on a client `mounted` flag. `#admin-portal-root` is the layout wrapper —
+  `src/app/admin/layout.tsx` under `/admin/*`, `src/app/core/layout.tsx` under
+  `/core/*` (each re-creates the same id) — an ancestor of `.admin-bg` (escapes
+  the trap), with no transform (the fixed pill anchors to the viewport), that
+  holds the `--font-admin-*` next/font vars. **Do not portal to `<body>`:** it's
   outside that font scope, so `var(--font-ui)` can't resolve and the pill
   renders in the browser-default **serif** (`AdminKDS`/`AdminKdsFleet` hit
   exactly this). See [KDS → Loading pill](../../core/modules/kds.md#loading-pill).
@@ -338,7 +339,7 @@ the pill renders full-width, clipped under the topbar instead of as a pill.
   the admin topbar; core routes don't render one, so the fallback came up 53px
   short and a strip of the layer behind showed at the bottom. Paint the same
   full-viewport `.core-suite` surface the real page uses
-  (`src/app/admin/pos/loading.tsx`).
+  (`src/app/core/pos/loading.tsx`).
 
 The pill **declares `font-family: var(--font-ui)` itself** so it doesn't depend
 on inheriting Inter from a `.v2-shell` ancestor — required for the portaled
@@ -358,6 +359,15 @@ and `.core-suite` scopes, so the one component looks right in either shell.
 
 - **Full nav, role-filtered**, from `useNavSections()`
   (`components/admin/v2/useNavSections.ts`); active state by `pathname`.
+- **Role-prefixed hrefs.** `nav.config` hrefs are canonical `/admin/*`, but
+  `useNavSections` re-roots each onto the prefix the page is served under
+  (`withAdminBase` — owner `/admin/*`, manager `/manager/*`, franchisee
+  `/franchisee/*`), and the brand link points at that base's home. So the
+  active-state `pathname` match lines up with the prefixed hrefs. The `g`+letter
+  shortcuts (`AdminShell.onGoto`) and the command palette prefix the same way.
+  See [README → Role-prefixed back-office URLs](../README.md#role-prefixed-back-office-urls)
+  and `src/lib/admin-base.ts`; the filter still gates on the canonical href, so
+  the prefix is cosmetic.
 - **No `g`-key chips** (the old `.v2-nav-kbd`). The `g`+letter shortcuts still
   work via the global handler in `AdminShell.tsx` off `nav.config`, and the
   full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep

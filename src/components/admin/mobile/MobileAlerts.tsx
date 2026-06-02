@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "../v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import {
   AlertTriangle,
   Bell,
@@ -92,6 +94,7 @@ function hrefFor(n: NotificationItem): string {
  */
 export function MobileAlerts() {
   const router = useRouter();
+  const base = useAdminBase();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<Filter>("unread");
 
@@ -144,7 +147,7 @@ export function MobileAlerts() {
 
   const open = (n: NotificationItem) => {
     if (!n.read) markRead(n.id);
-    router.push(hrefFor(n));
+    router.push(withAdminBase(base, hrefFor(n)));
   };
 
   // Bucket by "today" / "yesterday" / "older" for sectioned scanning.

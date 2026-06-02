@@ -65,8 +65,8 @@ function roleTone(role: StaffRole): "info" | "warning" | "success" | "brand" {
 /** Human label for where a job title lands after login. */
 function landingLabel(role: StaffRole): string {
   const path = landingPathForStaffRole(role);
-  if (path === "/admin/kds") return "Kitchen display (KDS)";
-  if (path === "/admin/pos") return "Point of sale (POS)";
+  if (path === "/core/kds") return "Kitchen display (KDS)";
+  if (path === "/core/pos") return "Point of sale (POS)";
   return "Admin dashboard";
 }
 
@@ -254,7 +254,7 @@ export function AdminStaff() {
       cell: (s) =>
         s.userId ? (
           <Badge tone="success" variant="soft" dot>
-            {landingPathForStaffRole(s.role) === "/admin/kds" ? "KDS" : landingPathForStaffRole(s.role) === "/admin/pos" ? "POS" : "Admin"}
+            {landingPathForStaffRole(s.role) === "/core/kds" ? "KDS" : landingPathForStaffRole(s.role) === "/core/pos" ? "POS" : "Admin"}
           </Badge>
         ) : (
           <span className="v2-muted">No login</span>

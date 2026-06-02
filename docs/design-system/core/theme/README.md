@@ -5,8 +5,11 @@ change must leave Admin and Homepage visually unchanged.
 
 ## Two CSS layers (mid-migration)
 
-The Core theme ships in **two** stylesheets, both loaded only by
-`src/app/admin/layout.tsx`:
+The Core theme ships in **two** stylesheets, both loaded by the Core
+suite's own `src/app/core/layout.tsx` (alongside `themes/admin/index.css`,
+whose tokens Core reuses). The Core surfaces live at `/core/*` — POS, KDS,
+Guest, Service — under that layout; they left `/admin/*`, so the admin
+back-office no longer ships the core chunk:
 
 1. **`src/app/themes/core/suite.css`** — the **current** design, a 1:1
    port of the core-suite mockup (`public/mockups/core-suite/
@@ -40,9 +43,11 @@ The Core theme ships in **two** stylesheets, both loaded only by
 - **JS-side token mirror:** `src/app/themes/core/theme.ts` exports the
   `--cmd-*` values as typed constants (for future Recharts / canvas
   code on KDS).
-- **Fonts:** loaded in `src/app/admin/layout.tsx` (`--font-admin-body`
-  Inter, `--font-admin-display` Fraunces, `--font-admin-mono` JetBrains
-  Mono). The **`.core-suite`** surfaces (POS / Guest) **do** use Fraunces
+- **Fonts:** loaded in `src/app/core/layout.tsx` (its own `next/font`
+  instances of `--font-admin-body` Inter, `--font-admin-display` Fraunces,
+  `--font-admin-mono` JetBrains Mono — independent from the admin layout's,
+  so a Core-only font tweak can't move admin). The **`.core-suite`**
+  surfaces (POS / Guest) **do** use Fraunces
   for display text (KPI values, dish + guest names) per the mockup, and so
   does the rebuilt **`.kds-core`** desktop KDS for **dish names only**
   (`.tk-nm` / `.ct-nm`); everything else on the line — labels, timers,

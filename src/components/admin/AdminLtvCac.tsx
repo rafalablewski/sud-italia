@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
 import { MetricExplainer, PageExplainer } from "./Explainers";
 import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
@@ -92,6 +94,7 @@ function kpiInfo(text: string, body: ReactNode): ReactNode {
 }
 
 export function AdminLtvCac() {
+  const base = useAdminBase();
   const [data, setData] = useState<LtvCacReport | null>(null);
   const [cohort, setCohort] = useState<CohortReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,14 +162,14 @@ export function AdminLtvCac() {
           <h1 className="v2-page-title">LTV / CAC</h1>
           <p className="v2-page-subtitle">
             Lifetime value from paid-order cohorts, acquisition cost from your{" "}
-            <Link href="/admin/business-costs" className="v2-link">marketing-cost ledger</Link>.
+            <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">marketing-cost ledger</Link>.
             LTV is margin-adjusted at the blended {data.blendedMarginPct}% gross margin
             derived from order line items. Generated{" "}
             {new Date(data.generatedAt).toLocaleString("pl-PL")}.
           </p>
         </div>
         <div className="v2-page-actions">
-          <Link href="/admin/reports/cohort">
+          <Link href={withAdminBase(base, "/admin/reports/cohort")}>
             <Button variant="ghost" size="sm">Cohort &amp; CLTV</Button>
           </Link>
         </div>
@@ -181,7 +184,7 @@ export function AdminLtvCac() {
                 <strong>No marketing spend logged.</strong> LTV is computed, but
                 CAC, the LTV:CAC ratio, and payback need acquisition spend. Add
                 your ad / promo spend under{" "}
-                <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link>{" "}
+                <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">Business costs → Marketing</Link>{" "}
                 and it flows in here automatically.
               </div>
             </div>
@@ -260,7 +263,7 @@ export function AdminLtvCac() {
               }
               methodology={
                 <p style={{ margin: 0 }}>
-                  Marketing-category spend from the <Link href="/admin/business-costs" className="v2-link">Business-costs ledger</Link>{" "}
+                  Marketing-category spend from the <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">Business-costs ledger</Link>{" "}
                   ÷ new customers in the window. Shows &ldquo;—&rdquo; (never a fabricated 0) until spend is logged.
                 </p>
               }
@@ -406,7 +409,7 @@ export function AdminLtvCac() {
             your <strong>blended gross margin</strong> (computed from real order
             line-item price − cost — margin, not revenue, because revenue
             doesn&apos;t pay the kitchen). CAC = <strong>marketing-category spend</strong>{" "}
-            from <Link href="/admin/business-costs" className="v2-link">Business costs</Link> ÷ new customers
+            from <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">Business costs</Link> ÷ new customers
             that month. When no spend is logged, CAC shows <strong>&ldquo;—&rdquo;</strong>{" "}
             rather than a fabricated 0.
           </p>

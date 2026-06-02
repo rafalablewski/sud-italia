@@ -18,7 +18,7 @@ handed over cleanly.
 > rebuilt on the Core suite theme (CoreShell) as the **Service** surface —
 > book a dine-in slot + assign a table in one step, plus Floor (live room +
 > twin) and Slots (capacity + demand) views. `/admin/slots` and `/admin/floor`
-> `redirect()` into `/admin/service?view=…`; their anatomy now lives in
+> `redirect()` into `/core/service?view=…`; their anatomy now lives in
 > [`../../core/modules/service.md`](../../core/modules/service.md), not here.
 
 ## Common rules across the section
@@ -83,7 +83,7 @@ The recipe board — one card per dish (deduped by base slug; CLAUDE rule
 Time-slot capacity, the dining floor (tables + reservations), the live Floor
 Twin, the Demand Exchange yield board, and the unified slot+table booking now
 live on the **Core** theme as the **Service** surface (CoreShell). `/admin/slots`
-and `/admin/floor` redirect into `/admin/service?view=slots|floor`. See
+and `/admin/floor` redirect into `/core/service?view=slots|floor`. See
 [`../../core/modules/service.md`](../../core/modules/service.md) for the anatomy,
 and [`../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
 for the Demand Exchange (Module 2) + Floor Twin (Module 3) theses.
@@ -138,7 +138,7 @@ End-of-shift sign-off (audit §11.2 / §12.4 #1). Manager+.
 ## What Operations is not
 
 - It is **not** order management — live orders live under Overview
-  (`/admin/orders`) and the Core KDS surface (`/admin/kds`).
+  (`/admin/orders`) and the Core KDS surface (`/core/kds`).
 - It is **not** stock management — that's Inventory ([`inventory.md`](./inventory.md)).
 - It is **not** the POS — the customer-facing order-entry surface is a
   Core module, not an admin page.

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import {
   ArrowLeft,
   Check,
@@ -81,6 +83,7 @@ function emptyChain(): ChainDraft {
 
 export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   const router = useRouter();
+  const base = useAdminBase();
   const toast = useToast();
 
   const [variants, setVariants] = useState<LocationVariant[]>([]);
@@ -645,7 +648,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         </header>
         <Card>
           <CardBody>
-            <Button variant="ghost" onClick={() => router.push("/admin/menu")}>
+            <Button variant="ghost" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
               <ArrowLeft className="h-3.5 w-3.5" /> Back to menu
             </Button>
           </CardBody>
@@ -672,7 +675,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
             }}
           >
             <Link
-              href="/admin/menu"
+              href={withAdminBase(base, "/admin/menu")}
               style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
             >
               <ArrowLeft className="h-3 w-3" /> Menu
@@ -693,7 +696,7 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
           </p>
         </div>
         <div className="v2-page-actions">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/menu")}>
+          <Button variant="ghost" size="sm" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
             <ArrowLeft className="h-3.5 w-3.5" /> Back
           </Button>
           <Button variant="primary" size="sm" loading={busy} onClick={save}>

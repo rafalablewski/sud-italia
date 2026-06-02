@@ -6,7 +6,7 @@ import { Sidebar } from "../v2/Sidebar";
 /**
  * The Core suite shell — the mockup's topbar + the shared admin sidebar
  * (`.core-suite` is a fixed full-viewport layer). Replaces the admin chrome on
- * /admin/pos and /admin/guest (AdminShell steps aside for those routes; KDS
+ * /core/pos and /core/guest (AdminShell steps aside for those routes; KDS
  * runs its own `.kds-core` wall with no sidebar).
  *
  * The sidebar is the **same `<Sidebar>` component AdminShell renders** — one

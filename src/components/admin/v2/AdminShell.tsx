@@ -13,18 +13,14 @@ import { ToastProvider } from "./ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { permissionForAdminPage } from "@/lib/permissions";
+import { useAdminBase } from "./useAdminBase";
+import { adminBaseForRole, withAdminBase } from "@/lib/admin-base";
 
 interface Props {
   children: ReactNode;
 }
 
 const BARE_ROUTES = ["/admin/login"];
-
-// Core suite surfaces render their own full-viewport shell (the mockup's SI
-// sidebar + topbar), so the admin chrome steps aside — but the data providers
-// (location, toast, shell context) stay so the Core components keep working.
-// Routes are added here as each surface is rebuilt onto the Core suite shell.
-const CORE_ROUTES = ["/admin/guest", "/admin/pos", "/admin/kds", "/admin/service"];
 
 export function AdminShell({ children }: Props) {
   const pathname = usePathname();
@@ -46,6 +42,13 @@ export function AdminShell({ children }: Props) {
   const [permGate, setPermGate] = useState<{
     keys: Set<string>;
     custom: boolean;
+    // Where to bounce a forbidden navigation. The owner's `/admin` HQ is now
+    // owner-gated, so a non-owner can't be dumped there — fall back to their
+    // own home (manager → /manager, etc.) which /api/admin/me resolves.
+    home: string;
+    // The URL prefix this role navigates within (/admin | /manager |
+    // /franchisee) — drives the convergence redirect below.
+    roleBase: ReturnType<typeof adminBaseForRole>;
   } | null>(null);
 
   useEffect(() => {
@@ -57,6 +60,8 @@ export function AdminShell({ children }: Props) {
         setPermGate({
           keys: new Set<string>(Array.isArray(j.permissions) ? j.permissions : []),
           custom: !!j.custom,
+          home: typeof j.signIn?.landing === "string" ? j.signIn.landing : "/admin",
+          roleBase: adminBaseForRole(j.role),
         });
       })
       .catch(() => {
@@ -73,7 +78,19 @@ export function AdminShell({ children }: Props) {
     if (!permGate || !permGate.custom) return;
     const need = permissionForAdminPage(pathname);
     if (need && !permGate.keys.has(need)) {
-      router.replace("/admin");
+      router.replace(permGate.home);
+    }
+  }, [pathname, permGate, router]);
+
+  // Convergence redirect: a non-owner who lands on the canonical /admin/* (a
+  // typed URL, an old bookmark, a stray link, or the full nav on a /core
+  // surface) is re-rooted onto their own prefix so the URL never reads "admin"
+  // for them. Owner (roleBase === /admin) is a no-op. The pages are identical
+  // either way (same rewrite target), so this only tidies the visible path.
+  useEffect(() => {
+    if (!permGate || permGate.roleBase === "/admin") return;
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+      router.replace(withAdminBase(permGate.roleBase, pathname));
     }
   }, [pathname, permGate, router]);
 
@@ -107,12 +124,13 @@ export function AdminShell({ children }: Props) {
     [],
   );
 
+  const base = useAdminBase();
   const onGoto = useCallback(
     (key: string) => {
       const hit = ALL_NAV_ITEMS.find((n) => n.shortcut === key);
-      if (hit) router.push(hit.href);
+      if (hit) router.push(withAdminBase(base, hit.href));
     },
-    [router],
+    [router, base],
   );
 
   useShortcuts({ onOpenPalette: openPalette, onOpenHelp: openHelp, onOpenNotifications: openNotifications, onGoto });
@@ -144,21 +162,6 @@ export function AdminShell({ children }: Props) {
 
   if (isBare) {
     return <>{children}</>;
-  }
-
-  const isCore = CORE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
-  // Core surfaces render their own full-viewport shell (.core-suite / .kds-core
-  // fixed layers), so the admin chrome steps aside — providers only. The Core
-  // pages reflow their desktop layout responsively (the mobile shell is
-  // retired; see docs/design-system/admin/mobile).
-  if (isCore) {
-    return (
-      <AdminLocationProvider>
-        <ShellContext.Provider value={ctxValue}>
-          <ToastProvider>{children}</ToastProvider>
-        </ShellContext.Provider>
-      </AdminLocationProvider>
-    );
   }
 
   return (

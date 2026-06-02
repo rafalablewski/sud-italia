@@ -77,7 +77,7 @@ The horizontal pill group for status / window / role switches.
   Concierge cross-view switcher rides the same `.cmd-seg-group`, but its
   segments are Next.js `<Link>` anchors (not buttons), so the
   `.guest-viewnav .cmd-seg` rule clears the default anchor underline.
-  `<GuestViewNav>` (`src/components/admin/guest/GuestViewNav.tsx`) drops
+  `<GuestViewNav>` (`src/components/core/guest/GuestViewNav.tsx`) drops
   it into each module's `cmd-head`. Active segment uses the normal
   `[aria-pressed="true"]` inversion.
 

@@ -103,6 +103,39 @@ const MOCKUP_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    // Role-prefixed back-office. The admin pages live once under
+    // src/app/admin/*, but a manager navigates them as /manager/* and a
+    // franchisee as /franchisee/* (the owner keeps /admin/*) so the URL reads
+    // as their space, not "admin". `:path+` requires at least one segment, so
+    // the /manager and /franchisee *portal* pages (exact paths) are NOT
+    // rewritten — only their sub-routes fall through to the shared /admin/*
+    // pages. See src/lib/admin-base.ts. (Rewrites keep the visible URL, so
+    // usePathname() still reports /manager/inventory.)
+    return [
+      { source: "/manager/:path+", destination: "/admin/:path+" },
+      { source: "/franchisee/:path+", destination: "/admin/:path+" },
+    ];
+  },
+  async redirects() {
+    // The Core suite (POS, KDS, Guest Engagement, Service) moved out of the
+    // owner's /admin back-office to its own top-level /core/* segment (so the
+    // URL no longer reads as "admin" for a staff-facing surface). Permanent
+    // redirects keep old bookmarks, QR codes, saved tabs and any external
+    // links working — query strings (e.g. ?view=loyalty) are forwarded
+    // automatically. The legacy /admin/{whatsapp,crm,loyalty,concierge,floor,
+    // slots} stubs already redirect into these, so they now chain to /core.
+    return [
+      { source: "/admin/pos", destination: "/core/pos", permanent: true },
+      { source: "/admin/pos/:path*", destination: "/core/pos/:path*", permanent: true },
+      { source: "/admin/kds", destination: "/core/kds", permanent: true },
+      { source: "/admin/kds/:path*", destination: "/core/kds/:path*", permanent: true },
+      { source: "/admin/guest", destination: "/core/guest", permanent: true },
+      { source: "/admin/guest/:path*", destination: "/core/guest/:path*", permanent: true },
+      { source: "/admin/service", destination: "/core/service", permanent: true },
+      { source: "/admin/service/:path*", destination: "/core/service/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -7,7 +7,7 @@ the Core theme docs for those surfaces; this doc covers the everything-else
 that runs the business behind the till.
 
 > **Floor + Slots are now Core, not admin.** They were merged and rebuilt on
-> the Core suite theme as the **Service** surface (`/admin/service`); the old
+> the Core suite theme as the **Service** surface (`/core/service`); the old
 > `/admin/floor` and `/admin/slots` redirect there. Their anatomy lives under
 > the Core theme ([`../core/modules/service.md`](../core/modules/service.md)),
 > no longer here.
@@ -79,8 +79,54 @@ The shell owns:
 
 Login (`/admin/login`, the owner-only admin door) is the only bare route
 *inside* the admin shell — it renders without the chrome. The universal team
-door `/login` and the PIN `/terminal` are separate top-level routes outside the
-admin layout entirely (see System → Login surfaces).
+door `/login`, the PIN `/terminal`, the `/manager` portal and the `/franchisee`
+portal are separate top-level routes outside the AdminShell, but they are
+**still admin-themed**: each ships its own `layout.tsx` that loads the Admin
+theme CSS + admin fonts and wraps children in a single
+`<div id="admin-portal-root" className="… admin-bg">` (the same pattern as
+`/kitchen`), so the shared `LoginForm`, the PIN keypad and the portal
+dashboards render with the real glass tokens rather than unstyled (see System →
+Login surfaces). **The `id="admin-portal-root"` is load-bearing, not just a
+portal mount:** these layouts carry no theme-boot script, so `<html>` never
+gets `[data-admin-theme]` and the `--font-ui` / `--font-display` tokens only
+re-resolve from the element's `--font-admin-*` next/font vars at the
+`#admin-portal-root` scope (see [theme → typography](./theme/typography.md) /
+`themes/admin/index.css`). Drop the id and `.admin-bg` falls back to its generic
+`var(--font-ui, "Inter", …)` stack — the bundled Inter / Fraunces never load.
+
+The `/admin` HQ dashboard is **owner-only** (gated server-side in
+`src/app/admin/page.tsx`): a non-owner who reaches it is redirected to their own
+home via `landingPathForRole`. A **manager** lands on `/manager` — a scoped
+overview (today's revenue / orders / covers / who's on shift, derived live from
+real orders + shifts) with quick links into the operational pages their
+permissions grant. The wall is only around the HQ root; managers keep their
+permission-scoped tools.
+
+### Role-prefixed back-office URLs
+
+The admin pages live once under `src/app/admin/*`, but each role navigates them
+under **its own URL prefix** so the path reads as *their* space, not "admin":
+the owner stays on `/admin/*`, a manager sees `/manager/*`, a franchisee
+`/franchisee/*`. `/manager/:path+` and `/franchisee/:path+` are **Next.js
+rewrites** onto `/admin/:path+` (`next.config.ts`) — one source of truth, only
+the visible URL changes (the `/manager` + `/franchisee` *portal* pages, exact
+paths, are not rewritten). The contract lives in **`src/lib/admin-base.ts`**
+(`adminBaseForPath` / `adminBaseForRole` / `withAdminBase`) + the client hook
+`src/components/admin/v2/useAdminBase.ts`:
+
+- The **shell** re-roots every link onto the current prefix — `useNavSections`
+  (sidebar items), `Sidebar` (brand), `CommandPalette` (page + search jumps),
+  `Topbar` breadcrumbs, the `g`-then-key shortcuts, and every intra-page
+  navigation (customer / order / menu links, notification deep-links). So a
+  manager who opens an order stays on `/manager/orders#…`, never `/admin`. The
+  `/admin/capabilities` ledger (a server component) re-roots its links the same
+  way, from the role server-side (`adminBaseForRole(user.role)`).
+- `permissionForAdminPage` **normalises** any prefix back to `/admin` before the
+  permission lookup, so the gate is prefix-agnostic.
+- `AdminShell` runs a **convergence redirect** as the safety net: a non-owner who
+  still lands on a canonical `/admin/*` URL (a typed URL, an old bookmark, the
+  full nav on a `/core` surface) is re-rooted onto their own prefix. Owner is a
+  no-op. The pages are identical either way (same rewrite target).
 
 ## Theme + glass tokens
 

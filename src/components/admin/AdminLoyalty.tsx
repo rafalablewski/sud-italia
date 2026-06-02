@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -119,6 +121,7 @@ function fmtDateTime(iso?: string): string {
  */
 export function AdminLoyalty() {
   const toast = useToast();
+  const base = useAdminBase();
   const [tab, setTab] = useState<TabKey>("members");
 
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -402,7 +405,7 @@ export function AdminLoyalty() {
           Members, family wallets and redemptions. Tiers are calculated from earned + manually-adjusted
           points — the same ledger guests earn on at the POS, online, or by WhatsApp. To edit the
           programme itself (tier labels / thresholds / multipliers / perks + the rewards catalogue),
-          go to <Link href="/admin/growth">/admin/growth</Link>.
+          go to <Link href={withAdminBase(base, "/admin/growth")}>/admin/growth</Link>.
         </p>
 
         <div className="loy-head">
@@ -507,7 +510,7 @@ export function AdminLoyalty() {
                       {sortedMembers.map((m) => (
                         <tr key={m.phone}>
                           <td>
-                            <Link href={`/admin/customers/${encodeURIComponent(m.phone)}`} className="loy-member">
+                            <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(m.phone)}`} className="loy-member">
                               <span className="nm">{m.name || "Guest"}</span>
                               <span className="mono sub">{m.phone}</span>
                             </Link>
@@ -627,7 +630,7 @@ export function AdminLoyalty() {
                         <tr key={r.id}>
                           <td className="muted">{fmtDateTime(r.createdAt)}</td>
                           <td>
-                            <Link href={`/admin/customers/${encodeURIComponent(r.phone)}`} className="mono loy-link">
+                            <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(r.phone)}`} className="mono loy-link">
                               {r.phone}
                             </Link>
                           </td>
@@ -888,12 +891,13 @@ function WinBackCard({
   busy: boolean;
   onApprove: () => void;
 }) {
+  const base = useAdminBase();
   const ChannelIcon = c.channel === "email" ? Mail : c.channel === "sms" ? MessageCircle : AlertTriangle;
   return (
     <div className="wb-card">
       <div className="wb-card-head">
         <div className="wb-who">
-          <Link href={`/admin/customers/${encodeURIComponent(c.phone)}`} className="wb-name">
+          <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(c.phone)}`} className="wb-name">
             {c.name}
           </Link>
           <span className="wb-phone mono">{c.phone}</span>

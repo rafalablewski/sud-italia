@@ -352,7 +352,7 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
               <div className="resp-h" style={{ marginTop: 18 }}>
                 Live console
               </div>
-              <Link href="/admin/guest?view=inbox" className="btn ghost">
+              <Link href="/core/guest?view=inbox" className="btn ghost">
                 <MessageCircle /> Open the WhatsApp inbox <ExternalLink />
               </Link>
               {!waConfigured && (

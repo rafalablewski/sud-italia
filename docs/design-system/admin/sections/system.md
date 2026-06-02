@@ -145,8 +145,15 @@ actually reach.
   `userLocationSlugs()` (`src/lib/user-locations.ts`). At login the set is
   bound into the session as the comma-separated `locationScope` and enforced by
   `requireLocationAccess` on every admin route (owners stay unrestricted, `*`).
-  Owners can&rsquo;t be scoped. Terminal-PIN resolution honours the full set, so
-  a multi-site manager&rsquo;s PIN works at any of their terminals.
+  Owners can&rsquo;t be scoped. **Every login door mints that scope through one
+  resolver — `sessionLocationScope()` (`src/lib/user-locations.ts`)** — so an
+  account is scoped identically whether it signs in by password, terminal PIN,
+  or passkey. (The PIN + passkey paths once read the raw singular `locationSlug`
+  and fell back to `*` when it was empty, over-granting every site to a manager
+  whose locations lived in the array field; the shared resolver makes that drift
+  impossible — see `src/lib/user-locations.test.ts`.) Terminal-PIN *matching*
+  also honours the full set, so a multi-site manager&rsquo;s PIN works at any of
+  their terminals.
 - **The role enum is closed**: `staff` / `kitchen` / `manager` /
   `owner` (`franchisee` exists in the rank table but isn't offered in
   the upsert form). Don't add roles ad-hoc — every new role is a
@@ -170,14 +177,49 @@ actually reach.
   - **`/terminal`** — numeric PIN on a shared kitchen/POS device →
     `POST /api/terminal/login`, location-scoped + 5/min/IP limited.
 
+  `/login`, `/terminal`, `/manager` and `/franchisee` live outside the
+  AdminShell, so each ships its own `layout.tsx` (`src/app/login/layout.tsx`,
+  `src/app/terminal/layout.tsx`, `src/app/manager/layout.tsx`,
+  `src/app/franchisee/layout.tsx`) that loads the Admin theme CSS + admin fonts
+  and wraps the page in a single
+  `<div id="admin-portal-root" className="… admin-bg">` — the same pattern
+  `/kitchen` uses. The **`id` is load-bearing, not just a portal mount**: these
+  layouts carry no theme-boot script, so the admin font tokens only re-resolve
+  at the `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
+  without it the bundled Inter/Fraunces never load. And without the layout
+  entirely the `glass-*` / `admin-text` utilities have no theme to read from and
+  the forms render unstyled (invisible `glass-btn` text), which previously
+  blocked staff from signing in.
+
   All mint the *same* signed, location-scoped session and route by role via
-  `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/admin/kds`,
-  `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`. The login APIs
-  return the `landing` path so the redirect has one source of truth.
+  `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/core/kds`,
+  `staff` → `/core/pos`, `manager` → `/manager`, `franchisee` → `/franchisee`,
+  and **only `owner` → `/admin`**. The login APIs return the `landing` path so
+  the redirect has one source of truth.
   **Unauthenticated `/admin/*` access redirects to `/login`** (the universal
   door), and logout returns there too — only the owner-only admin door is
   `/admin/login`. Portal enforcement lives in `/api/admin/login` and
   `/api/admin/webauthn/authenticate`.
+
+- **`/admin` HQ is owner-only; the Manager portal is the manager's home.** The
+  company-wide `/admin` dashboard is gated server-side in
+  `src/app/admin/page.tsx` — a signed-in non-owner is redirected to their own
+  landing (`landingPathForRole`). A **manager** lands on **`/manager`**
+  (`src/app/manager/page.tsx`), a scoped overview of the site(s) they run:
+  today's revenue / orders / covers and who's on shift, all derived live from
+  real `getOrders` + `getShifts`/`getStaff` filtered to the session's location
+  scope (no mock data), plus quick links into the operational pages
+  (Orders, KDS, Schedule, Inventory, POS, Team) their granular permissions
+  grant. The wall is **only** around the `/admin` HQ root — managers keep their
+  permission-scoped tools, but navigate them under **their own URL prefix**:
+  `/manager/*` (a franchisee `/franchisee/*`, the owner `/admin/*`), via
+  rewrites onto the shared `/admin/*` pages so the path reads as their space,
+  not "admin". The whole shell re-roots onto that prefix and a stray `/admin/*`
+  URL converges back to it (`src/lib/admin-base.ts` — see
+  [README → Role-prefixed back-office URLs](../README.md#role-prefixed-back-office-urls)).
+  The client-side page guard in `AdminShell` bounces a forbidden navigation to
+  the user's own home (from `/api/admin/me` → `signIn.landing`), never to the
+  now owner-only `/admin`.
 
 ### Granular permissions (action-level RBAC)
 

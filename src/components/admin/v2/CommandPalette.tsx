@@ -12,6 +12,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ALL_NAV_ITEMS } from "./nav.config";
+import { useAdminBase } from "./useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 
 interface SearchResult {
   id: string;
@@ -52,6 +54,9 @@ const TYPE_LABEL: Record<SearchResult["type"], string> = {
 
 export function CommandPalette({ open, onClose }: Props) {
   const router = useRouter();
+  // Nav + search hrefs are canonical /admin/*; re-root them onto the prefix
+  // this session is served under so jumping to a page keeps /manager/* etc.
+  const base = useAdminBase();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -101,15 +106,18 @@ export function CommandPalette({ open, onClose }: Props) {
   const pageHits = useMemo<FlatItem[]>(() => {
     const q = query.trim().toLowerCase();
     const items = q === "" ? ALL_NAV_ITEMS : ALL_NAV_ITEMS.filter((n) => n.label.toLowerCase().includes(q));
-    return items.map((n) => ({
-      key: `page:${n.href}`,
-      label: n.label,
-      sublabel: n.href,
-      icon: n.icon,
-      href: n.href,
-      group: "Pages",
-    }));
-  }, [query]);
+    return items.map((n) => {
+      const href = withAdminBase(base, n.href);
+      return {
+        key: `page:${n.href}`,
+        label: n.label,
+        sublabel: href,
+        icon: n.icon,
+        href,
+        group: "Pages",
+      };
+    });
+  }, [query, base]);
 
   // Flatten all items in render order so keyboard nav works across groups
   const flatItems = useMemo<FlatItem[]>(() => {
@@ -121,12 +129,12 @@ export function CommandPalette({ open, onClose }: Props) {
         label: r.label,
         sublabel: r.sublabel,
         icon: TYPE_ICON[r.type],
-        href: r.href,
+        href: withAdminBase(base, r.href),
         group,
       });
     }
     return Object.values(grouped).flat();
-  }, [pageHits, results]);
+  }, [pageHits, results, base]);
 
   useEffect(() => {
     setActiveIndex(0);

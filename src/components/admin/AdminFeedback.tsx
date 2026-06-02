@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
@@ -98,6 +100,7 @@ export function AdminFeedback() {
 
 function AdminFeedbackDesktop() {
   const { location } = useAdminLocation();
+  const base = useAdminBase();
   const toast = useToast();
   const [list, setList] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,7 +244,7 @@ function AdminFeedbackDesktop() {
       key: "customer",
       header: "Customer",
       cell: (f) => (
-        <Link href={`/admin/customers/${encodeURIComponent(f.customerPhone)}`} className="v2-link-cell">
+        <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(f.customerPhone)}`} className="v2-link-cell">
           <div className="v2-cell-stack">
             <span>{f.customerName || "Guest"}</span>
             <span className="v2-cell-sub mono">{f.customerPhone}</span>
@@ -254,7 +257,7 @@ function AdminFeedbackDesktop() {
       key: "order",
       header: "Order",
       cell: (f) => (
-        <Link href={`/admin/orders#${f.orderId}`} className="v2-link-cell mono">
+        <Link href={`${withAdminBase(base, "/admin/orders")}#${f.orderId}`} className="v2-link-cell mono">
           {f.orderId.slice(-6).toUpperCase()}
         </Link>
       ),

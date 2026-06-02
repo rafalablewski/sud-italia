@@ -1162,9 +1162,9 @@ function AdminSettingsDesktop() {
                       : " — the universal team door."}{" "}
                     After sign-in you land on{" "}
                     <strong>
-                      {me.signIn.landing === "/admin/kds"
+                      {me.signIn.landing === "/core/kds"
                         ? "the Kitchen Display (KDS)"
-                        : me.signIn.landing === "/admin/pos"
+                        : me.signIn.landing === "/core/pos"
                           ? "the POS till"
                           : "the admin dashboard"}
                     </strong>

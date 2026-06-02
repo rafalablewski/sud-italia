@@ -2,28 +2,29 @@ import "../themes/admin/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 
-// Franchisee portal is admin-flavoured (reads getCurrentAdminUser,
-// role-gated to "franchisee" / "owner"). It lives outside the
-// AdminShell so this layout loads the Admin theme CSS + admin fonts
-// directly. Independent next/font instances so a franchisee-only
-// type tweak would not move /admin.
-const franchiseeBody = Inter({
+// The shared-device PIN terminal is admin-themed (it uses .admin-bg,
+// glass-card, glass-input, glass-btn, admin-text, gradient-text) yet lives
+// outside the AdminShell — so, like /kitchen and /franchisee, this layout
+// loads the Admin theme CSS + admin font stack directly. Without it the keypad
+// renders unstyled. Independent next/font instances from /admin/layout so a
+// terminal-only type tweak wouldn't move admin.
+const terminalBody = Inter({
   subsets: ["latin"],
   variable: "--font-admin-body",
   display: "swap",
 });
-const franchiseeDisplay = Fraunces({
+const terminalDisplay = Fraunces({
   subsets: ["latin"],
   variable: "--font-admin-display",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Franchisee | Sud Italia",
+  title: "Terminal | Sud Italia",
   robots: "noindex, nofollow",
 };
 
-export default function FranchiseeLayout({
+export default function TerminalLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ export default function FranchiseeLayout({
     // next/font vars on this element, so the bundled Inter / Fraunces actually
     // load (without it `.admin-bg` falls back to a generic font stack). Also
     // the portal mount (rule #4). See themes/admin/index.css.
-    <div id="admin-portal-root" className={`${franchiseeBody.variable} ${franchiseeDisplay.variable} admin-bg`}>
+    <div id="admin-portal-root" className={`${terminalBody.variable} ${terminalDisplay.variable} admin-bg`}>
       {children}
     </div>
   );

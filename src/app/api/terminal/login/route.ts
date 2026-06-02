@@ -3,7 +3,7 @@ import {
   createSession,
   SESSION_COOKIE,
   SESSION_MAX_AGE,
-  LOCATION_SCOPE_ALL,
+  sessionLocationScope,
 } from "@/lib/admin-auth";
 import { appendAuditLog, findAdminUserByPin } from "@/lib/store";
 import { getLocationAsync } from "@/lib/locations-store";
@@ -69,10 +69,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
     }
 
-    const locationScope =
-      user.role === "owner" || !user.locationSlug
-        ? LOCATION_SCOPE_ALL
-        : user.locationSlug;
+    // One resolver for every login path so a PIN session is scoped exactly like
+    // the password login (and never over-grants every site).
+    const locationScope = sessionLocationScope(user);
     const token = createSession(user.id, locationScope);
 
     await appendAuditLog({
