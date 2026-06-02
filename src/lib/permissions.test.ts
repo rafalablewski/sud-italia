@@ -87,6 +87,12 @@ test("admin page paths map to their .view permission (dashboard is ungated)", ()
   assert.equal(permissionForAdminPage("/core/kds"), "kds.view");
   assert.equal(permissionForAdminPage("/core/guest"), "guest.view");
   assert.equal(permissionForAdminPage("/core/service"), "service.view");
+  // Role-prefixed aliases (/manager/*, /franchisee/* rewrite onto /admin/*)
+  // normalise back to the same permission — the gate is prefix-agnostic.
+  assert.equal(permissionForAdminPage("/manager/inventory"), "inventory.view");
+  assert.equal(permissionForAdminPage("/franchisee/reports/cohort"), "reports.view");
+  assert.equal(permissionForAdminPage("/manager"), null);
+  assert.equal(permissionForAdminPage("/franchisee"), null);
 });
 
 test("admin API paths map to method-aware permissions", () => {

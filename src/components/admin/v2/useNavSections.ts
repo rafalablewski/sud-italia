@@ -8,6 +8,8 @@ import {
   type NavSection,
 } from "./nav.config";
 import type { AdminRole } from "@/lib/admin-roles";
+import { withAdminBase } from "@/lib/admin-base";
+import { useAdminBase } from "./useAdminBase";
 
 /**
  * Shared nav source for both sidebars (v2 AdminShell + Core suite shell) so the
@@ -70,14 +72,25 @@ export function useNavSections(): NavSection[] {
     };
   }, []);
 
+  // Re-root every nav href onto the prefix the page is served under so a
+  // manager's sidebar links read /manager/* (and a franchisee's /franchisee/*)
+  // instead of /admin/*. Permission gating still keys on the canonical href
+  // (filtering runs first, below), so the prefix is purely cosmetic.
+  const base = useAdminBase();
+
   return useMemo(() => {
-    if (!perms) return NAV_SECTIONS; // still loading — over-render briefly
     const flags = { simulation: simulationEnabled ?? true };
     // Owner / all-access and custom-grant users gate on permissions; everyone
     // else keeps the legacy role-rank nav so the upgrade is invisible to them.
-    if (perms.allAccess || perms.custom) {
-      return filterNavForPermissions(perms.keys, perms.allAccess, flags);
-    }
-    return filterNavForRole(perms.role, flags);
-  }, [perms, simulationEnabled]);
+    const sections = !perms
+      ? NAV_SECTIONS // still loading — over-render briefly
+      : perms.allAccess || perms.custom
+        ? filterNavForPermissions(perms.keys, perms.allAccess, flags)
+        : filterNavForRole(perms.role, flags);
+    if (base === "/admin") return sections;
+    return sections.map((s) => ({
+      ...s,
+      items: s.items.map((it) => ({ ...it, href: withAdminBase(base, it.href) })),
+    }));
+  }, [perms, simulationEnabled, base]);
 }

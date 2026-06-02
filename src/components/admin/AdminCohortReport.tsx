@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
 import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
 import { MetricExplainer, PageExplainer } from "./Explainers";
@@ -64,6 +66,7 @@ export function AdminCohortReport() {
 }
 
 function AdminCohortReportDesktop() {
+  const base = useAdminBase();
   const [data, setData] = useState<CohortReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [segmentCounts, setSegmentCounts] = useState<Record<string, number> | null>(null);
@@ -347,7 +350,7 @@ function AdminCohortReportDesktop() {
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             <li><strong>Fix the month-1 drop first.</strong> The biggest retention loss is always between the 1st and 2nd order — a timely &ldquo;come back this week&rdquo; nudge moves it most.</li>
             <li><strong>Compare cohorts, not just the average.</strong> If recent months retain worse than older ones, something changed (menu, pricing, a bad delivery window) — find it.</li>
-            <li><strong>Feed acquisition spend</strong> into <Link href="/admin/business-costs" className="v2-link">Business costs → Marketing</Link> so these cohorts also get a CAC + payback on the LTV/CAC page.</li>
+            <li><strong>Feed acquisition spend</strong> into <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">Business costs → Marketing</Link> so these cohorts also get a CAC + payback on the LTV/CAC page.</li>
             <li><strong>Champion your champions.</strong> The segment mix below flags your most valuable repeat buyers — give them the loyalty perks that keep the curve flat.</li>
           </ul>
         }
@@ -358,7 +361,7 @@ function AdminCohortReportDesktop() {
             members who ordered in month N ÷ cohort size. CLTV = cumulative revenue
             per cohort customer through each day-horizon. All computed live from the
             orders table by <code>buildCohortReport</code> (the same engine behind{" "}
-            <Link href="/admin/reports/ltv-cac" className="v2-link">LTV / CAC</Link>).
+            <Link href={withAdminBase(base, "/admin/reports/ltv-cac")} className="v2-link">LTV / CAC</Link>).
             Young cohorts under-state the 365-day column simply because they
             haven&apos;t lived a full year yet.
           </p>

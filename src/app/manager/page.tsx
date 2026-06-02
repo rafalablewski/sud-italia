@@ -152,13 +152,16 @@ export default async function ManagerPortalPage() {
     },
   ];
 
+  // Manager's own prefix for the back-office tools (the KDS / POS live on the
+  // Core suite at /core/*, so they stay there). /manager/* rewrites onto the
+  // shared /admin/* pages — see src/lib/admin-base.ts.
   const quickLinks = [
-    { href: "/admin/orders", label: "Orders", desc: "Live tickets & history", icon: ClipboardList },
+    { href: "/manager/orders", label: "Orders", desc: "Live tickets & history", icon: ClipboardList },
     { href: "/core/kds", label: "Kitchen Display", desc: "The line, by station", icon: Flame },
-    { href: "/admin/schedule", label: "Schedule", desc: "Shifts & rota", icon: CalendarDays },
-    { href: "/admin/inventory", label: "Inventory", desc: "Stock & counts", icon: Boxes },
+    { href: "/manager/schedule", label: "Schedule", desc: "Shifts & rota", icon: CalendarDays },
+    { href: "/manager/inventory", label: "Inventory", desc: "Stock & counts", icon: Boxes },
     { href: "/core/pos", label: "Point of sale", desc: "Take an order", icon: Receipt },
-    { href: "/admin/staff", label: "Team", desc: "Roster & hiring", icon: Users },
+    { href: "/manager/staff", label: "Team", desc: "Roster & hiring", icon: Users },
   ];
 
   return (

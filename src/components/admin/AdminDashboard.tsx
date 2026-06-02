@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import {
   Activity,
   AlertTriangle,
@@ -166,6 +168,7 @@ export function AdminDashboard() {
 
 function AdminDashboardDesktop() {
   const [period, setPeriod] = useState<Period>("7d");
+  const base = useAdminBase();
   const { location } = useAdminLocation();
 
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -367,7 +370,7 @@ function AdminDashboardDesktop() {
             ariaLabel="Date range"
           />
           <Link
-            href="/admin/capabilities"
+            href={withAdminBase(base, "/admin/capabilities")}
             className="v2-btn v2-btn-secondary v2-btn-sm inline-flex items-center gap-1.5"
           >
             <Activity className="h-3.5 w-3.5" />
@@ -604,7 +607,7 @@ function AdminDashboardDesktop() {
             title="Operational alerts"
             description="Most recent first"
             actions={
-              <Link href="/admin#notifications" className="v2-link-sm">
+              <Link href={`${base}#notifications`} className="v2-link-sm">
                 All <ArrowRight className="h-3 w-3" />
               </Link>
             }
@@ -781,6 +784,7 @@ interface Next60Props {
  * partial counts.
  */
 function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60Props) {
+  const base = useAdminBase();
   const now = new Date();
   const horizon = new Date(now.getTime() + 60 * 60 * 1000);
   const todayDate = now.toISOString().slice(0, 10);
@@ -916,7 +920,7 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   {dueOrders.map((o) => (
                     <li key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
-                      <Link href={`/admin/orders#${o.id}`} className="v2-link-cell">
+                      <Link href={`${withAdminBase(base, "/admin/orders")}#${o.id}`} className="v2-link-cell">
                         <span className="mono">{o.id.slice(-6).toUpperCase()}</span>
                         <span className="v2-muted"> · {o.customerName || "Guest"}</span>
                       </Link>
@@ -934,7 +938,7 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   {sortedLowStock.map((s) => (
                     <li key={s.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
-                      <Link href="/admin/inventory" className="v2-link-cell">
+                      <Link href={withAdminBase(base, "/admin/inventory")} className="v2-link-cell">
                         {s.name}
                       </Link>
                       <span className="v2-muted">

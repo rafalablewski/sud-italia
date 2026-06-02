@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAdminShell } from "./ShellContext";
+import { adminBaseForPath } from "@/lib/admin-base";
 
 interface Props {
   onOpenMobileNav: () => void;
@@ -17,16 +18,30 @@ interface Crumb {
   href?: string;
 }
 
-function buildCrumbs(pathname: string): Crumb[] {
-  if (!pathname.startsWith("/admin")) return [];
-  const segments = pathname.split("/").filter(Boolean);
-  if (segments.length === 1) return [{ label: "Dashboard" }];
+// Root-crumb label per base. The owner's HQ reads "Admin"; the role portals
+// read their own name so the trail says e.g. Manager › Inventory.
+const BASE_ROOT_LABEL: Record<string, string> = {
+  "/admin": "Admin",
+  "/manager": "Manager",
+  "/franchisee": "Franchisee",
+};
 
-  const crumbs: Crumb[] = [{ label: "Admin", href: "/admin" }];
-  let acc = "/admin";
+function buildCrumbs(pathname: string): Crumb[] {
+  const base = adminBaseForPath(pathname);
+  // Only the admin-page namespace (incl. its role-prefixed aliases) gets a
+  // trail. A non-admin path the shell never wraps yields none.
+  if (!(pathname === base || pathname.startsWith(base + "/"))) return [];
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 1) return [{ label: base === "/admin" ? "Dashboard" : BASE_ROOT_LABEL[base] }];
+
+  const crumbs: Crumb[] = [{ label: BASE_ROOT_LABEL[base] ?? "Admin", href: base }];
+  let acc = base;
   for (let i = 1; i < segments.length; i++) {
     acc += "/" + segments[i];
-    const navHit = ALL_NAV_ITEMS.find((n) => n.href === acc);
+    // Nav labels are keyed on the canonical /admin href; map the prefixed acc
+    // back before the lookup.
+    const canonical = "/admin" + acc.slice(base.length);
+    const navHit = ALL_NAV_ITEMS.find((n) => n.href === canonical);
     const isLast = i === segments.length - 1;
     crumbs.push({
       label: navHit ? navHit.label : segments[i].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),

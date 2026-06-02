@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 
 import {
   Badge,
@@ -128,6 +130,7 @@ export function AdminCustomerDetail({ phoneEncoded }: { phoneEncoded: string }) 
 
 function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) {
   const toast = useToast();
+  const base = useAdminBase();
   const phone = decodeURIComponent(phoneEncoded);
   const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,7 +201,7 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
     return (
       <div className="v2-page">
         <header className="v2-page-header">
-          <Link href="/admin/customers" className="v2-link-back">
+          <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
           </Link>
         </header>
@@ -210,7 +213,7 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
   if (!data) {
     return (
       <div className="v2-page">
-        <Link href="/admin/customers" className="v2-link-back">
+        <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
         </Link>
         <Card>
@@ -277,7 +280,7 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
     <div className="v2-page">
       <header className="v2-page-header">
         <div className="v2-page-title-row">
-          <Link href="/admin/customers" className="v2-link-back">
+          <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
           </Link>
           <h1 className="v2-page-title">{fullName}</h1>

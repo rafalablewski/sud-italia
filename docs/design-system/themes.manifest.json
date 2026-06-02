@@ -52,11 +52,11 @@
       ],
       "routes": [
         "/admin/*",
-        "/manager",
+        "/manager, /manager/* (→ /admin/* via rewrite)",
+        "/franchisee, /franchisee/* (→ /admin/* via rewrite)",
         "/login",
         "/terminal",
-        "/kitchen, /kitchen/*",
-        "/franchisee"
+        "/kitchen, /kitchen/*"
       ],
       "fonts": "src/app/admin/layout.tsx loads its own Inter + Fraunces as --font-admin-body and --font-admin-display. /manager, /kitchen, /franchisee, /login and /terminal layouts load the same independently (they sit outside the AdminShell but stay admin-themed) so a font change in one wouldn't drift admin.",
       "selectorPrefixes": [

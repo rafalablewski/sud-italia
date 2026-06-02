@@ -2,6 +2,8 @@
 
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "./useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, CheckCheck, Trash2, X } from "lucide-react";
 
@@ -53,6 +55,7 @@ function notificationHref(n: NotificationRow): string {
 
 export function NotificationPanel({ open, onClose, onChanged }: Props) {
   const router = useRouter();
+  const base = useAdminBase();
   const [items, setItems] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -108,7 +111,7 @@ export function NotificationPanel({ open, onClose, onChanged }: Props) {
   const openItem = async (n: NotificationRow) => {
     if (!n.read) await markRead(n.id);
     onClose();
-    router.push(notificationHref(n));
+    router.push(withAdminBase(base, notificationHref(n)));
   };
 
   if (!open || !mounted) return null;

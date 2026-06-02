@@ -103,6 +103,20 @@ const MOCKUP_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    // Role-prefixed back-office. The admin pages live once under
+    // src/app/admin/*, but a manager navigates them as /manager/* and a
+    // franchisee as /franchisee/* (the owner keeps /admin/*) so the URL reads
+    // as their space, not "admin". `:path+` requires at least one segment, so
+    // the /manager and /franchisee *portal* pages (exact paths) are NOT
+    // rewritten — only their sub-routes fall through to the shared /admin/*
+    // pages. See src/lib/admin-base.ts. (Rewrites keep the visible URL, so
+    // usePathname() still reports /manager/inventory.)
+    return [
+      { source: "/manager/:path+", destination: "/admin/:path+" },
+      { source: "/franchisee/:path+", destination: "/admin/:path+" },
+    ];
+  },
   async redirects() {
     // The Core suite (POS, KDS, Guest Engagement, Service) moved out of the
     // owner's /admin back-office to its own top-level /core/* segment (so the

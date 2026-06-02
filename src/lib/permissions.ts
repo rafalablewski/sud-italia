@@ -288,7 +288,10 @@ export function userHasPermission(
 // route falls back to the existing role-rank check, never wide open).
 
 export function permissionForAdminPage(pathname: string): PermissionKey | null {
-  const p = pathname;
+  // The admin pages are served under role prefixes too (/manager/*,
+  // /franchisee/* rewrite onto /admin/* — see src/lib/admin-base.ts). Normalise
+  // back to the canonical /admin form so one map gates every alias.
+  const p = pathname.replace(/^\/(?:manager|franchisee)(?=\/|$)/, "/admin");
   const is = (base: string) => p === base || p.startsWith(base + "/");
   // Order matters where one path is a prefix of another's base.
   if (is("/admin/menu-engineering")) return "menu_engineering.view";

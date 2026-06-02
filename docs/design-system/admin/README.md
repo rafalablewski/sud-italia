@@ -100,7 +100,31 @@ home via `landingPathForRole`. A **manager** lands on `/manager` — a scoped
 overview (today's revenue / orders / covers / who's on shift, derived live from
 real orders + shifts) with quick links into the operational pages their
 permissions grant. The wall is only around the HQ root; managers keep their
-permission-scoped `/admin/*` tools.
+permission-scoped tools.
+
+### Role-prefixed back-office URLs
+
+The admin pages live once under `src/app/admin/*`, but each role navigates them
+under **its own URL prefix** so the path reads as *their* space, not "admin":
+the owner stays on `/admin/*`, a manager sees `/manager/*`, a franchisee
+`/franchisee/*`. `/manager/:path+` and `/franchisee/:path+` are **Next.js
+rewrites** onto `/admin/:path+` (`next.config.ts`) — one source of truth, only
+the visible URL changes (the `/manager` + `/franchisee` *portal* pages, exact
+paths, are not rewritten). The contract lives in **`src/lib/admin-base.ts`**
+(`adminBaseForPath` / `adminBaseForRole` / `withAdminBase`) + the client hook
+`src/components/admin/v2/useAdminBase.ts`:
+
+- The **shell** re-roots every link onto the current prefix — `useNavSections`
+  (sidebar items), `Sidebar` (brand), `CommandPalette` (page + search jumps),
+  `Topbar` breadcrumbs, the `g`-then-key shortcuts, and every intra-page
+  navigation (customer / order / menu links, notification deep-links). So a
+  manager who opens an order stays on `/manager/orders#…`, never `/admin`.
+- `permissionForAdminPage` **normalises** any prefix back to `/admin` before the
+  permission lookup, so the gate is prefix-agnostic.
+- `AdminShell` runs a **convergence redirect**: a non-owner who still lands on a
+  canonical `/admin/*` URL (a typed URL, an old bookmark, the capabilities
+  ledger, the full nav on a `/core` surface) is re-rooted onto their own prefix.
+  Owner is a no-op. The pages are identical either way (same rewrite target).
 
 ## Theme + glass tokens
 

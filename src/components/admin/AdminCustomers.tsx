@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useAdminBase } from "./v2/useAdminBase";
+import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Award,
@@ -82,6 +84,7 @@ export function AdminCustomers() {
 }
 
 function AdminCustomersDesktop() {
+  const base = useAdminBase();
   const { location } = useAdminLocation();
   const [list, setList] = useState<CustomerSummary[]>([]);
   const [triggers, setTriggers] = useState<TriggerRow[]>([]);
@@ -139,7 +142,7 @@ function AdminCustomersDesktop() {
       key: "name",
       header: "Customer",
       cell: (c) => (
-        <Link href={`/admin/customers/${encodeURIComponent(c.phone)}`} className="v2-link-cell">
+        <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(c.phone)}`} className="v2-link-cell">
           <div className="v2-cell-stack">
             <span>{c.name}</span>
             <span className="v2-cell-sub mono">{c.phone}</span>
@@ -271,7 +274,7 @@ function AdminCustomersDesktop() {
                     ) : (
                       <PartyPopper className="h-3.5 w-3.5" style={{ color: "var(--warning)" }} />
                     )}
-                    <Link href={`/admin/customers/${encodeURIComponent(t.phone)}`} className="v2-link-cell">
+                    <Link href={`${withAdminBase(base, "/admin/customers")}/${encodeURIComponent(t.phone)}`} className="v2-link-cell">
                       {t.name || "Customer"}
                     </Link>
                     <span className="v2-muted mono">{t.phone}</span>
