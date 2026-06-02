@@ -24,7 +24,7 @@
         "/core/guest",
         "/core/service"
       ],
-      "fonts": "Admin next/font vars (--font-admin-body Inter, --font-admin-display Fraunces, --font-admin-mono JetBrains Mono). POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
+      "fonts": "src/app/core/layout.tsx loads its own next/font instances of --font-admin-body (Inter), --font-admin-display (Fraunces) and --font-admin-mono (JetBrains Mono) — independent from the admin layout's, so a Core-only font tweak can't drift admin. POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
       "selectorPrefixes": [
         ".core-suite",
         ".shell",

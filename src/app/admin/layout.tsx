@@ -1,6 +1,4 @@
 import "../themes/admin/index.css";
-import "../themes/core/index.css";
-import "../themes/core/suite.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import { AdminShell } from "@/components/admin/v2/AdminShell";
@@ -22,7 +20,7 @@ const adminDisplay = Fraunces({
   variable: "--font-admin-display",
   display: "swap",
 });
-// Mono — the Core suite uses JetBrains Mono for prices / timers / ids.
+// Mono — JetBrains Mono for code-like admin numerals (ids / prices / timers).
 const adminMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-admin-mono",
@@ -43,8 +41,9 @@ export default function AdminLayout({
     // `id` is a stable portal mount for overlays that must escape the
     // `.admin-bg > *` stacking trap (rule #4) yet stay inside the admin font
     // scope (these `--font-admin-*` next/font vars live here, not on <body>).
-    // Core routes (KDS) drop the `.v2-shell` chrome, so this wrapper is the
-    // only reliable in-scope, trap-free node to portal a loading chip into.
+    // The Core suite (/core/*) is its own top-level segment with its own
+    // layout that re-creates this same `#admin-portal-root` wrapper — so each
+    // tree has an in-scope, trap-free node to portal into.
     <div id="admin-portal-root" className={`${adminBody.variable} ${adminDisplay.variable} ${adminMono.variable} flex flex-col flex-1`}>
       {/*
         Inline script runs synchronously during HTML parse to apply the

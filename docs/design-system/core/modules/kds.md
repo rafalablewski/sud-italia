@@ -233,14 +233,16 @@ the way it does on every `.v2-page` tab (those get the
 **Why `#admin-portal-root` and not `<body>` or `.v2-shell`:** the chip needs a
 mount that is (a) an *ancestor* of `.admin-bg` (to escape the trap), (b) inside
 the admin font scope, and (c) actually present on this route. `.v2-shell` sets
-`font-family: var(--font-ui)` but the KDS is a **core route** — AdminShell drops
-the `.v2-shell` chrome (providers only), so it isn't there. `<body>` is always
-there but sits *outside* the font scope: `--font-ui → var(--font-admin-body)`
-and `--font-admin-body` is a `next/font` variable set on the admin layout
-wrapper, not on `<body>` — so the chip renders in the browser default **serif**.
-The fix is the wrapper itself: it carries `id="admin-portal-root"`
-(`src/app/admin/layout.tsx`), holds the `--font-admin-*` vars, is an ancestor of
-`.admin-bg`, and has no transform (a fixed child still anchors to the viewport).
+`font-family: var(--font-ui)` but the KDS is a **core route** — the `/core`
+layout (`src/app/core/layout.tsx`) renders no `.v2-shell` chrome at all, so it
+isn't there. `<body>` is always there but sits *outside* the font scope:
+`--font-ui → var(--font-admin-body)` and `--font-admin-body` is a `next/font`
+variable set on the layout wrapper, not on `<body>` — so the chip renders in the
+browser default **serif**. The fix is the wrapper itself: it carries
+`id="admin-portal-root"` (`src/app/core/layout.tsx` for `/core/*`, mirroring
+`src/app/admin/layout.tsx` for `/admin/*`), holds the `--font-admin-*` vars, is
+an ancestor of `.admin-bg`, and has no transform (a fixed child still anchors to
+the viewport).
 `.v2-page-loading` also declares `font-family: var(--font-ui)` itself now, so it
 no longer depends on inheriting Inter from `.v2-shell`. Falls back to `<body>`
 defensively. The portal is gated on a client `mounted` flag so the SSR pass

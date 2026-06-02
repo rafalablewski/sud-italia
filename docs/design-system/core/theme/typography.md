@@ -21,10 +21,11 @@ Inter / mono everywhere.
 | **JetBrains Mono**  | Code-like data: order IDs (`#4821`), prices, tab tokens, table-row numerals where alignment matters. |
 | **Fraunces**        | Display only: on `.core-suite` (POS / Guest) — KPI values (`.stat .v`, `.kpi-value`), dish + guest names (`.prod h3`, `.gp .nm`, `.pf-name`); on the `.kds-core` desktop KDS — **dish names only** (`.tk-nm` / `.ct-nm`). Never on the legacy `.cmd-*` / Mobile KDS. |
 
-Loaded via `next/font` in `src/app/admin/layout.tsx` as
+Loaded via `next/font` in `src/app/core/layout.tsx` as
 `--font-admin-body` (Inter), `--font-admin-mono` (JetBrains Mono) and
-`--font-admin-display` (Fraunces); `suite.css` maps these to its
-`--ui` / `--mono` / `--display` vars.
+`--font-admin-display` (Fraunces) — its own instances, independent from the
+admin layout's; `suite.css` maps these to its `--ui` / `--mono` /
+`--display` vars.
 
 ## The weight ladder
 
