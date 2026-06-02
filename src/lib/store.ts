@@ -14,6 +14,7 @@ import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
+import { userCoversLocation } from "@/lib/user-locations";
 import { withDistributedLock } from "@/lib/locks";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
@@ -7281,7 +7282,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 }
 
 export async function saveAdminUser(
-  input: Omit<AdminUser, "id" | "createdAt" | "permissions"> & {
+  input: Omit<AdminUser, "id" | "createdAt" | "permissions" | "locationSlugs"> & {
     id?: string;
     createdAt?: string;
     /**
@@ -7292,6 +7293,13 @@ export async function saveAdminUser(
      *  - `undefined` (omitted) → leave whatever is already stored untouched.
      */
     permissions?: string[] | null;
+    /**
+     * Multi-location scope. Same three-case semantics as permissions: an array
+     * sets the exact set (and clears the legacy single field), `null` clears it,
+     * `undefined` leaves the stored value untouched (so a partial save — e.g.
+     * the permission matrix — doesn't wipe a manager's locations).
+     */
+    locationSlugs?: string[] | null;
     /** Link to a roster row (set when an account is provisioned at hire). */
     staffId?: string;
   },
@@ -7319,6 +7327,16 @@ export async function saveAdminUser(
     if (input.permissions !== undefined) {
       if (input.permissions === null) delete user.permissions;
       else user.permissions = input.permissions;
+    }
+    if (input.locationSlugs !== undefined) {
+      if (input.locationSlugs === null || input.locationSlugs.length === 0) {
+        delete user.locationSlugs;
+      } else {
+        user.locationSlugs = input.locationSlugs;
+        // The array is canonical — drop the legacy single field so the two
+        // can't disagree.
+        delete user.locationSlug;
+      }
     }
     if (i >= 0) list[i] = user;
     else list.push(user);
@@ -7522,7 +7540,7 @@ export async function pinExistsAtLocation(
       u.id !== exceptId &&
       u.status === "active" &&
       u.pinHash != null &&
-      (u.locationSlug === locationSlug || u.role === "owner") &&
+      (u.role === "owner" || userCoversLocation(u, locationSlug)) &&
       verifyPin(pin, u.pinHash),
   );
 }
@@ -7559,9 +7577,8 @@ export async function findAdminUserByPin(
   const list = await getAdminUsers();
   for (const u of list) {
     if (u.status !== "active" || !u.pinHash) continue;
-    const scoped =
-      u.role === "owner" || !u.locationSlug || u.locationSlug === locationSlug;
-    if (!scoped) continue;
+    // Owners + accounts covering this location (incl. unscoped = all) match.
+    if (u.role !== "owner" && !userCoversLocation(u, locationSlug)) continue;
     if (verifyPin(pin, u.pinHash)) return u;
   }
   return null;

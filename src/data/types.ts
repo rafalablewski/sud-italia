@@ -952,7 +952,18 @@ export interface AdminUser {
   email?: string;
   role: AdminRole;
   status: AdminUserStatus;
+  /**
+   * Legacy single-location binding. Still honored, but `locationSlugs` is the
+   * canonical multi-location field — a manager can run more than one site.
+   * Resolve with `userLocationSlugs()` (prefers the array, falls back to this).
+   */
   locationSlug?: string;
+  /**
+   * Locations this account is scoped to. Empty/absent = all locations (owners,
+   * unscoped accounts). Bound into the session's comma-separated locationScope
+   * at login and enforced by requireLocationAccess on every admin route.
+   */
+  locationSlugs?: string[];
   notes?: string;
   createdAt: string;
   /**

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Fingerprint, KeyRound, Lock, Pencil, Plus, RotateCcw, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
+import { userLocationSlugs } from "@/lib/user-locations";
 
 /** A passkey / security key as listed by the API (no public key, no counter). */
 type WebauthnKey = { id: string; name?: string; createdAt: string; transports?: string[] };
@@ -26,6 +27,7 @@ import {
   Button,
   Card,
   CardBody,
+  Chip,
   ConfirmDialog,
   Dialog,
   EmptyState,
@@ -170,13 +172,19 @@ function AdminUsersDesktop() {
     },
     {
       key: "loc",
-      header: "Location",
-      cell: (u) =>
-        u.locationSlug ? (
-          <Badge tone="neutral" variant="outline">{u.locationSlug}</Badge>
-        ) : (
+      header: "Locations",
+      cell: (u) => {
+        const slugs = userLocationSlugs(u);
+        return slugs.length === 0 ? (
           <span className="v2-muted">All</span>
-        ),
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {slugs.map((s) => (
+              <Badge key={s} tone="neutral" variant="outline">{s}</Badge>
+            ))}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -763,7 +771,8 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AdminRole>("manager");
   const [status, setStatus] = useState<AdminUserStatus>("active");
-  const [locationSlug, setLocationSlug] = useState<string>("");
+  // Multi-location scope. Empty set = all locations. A manager can run several.
+  const [locSet, setLocSet] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   // Granular permissions: `customPerms` off = inherit the role's defaults;
@@ -782,7 +791,7 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
     setEmail(u?.email ?? "");
     setRole(r);
     setStatus(u?.status ?? "active");
-    setLocationSlug(u?.locationSlug ?? "");
+    setLocSet(new Set(u ? userLocationSlugs(u) : []));
     setNotes(u?.notes ?? "");
     const hasCustom = Array.isArray(u?.permissions);
     setCustomPerms(hasCustom);
@@ -842,7 +851,10 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
           email: email.trim() || undefined,
           role,
           status,
-          locationSlug: locationSlug || undefined,
+          // Owners see every site, so we never scope them. Otherwise the chosen
+          // set is canonical (empty = all); clear the legacy single field.
+          locationSlug: undefined,
+          locationSlugs: isOwner ? null : Array.from(locSet),
           notes: notes.trim() || undefined,
           // Owners are implicitly all-access, so we never persist a grant for
           // them. Otherwise: a custom grant is sent as an array; "role default"
@@ -900,13 +912,46 @@ function UserDialog({ state, onClose, onSaved }: { state: DialogState; onClose: 
             ]}
           />
         </div>
-        <Select
-          label="Scoped to location"
-          value={locationSlug}
-          onChange={(e) => setLocationSlug(e.target.value)}
-          options={[{ value: "", label: "All locations" }, ...activeLocations.map((l) => ({ value: l.slug, label: l.city }))]}
-          description="Future per-user filter: when set, the user only sees data for this location."
-        />
+        <div>
+          <label className="v2-field-label" style={{ display: "block", marginBottom: 6 }}>Scoped to locations</label>
+          {isOwner ? (
+            <p className="v2-muted" style={{ fontSize: "0.8rem" }}>
+              Owners see every location — scope can&rsquo;t be narrowed.
+            </p>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <Chip
+                  selected={locSet.size === 0}
+                  onClick={() => setLocSet(new Set())}
+                >
+                  All locations
+                </Chip>
+                {activeLocations.map((l) => (
+                  <Chip
+                    key={l.slug}
+                    selected={locSet.has(l.slug)}
+                    onClick={() =>
+                      setLocSet((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(l.slug)) next.delete(l.slug);
+                        else next.add(l.slug);
+                        return next;
+                      })
+                    }
+                  >
+                    {l.city}
+                  </Chip>
+                ))}
+              </div>
+              <p className="v2-muted" style={{ fontSize: "0.75rem", marginTop: 6 }}>
+                {locSet.size === 0
+                  ? "Unrestricted — this account sees every location."
+                  : `Scoped to ${locSet.size} location${locSet.size > 1 ? "s" : ""}. The session and every admin API are restricted to ${locSet.size > 1 ? "these sites" : "this site"}.`}
+              </p>
+            </>
+          )}
+        </div>
         <Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
         <PermissionEditor

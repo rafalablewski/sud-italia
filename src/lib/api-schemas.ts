@@ -589,6 +589,9 @@ export const adminUserUpsertSchema = z.object({
   role: adminRoleSchema,
   status: adminUserStatusSchema,
   locationSlug: locationSlug.optional(),
+  // Multi-location scope (a manager can run several sites). An array sets the
+  // exact set, null clears it, omitted leaves it untouched.
+  locationSlugs: z.array(locationSlug).max(50).nullable().optional(),
   notes: z.string().max(2000).optional(),
   /**
    * Granular permission grant (action-level keys). An array sets a custom

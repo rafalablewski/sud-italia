@@ -11,6 +11,7 @@ import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limi
 import { verifyTotp } from "@/lib/totp";
 import { verifyPasswordHash, isPasswordHash } from "@/lib/password";
 import { landingPathForRole } from "@/lib/staff-roles";
+import { userLocationSlugs } from "@/lib/user-locations";
 import type { AdminRole } from "@/lib/admin-roles";
 import { adminLoginSchema, parseBody } from "@/lib/api-schemas";
 import { logger } from "@/lib/logger";
@@ -56,10 +57,10 @@ export async function POST(req: NextRequest) {
     let userId = "admin";
     let auditActor = "admin";
     let resolvedRole: AdminRole | undefined;
-    // Owners + shared-password sessions get unrestricted scope; non-owners
-    // with a locationSlug get scoped to that one slug. AdminUser only models
-    // one slug per user today — Phase 3 will widen this to comma-joined
-    // multi-location membership when the franchisee model lands.
+    // Owners + shared-password sessions get unrestricted scope; a non-owner
+    // bound to one or more locations gets a comma-joined scope (a manager can
+    // run several sites). The scope is HMAC-bound into the token and enforced
+    // by requireLocationAccess on every admin route.
     let locationScope: string = LOCATION_SCOPE_ALL;
 
     if (typeof email === "string" && email.trim().length > 0) {
@@ -96,8 +97,11 @@ export async function POST(req: NextRequest) {
       userId = hit.id;
       auditActor = hit.email || hit.id;
       resolvedRole = hit.role;
-      if (hit.role !== "owner" && hit.locationSlug) {
-        locationScope = hit.locationSlug;
+      // A non-owner bound to one or more locations gets a comma-joined scope
+      // (a manager can run multiple sites); no binding = unrestricted.
+      if (hit.role !== "owner") {
+        const slugs = userLocationSlugs(hit);
+        if (slugs.length > 0) locationScope = slugs.join(",");
       }
     } else {
       // No email → legacy shared-owner session, gated by the shared password.

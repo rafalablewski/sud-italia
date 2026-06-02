@@ -56,7 +56,8 @@ actually reach.
   primary.
 - **Table:** name + email, role, **Access** (`Full access` for owners,
   `Custom · N` when the account carries a custom grant, else
-  `Role default`), location scope, **Sign-in** (`Password` / `No password`
+  `Role default`), **Locations** (one badge per assigned site, or `All` when
+  unscoped — a manager can run several), **Sign-in** (`Password` / `No password`
   + a `PIN` chip when one is set + an `N keys` chip when passkeys are
   registered; owners read `Shared / own`), status (`active` / `disabled`),
   `MFA` (On / Off), row actions (`Login`, `MFA`, `Keys`, `Edit`, delete). Live
@@ -97,6 +98,15 @@ actually reach.
 - **Edit** opens an `lg` dialog (name, email, role, status, location
   scope, notes, **permissions**); save preserves the user's MFA fields
   rather than wiping them.
+- **Multi-location scope.** An account can be scoped to **several** locations
+  (a manager can run more than one site) via a `Chip` multi-select — none
+  selected = all locations. The canonical field is `AdminUser.locationSlugs`
+  (array); the legacy single `locationSlug` still resolves through
+  `userLocationSlugs()` (`src/lib/user-locations.ts`). At login the set is
+  bound into the session as the comma-separated `locationScope` and enforced by
+  `requireLocationAccess` on every admin route (owners stay unrestricted, `*`).
+  Owners can&rsquo;t be scoped. Terminal-PIN resolution honours the full set, so
+  a multi-site manager&rsquo;s PIN works at any of their terminals.
 - **The role enum is closed**: `staff` / `kitchen` / `manager` /
   `owner` (`franchisee` exists in the rank table but isn't offered in
   the upsert form). Don't add roles ad-hoc — every new role is a

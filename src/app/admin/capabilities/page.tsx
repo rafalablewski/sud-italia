@@ -124,7 +124,7 @@ export default async function CapabilitiesPage() {
           name: "Users & RBAC management",
           status: "live",
           href: "/admin/users",
-          summary: "Owner-only CRUD on admin accounts. Roles: staff, kitchen, manager, owner, franchisee. Each account carries its own scrypt password + optional terminal PIN (owner sets/resets via the per-row 'Login' dialog → /api/admin/users/[id]/credentials); login no longer rides the shared ADMIN_PASSWORD once a personal password is set. Secrets (hash + PIN hash + TOTP) are never sent to the client.",
+          summary: "Owner-only CRUD on admin accounts. Roles: staff, kitchen, manager, owner, franchisee. Accounts can be scoped to one OR several locations (a manager can run multiple sites) via AdminUser.locationSlugs — none = all; the set is bound into the session's comma-separated locationScope and enforced by requireLocationAccess everywhere. Each account carries its own scrypt password + optional terminal PIN (owner sets/resets via the per-row 'Login' dialog → /api/admin/users/[id]/credentials); login no longer rides the shared ADMIN_PASSWORD once a personal password is set. Secrets (hash + PIN hash + TOTP) are never sent to the client.",
         },
         {
           name: "Permission matrix (live RBAC cross-tab)",
