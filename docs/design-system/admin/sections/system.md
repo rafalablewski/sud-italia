@@ -54,6 +54,23 @@ actually reach.
 - **Header:** `Users & roles` (h1), search, role filter
   (`all` / `owner` / `manager` / `staff` / `kitchen`), `New user`
   primary.
+- **KPI strip** (`KpiCard`): account count, active count, **2FA / passkey
+  coverage** (% of accounts with TOTP or a passkey), and **on shared password**
+  (the risk count — accounts with no personal password). Real posture, computed
+  from the live list.
+- **Extra filters:** a **security** filter (`All` / `Secured (pwd + 2FA)` /
+  `No 2FA` / `On shared password` / `Has passkey`) and a **location** filter,
+  alongside the role tabs — so an operator can pull up "everyone in Kraków
+  without 2FA" in two clicks.
+- **Security posture column:** a per-row chip from `securityPosture()` —
+  `Secured` (personal password + a second factor), `Password only`, or
+  `Shared pwd` (a flagged risk). Sortable by strength.
+- **Account detail drawer:** clicking a name opens a read-first profile
+  (`UserDetailDrawer`) — identity, role, status, location scope, the
+  "How they sign in" explainer, the account's **effective access** (grouped,
+  read-only, with per-group counts; `Full access` for owners), and the security
+  actions (Edit, Login & credentials, MFA, Passkeys, Remove) which open the
+  existing dialogs. One place to see and run everything for an account.
 - **Table:** name + email, role, **Access** (`Full access` for owners,
   `Custom · N` when the account carries a custom grant, else
   `Role default`), **Locations** (one badge per assigned site, or `All` when
@@ -427,8 +444,15 @@ The chain-wide configuration tabs.
   Adding an 11th toggle is mechanical: add the key to `LayoutSettings`,
   add a `LAYOUT_TOGGLES` entry in `AdminSettings.tsx`, wrap the target
   with `<LayoutGate flag="…">` at the call site.
-- **Security:** session lifetime, 2FA enforcement, password policy,
-  IP allow-list.
+- **Security:** opens with a **"How you sign in"** card for the *current*
+  operator — their door (`/admin/login` for owners, `/login` for everyone
+  else), the surface they land on, their location scope, and their active
+  sign-in methods (personal vs shared password, terminal PIN, passkeys, MFA),
+  with a nudge to set a personal password / add MFA when they're on the shared
+  password or have no second factor. Fed by `/api/admin/me` (which now returns
+  a `signIn` block of credential booleans — never the secrets). Below it: the
+  shared-owner-password rotation, plus session lifetime / password policy / IP
+  allow-list.
 - **Themes:** read-only inspector for the three-theme architecture
   (`src/components/admin/settings/ThemesTab.tsx`). Sub-tabs for
   Core / Admin / Homepage; each view shows the theme's source files +

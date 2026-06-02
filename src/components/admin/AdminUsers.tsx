@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Fingerprint, KeyRound, Lock, Pencil, Plus, RotateCcw, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
+import { Fingerprint, KeyRound, Lock, MapPin, Pencil, Plus, Power, RotateCcw, Search, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
@@ -20,8 +20,11 @@ import {
   ALL_PERMISSION_KEYS,
   PERMISSION_GROUPS,
   ROLE_DEFAULT_PERMISSIONS,
+  effectiveHas,
+  resolveEffectivePermissions,
 } from "@/lib/permissions";
 import { useToast } from "./v2/ui/Toast";
+import { KpiCard } from "./v2/charts";
 
 import {
   Badge,
@@ -92,6 +95,28 @@ function landingTag(role: AdminRole): string {
   return p === "/admin/kds" ? "KDS" : p === "/admin/pos" ? "POS" : "Admin";
 }
 
+type Posture = { label: string; tone: "success" | "warning" | "neutral"; risk: boolean };
+
+/**
+ * A coarse auth-strength read for the roster: an account with a personal
+ * password AND a second factor (TOTP or passkey) is "Secured"; one still on the
+ * shared password is "Shared pwd" (a risk); a personal password with no second
+ * factor is "Password only". Drives the table chip + the security filter + the
+ * KPI risk count so the panel surfaces weak accounts at a glance.
+ */
+function securityPosture(u: AdminUserRow): Posture {
+  const has2fa = !!u.totpEnabled || (u.webauthnKeys?.length ?? 0) > 0;
+  if (!u.hasPassword) return { label: "Shared pwd", tone: "warning", risk: true };
+  if (has2fa) return { label: "Secured", tone: "success", risk: false };
+  return { label: "Password only", tone: "neutral", risk: false };
+}
+
+function has2fa(u: AdminUserRow): boolean {
+  return !!u.totpEnabled || (u.webauthnKeys?.length ?? 0) > 0;
+}
+
+type SecurityFilter = "all" | "secured" | "no2fa" | "shared" | "passkey";
+
 const ROLE_TONE: Record<AdminRole, "info" | "brand" | "warning" | "success"> = {
   owner: "brand",
   manager: "info",
@@ -119,6 +144,9 @@ function AdminUsersDesktop() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
+  const [secFilter, setSecFilter] = useState<SecurityFilter>("all");
+  const [locFilter, setLocFilter] = useState<string>("all");
+  const [detail, setDetail] = useState<AdminUserRow | null>(null);
   const [dialog, setDialog] = useState<DialogState>({ open: false, user: null });
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
   const [mfaUser, setMfaUser] = useState<AdminUser | null>(null);
@@ -151,6 +179,11 @@ function AdminUsersDesktop() {
     const q = query.trim().toLowerCase();
     return list.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (locFilter !== "all" && !userLocationSlugs(u).includes(locFilter)) return false;
+      if (secFilter === "secured" && !(u.hasPassword && has2fa(u))) return false;
+      if (secFilter === "no2fa" && has2fa(u)) return false;
+      if (secFilter === "shared" && u.hasPassword) return false;
+      if (secFilter === "passkey" && (u.webauthnKeys?.length ?? 0) === 0) return false;
       if (!q) return true;
       return (
         u.name.toLowerCase().includes(q) ||
@@ -158,7 +191,21 @@ function AdminUsersDesktop() {
         u.role.toLowerCase().includes(q)
       );
     });
-  }, [list, query, roleFilter]);
+  }, [list, query, roleFilter, secFilter, locFilter]);
+
+  // KPI strip — real auth-posture coverage across the roster.
+  const kpis = useMemo(() => {
+    const active = list.filter((u) => u.status === "active").length;
+    const with2fa = list.filter((u) => has2fa(u)).length;
+    const shared = list.filter((u) => !u.hasPassword).length;
+    return { total: list.length, active, with2fa, shared };
+  }, [list]);
+
+  // Keep the open drawer bound to the freshest row after a refetch.
+  const detailUser = useMemo(
+    () => (detail ? list.find((u) => u.id === detail.id) ?? detail : null),
+    [detail, list],
+  );
 
   const doDelete = async () => {
     if (!pendingDelete) return;
@@ -184,10 +231,16 @@ function AdminUsersDesktop() {
       key: "name",
       header: "Name",
       cell: (u) => (
-        <div className="v2-cell-stack">
-          <span>{u.name}</span>
+        <button
+          type="button"
+          onClick={() => setDetail(u)}
+          className="v2-cell-stack"
+          style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", color: "inherit" }}
+          title="Open account details"
+        >
+          <span style={{ fontWeight: 600 }}>{u.name}</span>
           {u.email && <span className="v2-cell-sub">{u.email}</span>}
-        </div>
+        </button>
       ),
       sortValue: (u) => u.name,
     },
@@ -267,15 +320,17 @@ function AdminUsersDesktop() {
       sortValue: (u) => (u.hasPassword ? 1 : 0),
     },
     {
-      key: "mfa",
-      header: "MFA",
-      cell: (u) =>
-        u.totpEnabled ? (
-          <Badge tone="success" variant="soft" dot>On</Badge>
-        ) : (
-          <Badge tone="neutral" variant="outline">Off</Badge>
-        ),
-      sortValue: (u) => (u.totpEnabled ? 1 : 0),
+      key: "security",
+      header: "Security",
+      cell: (u) => {
+        const p = securityPosture(u);
+        return (
+          <Badge tone={p.tone === "neutral" ? "info" : p.tone} variant={p.risk ? "soft" : "outline"} dot>
+            {p.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {p.label}
+          </Badge>
+        );
+      },
+      sortValue: (u) => (securityPosture(u).risk ? 0 : has2fa(u) ? 2 : 1),
     },
     {
       key: "actions",
@@ -318,6 +373,24 @@ function AdminUsersDesktop() {
         </Button>
       </header>
 
+      <section className="v2-kpi-grid">
+        <KpiCard label="Accounts" value={kpis.total} icon={UsersIcon} tone="info" />
+        <KpiCard label="Active" value={kpis.active} icon={Power} tone={kpis.active > 0 ? "success" : "neutral"} />
+        <KpiCard
+          label="2FA / passkey"
+          value={kpis.total ? Math.round((kpis.with2fa / kpis.total) * 100) : 0}
+          format={(n) => `${n}%`}
+          icon={Fingerprint}
+          tone={kpis.with2fa === kpis.total && kpis.total > 0 ? "success" : "warning"}
+        />
+        <KpiCard
+          label="On shared password"
+          value={kpis.shared}
+          icon={ShieldAlert}
+          tone={kpis.shared > 0 ? "warning" : "success"}
+        />
+      </section>
+
       <div className="v2-filters">
         <div className="v2-filter-search">
           <Input
@@ -339,6 +412,32 @@ function AdminUsersDesktop() {
           ]}
           variant="pill"
           ariaLabel="Role filter"
+        />
+      </div>
+
+      <div className="v2-filters" style={{ flexWrap: "wrap", gap: 8 }}>
+        <Select
+          label=""
+          aria-label="Security filter"
+          value={secFilter}
+          onChange={(e) => setSecFilter(e.target.value as SecurityFilter)}
+          options={[
+            { value: "all", label: "All security" },
+            { value: "secured", label: "Secured (pwd + 2FA)" },
+            { value: "no2fa", label: "No 2FA" },
+            { value: "shared", label: "On shared password" },
+            { value: "passkey", label: "Has passkey" },
+          ]}
+        />
+        <Select
+          label=""
+          aria-label="Location filter"
+          value={locFilter}
+          onChange={(e) => setLocFilter(e.target.value)}
+          options={[
+            { value: "all", label: "All locations" },
+            ...activeLocations.map((l) => ({ value: l.slug, label: l.city })),
+          ]}
         />
       </div>
 
@@ -416,7 +515,127 @@ function AdminUsersDesktop() {
         onClose={() => setKeysUser(null)}
         onChanged={fetchAll}
       />
+
+      <UserDetailDrawer
+        user={detailUser}
+        isOwner={isOwner}
+        onClose={() => setDetail(null)}
+        onEdit={(u) => { setDetail(null); setDialog({ open: true, user: u }); }}
+        onCredentials={(u) => setCredUser(u)}
+        onMfa={(u) => setMfaUser(u)}
+        onKeys={(u) => setKeysUser(u)}
+        onDelete={(u) => { setDetail(null); setPendingDelete(u); }}
+      />
     </div>
+  );
+}
+
+/**
+ * Read-first account profile drawer — the professional "everything about this
+ * account" view: identity, scope, how they sign in, their effective access
+ * (grouped, read-only), and the security actions. Reuses the existing edit /
+ * credentials / MFA / passkey dialogs rather than duplicating them.
+ */
+function UserDetailDrawer({
+  user,
+  isOwner,
+  onClose,
+  onEdit,
+  onCredentials,
+  onMfa,
+  onKeys,
+  onDelete,
+}: {
+  user: AdminUserRow | null;
+  isOwner: boolean;
+  onClose: () => void;
+  onEdit: (u: AdminUserRow) => void;
+  onCredentials: (u: AdminUserRow) => void;
+  onMfa: (u: AdminUserRow) => void;
+  onKeys: (u: AdminUserRow) => void;
+  onDelete: (u: AdminUserRow) => void;
+}) {
+  if (!user) return <Dialog open={false} onClose={onClose} />;
+
+  const eff = resolveEffectivePermissions(user);
+  const login = describeLogin(user);
+  const posture = securityPosture(user);
+  const locations = userLocationSlugs(user);
+
+  return (
+    <Dialog open onClose={onClose} size="lg" title={user.name}
+      footer={<Button variant="ghost" onClick={onClose}>Close</Button>}
+    >
+      <div className="v2-stack-12">
+        {/* Identity */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          {user.email && <span className="v2-muted">{user.email}</span>}
+          <Badge tone={ROLE_TONE[user.role]} variant="soft" dot>{ROLE_LABEL[user.role]}</Badge>
+          <Badge tone={user.status === "active" ? "success" : "neutral"} variant="soft" dot>{user.status}</Badge>
+          <Badge tone={posture.tone === "neutral" ? "info" : posture.tone} variant={posture.risk ? "soft" : "outline"} dot>
+            {posture.risk ? <ShieldAlert className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} {posture.label}
+          </Badge>
+        </div>
+
+        {/* Locations */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <MapPin className="h-3.5 w-3.5 v2-muted" />
+          {locations.length === 0 ? (
+            <span className="v2-muted">All locations</span>
+          ) : (
+            locations.map((s) => <Badge key={s} tone="neutral" variant="outline">{s}</Badge>)
+          )}
+        </div>
+
+        {/* How they sign in */}
+        <div className="v2-note">
+          <KeyRound className="h-4 w-4" />
+          <span>
+            <strong>How they sign in</strong>
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              {login.methods.map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
+            {login.mfa && <div style={{ marginTop: 4 }}>Requires a 6-digit MFA code at every sign-in.</div>}
+            <div style={{ marginTop: 4 }}>Lands on <strong>{login.landing}</strong>.</div>
+          </span>
+        </div>
+
+        {/* Effective access */}
+        <div>
+          <div className="v2-field-label" style={{ marginBottom: 6 }}>
+            Effective access {eff.all ? "" : `· ${eff.keys.size}/${ALL_PERMISSION_KEYS.length}`}
+            {eff.custom ? " · custom grant" : user.role === "owner" ? "" : " · role default"}
+          </div>
+          {eff.all ? (
+            <Badge tone="brand" variant="soft">Full access — every capability</Badge>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
+              {PERMISSION_GROUPS.map((g) => {
+                const on = g.permissions.filter((p) => effectiveHas(eff, p.key)).length;
+                if (on === 0) return null;
+                return (
+                  <div key={g.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: "0.82rem" }}>
+                    <span>{g.label}</span>
+                    <span className="v2-muted">{on}/{g.permissions.length}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, borderTop: "1px solid var(--v2-border, rgba(255,255,255,0.08))", paddingTop: 12 }}>
+          <Button size="sm" variant="primary" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => onEdit(user)}>Edit</Button>
+          {isOwner && user.role !== "owner" && (
+            <Button size="sm" variant="ghost" leadingIcon={<Lock className="h-3.5 w-3.5" />} onClick={() => onCredentials(user)}>Login & credentials</Button>
+          )}
+          <Button size="sm" variant="ghost" leadingIcon={<Smartphone className="h-3.5 w-3.5" />} onClick={() => onMfa(user)}>MFA</Button>
+          <Button size="sm" variant="ghost" leadingIcon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => onKeys(user)}>Passkeys</Button>
+          <Button size="sm" variant="ghost" leadingIcon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => onDelete(user)}>Remove</Button>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
