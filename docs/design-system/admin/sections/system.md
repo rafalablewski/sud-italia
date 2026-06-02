@@ -170,22 +170,38 @@ actually reach.
   - **`/terminal`** — numeric PIN on a shared kitchen/POS device →
     `POST /api/terminal/login`, location-scoped + 5/min/IP limited.
 
-  `/login` and `/terminal` live outside the AdminShell, so each ships its own
-  `layout.tsx` (`src/app/login/layout.tsx`, `src/app/terminal/layout.tsx`) that
-  loads the Admin theme CSS + admin fonts and wraps the page in `.admin-bg` —
-  the same pattern `/kitchen` and `/franchisee` use. Without those layouts the
-  `glass-*` / `admin-text` utilities have no theme to read from and the forms
-  render unstyled (invisible `glass-btn` text), which previously blocked staff
-  from signing in.
+  `/login`, `/terminal`, `/manager` and `/franchisee` live outside the
+  AdminShell, so each ships its own `layout.tsx` (`src/app/login/layout.tsx`,
+  `src/app/terminal/layout.tsx`, `src/app/manager/layout.tsx`,
+  `src/app/franchisee/layout.tsx`) that loads the Admin theme CSS + admin fonts
+  and wraps the page in `.admin-bg` — the same pattern `/kitchen` uses. Without
+  those layouts the `glass-*` / `admin-text` utilities have no theme to read
+  from and the forms render unstyled (invisible `glass-btn` text), which
+  previously blocked staff from signing in.
 
   All mint the *same* signed, location-scoped session and route by role via
   `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/admin/kds`,
-  `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`. The login APIs
-  return the `landing` path so the redirect has one source of truth.
+  `staff` → `/admin/pos`, `manager` → `/manager`, `franchisee` → `/franchisee`,
+  and **only `owner` → `/admin`**. The login APIs return the `landing` path so
+  the redirect has one source of truth.
   **Unauthenticated `/admin/*` access redirects to `/login`** (the universal
   door), and logout returns there too — only the owner-only admin door is
   `/admin/login`. Portal enforcement lives in `/api/admin/login` and
   `/api/admin/webauthn/authenticate`.
+
+- **`/admin` HQ is owner-only; the Manager portal is the manager's home.** The
+  company-wide `/admin` dashboard is gated server-side in
+  `src/app/admin/page.tsx` — a signed-in non-owner is redirected to their own
+  landing (`landingPathForRole`). A **manager** lands on **`/manager`**
+  (`src/app/manager/page.tsx`), a scoped overview of the site(s) they run:
+  today's revenue / orders / covers and who's on shift, all derived live from
+  real `getOrders` + `getShifts`/`getStaff` filtered to the session's location
+  scope (no mock data), plus quick links into the operational pages
+  (Orders, KDS, Schedule, Inventory, POS, Team) their granular permissions
+  grant. The wall is **only** around the `/admin` HQ root — managers keep their
+  permission-scoped `/admin/*` tools. The client-side page guard in `AdminShell`
+  bounces a forbidden navigation to the user's own home (from `/api/admin/me` →
+  `signIn.landing`), never to the now owner-only `/admin`.
 
 ### Granular permissions (action-level RBAC)
 

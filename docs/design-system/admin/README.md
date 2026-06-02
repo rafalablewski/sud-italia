@@ -79,12 +79,21 @@ The shell owns:
 
 Login (`/admin/login`, the owner-only admin door) is the only bare route
 *inside* the admin shell — it renders without the chrome. The universal team
-door `/login` and the PIN `/terminal` are separate top-level routes outside the
-AdminShell, but they are **still admin-themed**: each ships its own
-`layout.tsx` that loads the Admin theme CSS + admin fonts and wraps children in
-`.admin-bg` (the same pattern as `/kitchen` and `/franchisee`), so the shared
-`LoginForm` and the PIN keypad render with the real glass tokens rather than
-unstyled (see System → Login surfaces).
+door `/login`, the PIN `/terminal`, the `/manager` portal and the `/franchisee`
+portal are separate top-level routes outside the AdminShell, but they are
+**still admin-themed**: each ships its own `layout.tsx` that loads the Admin
+theme CSS + admin fonts and wraps children in `.admin-bg` (the same pattern as
+`/kitchen`), so the shared `LoginForm`, the PIN keypad and the portal
+dashboards render with the real glass tokens rather than unstyled (see System →
+Login surfaces).
+
+The `/admin` HQ dashboard is **owner-only** (gated server-side in
+`src/app/admin/page.tsx`): a non-owner who reaches it is redirected to their own
+home via `landingPathForRole`. A **manager** lands on `/manager` — a scoped
+overview (today's revenue / orders / covers / who's on shift, derived live from
+real orders + shifts) with quick links into the operational pages their
+permissions grant. The wall is only around the HQ root; managers keep their
+permission-scoped `/admin/*` tools.
 
 ## Theme + glass tokens
 

@@ -74,7 +74,13 @@ export function staffRoleToAdminRole(role: StaffRole): AdminRole {
 
 /**
  * Where a freshly-authenticated user lands. The owner's routing brief:
- * kitchen → KDS, floor → POS, everyone with admin reach → the dashboard.
+ * kitchen → KDS, floor → POS, manager → their own scoped Manager portal,
+ * franchisee → the Franchisee portal, and only the owner lands on the
+ * company-wide `/admin` HQ dashboard (which is owner-gated server-side).
+ *
+ * Managers keep access to the operational admin pages their permissions
+ * grant (Orders, Schedule, Inventory, KDS, POS…); `/manager` is just their
+ * home, not a cage — the wall is only around the `/admin` HQ root.
  */
 export function landingPathForRole(role: AdminRole): string {
   switch (role) {
@@ -83,7 +89,9 @@ export function landingPathForRole(role: AdminRole): string {
     case "staff":
       return "/admin/pos";
     case "manager":
+      return "/manager";
     case "franchisee":
+      return "/franchisee";
     case "owner":
     default:
       return "/admin";

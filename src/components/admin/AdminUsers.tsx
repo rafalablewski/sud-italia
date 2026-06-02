@@ -59,7 +59,9 @@ function landingLabel(role: AdminRole): string {
   const p = landingPathForRole(role);
   if (p === "/admin/kds") return "the Kitchen Display (KDS)";
   if (p === "/admin/pos") return "the POS till";
-  return "the admin dashboard";
+  if (p === "/manager") return "the Manager portal";
+  if (p === "/franchisee") return "the Franchisee portal";
+  return "the admin HQ dashboard";
 }
 
 /**
@@ -94,7 +96,11 @@ function describeLogin(u: AdminUserRow): { methods: string[]; mfa: boolean; land
 /** One-word landing tag for the dense table cell. */
 function landingTag(role: AdminRole): string {
   const p = landingPathForRole(role);
-  return p === "/admin/kds" ? "KDS" : p === "/admin/pos" ? "POS" : "Admin";
+  if (p === "/admin/kds") return "KDS";
+  if (p === "/admin/pos") return "POS";
+  if (p === "/manager") return "Manager";
+  if (p === "/franchisee") return "Franchisee";
+  return "Admin HQ";
 }
 
 type Posture = { label: string; tone: "success" | "warning" | "neutral"; risk: boolean };

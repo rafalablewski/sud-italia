@@ -46,6 +46,10 @@ export function AdminShell({ children }: Props) {
   const [permGate, setPermGate] = useState<{
     keys: Set<string>;
     custom: boolean;
+    // Where to bounce a forbidden navigation. The owner's `/admin` HQ is now
+    // owner-gated, so a non-owner can't be dumped there — fall back to their
+    // own home (manager → /manager, etc.) which /api/admin/me resolves.
+    home: string;
   } | null>(null);
 
   useEffect(() => {
@@ -57,6 +61,7 @@ export function AdminShell({ children }: Props) {
         setPermGate({
           keys: new Set<string>(Array.isArray(j.permissions) ? j.permissions : []),
           custom: !!j.custom,
+          home: typeof j.signIn?.landing === "string" ? j.signIn.landing : "/admin",
         });
       })
       .catch(() => {
@@ -73,7 +78,7 @@ export function AdminShell({ children }: Props) {
     if (!permGate || !permGate.custom) return;
     const need = permissionForAdminPage(pathname);
     if (need && !permGate.keys.has(need)) {
-      router.replace("/admin");
+      router.replace(permGate.home);
     }
   }, [pathname, permGate, router]);
 
