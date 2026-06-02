@@ -29,11 +29,32 @@ function ownerOnly(user: { role: AdminRole }) {
 // Admin-user mgmt is itself a privileged surface — owner-only for writes,
 // any-auth for reads (so the admin/users page can show the roster).
 export const GET = withAdmin({}, async () => {
-  // Never ship the TOTP secret to the client — expose only the boolean flag.
+  // Never ship secrets to the client — strip the TOTP secret and the password
+  // / PIN hashes, exposing only boolean "is it set" flags.
   const users = (await getAdminUsers()).map((u) => {
-    const { totpSecret, ...rest } = u;
+    const {
+      totpSecret,
+      passwordHash,
+      pinHash,
+      webauthnCredentials,
+      currentWebauthnChallenge,
+      ...rest
+    } = u;
     void totpSecret;
-    return { ...rest, totpEnabled: !!u.totpEnabled };
+    void currentWebauthnChallenge;
+    return {
+      ...rest,
+      totpEnabled: !!u.totpEnabled,
+      hasPassword: !!passwordHash,
+      hasPin: !!pinHash,
+      // Sanitized key list (no public key, no counter) for the management UI.
+      webauthnKeys: (webauthnCredentials ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        createdAt: c.createdAt,
+        transports: c.transports,
+      })),
+    };
   });
   return NextResponse.json(users);
 });

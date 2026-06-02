@@ -1,8 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { KeyRound, Pencil, Plus, RotateCcw, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
+import { Fingerprint, KeyRound, Lock, Pencil, Plus, RotateCcw, Search, ShieldCheck, Trash2, UserCog } from "lucide-react";
+import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
+
+/** A passkey / security key as listed by the API (no public key, no counter). */
+type WebauthnKey = { id: string; name?: string; createdAt: string; transports?: string[] };
+/** Row shape from /api/admin/users — secrets stripped, "is set" flags added. */
+type AdminUserRow = AdminUser & {
+  hasPassword?: boolean;
+  hasPin?: boolean;
+  webauthnKeys?: WebauthnKey[];
+};
 import { getActiveLocations } from "@/data/locations";
 import {
   ALL_PERMISSION_KEYS,
@@ -59,13 +69,15 @@ export function AdminUsers() {
 
 function AdminUsersDesktop() {
   const toast = useToast();
-  const [list, setList] = useState<AdminUser[]>([]);
+  const [list, setList] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
   const [dialog, setDialog] = useState<DialogState>({ open: false, user: null });
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
   const [mfaUser, setMfaUser] = useState<AdminUser | null>(null);
+  const [credUser, setCredUser] = useState<AdminUserRow | null>(null);
+  const [keysUser, setKeysUser] = useState<AdminUserRow | null>(null);
   const [me, setMe] = useState<{ id: string; role: AdminRole } | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -120,7 +132,8 @@ function AdminUsersDesktop() {
     return c;
   }, [list]);
 
-  const cols: Column<AdminUser>[] = [
+  const isOwner = me?.role === "owner";
+  const cols: Column<AdminUserRow>[] = [
     {
       key: "name",
       header: "Name",
@@ -176,6 +189,25 @@ function AdminUsersDesktop() {
       sortValue: (u) => u.status,
     },
     {
+      key: "signin",
+      header: "Sign-in",
+      cell: (u) =>
+        u.role === "owner" ? (
+          <span className="v2-muted">Shared / own</span>
+        ) : (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <Badge tone={u.hasPassword ? "success" : "neutral"} variant={u.hasPassword ? "soft" : "outline"}>
+              {u.hasPassword ? "Password" : "No password"}
+            </Badge>
+            {u.hasPin && <Badge tone="info" variant="soft">PIN</Badge>}
+            {(u.webauthnKeys?.length ?? 0) > 0 && (
+              <Badge tone="brand" variant="soft">{`${u.webauthnKeys!.length} key${u.webauthnKeys!.length > 1 ? "s" : ""}`}</Badge>
+            )}
+          </div>
+        ),
+      sortValue: (u) => (u.hasPassword ? 1 : 0),
+    },
+    {
       key: "mfa",
       header: "MFA",
       cell: (u) =>
@@ -191,8 +223,16 @@ function AdminUsersDesktop() {
       header: "",
       cell: (u) => (
         <div className="v2-row-actions">
+          {isOwner && u.role !== "owner" && (
+            <Button size="sm" variant="ghost" leadingIcon={<Lock className="h-3.5 w-3.5" />} onClick={() => setCredUser(u)}>
+              Login
+            </Button>
+          )}
           <Button size="sm" variant="ghost" leadingIcon={<KeyRound className="h-3.5 w-3.5" />} onClick={() => setMfaUser(u)}>
             MFA
+          </Button>
+          <Button size="sm" variant="ghost" leadingIcon={<Fingerprint className="h-3.5 w-3.5" />} onClick={() => setKeysUser(u)}>
+            Keys
           </Button>
           <Button size="sm" variant="ghost" leadingIcon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: u })}>
             Edit
@@ -304,7 +344,262 @@ function AdminUsersDesktop() {
         onClose={() => setMfaUser(null)}
         onChanged={fetchAll}
       />
+
+      <CredentialsDialog
+        user={credUser}
+        onClose={() => setCredUser(null)}
+        onChanged={fetchAll}
+      />
+
+      <PasskeyDialog
+        user={keysUser}
+        me={me}
+        onClose={() => setKeysUser(null)}
+        onChanged={fetchAll}
+      />
     </div>
+  );
+}
+
+function PasskeyDialog({
+  user,
+  me,
+  onClose,
+  onChanged,
+}: {
+  user: AdminUserRow | null;
+  me: { id: string; role: AdminRole } | null;
+  onClose: () => void;
+  onChanged: () => Promise<void> | void;
+}) {
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setName("");
+    setBusy(false);
+  }, [user]);
+
+  if (!user) return <Dialog open={false} onClose={onClose} />;
+
+  const isSelf = me?.id === user.id;
+  const isOwner = me?.role === "owner";
+  const keys = user.webauthnKeys ?? [];
+
+  const enroll = async () => {
+    setBusy(true);
+    try {
+      const begin = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/webauthn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "register-begin" }),
+      });
+      const options = await begin.json().catch(() => null);
+      if (!begin.ok) {
+        toast.error("Could not start", options?.error || "");
+        return;
+      }
+      const attestation = await startRegistration({ optionsJSON: options });
+      const finish = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/webauthn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "register-finish", response: attestation, name: name.trim() || undefined }),
+      });
+      const data = await finish.json().catch(() => null);
+      if (finish.ok) {
+        toast.success("Security key registered");
+        await onChanged();
+        setName("");
+      } else {
+        toast.error("Could not register", data?.error || "");
+      }
+    } catch (err) {
+      toast.error("Enrollment failed", err instanceof Error && /abort|cancel/i.test(err.message) ? "Cancelled" : "");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (credentialId: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/webauthn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", credentialId }),
+      });
+      if (res.ok) {
+        toast.success("Key removed");
+        await onChanged();
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error("Could not remove", data?.error || "");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={`Passkeys & security keys — ${user.name}`}
+      footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
+    >
+      <div className="v2-stack-12">
+        <div className="v2-note">
+          <Fingerprint className="h-4 w-4" />
+          <span>
+            Phishing-resistant sign-in with a hardware key (YubiKey) or device passkey (Touch ID, Windows Hello). At <span className="mono">/admin/login</span>, the holder enters their email and taps the key — no password needed.
+          </span>
+        </div>
+
+        {keys.length === 0 ? (
+          <p className="v2-muted">No keys registered yet.</p>
+        ) : (
+          <ul className="v2-mov-list">
+            {keys.map((k) => (
+              <li key={k.id} className="v2-mov-row">
+                <span className="v2-mov-icon v2-mov-tone-success"><KeyRound className="h-3 w-3" /></span>
+                <div className="v2-mov-text">
+                  <div className="v2-mov-title"><span>{k.name || "Security key"}</span></div>
+                  <div className="v2-mov-sub">Added {new Date(k.createdAt).toLocaleDateString()}</div>
+                </div>
+                {(isSelf || isOwner) && (
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => remove(k.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isSelf ? (
+          <>
+            <Input
+              label="Key name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. YubiKey 5C, MacBook Touch ID"
+            />
+            <Button variant="primary" onClick={enroll} loading={busy} leadingIcon={<Fingerprint className="h-3.5 w-3.5" />}>
+              Register a key on this device
+            </Button>
+          </>
+        ) : (
+          <p className="v2-muted">
+            A key can only be enrolled by its holder, signed in as this user. {isOwner ? "As an owner you can remove a lost key here." : ""}
+          </p>
+        )}
+      </div>
+    </Dialog>
+  );
+}
+
+function CredentialsDialog({
+  user,
+  onClose,
+  onChanged,
+}: {
+  user: AdminUserRow | null;
+  onClose: () => void;
+  onChanged: () => Promise<void> | void;
+}) {
+  const toast = useToast();
+  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setPassword("");
+    setPin("");
+    setBusy(false);
+  }, [user]);
+
+  if (!user) return <Dialog open={false} onClose={onClose} />;
+
+  const call = async (body: Record<string, unknown>, ok: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        toast.success(ok);
+        await onChanged();
+        setPassword("");
+        setPin("");
+      } else {
+        toast.error("Could not update", data?.error || "");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="md"
+      title={`Login & credentials — ${user.name}`}
+      footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
+    >
+      <div className="v2-stack-12">
+        <div className="v2-note">
+          <Lock className="h-4 w-4" />
+          <span>
+            Set this account&rsquo;s own password (email + password at <span className="mono">/admin/login</span>) and an optional terminal PIN (<span className="mono">/terminal</span>). Currently:{" "}
+            <strong>{user.hasPassword ? "password set" : "no password"}</strong>
+            {user.hasPin ? ", PIN set" : ", no PIN"}.
+          </span>
+        </div>
+
+        <Input
+          label="New password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          description="At least 8 characters."
+        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="primary" disabled={busy || password.length < 8} onClick={() => call({ password }, "Password set")}>
+            Set password
+          </Button>
+          {user.hasPassword && (
+            <Button variant="ghost" disabled={busy} onClick={() => call({ password: null }, "Password cleared")}>
+              Clear
+            </Button>
+          )}
+        </div>
+
+        <Input
+          label="Terminal PIN"
+          inputMode="numeric"
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 10))}
+          description="4–10 digits, unique within the location."
+        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="primary" disabled={busy || pin.length < 4} onClick={() => call({ pin }, "PIN set")}>
+            Set PIN
+          </Button>
+          {user.hasPin && (
+            <Button variant="ghost" disabled={busy} onClick={() => call({ pin: null }, "PIN cleared")}>
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+    </Dialog>
   );
 }
 

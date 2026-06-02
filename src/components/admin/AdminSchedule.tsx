@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
+import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 
@@ -39,13 +40,7 @@ const STATUS_LABEL: Record<ShiftStatus, string> = {
   missed: "Missed",
 };
 
-const ROLE_LABEL: Record<StaffRole, string> = {
-  manager: "Manager",
-  kitchen: "Kitchen",
-  front: "Front of house",
-  driver: "Driver",
-  courier: "Courier",
-};
+const ROLE_LABEL = STAFF_ROLE_LABEL;
 
 function isoDate(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -427,12 +422,9 @@ function ShiftDialog({
           label="Role on this shift"
           value={role}
           onChange={(e) => setRole(e.target.value as StaffRole)}
-          options={[
-            { value: "manager", label: ROLE_LABEL.manager },
-            { value: "kitchen", label: ROLE_LABEL.kitchen },
-            { value: "front", label: ROLE_LABEL.front },
-            { value: "driver", label: ROLE_LABEL.driver },
-          ]}
+          options={STAFF_ROLE_OPTIONS.flatMap((g) =>
+            g.roles.map((r) => ({ value: r, label: ROLE_LABEL[r] })),
+          )}
         />
         <Select
           label="Status"

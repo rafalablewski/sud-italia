@@ -83,3 +83,40 @@ export function verifyPasswordHash(plain: string, stored: string): boolean {
   if (derived.length !== expected.length) return false;
   return timingSafeEqual(derived, expected);
 }
+
+// --- PIN credentials (terminal login) -------------------------------------
+//
+// A PIN is just a short password: same scrypt construction so a stored PIN
+// hash is indistinguishable from a password hash and equally expensive to
+// brute-force offline. The only differences are policy — we require digits
+// and a 4–10 length so the terminal keypad stays numeric — and that PIN login
+// is always rate-limited and location-scoped to shrink the online search space.
+
+export const PIN_MIN_LENGTH = 4;
+export const PIN_MAX_LENGTH = 10;
+
+/** True when `value` is a syntactically acceptable PIN (digits, 4–10 long). */
+export function isValidPin(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^\d+$/.test(value) &&
+    value.length >= PIN_MIN_LENGTH &&
+    value.length <= PIN_MAX_LENGTH
+  );
+}
+
+/** Hashes a PIN with the same salted scrypt as passwords. Throws on a bad PIN. */
+export function hashPin(pin: string): string {
+  if (!isValidPin(pin)) {
+    throw new Error(
+      `hashPin: PIN must be ${PIN_MIN_LENGTH}–${PIN_MAX_LENGTH} digits`,
+    );
+  }
+  return hashPassword(pin);
+}
+
+/** Constant-time PIN verification against a stored hash. */
+export function verifyPin(pin: string, stored: string): boolean {
+  if (typeof pin !== "string") return false;
+  return verifyPasswordHash(pin, stored);
+}

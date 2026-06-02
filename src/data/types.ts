@@ -739,7 +739,25 @@ export interface CustomerNote {
 
 // --- Staff / HR ---
 
-export type StaffRole = "manager" | "kitchen" | "front" | "driver" | "courier";
+/**
+ * Job titles, not access tiers. The granular title lives on the roster so a
+ * manager hires a "pizzaiolo" or a "waiter" — not an abstract "kitchen" or
+ * "front" worker. Each title maps to an access role + landing surface via
+ * `src/lib/staff-roles.ts` (kitchen titles → KDS, floor titles → POS).
+ *
+ * The legacy values (`kitchen`, `front`) are kept so pre-existing roster rows
+ * and shifts keep validating; new hires pick a specific title.
+ */
+export type StaffRole =
+  | "manager"
+  | "pizzaiolo"
+  | "chef"
+  | "kp"
+  | "kitchen"
+  | "waiter"
+  | "front"
+  | "driver"
+  | "courier";
 export type StaffStatus = "active" | "inactive";
 
 export interface StaffMember {
@@ -758,6 +776,12 @@ export interface StaffMember {
   status: StaffStatus;
   notes?: string;
   createdAt: string;
+  /**
+   * Links this roster row to its login account (AdminUser) when the manager
+   * granted "login access" at hire time. Set on both sides (AdminUser.staffId)
+   * so deleting/disabling one can cascade to the other.
+   */
+  userId?: string;
 }
 
 export type ShiftStatus = "scheduled" | "in-progress" | "done" | "missed";
@@ -943,6 +967,48 @@ export interface AdminUser {
   totpSecret?: string;
   /** True once the user confirms a code — login then requires a TOTP. */
   totpEnabled?: boolean;
+  /**
+   * Per-user scrypt password hash (format from `src/lib/password.ts`). When
+   * set, login verifies against THIS — the account no longer rides the shared
+   * ADMIN_PASSWORD. Absent for the bootstrap owner, who keeps the shared
+   * secret until they set a personal one.
+   */
+  passwordHash?: string;
+  /**
+   * Per-user scrypt PIN hash, for fast login on a shared kitchen/POS terminal
+   * (`/terminal`). Same hash format as the password; kept separate so a short
+   * PIN never doubles as the full password.
+   */
+  pinHash?: string;
+  /** Links a login account back to its roster row (StaffMember.id). */
+  staffId?: string;
+  /**
+   * Registered WebAuthn credentials (passkeys / hardware security keys such as
+   * a YubiKey) the account can authenticate with — phishing-resistant, no
+   * shared secret, private key never leaves the authenticator.
+   */
+  webauthnCredentials?: WebAuthnCredential[];
+  /**
+   * Transient challenge issued during passkey enrollment, consumed by
+   * register-finish then cleared. Login challenges live in a short-lived signed
+   * cookie instead, since there's no session yet at that point.
+   */
+  currentWebauthnChallenge?: string;
+}
+
+/** One registered passkey / security key. Public key only — never a secret. */
+export interface WebAuthnCredential {
+  /** Base64url credential ID (the authenticator's handle). */
+  id: string;
+  /** Base64 COSE public key. */
+  publicKey: string;
+  /** Signature counter, bumped each auth to detect cloned authenticators. */
+  counter: number;
+  /** Hints like "usb" / "nfc" / "internal" for the browser prompt. */
+  transports?: string[];
+  /** Operator-friendly label, e.g. "YubiKey 5C" or "MacBook Touch ID". */
+  name?: string;
+  createdAt: string;
 }
 
 // --- Business costs (operating expenses ledger) ---

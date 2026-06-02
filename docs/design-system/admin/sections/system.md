@@ -9,6 +9,7 @@ chain-wide configuration.
 | Page                              | Code                                                      | Role-gate |
 | --------------------------------- | --------------------------------------------------------- | --------- |
 | `/admin/users`                    | `src/components/admin/AdminUsers.tsx`                     | **owner**   |
+| `/admin/permissions`              | `src/components/admin/AdminPermissions.tsx`               | **owner**   |
 | `/admin/compliance`               | `src/components/admin/AdminCompliance.tsx`                | manager+  |
 | `/admin/regulatory-compliance`    | `src/app/admin/regulatory-compliance/page.tsx`            | **owner**   |
 | `/admin/soc2`                     | `src/components/admin/AdminSoc2.tsx`                      | **owner**   |
@@ -55,19 +56,44 @@ actually reach.
   primary.
 - **Table:** name + email, role, **Access** (`Full access` for owners,
   `Custom · N` when the account carries a custom grant, else
-  `Role default`), location scope, status (`active` / `disabled`),
-  `MFA` (On / Off), row actions (`MFA`, `Edit`, delete). Live code:
-  `AdminUsers.tsx`.
+  `Role default`), location scope, **Sign-in** (`Password` / `No password`
+  + a `PIN` chip when one is set + an `N keys` chip when passkeys are
+  registered; owners read `Shared / own`), status (`active` / `disabled`),
+  `MFA` (On / Off), row actions (`Login`, `MFA`, `Keys`, `Edit`, delete). Live
+  code: `AdminUsers.tsx`.
+- **Login & credentials (owner-only):** the `Login` row action (shown to
+  owners, for non-owner accounts) opens `CredentialsDialog` — set / clear a
+  per-user **password** (min 8) and a terminal **PIN** (4–10 digits, unique
+  per location). Posts to `POST /api/admin/users/[id]/credentials`
+  (owner-only, audited `users.credentials_set`). Once a personal password is
+  set, that account's `/admin/login` verifies against its own scrypt hash and
+  no longer accepts the shared `ADMIN_PASSWORD`. Secrets never leave the
+  server — the users API strips `passwordHash` / `pinHash` / `totpSecret` from
+  reads and exposes only `hasPassword` / `hasPin` / `totpEnabled` booleans.
 - **MFA (TOTP):** the `MFA` row action opens an enrollment dialog —
   Begin setup → add the shown secret to an authenticator app → confirm
   a 6-digit code to turn it on (or disable, with a current code; an
   owner can force-disable for recovery). Once enabled, `/admin/login`
-  requires the code in addition to the shared password. Per-user enroll
+  requires the code in addition to the password. Per-user enroll
   is self-service only; the shared owner session is covered by
   `ADMIN_TOTP_SECRET` instead. Secrets never leave the server — the
   users API strips `totpSecret` from reads. Code:
   `src/app/api/admin/users/[id]/mfa/route.ts`,
   `src/app/admin/login/page.tsx`, `src/lib/totp.ts`.
+- **Passkeys / security keys (WebAuthn):** the `Keys` row action opens
+  `PasskeyDialog` — the account holder (self-only enroll, like MFA) registers
+  a hardware key (YubiKey) or device passkey (Touch ID / Windows Hello) with
+  `@simplewebauthn/browser`; the list shows each key with a remove action (an
+  owner can remove a lost key for recovery). At `/admin/login` the holder
+  enters their email and taps the key — passwordless, phishing-resistant.
+  Server: enrollment `POST /api/admin/users/[id]/webauthn`
+  (`register-begin` / `register-finish` / `delete`), login
+  `POST /api/admin/webauthn/authenticate` (`begin` / `finish`). RP id + origin
+  derive from the request host (`src/lib/webauthn.ts`), overridable with
+  `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN`. Public keys + counters never ship to
+  the client — the users API exposes only a sanitized `webauthnKeys` list
+  (id, name, createdAt, transports). The enrollment challenge sits on the user
+  row; the login challenge rides a short-lived signed cookie (no session yet).
 - **Edit** opens an `lg` dialog (name, email, role, status, location
   scope, notes, **permissions**); save preserves the user's MFA fields
   rather than wiping them.
@@ -76,13 +102,26 @@ actually reach.
   the upsert form). Don't add roles ad-hoc — every new role is a
   `nav.config.ts` + permission-catalog audit.
 - **Distinguish admin user from staff** — `/admin/users` is for admin
-  login accounts; `/admin/staff` is for the people who clock in. The
-  same person can have both records (linked by email).
+  login accounts; `/admin/staff` is for the people who clock in. The same
+  person can have both records: when a manager hires with login access the
+  staff route provisions the `AdminUser` and links the two
+  (`AdminUser.staffId` ↔ `StaffMember.userId`, the former authoritative). The
+  owner creates manager/owner accounts here; managers create staff/kitchen
+  logins through the hire flow (`staff.hire`) — never here.
+- **Login surfaces + role routing.** Three doors mint the *same* signed,
+  location-scoped session: `/admin/login` (email + per-user password with
+  optional TOTP, **or** a passwordless passkey / security key), and
+  `/terminal` (numeric PIN on a shared kitchen/POS device →
+  `POST /api/terminal/login`, location-scoped + 5/min/IP limited). All route
+  by role via `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` →
+  `/admin/kds`, `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`.
+  Each login API returns the `landing` path so the page redirect has one
+  source of truth.
 
 ### Granular permissions (action-level RBAC)
 
 The unit of authority is a **permission**, not a role. The catalog —
-**70 action-level keys** grouped by domain (orders, guests, menu,
+**71 action-level keys** grouped by domain (orders, guests, menu,
 inventory, people, finance, growth, intelligence, system) — lives in
 `src/lib/permissions.ts` and is the **single source of truth that gates
 both the UI and the API**. Never hard-code a permission string at a call
@@ -151,6 +190,33 @@ site; add/extend a key in the catalog so a typo fails to compile.
   preset(s), and extend `permissionForAdminPage` / `permissionForApiPath`
   if it introduces a new page or route segment. The editor, nav filter,
   page guard, and API gate all pick it up automatically.
+
+## Permission matrix — `/admin/permissions`
+
+The **live** cross-tab of capabilities × access — a visualization (and control
+surface) over the same RBAC model the rest of the section configures. Owner-only.
+
+- **Nothing is hand-maintained.** Rows come from `PERMISSION_GROUPS`
+  (`src/lib/permissions.ts`), the columns and cells from the role presets
+  (`ROLE_DEFAULT_PERMISSIONS`) and the live `/api/admin/users` list resolved
+  through `resolveEffectivePermissions`. Add a capability key or a user and it
+  appears here automatically — never add a row/column by hand.
+- **KPI row:** capability count, role count, user-account count, custom-grant
+  count (`KpiCard`, no ⓘ — plain metrics).
+- **Two views** (`Tabs`): **By role** (columns = `owner` / `franchisee` /
+  `manager` / `staff` / `kitchen`, cells = the role's *default* grant, owner =
+  all; read-only, since presets are code) and **By user** (columns = real
+  accounts sorted owners → rank → name, cells = each account's *effective*
+  access with a `custom` / count hint in the header).
+- **Editable cells (By user, owner-only):** clicking a cell grants/revokes that
+  capability for that account. It resolves the user's current effective set,
+  flips the one key, and `PUT`s a fully-custom `permissions` array to the
+  owner-only `/api/admin/users` (the account stops inheriting role defaults).
+  Optimistic update, then the matrix re-reads so it always reflects server
+  truth; owner columns are locked (always all-access).
+- **Search + group filter** (`Chip` row) narrow the rows; a sticky first column
+  + header keep orientation while scrolling a wide user grid. Green check =
+  granted, muted dash = not. Code: `AdminPermissions.tsx`.
 
 ## Compliance calendar — `/admin/compliance`
 

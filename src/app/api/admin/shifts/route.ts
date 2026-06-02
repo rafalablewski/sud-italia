@@ -7,7 +7,17 @@ import { partitionViolations, validateShift } from "@/lib/scheduling-rules";
 import type { Shift, ShiftStatus, StaffRole } from "@/data/types";
 
 const VALID_STATUS: ShiftStatus[] = ["scheduled", "in-progress", "done", "missed"];
-const VALID_ROLES: StaffRole[] = ["manager", "kitchen", "front", "driver"];
+const VALID_ROLES: StaffRole[] = [
+  "manager",
+  "pizzaiolo",
+  "chef",
+  "kp",
+  "kitchen",
+  "waiter",
+  "front",
+  "driver",
+  "courier",
+];
 
 export const GET = withAdmin(
   { locationParam: "location" },

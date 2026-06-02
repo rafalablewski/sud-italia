@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -12,6 +12,8 @@ import {
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { logger } from "@/lib/logger";
+import { hashPassword, hashPin, verifyPin } from "@/lib/password";
+import { staffRoleToAdminRole } from "@/lib/staff-roles";
 import { withDistributedLock } from "@/lib/locks";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
@@ -6737,6 +6739,7 @@ export async function saveStaff(
       status: input.status,
       notes: input.notes,
       createdAt: input.createdAt ?? new Date().toISOString(),
+      userId: input.userId,
     };
     const i = list.findIndex((s) => s.id === member.id);
     if (i >= 0) list[i] = member;
@@ -7289,6 +7292,8 @@ export async function saveAdminUser(
      *  - `undefined` (omitted) → leave whatever is already stored untouched.
      */
     permissions?: string[] | null;
+    /** Link to a roster row (set when an account is provisioned at hire). */
+    staffId?: string;
   },
 ): Promise<AdminUser> {
   return withLock("admin-users.json", async () => {
@@ -7310,6 +7315,7 @@ export async function saveAdminUser(
       notes: input.notes,
       createdAt: input.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     };
+    if (input.staffId !== undefined) user.staffId = input.staffId;
     if (input.permissions !== undefined) {
       if (input.permissions === null) delete user.permissions;
       else user.permissions = input.permissions;
@@ -7359,6 +7365,246 @@ export async function deleteAdminUser(id: string): Promise<boolean> {
     await writeJSON("admin-users.json", filtered);
     return true;
   });
+}
+
+/** Case-insensitive lookup of a login account by email (any status). */
+export async function getAdminUserByEmail(
+  email: string,
+): Promise<AdminUser | undefined> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return undefined;
+  const list = await getAdminUsers();
+  return list.find((u) => u.email?.toLowerCase() === normalized);
+}
+
+/**
+ * Sets (or clears) the per-user password and/or PIN. `undefined` leaves a
+ * credential untouched; `null` clears it; a string is hashed and stored.
+ * Returns the updated row or null when the id is unknown. Hashing happens here
+ * so a plaintext secret never lands in a JSON column.
+ */
+export async function setAdminUserCredentials(
+  id: string,
+  creds: { plain?: string | null; pin?: string | null },
+): Promise<AdminUser | null> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return null;
+    const next: AdminUser = { ...list[i] };
+    if (creds.plain !== undefined) {
+      if (creds.plain === null) delete next.passwordHash;
+      else next.passwordHash = hashPassword(creds.plain);
+    }
+    if (creds.pin !== undefined) {
+      if (creds.pin === null) delete next.pinHash;
+      else next.pinHash = hashPin(creds.pin);
+    }
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+    return next;
+  });
+}
+
+/** Sets an account's status (active/disabled). Returns the row or null. */
+export async function setAdminUserStatus(
+  id: string,
+  status: AdminUser["status"],
+): Promise<AdminUser | null> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return null;
+    if (list[i].status === status) return list[i];
+    list[i] = { ...list[i], status };
+    await writeJSON("admin-users.json", list);
+    return list[i];
+  });
+}
+
+/** Finds the login account linked to a roster row, if any. */
+export async function getAdminUserByStaffId(
+  staffId: string,
+): Promise<AdminUser | undefined> {
+  const list = await getAdminUsers();
+  return list.find((u) => u.staffId === staffId);
+}
+
+// --- WebAuthn (passkey / security key) -------------------------------------
+
+/** Stores the transient enrollment challenge (or clears it with null). */
+export async function setAdminUserWebauthnChallenge(
+  id: string,
+  challenge: string | null,
+): Promise<void> {
+  await withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return;
+    const next = { ...list[i] };
+    if (challenge === null) delete next.currentWebauthnChallenge;
+    else next.currentWebauthnChallenge = challenge;
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+  });
+}
+
+/** Appends a verified credential and clears the enrollment challenge. */
+export async function addAdminUserWebauthnCredential(
+  id: string,
+  cred: WebAuthnCredential,
+): Promise<AdminUser | null> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return null;
+    const next: AdminUser = { ...list[i] };
+    const existing = (next.webauthnCredentials ?? []).filter((c) => c.id !== cred.id);
+    next.webauthnCredentials = [...existing, cred];
+    delete next.currentWebauthnChallenge;
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+    return next;
+  });
+}
+
+/** Removes a registered credential by its base64url id. */
+export async function removeAdminUserWebauthnCredential(
+  id: string,
+  credentialId: string,
+): Promise<AdminUser | null> {
+  return withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return null;
+    const next: AdminUser = { ...list[i] };
+    next.webauthnCredentials = (next.webauthnCredentials ?? []).filter(
+      (c) => c.id !== credentialId,
+    );
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+    return next;
+  });
+}
+
+/** Bumps a credential's signature counter after a successful authentication. */
+export async function updateWebauthnCredentialCounter(
+  id: string,
+  credentialId: string,
+  counter: number,
+): Promise<void> {
+  await withLock("admin-users.json", async () => {
+    const list = await readJSON<AdminUser[]>("admin-users.json", []);
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return;
+    const next: AdminUser = { ...list[i] };
+    next.webauthnCredentials = (next.webauthnCredentials ?? []).map((c) =>
+      c.id === credentialId ? { ...c, counter } : c,
+    );
+    list[i] = next;
+    await writeJSON("admin-users.json", list);
+  });
+}
+
+/**
+ * True when another active account at `locationSlug` already answers to `pin`.
+ * PIN login is location-scoped, so collisions only matter within one site —
+ * we reject a duplicate at set-time so the terminal never has to disambiguate.
+ */
+export async function pinExistsAtLocation(
+  locationSlug: string,
+  pin: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const list = await getAdminUsers();
+  return list.some(
+    (u) =>
+      u.id !== exceptId &&
+      u.status === "active" &&
+      u.pinHash != null &&
+      (u.locationSlug === locationSlug || u.role === "owner") &&
+      verifyPin(pin, u.pinHash),
+  );
+}
+
+/**
+ * True when ANY active account answers to `pin`, regardless of location. Used
+ * when setting a PIN on an unscoped account (owner / no locationSlug): such a
+ * PIN matches at every terminal (see findAdminUserByPin), so it must be globally
+ * unique — a per-location check would skip it entirely and let it collide.
+ */
+export async function pinExistsAnywhere(
+  pin: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const list = await getAdminUsers();
+  return list.some(
+    (u) =>
+      u.id !== exceptId &&
+      u.status === "active" &&
+      u.pinHash != null &&
+      verifyPin(pin, u.pinHash),
+  );
+}
+
+/**
+ * Resolves a terminal PIN to its account, scoped to one location. Returns the
+ * active account whose PIN matches, or null. Owners (unscoped) are included so
+ * an operator can unlock any terminal with their own PIN.
+ */
+export async function findAdminUserByPin(
+  locationSlug: string,
+  pin: string,
+): Promise<AdminUser | null> {
+  const list = await getAdminUsers();
+  for (const u of list) {
+    if (u.status !== "active" || !u.pinHash) continue;
+    const scoped =
+      u.role === "owner" || !u.locationSlug || u.locationSlug === locationSlug;
+    if (!scoped) continue;
+    if (verifyPin(pin, u.pinHash)) return u;
+  }
+  return null;
+}
+
+/**
+ * Hires-with-login: provisions (or updates) the login account linked to a
+ * roster row, and writes the link on both sides. The access tier is derived
+ * from the job title (`staffRoleToAdminRole`) so a pizzaiolo lands on the KDS
+ * and a waiter on the POS — the caller never picks the tier directly. Returns
+ * the account; the staff route enforces who may call this and at which site.
+ */
+export async function provisionStaffLogin(args: {
+  staff: StaffMember;
+  email?: string;
+  plain?: string;
+  pin?: string;
+}): Promise<AdminUser> {
+  const { staff } = args;
+  const role = staffRoleToAdminRole(staff.role);
+  // Reuse the existing account when the roster row is already linked.
+  const existingId = staff.userId;
+  const account = await saveAdminUser({
+    id: existingId,
+    name: staff.name,
+    email: args.email || staff.email,
+    role,
+    status: staff.status === "active" ? "active" : "disabled",
+    locationSlug: staff.locationSlug,
+    staffId: staff.id,
+  });
+  if (args.plain || args.pin) {
+    await setAdminUserCredentials(account.id, {
+      plain: args.plain,
+      pin: args.pin,
+    });
+  }
+  // Backlink the roster row to the account (best-effort; AdminUser.staffId is
+  // the authoritative link since admin-users.json always round-trips it).
+  if (staff.userId !== account.id) {
+    await saveStaff({ ...staff, userId: account.id });
+  }
+  return account;
 }
 
 /**

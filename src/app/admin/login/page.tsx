@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn } from "lucide-react";
+import { KeyRound, LogIn } from "lucide-react";
+import { startAuthentication } from "@simplewebauthn/browser";
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
@@ -11,7 +12,49 @@ export default function AdminLoginPage() {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [keyLoading, setKeyLoading] = useState(false);
   const router = useRouter();
+
+  const land = (data: { landing?: unknown } | null) =>
+    router.push(typeof data?.landing === "string" ? data.landing : "/admin");
+
+  const handleSecurityKey = async () => {
+    if (!email.trim()) {
+      setError("Enter your email, then tap your security key.");
+      return;
+    }
+    setError("");
+    setKeyLoading(true);
+    try {
+      const begin = await fetch("/api/admin/webauthn/authenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "begin", email: email.trim() }),
+      });
+      const options = await begin.json().catch(() => null);
+      if (!begin.ok) {
+        setError(options?.error || "No security key registered for this email.");
+        return;
+      }
+      const assertion = await startAuthentication({ optionsJSON: options });
+      const finish = await fetch("/api/admin/webauthn/authenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "finish", email: email.trim(), response: assertion }),
+      });
+      const data = await finish.json().catch(() => null);
+      if (!finish.ok) {
+        setError(data?.error || "Security key sign-in failed");
+        return;
+      }
+      land(data);
+    } catch (err) {
+      // A user cancelling the browser prompt throws — keep it quiet-ish.
+      setError(err instanceof Error && /abort|cancel/i.test(err.message) ? "Cancelled" : "Security key sign-in failed");
+    } finally {
+      setKeyLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +72,9 @@ export default function AdminLoginPage() {
         }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
         if (data?.mfaRequired) {
           // Password was correct — now reveal the code field and prompt.
           setMfaRequired(true);
@@ -41,7 +85,9 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push("/admin");
+      // Land each role on its surface: kitchen → KDS, floor → POS, otherwise
+      // the dashboard. The server computes this from the resolved role.
+      land(data);
     } catch {
       setError("Something went wrong");
     } finally {
@@ -116,6 +162,22 @@ export default function AdminLoginPage() {
                   Log In
                 </>
               )}
+            </button>
+
+            <div className="flex items-center gap-3 my-1">
+              <span className="flex-1 h-px bg-white/10" />
+              <span className="admin-text-dim text-xs">or</span>
+              <span className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSecurityKey}
+              disabled={keyLoading}
+              className="w-full py-3 glass-input rounded-xl font-medium admin-text flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <KeyRound className="h-4 w-4" />
+              {keyLoading ? "Waiting for key…" : "Sign in with passkey / security key"}
             </button>
           </form>
         </div>

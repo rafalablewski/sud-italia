@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
   Users,
   Layers,
+  Grid3x3,
   Wallet,
   Receipt,
   Contact,
@@ -187,6 +188,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "System",
     items: [
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck, requiredRole: "owner" },
+      { href: "/admin/permissions", label: "Permission matrix", icon: Grid3x3, requiredRole: "owner" },
       { href: "/admin/compliance", label: "Compliance", icon: CalendarCheck2, requiredRole: "manager" },
       { href: "/admin/regulatory-compliance", label: "Regulatory disclosures", icon: ShieldCheck, requiredRole: "owner" },
       { href: "/admin/soc2", label: "SOC 2 controls", icon: ShieldCheck, requiredRole: "owner" },
