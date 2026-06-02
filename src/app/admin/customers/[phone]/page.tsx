@@ -7,7 +7,7 @@ export default async function AdminCustomerDetailPage({
 }: {
   params: Promise<{ phone: string }>;
 }) {
-  if (!(await isAuthenticated())) redirect("/admin/login");
+  if (!(await isAuthenticated())) redirect("/login");
   const { phone } = await params;
   return <AdminCustomerDetail phoneEncoded={phone} />;
 }

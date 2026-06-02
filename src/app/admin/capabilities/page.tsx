@@ -18,7 +18,7 @@ import { gatewayConfigured } from "@/lib/ai/gateway";
 
 export default async function CapabilitiesPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   const env = process.env;
@@ -143,7 +143,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/terminal",
           envVars: ["WEBAUTHN_RP_ID", "WEBAUTHN_ORIGIN"],
-          summary: "Professional per-person sign-in, three doors that all mint the same signed, location-scoped session and route by role (kitchen → KDS, floor → POS, manager/owner → dashboard): (1) email + per-user scrypt password (optional TOTP) at /admin/login; (2) a fast numeric PIN at the shared terminal /terminal (location-scoped, 5/min/IP); (3) passwordless passkey / hardware security key (YubiKey, Touch ID) via WebAuthn — phishing-resistant, enrolled self-service in /admin/users → Keys, verified at /admin/webauthn/authenticate. RP id/origin derive from the request host; override with WEBAUTHN_RP_ID + WEBAUTHN_ORIGIN behind a proxy. A linked staff login is auto-disabled when the roster row goes inactive or is removed.",
+          summary: "Professional per-person sign-in across separate doors that all mint the same signed, location-scoped session and route by role (kitchen → KDS, floor → POS, manager/owner → dashboard). Doors: /admin/login is the OWNER-ONLY admin door; /login is the universal team door (managers, pizzaiolo, chef, KP, waiter — and owners) — both render the shared LoginForm and send a portal flag the API enforces (a non-owner is rejected at /admin/login and pointed to /login); /terminal is a fast numeric PIN for shared kitchen/POS devices (location-scoped, 5/min/IP). Methods: email + per-user scrypt password (optional TOTP); passwordless passkey / hardware security key (YubiKey, Touch ID) via WebAuthn (enrolled self-service in /admin/users → Keys, verified at /api/admin/webauthn/authenticate). Unauthenticated /admin/* redirects to /login. RP id/origin derive from the request host; override with WEBAUTHN_RP_ID + WEBAUTHN_ORIGIN behind a proxy. A linked staff login is auto-disabled when the roster row goes inactive or is removed.",
         },
         {
           name: "Granular permissions (action-level RBAC)",

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   });
   if (rl) return rl;
 
-  let body: { action?: string; email?: unknown; response?: unknown };
+  let body: { action?: string; email?: unknown; response?: unknown; portal?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
   }
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
+  // Same portal separation as the password login: the admin door is owner-only.
+  const portal = body.portal === "admin" ? "admin" : "staff";
 
   const { rpID, origin } = getRpConfig(req);
 
@@ -121,6 +123,11 @@ export async function POST(req: NextRequest) {
         return fail(401, err instanceof Error ? err.message : "Authentication failed");
       }
       if (!verification.verified) return fail(401, "Authentication failed");
+
+      // Owner-only admin door (mirrors the password login).
+      if (portal === "admin" && user.role !== "owner") {
+        return fail(403, "This is the admin portal. Managers and staff sign in at /login.");
+      }
 
       await updateWebauthnCredentialCounter(
         user.id,

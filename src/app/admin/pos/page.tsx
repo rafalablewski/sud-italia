@@ -9,7 +9,7 @@ import type { UpsellConfig } from "@/lib/upsell";
 
 export default async function AdminPosPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   // Menu + combo config are per-location and rarely change — pass each active
   // truck's snapshot to the client so the POS can switch locations without a

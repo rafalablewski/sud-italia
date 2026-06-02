@@ -4,7 +4,7 @@ import { AdminOrders } from "@/components/admin/AdminOrders";
 
 export default async function AdminOrdersPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminOrders />;

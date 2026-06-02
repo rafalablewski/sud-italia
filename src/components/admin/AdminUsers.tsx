@@ -64,18 +64,20 @@ function landingLabel(role: AdminRole): string {
  * an operator can see exactly how each person gets in.
  */
 function describeLogin(u: AdminUserRow): { methods: string[]; mfa: boolean; landing: string; locations: string[] } {
+  // Owners sign in at the admin door; everyone else at the universal /login.
+  const door = u.role === "owner" ? "/admin/login" : "/login";
   const methods: string[] = [];
   if (u.role === "owner") {
-    methods.push(`Email + ${u.hasPassword ? "their own password" : "the shared owner password"} at /admin/login`);
+    methods.push(`Email + ${u.hasPassword ? "their own password" : "the shared owner password"} at ${door}`);
   } else {
     methods.push(
       u.hasPassword
-        ? "Email + their own password at /admin/login"
-        : "Email + the shared admin password at /admin/login (no personal password set yet)",
+        ? `Email + their own password at ${door}`
+        : `Email + the shared admin password at ${door} (no personal password set yet)`,
     );
   }
   if (u.hasPin) methods.push("A 4–10 digit PIN on the shared terminal at /terminal");
-  if ((u.webauthnKeys?.length ?? 0) > 0) methods.push("A passkey / security key (YubiKey, Touch ID) at /admin/login — passwordless");
+  if ((u.webauthnKeys?.length ?? 0) > 0) methods.push(`A passkey / security key (YubiKey, Touch ID) at ${door} — passwordless`);
   return {
     methods,
     mfa: !!u.totpEnabled,
@@ -510,7 +512,7 @@ function PasskeyDialog({
         <div className="v2-note">
           <Fingerprint className="h-4 w-4" />
           <span>
-            Phishing-resistant sign-in with a hardware key (YubiKey) or device passkey (Touch ID, Windows Hello). At <span className="mono">/admin/login</span>, the holder enters their email and taps the key — no password needed.
+            Phishing-resistant sign-in with a hardware key (YubiKey) or device passkey (Touch ID, Windows Hello). At their sign-in page (<span className="mono">/login</span>, or <span className="mono">/admin/login</span> for owners), the holder enters their email and taps the key — no password needed.
           </span>
         </div>
 

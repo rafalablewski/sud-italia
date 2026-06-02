@@ -30,7 +30,7 @@ export default async function AdminGuestPage({
 }: {
   searchParams: Promise<{ view?: string | string[] }>;
 }) {
-  if (!(await isAuthenticated())) redirect("/admin/login");
+  if (!(await isAuthenticated())) redirect("/login");
 
   const { view } = await searchParams;
   // searchParams values can be string | string[] (e.g. ?view=a&view=b) —

@@ -4,7 +4,7 @@ import { AdminWaste } from "@/components/admin/AdminWaste";
 
 export default async function AdminWastePage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminWaste />;
 }

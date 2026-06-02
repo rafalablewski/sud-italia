@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = await parseBody(req, adminLoginSchema);
   if ("error" in parsed) return parsed.error;
-  const { password, email, totp } = parsed.data;
+  const { password, email, totp, portal } = parsed.data;
 
   try {
 
@@ -121,6 +121,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Portal separation: the admin door (/admin/login) is owner-only. Managers,
+    // staff and kitchen sign in at the universal /login door. We reject here
+    // (before minting the cookie) so a non-owner can't establish a session via
+    // the admin portal — they're pointed at /login instead.
+    const role: AdminRole = resolvedRole ?? "owner";
+    if (portal === "admin" && role !== "owner") {
+      return NextResponse.json(
+        {
+          error: "This is the admin portal. Managers and staff sign in at /login.",
+          wrongPortal: true,
+        },
+        { status: 403 },
+      );
+    }
+
     const token = createSession(userId, locationScope);
 
     await appendAuditLog({
@@ -135,7 +150,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const role: AdminRole = resolvedRole ?? "owner";
     const response = NextResponse.json({
       success: true,
       userId,

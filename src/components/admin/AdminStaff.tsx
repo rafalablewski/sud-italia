@@ -650,8 +650,8 @@ function StaffDialog({ canHire, state, onClose, onSaved }: { canHire: boolean; s
                   <Monitor className="h-4 w-4" />
                   <span>
                     Access tier: <strong>{accessRole}</strong> · lands on{" "}
-                    <strong>{landingLabel(role)}</strong>. They can sign in with email + password at{" "}
-                    <span className="mono">/admin/login</span>, or tap their PIN at the shared terminal{" "}
+                    <strong>{landingLabel(role)}</strong>. They sign in with email + password at{" "}
+                    <span className="mono">/login</span>, or tap their PIN at the shared terminal{" "}
                     <span className="mono">/terminal</span>.
                   </span>
                 </div>

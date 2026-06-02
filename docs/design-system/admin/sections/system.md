@@ -65,8 +65,9 @@ actually reach.
   `Keys`, `Edit`, delete). Live code: `AdminUsers.tsx`.
 - **"How they sign in" explainer.** The `Login` dialog opens with a
   plain-language summary (`describeLogin`): the exact doors open to that
-  account (own vs shared password at `/admin/login`, PIN at `/terminal`,
-  passwordless passkey), whether MFA is mandatory, the surface they land on
+  account (own vs shared password at their door — `/admin/login` for owners,
+  `/login` for everyone else — PIN at `/terminal`, passwordless passkey),
+  whether MFA is mandatory, the surface they land on
   (KDS / POS / dashboard via `landingPathForRole`), and any location
   restriction — so an operator can see precisely how each person gets in.
 - **Login & credentials (owner-only):** the `Login` row action (shown to
@@ -74,20 +75,21 @@ actually reach.
   per-user **password** (min 8) and a terminal **PIN** (4–10 digits, unique
   per location). Posts to `POST /api/admin/users/[id]/credentials`
   (owner-only, audited `users.credentials_set`). Once a personal password is
-  set, that account's `/admin/login` verifies against its own scrypt hash and
-  no longer accepts the shared `ADMIN_PASSWORD`. Secrets never leave the
+  set, sign-in at that account's door (`/login`, or `/admin/login` for owners)
+  verifies against its own scrypt hash and no longer accepts the shared
+  `ADMIN_PASSWORD`. Secrets never leave the
   server — the users API strips `passwordHash` / `pinHash` / `totpSecret` from
   reads and exposes only `hasPassword` / `hasPin` / `totpEnabled` booleans.
 - **MFA (TOTP):** the `MFA` row action opens an enrollment dialog —
   Begin setup → add the shown secret to an authenticator app → confirm
   a 6-digit code to turn it on (or disable, with a current code; an
-  owner can force-disable for recovery). Once enabled, `/admin/login`
+  owner can force-disable for recovery). Once enabled, sign-in (either door)
   requires the code in addition to the password. Per-user enroll
   is self-service only; the shared owner session is covered by
   `ADMIN_TOTP_SECRET` instead. Secrets never leave the server — the
   users API strips `totpSecret` from reads. Code:
   `src/app/api/admin/users/[id]/mfa/route.ts`,
-  `src/app/admin/login/page.tsx`, `src/lib/totp.ts`.
+  `src/components/auth/LoginForm.tsx`, `src/lib/totp.ts`.
 - **Passkeys / security keys (WebAuthn):** the `Keys` row action opens
   `PasskeyDialog` — the account holder (self-only enroll, like MFA) registers
   a hardware key (YubiKey) or device passkey (Touch ID / Windows Hello) with
@@ -125,15 +127,26 @@ actually reach.
   (`AdminUser.staffId` ↔ `StaffMember.userId`, the former authoritative). The
   owner creates manager/owner accounts here; managers create staff/kitchen
   logins through the hire flow (`staff.hire`) — never here.
-- **Login surfaces + role routing.** Three doors mint the *same* signed,
-  location-scoped session: `/admin/login` (email + per-user password with
-  optional TOTP, **or** a passwordless passkey / security key), and
-  `/terminal` (numeric PIN on a shared kitchen/POS device →
-  `POST /api/terminal/login`, location-scoped + 5/min/IP limited). All route
-  by role via `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` →
-  `/admin/kds`, `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`.
-  Each login API returns the `landing` path so the page redirect has one
-  source of truth.
+- **Login surfaces + role routing.** Separate doors, one shared session.
+  - **`/admin/login` — admin door, owner-only.** Email + password (optional
+    TOTP) or a passwordless passkey. The login APIs carry a `portal: "admin"`
+    flag and **reject any non-owner** before minting a cookie, pointing them at
+    `/login`. The legacy shared-password (no-email) owner session lives here.
+  - **`/login` — the universal team door** (`portal: "staff"`). Managers,
+    pizzaiolo, chef, KP, waiter (and owners too) sign in with email + password
+    / passkey. Both pages render the shared
+    `LoginForm` (`src/components/auth/LoginForm.tsx`).
+  - **`/terminal`** — numeric PIN on a shared kitchen/POS device →
+    `POST /api/terminal/login`, location-scoped + 5/min/IP limited.
+
+  All mint the *same* signed, location-scoped session and route by role via
+  `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/admin/kds`,
+  `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`. The login APIs
+  return the `landing` path so the redirect has one source of truth.
+  **Unauthenticated `/admin/*` access redirects to `/login`** (the universal
+  door), and logout returns there too — only the owner-only admin door is
+  `/admin/login`. Portal enforcement lives in `/api/admin/login` and
+  `/api/admin/webauthn/authenticate`.
 
 ### Granular permissions (action-level RBAC)
 

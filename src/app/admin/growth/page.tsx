@@ -4,7 +4,7 @@ import { AdminGrowth } from "@/components/admin/AdminGrowth";
 
 export default async function AdminGrowthPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminGrowth />;

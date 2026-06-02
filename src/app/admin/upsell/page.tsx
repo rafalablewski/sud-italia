@@ -4,7 +4,7 @@ import { AdminUpsell } from "@/components/admin/AdminUpsell";
 
 export default async function AdminUpsellPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminUpsell />;

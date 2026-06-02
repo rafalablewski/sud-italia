@@ -77,7 +77,10 @@ The shell owns:
   `useIsMobile()` is gone and `AdminShell` renders one chrome for every width.
   See [`mobile/`](./mobile/) for the historical shape + the deletion note.
 
-Login (`/admin/login`) is the only bare route — it renders without the shell.
+Login (`/admin/login`, the owner-only admin door) is the only bare route
+*inside* the admin shell — it renders without the chrome. The universal team
+door `/login` and the PIN `/terminal` are separate top-level routes outside the
+admin layout entirely (see System → Login surfaces).
 
 ## Theme + glass tokens
 

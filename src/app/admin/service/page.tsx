@@ -9,6 +9,6 @@ import { ServiceConsole } from "@/components/admin/service/ServiceConsole";
  * Slots, Demand and Twin views fold in here next.
  */
 export default async function AdminServicePage() {
-  if (!(await isAuthenticated())) redirect("/admin/login");
+  if (!(await isAuthenticated())) redirect("/login");
   return <ServiceConsole />;
 }

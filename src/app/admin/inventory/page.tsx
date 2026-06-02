@@ -4,7 +4,7 @@ import { AdminInventory } from "@/components/admin/AdminInventory";
 
 export default async function AdminInventoryPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminInventory />;
 }

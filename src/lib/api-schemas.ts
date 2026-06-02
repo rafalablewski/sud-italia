@@ -636,6 +636,9 @@ export const adminLoginSchema = z.object({
   // Optional 6-digit TOTP code, required only when the resolved account (or the
   // shared session via ADMIN_TOTP_SECRET) has MFA enabled.
   totp: z.string().regex(/^\d{6}$/).optional().or(z.literal("")),
+  // Which door the request came from. "admin" (/admin/login) is owner-only;
+  // everyone else uses the universal "staff" door (/login). Defaults to staff.
+  portal: z.enum(["admin", "staff"]).optional(),
 });
 
 // --- Helpers -------------------------------------------------------------

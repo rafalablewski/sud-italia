@@ -4,7 +4,7 @@ import { AdminLocationsManager } from "@/components/admin/AdminLocationsManager"
 
 export default async function AdminLocationsManagePage() {
   const user = await getCurrentAdminUser();
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/login");
   if (ROLE_RANK[user.role] < ROLE_RANK.owner) {
     redirect("/admin/locations");
   }

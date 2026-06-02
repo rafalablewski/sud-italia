@@ -4,7 +4,7 @@ import { getSettings } from "@/lib/store";
 import { AdminSimulation } from "@/components/admin/AdminSimulation";
 
 export default async function AdminSimulationPage() {
-  if (!(await isAuthenticated())) redirect("/admin/login");
+  if (!(await isAuthenticated())) redirect("/login");
   const settings = await getSettings();
   if (!settings.simulationEnabled) redirect("/admin/settings");
   return <AdminSimulation />;

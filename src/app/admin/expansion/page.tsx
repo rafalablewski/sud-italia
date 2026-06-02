@@ -4,7 +4,7 @@ import { AdminExpansion } from "@/components/admin/AdminExpansion";
 
 export default async function AdminExpansionPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminExpansion />;

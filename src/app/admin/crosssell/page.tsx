@@ -4,7 +4,7 @@ import { AdminCrossSell } from "@/components/admin/AdminCrossSell";
 
 export default async function AdminCrossSellPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AdminCrossSell />;

@@ -4,7 +4,7 @@ import { AdminHaccp } from "@/components/admin/AdminHaccp";
 
 export default async function AdminHaccpPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminHaccp />;
 }

@@ -13,7 +13,7 @@ import { MobileAlerts } from "@/components/admin/mobile/MobileAlerts";
  */
 export default async function AdminAlertsPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <MobileAlerts />;
 }

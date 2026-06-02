@@ -3,6 +3,6 @@ import { isAuthenticated } from "@/lib/admin-auth";
 import { AdminPurchaseOrders } from "@/components/admin/AdminPurchaseOrders";
 
 export default async function AdminPurchaseOrdersPage() {
-  if (!(await isAuthenticated())) redirect("/admin/login");
+  if (!(await isAuthenticated())) redirect("/login");
   return <AdminPurchaseOrders />;
 }

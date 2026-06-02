@@ -4,7 +4,7 @@ import { AuditLog } from "@/components/admin/AuditLog";
 
 export default async function AdminAuditLogPage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return <AuditLog />;

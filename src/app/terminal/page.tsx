@@ -158,7 +158,7 @@ export default function TerminalLoginPage() {
 
           <p className="admin-text-dim text-center mt-6 text-xs">
             Manager or owner?{" "}
-            <a href="/admin/login" className="underline">
+            <a href="/login" className="underline">
               Sign in with email
             </a>
           </p>

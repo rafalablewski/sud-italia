@@ -4,7 +4,7 @@ import { AdminRegulatoryCompliance } from "@/components/admin/AdminRegulatoryCom
 
 export default async function AdminRegulatoryCompliancePage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminRegulatoryCompliance />;
 }

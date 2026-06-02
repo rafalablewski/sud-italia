@@ -4,7 +4,7 @@ import { AdminCorporate } from "@/components/admin/AdminCorporate";
 
 export default async function AdminCorporatePage() {
   if (!(await isAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
   return <AdminCorporate />;
 }
