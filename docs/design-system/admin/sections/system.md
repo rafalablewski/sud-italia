@@ -170,6 +170,14 @@ actually reach.
   - **`/terminal`** — numeric PIN on a shared kitchen/POS device →
     `POST /api/terminal/login`, location-scoped + 5/min/IP limited.
 
+  `/login` and `/terminal` live outside the AdminShell, so each ships its own
+  `layout.tsx` (`src/app/login/layout.tsx`, `src/app/terminal/layout.tsx`) that
+  loads the Admin theme CSS + admin fonts and wraps the page in `.admin-bg` —
+  the same pattern `/kitchen` and `/franchisee` use. Without those layouts the
+  `glass-*` / `admin-text` utilities have no theme to read from and the forms
+  render unstyled (invisible `glass-btn` text), which previously blocked staff
+  from signing in.
+
   All mint the *same* signed, location-scoped session and route by role via
   `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/admin/kds`,
   `staff` → `/admin/pos`, manager/owner/franchisee → `/admin`. The login APIs

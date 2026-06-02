@@ -80,7 +80,11 @@ The shell owns:
 Login (`/admin/login`, the owner-only admin door) is the only bare route
 *inside* the admin shell — it renders without the chrome. The universal team
 door `/login` and the PIN `/terminal` are separate top-level routes outside the
-admin layout entirely (see System → Login surfaces).
+AdminShell, but they are **still admin-themed**: each ships its own
+`layout.tsx` that loads the Admin theme CSS + admin fonts and wraps children in
+`.admin-bg` (the same pattern as `/kitchen` and `/franchisee`), so the shared
+`LoginForm` and the PIN keypad render with the real glass tokens rather than
+unstyled (see System → Login surfaces).
 
 ## Theme + glass tokens
 
