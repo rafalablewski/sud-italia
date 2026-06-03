@@ -236,6 +236,40 @@ export async function qualifyReferralOnFirstPaidOrder(
 }
 
 /**
+ * Count of this owner's referrals that *qualified* (referee placed their first
+ * paid order) at or after `sinceMs`. Powers the weekly "Bring a Friend"
+ * challenge on /rewards — only referrals that landed this week count toward it.
+ */
+export async function countQualifiedReferralsSince(
+  phoneRaw: string,
+  sinceMs: number,
+): Promise<number> {
+  const phone = normalizePlPhoneE164(phoneRaw) || phoneRaw;
+  const db = getDb();
+  if (!db) return 0;
+  await ensureReferralTables();
+  const codeRows = await db
+    .select()
+    .from(referralCodes)
+    .where(eq(referralCodes.ownerPhone, phone))
+    .limit(1);
+  const code = codeRows[0]?.code;
+  if (!code) return 0;
+  const reds = await db
+    .select()
+    .from(referralRedemptions)
+    .where(eq(referralRedemptions.code, code));
+  let n = 0;
+  for (const r of reds) {
+    const isQualified = r.status === "qualified" || r.status === "rewarded";
+    if (isQualified && r.qualifiedAt && new Date(r.qualifiedAt).getTime() >= sinceMs) {
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
  * Per-owner stats for the customer-facing /rewards page and the
  * admin's per-customer detail.
  */

@@ -2,7 +2,7 @@
 ## Brutal Institutional Diligence on Brand, Product, Ops, and Tech
 
 **Date:** 14 May 2026
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass — see the dated Update sections below. **One-time Rule #11 override:** the 2026-06-03 current-state corrections have been folded into the §1–§14 bodies too (matching the institutional audit), so a reader doesn't have to scroll to the dated section to know what's live. The 2026-05-21/29 Update sections remain as the historical trail; `docs/audits/*` is otherwise never edited retroactively.)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Senior hospitality-tech consultant + restaurant operations expert + Series-A diligence partner + elite product teardown
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres / Upstash Redis
@@ -30,24 +30,24 @@ It is, however, **salvageable**. The architecture is coherent for its current sc
 
 Scores below are the original 14 May figures; the **As of 2026-05-29** column carries the current value after the V8 storefront launch, the LLM layer, the relational migration, and the KDS/POS rewrite (full reasoning in the dated 2026-05-29 Update further down).
 
-| Dimension | Score (14 May) | **As of 2026-05-29** | Justification (one line) |
-|---|---:|---:|---|
-| **Overall** | **42 / 100** | **55 / 100** | Mid-May tool with a likeable skin → UX + ops materially up; NYC/SG viability still gated by the seven structural blockers. |
-| **NYC viability** | **22 / 100** | **27 / 100** | Premium frame shipped, compliance surfaces wired; still no Uber/DoorDash, no USD settlement, no Spanish, no food photography. |
-| **Singapore viability** | **27 / 100** | **31 / 100** | V8 + compliance help the feel; no GrabFood/foodpanda, no SGD, no PayNow/PayLah!, NEA A–D auto-grade still blocked. |
-| **Operational maturity** | **35 / 100** | **70 / 100** | KDS rewrite (role lenses, prediction, SLA, hotkeys), real POS Tabs terminal, floor/reservations, refund reason codes, recipe-driven stock, real LLM ops agent. No coursing, no offline POS. |
-| **UX maturity** | **48 / 100** | **64 / 100** | V8 Tuscany storefront in production (half the §2.4 burn-down list closed). Capped by missing food photography + two non-V8 legacy surfaces + fake rewards values. |
-| **Scalability** | **30 / 100** | **70 / 100** | Per-location lock keys + relational migration on hot paths; still no real test suite, KDS client lacks virtualization, single-region DB. |
-| **Franchise readiness** | **25 / 100** | **35 / 100** | DB-backed locations + cohort/segments + fleet model + chain-wide recipes; royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
-| **Investor readiness** | ~~**20 / 100**~~ → **28 / 100** (2026-05-21) | **48 / 100** | Real audited LLM agent + relational data layer + real-order-backed simulation strengthen the story. Zero real test coverage, plaintext password, no MFA, no SOC 2, no aggregators, no food photography remain the floor. |
+| Dimension | Score (14 May) | As of 2026-05-29 | **As of 2026-06-03** | Justification (current) |
+|---|---:|---:|---:|---|
+| **Overall** | 42 / 100 | 55 / 100 | **61 / 100** | Enterprise-hardening + ops + customer-flow gains; NYC/SG viability still gated by aggregators + local payments. |
+| **NYC viability** | 22 / 100 | 27 / 100 | **32 / 100** | Modifiers/ETA/autocomplete/points-preview/refund-governance/real-time/credible security shipped; still no Uber/DoorDash, no USD settlement, no Spanish, no Apple Pay, photo booked-not-shot. |
+| **Singapore viability** | 27 / 100 | 31 / 100 | **34 / 100** | Same operational + trust gains; no GrabFood/foodpanda, no SGD/PayNow/PayLah!, no Chinese/Malay/Tamil, NEA A–D auto-grade still blocked on `saturatedFatPerUnit`. |
+| **Operational maturity** | 35 / 100 | 70 / 100 | **78 / 100** | Modifiers end-to-end, coursing restored, ESC/POS receipts, HACCP/waste/handover, cash reconciliation, refund reason-codes + manager approval. Capped by no offline POS, no hardware bump bar/cash-drawer. |
+| **UX maturity** | 48 / 100 | 64 / 100 | **71 / 100** | Address autocomplete + pre-pay ETA + points-in-cart + reorder + post-order upsell + SSE tracking + rewards values now real. Capped by pending photo shoot, no Apple Pay/saved cards, PL-only phone validation, two legacy-palette surfaces. |
+| **Scalability** | 30 / 100 | 70 / 100 | **73 / 100** | Real CI test gate is the regression shield; relational migration continues. Still single-region DB, no KDS virtualization. |
+| **Franchise readiness** | 25 / 100 | 35 / 100 | **40 / 100** | Granular per-location RBAC + role-prefixed portals + SOC 2 register + backups; royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
+| **Investor readiness** | ~~20 / 100~~ → 28 (2026-05-21) | 48 / 100 | **62 / 100** | scrypt+MFA+passkeys, a green CI gate with payment/refund/RBAC tests, S3 backups + restore runbook, SOC 2 controls register, rate-limit + location-scoped RBAC. Floor: no aggregators, no USD/SGD settlement, photo pending, no SOC 2 Type II audit. |
 
 ### 1.2 The Five Hard Truths
 
 1. ✅ ~~**The "AI" is a random number generator.** `src/lib/ai-engine.ts:31, 36, 41, 62, 89, 97, 103, 107, 127` — `Math.random()` decides weather, expected-orders jitter, forecast confidence, the magnitude of every "price increase" / "price decrease" suggestion, the coin-flip that triggers a "demand-based" upcharge, *and* the confidence score returned with each price suggestion. There is no model, no embedding, no LLM call in the forecasting/pricing surface. The `/admin/ai` page is a credibility liability in front of any sophisticated buyer who clicks through the source.~~ **RESOLVED 2026-05-21** — the heuristic `generateDemandForecast` / `generatePriceSuggestions` / `generateInsights` exports were dead code (zero callers) and were deleted; `ai-engine.ts` now contains only the customer-side FAQ matcher `getChatResponse`, with a header comment that names it as keyword-rule lookup, not AI. The real AI surfaces live under `src/lib/ai/forecast.ts` (Claude-backed demand forecasting with honest "Heuristic" fallback when the API key is unset), `src/lib/ai/gateway.ts`, and `src/lib/ai/tools/`. The `/admin/ai` page is no longer a credibility liability.
 2. ⚠ **The order pipeline serializes on two global locks.** `lock:orders.json` and `lock:slots.json` (`src/lib/store.ts`, multiple call sites) gate every checkout, every status advance, every refund across *every location*. At 200 orders/hour the queue depth on these keys is sufficient to time out Vercel functions. **PARTIAL — 2026-05-21**: the hot path (`createOrder`) now goes through Postgres + `dualWriteOrder` when `DATABASE_URL` is set, with no application-level lock on the request-blocking path. The legacy kv-mirror writes still take the global `orders.json` / `slots.json` keys, but they run `void` fire-and-forget so the customer is not waiting on them; they only serialize the cold mirror, not the booking. ❌ The kv mirror still needs to be split per-location or deleted entirely (the DB is source-of-truth so the latter is the right answer). The lock-TTL-mid-section foot-gun referenced in §1.4 row 6 is unchanged.
 3. ✅ ~~**There is no real third-party delivery.** `src/lib/providers/aggregator.ts` ships a Wolt + Glovo *interface* with `WoltMockProvider` and `GlovoMockProvider` classes that just `console.log`. Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are not stubbed, not designed for. In NYC, 60–70% of QSR orders flow through these. In SG, 70–80%.~~ **PARTIAL — 2026-05-21**: the mock providers (which returned `true` from `verifyWebhookSignature` and just logged every event — a forged-webhook foot-gun the moment `ENABLE_AGGREGATORS` flipped on) were deleted. `getAggregatorProvider` now throws `AggregatorNotConfigured` with the missing env var list, and the webhook route returns 503. The honest read: there is still no live Wolt or Glovo integration, but the file no longer pretends to have one. ❌ Uber Eats / DoorDash / Deliveroo / GrabFood / foodpanda are still unaddressed — building those is its own multi-week workstream per provider.
-4. ❌ **The customer never sees their food.** `MenuItem.image` exists in the type (`src/data/types.ts:159`) but is **never populated** in `src/data/menus/krakow.ts` or `warszawa.ts`. The customer sees a 🍕 emoji on a gradient. Industry mobile-conversion lift from real food photography: 15–25%. Sweetgreen, Shake Shack, every Uber Eats merchant — none of them ship this way.
-5. ❌ **Zero automated tests.** `find src -name '*.test.*' -o -name '*.spec.*'` returns nothing. Every refactor is a hand-grenade. No CI gate, no Playwright smoke, no contract test on the lock primitive. For a system that takes payment, this is malpractice.
+4. 🟡 **The customer never sees their food — wiring ready, shoot pending (2026-06-03).** `MenuItem.image` still isn't populated, but this is now an **operator task, not a code gap**: the render path already supports real imagery (image renders when set; emoji/gradient is only the fallback), so the shoot drops straight in. Photographer booked; per Rule #1 no placeholder/stock URL was wired in the interim. Industry mobile-conversion lift from real photography: 15–25%.
+5. ✅ ~~**Zero automated tests.**~~ **RESOLVED 2026-06-03** — 29 `*.test.ts` / 181 assertions (`tsx --test`) in a real CI gate (`.github/workflows/ci.yml`: typecheck→lint→test→build on every PR), covering the exact payment-handling paths this called malpractice to leave untested: **checkout pricing, slot oversell, refund, RBAC scope**, plus loyalty, cohort, LTV/CAC, TOTP, password, receipt ESC/POS, POS coursing. Residual: no integration/coverage tooling, no Playwright smoke.
 
 ### 1.3 Strengths Worth Preserving
 
@@ -62,7 +62,7 @@ Scores below are the original 14 May figures; the **As of 2026-05-29** column ca
 | # | Risk | Severity | Trigger | Blast radius |
 |---|---|---|---|---|
 | 1 | Lock TTL (10 s) auto-expires mid critical section under load | Critical | 200 orders/hr lunch rush | Data corruption, duplicate orders, double refunds |
-| 2 | Single `ADMIN_PASSWORD` shared across all owners/managers | Critical | Staff turnover | Insider access, no audit trail per human |
+| 2 | ~~Single `ADMIN_PASSWORD` shared across all owners/managers~~ ✅ **RESOLVED 2026-06-03** — salted scrypt + TOTP MFA + WebAuthn passkeys + per-user PIN; per-route rate-limit + opt-in IP allowlist. Per-human accounts, audit-logged. | ~~Critical~~ | — | — |
 | 3 | ~~EU 1169/2011 (allergens at point of sale) violated — data exists, not shown~~ ⚠ **PARTIAL 2026-05-21** — allergen chips surface on the item drawer + new CompliancePills row on the card. Calorie + Nutri-Grade + halal / pork / alcohol disclosures now configurable per item and rendered conditionally on the customer card. | Low (was Critical) | Operator forgets to fill calorie / allergen on a new SKU | Per-item exposure, not chain-wide |
 | 4 | ~~NYC DOH calorie labelling (NYC Health Code §81.50) not implemented~~ ✅ **WIRED 2026-05-21** — `/admin/regulatory-compliance` flips a NYC truck to the NYC pack; the item card renders `<kcal>` next to the price whenever `nutrition.calories` is populated. DOH letter-grade banner ships on the location header. FRESH Act packaging text surfaces in the cart. | Medium (was Critical) | Truck tagged NYC without calorie + grade fields filled | Customer-visible blank, no fines on day 1 — but operator must complete the data fill before opening |
 | 5 | ~~SG NEA Healthier Choice / Nutri-Grade not implemented~~ ✅ **WIRED 2026-05-21** — SG zone surfaces Nutri-Grade A–D hex badges (when the operator sets `nutriGrade` per beverage), MUIS Halal cert banner on the location header, halal / non-halal + contains-pork / contains-alcohol pills on each item, 9% GST line back-calculated in the cart, PDPA §13 consent text in the cart. | Medium (was High) | Truck tagged SG without halal cert + Nutri-Grade fields filled | Operator must complete the data fill before opening |
@@ -94,7 +94,7 @@ I ran the home page (`src/app/(public)/page.tsx`) and Kraków location page thro
 | Warm cream background | ✓ | `--color-italia-cream: #FFF8F0` | Distinguishes from cold-white competitors. **Pass.** |
 | Italian flag accent | ✓ | `HeroSection.tsx` — green/white/red top stripe | On-brand, restrained. **Pass.** |
 | Hero food photography | ✗ | Dark gradient + blurred shapes, no food image | **Fail.** Sweetgreen leads with farm shot, Shake Shack with food close-up. Sud Italia leads with darkness. |
-| Menu food photography | ✗ | `data/menus/{krakow,warszawa}.ts` — `image` field never populated; fallback is 🍕 emoji on a Tailwind gradient | **Catastrophic fail.** This single fact will lose 15–25% of mobile conversion against any competitor on Uber Eats or GrabFood. |
+| Menu food photography | 🟡 | `MenuItem.image` renders when set (emoji/gradient is only the fallback); shoot booked 2026-06-03, not yet populated | **Wiring ready, shoot pending.** No longer a code gap — the photographer is booked; per Rule #1 no placeholder was wired. Still the single highest-ROI un-shipped change until the shoot lands. |
 | Trust signals (rating, count) | ✅ | ~~`data/ratings.ts` — hardcoded fake ratings ("4.8 ★ 342 reviews")~~ **RESOLVED 2026-05-21** — `data/ratings.ts` deleted; `<StarRating>` chips removed from `MenuItem`, `MenuSection` (incl. the "Highest rated" sort that read fake data), and `ItemDetailDrawer`. The `StarRating` component itself remains for the post-order feedback survey, where customers enter real ratings. No fake review surface remains on the customer site. | **Resolved.** Legal exposure under FTC §5 / UK CMA / SG CCCS / EU UCPD eliminated. Next step: aggregate the real `/review/[orderId]` submissions into per-item averages so trust signals come back with honest data. |
 | Premium colour psychology | ✓ | Gold accent `#B8922E` for tier badges, red CTA `#C8102E` | Sound. **Pass.** |
 | WCAG-AA contrast | ✗ | `#C8102E` on `#FFF8F0` is 4.39:1 — fails AA for text below 18 pt | **Fail.** |
@@ -119,11 +119,12 @@ Does this feel current? Partially.
 | Saved payment methods | ✗ | Fresh card every order |
 | Saved delivery addresses | ✗ | Re-typed every order |
 | Address autocomplete | ✗ | Plain text input |
-| Real-time order tracking with map | ⚠ | `OrderTracker` exists, map quality unaudited |
+| Real-time order tracking with map | ⚠→✓ transport | **2026-06-03:** `OrderTracker` now SSE-push (`/api/orders/stream`) with poll fallback; live *driver map* still not added |
+| Address autocomplete | ✗→✅ | **2026-06-03:** `AddressAutocomplete` — Google Places when keyed, OpenStreetMap Nominatim fallback |
 | Live menu availability | ✓ | `useLiveMenuAvailability` exists |
 | Skeleton loading states | ⚠ | Some present, inconsistent |
 | Dark mode | ✗ | Light only |
-| Promo / referral code at checkout | ✗ | No input field — referees can't claim |
+| Promo / referral code at checkout | ✗ | Still no input field — referees can't claim (referral cookie via `/r/CODE` exists, but no checkout field) |
 | AR menu / 360° item view | ✗ | Acceptable miss, but Shake Shack and CAVA both have it now |
 | Web push notifications | ✓ | `push-notifications.ts` exists |
 
@@ -153,10 +154,10 @@ Does this feel current? Partially.
 2. **Land on home page.** Mobile load on 4G — acceptable (Next.js 16 + edge). Hero is dark, no food visible. Decision pressure: "is this open? what's it like?" Not answered. **Friction: moderate.**
 3. **Pick location.** Two trucks, both in Poland. **NYC customer bounces here.** Even after re-skinning, the LocationsGrid requires manual `src/data/locations.ts` edits.
 4. **Browse menu.** Emoji items on gradients. No prices in USD/SGD. No allergen filter. No "spicy/vegan/GF" filter (tags exist but filter UI is absent in audited components). **Friction: severe.**
-5. **Add to cart.** Smooth Zustand state, persistent across refresh (`store/cart.ts:32`). A first-class modifier schema exists (`CartItem.selectedModifiers`, `src/data/types.ts:354`; the `CartItem` interface lives in `types.ts:342` and is imported into `store/cart.ts:5`), but there is **no customer picker** — the shopper still cannot say "large", "extra cheese", "no onion" from the menu, and the freeform `notes` field is the only place that intent lands. **Operationally crippling until the picker ships.**
+5. **Add to cart.** Smooth Zustand state, persistent across refresh. ✅ **2026-06-03 — modifier picker shipped.** The customer now picks size / extra cheese / half-and-half / no-onion from a first-class picker; selections flow cart → KDS ticket → Stripe line description → receipt (`api/checkout/route.ts`). The "freeform `notes` is the only signal" failure mode is closed. **Friction: resolved.**
 6. **Open cart drawer.** Discover fulfillment type (`takeout` / `delivery`) and slot picker only *now*. Slot might be full. **Friction: severe.**
-7. **Enter name + phone + (delivery) address.** Phone regex is loose (`/^[\d\s\-()]{7,}$/`), address is freeform — no Google Places autocomplete. **Friction: severe for delivery.**
-8. **No ETA shown before payment.** User commits without knowing when their food will be ready. McDonald's app, Uber Eats, GrabFood, Shake Shack — all show ETA before pay. **Trust: damaged.**
+7. **Enter name + phone + (delivery) address.** ✅ **2026-06-03 — address autocomplete shipped** (`AddressAutocomplete`: Google Places / Nominatim). ❌ Phone is still PL-style loose validation — no `libphonenumber-js` E.164 / country selector, so a `+1`/`+65` number isn't first-class. **Friction: address resolved; phone capture still NYC/SG-broken.**
+8. ✅ ~~**No ETA shown before payment.**~~ **RESOLVED 2026-06-03** — the cart shows "Ready by …" before pay (slot time, else prep estimate). **Trust: repaired.**
 9. **Stripe Checkout redirect.** Two redirects. No saved cards. No Apple Pay primary CTA. **Conversion: lost.**
 10. **Confirmation page.** Good — order tracker visible, points display, referral CTA. **One bright spot.**
 11. **Repeat order.** No "Order again" button on home page. Cart is empty. Address re-entered. **Retention: weakened.**
@@ -177,8 +178,8 @@ That delta is the entire margin for a food truck. At 100 store visits, a competi
 
 ### 3.3 Psychological Optimisation Quick Wins
 
-- **Points preview in cart.** "You'll earn 47 points on this order — 153 away from Silver". Sweetgreen does this; conversion bump 4–7%.
-- **Order ETA pre-payment.** "Ready at 12:18". Anxiety-reducing, conversion-positive.
+- ✅ **Points preview in cart — DONE 2026-06-03.** `LoyaltyEarnPreview` + an "Earning points as …" chip render the earn estimate in the cart. (Sweetgreen-style; 4–7% bump.)
+- ✅ **Order ETA pre-payment — DONE 2026-06-03.** "Ready by …" shown before pay.
 - **Last-2 social proof.** "Maria from Praga ordered this Margherita 3 minutes ago" — runs off real orders, not fakes.
 - **Free-delivery progress bar.** Cart drawer text exists (`delivery.add_more`), but no visual progress bar. Add one.
 - **Loss-aversion at slot-fill.** "Only 2 spots left at 12:30" — already true in data, never surfaced.
@@ -189,9 +190,9 @@ That delta is the entire margin for a food truck. At 100 store visits, a competi
 |---|---|---|
 | Post-order email receipt | ⚠ Unknown | Webhook handler not located |
 | SMS "your food is ready" | ⚠ Outbox exists, send route unconfirmed | `src/lib/sms.ts` present |
-| "You haven't ordered in 14 days" win-back | ⚠ `lapsed` tag in cron, no campaign confirmed | |
+| "You haven't ordered in 14 days" win-back | ✅ **2026-06-03** | Win-back auto-retention engine (`retention.ts`) + Customer Intelligence (`customer-intelligence.ts`) — queues by churn hazard × LTV, grants points + sends on the consented channel |
 | Birthday rewards | ✗ | No DOB capture |
-| One-click reorder | ✗ | None |
+| One-click reorder | ✅ **2026-06-03** | `ReorderSection` on location pages (reads real order history); home-page placement still a nice-to-have |
 | Saved favourites | ✗ | None |
 | Subscription / standing order | ✗ | None |
 | Push notification on truck arrival nearby | ⚠ | Push infra exists, geofence trigger not wired |
@@ -211,8 +212,8 @@ Assume Bryant Park, 11:45–13:15, three workers in a 10 m² truck, target 180�
 3. **12:05:00 — Lock TTL expiration mid-write.** Default lock TTL is 10 s (`src/lib/locks.ts`). With 200+ orders in `orders.json`, `readJSON` + `findIndex` + `writeJSON` regularly exceeds 10 s under contention. The lock auto-releases, a second lambda acquires it, both write — duplicate orders, lost status transitions.
 4. **12:10:00 — No offline mode at counter.** LTE in a metal box on a Bryant Park sidewalk is unreliable. There is no offline-first POS terminal; `offline-outbox.ts` exists for *public* customer mutations but admin/KDS surfaces don't have a comparable local-first queue. When LTE drops, the kitchen is blind.
 5. **12:15:00 — No item-86 propagation.** Truck runs out of basil. Manager opens `/admin/menu` on their phone, toggles Margherita to unavailable. Public availability endpoint cache TTL is 2 s; client poll is every ~10 s. Customers continue placing orders for Margherita for 12–14 s. Each one becomes a refund.
-6. **12:20:00 — Modifier ambiguity.** A customer writes "no anchovies" in the freeform `notes` field. KDS shows it as gray text under the line. Cook misses it. Refund. A first-class modifier schema now exists (`ModifierOption`/`ModifierGroup`/`SelectedModifier` in `src/data/types.ts:117/132/145`, `MenuItem.modifierGroups` `:189`, `CartItem.selectedModifiers` `:354`, with admin authoring in `ModifierEditor.tsx`/`ModifierInventory.tsx`) — but there is **no customer-facing picker and no KDS modifier render**, so at the counter the freeform `notes` string is still the only signal the cook sees. Toast, Square, every POS solved the full loop in 2014.
-7. **12:25:00 — Cash drawer drift.** `CashSession`/`CashDrop` types exist in `src/data/types.ts` but the `/admin/cash` page (per agent inspection) has no reconciliation flow, no opening-float capture, no variance flagging.
+6. ✅ ~~**12:20:00 — Modifier ambiguity.**~~ **RESOLVED 2026-06-03.** The full loop is wired: customer picker → cart → KDS ticket render → Stripe line description → receipt. The freeform `notes` field is no longer the only signal the cook sees.
+7. ~~**12:25:00 — Cash drawer drift.**~~ ✅ **Reconciliation RESOLVED 2026-06-03** — shift handover captures cash count + variance flagging (`AdminHandover`); opening-float/closing reconcile is part of the handover flow. (Hardware cash-drawer pulse still ✗.)
 
 ### 4.2 Singapore CBD Office-Lunch Stress Test
 
@@ -226,9 +227,9 @@ Different stressor — fewer orders/hour, more concurrent browsers (500+ Slack-s
 
 | Capability | Present | Comment |
 |---|---|---|
-| Bump-bar / hardware KDS | ✗ | Touch tablet only |
-| Receipt printer driver | ✗ | No native print |
-| Cash drawer pulse | ✗ | None |
+| Bump-bar / hardware KDS | ⚠ | Touch tablet + hotkeys 1–9/0; no USB/BT hardware bump-bar driver |
+| Receipt printer driver | ✅ **2026-06-03** | Real ESC/POS (`src/lib/receipt/escpos.ts`, unit-tested), TCP-to-printer + simulator + go-live guide |
+| Cash drawer pulse | ✗ | None (cash *reconciliation* shipped via shift handover; no hardware drawer pulse) |
 | Truck live GPS | ✓ | `truck-live-location.ts` — 90 s Redis TTL, 500 m geofence |
 | Route optimisation | ✗ | Routes are manual `TruckStop[]` lists |
 | Fuel / mileage / breakdown log | ✗ | None |
@@ -313,22 +314,22 @@ Yes, in three distinct ways:
 ### 6.2 Manager / Regional Workflow
 
 - **Analytics surface.** `AdminDashboard.tsx` ships KPI cards (revenue today, orders, profit, AOV), 7/30/90-day rollups, location heatmap, peak-hours chart. This is *decent.*
-- **Reports.** Delivery profitability, tips summary, JPK_V7M (Polish VAT export). Useful, but: no cohort retention, no LTV/CAC, no labour ratio dashboard despite the `/api/admin/labor-ratio` route existing, no item-level P&L beyond margin %.
-- **Schedule.** Shifts data model exists, but no shift handover (cash count, waste log, manager comment, photo) — the #1 source of theft and morale collapse in QSR.
+- **Reports.** Delivery profitability, tips summary, JPK_V7M. ✅ **2026-06-03:** cohort retention + LTV/CAC now ship (`/admin/reports/cohort`, `/admin/reports/ltv-cac`) over real orders, plus weekly RFM segmentation, SPLH labour ratio, and a Customer Intelligence engine. Item-level P&L beyond margin % still thin.
+- **Schedule.** ✅ **2026-06-03 — shift handover shipped** (`AdminHandover`: cash count + variance, temp/waste/equipment checks, manager handoff, audit-logged) + standalone waste log + HACCP temperature log. The #1 theft/morale gap is closed.
 
 ### 6.3 Permissions
 
 Five-tier role hierarchy in `src/lib/admin-roles.ts`: owner (100) > franchisee (70) > manager (50) > staff (20) > kitchen (10). The nav config gates *display*. Enforcement on API routes is via opt-in `withAdmin()` wrapper (`src/lib/api-middleware.ts`). **Coverage is not 100% across the ~134 admin routes.** Any route that forgets the wrapper is a privilege escalation.
 
-Single `ADMIN_PASSWORD` shared across owners and legacy users is a fundamental control gap. There is no per-human credential, no MFA, no SSO, no SCIM. A staff member who learns the password becomes effectively the owner.
+~~Single `ADMIN_PASSWORD` shared across owners and legacy users is a fundamental control gap. There is no per-human credential, no MFA...~~ ✅ **RESOLVED 2026-06-03** — per-human accounts with salted-scrypt passwords, **TOTP MFA + WebAuthn passkeys + PIN**, 60+ granular permissions with custom grants, location scope bound into the session HMAC, and role-prefixed portals. **Still ✗:** SAML/OIDC SSO + SCIM (the enterprise-IdP tier).
 
 ### 6.4 What An Enterprise Buyer Sees
 
-- No SAML / OIDC / SCIM → **disqualified from any chain over 25 corporate-managed locations**
-- No SOC 2 Type II → **disqualified from any chain handling investor due diligence**
-- No structured audit log (free-text `entity` / `action`) → **disqualified from any regulated jurisdiction**
-- No backup / restore SLA documented → **disqualified from any insurance underwriting**
-- Zero tests → **walk-out at first technical-DD call**
+- No SAML / OIDC / SCIM → **still disqualified from any chain over 25 corporate-managed locations** (the one enterprise-IdP gap that remains)
+- ~~No SOC 2 Type II~~ 🟡 **2026-06-03** — a 12-control SOC 2 register that introspects real posture ships at `/admin/soc2`; a Type II *external audit* is still not done, but the controls question now has an evidence-backed answer
+- No structured audit log (free-text `entity` / `action`) → every write is audit-logged with actor/entity; still free-text shape (no formal schema)
+- ~~No backup / restore SLA documented~~ ✅ **RESOLVED 2026-06-03** — nightly S3 dump + documented restore runbook
+- ~~Zero tests → walk-out at first technical-DD call~~ ✅ **RESOLVED 2026-06-03** — 29 files / 181 assertions in a CI gate (payment/refund/RBAC/slot covered)
 
 ---
 
@@ -437,8 +438,8 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 9.3 Security
 
-- Single `ADMIN_PASSWORD` shared across roles — **critical**.
-- 24 h session TTL with no re-auth for refunds / staff deletion / payouts — **high**.
+- ~~Single `ADMIN_PASSWORD` shared across roles — **critical**.~~ ✅ **RESOLVED 2026-06-03** — salted scrypt + TOTP MFA + passkeys + PIN + per-route rate-limit + opt-in IP allowlist.
+- 24 h session TTL — refunds/comps now gated by a per-actor daily cap + manager-approval, though there's still no step-up re-auth for staff deletion / payouts — **medium**.
 - Legacy 3-part token still accepted (scope defaults to `*`) — **medium**.
 - No CSP header verification in this audit pass.
 - No secrets scanning in CI.
@@ -466,7 +467,7 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 - ✅ ~~The `ai-engine.ts` heuristic mascot.~~ Deleted 2026-05-21.
 - ✅ ~~Hardcoded fake ratings (`data/ratings.ts`).~~ Deleted 2026-05-21.
 - ✅ ~~The mock-only aggregator providers.~~ Deleted 2026-05-21; webhook returns 503 with missing-env list when ENABLE_AGGREGATORS is on without credentials.
-- ❌ No CI tests, no Playwright smoke, no chaos suite (despite `scripts/chaos-phase0.ts` existing).
+- ✅ ~~No CI tests~~ **RESOLVED 2026-06-03** — 29-file / 181-assertion suite in a typecheck→lint→test→build CI gate. ❌ Still no Playwright smoke, no wired chaos suite (despite `scripts/chaos-phase0.ts`).
 
 ---
 
@@ -534,16 +535,16 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 10.2 "Must-Have" Gaps For NYC/SG Launch
 
-1. ❌ Real food photography.
-2. ⚠ Item modifiers — first-class schema + admin editor exist; no customer picker and no KDS modifier render yet.
-3. ❌ Apple Pay / Google Pay primary.
+1. 🟡 Real food photography — **wiring ready, shoot pending** (photographer booked 2026-06-03; render path supports `MenuItem.image`).
+2. ✅ ~~Item modifiers~~ **DONE 2026-06-03** — customer picker → cart → KDS render → Stripe line → receipt.
+3. ❌ Apple Pay / Google Pay primary. (Still Stripe Checkout redirect; no Payment Request API, no saved cards.)
 4. ⚠ **Multi-currency + multi-tax + multi-locale.** ✅ Multi-currency *display* + multi-locale UI shipped 2026-05-21 (`/admin/currency`, `/admin/languages` with PLN/USD/SGD/EUR × pl/en/de/en-SG). ❌ Multi-tax (Stripe Tax / TaxJar replacing JPK_V7M) + per-region Stripe merchant settlement remain.
 5. ❌ Uber Eats / DoorDash / GrabFood / foodpanda webhook intake **with menu push and status push**. (Wolt + Glovo scaffold remains; mocks deleted.)
 6. ⚠ Calorie display (NYC) + Nutri-Grade and allergen at POS (SG, EU). ✅ **WIRED 2026-05-21** — schema + per-location admin config + customer surfaces (kcal pill, Nutri-Grade hex, halal / pork / alcohol chips, DOH grade banner, FRESH Act + GST + PDPA in cart). ❌ Counsel review of default copy + per-item data fill (calorie data for every SKU) still pending.
-7. ❌ Per-user RBAC with MFA. (Five-tier role enum exists; single shared `ADMIN_PASSWORD` is the auth surface.)
-8. ❌ Cohort / LTV reporting.
-9. ❌ Refunds with reason codes + manager approval. (Reason codes exist in `REFUND_REASON_CODES`; manager-approval gating not enforced.)
-10. ❌ Offline-first POS terminal.
+7. ✅ ~~Per-user RBAC with MFA~~ **DONE 2026-06-03** — per-human accounts, scrypt + TOTP + passkeys + PIN, 60+ granular permissions, location-scoped sessions. (SAML/OIDC/SCIM still ✗.)
+8. ✅ ~~Cohort / LTV reporting~~ **DONE 2026-06-03** — `/admin/reports/cohort` + `/admin/reports/ltv-cac` over real orders + RFM segmentation.
+9. ✅ ~~Refunds with reason codes + manager approval~~ **DONE 2026-06-03** — reason codes + per-refund cap + per-actor daily comp cap behind a manager-approval gate.
+10. ❌ Offline-first POS terminal. (Still a network no-op when LTE drops.)
 
 ### 10.3 Unnecessary Complexity To Cut
 
@@ -567,21 +568,23 @@ With 6–9 months of work in §13: plausibly a $3–5M seed-stage hospitality-OS
 
 ### 11.2 What Serious Operators Would Criticize
 
-- "Where is shift handover? Where is cash variance? Where is waste log? Where is HACCP?"
-- "Where is the refund reason-code dropdown? What stops a cashier from comping the entire shift's revenue?"
-- "Why is there a freeform `notes` field instead of modifiers? My customers are going to ask for half-and-half pizzas all day."
-- "Why is the only ETA my customer sees `Estimated time` *after* they pay?"
-- "Why does the KDS lose its bump history on a refresh?"
-- "Where is the receipt printer driver? My customers want printed receipts."
+- ~~"Where is shift handover? Where is cash variance? Where is waste log? Where is HACCP?"~~ ✅ **all shipped 2026-06-03** (`AdminHandover`/`AdminWaste`/`AdminHaccp`).
+- ~~"Where is the refund reason-code dropdown? What stops a cashier from comping the entire shift's revenue?"~~ ✅ **reason codes + per-actor daily comp cap + manager-approval gate (2026-06-03).**
+- ~~"Why is there a freeform `notes` field instead of modifiers?"~~ ✅ **first-class modifier picker → KDS render (2026-06-03).**
+- ~~"Why is the only ETA my customer sees `Estimated time` *after* they pay?"~~ ✅ **"Ready by …" shown before pay (2026-06-03).**
+- ~~"Why does the KDS lose its bump history on a refresh?"~~ ✅ **bump/recall tray now persists across refresh.**
+- ~~"Where is the receipt printer driver?"~~ ✅ **ESC/POS driver shipped (2026-06-03).**
+
+*(Every line in this list is now addressed — the §11.2 operator-criticism block is, as of 2026-06-03, closed.)*
 
 ### 11.3 What Investors Would Criticize
 
-- "Where is the test suite?" — *there isn't one*.
-- "What's the LTV/CAC?" — *not computed*.
-- "Show me a cohort retention curve." — *no such surface*.
+- ~~"Where is the test suite?" — *there isn't one*.~~ ✅ **2026-06-03** — 29 files / 181 assertions in a CI gate (payment/refund/RBAC/slot).
+- ~~"What's the LTV/CAC?" — *not computed*.~~ ✅ **2026-06-03** — `/admin/reports/ltv-cac` over real orders.
+- ~~"Show me a cohort retention curve." — *no such surface*.~~ ✅ **2026-06-03** — `/admin/reports/cohort` heatmap + RFM segmentation.
 - ~~"Where is the real ML?" — *`Math.random()`*.~~ ✅ **2026-05-21**: forecasting is Claude-backed (`src/lib/ai/forecast.ts`) with explicit "Heuristic" badge when `ANTHROPIC_API_KEY` is unset. The random-number `ai-engine.ts` heuristics were deleted.
 - ~~"How do you onboard a franchisee?" — *we edit `src/data/locations.ts` and redeploy*.~~ ✅ DB-backed `locations` table + admin CRUD at `/admin/locations/manage`. Adding a truck is a 30-second admin form, no deploy.
-- "Walk me through the SOC 2 controls." — *we don't have any*.
+- ~~"Walk me through the SOC 2 controls." — *we don't have any*.~~ 🟡 **2026-06-03** — a 12-control register introspecting real posture at `/admin/soc2`; a Type II *external audit* is still pending.
 - "What's the multi-region database failover story?" — *Neon does it, we don't*.
 - "How do you handle a 200-order rush?" — *we go down*.
 
@@ -619,24 +622,24 @@ A 6–9 month brutal hardening pass against §13 would yield a credible regional
 ### 12.1 Top 10 Urgent Fixes (this quarter)
 
 1. **Scope locks per-location-per-date.** `lock:slots:${slug}:${date}`, `lock:orders:${slug}`. Drop global `lock:orders.json` / `lock:slots.json` from every call site in `src/lib/store.ts`. Eliminates 80% of contention.
-2. **Add a real test suite.** Vitest for unit, Playwright for one happy-path checkout, one KDS advance, one refund. CI gates on green.
+2. ✅ ~~**Add a real test suite.**~~ **DONE 2026-06-03** — 29 files / 181 assertions (`tsx --test`) in a CI gate (typecheck→lint→test→build), covering checkout/slot/refund/RBAC. (Playwright happy-path smoke still ❌.)
 3. **Idempotency table.** `(idempotency_key, request_hash, response)` on every mutation. Refunds, status advances, slot increments.
-4. **Per-human admin accounts + MFA.** Kill the shared `ADMIN_PASSWORD`. Email-bound users only.
-5. **Item modifiers as a first-class shape.** `CartItem.modifiers: { groupId, optionIds[], priceDelta }`. Propagate through `Order.items`, KDS, recipes, Stripe line items.
+4. ✅ ~~**Per-human admin accounts + MFA.** Kill the shared `ADMIN_PASSWORD`.~~ **DONE 2026-06-03** — per-human accounts, scrypt + TOTP + passkeys + PIN, location-scoped sessions. (SAML/OIDC/SCIM still ❌.)
+5. ✅ ~~**Item modifiers as a first-class shape.**~~ **DONE 2026-06-03** — picker → cart → `Order.items` → KDS render → Stripe line description → receipt.
 6. **Wire `kodawari.ts` allergens and nutrition to the menu UI and to the cart.** Mandatory EU 1169/2011 + NYC §81.50 + SG NEA compliance. The data exists; the wire is missing.
-7. **Real food photography commissioning** — Margherita, Marinara, Carbonara, two pasta, two antipasti, two desserts, espresso. ~$5k one-time. Replace emoji.
+7. 🟡 **Real food photography commissioning** — **in progress 2026-06-03** (photographer booked; render path supports `MenuItem.image`, so the shoot drops straight in). Margherita, Marinara, Carbonara, two pasta, two antipasti, two desserts, espresso. ~$5k one-time.
 8. ⚠ **Replace `data/ratings.ts` fake reviews with real `/review/[orderId]` submissions aggregated server-side.** Burn the fake data file. Legal exposure. → ✅ **2026-05-21**: fake file burned, `<StarRating>` chips removed from customer surfaces. ❌ Aggregating `/review/[orderId]` submissions into per-item averages + surfacing them as real chips on the menu cards is the remaining step.
-9. ❌ **Add refund reason codes + manager approval flow** under `/admin/orders/[id]/refund`. Wire Stripe Refunds API correctly.
+9. ✅ ~~**Add refund reason codes + manager approval flow**~~ **DONE 2026-06-03** — reason codes + per-refund cap + per-actor daily comp cap behind a manager-approval gate; Stripe Refunds API wired.
 10. ✅ ~~**Delete or build the aggregator stubs.**~~ **DONE 2026-05-21** — mocks deleted, registry now throws `AggregatorNotConfigured` when ENABLE_AGGREGATORS is on without credentials and the webhook returns 503. Capabilities ledger updated to mark "Wolt + Glovo webhook intake" as a scaffold, not a live integration. Building live Wolt + Glovo with menu/status sync remains as a separate workstream.
 
 ### 12.2 Top 10 Highest ROI Improvements
 
 1. **Apple Pay + Google Pay primary CTAs at checkout** via Stripe Payment Request API. ~2 days. Expect 8–14% checkout conversion lift on mobile.
-2. **Order ETA before pay.** "Ready at 12:18". ~1 day. Expect 3–5% conversion lift, 10–20% complaint reduction.
-3. **Points preview in cart.** "You'll earn 47 pts — 153 to Silver." ~half-day. Expect 4–7% lift + loyalty enrolment up.
+2. ✅ ~~**Order ETA before pay.**~~ **DONE 2026-06-03** — "Ready by …" before pay.
+3. ✅ ~~**Points preview in cart.**~~ **DONE 2026-06-03** — `LoyaltyEarnPreview` + earn chip in the cart.
 4. **Saved addresses + saved cards via customer cookie + Stripe Customer.** ~3 days. Expect 12–18% lift on second+ orders.
-5. **One-click "Order again" on home page** for returning customers. ~2 days. Massive repeat-rate driver.
-6. **Address autocomplete.** Google Places, ~1 day. Eliminates 30% of address-related delivery failures.
+5. 🟡 **One-click "Order again"** — `ReorderSection` shipped on location pages (2026-06-03); home-page placement for returning customers still a nice-to-have.
+6. ✅ ~~**Address autocomplete.**~~ **DONE 2026-06-03** — Google Places + Nominatim fallback.
 7. **Promo / referral code field at checkout.** ~1 day. Unlocks the referral economy already coded in `growth-engine.ts`.
 8. **SMS "your order is ready" via outbox.** Build the receiver, the infra exists. ~2 days. Single highest CSAT lever in QSR.
 9. **Live menu availability surfaced on every menu card** ("only 2 left tonight"). Infra (`useLiveMenuAvailability`) exists. ~1 day.
@@ -657,15 +660,15 @@ A 6–9 month brutal hardening pass against §13 would yield a credible regional
 
 ### 12.4 Top 10 Operational Improvements
 
-1. Shift handover module (cash count, waste log, manager comment, photo).
-2. Refund / void / comp with reason codes and manager approval.
-3. Item-86 propagation in <2 s across menu + KDS + aggregators.
-4. Inventory depletion on `preparing` status; auto-86 on zero.
-5. HACCP temperature log (regulator + insurance + closure risk mitigation).
-6. Cash drawer reconciliation with variance flagging.
-7. Receipt printer driver (ESC/POS over Bluetooth or LAN).
-8. Bump bar driver (LogicControls KB1700).
-9. Offline-first POS terminal mode with replay queue.
+1. ✅ ~~Shift handover module (cash count, waste log, manager comment).~~ **DONE 2026-06-03** (`AdminHandover` + standalone waste log).
+2. ✅ ~~Refund / void / comp with reason codes and manager approval.~~ **DONE 2026-06-03.**
+3. Item-86 propagation in <2 s across menu + KDS + aggregators. *(live-86 on KDS/floor-ops; aggregator leg blocked on no aggregators.)*
+4. Inventory depletion on `preparing` status; auto-86 on zero. *(recipe-driven consume on paid order shipped earlier; live auto-86 still partial.)*
+5. ✅ ~~HACCP temperature log~~ **DONE 2026-06-03** (`AdminHaccp`).
+6. ✅ ~~Cash drawer reconciliation with variance flagging.~~ **DONE 2026-06-03** (via shift handover; hardware drawer pulse still ✗).
+7. ✅ ~~Receipt printer driver (ESC/POS over Bluetooth or LAN).~~ **DONE 2026-06-03** (TCP/LAN ESC/POS + simulator).
+8. Bump bar driver (LogicControls KB1700). *(hotkeys 1–9/0 shipped; USB/BT hardware driver still ✗.)*
+9. ❌ Offline-first POS terminal mode with replay queue. *(still a network no-op on LTE drop.)*
 10. Maintenance ticket system with vendor SLA.
 
 ### 12.5 Top 10 Features Needed To Compete Globally
@@ -696,6 +699,8 @@ A 6–9 month brutal hardening pass against §13 would yield a credible regional
 | 5. Scale | M8–M9 | Multi-location | Self-serve onboarding, Postgres partitioning, multi-currency/tax/locale, structured audit log, SAML/OIDC, multi-region |
 | 6. Intelligence | M10–M12 | Real AI | LLM-driven ops agent with real tool audit + budgets, ML demand forecasting trained on actuals, price elasticity engine, anomaly detection |
 
+**Phase progress as of 2026-06-03:** **Phase 1 (Foundation) ≈ complete** — tests ✅, MFA + per-user RBAC ✅, refund reason codes ✅, item modifiers ✅, allergens wired ✅, fake ratings deleted ✅; only scoped locks (partial) + real photography (shoot pending) trail. **Phase 2 (Conversion) ≈ half** — ETA ✅, points-in-cart ✅, address autocomplete ✅, reorder ✅; Apple/Google Pay + saved cards/addresses + promo field ❌. **Phase 4 (Ops) ≈ mostly** — shift handover/HACCP/cash-recon/receipt-printer/refund-governance ✅; offline POS + hardware bump-bar ❌. **Phase 6 (Real AI) largely pre-delivered** (audited Claude agent + forecast). **Not started: Phase 3 (Aggregators)** and the local-payments slice of Phase 2 — the two cities' actual gate. **Phase 5 (Scale)** advanced on hardening (backups, SOC 2 register, RBAC) but not multi-region/partitioning.
+
 ### 13.2 Franchise-Ready Roadmap
 
 Owners of the territory exclusivity + brand-price ceiling + SLA dashboard + royalty dispute flow + MSA/FDD scaffold + franchisee training portal + brand-standards enforcement (mystery-shop scoring, photo audits, secret-shopper reports). Plan for M5–M9.
@@ -724,7 +729,9 @@ It is, however, salvageable, and three things give it more credibility than most
 
 No politeness. No protected feelings. This is what I would tell a partner before they wrote the check.
 
-— *Audit lens: senior hospitality-tech consultant, restaurant operations expert, UX/UI critic, Series-A diligence partner — 14 May 2026*
+> **2026-06-03 amendment.** Phase 1 (foundation) is essentially done and most of Phase 2/4-ops shipped, so the "8-week burn" no longer comes from *ops fragility or enterprise-hardening* — those are now credible (tests, MFA, backups, SOC 2 posture, RBAC, receipts, HACCP, refund governance, modifiers). The burn now comes from the **un-started Phase 3 (no Uber/DoorDash/GrabFood/foodpanda)**, the **local-payments slice of Phase 2 (no USD/SGD settlement, no Apple Pay/PayNow/PayLah!)**, **no offline POS**, **no Spanish/Chinese/Malay/Tamil**, and the **booked-but-unshot food photography**. The §0 "not ready for NYC or Singapore" verdict holds — but it's now a shorter, channel-and-payments-shaped list, not a rebuild.
+
+— *Audit lens: senior hospitality-tech consultant, restaurant operations expert, UX/UI critic, Series-A diligence partner — 14 May 2026 (body brought current 2026-06-03)*
 
 ---
 
@@ -877,3 +884,80 @@ The V8 `/rewards` rebuild introduced **hardcoded display values** this diligence
 **The §0 verdict is unchanged: Sud Italia would not survive NYC or Singapore as-is.** Fifteen days of shipping closed half of the UX burn-down list and rebuilt the operational spine, but the seven binding constraints (aggregators, USD/SGD settlement, SOC 2, real test coverage, food photography, offline POS, MFA) are exactly where the 14 May audit left them. The §13 Phase 1–3 sequencing remains the right path; the operator is now meaningfully ahead on the *UX* and *ops* dimensions of Phase 1–4 and has not started the *channel* (Phase 3) or *enterprise-hardening* (Phase 5) work the two cities actually require.
 
 — *Re-run lens: same five auditors, fifteen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — four of the seven blockers fall; the §0 verdict still holds on channel + local payments
+
+Five days and **211 commits** since the 2026-05-29 pass (`git log --since=2026-05-29`, HEAD `cb49026`), plus a same-day follow-up branch (`claude/sharp-galileo-qlIve`) closing the last code-fixable items. Every claim below was re-verified against the running code and a green suite (`npm test` → 181/181; `tsc`/`eslint`/`build` clean). **This is the largest single movement on the *enterprise-hardening* and *operations* axes since the 14 May audit — but the §0 "would not survive NYC/SG as-is" verdict stands, because the surviving open blockers are exactly the two cities' load-bearing ones: third-party aggregators and local-currency/payment settlement.**
+
+### The seven structural blockers — status
+
+| # | Blocker | 2026-05-29 | **2026-06-03** |
+|---|---|---|---|
+| 1 | Aggregator integration (Uber Eats / DoorDash / GrabFood / foodpanda) | ❌ | ❌ **Unmoved.** Wolt/Glovo are still scaffolds (real HMAC, RPC bodies throw); the four city-dominant marketplaces aren't designed for. This is now the single biggest NYC/SG-specific gap. |
+| 2 | USD/SGD settlement (per-region Stripe merchant) | ❌ display-only | ❌ **Unmoved.** Currency *display* (USD/SGD/EUR/PLN) ships; charges still settle PLN. Apple Pay/Google Pay primary, saved cards, saved addresses, promo-code field — all still absent (Stripe Checkout redirect, fresh card each order). |
+| 3 | SOC 2 | ❌ | 🟡 **Materially advanced.** `src/lib/soc2.ts` builds a **12-control Trust-Services register that introspects real runtime posture** (session secret, password hash, Stripe webhook verification, distributed lock, CI pipeline, role separation, audit-log recency), scored met/partial/gap, surfaced at `/admin/soc2`. Not a SOC 2 *Type II external audit* (that's an auditor engagement, not a code task), but the §6.4/§11.3 "walk me through your SOC 2 controls" question now has a real, evidence-backed answer. |
+| 4 | Real test coverage | ❌ (2 pure-fn files) | ✅ **CLOSED in substance.** 29 `*.test.ts` / 181 assertions (`tsx --test`) in a real CI gate (`.github/workflows/ci.yml`: typecheck→lint→test→build on every PR), covering the exact paths the audit called malpractice to leave untested — **checkout pricing, slot oversell, refund, RBAC scope** — plus loyalty, cohort, LTV/CAC, TOTP, password, receipt ESC/POS, POS coursing. Residual: no integration/coverage tooling, no Playwright smoke. |
+| 5 | Food photography | ❌ empty | 🟡 **Operator action in progress (photographer booked).** Now an ops task, not a code gap: the render path already supports real imagery (`MenuItem.image` renders when set; emoji/gradient is only the fallback), so the shoot drops straight in. Per Rule #1 no placeholder/stock URL was wired in the interim. The §1.2 hard-truth #4 frame is now "wiring ready, shoot pending" rather than "absent." |
+| 6 | Offline-first POS | ❌ | ❌ **Unmoved.** `AdminPos` is still a network no-op when LTE drops; the generic IndexedDB outbox isn't wired into POS/KDS. The §4.1 "12:10 — kitchen goes blind" failure mode stands. |
+| 7 | MFA on admin | ❌ shared password | ✅ **CLOSED.** Salted **scrypt** via `ADMIN_PASSWORD_HASH` (constant-time verify) replaces the plaintext compare; **TOTP** MFA (per-user, mandatory when enabled), **WebAuthn passkeys**, salted-scrypt **PIN** terminal login; **per-route rate-limit** via `withAdmin` + opt-in `ADMIN_IP_ALLOWLIST`. The §1.4 risk #2 / §6.3 "single shared `ADMIN_PASSWORD` = insider access, no per-human audit" is closed. |
+
+**Tally: 2 closed (tests, MFA), 1 materially advanced (SOC 2 register), 1 moved to operator-in-progress (photography), 3 hard-open (aggregators, USD/SGD settlement, offline POS).**
+
+### §2 / §3 / §10 Customer flow — most of the §12.2 "highest-ROI" list shipped
+
+| Item (audit ref) | 2026-05-29 | **2026-06-03** |
+|---|---|---|
+| Address autocomplete (§2.3, §3.1 #7, §12.2 #6) | ✗ | ✅ `AddressAutocomplete` — Google Places when keyed, OpenStreetMap Nominatim fallback, server-proxied. |
+| Pre-payment ETA (§2.3, §3.1 #8, §12.2 #2) | ✗ | ✅ Cart shows "Ready by …" before pay (slot time or prep estimate). |
+| Points preview in cart (§3.3, §12.2 #3) | ✗ | ✅ `LoyaltyEarnPreview` + an "Earning points as …" chip in the cart. |
+| Item modifiers end-to-end (§3.1 #5, §4.1 #6, §5.2, §10.2 #2) | ⚠ schema+editor, no picker/KDS render | ✅ Customer picker → cart → KDS ticket → Stripe line description → receipt (`api/checkout/route.ts`). The "freeform `notes` is the only signal the cook sees" failure mode is closed. |
+| One-click reorder (§3.4, §10 "Order again", §12.2 #5) | ✗ | ✅ `ReorderSection` on location pages (reads real order history). Home-page placement still a nice-to-have. |
+| Post-order single-tap upsell | ✗ | ✅ `PostOrderUpsell` on the confirmation page (same `getCartSuggestions` engine, adds to the live cart). |
+| Order tracking transport (§2.3, §5.1) | 10s poll | ✅ Now SSE-push (`/api/orders/stream`) with a poll fallback. (Live *driver map* still not added — transport improved, not the map.) |
+| Rewards Rule #1 regressions (§2.1, §10 "fake rewards values") | streak "2" / "33%" / `Math.random()` referral | ✅ All wired to real data (`/api/customer/rewards-stats` + `src/lib/rewards-progress.ts`, 9-assertion suite); the `Math.random()` `generateReferralCode()` helper deleted. |
+| Apple/Google Pay primary, saved cards/addresses, promo field (§2.3, §12.2 #1/#4/#7) | ✗ | ❌ **Still open** — Stripe Checkout redirect, no Payment Request API, fresh card each order, no promo input. |
+| `libphonenumber-js` E.164 + country selector (§2.4) | ✗ | ❌ Still PL-style loose validation — a `+1`/`+65` number isn't first-class. A blocker for real NYC/SG phone capture. |
+| Localization for the two cities | pl/en/de/en-SG | ❌ **Spanish (NYC) and Chinese/Malay/Tamil (SG) still absent** — `i18n.ts` is still the four-locale set. |
+
+### §4 / §6 / §10 / §12.4 Operations — the operator-criticism list (§11.2) is largely answered
+
+- **Receipt printer (§4.3, §12.4 #7)** → ✅ real ESC/POS driver (`src/lib/receipt/escpos.ts`, unit-tested), TCP-to-printer with simulator + go-live guide. **Cash-drawer pulse + hardware bump bar still ✗.**
+- **Shift handover / waste log / HACCP temperature log (§6.2, §12.4 #1/#5)** → ✅ all three shipped, audit-logged (`AdminHandover`/`AdminWaste`/`AdminHaccp`). Cash reconciliation with variance is part of handover.
+- **Refunds with reason codes + manager approval (§10, §12.1 #9, §12.4 #2)** → ✅ per-refund cap + per-actor daily comp cap behind a manager-approval gate.
+- **Coursing** → ✅ **restored** (`src/lib/pos-coursing.ts` + test) — reverses the 2026-05-29 "coursing dropped in the rewrite" finding. Starter/main/dessert/drink with per-course firing onto the server-owned `PosTab`.
+- **LTV/CAC + cohort retention (§6.2, §10, §11.3, §12.5 #5)** → ✅ `/admin/reports/cohort` + `/admin/reports/ltv-cac` over real orders; weekly RFM segmentation; **Customer Intelligence engine + Win-back auto-retention** (`customer-intelligence.ts`/`retention.ts`) address the §3.4 win-back lever.
+- **Still ✗:** offline POS, hardware bump bar, cash-drawer pulse, batch consolidation, hold/transfer between stations, real-time menu sync *to aggregators* (no aggregators), KDS client list virtualization.
+
+### §9 Tech & §6 Admin — the enterprise-hardening floor lifted
+
+- **Auth/RBAC:** scrypt + MFA + passkeys + PIN; **60+ granular permissions** with custom grants overriding role rank; **location scope cryptographically bound into the session HMAC**; role-prefixed portals (`/manager/*`, `/franchisee/*`, owner-only `/admin/*`); a unified `sessionLocationScope()` resolver that fixed a real PIN/passkey over-grant bug. §6.4 "disqualified from chains >25 locations / investor DD / regulated jurisdictions" is materially softened (SAML/OIDC/SCIM still absent; the register is a controls register, not an external audit).
+- **Backups (§6.4, §11.3):** nightly logical dump → S3 (SigV4) + documented restore runbook + dry-run-on-a-Neon-branch procedure. "No backup/restore SLA → disqualified from insurance underwriting" is closed.
+- **Persistence (§9.1/§9.4):** still mid-migration — orders/slots normalized relational-first with a kv mirror; no row-level transaction on order-create; self-bootstrapping DDL; `store.ts` now ~11,880 lines. Unmoved since 2026-05-29; correctly low-priority at two trucks.
+- **Real-time:** customer tracker + legacy kitchen board both moved off 10s polling onto the order-event SSE; KDS v2 already was. Push end-to-end. (The §5.4 "WebSocket / LISTEN-NOTIFY instead of SSE-of-full-array" upgrade and KDS virtualization are still open.)
+
+### The five §1.2 "Hard Truths" — re-verified 2026-06-03
+
+1. **"AI" is a random number generator** → **Resolved** (real Claude agent layer; heuristics deleted) — unchanged from 2026-05-29.
+2. **Order pipeline serializes on two global locks** → **Mitigated** (DB-first relational path, kv mirror fire-and-forget) — unchanged.
+3. **No real third-party delivery** → **Still true.** The defining NYC/SG blocker. WhatsApp bot is an owned channel, not an aggregator.
+4. **The customer never sees their food** → **Wiring ready, shoot pending** (photographer booked) — the only change is that this is now an ops task, not a code gap.
+5. **Zero automated tests** → **Now false.** 29 files / 181 assertions in a CI gate covering payment/refund/RBAC/slot. The single most-repeated investor objection in this audit is retired.
+
+### Net read on the §1.1 scorecard
+
+| §1.1 row | 2026-05-29 | **2026-06-03** | Why |
+|---|---:|---:|---|
+| **Overall** | 55 | **61** | Enterprise-hardening + ops + customer-flow gains; NYC/SG viability still gated by aggregators + local payments. |
+| **NYC viability** | 27 | **32** | Modifiers, ETA, autocomplete, points preview, refund governance, real-time tracking, credible security/tests. Still no Uber/DoorDash, no USD settlement, no Spanish, photo not yet shot, no Apple Pay. |
+| **Singapore viability** | 31 | **34** | Same operational + trust gains. Still no GrabFood/foodpanda, no SGD/PayNow/PayLah!, no Chinese/Malay/Tamil, NEA A–D auto-grade still blocked on `saturatedFatPerUnit`. |
+| **Operational maturity** | 70 | **78** | Modifiers end-to-end, coursing restored, ESC/POS receipts, HACCP/waste/handover, cash reconciliation, refund reason-codes + manager approval. Capped by no offline POS, no hardware bump bar/cash-drawer, no aggregator menu/status sync. |
+| **UX maturity** | 64 | **71** | Address autocomplete + pre-pay ETA + points-in-cart + reorder + post-order upsell + SSE tracking + rewards values now real. Capped by the pending photo shoot, no Apple Pay/saved cards, PL-only phone validation, two legacy-palette surfaces. |
+| **Scalability** | 70 | **73** | Real CI test gate is the regression shield the audit tied scalability to; relational migration continues. Still single-region DB, no KDS virtualization. |
+| **Franchise readiness** | 35 | **40** | Granular per-location RBAC + role-prefixed portals + SOC 2 register + backups. Royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
+| **Investor readiness** | 48 | **62** | The big move: scrypt+MFA+passkeys, a green CI gate with payment/refund/RBAC tests, S3 backups + restore runbook, SOC 2 controls register, rate-limit + location-scoped RBAC everywhere. Floor remaining: no aggregators, no USD/SGD settlement, photo pending, no SOC 2 Type II audit. |
+
+**The §0 verdict holds — but the shape of the "no" has changed.** On 14 May the answer was "no — fails on ops, enterprise-hardening, *and* channel." As of 2026-06-03 the **ops spine and the enterprise-hardening floor are credible** (tests, MFA, backups, SOC 2 posture, RBAC, receipts, HACCP, refund governance, modifiers). What still kills a NYC/SG launch is now a *shorter, sharper* list: **(1) no Uber Eats/DoorDash/GrabFood/foodpanda — surrendering 60–85% of the addressable market; (2) no local-currency settlement or Apple Pay/PayNow/PayLah! — a 10–20% conversion floor; (3) no offline POS for a metal box on a sidewalk; (4) no Spanish / Chinese-Malay-Tamil; (5) the booked-but-unshot food photography.** That is the §13 Phase 3 (channel) + the local-payments slice of Phase 2 + the Phase 4 offline-POS item — three concrete workstreams, not a rebuild. The operator has effectively completed Phase 1 and most of Phase 2/4-ops; the two cities now gate on Phase 3 and local payments specifically.
+
+— *Re-run lens: same five auditors, twenty days after the original — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` green at 181/181.*

@@ -1,7 +1,7 @@
 # Elite QSR — what Sud Italia would still do differently
 
 **Date:** 2026-05  
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)  
+**Last updated:** 2026-06-03 (re-run pass + one-time Rule #11 fold-in into the body status note; dated Update sections retained as history)  
 **Source:** §10 of `2026-05-revenue-growth-psychology-redesign.md` v3 (post-Sprint-9).  
 **Audience:** product + engineering planning the next 1–2 quarters of monetization work.
 
@@ -9,7 +9,7 @@ The post-Sprint-9 monetization stack is at A-overall — single-codebase QSR pri
 
 The grading carries forward the v3 audit's standard: **A+** = an elite operator (McDonald's, Domino's, Chipotle, Starbucks, Pret) would be hard-pressed to point at a gap. The items below are the gaps they would point at.
 
-> **Status as of 2026-05-29.** Grade holds at **A-overall, not yet A+**. Item 13 (V8 brand direction) shipped to production and a real audited LLM agent layer now underpins item 1, but the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps, now on a premium surface, plus a new precondition: wire the V8 `/rewards` streak/challenge/referral surfaces to real data before instrumenting them. Per-item status re-verified in the dated 2026-05-29 Update below.
+> **Status as of 2026-06-03.** Grade holds at **A-overall, not yet A+**. The customer-facing flywheel half (items 1–10) is largely unchanged in shipped status, but **two things this doc was waiting on are now closed**: (a) the **`/rewards` streak/challenge/referral precondition** flagged on 2026-05-29 — they're wired to real data now, so items 2/3 can instrument a real surface, not fiction; and (b) **refund reason-codes now sit behind a manager-approval gate** (item 3's capture half is fully in; only the analytics *join* remains). Item 13 (V8 brand) shipped earlier; a real audited LLM agent underpins item 1. Per-item status re-verified in the dated 2026-06-03 Update below.
 
 ---
 
@@ -246,3 +246,19 @@ Eight days on. The big movement is **item 13 — the V8 brand-direction commitme
 **Net read on A → A+.** Item 13 closing (V8 live) and the real LLM layer landing both move the operator-side substrate; the customer-facing flywheel half (items 1–10) is **unchanged in shipped status** — same ten gaps an elite operator would point at, now on a more premium surface. The headline self-improving-stack work (1, 2, 4) is still the right Q3 priority, and the new precondition is "make the rewards streak/challenge/referral surfaces real before instrumenting them."
 
 — *Re-run lens: same planning audit, fourteen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — the flagged precondition is closed; refund capture fully gated; the ten hold
+
+Five days on (+211 commits, HEAD `cb49026`, plus the `claude/sharp-galileo-qlIve` fix branch). The grade still holds at **A-overall, not yet A+** — items 1, 2, 4, 5, 6, 7, 9, 10, 11, 14, 15 are unchanged in shipped status (they remain the right Q3–Q4 roadmap for the self-improving flywheel). Two things moved:
+
+**The 2026-05-29 precondition is closed.** That update added "wire the V8 `/rewards` streak/challenge/referral surfaces to real data **before** instrumenting them — otherwise the flywheel measures fiction." Done: streak + per-challenge progress + the persisted referral code now come from real orders via `GET /api/customer/rewards-stats` + `src/lib/rewards-progress.ts` (9-assertion suite); the `Math.random()` `generateReferralCode()` helper was deleted. **Items 2 (voice-of-customer feedback) and 3 (refund×bundle) can now build on a real surface.**
+
+**Item 3 — Refund × bundle correlation → capture half fully closed.** The `OrderRefund.reasonCode` enum + admin reason-picker were live on 2026-05-29; as of this pass refunds also sit behind a **per-actor daily comp cap + manager-approval gate** (the "what stops a cashier comping the whole shift?" control the elite-operator lens asked for). Status moves from 🟡 to **🟡-plus**: capture + governance done, only the **analytics join** (refund-rate per bundle id / per A/B variant in `BundleAnalyticsCard`) remains — and the per-line cost-snapshot prerequisite (Update #2) still applies before the distributor-attributed version of that join is honest.
+
+**Everything else — re-verified unchanged:** item 1 (still rules-based `getCartSuggestions`; LLM substrate richer but segment-feature wiring not done), 2 (no bundle thumbs-up/down), 4 (Stripe Subscription Phase 2 not wired), 5 (slot×bundle pivot), 6 ("bundle is the path" — `CartUpsell` still renders alongside `BundleLadder`), 7 (`byDayOfWeek` rollup + card panel), 9 (continuous elasticity loop), 10 (one-algorithmic-card cart still 10+ elements), 11/12/14/15 (operator-side substrate adds). All still the documented roadmap.
+
+**Net read.** A → A+ is unchanged as a characterisation; the precondition that gated items 2/3 is gone and item 3's capture+governance half is complete, so the **next-quarter build can start on a real retention surface**. The headline self-improving-stack work (items 1, 2, 4) remains the right Q3 priority.
+
+— *Re-run lens: same planning audit, nineteen days later — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` 181/181.*

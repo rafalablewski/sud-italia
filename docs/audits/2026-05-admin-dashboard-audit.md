@@ -2,7 +2,7 @@
 ## Institutional-Grade Audit & Gap Analysis
 
 **Date:** 12 May 2026
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass + one-time Rule #11 fold-in into the §5 scorecard/verdict bodies; dated Update sections retained as history)
 **Auditor scope:** Senior hospitality-tech product strategy, enterprise SaaS architecture, restaurant ops, UX systems
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres
 **Object of audit:** the entire `/admin/*` surface (42 pages, ~74,600 LOC across `src/app/admin` + `src/components/admin`) plus `src/lib/*` (store, ai-engine, growth-engine, loyalty, upsell, admin-auth)
@@ -93,7 +93,7 @@ The five honest findings:
 4. ⚠ **The store is single-instance.** ~~`withLock` in `src/lib/store.ts` is a per-file in-memory Promise queue. On Vercel's multi-region serverless, two concurrent invocations will write to the same row without coordination. This is acceptable for two trucks; it is catastrophic for forty.~~ Now Postgres + drizzle for the hot path (`createOrder` writes through `dualWriteOrder`); `withLock` only fences the legacy kv mirror. Per-location lock keys (`orders:${slug}`) are used on the kv-fallback path (when DB is unset) via `withLockScoped`. The kv-mirror writes still take global `orders.json` / `slots.json` locks but run fire-and-forget so the customer is not waiting on them. Acceptable up to ~10 trucks; the right structural fix is splitting the kv mirror per-location or deleting it now that the DB is source-of-truth.
 5. ❌ **There are zero automated tests.** `find . -name "*.test.*"` returns nothing. There is no CI gate, no contract test on the store, no fixture set, no Playwright smoke. Every refactor is a hand-grenade.
 
-Sophistication score (detailed in §5): originally **38 / 100**, **~68–72 / 100 as of 2026-05-29** (see the dated Update sections — real POS terminal, audited LLM agent, relational migration, three-theme design system, V8 storefront). Investor-grade hospitality SaaS starts at **70**. McDonald's-grade internal ops platforms operate at **88–95**.
+Sophistication score (detailed in §5): originally **38 / 100**, ~68–72 (2026-05-29), **~74–78 / 100 as of 2026-06-03** — it now **crosses the investor-grade 70 line**, because the entire residual-gap list this audit kept citing (zero tests, plaintext password, no MFA, no backup/restore runbook) closed in one branch: 29 test files / 181 assertions in a CI gate, salted-scrypt + TOTP + passkeys, nightly S3 backups + restore runbook, a SOC 2 controls register, per-route rate-limit, plus HACCP/waste/handover, customer modifier picker end-to-end, coursing, ESC/POS receipts, and SSE on every order surface. Remaining gap to McDonald's-grade (88–95): third-party delivery, offline POS, food photography (shoot booked), staging env, multi-tenant.
 
 The product is salvageable and, in many dimensions, well-architected for its current stage — the data model in `store.ts` is clean, types are coherent, the glass design system is consistent, and breadth (42 pages, 130+ admin endpoints) is impressive for what is effectively a single-team build. But the gap between **"functional admin tool"** and **"category-defining hospitality OS"** is approximately the work outlined in §3 and §5 of this document.
 
@@ -598,39 +598,39 @@ A trillion-dollar operator does not buy software. It builds an operating system 
 
 | Dimension | Score / 100 | Comment | Movement this session |
 |---|---|---|---|
-| **Overall sophistication** | **38** | Solid breadth, shallow depth, fake AI, no realtime, no RBAC. | ✓ Materially improved — Insights relabelled honestly, Claude-backed forecast at `src/lib/ai/forecast.ts` (heuristic fallback badge when API key unset), SSE on KDS v2 + admin orders board, per-route role gates on refund / GDPR / shifts. Per the 2026-05-21 preambles above the score arc is 38 → 55–60 → 62–68 over the three audit-update passes; the cell value left at 38 reflects the original audit date, not today. |
-| **Enterprise readiness** | 22 | Single-password auth, no SSO, no audit-grade logs, no SOC2 surface, no tests. | ✗ Unchanged on the password / SSO / SOC2 / tests axes; ✓ partial on per-user binding (signed cookie carries `userId:issuedAt.hmac`, `getCurrentAdminUser()` resolves the row from `admin-users.json`, audit-log `actor` now resolves to the bound user's email). Shared-password fallback still effective on routes that haven't adopted `requireRole(...)`. |
+| **Overall sophistication** | **38** → **~74–78 (2026-06-03)** | Solid breadth, shallow depth, fake AI, no realtime, no RBAC. | ✓ **Crosses the investor-grade 70 line as of 2026-06-03.** Score arc: 38 → 55–60 (2026-05-16) → 62–68 (2026-05-21) → 68–72 (2026-05-29) → **74–78 (2026-06-03)** — the residual-gap list (tests, plaintext password, MFA, backup runbook) closed; HACCP/modifiers/coursing/receipts/SSE-everywhere landed. The original `38` cell reflects the audit date. |
+| **Enterprise readiness** | 22 → **~52 (2026-06-03)** | Single-password auth, no SSO, no audit-grade logs, no SOC2 surface, no tests. | ✓ **Materially improved 2026-06-03** — salted-scrypt password + **TOTP MFA + WebAuthn passkeys + PIN**, per-human accounts, 60+ granular permissions with location-scoped session HMAC, **per-route rate-limit** + IP allowlist, **29 tests / 181 assertions in a CI gate**, **SOC 2 controls register** at `/admin/soc2`, nightly S3 backups + restore runbook. ✗ Still: SAML/OIDC SSO + SCIM, SOC 2 Type II external audit. |
 | **Scalability readiness** | 31 | Single-instance lock, polling, hardcoded locations, monolithic JSON store. Fine to ~5 trucks, breaks at 20. | ✓ Improved — Postgres + `dualWriteOrder` on the hot path, `withLockScoped("orders", locationSlug, ...)` on the kv-fallback path, DB-backed locations CRUD at `/admin/locations/manage`. Legacy global locks remain only on the fire-and-forget kv mirror writes. The "breaks at 20 trucks" ceiling lifts roughly N× now that the hot path is per-location. |
-| **AI-native readiness** | 12 | One page labeled "AI" with no model in it. Zero LLM, zero retrieval, zero copilot. | ✓ Improved on honesty + capability — `/admin/ai` relabelled **Insights**, Claude-backed demand forecast wired (`src/lib/ai/forecast.ts`), feedback NLP via Claude Haiku 4.5 (`src/lib/sentiment.ts`). Anomaly detection still heuristic with thresholds; copilot not built. |
+| **AI-native readiness** | 12 → **~45 (2026-06-03)** | One page labeled "AI" with no model in it. Zero LLM, zero retrieval, zero copilot. | ✓ Improved — Claude-backed forecast (`src/lib/ai/forecast.ts`) + feedback NLP + a real **agentic LLM layer** (`src/lib/ai/agent.ts` tool-use loop with operator-approval gates + role-gated, audit-logged tool registry) + WhatsApp LLM ordering bot. Anomaly detection still heuristic; a full per-page copilot not built. |
 | **Franchise readiness** | 18 | No multi-tenant, no royalty accounting, no per-franchisee permissions, no comparison dashboards. | ✗ Unchanged on multi-tenant + royalty accounting; ✓ marginally on substrate — DB-backed locations + the multi-unit fleet model in `/admin/simulation` give the operator a model to underwrite a franchise pro forma. Chain-wide recipes (post-2026-05-21 #2) remove a class of formula-divergence foot-gun that any franchise model would need to reject. |
 | **Multi-location readiness** | 55 | Best dimension. Location switcher works, most APIs are scoped, but reporting cross-location is shallow. | ✓ Cross-location reporting now lives in `/admin/reports/cohort` + the fleet-model panel of `/admin/simulation`. Locations CRUD shipped at `/admin/locations/manage`. |
-| **Operational maturity** | 34 | KDS exists; compliance calendar shipped (`/admin/compliance` + `ComplianceItem` entity, see §1.1 row "Compliance calendar"); no SOPs, no HACCP, no incidents, no maintenance. | ✓ Improved — variance alerts (`src/lib/variance.ts`), labor-cost ratio KPI (`/api/admin/labor-ratio`), tip reports (`/api/admin/reports/tips`), recall function on KDS, scheduling-rules conflict detection (`src/lib/scheduling-rules.ts`), recipe-driven stock decrement with chain-wide recipes + per-distributor offerings (post-2026-05-21 #2). SOPs / HACCP / incidents / maintenance still ✗. |
-| **Investor attractiveness** | 28 | Pretty UI + breadth helps; the original "fake AI" callout is partially obsolete (Insights label + Claude forecast); zero tests + no metrics infra still hurt. | ✓ Materially improved — full unit-economics + cohort + LTV/CAC + sensitivity + EBITDA / EBITDAR / cash-on-cash sandbox in `/admin/simulation` with `InfoButton` "Brief + InstitutionalAnalysis" annotations on every concept. Per-distributor cost ledger gives every margin number audit-traceable provenance. The "YC partner digs fast" risk is now bounded by: tests, MFA, third-party delivery, food photography — not by the in-product story. |
+| **Operational maturity** | 34 → **~58 (2026-06-03)** | KDS exists; compliance calendar shipped; no SOPs, no HACCP, no incidents, no maintenance. | ✓ **Materially improved 2026-06-03** — **HACCP temperature log + waste log + shift handover (cash count + variance)** shipped, **customer modifier picker → KDS → Stripe → ESC/POS receipt**, **coursing restored**, **refund reason-codes behind a per-actor daily-cap + manager-approval gate**, plus the prior variance alerts / labor-ratio / recall / recipe-driven stock. Still ✗: SOPs library, incidents, maintenance, offline POS, hardware bump-bar/cash-drawer. |
+| **Investor attractiveness** | 28 → **~55 (2026-06-03)** | Pretty UI + breadth helps; zero tests + no metrics infra hurt. | ✓ **Materially improved 2026-06-03** — the unit-economics + cohort + LTV/CAC + sensitivity sandbox in `/admin/simulation`, **plus the two items that bounded the score are now closed: a green CI test gate (payment/refund/RBAC/slot) and MFA.** The "YC partner digs fast" risk is now bounded only by: third-party delivery + the booked-not-shot food photography. |
 | **Competitive moat** | 24 | Today this is a generic admin tool. Moat candidates exist (food-truck specificity, family wallet, Polish-market focus) but none are exploited. | ✗ Unchanged |
 | **Code quality / maintainability** | 64 | TypeScript end-to-end, clean module boundaries, consistent design system, no obvious tech debt. The bones are good. | ✗ Unchanged |
 
 ### 5.2 Top 10 Highest-Impact Missing Features
 
-1. Real-time event bus + WebSocket / SSE for KDS, orders, alerts. — ✗ Not fixed
-2. Per-user authentication + actual RBAC enforcement. — ✓ Partial — session cookie now carries a userId claim; login optionally binds to an `admin-users.json` row by email; `getCurrentRole()` resolves from that row; `requireRole()` enforces on refund / GDPR delete / shifts. Magic-link + cascading the gate to every admin route still ✗.
+1. Real-time event bus + WebSocket / SSE for KDS, orders, alerts. — ✓ **Partial 2026-06-03** — SSE on KDS v2, admin orders board, **customer tracker (`/api/orders/stream`)** and the **legacy kitchen board (`/api/kitchen/orders/stream`)** via the in-process order-event emitter. A durable event bus (Inngest/Kafka-class) is still ✗.
+2. Per-user authentication + actual RBAC enforcement. — ✓ **Materially closed 2026-06-03** — per-human accounts with **salted-scrypt + TOTP + passkeys + PIN**, **60+ granular permissions** with custom grants, location scope bound into the session HMAC, per-route rate-limit via `withAdmin`. SAML/OIDC SSO still ✗.
 3. Real demand-forecasting model (replace `ai-engine.ts` heuristics). — ✅ **Resolved 2026-05-21** — heuristic exports deleted; `/admin/ai` is wired to `src/lib/ai/forecast.ts` (Claude-backed) with explicit "Heuristic" fallback badge when `ANTHROPIC_API_KEY` is unset.
 4. Aggregator integration (Pyszne, Glovo, Bolt, Uber Eats) via Deliverect-class adapter. — ✗ Not fixed
 5. Live truck telemetry (GPS, fuel, oven, generator) with customer-facing ETA. — ✗ Not fixed
 6. Real-time P&L with per-order contribution margin and per-channel margin matrix. — ✗ Not fixed
 7. Live labor cost % of revenue tile + AI auto-scheduler. — ✗ Not fixed
-8. HACCP & food-safety logs (probe temps, hygiene, allergen) with SANEPID-ready export. — ✗ Not fixed
-9. Variance alerts (theoretical vs actual usage) and auto-PO drafting. — ✗ Not fixed
+8. HACCP & food-safety logs (probe temps, hygiene, allergen) with SANEPID-ready export. — ✓ **Done 2026-06-03** — `AdminHaccp` temperature log + waste log + shift handover, all audit-logged. (SANEPID-format export still ✗.)
+9. Variance alerts (theoretical vs actual usage) and auto-PO drafting. — ✓ **Done** — `src/lib/variance.ts` + recipe-driven stock decrement + daily PAR-driven draft POs.
 10. AI Copilot in admin (natural-language → query → answer / action). — ✗ Not fixed
 
 ### 5.3 Top 10 Fastest Wins (≤ 2 weeks each)
 
-1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic. — ✓ Partial — `@sentry/nextjs` installed and gated on `SENTRY_DSN`; `src/lib/logger.ts` ships structured JSON logs wired into the webhook / checkout / refund / store read paths. Still ✗: unit tests covering `store.ts` and pricing logic.
+1. Add Sentry + structured logging + at least 30 unit tests covering `store.ts` and pricing logic. — ✓ **Done 2026-06-03** — Sentry + structured logs + **29 test files / 181 assertions** (checkout pricing, slot, refund, RBAC, loyalty, cohort, LTV/CAC, TOTP, receipt, coursing…) in a CI gate. (Coverage tooling/threshold still ✗.)
 2. Rename `/admin/ai` to `Insights` until real models ship; remove "AI" labels from heuristics. — ✓ **Fixed this session** — sidebar label, page H1, subtitle, and aria-label all relabelled. Subtitle explicitly states no ML model is in the loop yet
 3. Add bulk actions (multi-select + bulk status / bulk delete) on orders and stock. — ✓ Partial — bulk actions shipped on AdminOrders (table view) and AdminMenu (per-row checkboxes). Inventory bulk operations still ✗.
 4. Add CSV export to every list view (orders, customers, members, stock, shifts). — ✗ Not fixed
 5. Add `Cmd+K` universal command palette that finds orders, customers, items, suppliers, not just pages. — ✓ **Already fixed prior to this audit** — `CommandPalette.tsx` + `/api/admin/search` return orders, customers, menu items, ingredients. The audit row is out of date
 6. Add a single "next 60 minutes" widget to `/admin` showing upcoming slot load + alerts. — ✓ Fixed — Next60Widget at the top of AdminDashboard composes slots, tickets due, low-stock, and floor headcount into one strip with drill-down detail lists.
-7. Add per-user login (email + password) wrapped around existing HMAC; record actor on every audit-log entry. — ✗ Not fixed
+7. Add per-user login (email + password) wrapped around existing HMAC; record actor on every audit-log entry. — ✓ **Done 2026-06-03** — per-human accounts (scrypt + MFA + passkeys + PIN); every write audit-logged with the bound actor.
 8. Add WebSocket (or Vercel-compatible SSE) for KDS and orders; remove the 2-second polling. — ✓ Fixed — SSE endpoint `/api/admin/orders/stream` plus `useAdminOrdersStream` (graceful REST fallback) replace the polling loops in AdminOrders and AdminKDS.
 9. Add `react-hot-keys` + `J/K/E/Backspace/U` keyboard model on the orders list. — ✗ Not fixed
 10. Add explicit empty / skeleton / error states to every list page (currently many pages render half-broken on no-data). — ✗ Not fixed
@@ -668,11 +668,11 @@ Three phases, each ~6 months. Each phase ends with a demoable, sellable artifact
 **Phase 1 — Credibility (months 0–6).** Goal: a system that survives serious due diligence.
 
 - Replace heuristics labeled "AI" with either real models or honest names. — ✓ **Partly done** (honest names shipped this session; real models still ✗)
-- Per-user auth, enforced RBAC on every page + every API route, audit log per actor. — ✗ Not fixed
-- Sentry, OpenTelemetry, structured logs, dashboards, on-call. — ✗ Not fixed
-- Test suite (unit + Playwright smoke) gating CI; coverage > 60% on `lib/`. — ✗ Not fixed
+- Per-user auth, enforced RBAC on every page + every API route, audit log per actor. — ✓ **Largely done 2026-06-03** — per-human scrypt+MFA accounts, 60+ permissions, location-scoped HMAC, per-route rate-limit; audit log per actor. (Central middleware vs per-route wrapper + SSO still ✗.)
+- Sentry, OpenTelemetry, structured logs, dashboards, on-call. — ✓ **Partial** — Sentry server-side capture + alerting runbook + structured logs. (OTel/dashboards/on-call still ✗.)
+- Test suite (unit + Playwright smoke) gating CI; coverage > 60% on `lib/`. — ✓ **Partial 2026-06-03** — 29-file/181-assertion unit suite gating CI (typecheck→lint→test→build). Playwright smoke + a coverage threshold still ✗.
 - Real-time event bus (Inngest / Trigger.dev / Kafka-light) replacing polling. — ✗ Not fixed
-- HACCP food-safety module with SANEPID-ready export. — ✗ Not fixed
+- HACCP food-safety module with SANEPID-ready export. — ✓ **Module done 2026-06-03** (`AdminHaccp` temp log + waste + handover); SANEPID-format export still ✗.
 - Aggregator adapter for at minimum Pyszne and Glovo via Deliverect. — ✗ Not fixed
 - AI Copilot (RAG over schema) on `/admin`. — ✗ Not fixed
 - Bulk actions, exports, command palette, undo, sheets-not-modals across all list views. — ✓ Command palette done; bulk actions / exports / undo / sheets ✗
@@ -706,7 +706,7 @@ Three phases, each ~6 months. Each phase ends with a demoable, sellable artifact
 
 ### 5.7 Closing Posture
 
-The codebase is honest, clean, broad, and pretty. It is also small, single-tenant, ~~polling-based~~ (SSE on KDS v2 + admin orders; legacy `/kitchen/[slug]` still polls), password-gated, ~~AI-labeled-but-not-AI~~ (Claude-backed forecast at `src/lib/ai/forecast.ts` since 2026-05-16, dead heuristic exports deleted 2026-05-21), and untested. Sud Italia today is a *very good internal admin tool* and a *very weak hospitality OS*.
+The codebase is honest, clean, broad, and pretty. It is also small, single-tenant, ~~polling-based~~ (SSE on KDS v2 + admin orders + **the customer tracker and legacy kitchen board as of 2026-06-03**), ~~password-gated~~ (**scrypt + MFA + passkeys + PIN since 2026-06-03**), ~~AI-labeled-but-not-AI~~ (Claude forecast + a real agentic LLM agent), and ~~untested~~ (**29 files / 181 assertions in a CI gate**). Sud Italia today is a *very good internal admin tool* that has **crossed the investor-grade threshold on hardening** — and is still a *weak hospitality OS* on the channel + multi-tenant axes.
 
 The opportunity is real: a Polish-market-deep, food-truck-native, AI-copilot-first operating system has no serious incumbent. Toast is American, MICROS is enterprise legacy, Square is light, Pyszne/Glovo are aggregators not OSes. ~~With the roadmap above — and the discipline to stop calling heuristics "AI" —~~ With the roadmap above — and the 2026-05-16 / 2026-05-21 honesty passes (real Claude forecast wired, fake heuristic exports deleted, fake ratings deleted, aggregator mocks deleted) — this codebase is 12–18 months away from being category-defining.
 
@@ -761,3 +761,26 @@ The 2026-05-21 #2 score was 64–68/100. With the real POS terminal, the agentic
 **Bottom line for this audit.** The "is this an admin tool for two trucks or an operating system for an industry?" question the original close posed is being answered, in code, in the direction of the latter — a real POS, an audited AI agent, multi-theme infrastructure, and a relational data spine are operating-system moves, not admin-tool moves. The honest counterweight is that the foundational hygiene this audit's §0 named (auth, tests, backups) is still open, and a fresh cosmetic-not-functional regression appeared on the rewards surface. The next decision is unchanged — pick the product — and the evidence now leans toward "operating system," which makes closing the hygiene gap more urgent, not less.
 
 — *Re-run lens: same admin-dashboard audit, seventeen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — the foundational-hygiene gap §0 named is closed; sophistication crosses 70
+
+Five days on (+211 commits, HEAD `cb49026`, plus the `claude/sharp-galileo-qlIve` fix branch). The 2026-05-29 close said the score's ceiling was "plaintext admin password, no MFA, no real test coverage on payment/refund/RBAC, … no Neon backup/restore runbook" — i.e. the **foundational hygiene this audit's §0 named (auth, tests, backups)**. That entire sub-list closed in one branch, so the **sophistication score crosses the investor-grade 70 line: ~74–78/100**.
+
+| Closed 2026-06-03 | Evidence |
+|---|---|
+| Plaintext password → **scrypt + TOTP MFA + passkeys + PIN** | `src/lib/password.ts`, `src/lib/totp.ts`, `src/lib/webauthn.ts` |
+| Zero payment/refund/RBAC tests → **29 files / 181 assertions in a CI gate** | `.github/workflows/ci.yml` (typecheck→lint→test→build) |
+| No backup/restore runbook → **nightly S3 dump + documented restore** | `src/lib/backup.ts`, `docs/runbooks/backup-restore.md` |
+| No SOC2 surface → **12-control register introspecting real posture** | `src/lib/soc2.ts`, `/admin/soc2` |
+| Rate-limit on 2 routes → **every admin route via `withAdmin`** + IP allowlist | `src/lib/api-middleware.ts` |
+| The 2026-05-29 **`/rewards` Rule #1 regression** (hardcoded streak/challenge + `Math.random()` referral) | ✅ wired to real data (`/api/customer/rewards-stats`, `src/lib/rewards-progress.ts`); `generateReferralCode()` deleted |
+| HACCP / waste / shift-handover, customer **modifier picker → KDS → Stripe → ESC/POS receipt**, **coursing restored**, refund **manager-approval gate** | §5.1 Operational maturity 34 → ~58 |
+| Customer tracker + legacy kitchen board → **SSE** | `/api/orders/stream`, `/api/kitchen/orders/stream` |
+
+**Scorecard movement (§5.1):** Overall sophistication 68–72 → **74–78**; Enterprise readiness 22 → **~52**; Operational maturity 34 → **~58**; Investor attractiveness 28 → **~55**; AI-native 12 → **~45**. The dimensions still pinned low — Franchise readiness (no multi-tenant/royalty), Competitive moat — are strategy, not hygiene.
+
+**Still open (the real ceiling now):** third-party delivery (no Pyszne/Glovo/Uber/Bolt in production), offline-first POS, food photography (shoot booked), staging env, multi-tenant + SSO/SCIM, a durable event bus, and a coverage threshold/Playwright smoke on top of the unit suite. **The §0 question is now answered in code toward "operating system," and — unlike every prior pass — the foundational-hygiene counterweight that made that answer risky is no longer open.** The next gates are channel + multi-tenant, not auth/tests/backups.
+
+— *Re-run lens: same admin-dashboard audit, twenty-two days later — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` 181/181.*

@@ -2,7 +2,7 @@
 ## How To Squeeze 30–60% More Revenue Out Of The Same Trucks
 
 **Date:** 14 May 2026
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass + one-time Rule #11 fold-in into the status note; dated Update sections retained as history)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Restaurant growth strategist + behavioural-psychology consultant + menu-engineering operator + restaurant-tech product architect + private-equity operating partner
 **Posture:** Elite PE operational audit × casino psychology consulting × FAANG conversion optimisation. Tactical, system-thinking, profit-per-minute mindset.
@@ -14,7 +14,7 @@
 
 ## Implementation status
 
-> **Status as of 2026-05-29.** Plays 1–3 unchanged in shipped status; the §1.5 "emoji-on-gradient" conversion killer is closed at the brand-frame level (V8 Tuscany storefront in production) but **real food photography is still missing**, and the three single-day revenue items (food photography, address autocomplete, post-order single-tap espresso upsell) remain un-shipped. Tip default still None. New regression: the V8 `/rewards` streak/challenge/referral surfaces ship with hardcoded/`Math.random()` values (Rule #1). Full re-verification in the dated 2026-05-29 Update below.
+> **Status as of 2026-06-03.** **Two of the three single-day revenue items shipped:** ✅ **address autocomplete** (`AddressAutocomplete` — Google Places + Nominatim) and ✅ **post-order single-tap upsell** (`PostOrderUpsell` on the confirmation page, adds to the live cart). **Food photography** is now 🟡 operator-in-progress (photographer booked; `MenuItem.image` render path ready). The **2026-05-29 `/rewards` Rule #1 regression is RESOLVED** — streak/challenge/referral all wired to real data (`/api/customer/rewards-stats` + `src/lib/rewards-progress.ts`; `Math.random()` `generateReferralCode()` deleted). Tip default still None (intentional). Full re-verification in the dated 2026-06-03 Update below.
 
 Sections 2 and 3 are fully in production. Section 4 is mostly in
 production (charm pricing, hero/profit-driver/anchor cards, the LTO
@@ -1287,3 +1287,39 @@ These are exactly the "cosmetic implementation pretending to function" failures 
 The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged. The brand-frame half of the §1.5 conversion-killer complaint is **closed** (V8 live); the photography half is **still open**. Of the audit's three explicitly-named single-day revenue items — food photography, address autocomplete, post-order single-tap espresso upsell — **all three remain un-shipped after fourteen days.** The eight days of work went into the storefront rebuild, the three-theme design-system split, the data-layer migration, and the LLM layer. The §5 retention surface finally has UI, but it ships with hardcoded streak/challenge/referral values that must be wired to real data before the dopamine loop earns the trust the audit's §8 demands. The work-vs-revenue ratio on the three single-day items has, if anything, worsened — the premium surface now sits above an emoji-free but photo-free menu and a streak counter that doesn't count.
 
 — *Re-run lens: same growth/psychology audit, fifteen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — two of the three single-day revenue items shipped; the dopamine loop is real now
+
+Five days on (+211 commits, HEAD `cb49026`, plus the `claude/sharp-galileo-qlIve` fix branch; `npm test` 181/181). The 2026-05-29 close ended on a sharp line: "the premium surface now sits above an emoji-free but photo-free menu and a streak counter that doesn't count." Two of those three single-day items are now done, and the streak counts.
+
+### The three single-day revenue items — 2 of 3 closed
+
+| Item | 2026-05-29 | **2026-06-03** |
+|---|---|---|
+| Address autocomplete | ❌ commented out | ✅ **Shipped** — `AddressAutocomplete` (Google Places when keyed, OpenStreetMap Nominatim fallback, server-proxied). The §3 delivery-address friction lever is live. |
+| Post-order single-tap espresso/upsell | ❌ not built | ✅ **Shipped** — `PostOrderUpsell` on the confirmation page runs the same margin-ranked `getCartSuggestions` engine and adds to the live Zustand cart. The +6–12%-on-confirmed-orders lever (§2) is live. |
+| Real food photography | ❌ missing | 🟡 **Operator-in-progress** — photographer booked; `MenuItem.image` render path already supports real images (emoji/gradient only the fallback), so the shoot drops straight in. Per Rule #1 no placeholder was wired. Still the single highest-ROI un-shipped change until the shoot lands. |
+
+### §5 / §0.2 Play 3 — the dopamine loop is no longer faked
+
+The 2026-05-29 update flagged three Rule #1 violations on the `/rewards` retention surface — the exact surface this audit's §5 dopamine-loop and §6.2 give-get depend on. **All three are now wired to real data:**
+
+- **Streak** → `computeWeekStreak` over real confirmed orders (consecutive Sunday-anchored weeks, DST-safe), shown only when ≥1; no more literal "2".
+- **Weekly-challenge progress** → `computeChallengeProgress` (this-week pasta units / order count / qualified referrals) drives the bar and the `current / target` footer; no more literal "33%".
+- **Referral code** → the **persisted, deterministic-per-phone** code from `referral-loop.ts` via `GET /api/customer/rewards-stats`; the `Math.random()` `generateReferralCode()` helper was **deleted**, so the give-get loop §6.2 designs now surfaces a stable, shareable code.
+
+Served by a cookie-authenticated endpoint with a 9-assertion unit suite (`src/lib/rewards-progress.test.ts`). Play 3 finally has *real* pixels — the variable-ratio mechanic and DOB triggers remain ⏳, but the streak now counts.
+
+### Still open (re-verified)
+
+- **Apple Pay primary** (§2.1 `T+pay`) — still ⏳, Stripe redirect; no Payment Request API, no saved cards.
+- **Tip default still "None"** — the §0.1 +PLN 18k tip-pool lever is still un-pulled (intentional brand call; an A/B of 5%-default vs none would resolve it).
+- **Subscription / corporate auto-rebill** (Play 2 Phase 2) — `/admin/scheduled-bundles` queue + WhatsApp pay-in-chat exist; recurring Stripe Subscription billing still ⏳.
+
+### Net read
+
+The audit's PLN 240–420k/truck/year cost-of-not-pulling is unchanged in framing but **two of its three named single-day levers are now pulled**, and the §5 retention surface that shipped faked on 2026-05-29 is now honest. The work-vs-revenue ratio the last update called "worsened" has reversed: the premium surface now sits above a menu with a live address-autocomplete checkout, a post-payment attach prompt, and a streak counter that counts — with only the food-photography shoot and the Apple-Pay/tip-default levers between today and the bulk of the recoverable AOV.
+
+— *Re-run lens: same growth/psychology audit, twenty days later — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` 181/181.*

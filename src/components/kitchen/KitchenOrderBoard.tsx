@@ -186,10 +186,59 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
     };
   }, [router, slug, fetchLiveCarts, applyPresencePayload]);
 
+  // Live order updates via SSE (/api/kitchen/orders/stream) — same in-process
+  // emitter the admin/KDS boards use, so the legacy station board gets
+  // push parity instead of the old 10 s `setInterval` poll. Falls back to a
+  // 10 s REST poll if EventSource is missing or the stream errors/drops.
   useEffect(() => {
-    const id = setInterval(() => fetchOrders({ silent: true }), 10_000);
-    return () => clearInterval(id);
-  }, [fetchOrders]);
+    let cancelled = false;
+    let source: EventSource | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const startFallbackPoll = () => {
+      if (pollTimer || cancelled) return;
+      pollTimer = setInterval(() => fetchOrders({ silent: true }), 10_000);
+    };
+    const stopFallbackPoll = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        source = new EventSource("/api/kitchen/orders/stream");
+        // On (re)connect, drop the fallback poll — the stream is live again.
+        source.onopen = () => stopFallbackPoll();
+        source.onmessage = (ev) => {
+          if (cancelled) return;
+          try {
+            const data = JSON.parse(ev.data);
+            if (Array.isArray(data)) {
+              setOrders(data as Order[]);
+              void fetchLiveCarts();
+            }
+          } catch {
+            /* ignore malformed frame */
+          }
+        };
+        // Don't close the source — let EventSource auto-reconnect natively.
+        // Poll bridges the gap meanwhile; onopen clears it on reconnect.
+        source.onerror = () => startFallbackPoll();
+      } catch {
+        startFallbackPoll();
+      }
+    } else {
+      startFallbackPoll();
+    }
+
+    return () => {
+      cancelled = true;
+      source?.close();
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [fetchOrders, fetchLiveCarts]);
 
   const handleStatusChange = async (orderId: string, status: string) => {
     await fetch("/api/kitchen/orders", {

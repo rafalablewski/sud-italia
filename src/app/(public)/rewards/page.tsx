@@ -12,7 +12,6 @@ import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-se
 import {
   ACHIEVEMENTS,
   getActiveChallenges,
-  generateReferralCode,
   getEarnedAchievements,
 } from "@/lib/growth-engine";
 import { COMBO_DEALS } from "@/lib/upsell";
@@ -41,6 +40,12 @@ import {
 
 function daysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
+}
+
+interface RewardsStats {
+  referralCode: string;
+  weekStreak: number;
+  challengeProgress: Record<string, number>;
 }
 
 // QR placeholder cell map (5×5 grid; matches the previous component's
@@ -292,6 +297,24 @@ function RewardsDashboard() {
     };
   }, []);
 
+  // Real engagement data — persisted referral code + week streak +
+  // per-challenge progress from the customer's actual orders (Rule #1).
+  // Served by /api/customer/rewards-stats (cookie-authenticated).
+  const [stats, setStats] = useState<RewardsStats | null>(null);
+  useEffect(() => {
+    if (!customer) return;
+    let cancelled = false;
+    fetch("/api/customer/rewards-stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: RewardsStats | null) => {
+        if (!cancelled && d) setStats(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [customer]);
+
   if (!customer || !loyalty) return null;
 
   const tiersCfg = loyalty.tiers;
@@ -300,7 +323,8 @@ function RewardsDashboard() {
   const nextTier = getNextTier(tier);
   const toNext = pointsToNextTier(customer.points, tier, tiersCfg);
   const challenges = getActiveChallenges();
-  const referralCode = generateReferralCode(customer.name);
+  const referralCode = stats?.referralCode ?? "";
+  const weekStreak = stats?.weekStreak ?? 0;
 
   const earnedIds = getEarnedAchievements(customer);
   const earned = ACHIEVEMENTS.filter((a) => earnedIds.has(a.id));
@@ -431,7 +455,7 @@ function RewardsDashboard() {
           </div>
           <div className="v8-rewards-tier-stat">
             <div className="v8-rewards-tier-stat-num">
-              2 <Flame className="h-4 w-4" />
+              {weekStreak} <Flame className="h-4 w-4" />
             </div>
             <div className="v8-rewards-tier-stat-label">Week streak</div>
           </div>
@@ -466,48 +490,56 @@ function RewardsDashboard() {
             <LoyaltyCardSection />
           </div>
 
-          <div className="v8-rewards-streak">
-            <span className="v8-rewards-streak-icon" aria-hidden="true">
-              <Flame className="h-7 w-7" />
-            </span>
-            <div>
-              <div className="v8-rewards-streak-title">
-                2-week streak · <em>due settimane</em>
-              </div>
-              <div className="v8-rewards-streak-sub">
-                Order again this week to keep it going. <strong>3 weeks = +30 bonus pts.</strong>
+          {weekStreak >= 1 && (
+            <div className="v8-rewards-streak">
+              <span className="v8-rewards-streak-icon" aria-hidden="true">
+                <Flame className="h-7 w-7" />
+              </span>
+              <div>
+                <div className="v8-rewards-streak-title">
+                  {weekStreak}-week streak · <em>settimane</em>
+                </div>
+                <div className="v8-rewards-streak-sub">
+                  Order again this week to keep it going.
+                  {weekStreak < 3 && <strong> 3 weeks = +30 bonus pts.</strong>}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <h2 className="v8-rewards-section-title">
             <Target className="h-5 w-5" aria-hidden />
             Weekly challenges <span className="v8-rewards-section-it">· sfide della settimana</span>
           </h2>
           <div className="v8-rewards-challenges" style={{ marginBottom: 22 }}>
-            {challenges.map((ch) => (
-              <div key={ch.id} className="v8-rewards-challenge">
-                <div className="v8-rewards-challenge-head">
-                  <div className="v8-rewards-challenge-title">{ch.title}</div>
-                  <span className="v8-rewards-challenge-clock">
-                    <Clock className="h-3 w-3" /> {daysUntil(ch.expiresAt)}d
-                  </span>
+            {challenges.map((ch) => {
+              const current = Math.min(stats?.challengeProgress?.[ch.id] ?? 0, ch.target);
+              const fillPct = ch.target > 0 ? Math.min((current / ch.target) * 100, 100) : 0;
+              return (
+                <div key={ch.id} className="v8-rewards-challenge">
+                  <div className="v8-rewards-challenge-head">
+                    <div className="v8-rewards-challenge-title">{ch.title}</div>
+                    <span className="v8-rewards-challenge-clock">
+                      <Clock className="h-3 w-3" /> {daysUntil(ch.expiresAt)}d
+                    </span>
+                  </div>
+                  <div className="v8-rewards-challenge-desc">{ch.description}</div>
+                  <div className="v8-rewards-challenge-rail">
+                    <div className="v8-rewards-challenge-fill" style={{ width: `${fillPct}%` }} />
+                  </div>
+                  <div className="v8-rewards-challenge-foot">
+                    <span>
+                      <span className="num">{current}</span> /{" "}
+                      <span className="num">{ch.target}</span>
+                    </span>
+                    <strong>+{ch.rewardPoints} pts</strong>
+                  </div>
                 </div>
-                <div className="v8-rewards-challenge-desc">{ch.description}</div>
-                <div className="v8-rewards-challenge-rail">
-                  <div className="v8-rewards-challenge-fill" style={{ width: "33%" }} />
-                </div>
-                <div className="v8-rewards-challenge-foot">
-                  <span>
-                    1 / <span className="num">{ch.target}</span>
-                  </span>
-                  <strong>+{ch.rewardPoints} pts</strong>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {loyalty.referral && (
+          {loyalty.referral && referralCode && (
           <div className="v8-rewards-referral">
             <h2 className="v8-rewards-referral-h2">
               <Share2 className="h-5 w-5" aria-hidden />
@@ -718,7 +750,7 @@ function RewardsDashboard() {
             )}
           </div>
 
-          {loyalty.referral && (
+          {loyalty.referral && referralCode && (
           <div className="v8-rewards-refer-card">
             <div className="v8-rewards-refer-card-icon" aria-hidden="true">
               <Heart className="h-7 w-7" fill="currentColor" fillOpacity="0.25" />

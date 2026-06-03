@@ -13,11 +13,12 @@ export interface ReferralCode {
   createdAt: string;
 }
 
-export function generateReferralCode(name: string): string {
-  const clean = name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `SUD-${clean}-${random}`;
-}
+// Referral codes are NOT generated here. The customer-facing code is the
+// persisted, deterministic-per-phone value from `referral-loop.ts`
+// (`getOrCreateReferralCode`), surfaced to /rewards via
+// `/api/customer/rewards-stats`. The old `generateReferralCode()` helper used
+// `Math.random()` and produced a different code on every render — a Rule #1
+// regression — so it was removed.
 
 // Referral reward values (referrerPoints + refereeDiscountGrosze) live
 // on `LoyaltySettings.referral` — edit at /admin/growth → Referrals,
