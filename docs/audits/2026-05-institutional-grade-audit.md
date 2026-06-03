@@ -1,7 +1,7 @@
 # Sud Italia — Institutional-Grade Audit
 
 **Date:** 2026-05-16
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass — see §17 below. The 2026-05-16/21/29 bodies are preserved as historical snapshots per Rule #11; the current state of every finding is consolidated in the dated §17 re-run section.)
 **Auditor lens:** McKinsey operational due diligence + PE operational advisor + Toast/Square systems architect + consumer-psychology operator
 **Scope:** Full repository (`/home/user/sud-italia`), business model, ops architecture, UX, monetization, scale readiness
 **Mode:** Brutally honest. No flattery. Specific citations.
@@ -700,3 +700,97 @@ The §3 "What is theatre" discipline this audit pioneered has a fresh instance t
 The four still-open §15 bullets are unchanged in substance: **plaintext password compare** (still the highest-leverage open security item), **no real test coverage** on payment/refund/RBAC, the **legacy `/kitchen/[slug]` board still polling** (KDS v2 + the new role-lens board are on SSE), and the **operator-attention-vs-trucks** existential risk. What changed is that the "the codebase is no longer the binding constraint" framing is now even more true — the storefront is premium-in-production, the AI is genuinely agentic, and the data layer is migrating to a shape that scales — which sharpens the §15 point that **the remaining bottlenecks are demand generation, security/tests hygiene, and operator focus, not missing features.** The one thing to fix this week is still **hash the admin password**; the one new thing to fix this month is **wire the rewards streak/challenge/referral surfaces to real data** before they become a credibility tell in the next diligence pass.
 
 — *Re-run lens: consolidated outside-in view, thirteen days later — 29 May 2026*
+
+---
+
+## 17. 2026-06-03 Update — the security/hygiene floor finally lifted; two of four §15 bullets close
+
+Five days and **211 commits** since the 2026-05-29 pass (`git log --since=2026-05-29`, HEAD at `cb49026`). This is the single largest audit-to-audit movement on the axis the previous eight re-runs kept flagging as the binding constraint: **security, tests, and operational hygiene**. The headline is blunt — *two of the four still-open §15 bullets (plaintext password, no real tests) are now closed in substance, verified against running code, not commit messages.* Every claim below was re-checked by reading the files and running the suite.
+
+The body sections above (§1–§16) are preserved as dated historical snapshots per Rule #11. What follows is the current-state delta.
+
+### §4 / §9 / §11 Security & infra — the floor lifted
+
+| Item | Prior state (≤2026-05-29) | **2026-06-03 state** | Evidence |
+|---|---|---|---|
+| **Admin password** | Plaintext `password === getAdminPassword()` compare — *the* highest-leverage open §15 item across every prior pass | **✅ CLOSED.** Salted **scrypt** (N=16384, r=8, p=1, 64-byte key) via `ADMIN_PASSWORD_HASH`, constant-time `timingSafeEqual`. Plaintext `ADMIN_PASSWORD` survives only as a documented fallback that **logs a loud production warning**. Hashing helper at `scripts/hash-admin-password.ts`. | `src/lib/password.ts:58-85`, `src/lib/admin-auth.ts:171-192` |
+| **MFA** | None | **✅ NEW.** RFC-6238 **TOTP** (`src/lib/totp.ts`), per-user, *mandatory when enabled on an account*; shared-owner session can require `ADMIN_TOTP_SECRET`. Plus **WebAuthn passkeys** (`src/lib/webauthn.ts`) and salted-scrypt **PIN** terminal login (`/api/terminal/login`). Self-service enrolment in the account drawer. | `src/app/api/admin/login/route.ts:89-119` |
+| **Rate limiting** | 2 of ~176 routes | **✅ CLOSED.** Global `withAdmin` wrapper rate-limits every admin API route (129/150 mapped; the unmapped 21 are crons/login/logout/telemetry that gate elsewhere). 5/min on login, 300/min per-user on the API (`ADMIN_RATE_LIMIT_PER_MIN`). Opt-in **`ADMIN_IP_ALLOWLIST`**. | `src/lib/api-middleware.ts:131-246`, `src/lib/rate-limit.ts:124-144` |
+| **Backups** | None — "single Neon DB is your single point of failure" (§9 risk #9) | **✅ CLOSED.** Nightly logical dump → **S3** (SigV4, node:crypto only, no SDK), daily cron in `vercel.json`, **documented restore** script + runbook with dry-run-on-a-Neon-branch procedure. Skips cleanly when unconfigured. | `src/lib/backup.ts`, `scripts/restore-backup.ts`, `docs/runbooks/backup-restore.md` |
+| **Sentry / alerting** | Sentry caught errors; "who is paged at 9pm Saturday?" (§9) | **✅ Wired.** Server-side capture + `logger.error` mirroring + `withAdmin` catch-all; **alerting runbook** with >1% 5xx + lock-fallback thresholds and a `backup.failed` alert. | `sentry.server.config.ts`, `docs/runbooks/alerting.md` |
+| **SOC 2 posture** | n/a | **✅ NEW.** `src/lib/soc2.ts` builds a **12-control Trust-Services register that introspects real runtime signals** (session secret, password hash, Stripe webhook verification, distributed lock, CI pipeline, role separation, audit-log recency) — scored met/partial/gap, not cosmetic checkboxes. Surfaced at `/admin/soc2`. | `src/lib/soc2.ts:1-237` |
+| **Staging env** | None | **⚠ Still partial.** Vercel preview deploys + Neon-branch testing exist; no dedicated long-lived staging instance. Lowest-friction remaining infra gap. | `docs/runbooks/backup-restore.md:71-73` |
+
+### §1 / §4 / §11 Tests — "zero tests / malpractice" no longer true
+
+The most-repeated line in this audit ("zero tests on a Stripe-integrated codebase… malpractice") is now **factually false**:
+
+- **29 test files, 172 assertions, all passing** (`npm test` → `tests 172 / fail 0`). Runner is `tsx --test` (node:test) — still no vitest/jest, but it is real, fast, and **wired into CI**.
+- **CI gate is real**: `.github/workflows/ci.yml` runs **typecheck → lint → test → build** on every PR and push to `main`, `npm ci` strict, `cancel-in-progress`. Every prior pass noted "no CI." Closed.
+- The exact four tests §11 Week-2 demanded now exist: **checkout pricing/idempotency** (`checkout-pricing.test.ts`), **slot oversell** (`slot-capacity.test.ts`), **refund flow** (`refund-guard.test.ts`), **RBAC scope** (`rbac.test.ts` + `user-locations.test.ts`). Plus loyalty, combos, delivery, cohort, LTV/CAC, TOTP, password, receipt ESC/POS, POS coursing, floor/booking, demand-exchange, customer-intelligence, db-resilience, pace-steering.
+- **Residual honesty caveat:** still no coverage harness/threshold, and the suite is pure-logic — no integration test boots a real DB or Stripe. The §15 "malpractice" bullet is retired; the engineering-maturity ceiling is now "no integration/coverage tooling," a far smaller finding.
+
+### §3 Operational — coursing came back, the kitchen got real hardware, and the OS reorganised
+
+- **Core suite reorganised.** POS / KDS / Guest / Service now live under **`src/app/core/*`** with a `CoreShell`; `/admin` retains 47 HQ surfaces; new **role-prefixed portals** `/manager/*` and `/franchisee/*` serve scoped views. RBAC is now genuinely granular — **60+ permissions** (`src/lib/permissions.ts`), custom grants overriding role rank, **location scope cryptographically bound into the session HMAC**, and a unified `sessionLocationScope()` resolver that fixed a real **PIN/passkey over-grant bug** (`4c9aad7` — "manager saw all sites").
+- **Coursing is back.** The 2026-05-29 finding ("an interim coursing feature was built then dropped in the POS/KDS rewrite") is **reversed**: `src/lib/pos-coursing.ts` + `tests/pos-coursing.test.ts` ship a real starter/main/dessert/drink course model with per-course firing onto the server-owned `PosTab`.
+- **Receipt printing is real hardware now.** `src/lib/receipt/escpos.ts` builds 80mm **ESC/POS** payloads (unit-tested for INIT + cut bytes), prints over TCP to `RECEIPT_PRINTER_HOST:9100` with a simulator fallback and a go-live guide. Still **no cash-drawer driver** and **no offline-first POS** (the generic IndexedDB outbox exists but POS doesn't use it).
+- **Modifiers flow end-to-end.** Half-&-half / crust / toppings travel customer picker → cart → KDS ticket → Stripe line description → receipt (`src/app/api/checkout/route.ts:152-180`). Closes a long-standing product gap.
+- **Food-safety surfaces landed** (partly answers §9 risk #3): **HACCP temperature log**, **waste log** (reason-coded + cost), **shift handover** (cash reconcile + temp/waste/equipment checks), all audit-logged. **Refund/comp governance**: per-refund cap + per-actor daily comp cap behind a manager-approval gate.
+- **Polling unchanged where it was.** The legacy `src/components/kitchen/KitchenOrderBoard.tsx` (10s) and the customer `OrderTracker.tsx` (10s) **still poll** — §15's cheapest-open-item bullet stands. The Core KDS is on SSE (`useAdminOrdersStream`, 15s REST fallback).
+
+### §5 / §6 UX & Revenue — three real wins, the photography gap unmoved
+
+- **✅ Address autocomplete** — real, server-proxied: **Google Places** when keyed (`ADDRESS_AUTOCOMPLETE_GOOGLE_KEY`), **OpenStreetMap Nominatim** fallback out-of-the-box (`src/components/cart/AddressAutocomplete.tsx`). §5 weakness #2 closed.
+- **✅ Post-order single-tap upsell** — `PostOrderUpsell.tsx` on the confirmation page runs the same `getCartSuggestions()` engine, single-tap `addItem` to the live Zustand cart. §6 #2 closed.
+- **✅ Promised-ready ETA in cart before pay**, and **✅ combo savings now show PLN + %**.
+- **✅ Hardcoded-const purge.** A dedicated pass moved delivery fee, loyalty/referral mechanics, footer contact/social, JPK VAT rate, and the speed-guarantee banner from literals to settings/store (`59d9b0e`, `9e15e42`, `e52fb9a`, `9177b1d`, `40b754d`). Good Rule-#1 hygiene.
+- **❌ Food photography — still empty.** `MenuItem.image` is still unset; the storefront renders category emoji + gradients (`src/data/menu-images.ts`). This remains, as it has since 2026-05-16, **the single highest-ROI non-engineering fix in the entire audit.** Unmoved.
+- **Tip default still "None"/0%** (honorable, intentional) and the **4-slot upsell is still fixed by design** (now explicitly documented as product direction in `upsell.ts:414-418`, with the four slots admin-configurable). Both are deliberate, not defects.
+
+### New finding (Rule #1 / Rule #11) — the rewards surface is still partly theatre
+
+The 2026-05-29 "rewards regression" is **only half-fixed** and one piece is worse than logged:
+
+1. **Hardcoded loyalty streak `2`** — `src/app/(public)/rewards/page.tsx:434-437` renders a literal "2 Week streak" unconnected to any customer data.
+2. **Hardcoded `33%` challenge fill** — same file, line ~498: `style={{ width: "33%" }}`, a frozen progress bar (the challenge *list* is real via `getActiveChallenges()`; the *progress* is cosmetic).
+3. **Per-render `Math.random()` referral code** — the page calls `generateReferralCode(customer.name)` (`src/lib/growth-engine.ts:16-20`), which appends a fresh `Math.random()` suffix **on every render**, so the customer's "shareable" code changes each page load — while the *persisted, deterministic* code from `referral-loop.ts` (`getOrCreateReferralCode(phone)`) sits unused. This is the most pernicious of the three: it looks live but silently breaks share/attribution.
+
+These three are exactly the "theatre, not function" pattern §3 exists to catch, and CLAUDE.md Rule #1 forbids. They belong on the open list until wired. **Design-system drift (Rule #11):** `/review/[orderId]` and `/corporate/[slug]` are still on the pre-V8 `italia-*` palette.
+
+### §4 persistence — migration still half-done (unchanged)
+
+Orders/slots are normalized-table-first with the kv_store blob as a lazy-backfill mirror; the O(N) full-document rewrite survives on the un-migrated long tail; **no row-level transaction** wraps order-create + slot-increment + customer-rollup; self-bootstrapping DDL still runs at runtime. `store.ts` is now **11,880 lines**. No movement since 2026-05-29 — correctly low priority while it works at two trucks, but it's the next real tech-debt item once a third truck loads the query plans.
+
+### Scorecard movement (§2) — systems maturity is the big mover
+
+| Dimension | 2026-05-29 | **2026-06-03** | Why |
+|---|---:|---:|---|
+| Overall business quality | 6.7 | **6.9** | Codebase moved materially; demand/unit-economics on the business side unchanged, so the lift is modest. |
+| Scalability (ops) | 8 | **8** | Already high; receipt hardware/HACCP/modifiers deepen ops but aren't scalability levers. |
+| Scalability (tech) | 8 | **8** | Persistence migration unmoved; per-location locks + DB-first hot path already counted. |
+| Defensibility | 7 | **7.2** | Customer-intelligence engine + win-back retention deepen the data moat slightly; brand/physical moats still not a code problem. |
+| Operational sophistication | 8.8 | **9.0** | Core-suite reorg, coursing restored, ESC/POS hardware, modifiers end-to-end, HACCP/waste/handover, refund/comp governance. Capped by no offline POS / no cash drawer. |
+| Product quality (food) | Unknown / 7 | **Unknown / 7** | Not auditable from repo. |
+| **Systems maturity** | 5.5 | **7.5** | **The headline.** Scrypt + MFA + passkeys, 29 tests in a real CI gate, S3 backups + restore runbook, Sentry alerting, SOC 2 register, RBAC + rate-limit everywhere. The two anchors that held this down (plaintext password, thin coverage) are gone. Capped by no staging + no integration/coverage tooling + incomplete persistence migration. |
+| UX / UI sophistication | 8 | **8.2** | Address autocomplete + post-order upsell + ETA + modifiers UI. Still capped by missing food photography, the fake rewards values, and two legacy-palette surfaces. |
+| Profitability potential | 5.5 | **5.5** | Levers unchanged. |
+| Strategic positioning | 5 | **5** | Unchanged. |
+
+Average **~6.6 → ~6.9**. The codebase has now decisively stopped being the constraint on anything.
+
+### Net effect on the §15 verdict
+
+Of the four still-open §15 bullets, **two close**:
+
+1. ~~Plaintext password compare~~ → **CLOSED** (scrypt + MFA + passkeys).
+2. ~~No real test coverage on payment/refund/RBAC~~ → **CLOSED in substance** (29 files incl. checkout/slot/refund/RBAC, in a real CI gate; residual = no integration/coverage tooling).
+3. **Legacy `/kitchen/[slug]` board + customer `OrderTracker` still poll at 10s** → **still open** (still the cheapest unfixed item).
+4. **Operator-attention-vs-trucks / demand generation** → **still open and still existential** — entirely non-code.
+
+The diligence-room conversation the prior passes described has now fully inverted: a first-week team would find a **hashed-and-MFA'd admin, a green CI pipeline with payment/refund/RBAC tests, nightly off-site backups with a restore runbook, a SOC 2 posture register, and granular location-scoped RBAC** — and would spend its remaining time on exactly two things this audit has flagged from the start: **(a) demand generation and unit economics on the business side, and (b) a one-day food-photography shoot.** Everything that used to be "theatre" is now either real or honestly labelled — *except the rewards streak/challenge/referral surface*, which is the one fresh credibility tell to fix before the next pass.
+
+**If you change one thing this week:** finally hire the photographer — it has been the #1 non-engineering ROI item in every pass and is now, with the security floor lifted, unambiguously the highest-value open move.
+**If you change one thing this month:** wire the `/rewards` streak, challenge progress, and referral code to the real data that already exists (`referral-loop.ts`, loyalty store) — it's a small change that removes the last "theatre" surface and the only live Rule #1 regression.
+
+— *Re-run lens: consolidated outside-in view, eighteen days after the original — 03 June 2026. Verified against HEAD `cb49026`; `npm test` green at 172/172.*
