@@ -86,15 +86,25 @@ export function BundleComposer({
   onApply,
 }: BundleComposerProps) {
   const [lastComposition, setLastComposition] = useState<{ menuItemId: string; quantity: number }[] | null>(null);
+  // True once the repeat-customer lookup has SETTLED — fetched, failed, or
+  // there was no phone to look up. Gates the one-shot pick init below so the
+  // "same as last time" prefill isn't lost to the async fetch: without this,
+  // picks initialize on the first render (while lastComposition is still
+  // null) and never re-run, so the customer's prior composition never lands.
+  const [lastBundleLoaded, setLastBundleLoaded] = useState(false);
   const [lastFetchedFor, setLastFetchedFor] = useState<string | null>(null);
   // Which slot/unit chooser is expanded — only one open at a time keeps the
   // inline picker calm. Key is `${slotIdx}:${unitIdx}`.
   const [openKey, setOpenKey] = useState<string | null>(null);
   useEffect(() => {
-    if (!customerPhone || !locationSlug) return;
+    if (!customerPhone || !locationSlug) {
+      setLastBundleLoaded(true);
+      return;
+    }
     const key = `${bundle.id}|${customerPhone}|${locationSlug}`;
     if (lastFetchedFor === key) return;
     setLastFetchedFor(key);
+    let active = true;
     const qs = new URLSearchParams({
       phone: customerPhone,
       bundleId: bundle.id,
@@ -103,9 +113,17 @@ export function BundleComposer({
     fetch(`/api/customer/last-bundle?${qs.toString()}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: { composition?: { menuItemId: string; quantity: number }[] | null }) => {
-        setLastComposition(data.composition ?? null);
+        if (active) setLastComposition(data.composition ?? null);
       })
-      .catch(() => setLastComposition(null));
+      .catch(() => {
+        if (active) setLastComposition(null);
+      })
+      .finally(() => {
+        if (active) setLastBundleLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [bundle, customerPhone, locationSlug, lastFetchedFor]);
 
   const resolved = useMemo(
@@ -118,16 +136,14 @@ export function BundleComposer({
   // don't want to customize anything.
   const [picks, setPicks] = useState<MenuItem[][] | null>(null);
 
-  // Reset picks when the composer mounts for a new bundle. We can't read
-  // setState in render so we mirror the resolved slots into local state
-  // via useMemo + state assignment in an effect-like pattern; simpler
-  // to just recompute when bundle/resolve changes via a key check.
-  const lastSig = useMemo(() => {
-    if (!resolved) return null;
-    return `${bundle.id}|${resolved.map((r) => r.slot.quantity).join(",")}|${cartItems.map((c) => c.menuItem.id + "x" + c.quantity).join(",")}`;
-  }, [bundle, resolved, cartItems]);
-  const [initSig, setInitSig] = useState<string | null>(null);
-  if (resolved && lastSig !== null && lastSig !== initSig) {
+  // One-shot initial selection, computed once the slot candidates are
+  // resolved AND the repeat-customer lookup has settled. The component is
+  // keyed by bundle.id in BundleLadder, so switching tiers remounts and
+  // re-runs this; within a tier it runs exactly once (guarded by
+  // `initialized`), so a later cart edit can't wipe the customer's add-on
+  // choices. Render-phase setState for derived state — React supports this.
+  const [initialized, setInitialized] = useState(false);
+  if (resolved && lastBundleLoaded && !initialized) {
     // Initial-pick priority for repeat customers:
     //   1. customer's prior composition for this same bundle (Sprint 8
     //      #8 — Domino's "Same as last time")
@@ -170,7 +186,7 @@ export function BundleComposer({
       return slotPicks;
     });
     setPicks(initial);
-    setInitSig(lastSig);
+    setInitialized(true);
   }
 
   const header = (

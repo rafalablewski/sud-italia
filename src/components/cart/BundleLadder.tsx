@@ -319,6 +319,7 @@ export function BundleLadder({
           /* Inline feast builder — rendered in place of the ladder, inside
              the cart, so a guest edits the deal without leaving their cart. */
           <BundleComposer
+            key={composerBundle.id}
             bundle={composerBundle}
             cartItems={items}
             menuItems={allMenuItems}
