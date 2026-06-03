@@ -92,19 +92,21 @@ export function BundleComposer({
   // picks initialize on the first render (while lastComposition is still
   // null) and never re-run, so the customer's prior composition never lands.
   const [lastBundleLoaded, setLastBundleLoaded] = useState(false);
-  const [lastFetchedFor, setLastFetchedFor] = useState<string | null>(null);
   // Which slot/unit chooser is expanded — only one open at a time keeps the
   // inline picker calm. Key is `${slotIdx}:${unitIdx}`.
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // Fetch the customer's last composition for this bundle. The component is
+  // keyed by bundle.id and only mounted while active, and these deps are
+  // stable per mount, so this runs once. (Don't reintroduce a `lastFetchedFor`
+  // state guard in the dep array — setting it here would retrigger the effect,
+  // the cleanup would flip `active` off, and `lastBundleLoaded` would never be
+  // set → the composer deadlocks on the loading state.)
   useEffect(() => {
+    let active = true;
     if (!customerPhone || !locationSlug) {
       setLastBundleLoaded(true);
       return;
     }
-    const key = `${bundle.id}|${customerPhone}|${locationSlug}`;
-    if (lastFetchedFor === key) return;
-    setLastFetchedFor(key);
-    let active = true;
     const qs = new URLSearchParams({
       phone: customerPhone,
       bundleId: bundle.id,
@@ -124,7 +126,7 @@ export function BundleComposer({
     return () => {
       active = false;
     };
-  }, [bundle, customerPhone, locationSlug, lastFetchedFor]);
+  }, [bundle.id, customerPhone, locationSlug]);
 
   const resolved = useMemo(
     () => (menuItems.length > 0 ? resolveBundleSlots(bundle, menuItems) : null),
