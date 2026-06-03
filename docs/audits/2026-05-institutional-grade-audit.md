@@ -737,7 +737,7 @@ The most-repeated line in this audit ("zero tests on a Stripe-integrated codebas
 - **Receipt printing is real hardware now.** `src/lib/receipt/escpos.ts` builds 80mm **ESC/POS** payloads (unit-tested for INIT + cut bytes), prints over TCP to `RECEIPT_PRINTER_HOST:9100` with a simulator fallback and a go-live guide. Still **no cash-drawer driver** and **no offline-first POS** (the generic IndexedDB outbox exists but POS doesn't use it).
 - **Modifiers flow end-to-end.** Half-&-half / crust / toppings travel customer picker → cart → KDS ticket → Stripe line description → receipt (`src/app/api/checkout/route.ts:152-180`). Closes a long-standing product gap.
 - **Food-safety surfaces landed** (partly answers §9 risk #3): **HACCP temperature log**, **waste log** (reason-coded + cost), **shift handover** (cash reconcile + temp/waste/equipment checks), all audit-logged. **Refund/comp governance**: per-refund cap + per-actor daily comp cap behind a manager-approval gate.
-- **Polling unchanged where it was.** The legacy `src/components/kitchen/KitchenOrderBoard.tsx` (10s) and the customer `OrderTracker.tsx` (10s) **still poll** — §15's cheapest-open-item bullet stands. The Core KDS is on SSE (`useAdminOrdersStream`, 15s REST fallback).
+- ~~**Polling unchanged where it was.** The legacy `src/components/kitchen/KitchenOrderBoard.tsx` (10s) and the customer `OrderTracker.tsx` (10s) **still poll**.~~ **✅ RESOLVED 2026-06-03 (this branch).** Both now subscribe to the in-process order-event SSE — the legacy kitchen board to the existing `/api/kitchen/orders/stream`, the customer tracker to a new `/api/orders/stream` (the streaming twin of `GET /api/orders?orderId=`). Each keeps the 10 s REST poll only as a fallback for browsers without `EventSource` or when the stream drops. §15's cheapest-open-item bullet is closed; real-time is now push end-to-end (Core KDS, legacy board, customer tracker).
 
 ### §5 / §6 UX & Revenue — three real wins, the photography gap unmoved
 
@@ -745,18 +745,18 @@ The most-repeated line in this audit ("zero tests on a Stripe-integrated codebas
 - **✅ Post-order single-tap upsell** — `PostOrderUpsell.tsx` on the confirmation page runs the same `getCartSuggestions()` engine, single-tap `addItem` to the live Zustand cart. §6 #2 closed.
 - **✅ Promised-ready ETA in cart before pay**, and **✅ combo savings now show PLN + %**.
 - **✅ Hardcoded-const purge.** A dedicated pass moved delivery fee, loyalty/referral mechanics, footer contact/social, JPK VAT rate, and the speed-guarantee banner from literals to settings/store (`59d9b0e`, `9e15e42`, `e52fb9a`, `9177b1d`, `40b754d`). Good Rule-#1 hygiene.
-- **❌ Food photography — still empty.** `MenuItem.image` is still unset; the storefront renders category emoji + gradients (`src/data/menu-images.ts`). This remains, as it has since 2026-05-16, **the single highest-ROI non-engineering fix in the entire audit.** Unmoved.
+- **🟡 Food photography — operator action in progress (photographer booked).** This is now an operations task, not a code gap: the rendering path already supports real imagery — `MenuItem.image` renders when set, with category emoji + gradients (`src/data/menu-images.ts`) only as the fallback — so the shoot drops straight in with no engineering. The operator has a photographer booked; per Rule #1 no placeholder/stock URLs were wired in the interim (a fake image would be worse than the honest emoji fallback). Tracked as done-pending-shoot rather than an open engineering item.
 - **Tip default still "None"/0%** (honorable, intentional) and the **4-slot upsell is still fixed by design** (now explicitly documented as product direction in `upsell.ts:414-418`, with the four slots admin-configurable). Both are deliberate, not defects.
 
-### New finding (Rule #1 / Rule #11) — the rewards surface is still partly theatre
+### New finding (Rule #1 / Rule #11) — the rewards surface was partly theatre → now wired
 
-The 2026-05-29 "rewards regression" is **only half-fixed** and one piece is worse than logged:
+The 2026-05-29 "rewards regression" was, at the start of this pass, **only half-fixed** with one piece worse than logged. All three are now closed (**✅ RESOLVED 2026-06-03, this branch**):
 
-1. **Hardcoded loyalty streak `2`** — `src/app/(public)/rewards/page.tsx:434-437` renders a literal "2 Week streak" unconnected to any customer data.
-2. **Hardcoded `33%` challenge fill** — same file, line ~498: `style={{ width: "33%" }}`, a frozen progress bar (the challenge *list* is real via `getActiveChallenges()`; the *progress* is cosmetic).
-3. **Per-render `Math.random()` referral code** — the page calls `generateReferralCode(customer.name)` (`src/lib/growth-engine.ts:16-20`), which appends a fresh `Math.random()` suffix **on every render**, so the customer's "shareable" code changes each page load — while the *persisted, deterministic* code from `referral-loop.ts` (`getOrCreateReferralCode(phone)`) sits unused. This is the most pernicious of the three: it looks live but silently breaks share/attribution.
+1. ~~**Hardcoded loyalty streak `2`**~~ → now `weekStreak` from real orders. `src/lib/rewards-progress.ts:computeWeekStreak` counts the consecutive-week (Sunday-anchored, DST-safe) run of weeks containing ≥1 confirmed order, with a one-week grace so a live streak doesn't read as broken before this week's order. The streak banner only renders when the streak is ≥1.
+2. ~~**Hardcoded `33%` challenge fill**~~ → now real per-challenge progress. `computeChallengeProgress` derives this-week pasta units / order count / qualified referrals; the bar width and the `current / target` footer read from it.
+3. ~~**Per-render `Math.random()` referral code**~~ → now the **persisted, deterministic-per-phone** code from `referral-loop.ts` (`getOrCreateReferralCode`). The `generateReferralCode()` `Math.random()` helper was **deleted** from `growth-engine.ts` so the anti-pattern can't be reused; the referral surfaces only render once the real code has loaded.
 
-These three are exactly the "theatre, not function" pattern §3 exists to catch, and CLAUDE.md Rule #1 forbids. They belong on the open list until wired. **Design-system drift (Rule #11):** `/review/[orderId]` and `/corporate/[slug]` are still on the pre-V8 `italia-*` palette.
+All three are served by a new cookie-authenticated `GET /api/customer/rewards-stats`, and the streak/challenge math ships with a unit suite (`src/lib/rewards-progress.test.ts`, 9 assertions). The one remaining live Rule #1 regression this audit had on its books is closed. **Design-system drift (Rule #11) still open:** `/review/[orderId]` and `/corporate/[slug]` remain on the pre-V8 `italia-*` palette (cosmetic; not a data-truth issue).
 
 ### §4 persistence — migration still half-done (unchanged)
 
@@ -773,7 +773,7 @@ Orders/slots are normalized-table-first with the kv_store blob as a lazy-backfil
 | Operational sophistication | 8.8 | **9.0** | Core-suite reorg, coursing restored, ESC/POS hardware, modifiers end-to-end, HACCP/waste/handover, refund/comp governance. Capped by no offline POS / no cash drawer. |
 | Product quality (food) | Unknown / 7 | **Unknown / 7** | Not auditable from repo. |
 | **Systems maturity** | 5.5 | **7.5** | **The headline.** Scrypt + MFA + passkeys, 29 tests in a real CI gate, S3 backups + restore runbook, Sentry alerting, SOC 2 register, RBAC + rate-limit everywhere. The two anchors that held this down (plaintext password, thin coverage) are gone. Capped by no staging + no integration/coverage tooling + incomplete persistence migration. |
-| UX / UI sophistication | 8 | **8.2** | Address autocomplete + post-order upsell + ETA + modifiers UI. Still capped by missing food photography, the fake rewards values, and two legacy-palette surfaces. |
+| UX / UI sophistication | 8 | **8.3** | Address autocomplete + post-order upsell + ETA + modifiers UI; the fake rewards values are now wired to real data and order tracking is push-based (SSE). Capped only by the pending food-photography shoot and two legacy-palette surfaces (`/review`, `/corporate`). |
 | Profitability potential | 5.5 | **5.5** | Levers unchanged. |
 | Strategic positioning | 5 | **5** | Unchanged. |
 
@@ -781,16 +781,18 @@ Average **~6.6 → ~6.9**. The codebase has now decisively stopped being the con
 
 ### Net effect on the §15 verdict
 
-Of the four still-open §15 bullets, **two close**:
+Of the four still-open §15 bullets, **three now close** (the fourth is non-code):
 
 1. ~~Plaintext password compare~~ → **CLOSED** (scrypt + MFA + passkeys).
 2. ~~No real test coverage on payment/refund/RBAC~~ → **CLOSED in substance** (29 files incl. checkout/slot/refund/RBAC, in a real CI gate; residual = no integration/coverage tooling).
-3. **Legacy `/kitchen/[slug]` board + customer `OrderTracker` still poll at 10s** → **still open** (still the cheapest unfixed item).
-4. **Operator-attention-vs-trucks / demand generation** → **still open and still existential** — entirely non-code.
+3. ~~Legacy `/kitchen/[slug]` board + customer `OrderTracker` poll at 10s~~ → **CLOSED 2026-06-03** (both moved to the order-event SSE with the 10 s poll demoted to a fallback). Real-time is now push end-to-end.
+4. **Operator-attention-vs-trucks / demand generation** → **still open and still existential** — entirely non-code, and the only one of the four no commit can close.
 
-The diligence-room conversation the prior passes described has now fully inverted: a first-week team would find a **hashed-and-MFA'd admin, a green CI pipeline with payment/refund/RBAC tests, nightly off-site backups with a restore runbook, a SOC 2 posture register, and granular location-scoped RBAC** — and would spend its remaining time on exactly two things this audit has flagged from the start: **(a) demand generation and unit economics on the business side, and (b) a one-day food-photography shoot.** Everything that used to be "theatre" is now either real or honestly labelled — *except the rewards streak/challenge/referral surface*, which is the one fresh credibility tell to fix before the next pass.
+The diligence-room conversation the prior passes described has now fully inverted: a first-week team would find a **hashed-and-MFA'd admin, a green CI pipeline with payment/refund/RBAC tests, nightly off-site backups with a restore runbook, a SOC 2 posture register, granular location-scoped RBAC, and push-based real-time across every order surface** — and the only "theatre" surface this audit ever had on its books (the `/rewards` streak/challenge/referral values) is now wired to real data. The remaining work is the two things no codebase can manufacture: **demand generation / unit economics on the business side, and the booked food-photography shoot.**
 
-**If you change one thing this week:** finally hire the photographer — it has been the #1 non-engineering ROI item in every pass and is now, with the security floor lifted, unambiguously the highest-value open move.
-**If you change one thing this month:** wire the `/rewards` streak, challenge progress, and referral code to the real data that already exists (`referral-loop.ts`, loyalty store) — it's a small change that removes the last "theatre" surface and the only live Rule #1 regression.
+**Follow-up applied this same day (2026-06-03, branch `claude/sharp-galileo-qlIve`)** — the open code-fixable items from this pass were closed in one branch: (a) **`/rewards` wired to real data** — week streak, per-challenge progress, and persisted referral code via new `GET /api/customer/rewards-stats` + `src/lib/rewards-progress.ts` (with a 9-assertion unit suite); the `Math.random()` `generateReferralCode()` helper was deleted. (b) **Real-time polling → SSE** — legacy kitchen board on `/api/kitchen/orders/stream`, customer tracker on a new `/api/orders/stream`, both with a poll fallback. (c) **Food photography** reclassified to operator-action-in-progress (photographer booked; render path already supports real images, no placeholder wired per Rule #1). Verified green: `npx tsc --noEmit`, `eslint`, `npm test` (181/181), `next build`.
 
-— *Re-run lens: consolidated outside-in view, eighteen days after the original — 03 June 2026. Verified against HEAD `cb49026`; `npm test` green at 172/172.*
+**If you change one thing this week:** the photographer shoot — now the single highest-ROI move with every code item closed.
+**If you change one thing this month:** demand generation (SEO/content/paid/creator) — the last existential, non-code risk, and the one the dashboards can't fix for you.
+
+— *Re-run lens: consolidated outside-in view, eighteen days after the original — 03 June 2026. Verified against HEAD `cb49026` + this branch's fixes; `npm test` green at 181/181.*

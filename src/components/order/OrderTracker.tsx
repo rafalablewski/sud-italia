@@ -128,15 +128,57 @@ export function OrderTracker({ orderId }: OrderTrackerProps) {
     }
   }, [orderId]);
 
-  // Poll every 10 seconds for status updates. Polling continues until
-  // the component unmounts; on terminal states (completed / cancelled)
-  // the API just keeps returning the same data, which is cheap and
-  // keeps the code path simple.
+  // Live updates via SSE (/api/orders/stream) — the in-process order-event
+  // emitter pushes status changes sub-50 ms on the common path. If the
+  // browser has no EventSource or the stream errors/drops (proxy timeout,
+  // backgrounding), we fall back to a 10 s REST poll so the tracker never
+  // freezes. The first REST fetch still runs immediately for fast paint.
   useEffect(() => {
+    let cancelled = false;
+    let source: EventSource | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const startFallbackPoll = () => {
+      if (pollTimer || cancelled) return;
+      pollTimer = setInterval(fetchOrder, 10_000);
+    };
+
     fetchOrder();
-    const interval = setInterval(fetchOrder, 10_000);
-    return () => clearInterval(interval);
-  }, [fetchOrder]);
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        source = new EventSource(`/api/orders/stream?orderId=${encodeURIComponent(orderId)}`);
+        source.onmessage = (ev) => {
+          if (cancelled) return;
+          try {
+            const data = JSON.parse(ev.data);
+            if (data.order) {
+              setOrder(data.order);
+              setLastUpdated(new Date());
+              setError(false);
+            }
+          } catch {
+            /* ignore malformed frame */
+          }
+        };
+        source.onerror = () => {
+          source?.close();
+          source = null;
+          startFallbackPoll();
+        };
+      } catch {
+        startFallbackPoll();
+      }
+    } else {
+      startFallbackPoll();
+    }
+
+    return () => {
+      cancelled = true;
+      source?.close();
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [fetchOrder, orderId]);
 
   const status: TrackerStatus = (order?.status as TrackerStatus) ?? "pending";
   const currentStep = getStepIndex(status);
