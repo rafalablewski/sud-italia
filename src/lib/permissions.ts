@@ -313,6 +313,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/customers")) return "customers.view";
   if (is("/admin/corporate")) return "corporate.view";
   if (is("/admin/feedback")) return "feedback.view";
+  if (is("/admin/surveys")) return "feedback.view";
   if (is("/admin/reports")) return "reports.view";
   if (is("/admin/cash")) return "cash.view";
   if (is("/admin/business-costs")) return "business_costs.view";
@@ -382,6 +383,10 @@ export function permissionForApiPath(
     case "corporate":
       return write ? "corporate.edit" : "corporate.view";
     case "feedback":
+    case "surveys":
+      // Pulse surveys live under the feedback permission — the API gate must
+      // match the page gate (permissionForAdminPage) so a custom-permission
+      // user can't read response PII via the API after being denied the page.
       return write ? "feedback.respond" : "feedback.view";
     case "reports":
       if (sub.includes("export")) return "reports.export";

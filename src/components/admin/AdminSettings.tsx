@@ -71,6 +71,7 @@ interface Settings {
     showDeliveryProgress: boolean;
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
+    showNpsSurvey: boolean;
     showPostOrderUpsell: boolean;
     showChatWidget: boolean;
     showLiveTicker: boolean;
@@ -172,6 +173,15 @@ const LAYOUT_TOGGLES: LayoutToggleSpec[] = [
       "The post-order 5-star survey on the confirmation + review pages. Surveys still arrive via admin Feedback when this is off, just not collected client-side.",
     onCopy: "Survey visible after pickup / delivery.",
     offCopy: "Hidden — no client-side survey.",
+  },
+  {
+    key: "showNpsSurvey",
+    group: "Site-wide",
+    label: "Pulse micro-surveys (NPS)",
+    description:
+      "NPS-style 1–5★ micro-surveys that fire opportunistically across the storefront — after ordering, on prolonged browsing, on exit intent, for returning visitors. Master kill-switch for the global SurveyPrompt + trigger engine; per-survey activation lives in /admin/surveys. Frequency-capped to at most one prompt per session.",
+    onCopy: "Pulse prompts active (per-survey toggles in Pulse surveys).",
+    offCopy: "Hidden — no Pulse prompts, timers, or listeners.",
   },
   {
     key: "showPostOrderUpsell",

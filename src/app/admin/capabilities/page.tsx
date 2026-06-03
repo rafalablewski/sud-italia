@@ -711,6 +711,13 @@ export default async function CapabilitiesPage() {
           href: "/admin/feedback",
           summary: "Post-order 1–5 rating + comment with sentiment analysis. Optional loyalty points for completion.",
         },
+        {
+          name: "Pulse micro-surveys (NPS)",
+          status: "live",
+          href: "/admin/surveys",
+          summary:
+            "NPS-style 1–5★ one-tap micro-surveys captured opportunistically across the storefront. A client trigger engine (src/store/survey.ts + SurveyTriggerEngine) fires on real browsing signals — after ordering (order-confirmation), prolonged browsing (~70s on a location page), exit intent (desktop), the rewards page, and returning visitors — and SurveyPrompt renders the elected star prompt (portalled, dismissible). Restraint is built in: at most one prompt per session, an 8h cross-session gap, and a per-survey cooldown. Answers POST to /api/surveys (rate-limited 5/min per IP + phone, parity with feedback) and persist to the dedicated indexed survey_responses Postgres table (dual-write, with a JSON fallback for local dev) — same pattern as feedback. Operators manage a 12-survey catalogue at /admin/surveys — flip any live (toggle = saved), read the Pulse score (NPS computed from 5 stars), rating distribution, per-trigger volume, and every detractor comment. Active surveys ship to the storefront via /api/settings/public; the whole feature is gated by the showNpsSurvey Layout toggle.",
+        },
       ],
     },
     {

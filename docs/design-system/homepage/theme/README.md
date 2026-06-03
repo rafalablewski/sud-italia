@@ -45,7 +45,7 @@ token change must leave Core and Admin visually unchanged.
 - [`color.md`](./color.md) — V8 Tuscany palette: parchment canvas, oxblood-as-brand vs flag-red, terracotta warm-action layer, ochre as editorial accent, basil for status. Italia-\* aliases remapped + new V8-named tokens (`parchment`, `terracotta`, `basil`, `oxblood`, `ochre`, `espresso`).
 - [`typography.md`](./typography.md) — Cormorant Garamond (display, brand voice) + Lora (workhorse) + JetBrains Mono (codes); 15–16px body default; sentence case headings; price callout rules.
 - [`material.md`](./material.md) — cream/white elevation alternation; the single brand-tinted shadow (FloatingCartButton); spring physics allowed on one-shot celebrations; 12/16/24px radius ladder; generous padding rhythm.
-- [`components.md`](./components.md) — `.pub-*` form primitives; shared `<Button>` / `<Sheet>` / `<Container>` / `<StarRating>` / `<NavDropdown>` (the collapsible primitive both nav switchers share) / `<LanguageSwitcher>` / `<CurrencySwitcher>`; landing sections; item card; `<CartDrawer>` and `<FloatingCartButton>`; `<DeliveryProgress>`; the `/rewards` chrome (`.v8-rewards-*`); `<OrderTracker>`.
+- [`components.md`](./components.md) — `.pub-*` form primitives; shared `<Button>` / `<Sheet>` / `<Container>` / `<StarRating>` / `<NavDropdown>` (the collapsible primitive both nav switchers share) / `<LanguageSwitcher>` / `<CurrencySwitcher>`; the `<SurveyPrompt />` Pulse micro-survey (NPS) + its trigger engine (`.v8-pulse-*`); landing sections; item card; `<CartDrawer>` and `<FloatingCartButton>`; `<DeliveryProgress>`; the `/rewards` chrome (`.v8-rewards-*`); `<OrderTracker>`.
 
 ## Authority
 

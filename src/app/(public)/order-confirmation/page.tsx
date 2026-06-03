@@ -14,6 +14,7 @@ import { LayoutGate } from "@/components/layout/LayoutGate";
 import { CheckCircle, MapPin, ArrowLeft, Share2, Link2, Sparkles, Users } from "lucide-react";
 import { getLocation } from "@/data/locations";
 import { useCustomer } from "@/store/customer";
+import { useSurveyStore } from "@/store/survey";
 import { calculateTier } from "@/lib/loyalty";
 import { fetchPublicSettings, type PublicLoyaltySettings } from "@/lib/public-settings";
 
@@ -49,6 +50,22 @@ function OrderConfirmationContent() {
       cancelled = true;
     };
   }, [locationSlug]);
+
+  // Pulse micro-survey: ask about the *ordering process* a few seconds
+  // after the receipt lands, so it slides in beside (not on top of) the
+  // detailed dish-rating FeedbackSurvey. The engine enforces frequency
+  // capping + the showNpsSurvey kill-switch, so this is a safe nudge.
+  const requestSurvey = useSurveyStore((s) => s.request);
+  useEffect(() => {
+    if (!orderId) return;
+    const t = setTimeout(() => {
+      void requestSurvey("post-order", {
+        locationSlug: locationSlug ?? undefined,
+        pagePath: "/order-confirmation",
+      });
+    }, 6000);
+    return () => clearTimeout(t);
+  }, [orderId, locationSlug, requestSurvey]);
 
   const pointsEarned = orderData ? Math.floor(orderData.totalAmount / 100) : 0;
   const priorPoints = customer?.points ?? 0;
