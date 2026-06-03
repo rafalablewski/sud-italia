@@ -295,7 +295,7 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
 | `<ComboDealBanner />`      | `.v8-cart-combo-*`            | Italian Classic / Pasta Combo paper card with hairline progress |
 | `<SlotPicker />`           | `.v8-cart-days-* .v8-cart-slot-*` | Date strip + slot grid with italic Lora scarcity copy     |
 | `<BundleLadder />`         | `.v8-cart-ladder-*`           | Make-it-a-bundle paper card + primary CTA + chip ladder (audit §3.2) |
-| `<BundleComposerSheet />`  | `.v8-composer-*`              | Feast builder sheet opened from the ladder — tap-to-expand slot pickers + savings hero + sticky apply CTA |
+| `<BundleComposer />`       | `.v8-composer-*`              | Inline feast builder — replaces the ladder in place (no overlay); tap-to-expand slot pickers + savings hero + "← Bundles" back + inline apply CTA |
 
 #### Notes on the bigger sub-components
 
@@ -308,8 +308,9 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
   (`.v8-cart-ladder-chip`). A `.v8-cart-ladder-hint` lands above the
   ladder when the cart is within `hintWithin` items of the Family
   Feast threshold. All funnel beaconing (impression /
-  composer_opened / composer_abandoned), variant resolution, and
-  composer-sheet handoff stays untouched. It also reports its
+  composer_opened / composer_abandoned), variant resolution, and the
+  inline composer handoff (tapping a tier swaps the ladder for
+  `<BundleComposer />` in place) stay untouched. It also reports its
   on-screen state to the drawer via `onVisibilityChange` so the
   cross-sell rail can step aside (see the Cross-sell rail section).
 

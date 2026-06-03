@@ -913,7 +913,7 @@ export default async function CapabilitiesPage() {
           name: "Composer 'same as last time' (repeat-customer one-tap)",
           status: "live",
           href: "/admin/upsell",
-          summary: "Bundle composer (Domino's Mix & Match) pre-fills picks from the customer's most-recent applied composition for the same bundle. Customer sees a ★ banner 'Same as your last X — confirm or tweak below' so a repeat order is one tap. Pipeline: BundleEvent.addOnComposition (persisted per order), GET /api/customer/last-bundle, BundleComposerSheet useEffect on open. Drops the perceived friction Domino's reports a ~7% AOV uplift from.",
+          summary: "Bundle composer (Domino's Mix & Match) pre-fills picks from the customer's most-recent applied composition for the same bundle. Customer sees a ★ banner 'Same as your last X — confirm or tweak below' so a repeat order is one tap. Pipeline: BundleEvent.addOnComposition (persisted per order), GET /api/customer/last-bundle, BundleComposer mount fetch. Drops the perceived friction Domino's reports a ~7% AOV uplift from.",
         },
         {
           name: "Scheduled bundle (weekly usual)",

@@ -1178,30 +1178,29 @@ count, and admin config.
   primary CTA shows the *incremental* basil-deep savings alongside a
   muted "Replaces the active [combo name]" italic line so the
   customer understands the trade.
-- Composer-sheet handoff, A/B variant resolution (SHA-256 hashed
-  phone), and funnel beaconing (impression / composer_opened /
-  composer_abandoned) all preserved.
+- Inline composer handoff (taps swap the ladder for `<BundleComposer />`
+  in place; the "← Bundles" back returns to the tier list), A/B variant
+  resolution (SHA-256 hashed phone), and funnel beaconing (impression /
+  composer_opened / composer_abandoned) all preserved.
 
-### `<BundleComposerSheet />` — `src/components/cart/BundleComposerSheet.tsx`
+### `<BundleComposer />` — `src/components/cart/BundleComposer.tsx`
 
-The feast builder that opens when a customer taps a `<BundleLadder />`
-CTA (Domino's Mix & Match × McDonald's Make-it-a-Meal). Rendered inside
-the shared `<Sheet>` panel; `.v8-composer` fills it with the parchment
-ground and lays out a sticky header → scrolling body → sticky footer in
-the same paper / Cormorant / terracotta language as the ladder.
+The feast builder shown when a customer taps a `<BundleLadder />` CTA
+(Domino's Mix & Match × McDonald's Make-it-a-Meal). It is **not** a
+sheet/overlay — it renders **inline inside the cart drawer, in place of
+the ladder** (the ladder's slot is occupied by either the tier list or
+the composer, never both), so a guest edits the deal without ever
+leaving their cart. `.v8-composer` is a single paper card whose
+`margin` matches `.v8-cart-ladder` so the swap is seamless, in the same
+parchment / Cormorant / terracotta language as the ladder it replaces.
+Confirming applies the bundle and collapses back to the ladder (now
+showing the applied tier).
 
-Because it launches from *inside* the cart drawer (`.v8-cart-sheet`,
-z-index 95) and both portal as siblings under `<body>`, the sheet passes
-`z={120}` to `<Sheet>` so it stacks **above** the drawer — without it the
-composer opens trapped behind the cart and a guest can't edit the deal
-without closing their cart. The backdrop dims the drawer behind it, and
-closing the composer returns the guest straight to their cart.
-
-- `.v8-composer-head` sticky parchment bar (blur) — `.v8-composer-eyebrow`
-  uppercase "Compose your bundle" + `.v8-composer-title` italic Cormorant
-  oxblood "Make it a *Family*" with a muted `.v8-composer-title-it`
-  italian period phrase (`il pranzo` / `festa di famiglia` /
-  `la cena tardi`). Round `.v8-composer-close` at the right.
+- `.v8-composer-head` — a `.v8-composer-back` "← Bundles" affordance
+  (returns to the ladder; the abandon beacon fires on the ladder side)
+  above the `.v8-composer-title` italic Cormorant oxblood "Make it a
+  *Family*" with a muted `.v8-composer-title-it` italian period phrase
+  (`il pranzo` / `festa di famiglia` / `la cena tardi`).
 - `.v8-composer-hero` terracotta/ochre-tinted paper ribbon — uppercase
   ochre `.v8-composer-hero-name`, italic `.v8-composer-hero-desc`,
   basil-deep `.v8-composer-hero-save` next to the à-la-carte
@@ -1219,10 +1218,11 @@ closing the composer returns the guest straight to their cart.
   selected one. Only one chooser is open at a time. Single-candidate
   item slots render a static `.v8-composer-included` "included" card
   instead of a chooser.
-- `.v8-composer-foot` sticky parchment footer — `.v8-composer-total-now`
-  oxblood total (with an optional `.v8-composer-total-pp` per-person
-  echo) above the full-width terracotta `.v8-composer-apply` CTA
-  ("Apply *Family* · 92,63 zł"). Honours `env(safe-area-inset-bottom)`.
+- `.v8-composer-foot` **inline** footer (not sticky — the cart drawer
+  owns the sticky footer + scroll) — `.v8-composer-total-now` oxblood
+  total (with an optional `.v8-composer-total-pp` per-person echo) above
+  the full-width terracotta `.v8-composer-apply` CTA ("Apply *Family* ·
+  92,63 zł").
 - Logic preserved from the pre-V8 sheet: cheapest-or-cart-or-last-order
   prefill priority, live split-discount pricing, and the
   `/api/customer/last-bundle` repeat-customer fetch.
@@ -1467,7 +1467,7 @@ in the storefront reads as one paper-card vocabulary:
 | `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`           |
 | `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`       |
 | `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`          |
-| `<BundleComposerSheet />`| V8 (redesign) | `.v8-composer-*`             |
+| `<BundleComposer />`     | V8 (inline)   | `.v8-composer-*`             |
 | `<FloatingCartButton />` | V8 (Step 12)  | `.v8-float-cart`             |
 | `<AddToCartToast />`     | V8 (Step 12)  | `.v8-cart-toast`             |
 | `<ItemDetailDrawer />`   | V8 (Step 13)  | `.v8-detail-*`               |
