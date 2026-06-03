@@ -14,7 +14,8 @@ import {
 import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
-import { DEFAULT_BUNDLES } from "@/lib/bundles";
+import { DEFAULT_BUNDLES, BUNDLE_MARGIN_FLOOR } from "@/lib/bundles";
+import { worstBundleMargin } from "@/lib/bundle-margin";
 import {
   Button,
   Chip,
@@ -271,6 +272,54 @@ function defaultsAsConfig(): TimeWindowConfig[] {
   }));
 }
 
+// ─── Save-time margin-floor guardian ─────────────────────────────────────
+
+export interface BundleMarginViolation {
+  locationSlug: string;
+  locationName: string;
+  bundleName: string;
+  /** Worst-case margin as a whole-number percent (e.g. 32 for 0.32). */
+  marginPct: number;
+}
+
+/**
+ * Pre-compute every active bundle's worst-case contribution margin across
+ * the locations about to be saved, and flag any that fall below
+ * BUNDLE_MARGIN_FLOOR. Margin is computed against each location's live
+ * menu (falling back to its seed catalogue) using the same sampler the
+ * editor's live preview uses, so the guardian and the preview can't
+ * disagree. Audit bundle-ladder-revenue-rebuild — "per-bundle margin
+ * floor enforcement at admin save-time" (was post-order alert only).
+ */
+export function collectBundleMarginViolations(
+  dirtySlugs: Iterable<string>,
+  settings: AllSettings,
+  liveMenus: Record<string, MenuItem[]>,
+): BundleMarginViolation[] {
+  const out: BundleMarginViolation[] = [];
+  for (const slug of dirtySlugs) {
+    const cfg = settings[slug];
+    const bundles = cfg?.bundles;
+    if (!bundles || bundles.length === 0) continue;
+    const seed = LOCATIONS.find((l) => l.slug === slug);
+    const menu = liveMenus[slug] ?? seed?.menu ?? [];
+    if (menu.length === 0) continue;
+    for (const bundle of bundles) {
+      if (!bundle.active) continue;
+      const margin = worstBundleMargin(bundle, menu);
+      if (margin !== null && margin < BUNDLE_MARGIN_FLOOR) {
+        out.push({
+          locationSlug: slug,
+          locationName: seed?.name ?? slug,
+          bundleName: bundle.name || bundle.tier || bundle.id,
+          marginPct: Math.round(margin * 100),
+        });
+      }
+    }
+  }
+  return out;
+}
+
 // ─── Shared selling-settings hook ────────────────────────────────────────
 
 /** Single source of truth for loading / saving location-scoped selling
@@ -378,6 +427,25 @@ export function useSellingSettings() {
     }
     if (dirty.size === 0) return;
 
+    // Save-time margin-floor guardian. Pre-compute every active bundle's
+    // worst-case contribution margin and make the operator explicitly
+    // confirm before persisting a tier that bleeds below the floor — so a
+    // discount that goes underwater is caught at save, not discovered one
+    // order later from the post-order `bundle_low_margin` alert.
+    const violations = collectBundleMarginViolations(dirty, settings, liveMenus);
+    if (violations.length > 0 && typeof window !== "undefined") {
+      const lines = violations
+        .map((v) => `• ${v.bundleName} (${v.locationName}) — ${v.marginPct}% margin`)
+        .join("\n");
+      const verb = violations.length === 1 ? "bundle falls" : "bundles fall";
+      const proceed = window.confirm(
+        `${violations.length} active ${verb} below the ${Math.round(
+          BUNDLE_MARGIN_FLOOR * 100,
+        )}% contribution-margin floor:\n\n${lines}\n\nThese discounts erode contribution on every order — lower the discount % or raise minMains on the Pricing tab to fix. Save anyway?`,
+      );
+      if (!proceed) return; // keep dirty so the operator can re-tune and retry
+    }
+
     setSaving(true);
     const failures: string[] = [];
     for (const slug of dirty) {
@@ -407,7 +475,7 @@ export function useSellingSettings() {
       toast.error("Couldn't save some locations", names);
     }
     setSaving(false);
-  }, [dirty, loadError, settings, toast]);
+  }, [dirty, loadError, settings, liveMenus, toast]);
 
   return {
     activeLocation,

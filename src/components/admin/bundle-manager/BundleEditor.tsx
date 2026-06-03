@@ -23,6 +23,11 @@ import {
   WEEKDAYS,
   CATEGORIES,
 } from "@/components/admin/AdminSellingShared";
+import {
+  computeMarginSamples,
+  worstBundleMargin,
+  type MarginSample,
+} from "@/lib/bundle-margin";
 
 /** Concern-tabs inside the wizard. Defined locally — there's only one
  *  view (card grid) and one editor, so no need for a separate types
@@ -669,108 +674,10 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, Number.isFinite(n) ? n : lo));
 }
 
-interface MarginSample {
-  label: string;
-  priceLabel: string;
-  margin: number | null;
-  hint: string;
-}
-
-function computeMarginSamples(bundle: BundleConfig, menu: MenuItem[]): MarginSample[] {
-  const isDynamic = (bundle.pricingMode ?? "fixed") === "dynamic";
-  if (!isDynamic) {
-    const price = bundle.priceGrosze ?? 0;
-    if (price === 0) return [{ label: "Sample", priceLabel: "—", margin: null, hint: "Set a price on the Pricing tab." }];
-    const sample = sampleFixed(bundle, menu);
-    return [
-      {
-        label: "Locked price",
-        priceLabel: `zł ${(price / 100).toFixed(2)}`,
-        margin: sample.margin,
-        hint: sample.margin === null
-          ? "Composition doesn't resolve at this location."
-          : "Single-line bundle; margin is the same on every order.",
-      },
-    ];
-  }
-  const samplePoints = uniq([
-    Math.max(2, bundle.minMains ?? 2),
-    Math.max(3, (bundle.minMains ?? 2) + 1),
-    Math.min(bundle.maxMains ?? 8, Math.max(4, (bundle.minMains ?? 2) + 2)),
-  ]).sort((a, b) => a - b);
-  return samplePoints.map((n) => {
-    const s = sampleDynamic(bundle, menu, n);
-    return {
-      label: `@ ${n} ${n === 1 ? "main" : "mains"}`,
-      priceLabel: s.price === null ? "—" : `zł ${(s.price / 100).toFixed(2)}`,
-      margin: s.margin,
-      hint:
-        s.margin === null
-          ? "Outside min/max mains or missing add-on candidates."
-          : s.margin >= 0.4
-          ? "Healthy — well above the 40% bleeding line."
-          : s.margin >= 0.25
-          ? "Watch this — close to the bleeding threshold."
-          : "Bleeding — lower the discount or raise minMains.",
-    };
-  });
-}
-
-function uniq<T>(arr: T[]): T[] {
-  const seen = new Set<T>();
-  const out: T[] = [];
-  for (const x of arr) {
-    if (!seen.has(x)) { seen.add(x); out.push(x); }
-  }
-  return out;
-}
-
-function cheapestByCat(menu: MenuItem[], cat: string): MenuItem | undefined {
-  return menu.filter((m) => m.available && m.category === cat).sort((a, b) => a.price - b.price)[0];
-}
-
-function sampleFixed(bundle: BundleConfig, menu: MenuItem[]): { margin: number | null } {
-  const price = bundle.priceGrosze ?? 0;
-  if (price === 0) return { margin: null };
-  let cost = 0;
-  for (const slot of bundle.composition) {
-    const candidate =
-      slot.kind === "item"
-        ? menu.find((m) => m.available && m.id.endsWith(slot.itemIdSuffix ?? ""))
-        : cheapestByCat(menu, slot.category ?? "");
-    if (!candidate) return { margin: null };
-    cost += (candidate.cost ?? 0) * slot.quantity;
-  }
-  return { margin: price === 0 ? 0 : (price - cost) / price };
-}
-
-function sampleDynamic(bundle: BundleConfig, menu: MenuItem[], mains: number): { price: number | null; margin: number | null } {
-  const samplePizza = menu.filter((m) => m.available && m.category === "pizza").sort((a, b) => a.price - b.price)[0];
-  if (!samplePizza) return { price: null, margin: null };
-  if (mains < (bundle.minMains ?? 1)) return { price: null, margin: null };
-  if (bundle.maxMains && mains > bundle.maxMains) return { price: null, margin: null };
-  const mainsSubtotal = samplePizza.price * mains;
-  const mainsCost = (samplePizza.cost ?? 0) * mains;
-  let addOnsSubtotal = 0;
-  let addOnsCost = 0;
-  for (const slot of bundle.composition) {
-    const candidate =
-      slot.kind === "item"
-        ? menu.find((m) => m.available && m.id.endsWith(slot.itemIdSuffix ?? ""))
-        : cheapestByCat(menu, slot.category ?? "");
-    if (!candidate) return { price: null, margin: null };
-    addOnsSubtotal += candidate.price * slot.quantity;
-    addOnsCost += (candidate.cost ?? 0) * slot.quantity;
-  }
-  const mainsPct = bundle.mainsDiscountPercent ?? bundle.discountPercent ?? 0;
-  const addOnsPct = bundle.addOnsDiscountPercent ?? bundle.discountPercent ?? 0;
-  const price = Math.round(mainsSubtotal * (1 - mainsPct / 100) + addOnsSubtotal * (1 - addOnsPct / 100));
-  const cost = mainsCost + addOnsCost;
-  return { price, margin: price === 0 ? 0 : (price - cost) / price };
-}
-
-// Re-export for callers that want to render the editor in summary mode.
-export { computeMarginSamples };
+// Re-export the pure margin helpers (moved to @/lib/bundle-margin so the
+// admin save-time guardian can share them without a circular import) for
+// callers that still reach them through the editor module.
+export { computeMarginSamples, worstBundleMargin };
 export type { MarginSample };
 
 /** Default starter bundle for the "Add tier" action — used by views

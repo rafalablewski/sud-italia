@@ -108,6 +108,16 @@ The AOV machinery: bundle ladders + modifier gating.
 - **Combo discount validation** (CLAUDE rule 8) — preview the actual
   cart math on save, refuse to save a bundle whose math doesn't reduce
   the cart total.
+- **Margin-floor guardian on save.** `Save changes` pre-computes every
+  active bundle's worst-case contribution margin across the dirty
+  locations (`worstBundleMargin` / `collectBundleMarginViolations`,
+  same sampler as the editor's Margin tab, against each location's live
+  menu) and blocks on a confirm listing every tier below
+  `BUNDLE_MARGIN_FLOOR` (40%) before persisting. Confirming saves
+  anyway; cancelling keeps the locations dirty so the operator can
+  re-tune discount % / minMains and retry. Catches an underwater
+  discount at save instead of one order later via the post-order
+  `bundle_low_margin` alert — both read the same floor.
 
 ## Cross-sell — `/admin/crosssell`
 

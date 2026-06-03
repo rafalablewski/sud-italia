@@ -879,10 +879,10 @@ export default async function CapabilitiesPage() {
           summary: "BundleAnalyticsCard on Reports surfaces bundle orders, revenue, total savings given, anchor conversion %, decoy CTR, per-bundle effective discount + avg mains, A/B variant uplift, conversion funnel, AND a new-vs-repeat-customer cohort split (target ≥25% new-customer share among bundle orders proves acquisition role). Slot links persisted per BundleEvent for follow-up capacity analysis.",
         },
         {
-          name: "Bundle low-margin operator alert",
+          name: "Bundle low-margin operator alert + save-time guardian",
           status: "live",
-          href: "/admin",
-          summary: "Every bundle order's contribution margin is computed at write time using MenuItem.cost (food cost) ÷ finalPriceGrosze. When margin drops below 40%, addNotification posts a `bundle_low_margin` alert into the operator notification inbox with bundle name + exact margin % + order total so the operator can re-tune discount % in /admin/upsell before the next order lands. Threshold matches the amber/red line on the live BundleMarginPreview in the bundle editor.",
+          href: "/admin/upsell",
+          summary: "Two-stage margin protection sharing one BUNDLE_MARGIN_FLOOR (40%, in src/lib/bundles.ts). (1) Save-time guardian: pressing 'Save changes' in /admin/upsell pre-computes every active bundle's worst-case contribution margin across the dirty locations (worstBundleMargin in src/lib/bundle-margin.ts — same sampler as the editor's live preview, against each location's live menu) and blocks on a confirm listing each tier below the floor before persisting, so an underwater discount is caught at save, not one order later. (2) Post-order alert: every bundle order's margin is computed at write time (MenuItem.cost ÷ finalPriceGrosze); below the floor, addNotification posts a `bundle_low_margin` alert into the operator inbox with bundle name + exact margin % + order total. All three margin signals (guardian, post-order alert, editor preview tones) read the same floor so they can't disagree.",
         },
         {
           name: "Composer 'same as last time' (repeat-customer one-tap)",
