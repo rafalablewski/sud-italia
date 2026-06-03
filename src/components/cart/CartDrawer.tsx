@@ -25,6 +25,7 @@ import {
   computeDeliveryFee,
   UpsellConfig,
   PairingContext,
+  UpsellSuggestion,
 } from "@/lib/upsell";
 import { calculateTier } from "@/lib/loyalty";
 import { Star, Clock, Check, Trash2 } from "lucide-react";
@@ -81,6 +82,24 @@ export function CartDrawer() {
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
+  // Chipotle "bundle is the path" (audit elite-qsr §6). When the bundle
+  // ladder is showing a real offer, the à-la-carte cross-sell chips are
+  // hidden so the whole-meal upsell owns the moment instead of splitting
+  // attention. BundleLadder reports this off the same compound that gates
+  // its own render, so the suppression can't drift from what's on screen.
+  const [bundleLadderShowing, setBundleLadderShowing] = useState(false);
+  // Referral give-get (audit §6 #5). Code arrives either from the
+  // `/r/CODE` landing cookie or by typing a friend's code here. The
+  // server (createOrderFromCart) re-validates + records the single
+  // redemption intent and is authoritative on the discount — this is a
+  // display estimate only, validated non-recordingly via /api/referrals.
+  const [referralCode, setReferralCode] = useState("");
+  const [referralInfo, setReferralInfo] = useState<{
+    valid: boolean;
+    selfReferral?: boolean;
+    ownerName: string | null;
+    discountGrosze: number;
+  } | null>(null);
 
   // Portal mount + body scroll lock. The mockup also adds .cart-open on
   // <body> so the floating cart pill / nav fade away when the sheet is
@@ -157,6 +176,46 @@ export function CartDrawer() {
       })
       .catch(() => setAttachHistory(null));
   }, [loyaltyCustomer?.phone]);
+
+  // Referral code from the /r/CODE landing cookie (httpOnly:false so the
+  // drawer can read it). Pre-fills the input; the customer can still edit
+  // or clear it. Read once on mount.
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)sud-italia-referral=([^;]+)/);
+    if (m) {
+      try {
+        const code = decodeURIComponent(m[1]).toUpperCase();
+        if (code) setReferralCode(code);
+      } catch {
+        // Malformed cookie value (bad %-escape) — ignore rather than crash mount.
+      }
+    }
+  }, []);
+
+  // Non-recording validation of the current code (+ self-referral check
+  // against the typed phone). Recording happens only at checkout, so this
+  // can run freely as the customer types without minting pending intents.
+  useEffect(() => {
+    const code = referralCode.trim();
+    if (code.length < 4) {
+      setReferralInfo(null);
+      return;
+    }
+    let cancelled = false;
+    const phone = customerPhone.trim();
+    const phoneQ = phone ? `&phone=${encodeURIComponent(`+48${phone}`)}` : "";
+    fetch(`/api/referrals?code=${encodeURIComponent(code)}${phoneQ}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setReferralInfo(d && typeof d === "object" ? d : null);
+      })
+      .catch(() => {
+        if (!cancelled) setReferralInfo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [referralCode, customerPhone]);
 
   // Slot scarcity for honest FOMO (same data as SlotPicker)
   useEffect(() => {
@@ -305,13 +364,23 @@ export function CartDrawer() {
   // Mirror the server-side fee calculation so the pay-bar shows the same
   // number Stripe will charge. createOrder.ts:161 calls computeDeliveryFee
   // with the post-discount subtotal and the same per-segment threshold.
+  // Referral give-get discount (audit §6 #5). Shown only for new
+  // customers (no prior orders) — matches the server's first-order gate.
+  // An unsigned-in returning customer may see it briefly; the server is
+  // authoritative and won't apply it, so the Stripe total is the truth.
+  const referralEligible = !loyaltyCustomer || loyaltyCustomer.ordersCount === 0;
+  const referralDiscount =
+    referralEligible && referralInfo?.valid
+      ? Math.min(referralInfo.discountGrosze ?? 0, Math.max(0, subtotal - comboDiscount))
+      : 0;
+
   const deliveryFee = computeDeliveryFee(
-    subtotal - comboDiscount,
+    subtotal - comboDiscount - referralDiscount,
     fulfillmentType,
     deliveryThreshold,
     publicDeliveryFee,
   );
-  const total = subtotal - comboDiscount + deliveryFee + tipAmount;
+  const total = subtotal - comboDiscount - referralDiscount + deliveryFee + tipAmount;
 
   // Pre-pay "Ready by" quote (audit §11.2 — ETA before pay, not only after).
   // When the customer has picked a slot, that slot time IS the kitchen's
@@ -391,10 +460,68 @@ export function CartDrawer() {
     }),
     [attachHistory],
   );
-  const suggestions = useMemo(
-    () => getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig, pairingContext),
-    [items, resolvedMenuItems, upsellConfig, pairingContext]
+  // Per-customer ML ranker (audit elite-qsr §1). When the customer is
+  // bucketed into the ML rollout arm and the location has a trained model,
+  // /api/customer/upsell-rank returns a personalised candidate order;
+  // otherwise it returns ranker:"rules" and we use the existing engine, so
+  // cross-sell can never break. The model lives server-side, hence the
+  // round-trip rather than scoring in the browser.
+  const [mlRankedItemIds, setMlRankedItemIds] = useState<string[] | null>(null);
+  const cartItemIdSig = useMemo(
+    () => items.map((i) => i.menuItem.id).sort().join(","),
+    [items],
   );
+  useEffect(() => {
+    if (!open || !locationSlug || !loyaltyCustomer?.phone || items.length === 0) {
+      setMlRankedItemIds(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/customer/upsell-rank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: loyaltyCustomer.phone,
+        locationSlug,
+        cartItemIds: items.map((i) => i.menuItem.id),
+        hour: new Date().getHours(),
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setMlRankedItemIds(d && d.ranker === "ml" && Array.isArray(d.itemIds) ? d.itemIds : null);
+      })
+      .catch(() => {
+        if (!cancelled) setMlRankedItemIds(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // cartItemIdSig captures the cart's item set; quantity-only changes
+    // needn't re-rank. items is read fresh inside.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, locationSlug, loyaltyCustomer?.phone, cartItemIdSig]);
+
+  const suggestions = useMemo<UpsellSuggestion[]>(() => {
+    if (mlRankedItemIds && mlRankedItemIds.length > 0) {
+      const byId = new Map(resolvedMenuItems.map((m) => [m.id, m]));
+      const inCart = new Set(items.map((i) => i.menuItem.id));
+      const picks: UpsellSuggestion[] = [];
+      for (const id of mlRankedItemIds) {
+        if (picks.length >= 4) break;
+        const item = byId.get(id);
+        if (!item || !item.available || inCart.has(item.id)) continue;
+        picks.push({
+          item,
+          reason: (item.description?.split(/[.;]/)[0] || "Picked for your order").trim(),
+          priority: picks.length,
+        });
+      }
+      if (picks.length > 0) return picks;
+    }
+    return getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig, pairingContext);
+  }, [mlRankedItemIds, items, resolvedMenuItems, upsellConfig, pairingContext]);
 
   const handlePhoneChange = (value: string) => {
     setCustomerPhone(value);
@@ -443,6 +570,13 @@ export function CartDrawer() {
           tipAmount: tipAmount > 0 ? tipAmount : undefined,
           appliedBundleId: appliedBundleId || undefined,
           appliedBundlePriceGrosze: appliedBundleId && bundlePriceGrosze > 0 ? bundlePriceGrosze : undefined,
+          // Send when the code validates client-side; the server re-checks
+          // owner + self-referral + new-customer eligibility and is the
+          // authority on whether the discount actually lands.
+          referralCode:
+            referralInfo?.valid && referralCode.trim().length >= 4
+              ? referralCode.trim().toUpperCase()
+              : undefined,
         }),
       });
 
@@ -484,6 +618,12 @@ export function CartDrawer() {
         } catch {
           // Best-effort; intent capture failure shouldn't block checkout.
         }
+      }
+
+      // Referral redemption is now recorded server-side; clear the landing
+      // cookie so the code isn't re-applied to a later, non-first order.
+      if (data.url || data.orderId) {
+        document.cookie = "sud-italia-referral=; Max-Age=0; path=/";
       }
 
       if (data.url) {
@@ -662,6 +802,7 @@ export function CartDrawer() {
                 fulfillmentType={fulfillmentType}
                 activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
                 activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
+                onVisibilityChange={setBundleLadderShowing}
               />
 
               {/* Combo deal banner — see prior comment for the bundle-active gate. */}
@@ -675,10 +816,15 @@ export function CartDrawer() {
                 />
               )}
 
-              {/* Cross-sell suggestions */}
-              <LayoutGate flag="showCartUpsell">
-                <CartUpsell suggestions={suggestions} />
-              </LayoutGate>
+              {/* Cross-sell suggestions — suppressed while the bundle ladder
+                  is showing a real offer (Chipotle "bundle is the path",
+                  audit elite-qsr §6): one primary upsell path per cart
+                  moment, never both competing for attention. */}
+              {!bundleLadderShowing && (
+                <LayoutGate flag="showCartUpsell">
+                  <CartUpsell suggestions={suggestions} />
+                </LayoutGate>
+              )}
 
               {/* Delivery progress bar — per-segment threshold (audit §2.5). */}
               <LayoutGate flag="showDeliveryProgress">
@@ -926,9 +1072,68 @@ export function CartDrawer() {
                 />
               </div>
 
+              {/* Referral give-get (audit §6 #5) — a friend's code lands the
+                  referee discount and, on their first paid order, rewards the
+                  referrer. Pre-filled from the /r/CODE cookie; editable. The
+                  server re-validates + records the intent and owns the
+                  discount; this surface only displays the estimate. */}
+              <div className="v8-cart-field">
+                <label className="v8-cart-field-label" htmlFor="checkout-referral">
+                  Referral code <span className="v8-cart-field-label-aside">· codice invito</span>
+                </label>
+                <input
+                  id="checkout-referral"
+                  type="text"
+                  placeholder="From a friend? Enter their code"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  className="v8-cart-input"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  maxLength={12}
+                  aria-describedby="checkout-referral-note"
+                />
+                {referralCode.trim().length >= 4 && referralInfo && (
+                  <div id="checkout-referral-note">
+                    {referralInfo.selfReferral ? (
+                      <div className="v8-cart-field-error">
+                        That&apos;s your own code — share it with a friend instead.
+                      </div>
+                    ) : !referralInfo.valid ? (
+                      <div className="v8-cart-field-error">We don&apos;t recognise that code.</div>
+                    ) : referralEligible ? (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontFamily: "var(--font-body)",
+                          fontStyle: "italic",
+                          fontSize: 12.5,
+                          color: "var(--color-basil-deep)",
+                        }}
+                      >
+                        {formatPrice(referralDiscount)} off your first order
+                        {referralInfo.ownerName ? `, with thanks to ${referralInfo.ownerName}` : ""}.
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontFamily: "var(--font-body)",
+                          fontStyle: "italic",
+                          fontSize: 12.5,
+                          color: "var(--color-muted)",
+                        }}
+                      >
+                        Referral codes apply to a first order only.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Tip picker */}
               <TipPicker
-                subtotalGrosze={subtotal - comboDiscount}
+                subtotalGrosze={subtotal - comboDiscount - referralDiscount}
                 valueGrosze={tipAmount}
                 onChange={setTipAmount}
               />
@@ -960,6 +1165,14 @@ export function CartDrawer() {
                           {comboResult.activeDeal.name} · −{comboResult.activeDeal.discountPercent}%
                         </span>
                         <span className="v8-cart-totals-val">−{formatPrice(comboDiscount)}</span>
+                      </div>
+                    )}
+                    {referralDiscount > 0 && (
+                      <div className="v8-cart-totals-row is-discount">
+                        <span className="v8-cart-totals-label">
+                          Referral{referralInfo?.ownerName ? ` · ${referralInfo.ownerName}` : ""}
+                        </span>
+                        <span className="v8-cart-totals-val">−{formatPrice(referralDiscount)}</span>
                       </div>
                     )}
                     {fulfillmentType === "delivery" && (

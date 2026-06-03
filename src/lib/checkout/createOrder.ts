@@ -25,7 +25,12 @@ import {
   getActiveComboDeals,
   getDeliveryThresholdForCustomer,
 } from "@/lib/upsell";
-import { findBundle, cartSatisfiesBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
+import { findBundle, cartSatisfiesBundle, computeBundlePrice, BUNDLE_MARGIN_FLOOR, type BundleTier } from "@/lib/bundles";
+import {
+  getReferralCodeOwner,
+  recordRedemptionIntent,
+  REFEREE_DISCOUNT_GROSZE,
+} from "@/lib/referral-loop";
 import { calculateTier } from "@/lib/loyalty";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 
@@ -70,6 +75,11 @@ export interface CreateOrderInput {
    *  at this value so an admin discount-percent change between render
    *  and checkout can't silently overcharge the customer. */
   appliedBundlePriceGrosze?: number;
+  /** Referral give-get code (audit §6 #5). Applied only when it resolves
+   *  to a real owner, isn't a self-referral, and the customer is new (no
+   *  prior paid orders) — matching the webhook's first-paid-order
+   *  qualification gate. Validated + recorded server-side here. */
+  referralCode?: string;
   /** "web" = browser checkout; "whatsapp" = bot-driven chat. Defaults to web. */
   channel?: Order["channel"];
 }
@@ -88,6 +98,14 @@ export type CreateOrderResult =
       /** Friendly name of the applied combo for receipt copy. Null when no
        *  combo applied. */
       comboName: string | null;
+      /** Referral give-get discount in grosze applied to the food subtotal.
+       *  0 when no code, an invalid/self/duplicate code, or a returning
+       *  customer. Threaded out so the Stripe layer can fold it into the
+       *  session coupon. */
+      referralDiscount: number;
+      /** Referrer's name for receipt / confirmation copy. Null when no
+       *  referral discount applied. */
+      referralOwnerName: string | null;
     }
   | {
       ok: false;
@@ -268,6 +286,31 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   }
 
   const segmentCustomer = await getCustomer(phoneE164);
+
+  // Referral give-get (audit §6 #5) — apply the flat referee discount to
+  // the food subtotal when a code is present and this is a new customer
+  // (no prior orders), matching the webhook's first-paid-order
+  // qualification gate so the referrer reward and the referee discount
+  // can't disagree. recordRedemptionIntent re-validates the owner +
+  // self-referral + duplicate, so a forged or reused code applies no
+  // discount. Recorded here (server) — the client only validates for
+  // display, never records, so there's exactly one pending intent.
+  let referralDiscount = 0;
+  let referralOwnerName: string | null = null;
+  const isNewCustomer = !segmentCustomer || segmentCustomer.orderCount === 0;
+  if (input.referralCode && isNewCustomer) {
+    const code = input.referralCode.trim().toUpperCase();
+    const owner = await getReferralCodeOwner(code);
+    if (owner && owner.ownerPhone !== phoneE164) {
+      const intent = await recordRedemptionIntent(code, phoneE164);
+      if (intent.status === "pending") {
+        referralDiscount = Math.min(REFEREE_DISCOUNT_GROSZE, calculatedTotal);
+        calculatedTotal -= referralDiscount;
+        referralOwnerName = owner.ownerName || null;
+      }
+    }
+  }
+
   const appSettings = await getSettings();
   const loyalty = await getLoyaltySettings();
   const segmentThreshold = getDeliveryThresholdForCustomer(
@@ -423,14 +466,14 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     });
 
     // Operator margin alert — when a real bundle order's contribution
-    // margin drops below 40% the operator gets pinged in /admin so they
-    // can re-tune the discount before it bleeds. Threshold matches the
-    // "amber/red" line on BundleMarginPreview so the admin signal and
-    // the live preview agree.
-    if (marginRatio !== undefined && marginRatio < 0.4 && bundleSubtotal !== null) {
+    // margin drops below the floor the operator gets pinged in /admin so
+    // they can re-tune the discount before it bleeds. Same
+    // BUNDLE_MARGIN_FLOOR the save-time guardian and the editor's live
+    // preview use, so all three margin signals agree.
+    if (marginRatio !== undefined && marginRatio < BUNDLE_MARGIN_FLOOR && bundleSubtotal !== null) {
       void addNotification({
         type: "bundle_low_margin",
-        title: "Bundle margin below 40%",
+        title: `Bundle margin below ${Math.round(BUNDLE_MARGIN_FLOOR * 100)}%`,
         message: `${bundleAuditPayload.bundleName} — ${Math.round(marginRatio * 100)}% margin on ${formatPrice(bundleSubtotal)}. Review discount % in /admin/upsell.`,
         locationSlug: input.locationSlug,
         orderId,
@@ -474,5 +517,5 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     });
   }
 
-  return { ok: true, order, deliveryFee, bundleSubtotal, comboDiscount, comboName };
+  return { ok: true, order, deliveryFee, bundleSubtotal, comboDiscount, comboName, referralDiscount, referralOwnerName };
 }

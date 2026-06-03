@@ -47,6 +47,26 @@ The tabbed analytics surface — revenue, orders, items, cohort, exports.
   cohort/CLTV view that focuses on the cohort itself, not the period.
 - **JPK export** triggers a same-tab navigation to the JPK endpoint
   (not an XHR) so the browser handles the file download natively.
+- **Bundle analytics card** (`BundleAnalyticsCard`) surfaces bundle KPIs
+  plus the **A/B significance** panel: per variant it shows orders,
+  conversion (applies ÷ impressions), avg paid, avg contribution, the
+  relative lift vs control, and a verdict badge (Winner / Worse /
+  Collecting / No diff.) computed by `@/lib/experiment-stats`. A note
+  line echoes the decision rationale (e.g. "~N more orders needed for a
+  signal at 95% confidence"). The control row is marked and listed first;
+  the experiment's primary metric + lifecycle status label the section.
+  The operator reads the verdict here, then promotes the winner from the
+  Upsell → Experiments tab (see [`growth.md`](./growth.md)). The "By
+  bundle" table also carries a **Value** column — voice-of-customer
+  thumbs (👍 / 👎) from the post-order `BundleFeedbackPrompt`, amber-
+  flagged when ≥20% thumbs-down on ≥5 ratings so a high-converting-but-
+  disliked bundle is caught before it becomes a one-star review. A
+  **Refunds** column joins `Order.refund` to bundle orders by id (audit
+  elite-qsr §3) — count + rate per bundle, amber-flagged at ≥8% on ≥5
+  orders, with the most common refund reason on hover; per-variant refund
+  rate rides the A/B significance table. A bundle that forces unwanted
+  items refunds harder than à la carte, and this is the only place that
+  shows up.
 
 ## Cash — `/admin/cash`
 

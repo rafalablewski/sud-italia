@@ -107,6 +107,23 @@ export interface BundleDynamicTier extends BundleBase {
 
 export type BundleTier = BundleFixedTier | BundleDynamicTier;
 
+/**
+ * Contribution-margin floor for a bundle, as a 0–1 ratio
+ * ((price − food cost) / price). A bundle whose margin drops below this
+ * is "bleeding" — it discounts past the point where the order still
+ * carries its plate cost plus a healthy contribution.
+ *
+ * Single source of truth for every margin signal so they can't disagree:
+ *   - the post-order `bundle_low_margin` operator alert (createOrder.ts),
+ *   - the live margin preview tones in the bundle editor,
+ *   - the save-time guardian confirm in the Upsell admin (audit
+ *     bundle-ladder-revenue-rebuild — "per-bundle margin floor enforcement
+ *     at admin save-time").
+ * Keep it at 0.4: the 50% blended target is aspirational, but 40% is the
+ * line below which a single bundle is actively eroding contribution.
+ */
+export const BUNDLE_MARGIN_FLOOR = 0.4;
+
 /** Type guard — treats missing pricingMode as "fixed" so legacy entries work. */
 export function isDynamicBundle(b: BundleTier): b is BundleDynamicTier {
   return b.pricingMode === "dynamic";

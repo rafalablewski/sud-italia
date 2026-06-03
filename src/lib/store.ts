@@ -11,6 +11,8 @@ import {
 } from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import type { Experiment } from "@/lib/experiments";
+import type { MLUpsellModel } from "@/lib/ml-upsell";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -5618,6 +5620,25 @@ export interface LocationUpsellConfig {
     lunch?: { startHour: number; endHour: number };
     family?: { minMainItems: number; hintWithin: number };
   };
+  /**
+   * Per-location bundle A/B experiment (audit elite-qsr §9). Single
+   * experiment per location with weighted variants + per-bundle discount
+   * overrides, lifecycle (draft/running/stopped), and a concluded result.
+   * The server resolver (`experiments-server.ts`) reads it and assigns
+   * variants only while `isExperimentLive`. Previously this field was
+   * written by the admin PUT but missing from the type — surfaced as
+   * `experiment` on the admin LocationConfig; now part of the canonical
+   * persisted shape so reads + writes are type-checked end to end.
+   */
+  experiment?: Experiment | null;
+  /**
+   * ML upsell ranker rollout (audit elite-qsr §1). 0–100 = % of customers
+   * (deterministically phone-bucketed) served the ML-ranked cross-sell
+   * instead of the rules ranker. 0 / unset = off (rules for everyone).
+   * Falls back to rules when no trained model exists for the location, so
+   * turning this up before training simply changes nothing.
+   */
+  mlUpsellRolloutPct?: number;
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;
@@ -5828,6 +5849,60 @@ export async function getBundleFunnelEvents(opts?: {
   });
 }
 
+// ─── Bundle feedback (voice-of-customer, audit elite-qsr §2) ─────────────
+//
+// The bundle audit log captures WHAT was sold; this captures what the
+// customer thought of the value. A post-receipt thumbs-up/down per bundle
+// order so a bundle that converts well but is disliked (a profit centre
+// burning brand equity) becomes visible on BundleAnalyticsCard instead of
+// being discovered from a one-star review. Upsert by orderId so a
+// customer can change their mind without skewing the rate.
+
+export interface BundleFeedbackEvent {
+  id: string;
+  orderId: string;
+  bundleId: string;
+  bundleName: string;
+  locationSlug: string;
+  rating: "up" | "down";
+  createdAt: string;
+}
+
+export async function appendBundleFeedback(event: BundleFeedbackEvent): Promise<void> {
+  await withLock("bundle-feedback.json", async () => {
+    const list = await readJSON<BundleFeedbackEvent[]>("bundle-feedback.json", []);
+    const next = list.filter((e) => e.orderId !== event.orderId);
+    next.push(event);
+    await writeJSON("bundle-feedback.json", next);
+  });
+  incrCounter(`bundles.feedback.${event.rating}`);
+}
+
+export async function getBundleFeedback(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleFeedbackEvent[]> {
+  const all = await readJSON<BundleFeedbackEvent[]>("bundle-feedback.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
+/** The most-recent bundle event for an order (one bundle per order), used
+ *  to resolve whether an order was a bundle + which bundle, for the
+ *  post-order feedback prompt. */
+export async function getBundleEventByOrderId(
+  orderId: string,
+): Promise<BundleEvent | null> {
+  const all = await readJSON<BundleEvent[]>("bundle-events.json", []);
+  for (let i = all.length - 1; i >= 0; i--) {
+    if (all[i].orderId === orderId) return all[i];
+  }
+  return null;
+}
+
 // ─── Scheduled bundle intents (Sprint 4 #17) ─────────────────────────────
 //
 // Pret-style "make this my weekly usual" intent capture. Phase 1 just
@@ -5917,6 +5992,35 @@ export async function updateLocationUpsell(
     settings[locationSlug] = config;
     await writeJSON("upsell-settings.json", settings);
     return settings;
+  });
+}
+
+// ─── ML upsell ranker models (audit elite-qsr §1) ────────────────────────
+//
+// Per-location logistic-regression weights + learned attach aggregates,
+// trained from real orders by /api/admin/ml-upsell/train and read by the
+// inference path when a customer is bucketed into the ML variant. Keyed
+// by location slug (menus differ per location, so models do too).
+
+export type MLUpsellModels = Record<string, MLUpsellModel>;
+
+export async function getMLUpsellModels(): Promise<MLUpsellModels> {
+  return readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+}
+
+export async function getMLUpsellModel(
+  locationSlug: string,
+): Promise<MLUpsellModel | null> {
+  const all = await readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+  return all[locationSlug] ?? null;
+}
+
+export async function saveMLUpsellModel(model: MLUpsellModel): Promise<void> {
+  if (!model.locationSlug) return;
+  await withLock("ml-upsell-models.json", async () => {
+    const all = await readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+    all[model.locationSlug as string] = model;
+    await writeJSON("ml-upsell-models.json", all);
   });
 }
 

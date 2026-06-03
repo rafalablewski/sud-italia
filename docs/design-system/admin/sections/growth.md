@@ -108,6 +108,46 @@ The AOV machinery: bundle ladders + modifier gating.
 - **Combo discount validation** (CLAUDE rule 8) — preview the actual
   cart math on save, refuse to save a bundle whose math doesn't reduce
   the cart total.
+- **Margin-floor guardian on save.** `Save changes` pre-computes every
+  active bundle's worst-case contribution margin across the dirty
+  locations (`worstBundleMargin` / `collectBundleMarginViolations`,
+  same sampler as the editor's Margin tab, against each location's live
+  menu) and blocks on a confirm listing every tier below
+  `BUNDLE_MARGIN_FLOOR` (40%) before persisting. Confirming saves
+  anyway; cancelling keeps the locations dirty so the operator can
+  re-tune discount % / minMains and retry. Catches an underwater
+  discount at save instead of one order later via the post-order
+  `bundle_low_margin` alert — both read the same floor.
+- **Experiments tab — A/B ledger** (`ExperimentEditor`). One per-location
+  experiment with weighted variants + per-bundle discount overrides.
+  Lifecycle controls: a **status pill** (draft / running / stopped) with
+  **Start / Stop** (Start needs ≥2 variants; assignment only runs while
+  `running`), a **control-variant** selector (the baseline the others are
+  measured against), and a **primary-metric** selector (contribution /
+  AOV / conversion) that decides which significance verdict drives the
+  call. Each variant row carries a **Promote winner → live bundles**
+  action: it copies that variant's overrides into the live bundle config,
+  stops the experiment, and records a `result` (winner + promoted). The
+  promoted discounts pass back through the margin-floor guardian on the
+  next save. Verdicts themselves are read on the Reports bundle-analytics
+  card (see [`finance.md`](./finance.md)).
+- **Cross-sell intelligence — ML ranker panel** (`MLUpsellPanel`). A
+  per-customer logistic ranker trained on the truck's real orders.
+  Shows model status (trained-at, training examples, base attach rate,
+  log loss), a **Train now** button (POST `/api/admin/ml-upsell`, writes
+  the model immediately), and a **rollout %** slider — the deterministic
+  phone-bucketed share served the ML-ranked cross-sell vs the rules
+  ranker (persisted in `LocationUpsellConfig.mlUpsellRolloutPct` on Save
+  changes). 0% or no trained model = rules ranker for everyone, so the
+  slider is safe to raise before training (it does nothing until a model
+  exists). A **Live comparison · ML vs rules** block recomputes each
+  order's arm from its phone bucket (`/api/admin/ml-upsell/compare`, the
+  same hash the serving path uses, window clamped to the model's
+  trained-at) and shows orders / attach rate / avg order per arm, the
+  attach + AOV lift, and a decision badge (ML winning / worse /
+  collecting / no diff.) from the significance engine — so the operator
+  reads whether the rollout is actually paying off, with a stable-rollout
+  caveat stated inline.
 
 ## Cross-sell — `/admin/crosssell`
 

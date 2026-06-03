@@ -20,6 +20,7 @@ V8 since Step 14 — all selectors live under `.v8-order-*` in
 | Pickup location                | inline                                                     | `.v8-order-pickup`                          |
 | Loyalty points earned          | `src/components/order/LoyaltyPointsEarned.tsx`             | `.v8-order-loyalty`                         |
 | Post-order upsell              | `src/components/order/PostOrderUpsell.tsx`                 | reuses `.v8-cart-pairs`, `.v8-cart-pair*`   |
+| Bundle value feedback          | `src/components/order/BundleFeedbackPrompt.tsx`            | `.v8-bundle-feedback*` (reuses `.v8-order-card`) |
 | Limited-time come-back card    | inline                                                     | `.v8-order-comeback`                        |
 | Customer milestone             | `src/components/order/CustomerMilestone.tsx`               | `.v8-order-milestone`                       |
 | Push opt-in                    | `src/components/order/PushOptInButton.tsx`                 | `.v8-order-push`, `.v8-order-push-confirmed`|
@@ -157,6 +158,26 @@ Quiet, non-intrusive recognition. Triggers on 1st / 5th / 10th /
   back to `/locations/{slug}#menu` to complete a quick follow-on order.
 - Gated by `<LayoutGate flag="showPostOrderUpsell">` (Settings → Layout →
   Order confirmation). Default on.
+
+### Bundle value feedback — `<BundleFeedbackPrompt />`
+
+- Live code: `src/components/order/BundleFeedbackPrompt.tsx`. Voice-of-
+  customer (audit elite-qsr §2): the one question the bundle audit log
+  can't answer — "was the value good?".
+- **Self-gating** — fetches `GET /api/customer/bundle-feedback?orderId=`
+  and renders **nothing** unless the order was a bundle order, so the page
+  mounts it unconditionally. No `LayoutGate` (it's already conditional on
+  bundle orders, a small slice).
+- A `.v8-order-card` with `.v8-bundle-feedback-q` (italic Cormorant "How
+  was the value? · il valore") + `.v8-bundle-feedback-sub`, then two
+  `.v8-bundle-feedback-btn` thumbs — `.is-up` (basil hover) / `.is-down`
+  (oxblood hover). Tapping POSTs `{ orderId, rating }`; the rating is
+  optimistic (the `.is-done` thank-you never waits on the network). The
+  bundle id / name / location are resolved server-side from the order's
+  BundleEvent so the client can't spoof them.
+- Aggregated thumbs-down rate per bundle surfaces on the admin Reports
+  `BundleAnalyticsCard` "Value" column (see admin
+  [`finance.md`](../../admin/sections/finance.md)).
 
 ### Feedback survey — `<FeedbackSurvey />`
 

@@ -9,9 +9,11 @@ import {
   DEFAULT_BUNDLES_FALLBACK,
   DEFAULT_BUNDLE_RULES,
   useSellingSettings,
+  type ExperimentConfig,
 } from "./AdminSellingShared";
 import { BundleManager } from "./bundle-manager/BundleManager";
 import { ModifierInventory } from "./ModifierInventory";
+import { MLUpsellPanel } from "./MLUpsellPanel";
 
 type TabKey = "bundles" | "modifiers";
 
@@ -31,6 +33,46 @@ export function AdminUpsell() {
     handleSave,
   } = useSellingSettings();
   const [tab, setTab] = useState<TabKey>("bundles");
+
+  // Promote a winning variant: copy its per-bundle discount overrides into
+  // the live bundle config and conclude the experiment (stopped + result).
+  // Lives here because the parent owns both the bundle list and the
+  // experiment — the editor only knows the experiment. Saved on the next
+  // "Save changes" like any other config edit (and the margin-floor
+  // guardian still vets the promoted discounts).
+  const handlePromoteVariant = (variantId: string) => {
+    const exp = config.experiment;
+    if (!exp) return;
+    const variant = exp.variants.find((v) => v.id === variantId);
+    if (!variant) return;
+    const overrides = variant.bundleOverrides ?? {};
+    const bundles = (config.bundles ?? DEFAULT_BUNDLES_FALLBACK).map((b) => {
+      const o = overrides[b.id];
+      if (o === undefined) return b;
+      if (typeof o === "number") return { ...b, discountPercent: o };
+      return {
+        ...b,
+        discountPercent: o.discountPercent ?? b.discountPercent,
+        mainsDiscountPercent: o.mainsDiscountPercent ?? b.mainsDiscountPercent,
+        addOnsDiscountPercent: o.addOnsDiscountPercent ?? b.addOnsDiscountPercent,
+      };
+    });
+    const now = new Date().toISOString();
+    const concluded: ExperimentConfig = {
+      ...exp,
+      status: "stopped",
+      active: false,
+      stoppedAt: now,
+      result: {
+        decidedAt: now,
+        winnerVariantId: variantId,
+        relativeLift: 0,
+        primaryMetric: exp.primaryMetric ?? "contribution",
+        promoted: true,
+      },
+    };
+    updateConfig({ bundles, experiment: concluded });
+  };
 
   if (loading) {
     return (
@@ -148,8 +190,15 @@ export function AdminUpsell() {
               experiment={config.experiment ?? null}
               bundles={config.bundles ?? DEFAULT_BUNDLES_FALLBACK}
               onChange={(experiment) => updateConfig({ experiment })}
+              onPromote={handlePromoteVariant}
             />
           </section>
+
+          <MLUpsellPanel
+            locationSlug={activeLocation}
+            rolloutPct={config.mlUpsellRolloutPct ?? 0}
+            onRolloutChange={(mlUpsellRolloutPct) => updateConfig({ mlUpsellRolloutPct })}
+          />
         </div>
       )}
 

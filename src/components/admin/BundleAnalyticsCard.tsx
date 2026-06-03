@@ -18,14 +18,43 @@ interface BundleAnalytics {
     totalRevenueGrosze: number;
     totalSavingsGrosze: number;
     effectiveDiscount: number;
+    thumbsUp: number;
+    thumbsDown: number;
+    thumbsDownRate: number;
+    refundCount: number;
+    refundRate: number;
+    topRefundReason: string | null;
   }[];
   byVariant: {
     variantId: string;
+    label?: string;
+    isControl: boolean;
     count: number;
+    impressions: number;
+    conversionRate: number;
     avgFinalGrosze: number;
     avgSavingsGrosze: number;
     totalRevenueGrosze: number;
+    avgContributionGrosze: number;
+    totalContributionGrosze: number;
+    verdict: {
+      metric: "conversion" | "aov" | "contribution";
+      relativeLift: number;
+      pValue: number;
+      significant: boolean;
+      decision: "collect_more" | "winner" | "loser" | "no_difference";
+      reason: string;
+    } | null;
   }[];
+  experiment?: {
+    id: string;
+    name: string;
+    status: "draft" | "running" | "stopped" | null;
+    primaryMetric: "conversion" | "aov" | "contribution";
+    controlVariantId: string;
+    startedAt: string | null;
+    stoppedAt: string | null;
+  } | null;
   funnel?: {
     impressions: number;
     composerOpens: number;
@@ -134,6 +163,8 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                       <th className="py-1 pr-2 text-right">Avg save</th>
                       <th className="py-1 pr-2 text-right">Eff. disc.</th>
                       <th className="py-1 pr-2 text-right">Avg mains</th>
+                      <th className="py-1 pr-2 text-right">Value</th>
+                      <th className="py-1 pr-2 text-right">Refunds</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -149,6 +180,12 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                         <td className="py-1 pr-2 text-right admin-text-secondary">
                           {b.avgMainsCount.toFixed(1)}
                         </td>
+                        <td className="py-1 pr-2 text-right">
+                          <BundleSentiment up={b.thumbsUp} down={b.thumbsDown} rate={b.thumbsDownRate} />
+                        </td>
+                        <td className="py-1 pr-2 text-right">
+                          <BundleRefunds count={b.refundCount} rate={b.refundRate} reason={b.topRefundReason} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -160,7 +197,14 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
               <section>
                 <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1.5 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  A/B uplift
+                  A/B significance
+                  {data.experiment && (
+                    <span className="normal-case tracking-normal admin-text-secondary">
+                      · {data.experiment.name}
+                      {data.experiment.status ? ` (${data.experiment.status})` : ""} · decided on{" "}
+                      {metricLabel(data.experiment.primaryMetric)}
+                    </span>
+                  )}
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -168,24 +212,57 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                       <tr className="text-left admin-text-secondary">
                         <th className="py-1 pr-2">Variant</th>
                         <th className="py-1 pr-2 text-right">Orders</th>
+                        <th className="py-1 pr-2 text-right">Conv.</th>
                         <th className="py-1 pr-2 text-right">Avg paid</th>
-                        <th className="py-1 pr-2 text-right">Avg save</th>
-                        <th className="py-1 pr-2 text-right">Total revenue</th>
+                        <th className="py-1 pr-2 text-right">Avg contrib.</th>
+                        <th className="py-1 pr-2 text-right">Lift</th>
+                        <th className="py-1 pr-2">Verdict</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.byVariant.map((v) => (
                         <tr key={v.variantId} className="border-t border-[var(--border)]">
-                          <td className="py-1 pr-2 admin-text font-semibold">{v.variantId}</td>
+                          <td className="py-1 pr-2 admin-text font-semibold">
+                            {v.label ?? v.variantId}
+                            {v.isControl && (
+                              <span className="ml-1 text-[9px] uppercase tracking-wide admin-text-secondary">
+                                control
+                              </span>
+                            )}
+                          </td>
                           <td className="py-1 pr-2 text-right admin-text">{v.count}</td>
+                          <td className="py-1 pr-2 text-right admin-text-secondary">
+                            {v.impressions > 0 ? `${(v.conversionRate * 100).toFixed(1)}%` : "—"}
+                          </td>
                           <td className="py-1 pr-2 text-right admin-text">{zl(v.avgFinalGrosze)}</td>
-                          <td className="py-1 pr-2 text-right text-[var(--success)]">{zl(v.avgSavingsGrosze)}</td>
-                          <td className="py-1 pr-2 text-right admin-text">{zl(v.totalRevenueGrosze)}</td>
+                          <td className="py-1 pr-2 text-right admin-text">
+                            {v.avgContributionGrosze > 0 ? zl(v.avgContributionGrosze) : "—"}
+                          </td>
+                          <td className="py-1 pr-2 text-right admin-text">
+                            {v.verdict ? (
+                              <span className={liftClass(v.verdict.relativeLift)}>
+                                {fmtLift(v.verdict.relativeLift)}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="py-1 pr-2">
+                            {v.verdict ? <VerdictBadge decision={v.verdict.decision} /> : <span className="admin-text-secondary">baseline</span>}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {(() => {
+                  const decisive = data.byVariant.find((v) => v.verdict && (v.verdict.decision === "winner" || v.verdict.decision === "loser"));
+                  const pending = data.byVariant.find((v) => v.verdict?.decision === "collect_more");
+                  const note = decisive?.verdict?.reason ?? pending?.verdict?.reason;
+                  return note ? (
+                    <p className="text-[11px] admin-text-secondary mt-1.5">{note}</p>
+                  ) : null;
+                })()}
               </section>
             )}
 
@@ -276,6 +353,67 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
         </>
       )}
     </div>
+  );
+}
+
+/** Voice-of-customer sentiment for a bundle. Shows the thumbs split and
+ *  flags a high disappointment rate (≥20% down on ≥5 ratings) in amber so
+ *  a high-converting-but-disliked bundle is visible (audit elite-qsr §2). */
+function BundleSentiment({ up, down, rate }: { up: number; down: number; rate: number }) {
+  const total = up + down;
+  if (total === 0) return <span className="admin-text-secondary">—</span>;
+  const flag = total >= 5 && rate >= 0.2;
+  return (
+    <span className={flag ? "text-[var(--warning)] font-semibold" : "admin-text-secondary"}>
+      👍 {up} · 👎 {down}
+      {flag ? ` (${(rate * 100).toFixed(0)}% ↓)` : ""}
+    </span>
+  );
+}
+
+/** Refund rate for a bundle (audit elite-qsr §3). Amber-flags ≥8% on ≥5
+ *  orders — a bundle refunding materially more than à la carte usually
+ *  means it forces items the customer didn't want. */
+function BundleRefunds({ count, rate, reason }: { count: number; rate: number; reason: string | null }) {
+  if (count === 0) return <span className="admin-text-secondary">—</span>;
+  const flag = count >= 5 && rate >= 0.08;
+  return (
+    <span
+      className={flag ? "text-[var(--warning)] font-semibold" : "admin-text-secondary"}
+      title={reason ? `Top reason: ${reason}` : undefined}
+    >
+      {count} ({(rate * 100).toFixed(0)}%)
+    </span>
+  );
+}
+
+function metricLabel(m: "conversion" | "aov" | "contribution"): string {
+  return m === "conversion" ? "conversion rate" : m === "aov" ? "avg order value" : "contribution";
+}
+
+function fmtLift(rel: number): string {
+  if (!Number.isFinite(rel)) return "—";
+  const pct = rel * 100;
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+}
+
+function liftClass(rel: number): string {
+  if (!Number.isFinite(rel) || rel === 0) return "admin-text-secondary";
+  return rel > 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
+}
+
+function VerdictBadge({ decision }: { decision: "collect_more" | "winner" | "loser" | "no_difference" }) {
+  const map = {
+    winner: { label: "Winner", cls: "bg-[var(--success)]/15 text-[var(--success)]" },
+    loser: { label: "Worse", cls: "bg-[var(--danger)]/15 text-[var(--danger)]" },
+    collect_more: { label: "Collecting", cls: "bg-[var(--warning)]/15 text-[var(--warning)]" },
+    no_difference: { label: "No diff.", cls: "admin-text-secondary bg-[var(--surface-2)]" },
+  } as const;
+  const { label, cls } = map[decision];
+  return (
+    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>
+      {label}
+    </span>
   );
 }
 

@@ -837,16 +837,22 @@ export default async function CapabilitiesPage() {
           summary: "Cart upsell chips re-rank by composite score combining margin × attach, hour-of-day bias (espresso 0.82 at 11:00, 0.31 at 19:00), per-customer attach history (`you added it 3 of last 4 visits`), and a small novelty decay so chips rotate. Pure scorePairing() in upsell.ts; cart drawer feeds context via /api/customer/attach-history. Audit §3.1.",
         },
         {
+          name: "Per-customer ML upsell ranker",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Logistic-regression cross-sell ranker trained on REAL orders (audit elite-qsr §1) — no hardcoded weights. src/lib/ml-upsell.ts builds a leakage-controlled training set (one example per anchor-order × attach-candidate; per-customer attach features use only prior orders), fits weights by gradient descent over 7 learned features (personal attach rate, has-ordered, global attach rate, category×hour attach, item margin, tenure, new-customer flag), and ranks candidates by expected contribution (P(attach) × margin). POST /api/admin/ml-upsell/train pulls getOrders for the window + getMenuWithOverrides per location and persists per-location models (ml-upsell-models.json); GET returns model status (trainedAt, sampleCount, positiveRate, logLoss). Cold-start locations (<200 examples) are skipped → rules ranker stays in use. Inference: the cart POSTs to /api/customer/upsell-rank, which deterministically phone-buckets the customer into the ML arm when their bucket falls under the location's mlUpsellRolloutPct (the same hash is reproducible from any order's phone, so ML-vs-rules arms can be compared retroactively without storing assignments) and returns the model-ranked candidate ids; the cart orders the .v8-cart-pairs rail by them, falling back to the rules getCartSuggestions for the control arm / cold-start / untrained locations so cross-sell can never break. Operated from /admin/upsell → Cross-sell intelligence (MLUpsellPanel): model status, Train now, the rollout-% slider, AND a live ML-vs-rules comparison — /api/admin/ml-upsell/compare recomputes each order's arm from its phone (shared inMlArm bucket, window clamped to the model's trainedAt so ML-arm orders genuinely saw the ML ranker) and runs attach rate (two-proportion) + AOV (Welch) through the significance engine, surfacing per-arm orders/attach/AOV, lift, p-value, and a decision (ML winning / worse / collecting / no diff.). Arms are reproducible from the deterministic hash, so this needs no per-order assignment log (assumes a stable rollout over the window). 17 unit tests cover separation, no-leakage construction, recovery of a synthetic per-hour preference, deterministic bucketing, and the arm comparison.",
+        },
+        {
           name: "Bundle architecture (Lunch / Family / Late-night)",
           status: "live",
           href: "/admin/upsell",
           summary: "Restructured May 2026 (revenue-audit-5jrVU). Four parallel ladders: (1) pasta-led lunch [Solo 27.90 → Lunch 38.90 → Lunch+ 44.90 → Big Lunch 68.90 decoy], (2) pizza-led lunch — NEW — [Pizza Solo 22.90 → Pizza Lunch 39.90 → Pizza Lunch+ 44.90, hits the hero product], (3) family [Pizza Family Pack fixed 99 zł — NEW — → Family 18% → Family Feast 22% anchor → Feast Deluxe 25% true decoy gated at 6 mains], (4) late-night [Slice + drink 16.90 entry — NEW — → Late dinner 20% default → Late Party 28% anchor — NEW]. Family minimum raised 2→3 (couples were being padded into bundles), Feast Deluxe discount lifted to true scale-economics offer that only dominates at 6+ mains. Hungry tier rebuilt as a true decoy (savings % below Lunch+ so dominance theory works). Anchor SKUs (Tartufata Reale 79.90/89.90, Pizza del Pizzaiolo 49.90/54.90) excluded from category-slot resolution so they can't be folded into discounted bundles. Channel-aware: delivery-only Pantry Pack bundle (frozen tiramisù + Peroni 4-pack + olive oil) surfaces only when fulfillmentType=delivery. Member-only tier visibility flag drives phone collection as conversion lever. Server caps charged amount at min(server-recomputed, client-snapshot). Combo banner suppressed when bundle ladder showable. Audit §3.",
         },
         {
-          name: "Bundle experimentation (A/B)",
+          name: "Bundle experimentation (A/B) + significance ledger",
           status: "live",
           href: "/admin/upsell",
-          summary: "Full A/B harness manageable in /admin/upsell → Experiments tab. ExperimentEditor lets the operator define one per-location experiment with weighted variants and per-bundle discount overrides (single percent OR split mains/add-ons). Customer phone → SHA-256 bucket → stable variant assignment so a customer always sees the same offer across visits and the server can reproduce the variant at checkout. Each BundleEvent records the variant id; /api/admin/bundle-analytics rolls up avg paid + avg saved per variant for direct AOV / contribution-profit comparison on the Reports page. Server resolver in src/lib/experiments.ts; client mirror via Web Crypto SHA-256 so client + server agree.",
+          summary: "Full A/B harness + significance ledger, manageable in /admin/upsell → Experiments tab. ExperimentEditor defines one per-location experiment with weighted variants + per-bundle discount overrides (single percent OR split mains/add-ons), a lifecycle (draft → running → stopped, with start/stop + startedAt/stoppedAt), a control variant, and a primary metric (contribution / AOV / conversion). Customer phone → SHA-256 bucket → stable variant assignment; assignment runs only while status is `running` (isExperimentLive). Server reproduces the variant at checkout. Each BundleEvent records the variant id; /api/admin/bundle-analytics rolls up per variant: conversion (applies ÷ funnel impressions), avg paid, avg contribution (finalPrice × marginRatio), and a significance verdict vs control — relative lift, p-value, and a decision (collect_more / winner / loser / no_difference) from the tested, pure src/lib/experiment-stats.ts engine (two-proportion z-test, Welch means, power-based required-n). BundleAnalyticsCard on Reports surfaces the verdict; the operator promotes a winner from the Experiments tab, which copies its overrides into the live bundles, stops the experiment, and records a result snapshot. Server resolver in src/lib/experiments-server.ts; client mirror via Web Crypto SHA-256 so client + server agree.",
         },
         {
           name: "Bundle scarcity + weekday gating",
@@ -879,10 +885,22 @@ export default async function CapabilitiesPage() {
           summary: "BundleAnalyticsCard on Reports surfaces bundle orders, revenue, total savings given, anchor conversion %, decoy CTR, per-bundle effective discount + avg mains, A/B variant uplift, conversion funnel, AND a new-vs-repeat-customer cohort split (target ≥25% new-customer share among bundle orders proves acquisition role). Slot links persisted per BundleEvent for follow-up capacity analysis.",
         },
         {
-          name: "Bundle low-margin operator alert",
+          name: "Bundle value feedback (voice-of-customer)",
           status: "live",
-          href: "/admin",
-          summary: "Every bundle order's contribution margin is computed at write time using MenuItem.cost (food cost) ÷ finalPriceGrosze. When margin drops below 40%, addNotification posts a `bundle_low_margin` alert into the operator notification inbox with bundle name + exact margin % + order total so the operator can re-tune discount % in /admin/upsell before the next order lands. Threshold matches the amber/red line on the live BundleMarginPreview in the bundle editor.",
+          href: "/admin/reports",
+          summary: "Post-receipt thumbs up/down on every bundle order — the one signal the bundle audit log can't capture (what the customer thought of the value). BundleFeedbackPrompt on /order-confirmation self-gates to bundle orders (GET /api/customer/bundle-feedback?orderId=), records an upsert-by-order rating (POST same route; bundle id/name/location resolved server-side from the BundleEvent so it can't be spoofed), persisted to bundle-feedback.json. BundleAnalyticsCard's 'By bundle' table shows the 👍/👎 split per bundle and amber-flags ≥20% thumbs-down on ≥5 ratings so a high-converting-but-disliked bundle (a profit centre burning brand equity) is caught before it surfaces as a one-star review.",
+        },
+        {
+          name: "Refund × bundle correlation",
+          status: "live",
+          href: "/admin/reports",
+          summary: "Joins Order.refund to bundle orders by id (audit elite-qsr §3) so the operator can see if a bundle refunds at a higher rate than à la carte — usually a sign it forces items the customer didn't want. /api/admin/bundle-analytics matches each BundleEvent's orderId against refunded orders in the window and rolls up refund count + rate + the most common reason (RefundReasonCode) per bundle, and refund rate per A/B variant. BundleAnalyticsCard's 'By bundle' table shows a Refunds column (count + %, top reason on hover) amber-flagged at ≥8% on ≥5 orders; the per-variant refund rate rides the A/B significance table. Builds on the existing refund capture (reasonCode enum + manager-approval comp cap). Refund cost is current-cost; distributor-attributed historical cost still needs the per-line cost snapshot.",
+        },
+        {
+          name: "Bundle low-margin operator alert + save-time guardian",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Two-stage margin protection sharing one BUNDLE_MARGIN_FLOOR (40%, in src/lib/bundles.ts). (1) Save-time guardian: pressing 'Save changes' in /admin/upsell pre-computes every active bundle's worst-case contribution margin across the dirty locations (worstBundleMargin in src/lib/bundle-margin.ts — same sampler as the editor's live preview, against each location's live menu) and blocks on a confirm listing each tier below the floor before persisting, so an underwater discount is caught at save, not one order later. (2) Post-order alert: every bundle order's margin is computed at write time (MenuItem.cost ÷ finalPriceGrosze); below the floor, addNotification posts a `bundle_low_margin` alert into the operator inbox with bundle name + exact margin % + order total. All three margin signals (guardian, post-order alert, editor preview tones) read the same floor so they can't disagree.",
         },
         {
           name: "Composer 'same as last time' (repeat-customer one-tap)",
@@ -1371,9 +1389,7 @@ export default async function CapabilitiesPage() {
           href: "/api/referrals",
           envVars: ["DATABASE_URL"],
           summary:
-            "Stable per-phone code, /r/CODE landing drops a 30-day cookie, first paid order qualifies the redemption, outbox dispatcher credits 100 points to the referrer + SMSes them the win. Acquisition cost capped at the 10 PLN referee discount.",
-          caveats:
-            "Cart drawer still needs to read the `sud-italia-referral` cookie and apply the 10 PLN discount + post to /api/referrals at checkout. Backend is fully wired; the cart UI hook is the remaining work.",
+            "End-to-end: stable per-phone code, /r/CODE landing drops a 30-day cookie, the cart drawer reads it (or the customer types a friend's code) and shows the 10 PLN referee discount, checkout applies it and records the redemption intent, first paid order qualifies it, and the outbox dispatcher credits 100 points to the referrer + SMSes them the win. createOrderFromCart is the authority — it re-validates owner + self-referral + new-customer eligibility (same first-order gate as the webhook) so a forged or reused code applies no discount; the cart only shows an estimate via the non-recording GET /api/referrals?code= validation. On Stripe, the referee discount folds into the single session coupon alongside any combo discount. Acquisition cost capped at the 10 PLN referee discount.",
         },
       ],
     },

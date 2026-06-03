@@ -35,11 +35,60 @@ export interface ExperimentVariant {
   >;
 }
 
+/** Which outcome the significance verdict is decided on. */
+export type ExperimentMetric = "conversion" | "aov" | "contribution";
+
+/** Lifecycle of a concluded experiment, recorded when the operator
+ *  declares (and usually promotes) a winner. Kept on the experiment so
+ *  the ledger has a durable "what did we learn?" trail. */
+export interface ExperimentResult {
+  decidedAt: string;
+  winnerVariantId: string;
+  /** Relative lift of the winner vs control on the primary metric. */
+  relativeLift: number;
+  primaryMetric: ExperimentMetric;
+  /** Whether the winning variant's overrides were promoted into the
+   *  live bundle config (vs just recorded). */
+  promoted: boolean;
+}
+
 export interface Experiment {
   id: string;
   name: string;
+  /** Master on/off. Kept for back-compat; `status` is the richer signal.
+   *  A live experiment is `active && status === "running"` (see
+   *  `isExperimentLive`). */
   active: boolean;
   variants: ExperimentVariant[];
+  /** Lifecycle. Absent on legacy configs → liveness falls back to
+   *  `active`. "draft" = editable, not assigning; "running" = assigning
+   *  variants to customers; "stopped" = frozen, no new assignments. */
+  status?: "draft" | "running" | "stopped";
+  /** ISO timestamps stamped when the experiment is started / stopped. */
+  startedAt?: string;
+  stoppedAt?: string;
+  /** Baseline variant the others are compared against. Defaults to the
+   *  first variant when unset. */
+  controlVariantId?: string;
+  /** Metric the significance verdict is decided on. Defaults to
+   *  "contribution" (margin-weighted, the audit's framing). */
+  primaryMetric?: ExperimentMetric;
+  /** Concluded result, set on declare-winner. */
+  result?: ExperimentResult;
+}
+
+/**
+ * Is this experiment currently assigning variants to customers? Prefers
+ * the richer `status` when present (so a "stopped"/"draft" experiment
+ * never assigns even if a stale `active:true` lingers); falls back to
+ * the legacy `active` boolean for configs saved before lifecycle existed.
+ */
+export function isExperimentLive(
+  experiment: Experiment | null | undefined,
+): experiment is Experiment {
+  if (!experiment || experiment.variants.length === 0) return false;
+  if (experiment.status) return experiment.status === "running";
+  return experiment.active === true;
 }
 
 export interface ResolvedVariant {
@@ -122,7 +171,7 @@ export async function resolveClientVariant(
   experiment: Experiment | null | undefined,
   phoneE164: string | null | undefined,
 ): Promise<ResolvedVariant | null> {
-  if (!experiment || !experiment.active || experiment.variants.length === 0) return null;
+  if (!isExperimentLive(experiment)) return null;
   if (!phoneE164) return null;
 
   const subtle =

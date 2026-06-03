@@ -14,7 +14,8 @@ import {
 import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
-import { DEFAULT_BUNDLES } from "@/lib/bundles";
+import { DEFAULT_BUNDLES, BUNDLE_MARGIN_FLOOR } from "@/lib/bundles";
+import { worstBundleMargin } from "@/lib/bundle-margin";
 import {
   Button,
   Chip,
@@ -137,6 +138,21 @@ export interface ExperimentConfig {
   name: string;
   active: boolean;
   variants: ExperimentVariantConfig[];
+  /** Lifecycle — mirrors src/lib/experiments.ts. Optional for back-compat
+   *  with experiments saved before lifecycle existed (liveness then falls
+   *  back to `active`). */
+  status?: "draft" | "running" | "stopped";
+  startedAt?: string;
+  stoppedAt?: string;
+  controlVariantId?: string;
+  primaryMetric?: "conversion" | "aov" | "contribution";
+  result?: {
+    decidedAt: string;
+    winnerVariantId: string;
+    relativeLift: number;
+    primaryMetric: "conversion" | "aov" | "contribution";
+    promoted: boolean;
+  };
 }
 
 export interface BundleRulesConfig {
@@ -167,6 +183,10 @@ export interface LocationConfig {
    *  in src/lib/experiments.ts phone-hashes assignment so client and
    *  server agree on the same variant for the same customer. */
   experiment?: ExperimentConfig | null;
+  /** ML upsell ranker rollout % (0–100, audit elite-qsr §1). Deterministic
+   *  phone-bucketed share served the ML-ranked cross-sell; falls back to
+   *  rules when unset/0 or no trained model. */
+  mlUpsellRolloutPct?: number;
 }
 
 export type AllSettings = Record<string, LocationConfig>;
@@ -269,6 +289,54 @@ function defaultsAsConfig(): TimeWindowConfig[] {
     addItemIdSuffix: w.addItemId ?? "",
     active: true,
   }));
+}
+
+// ─── Save-time margin-floor guardian ─────────────────────────────────────
+
+export interface BundleMarginViolation {
+  locationSlug: string;
+  locationName: string;
+  bundleName: string;
+  /** Worst-case margin as a whole-number percent (e.g. 32 for 0.32). */
+  marginPct: number;
+}
+
+/**
+ * Pre-compute every active bundle's worst-case contribution margin across
+ * the locations about to be saved, and flag any that fall below
+ * BUNDLE_MARGIN_FLOOR. Margin is computed against each location's live
+ * menu (falling back to its seed catalogue) using the same sampler the
+ * editor's live preview uses, so the guardian and the preview can't
+ * disagree. Audit bundle-ladder-revenue-rebuild — "per-bundle margin
+ * floor enforcement at admin save-time" (was post-order alert only).
+ */
+export function collectBundleMarginViolations(
+  dirtySlugs: Iterable<string>,
+  settings: AllSettings,
+  liveMenus: Record<string, MenuItem[]>,
+): BundleMarginViolation[] {
+  const out: BundleMarginViolation[] = [];
+  for (const slug of dirtySlugs) {
+    const cfg = settings[slug];
+    const bundles = cfg?.bundles;
+    if (!bundles || bundles.length === 0) continue;
+    const seed = LOCATIONS.find((l) => l.slug === slug);
+    const menu = liveMenus[slug] ?? seed?.menu ?? [];
+    if (menu.length === 0) continue;
+    for (const bundle of bundles) {
+      if (!bundle.active) continue;
+      const margin = worstBundleMargin(bundle, menu);
+      if (margin !== null && margin < BUNDLE_MARGIN_FLOOR) {
+        out.push({
+          locationSlug: slug,
+          locationName: seed?.name ?? slug,
+          bundleName: bundle.name || bundle.tier || bundle.id,
+          marginPct: Math.round(margin * 100),
+        });
+      }
+    }
+  }
+  return out;
 }
 
 // ─── Shared selling-settings hook ────────────────────────────────────────
@@ -378,6 +446,25 @@ export function useSellingSettings() {
     }
     if (dirty.size === 0) return;
 
+    // Save-time margin-floor guardian. Pre-compute every active bundle's
+    // worst-case contribution margin and make the operator explicitly
+    // confirm before persisting a tier that bleeds below the floor — so a
+    // discount that goes underwater is caught at save, not discovered one
+    // order later from the post-order `bundle_low_margin` alert.
+    const violations = collectBundleMarginViolations(dirty, settings, liveMenus);
+    if (violations.length > 0 && typeof window !== "undefined") {
+      const lines = violations
+        .map((v) => `• ${v.bundleName} (${v.locationName}) — ${v.marginPct}% margin`)
+        .join("\n");
+      const verb = violations.length === 1 ? "bundle falls" : "bundles fall";
+      const proceed = window.confirm(
+        `${violations.length} active ${verb} below the ${Math.round(
+          BUNDLE_MARGIN_FLOOR * 100,
+        )}% contribution-margin floor:\n\n${lines}\n\nThese discounts erode contribution on every order — lower the discount % or raise minMains on the Pricing tab to fix. Save anyway?`,
+      );
+      if (!proceed) return; // keep dirty so the operator can re-tune and retry
+    }
+
     setSaving(true);
     const failures: string[] = [];
     for (const slug of dirty) {
@@ -407,7 +494,7 @@ export function useSellingSettings() {
       toast.error("Couldn't save some locations", names);
     }
     setSaving(false);
-  }, [dirty, loadError, settings, toast]);
+  }, [dirty, loadError, settings, liveMenus, toast]);
 
   return {
     activeLocation,
@@ -1203,10 +1290,15 @@ export function ExperimentEditor({
   experiment,
   bundles,
   onChange,
+  onPromote,
 }: {
   experiment: ExperimentConfig | null | undefined;
   bundles: BundleConfig[];
   onChange: (next: ExperimentConfig | null) => void;
+  /** Promote a variant's overrides into the live bundle config and
+   *  conclude the experiment. Wired by the parent (which owns the bundle
+   *  list). Absent → the promote action is hidden. */
+  onPromote?: (variantId: string) => void;
 }) {
   // Empty-state nudge: ship a starter experiment that the operator can
   // tune. Avoids requiring JSON literacy to set up the first A/B.
@@ -1281,6 +1373,18 @@ export function ExperimentEditor({
     });
   };
 
+  // Liveness mirrors isExperimentLive in src/lib/experiments.ts: prefer
+  // status when present, else the legacy `active` flag.
+  const status = experiment.status ?? (experiment.active ? "running" : "draft");
+  const isRunning = status === "running";
+  const controlId = experiment.controlVariantId ?? experiment.variants[0]?.id ?? "";
+  const primaryMetric = experiment.primaryMetric ?? "contribution";
+
+  const start = () =>
+    update({ status: "running", active: true, startedAt: new Date().toISOString(), stoppedAt: undefined });
+  const stop = () =>
+    update({ status: "stopped", active: false, stoppedAt: new Date().toISOString() });
+
   return (
     <div className="glass-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -1291,20 +1395,73 @@ export function ExperimentEditor({
             onChange={(e) => update({ name: e.target.value })}
             placeholder="Experiment name"
           />
-          <p className="text-[10px] admin-text-secondary mt-1">id: {experiment.id}</p>
+          <p className="text-[10px] admin-text-secondary mt-1">
+            id: {experiment.id}
+            {experiment.startedAt && ` · started ${experiment.startedAt.slice(0, 10)}`}
+            {experiment.stoppedAt && ` · stopped ${experiment.stoppedAt.slice(0, 10)}`}
+          </p>
         </div>
-        <label className="flex items-center gap-2 text-xs admin-text-secondary">
-          <Switch
-            checked={experiment.active}
-            onChange={(v) => update({ active: v })}
-            label="Toggle experiment active"
-          />
-          Active
-        </label>
+        <span
+          className={`text-[10px] font-semibold uppercase tracking-wide rounded px-2 py-1 ${
+            isRunning
+              ? "bg-[var(--success)]/15 text-[var(--success)]"
+              : status === "stopped"
+                ? "admin-text-secondary bg-[var(--surface-2)]"
+                : "bg-[var(--warning)]/15 text-[var(--warning)]"
+          }`}
+        >
+          {status}
+        </span>
+        {isRunning ? (
+          <Button size="sm" variant="secondary" onClick={stop}>
+            Stop
+          </Button>
+        ) : (
+          <Button size="sm" onClick={start} disabled={experiment.variants.length < 2}>
+            {status === "stopped" ? "Restart" : "Start"}
+          </Button>
+        )}
         <IconButton tone="danger" size="sm" onClick={() => onChange(null)} label="Delete experiment">
           <Trash2 className="h-4 w-4" />
         </IconButton>
       </div>
+
+      <div className="grid gap-2 md:grid-cols-2">
+        <label className="text-[11px] admin-text-secondary">
+          Control variant
+          <Select
+            value={controlId}
+            onChange={(e) => update({ controlVariantId: e.target.value })}
+            className="mt-1"
+          >
+            {experiment.variants.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.label || v.id}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="text-[11px] admin-text-secondary">
+          Decide on (primary metric)
+          <Select
+            value={primaryMetric}
+            onChange={(e) => update({ primaryMetric: e.target.value as ExperimentConfig["primaryMetric"] })}
+            className="mt-1"
+          >
+            <option value="contribution">Contribution (margin-weighted)</option>
+            <option value="aov">Average order value</option>
+            <option value="conversion">Conversion rate</option>
+          </Select>
+        </label>
+      </div>
+
+      {experiment.result && (
+        <p className="text-[11px] admin-text-secondary">
+          Concluded {experiment.result.decidedAt.slice(0, 10)}: winner{" "}
+          <span className="admin-text font-semibold">{experiment.result.winnerVariantId}</span>
+          {experiment.result.promoted ? " — promoted to live bundles." : "."}
+        </p>
+      )}
 
       {!weightBalanced && (
         <p className="text-[11px] text-[var(--warning)]">
@@ -1319,8 +1476,10 @@ export function ExperimentEditor({
             key={variant.id}
             variant={variant}
             bundles={bundles}
+            isControl={variant.id === controlId}
             onChange={(patch) => updateVariant(idx, patch)}
             onRemove={() => removeVariant(idx)}
+            onPromote={onPromote ? () => onPromote(variant.id) : undefined}
           />
         ))}
       </div>
@@ -1335,13 +1494,17 @@ export function ExperimentEditor({
 function ExperimentVariantRow({
   variant,
   bundles,
+  isControl,
   onChange,
   onRemove,
+  onPromote,
 }: {
   variant: ExperimentVariantConfig;
   bundles: BundleConfig[];
+  isControl?: boolean;
   onChange: (patch: Partial<ExperimentVariantConfig>) => void;
   onRemove: () => void;
+  onPromote?: () => void;
 }) {
   // Available bundles to override = dynamic bundles. Fixed bundles
   // ignore discount overrides at runtime so the UI hides them.
@@ -1387,6 +1550,35 @@ function ExperimentVariantRow({
           <Trash2 className="h-3.5 w-3.5" />
         </IconButton>
       </div>
+
+      {(isControl || onPromote) && (
+        <div className="flex items-center justify-between gap-2">
+          {isControl ? (
+            <span className="text-[10px] uppercase tracking-wide admin-text-secondary">
+              Control · baseline
+            </span>
+          ) : (
+            <span />
+          )}
+          {onPromote && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Promote "${variant.label || variant.id}" to the live bundles and stop this experiment? Its discount overrides will overwrite the current bundle settings.`,
+                  )
+                ) {
+                  onPromote();
+                }
+              }}
+            >
+              Promote winner → live bundles
+            </Button>
+          )}
+        </div>
+      )}
 
       <div>
         <p className="text-[10px] uppercase tracking-wide admin-text-secondary mb-1">
