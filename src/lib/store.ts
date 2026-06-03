@@ -11,6 +11,7 @@ import {
 } from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import type { Experiment } from "@/lib/experiments";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -5618,6 +5619,17 @@ export interface LocationUpsellConfig {
     lunch?: { startHour: number; endHour: number };
     family?: { minMainItems: number; hintWithin: number };
   };
+  /**
+   * Per-location bundle A/B experiment (audit elite-qsr §9). Single
+   * experiment per location with weighted variants + per-bundle discount
+   * overrides, lifecycle (draft/running/stopped), and a concluded result.
+   * The server resolver (`experiments-server.ts`) reads it and assigns
+   * variants only while `isExperimentLive`. Previously this field was
+   * written by the admin PUT but missing from the type — surfaced as
+   * `experiment` on the admin LocationConfig; now part of the canonical
+   * persisted shape so reads + writes are type-checked end to end.
+   */
+  experiment?: Experiment | null;
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

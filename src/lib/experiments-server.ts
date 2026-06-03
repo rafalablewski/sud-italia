@@ -1,9 +1,9 @@
 import "server-only";
 import { createHash } from "crypto";
 import {
-  type Experiment,
   type ResolvedVariant,
   buildResolvedVariant,
+  isExperimentLive,
   pickVariantFromBucket,
 } from "@/lib/experiments";
 import { getUpsellSettings } from "@/lib/store";
@@ -28,9 +28,8 @@ export async function resolveCustomerVariant(
   phoneE164: string,
 ): Promise<ResolvedVariant | null> {
   const settings = await getUpsellSettings();
-  const loc = settings[locationSlug] as { experiment?: Experiment | null } | undefined;
-  const exp = loc?.experiment;
-  if (!exp || !exp.active || exp.variants.length === 0) return null;
+  const exp = settings[locationSlug]?.experiment;
+  if (!isExperimentLive(exp)) return null;
 
   const bucket = hashPhoneToBucket(exp.id, phoneE164) / 100;
   const picked = pickVariantFromBucket(exp, bucket);
