@@ -22,6 +22,41 @@ interface ModelStatus {
   logLoss: number;
 }
 
+interface ArmStats {
+  arm: "ml" | "rules";
+  orders: number;
+  attachOrders: number;
+  attachRate: number;
+  avgOrderValueGrosze: number;
+}
+
+interface Comparison {
+  ready: boolean;
+  reason?: "no_model" | "rollout_off";
+  rolloutPct: number;
+  windowDays?: number;
+  ml?: ArmStats;
+  rules?: ArmStats;
+  attach?: { relativeLift: number; pValue: number; significant: boolean };
+  aov?: { relativeLift: number; pValue: number; significant: boolean };
+  decision?: { kind: "collect_more" | "winner" | "loser" | "no_difference"; reason: string };
+}
+
+const zl = (g: number) => `zł ${(g / 100).toFixed(2)}`;
+const pct = (r: number) => `${(r * 100).toFixed(1)}%`;
+const lift = (r: number) =>
+  !Number.isFinite(r) ? "—" : `${r >= 0 ? "+" : ""}${(r * 100).toFixed(1)}%`;
+
+const DECISION_BADGE: Record<
+  NonNullable<Comparison["decision"]>["kind"],
+  { label: string; cls: string }
+> = {
+  winner: { label: "ML winning", cls: "bg-[var(--success)]/15 text-[var(--success)]" },
+  loser: { label: "ML worse", cls: "bg-[var(--danger)]/15 text-[var(--danger)]" },
+  collect_more: { label: "Collecting", cls: "bg-[var(--warning)]/15 text-[var(--warning)]" },
+  no_difference: { label: "No diff.", cls: "admin-text-secondary bg-[var(--surface-2)]" },
+};
+
 export function MLUpsellPanel({
   locationSlug,
   rolloutPct,
@@ -32,6 +67,7 @@ export function MLUpsellPanel({
   onRolloutChange: (pct: number) => void;
 }) {
   const [status, setStatus] = useState<ModelStatus | null>(null);
+  const [comparison, setComparison] = useState<Comparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [training, setTraining] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -50,9 +86,19 @@ export function MLUpsellPanel({
     }
   }, [locationSlug]);
 
+  const loadComparison = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/admin/ml-upsell/compare?location=${encodeURIComponent(locationSlug)}&days=30`);
+      setComparison(r.ok ? await r.json() : null);
+    } catch {
+      setComparison(null);
+    }
+  }, [locationSlug]);
+
   useEffect(() => {
     loadStatus();
-  }, [loadStatus]);
+    loadComparison();
+  }, [loadStatus, loadComparison]);
 
   const train = async () => {
     setTraining(true);
@@ -67,7 +113,7 @@ export function MLUpsellPanel({
       const res = (d.results as { trained: boolean; reason?: string; sampleCount?: number }[] | undefined)?.[0];
       if (res?.trained) {
         setMsg(`Trained on ${res.sampleCount} examples.`);
-        await loadStatus();
+        await Promise.all([loadStatus(), loadComparison()]);
       } else {
         setMsg(res?.reason ?? "Not enough data to train yet.");
       }
@@ -149,6 +195,96 @@ export function MLUpsellPanel({
             )}
           </p>
         </div>
+      </div>
+
+      {/* Live ML-vs-rules comparison (audit elite-qsr §1) — arms recomputed
+          from each order's phone bucket; the significance engine calls it. */}
+      <div className="mt-4 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <p className="text-[10px] uppercase tracking-wide admin-text-secondary">
+            Live comparison · ML vs rules
+          </p>
+          {comparison?.ready && comparison.decision && (
+            <span
+              className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${DECISION_BADGE[comparison.decision.kind].cls}`}
+            >
+              {DECISION_BADGE[comparison.decision.kind].label}
+            </span>
+          )}
+        </div>
+        {!comparison ? (
+          <p className="text-sm admin-text-secondary">Loading…</p>
+        ) : !comparison.ready ? (
+          <p className="text-sm admin-text-secondary">
+            {comparison.reason === "no_model"
+              ? "Train a model to start comparing."
+              : "Set a rollout above 0% to split traffic and compare."}
+          </p>
+        ) : (
+          <>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left admin-text-secondary">
+                  <th className="py-1 pr-2">Arm</th>
+                  <th className="py-1 pr-2 text-right">Orders</th>
+                  <th className="py-1 pr-2 text-right">Attach rate</th>
+                  <th className="py-1 pr-2 text-right">Avg order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[comparison.rules, comparison.ml].map(
+                  (a) =>
+                    a && (
+                      <tr key={a.arm} className="border-t border-[var(--border)]">
+                        <td className="py-1 pr-2 admin-text font-semibold">
+                          {a.arm === "ml" ? "ML ranker" : "Rules (control)"}
+                        </td>
+                        <td className="py-1 pr-2 text-right admin-text">{a.orders}</td>
+                        <td className="py-1 pr-2 text-right admin-text">{pct(a.attachRate)}</td>
+                        <td className="py-1 pr-2 text-right admin-text">{zl(a.avgOrderValueGrosze)}</td>
+                      </tr>
+                    ),
+                )}
+              </tbody>
+            </table>
+            {comparison.attach && (
+              <p className="text-[11px] admin-text-secondary mt-2">
+                Attach lift:{" "}
+                <span
+                  className={
+                    comparison.attach.relativeLift >= 0
+                      ? "text-[var(--success)]"
+                      : "text-[var(--danger)]"
+                  }
+                >
+                  {lift(comparison.attach.relativeLift)}
+                </span>{" "}
+                (p={comparison.attach.pValue.toFixed(3)})
+                {comparison.aov && (
+                  <>
+                    {" · "}AOV lift{" "}
+                    <span
+                      className={
+                        comparison.aov.relativeLift >= 0
+                          ? "text-[var(--success)]"
+                          : "text-[var(--danger)]"
+                      }
+                    >
+                      {lift(comparison.aov.relativeLift)}
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
+            {comparison.decision && (
+              <p className="text-[11px] admin-text-secondary mt-1">{comparison.decision.reason}</p>
+            )}
+            <p className="text-[10px] admin-text-secondary mt-1.5 opacity-80">
+              Arms recomputed from each order&rsquo;s phone since the model was trained. Assumes the
+              rollout % has been stable over the window.
+            </p>
+          </>
+        )}
       </div>
 
       {msg && (

@@ -140,7 +140,14 @@ The AOV machinery: bundle ladders + modifier gating.
   ranker (persisted in `LocationUpsellConfig.mlUpsellRolloutPct` on Save
   changes). 0% or no trained model = rules ranker for everyone, so the
   slider is safe to raise before training (it does nothing until a model
-  exists).
+  exists). A **Live comparison · ML vs rules** block recomputes each
+  order's arm from its phone bucket (`/api/admin/ml-upsell/compare`, the
+  same hash the serving path uses, window clamped to the model's
+  trained-at) and shows orders / attach rate / avg order per arm, the
+  attach + AOV lift, and a decision badge (ML winning / worse /
+  collecting / no diff.) from the significance engine — so the operator
+  reads whether the rollout is actually paying off, with a stable-rollout
+  caveat stated inline.
 
 ## Cross-sell — `/admin/crosssell`
 

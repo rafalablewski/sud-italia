@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { z } from "zod";
 import {
   getOrdersByPhone,
@@ -9,6 +8,7 @@ import {
 import { getMenuWithOverrides } from "@/data/menus";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { scoreCandidates } from "@/lib/ml-upsell";
+import { inMlArm } from "@/lib/ml-upsell-rollout";
 
 /**
  * ML cross-sell ranking for a live cart (audit elite-qsr §1).
@@ -34,14 +34,6 @@ const bodySchema = z.object({
   hour: z.number().int().min(0).max(23).optional(),
 });
 
-/** Deterministic 0–99 bucket from phone, salted per location + feature so
- *  it's independent of the bundle experiment's bucketing. */
-function bucketFor(phone: string, locationSlug: string): number {
-  const h = createHash("sha256").update(`ml-upsell|${locationSlug}|${phone}`).digest();
-  const n = (h[0] << 24) | (h[1] << 16) | (h[2] << 8) | h[3];
-  return Math.abs(n) % 100;
-}
-
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
@@ -58,8 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ranker: "rules", variant: "control" });
   }
 
-  const inMlArm = bucketFor(phone, locationSlug) < rolloutPct;
-  if (!inMlArm) {
+  if (!inMlArm(phone, locationSlug, rolloutPct)) {
     return NextResponse.json({ ranker: "rules", variant: "control" });
   }
 
