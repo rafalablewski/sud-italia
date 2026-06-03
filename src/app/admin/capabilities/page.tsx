@@ -1371,9 +1371,7 @@ export default async function CapabilitiesPage() {
           href: "/api/referrals",
           envVars: ["DATABASE_URL"],
           summary:
-            "Stable per-phone code, /r/CODE landing drops a 30-day cookie, first paid order qualifies the redemption, outbox dispatcher credits 100 points to the referrer + SMSes them the win. Acquisition cost capped at the 10 PLN referee discount.",
-          caveats:
-            "Cart drawer still needs to read the `sud-italia-referral` cookie and apply the 10 PLN discount + post to /api/referrals at checkout. Backend is fully wired; the cart UI hook is the remaining work.",
+            "End-to-end: stable per-phone code, /r/CODE landing drops a 30-day cookie, the cart drawer reads it (or the customer types a friend's code) and shows the 10 PLN referee discount, checkout applies it and records the redemption intent, first paid order qualifies it, and the outbox dispatcher credits 100 points to the referrer + SMSes them the win. createOrderFromCart is the authority — it re-validates owner + self-referral + new-customer eligibility (same first-order gate as the webhook) so a forged or reused code applies no discount; the cart only shows an estimate via the non-recording GET /api/referrals?code= validation. On Stripe, the referee discount folds into the single session coupon alongside any combo discount. Acquisition cost capped at the 10 PLN referee discount.",
         },
       ],
     },

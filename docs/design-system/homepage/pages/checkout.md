@@ -378,6 +378,7 @@ sommelier rail:
 | Phone with +48 prefix    | `.v8-cart-phone` + `.v8-cart-phone-prefix`              |
 | First/last grid          | `.v8-cart-name-grid`                                    |
 | Kitchen notes            | `.v8-cart-textarea`                                     |
+| Referral code            | `.v8-cart-field` + `.v8-cart-input` — "Referral code · codice invito". Pre-filled from the `sud-italia-referral` cookie (`/r/CODE` landing), editable. Validated non-recordingly via `GET /api/referrals?code=…&phone=…`; below the field an italic basil-deep note confirms the give-get ("10,00 zł off your first order, with thanks to …"), or `.v8-cart-field-error` rejects an unknown / self-referral code. |
 | Dine-in party-size panel | `.v8-cart-party` + `.v8-cart-party-stepper`             |
 
 Each button on the fulfilment toggle carries the EN/PL label on top
@@ -403,8 +404,10 @@ clear on checkout — unchanged from the pre-V8 version.
   gradient + 3px Italian-flag stripe on top + `0 -12px 30px -16px
   rgba(61,40,23,0.35)` editorial drop shadow.
 - **`.v8-cart-totals`** — one row per line item (Subtotal, combo
-  discount, Delivery, Mancia, GST, Ready-by). Combo-discount rows carry
-  `.is-discount` (basil-deep + italic). The total row carries
+  discount, referral discount, Delivery, Mancia, GST, Ready-by). The
+  combo-discount and referral-discount rows both carry `.is-discount`
+  (basil-deep + italic); the referral row labels the referrer
+  ("Referral · {name}"). The total row carries
   `.is-total` (dashed hairline above + oxblood 21px tabular).
   The `.is-ready` row (clock icon + "Ready · pronto") surfaces the
   pre-pay ETA in basil-deep: "by HH:MM" once a slot is picked (the slot
@@ -461,5 +464,13 @@ Every audit-tied behaviour from the pre-V8 drawer still holds:
   `/order-confirmation?orderId=...&location=...` is identical.
 - Weekly-usual intent capture fires before the Stripe redirect when a
   bundle is locked + the checkbox is on.
+- Referral give-get (audit §6 #5): the drawer reads the
+  `sud-italia-referral` cookie or a typed code, shows the 10 PLN referee
+  discount for new customers, and passes the code to `/api/checkout`.
+  The server (`createOrderFromCart`) is authoritative — it re-validates
+  owner + self-referral + new-customer eligibility, applies + records the
+  redemption, and the discount folds into the single Stripe session
+  coupon alongside any combo discount. The drawer clears the cookie on a
+  successful checkout so the code can't re-apply to a later order.
 - PDPA §13 consent + NYC FRESH Act packaging disclosure surface in
   the paybar foot per `compliance.zone`.

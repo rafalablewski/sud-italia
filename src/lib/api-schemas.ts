@@ -95,6 +95,11 @@ export const checkoutBodySchema = z
      *  the customer (operator-protective for hikes, customer-protective
      *  for drops). Required when appliedBundleId is set. */
     appliedBundlePriceGrosze: z.number().int().nonnegative().max(1_000_000).optional(),
+    /** Referral give-get code (audit §6 #5). When a valid code is present
+     *  and the customer is new, the server applies the flat referee
+     *  discount and records a redemption intent. The server re-validates
+     *  the code + eligibility — a forged code can't lower the price. */
+    referralCode: z.string().trim().min(4).max(12).optional(),
   })
   .refine(
     (data) =>

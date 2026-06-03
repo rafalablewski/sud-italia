@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       tipAmount: rawTip,
       appliedBundleId,
       appliedBundlePriceGrosze,
+      referralCode,
     } = parsed.data;
 
     const phoneE164 = normalizePlPhoneE164(customerPhone);
@@ -106,12 +107,13 @@ export async function POST(req: NextRequest) {
       tipAmount: typeof rawTip === "number" ? rawTip : undefined,
       appliedBundleId,
       appliedBundlePriceGrosze,
+      referralCode,
       channel: "web",
     });
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 400 });
     }
-    const { order, deliveryFee, bundleSubtotal, comboDiscount, comboName } = result;
+    const { order, deliveryFee, bundleSubtotal, comboDiscount, comboName, referralDiscount } = result;
     const tipAmount = order.tipAmount ?? 0;
     const calculatedTotal = order.totalAmount;
 
@@ -159,32 +161,41 @@ export async function POST(req: NextRequest) {
             })()
           : null;
 
-      // Combo discounts ride along as a Stripe coupon so the session
-      // total matches order.totalAmount. Bundles already collapse to a
-      // single discounted line above, so they skip this path.
+      // Discounts ride along as a single Stripe coupon so the session
+      // total matches order.totalAmount. Stripe Checkout accepts at most
+      // one coupon, so the combo discount (only when no bundle — bundles
+      // already collapse to a discounted line above) and the referral
+      // give-get discount (audit §6 #5 — applies on bundle and à-la-carte
+      // carts alike) are summed into one amount_off.
       //
       // Sprint 9 #3 — coupon reuse: every checkout used to create a NEW
       // coupon object, leaving thousands of orphans in the Stripe account
-      // over time. We now use a stable id keyed on (combo, amount) and
-      // catch the "already exists" conflict, so each unique discount
-      // amount lives as a single permanent coupon that gets reused
-      // forever. Idempotent under retries (network or otherwise).
+      // over time. We use a stable id keyed on (label, amount) and catch
+      // the "already exists" conflict, so each unique discount lives as a
+      // single permanent coupon that gets reused forever. Idempotent under
+      // retries (network or otherwise).
+      const comboPart = bundleSubtotal === null ? comboDiscount : 0;
+      const totalDiscount = comboPart + referralDiscount;
       let sessionDiscounts: { coupon: string }[] | undefined;
-      if (bundleSubtotal === null && comboDiscount > 0) {
-        const couponSlug = (comboName ?? "combo-discount")
+      if (totalDiscount > 0) {
+        const parts: string[] = [];
+        if (comboPart > 0) parts.push(comboName ? `Combo: ${comboName}` : "Combo discount");
+        if (referralDiscount > 0) parts.push("Referral give-get");
+        const couponName = parts.join(" + ");
+        const couponSlug = couponName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "")
           .slice(0, 40);
-        const couponId = `sud-${couponSlug}-${comboDiscount}`;
+        const couponId = `sud-${couponSlug}-${totalDiscount}`;
         let couponIdToUse = couponId;
         try {
           await stripeClient.coupons.create({
             id: couponId,
-            amount_off: comboDiscount,
+            amount_off: totalDiscount,
             currency: "pln",
             duration: "once",
-            name: comboName ? `Combo: ${comboName}` : "Combo discount",
+            name: couponName,
           });
         } catch (err: unknown) {
           // resource_already_exists → reuse the existing coupon. Any
@@ -193,10 +204,10 @@ export async function POST(req: NextRequest) {
           const code = (err as { code?: string } | null)?.code;
           if (code !== "resource_already_exists") {
             const fallback = await stripeClient.coupons.create({
-              amount_off: comboDiscount,
+              amount_off: totalDiscount,
               currency: "pln",
               duration: "once",
-              name: comboName ? `Combo: ${comboName}` : "Combo discount",
+              name: couponName,
             });
             couponIdToUse = fallback.id;
           }
