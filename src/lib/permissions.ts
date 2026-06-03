@@ -313,6 +313,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/customers")) return "customers.view";
   if (is("/admin/corporate")) return "corporate.view";
   if (is("/admin/feedback")) return "feedback.view";
+  if (is("/admin/surveys")) return "feedback.view";
   if (is("/admin/reports")) return "reports.view";
   if (is("/admin/cash")) return "cash.view";
   if (is("/admin/business-costs")) return "business_costs.view";

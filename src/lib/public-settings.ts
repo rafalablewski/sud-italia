@@ -105,10 +105,32 @@ export interface PublicSettings {
     showDeliveryProgress: boolean;
     showPushOptIn: boolean;
     showFeedbackSurvey: boolean;
+    showNpsSurvey: boolean;
     showPostOrderUpsell: boolean;
     showChatWidget: boolean;
     showLiveTicker: boolean;
   };
+  /** Live NPS-style Pulse surveys (active only) the storefront may
+   *  surface. The client trigger engine reads these and matches one to a
+   *  fired trigger. Empty / absent ⇒ nothing to show. Gated overall by
+   *  `layout.showNpsSurvey`. */
+  surveys?: PublicSurvey[];
+}
+
+export interface PublicSurvey {
+  id: string;
+  trigger:
+    | "post-order"
+    | "prolonged-browse"
+    | "exit-intent"
+    | "rewards-page"
+    | "repeat-visit";
+  question: string;
+  subtext?: string;
+  scaleLow: string;
+  scaleHigh: string;
+  commentPrompt: string;
+  cooldownDays: number;
 }
 
 // One in-flight promise per location key. `null` location = origin-wide

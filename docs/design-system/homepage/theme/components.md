@@ -36,6 +36,49 @@ This is the storefront's CMS-style operator-visibility primitive —
 every operator-toggleable storefront component should wrap through it
 rather than rolling its own visibility logic.
 
+## Pulse micro-survey — `<SurveyPrompt />` (`.v8-pulse-*`)
+
+The NPS-style one-tap star survey that slides up bottom-right (a
+full-width sheet under 520px) when the trigger engine elects a survey.
+The storefront's voice-of-customer probe — quick, dismissible, at most
+one per session.
+
+Live code:
+
+- `src/components/survey/SurveyPrompt.tsx` — the card. Portalled to
+  `document.body` (rule 4), reads passive identity from `useCustomer`
+  (rule 6), POSTs to `/api/surveys`. State machine: rate → optional
+  comment → Send → thank-you flash → auto-close.
+- `src/components/survey/SurveyTriggerEngine.tsx` — the invisible signal
+  watcher (route dwell, exit-intent, repeat-visit). Renders `null`.
+- `src/store/survey.ts` — the Zustand engine that owns *which* survey
+  shows and *whether* it may (session-once + 8h global gap + per-survey
+  cooldown).
+- Styles: the `.v8-pulse-*` block in `themes/homepage/index.css`.
+
+Both `<SurveyTriggerEngine />` and `<SurveyPrompt />` mount once in
+`(public)/layout.tsx`, wrapped together in
+`<LayoutGate flag="showNpsSurvey">` — the single operator kill-switch.
+Per-survey activation + the catalogue live in admin at
+[`../../admin/sections/customers.md`](../../admin/sections/customers.md).
+
+Anatomy of the card (`.v8-pulse`):
+
+- **`.v8-pulse-close`** — the top-right dismiss `×` (still counts as
+  "seen" for cooldown).
+- **`.v8-pulse-question`** / **`.v8-pulse-sub`** — Cormorant headline +
+  Lora subtext, matching the order-card editorial voice.
+- **`.v8-pulse-stars`** / **`.v8-pulse-star`** — the 1–5 control. Gold
+  fill (`--color-italia-gold`) on hover/selection.
+- **`.v8-pulse-scale`** — the low/high anchor labels under the stars.
+- **`.v8-pulse-followup`** — slides in once rated: `.v8-pulse-textarea`
+  (optional comment) + `.v8-pulse-send` (terracotta CTA, same vocabulary
+  as `.v8-order-feedback-cta`).
+- **`.v8-pulse-thanks`** — the basil-tinted thank-you state.
+
+Respects `prefers-reduced-motion` (drops the slide-in). Never blocks the
+page; a failed POST still shows the thank-you (best-effort capture).
+
 ## Form primitives (`.pub-*`)
 
 The form-element classes declared in `themes/homepage/index.css`. Used

@@ -17,6 +17,11 @@ import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
 import { userCoversLocation } from "@/lib/user-locations";
+import {
+  type SurveyDefinition,
+  type SurveyResponse,
+  mergeSurveysWithDefaults,
+} from "@/lib/surveys";
 import { withDistributedLock } from "@/lib/locks";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
@@ -2819,6 +2824,13 @@ export interface LayoutSettings {
   /** Show the post-order feedback survey on the order-confirmation +
    *  review pages. */
   showFeedbackSurvey: boolean;
+  /** Master switch for the NPS-style Pulse micro-surveys that fire
+   *  opportunistically across the storefront (after ordering, on
+   *  prolonged browsing, on exit intent, etc). When false the global
+   *  SurveyPrompt + SurveyTriggerEngine drop out entirely — no prompts,
+   *  no timers, no listeners. Per-survey `active` flags live in
+   *  /admin/surveys; this is the umbrella kill-switch. */
+  showNpsSurvey: boolean;
   /** Show the "complete your meal" post-order cross-sell on the
    *  order-confirmation page. */
   showPostOrderUpsell: boolean;
@@ -2841,6 +2853,7 @@ export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   showDeliveryProgress: true,
   showPushOptIn: true,
   showFeedbackSurvey: true,
+  showNpsSurvey: true,
   showPostOrderUpsell: true,
   showChatWidget: true,
   showLiveTicker: true,
@@ -5471,6 +5484,75 @@ export async function setFeedbackAnalysis(
   // Mirror outside the lock — these are independent rows.
   await Promise.all(written.map((e) => dualWriteFeedback(e)));
   return n;
+}
+
+// --- Pulse surveys (NPS-style micro-surveys) -------------------------
+//
+// Shape + seed catalogue + scoring live in the pure `@/lib/surveys`
+// module (client-safe). Persistence goes through readJSON/writeJSON so it
+// rides the generic kv_store on Postgres and the filesystem fallback in
+// local dev (CLAUDE rule 2) — no bespoke table needed for this volume.
+
+const SURVEY_DEFS_KEY = "survey-definitions.json";
+const SURVEY_RESPONSES_KEY = "survey-responses.json";
+/** Bound the responses blob so the kv row stays small; keep the newest. */
+const SURVEY_RESPONSES_CAP = 5000;
+
+/**
+ * The full survey catalogue — persisted operator edits merged over the
+ * seed defaults, so a deploy that ships a new idea never drops it and an
+ * operator's toggles/copy stay sticky.
+ */
+export async function getSurveys(): Promise<SurveyDefinition[]> {
+  const saved = await readJSON<SurveyDefinition[] | null>(SURVEY_DEFS_KEY, null);
+  return mergeSurveysWithDefaults(saved);
+}
+
+/** Just the live surveys — what the storefront is allowed to surface. */
+export async function getActiveSurveys(): Promise<SurveyDefinition[]> {
+  return (await getSurveys()).filter((s) => s.active);
+}
+
+/**
+ * Patch one survey definition. Writes the whole hydrated catalogue so the
+ * seed defaults are materialised on first edit (and stay editable after).
+ */
+export async function updateSurvey(
+  id: string,
+  updates: Partial<Omit<SurveyDefinition, "id">>,
+): Promise<SurveyDefinition | null> {
+  return withLock(SURVEY_DEFS_KEY, async () => {
+    const list = mergeSurveysWithDefaults(
+      await readJSON<SurveyDefinition[] | null>(SURVEY_DEFS_KEY, null),
+    );
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx === -1) return null;
+    // `trigger` is wired to concrete client signals — never let an edit
+    // point a survey at a trigger that can't fire.
+    const { trigger: _ignoreTrigger, ...safe } = updates;
+    list[idx] = { ...list[idx], ...safe };
+    await writeJSON(SURVEY_DEFS_KEY, list);
+    return list[idx];
+  });
+}
+
+export async function getSurveyResponses(): Promise<SurveyResponse[]> {
+  return readJSON<SurveyResponse[]>(SURVEY_RESPONSES_KEY, []);
+}
+
+export async function saveSurveyResponse(
+  entry: SurveyResponse,
+): Promise<SurveyResponse> {
+  return withLock(SURVEY_RESPONSES_KEY, async () => {
+    const list = await readJSON<SurveyResponse[]>(SURVEY_RESPONSES_KEY, []);
+    list.push(entry);
+    const capped =
+      list.length > SURVEY_RESPONSES_CAP
+        ? list.slice(list.length - SURVEY_RESPONSES_CAP)
+        : list;
+    await writeJSON(SURVEY_RESPONSES_KEY, capped);
+    return entry;
+  });
 }
 
 // ── Chatbot FAQ ──────────────────────────────────────────────

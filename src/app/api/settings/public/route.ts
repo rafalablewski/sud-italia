@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import {
   DEFAULT_LAYOUT_SETTINGS,
+  getActiveSurveys,
   getLoyaltySettings,
   getSettings,
   LIVE_WIDGET_LIMIT,
@@ -10,9 +11,10 @@ import {
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
-  const [settings, appSettings] = await Promise.all([
+  const [settings, appSettings, activeSurveys] = await Promise.all([
     getLoyaltySettings(),
     getSettings(),
+    getActiveSurveys(),
   ]);
   const location = req.nextUrl.searchParams.get("location");
 
@@ -108,6 +110,20 @@ export async function GET(req: NextRequest) {
      *  the corresponding flag is false, so the surface loses its DOM
      *  and visible CSS without a code change. */
     layout: appSettings.layout ?? DEFAULT_LAYOUT_SETTINGS,
+    /** Live NPS-style Pulse surveys (active only). The storefront trigger
+     *  engine matches one to a fired signal (post-order, prolonged-browse,
+     *  exit-intent, …). Only customer-facing copy is shipped — no operator
+     *  internals. Overall on/off is `layout.showNpsSurvey`. */
+    surveys: activeSurveys.map((s) => ({
+      id: s.id,
+      trigger: s.trigger,
+      question: s.question,
+      subtext: s.subtext,
+      scaleLow: s.scaleLow,
+      scaleHigh: s.scaleHigh,
+      commentPrompt: s.commentPrompt,
+      cooldownDays: s.cooldownDays,
+    })),
     /** Operator-managed contact + social handles rendered in the
      *  public footer. Empty values let the footer hide the matching
      *  row / link without a code change. */

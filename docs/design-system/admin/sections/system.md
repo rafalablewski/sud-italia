@@ -489,15 +489,15 @@ The chain-wide configuration tabs.
   `/api/settings/public`; the owning component is wrapped in
   `<LayoutGate flag="…">` (`src/components/layout/LayoutGate.tsx`) and
   returns `null` when the flag is `false` — no DOM, no painted CSS, no
-  event listeners. Toggle is the saved state (CLAUDE rule 7). 10
+  event listeners. Toggle is the saved state (CLAUDE rule 7). 13
   surfaces today, grouped:
-  - **Header** — currency switcher · language switcher
+  - **Header** — currency switcher · language switcher · live activity ticker
   - **Landing** — bundles showcase · loyalty pitch
   - **Menu pages** — seasonal specials rail
   - **Cart** — cross-sell rail · free-delivery progress
-  - **Order confirmation** — push opt-in · feedback survey
-  - **Site-wide** — chat widget
-  Adding an 11th toggle is mechanical: add the key to `LayoutSettings`,
+  - **Order confirmation** — push opt-in · feedback survey · post-order upsell
+  - **Site-wide** — chat widget · Pulse micro-surveys (NPS)
+  Adding the next toggle is mechanical: add the key to `LayoutSettings`,
   add a `LAYOUT_TOGGLES` entry in `AdminSettings.tsx`, wrap the target
   with `<LayoutGate flag="…">` at the call site.
 - **Security:** opens with a **"How you sign in"** card for the *current*

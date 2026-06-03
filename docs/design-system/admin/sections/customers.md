@@ -2,17 +2,18 @@
 
 ← back to [Admin README](../README.md)
 
-The three pages for the relationship layer on the admin side — note that
+The four pages for the relationship layer on the admin side — note that
 the **operational** relationship layer (Concierge, CRM book, Loyalty
 roster, WhatsApp inbox) lives in the Core Guest hub. These pages are the
-back-office view: the book of records, B2B accounts, and post-order
-feedback.
+back-office view: the book of records, B2B accounts, post-order
+feedback, and the NPS Pulse-survey board.
 
 | Page                | Code                                              | Role-gate |
 | ------------------- | ------------------------------------------------- | --------- |
 | `/admin/customers`  | `src/components/admin/AdminCustomers.tsx`         | **staff+** (phone-order lookups) |
 | `/admin/corporate`  | `src/components/admin/AdminCorporate.tsx`         | manager+  |
 | `/admin/feedback`   | `src/components/admin/AdminFeedback.tsx`          | manager+  |
+| `/admin/surveys`    | `src/components/admin/AdminSurveys.tsx`           | manager+  |
 
 > **Loyalty moved to the Core Guest hub.** The member roster + family
 > wallets + redemption log are now the **Loyalty** view of Guest
@@ -112,6 +113,37 @@ The post-order review inbox.
 - **Auto-route hints** show on submit when the rating ≤ 2 or the text
   mentions an allergen — the routing dropdown pre-selects the right
   owner but the operator confirms.
+
+## Pulse surveys — `/admin/surveys`
+
+The NPS board. The companion to Feedback: where Feedback is the
+detailed post-order review inbox, Pulse is the lightweight, always-on
+voice-of-customer probe — one-tap 1–5★ micro-surveys fired across the
+storefront (after ordering, on prolonged browsing, on exit intent, on
+the rewards page, for returning visitors).
+
+- **Header:** `Pulse surveys` (h1) + subtitle. KPI row: **Pulse score**
+  (NPS-style, with the five-part ⓘ `MetricExplainer` per rule 12), avg
+  rating, promoters (5★), detractors (≤3★).
+- **Tabs:** Overview (rating distribution + responses-by-trigger bar
+  charts) · Catalogue · Responses.
+- **Catalogue:** the 12-survey seed table — question, the moment it
+  **Fires on**, response count, avg, per-survey Pulse, and a **Live**
+  `Switch`. Flipping it is the activation (toggle = saved, rule 7) — it
+  PUTs `/api/admin/surveys` and the storefront picks it up via
+  `/api/settings/public`. `trigger` is **not** editable: each value is
+  wired to a concrete client signal, so a survey can never point at a
+  moment that never fires (rule 1).
+- **Responses:** newest-first, read-only — rating, the survey + trigger,
+  comment, passive identity (or "Anonymous"), where, when.
+
+Scoring (`computePulseScore` / `averageStars` in `src/lib/surveys.ts`,
+the client-safe pure module shared with the storefront): promoter = 5★,
+passive = 4★, detractor ≤ 3★; Pulse = `(promoters − detractors) / total
+× 100`. Storefront delivery is the `<SurveyPrompt />` +
+`<SurveyTriggerEngine />` pair documented in
+[`../../homepage/theme/components.md`](../../homepage/theme/components.md);
+the umbrella kill-switch is the `showNpsSurvey` Layout toggle.
 
 ## What Customers is not
 

@@ -10,6 +10,8 @@ import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 import { AddToCartToast } from "@/components/cart/AddToCartToast";
 import { ItemDetailDrawer } from "@/components/location/ItemDetailDrawer";
 import { LayoutGate } from "@/components/layout/LayoutGate";
+import { SurveyPrompt } from "@/components/survey/SurveyPrompt";
+import { SurveyTriggerEngine } from "@/components/survey/SurveyTriggerEngine";
 import { CustomerProvider } from "@/store/customer";
 
 // Homepage fonts — owned by the Homepage theme. Loaded here (not in the
@@ -85,6 +87,14 @@ export default function PublicLayout({
         <ItemDetailDrawer />
         <AbandonedCartBanner />
         <CartPresenceSync />
+        {/* NPS-style Pulse micro-surveys. The engine watches browsing
+            signals (prolonged browse, exit intent, returning visitor…)
+            and the prompt renders the elected star survey. Both behind
+            the single showNpsSurvey kill-switch. */}
+        <LayoutGate flag="showNpsSurvey">
+          <SurveyTriggerEngine />
+          <SurveyPrompt />
+        </LayoutGate>
       </div>
     </CustomerProvider>
   );

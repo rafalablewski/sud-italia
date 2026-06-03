@@ -8632,3 +8632,170 @@ body.v8-cart-open .v8-abandoned {
   border-color: var(--color-oxblood-soft);
   color: var(--color-oxblood);
 }
+
+/* ── Pulse micro-survey (NPS) ────────────────────────────────────────
+   Global, dismissible star prompt elected by the survey trigger engine
+   (src/store/survey.ts) and rendered by SurveyPrompt via a body portal
+   (rule 4). Bottom-right on desktop; a full-width sheet on phones. Same
+   parchment/terracotta editorial vocabulary as the order cards. */
+.v8-pulse {
+  position: fixed;
+  z-index: 60;
+  right: 20px;
+  bottom: 20px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--color-parchment);
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-paper), 0 12px 32px rgba(44, 24, 16, 0.18);
+  padding: 18px 18px 16px;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  animation: v8-pulse-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes v8-pulse-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 520px) {
+  .v8-pulse {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v8-pulse { animation: none; }
+}
+.v8-pulse-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.v8-pulse-close:hover {
+  background: var(--color-parchment-deep);
+  color: var(--color-ink);
+}
+.v8-pulse-question {
+  margin: 0 24px 4px 0;
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+.v8-pulse-sub {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+.v8-pulse-stars {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 6px;
+}
+.v8-pulse-star {
+  border: none;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+}
+.v8-pulse-star:disabled { cursor: default; }
+.v8-pulse-star:hover { transform: scale(1.08); }
+.v8-pulse-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+.v8-pulse-followup {
+  margin-top: 12px;
+  animation: v8-pulse-reveal 0.28s ease;
+}
+@keyframes v8-pulse-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.v8-pulse-textarea {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: var(--r-md);
+  padding: 9px 11px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-ink);
+  resize: vertical;
+  margin-bottom: 10px;
+}
+.v8-pulse-textarea::placeholder { color: var(--color-muted); }
+.v8-pulse-textarea:focus {
+  outline: none;
+  border-color: var(--color-terracotta-soft);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
+}
+.v8-pulse-send {
+  width: 100%;
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+  border: 1px solid var(--color-terracotta-dark);
+  border-radius: var(--r-md);
+  padding: 11px 14px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-cta);
+  transition: filter 0.18s, transform 0.05s;
+}
+.v8-pulse-send:hover { filter: brightness(1.05); }
+.v8-pulse-send:active { transform: translateY(1px); }
+.v8-pulse-send:disabled { opacity: 0.7; cursor: default; }
+.v8-pulse-it {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 400;
+  opacity: 0.85;
+}
+.v8-pulse-thanks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.v8-pulse-thanks-mark {
+  display: inline-flex;
+  color: var(--color-basil);
+}
+.v8-pulse-thanks-text {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-ink);
+}
+.v8-pulse-thanks-text em {
+  font-family: var(--font-heading);
+  color: var(--color-basil-deep);
+  font-style: italic;
+}

@@ -11,6 +11,7 @@ import {
   Boxes,
   Building2,
   CalendarCheck2,
+  Gauge,
   HardHat,
   History,
   Coins,
@@ -147,6 +148,7 @@ export const NAV_SECTIONS: NavSection[] = [
       // Loyalty moved into the Core Guest Engagement hub (/core/guest?view=loyalty).
       { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
+      { href: "/admin/surveys", label: "Pulse surveys", icon: Gauge, requiredRole: "manager" },
     ],
   },
   {
