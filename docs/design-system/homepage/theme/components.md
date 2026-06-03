@@ -1182,6 +1182,44 @@ count, and admin config.
   phone), and funnel beaconing (impression / composer_opened /
   composer_abandoned) all preserved.
 
+### `<BundleComposerSheet />` — `src/components/cart/BundleComposerSheet.tsx`
+
+The feast builder that opens when a customer taps a `<BundleLadder />`
+CTA (Domino's Mix & Match × McDonald's Make-it-a-Meal). Rendered inside
+the shared `<Sheet>` panel; `.v8-composer` fills it with the parchment
+ground and lays out a sticky header → scrolling body → sticky footer in
+the same paper / Cormorant / terracotta language as the ladder.
+
+- `.v8-composer-head` sticky parchment bar (blur) — `.v8-composer-eyebrow`
+  uppercase "Compose your bundle" + `.v8-composer-title` italic Cormorant
+  oxblood "Make it a *Family*" with a muted `.v8-composer-title-it`
+  italian period phrase (`il pranzo` / `festa di famiglia` /
+  `la cena tardi`). Round `.v8-composer-close` at the right.
+- `.v8-composer-hero` terracotta/ochre-tinted paper ribbon — uppercase
+  ochre `.v8-composer-hero-name`, italic `.v8-composer-hero-desc`,
+  basil-deep `.v8-composer-hero-save` next to the à-la-carte
+  `.v8-composer-hero-ref` strikethrough, an ochre `.v8-composer-hero-pp`
+  per-person capsule (kicks in at ≥2 mains), and a `.v8-composer-lastorder`
+  ★ "Same as your last …" line when the repeat-customer prefill fires.
+- `.v8-composer-mains` dashed read-only block listing the pizzas/pastas
+  carried in from the cart (dynamic tiers only).
+- `.v8-composer-slot` per slot: italic `.v8-composer-slot-label` with a
+  decorative category glyph. Each unit is a tap-to-expand
+  `.v8-composer-pick` card (≥54px target, name + oxblood price +
+  rotating `.v8-composer-pick-chevron`); opening reveals
+  `.v8-composer-options` (a `grid-template-rows: 0fr→1fr` height
+  animation) holding `.v8-composer-option` rows with a basil check on the
+  selected one. Only one chooser is open at a time. Single-candidate
+  item slots render a static `.v8-composer-included` "included" card
+  instead of a chooser.
+- `.v8-composer-foot` sticky parchment footer — `.v8-composer-total-now`
+  oxblood total (with an optional `.v8-composer-total-pp` per-person
+  echo) above the full-width terracotta `.v8-composer-apply` CTA
+  ("Apply *Family* · 92,63 zł"). Honours `env(safe-area-inset-bottom)`.
+- Logic preserved from the pre-V8 sheet: cheapest-or-cart-or-last-order
+  prefill priority, live split-discount pricing, and the
+  `/api/customer/last-bundle` repeat-customer fetch.
+
 ## Loyalty components
 
 All V8 as of Step 15. The `/rewards` surface lives at
@@ -1422,6 +1460,7 @@ in the storefront reads as one paper-card vocabulary:
 | `<ComboDealBanner />`    | V8 (Step 11+) | `.v8-cart-combo-*`           |
 | `<SlotPicker />`         | V8 (Step 11+) | `.v8-cart-days/slot-*`       |
 | `<BundleLadder />`       | V8 (Step 11+) | `.v8-cart-ladder-*`          |
+| `<BundleComposerSheet />`| V8 (redesign) | `.v8-composer-*`             |
 | `<FloatingCartButton />` | V8 (Step 12)  | `.v8-float-cart`             |
 | `<AddToCartToast />`     | V8 (Step 12)  | `.v8-cart-toast`             |
 | `<ItemDetailDrawer />`   | V8 (Step 13)  | `.v8-detail-*`               |
