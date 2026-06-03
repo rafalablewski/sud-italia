@@ -21,6 +21,9 @@ interface BundleAnalytics {
     thumbsUp: number;
     thumbsDown: number;
     thumbsDownRate: number;
+    refundCount: number;
+    refundRate: number;
+    topRefundReason: string | null;
   }[];
   byVariant: {
     variantId: string;
@@ -161,6 +164,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                       <th className="py-1 pr-2 text-right">Eff. disc.</th>
                       <th className="py-1 pr-2 text-right">Avg mains</th>
                       <th className="py-1 pr-2 text-right">Value</th>
+                      <th className="py-1 pr-2 text-right">Refunds</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -178,6 +182,9 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                         </td>
                         <td className="py-1 pr-2 text-right">
                           <BundleSentiment up={b.thumbsUp} down={b.thumbsDown} rate={b.thumbsDownRate} />
+                        </td>
+                        <td className="py-1 pr-2 text-right">
+                          <BundleRefunds count={b.refundCount} rate={b.refundRate} reason={b.topRefundReason} />
                         </td>
                       </tr>
                     ))}
@@ -360,6 +367,22 @@ function BundleSentiment({ up, down, rate }: { up: number; down: number; rate: n
     <span className={flag ? "text-[var(--warning)] font-semibold" : "admin-text-secondary"}>
       👍 {up} · 👎 {down}
       {flag ? ` (${(rate * 100).toFixed(0)}% ↓)` : ""}
+    </span>
+  );
+}
+
+/** Refund rate for a bundle (audit elite-qsr §3). Amber-flags ≥8% on ≥5
+ *  orders — a bundle refunding materially more than à la carte usually
+ *  means it forces items the customer didn't want. */
+function BundleRefunds({ count, rate, reason }: { count: number; rate: number; reason: string | null }) {
+  if (count === 0) return <span className="admin-text-secondary">—</span>;
+  const flag = count >= 5 && rate >= 0.08;
+  return (
+    <span
+      className={flag ? "text-[var(--warning)] font-semibold" : "admin-text-secondary"}
+      title={reason ? `Top reason: ${reason}` : undefined}
+    >
+      {count} ({(rate * 100).toFixed(0)}%)
     </span>
   );
 }

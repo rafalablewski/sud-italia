@@ -891,6 +891,12 @@ export default async function CapabilitiesPage() {
           summary: "Post-receipt thumbs up/down on every bundle order — the one signal the bundle audit log can't capture (what the customer thought of the value). BundleFeedbackPrompt on /order-confirmation self-gates to bundle orders (GET /api/customer/bundle-feedback?orderId=), records an upsert-by-order rating (POST same route; bundle id/name/location resolved server-side from the BundleEvent so it can't be spoofed), persisted to bundle-feedback.json. BundleAnalyticsCard's 'By bundle' table shows the 👍/👎 split per bundle and amber-flags ≥20% thumbs-down on ≥5 ratings so a high-converting-but-disliked bundle (a profit centre burning brand equity) is caught before it surfaces as a one-star review.",
         },
         {
+          name: "Refund × bundle correlation",
+          status: "live",
+          href: "/admin/reports",
+          summary: "Joins Order.refund to bundle orders by id (audit elite-qsr §3) so the operator can see if a bundle refunds at a higher rate than à la carte — usually a sign it forces items the customer didn't want. /api/admin/bundle-analytics matches each BundleEvent's orderId against refunded orders in the window and rolls up refund count + rate + the most common reason (RefundReasonCode) per bundle, and refund rate per A/B variant. BundleAnalyticsCard's 'By bundle' table shows a Refunds column (count + %, top reason on hover) amber-flagged at ≥8% on ≥5 orders; the per-variant refund rate rides the A/B significance table. Builds on the existing refund capture (reasonCode enum + manager-approval comp cap). Refund cost is current-cost; distributor-attributed historical cost still needs the per-line cost snapshot.",
+        },
+        {
           name: "Bundle low-margin operator alert + save-time guardian",
           status: "live",
           href: "/admin/upsell",

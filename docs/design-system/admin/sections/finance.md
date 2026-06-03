@@ -60,7 +60,13 @@ The tabbed analytics surface — revenue, orders, items, cohort, exports.
   bundle" table also carries a **Value** column — voice-of-customer
   thumbs (👍 / 👎) from the post-order `BundleFeedbackPrompt`, amber-
   flagged when ≥20% thumbs-down on ≥5 ratings so a high-converting-but-
-  disliked bundle is caught before it becomes a one-star review.
+  disliked bundle is caught before it becomes a one-star review. A
+  **Refunds** column joins `Order.refund` to bundle orders by id (audit
+  elite-qsr §3) — count + rate per bundle, amber-flagged at ≥8% on ≥5
+  orders, with the most common refund reason on hover; per-variant refund
+  rate rides the A/B significance table. A bundle that forces unwanted
+  items refunds harder than à la carte, and this is the only place that
+  shows up.
 
 ## Cash — `/admin/cash`
 

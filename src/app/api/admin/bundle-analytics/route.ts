@@ -5,10 +5,13 @@ import {
   getBundleFunnelEvents,
   getBundleFeedback,
   getUpsellSettings,
+  getOrders,
   type BundleEvent,
   type BundleFunnelEvent,
   type BundleFeedbackEvent,
 } from "@/lib/store";
+import type { OrderRefund, RefundReasonCode } from "@/data/types";
+import { REFUND_REASON_LABELS } from "@/data/types";
 import type { Experiment, ExperimentMetric } from "@/lib/experiments";
 import {
   compareProportions,
@@ -44,6 +47,13 @@ interface BundleRollup {
   thumbsUp: number;
   thumbsDown: number;
   thumbsDownRate: number;
+  /** Refund × bundle (audit elite-qsr §3): bundle orders that saw a
+   *  refund (full or partial), the rate, and the most common reason —
+   *  a bundle forcing unwanted items refunds at a higher rate than à la
+   *  carte, and that's invisible without this join. */
+  refundCount: number;
+  refundRate: number;
+  topRefundReason: string | null;
 }
 
 interface VariantVerdict {
@@ -75,6 +85,10 @@ interface VariantRollup {
    *  that carry a margin. 0 when none do. */
   avgContributionGrosze: number;
   totalContributionGrosze: number;
+  /** Refund rate for this variant's bundle orders (audit elite-qsr §3) —
+   *  a variant that discounts into forced add-ons may refund more. */
+  refundCount: number;
+  refundRate: number;
   /** Significance vs control on the experiment's primary metric. Null for
    *  the control row, or when no experiment is in scope. */
   verdict: VariantVerdict | null;
@@ -228,6 +242,7 @@ function buildVariantRollups(
   byVariant: Map<string, BundleEvent[]>,
   funnel: BundleFunnelEvent[],
   experiment: Experiment | null,
+  refundByOrderId: Map<string, OrderRefund>,
 ): VariantRollup[] {
   const impressions = impressionsByVariant(funnel);
   const metric: ExperimentMetric = experiment?.primaryMetric ?? "contribution";
@@ -263,6 +278,7 @@ function buildVariantRollups(
       const isControl = id === controlId;
       const verdict =
         experiment && controlAgg && !isControl ? buildVerdict(metric, controlAgg, agg) : null;
+      const refundCount = list.reduce((s, e) => s + (refundByOrderId.has(e.orderId) ? 1 : 0), 0);
       return {
         variantId: id,
         label: labels.get(id),
@@ -281,6 +297,8 @@ function buildVariantRollups(
             ? 0
             : Math.round(totalContribution / agg.contributionValues.length),
         totalContributionGrosze: Math.round(totalContribution),
+        refundCount,
+        refundRate: agg.applies === 0 ? 0 : refundCount / agg.applies,
         verdict,
       };
     })
@@ -303,6 +321,22 @@ function experimentSummary(experiment: Experiment | null): ExperimentSummary | n
   };
 }
 
+/** Most common refund reason among a set of refunds, as a friendly label. */
+function topRefundReason(refunds: OrderRefund[]): string | null {
+  if (refunds.length === 0) return null;
+  const counts = new Map<RefundReasonCode, number>();
+  for (const r of refunds) counts.set(r.reasonCode, (counts.get(r.reasonCode) ?? 0) + 1);
+  let best: RefundReasonCode | null = null;
+  let bestN = 0;
+  for (const [code, n] of counts) {
+    if (n > bestN) {
+      best = code;
+      bestN = n;
+    }
+  }
+  return best ? REFUND_REASON_LABELS[best] : null;
+}
+
 /** thumbsUp / thumbsDown per bundle id from the voice-of-customer log. */
 function feedbackByBundle(feedback: BundleFeedbackEvent[]): Map<string, { up: number; down: number }> {
   const m = new Map<string, { up: number; down: number }>();
@@ -319,6 +353,7 @@ function rollup(
   events: BundleEvent[],
   funnel: BundleFunnelEvent[],
   feedback: BundleFeedbackEvent[],
+  refundByOrderId: Map<string, OrderRefund>,
   windowDays: number,
   experiment: Experiment | null,
 ): BundleAnalytics {
@@ -353,6 +388,9 @@ function rollup(
         const totalSav = list.reduce((s, e) => s + e.savingsGrosze, 0);
         const fb = feedbackMap.get(bundleId) ?? { up: 0, down: 0 };
         const fbTotal = fb.up + fb.down;
+        const refunds = list
+          .map((e) => refundByOrderId.get(e.orderId))
+          .filter((r): r is OrderRefund => r !== undefined);
         return {
           bundleId,
           bundleName: list[0].bundleName,
@@ -367,10 +405,13 @@ function rollup(
           thumbsUp: fb.up,
           thumbsDown: fb.down,
           thumbsDownRate: fbTotal === 0 ? 0 : fb.down / fbTotal,
+          refundCount: refunds.length,
+          refundRate: list.length === 0 ? 0 : refunds.length / list.length,
+          topRefundReason: topRefundReason(refunds),
         };
       })
       .sort((a, b) => b.count - a.count),
-    byVariant: buildVariantRollups(byVariant, funnel, experiment),
+    byVariant: buildVariantRollups(byVariant, funnel, experiment, refundByOrderId),
     experiment: experimentSummary(experiment),
     perDay: Array.from(byDay.entries())
       .map(([date, list]) => ({
@@ -404,13 +445,19 @@ export const GET = withAdmin({}, async (req) => {
   // The verdict math is per-location (an experiment lives on one location's
   // upsell config). Chain-wide views (no location) skip the experiment so
   // we never compare variants pooled across different live experiments.
-  const [events, funnel, feedback, experiment] = await Promise.all([
+  const [events, funnel, feedback, orders, experiment] = await Promise.all([
     getBundleEvents({ locationSlug, sinceIso }),
     getBundleFunnelEvents({ locationSlug, sinceIso }),
     getBundleFeedback({ locationSlug, sinceIso }),
+    getOrders(locationSlug, sinceIso),
     locationSlug
       ? getUpsellSettings().then((s) => s[locationSlug]?.experiment ?? null)
       : Promise.resolve(null),
   ]);
-  return NextResponse.json(rollup(events, funnel, feedback, days, experiment));
+  // Join refunds to bundle orders by orderId (audit elite-qsr §3).
+  const refundByOrderId = new Map<string, OrderRefund>();
+  for (const o of orders) {
+    if (o.refund) refundByOrderId.set(o.id, o.refund);
+  }
+  return NextResponse.json(rollup(events, funnel, feedback, refundByOrderId, days, experiment));
 });
