@@ -81,6 +81,12 @@ export function CartDrawer() {
   // bundle is applied (otherwise scheduling à-la-carte is awkward).
   // Stored client-side and POSTed after checkout success.
   const [scheduleWeekly, setScheduleWeekly] = useState(false);
+  // Chipotle "bundle is the path" (audit elite-qsr §6). When the bundle
+  // ladder is showing a real offer, the à-la-carte cross-sell chips are
+  // hidden so the whole-meal upsell owns the moment instead of splitting
+  // attention. BundleLadder reports this off the same compound that gates
+  // its own render, so the suppression can't drift from what's on screen.
+  const [bundleLadderShowing, setBundleLadderShowing] = useState(false);
 
   // Portal mount + body scroll lock. The mockup also adds .cart-open on
   // <body> so the floating cart pill / nav fade away when the sheet is
@@ -662,6 +668,7 @@ export function CartDrawer() {
                 fulfillmentType={fulfillmentType}
                 activeComboSavings={comboResult.isComplete ? comboResult.savings : 0}
                 activeComboName={comboResult.isComplete ? comboResult.activeDeal?.name ?? null : null}
+                onVisibilityChange={setBundleLadderShowing}
               />
 
               {/* Combo deal banner — see prior comment for the bundle-active gate. */}
@@ -675,10 +682,15 @@ export function CartDrawer() {
                 />
               )}
 
-              {/* Cross-sell suggestions */}
-              <LayoutGate flag="showCartUpsell">
-                <CartUpsell suggestions={suggestions} />
-              </LayoutGate>
+              {/* Cross-sell suggestions — suppressed while the bundle ladder
+                  is showing a real offer (Chipotle "bundle is the path",
+                  audit elite-qsr §6): one primary upsell path per cart
+                  moment, never both competing for attention. */}
+              {!bundleLadderShowing && (
+                <LayoutGate flag="showCartUpsell">
+                  <CartUpsell suggestions={suggestions} />
+                </LayoutGate>
+              )}
 
               {/* Delivery progress bar — per-segment threshold (audit §2.5). */}
               <LayoutGate flag="showDeliveryProgress">

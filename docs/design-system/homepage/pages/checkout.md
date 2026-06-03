@@ -55,7 +55,10 @@ The default state when the drawer opens.
 - **Cross-sell rail** (`<CartUpsell />`) shows below the items —
   espresso / dessert recommendations driven by
   `src/lib/upsell.ts :: getCartSuggestions` (CLAUDE rule: pizza /
-  pasta always get espresso + dessert).
+  pasta always get espresso + dessert). **Suppressed entirely while
+  the bundle ladder is showing a real offer** — Chipotle "bundle is
+  the path": one primary upsell path per cart moment, never the
+  whole-meal ladder and the à-la-carte chips competing at once.
 - **Combo deal banner** (`<ComboDealBanner />`) appears when the
   current cart qualifies for a combo discount — shows the discount
   amount inline AND it lands in the total.
@@ -305,7 +308,9 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
   ladder when the cart is within `hintWithin` items of the Family
   Feast threshold. All funnel beaconing (impression /
   composer_opened / composer_abandoned), variant resolution, and
-  composer-sheet handoff stays untouched.
+  composer-sheet handoff stays untouched. It also reports its
+  on-screen state to the drawer via `onVisibilityChange` so the
+  cross-sell rail can step aside (see the Cross-sell rail section).
 
 - **ComboDealBanner.** When the cart is short of the combo, the card
   becomes an actionable button — tap adds the cheapest available
@@ -353,6 +358,15 @@ sommelier rail:
   another increment (mirrors the audit §2.2 chip behaviour).
 - Wired through the same `getCartSuggestions()` upstream ranking
   with `PairingContext` (hour-of-day + per-customer attach history).
+- **"Bundle is the path" suppression (audit elite-qsr §6).** The rail
+  is hidden whenever `<BundleLadder />` reports a real offer on screen.
+  The ladder fires `onVisibilityChange(true|false)` off the same
+  `showLadder && visibleBundles.length > 0` compound that gates its own
+  render, so the signal never drifts from what the customer sees; the
+  drawer holds it in `bundleLadderShowing` and skips the rail (and its
+  `showCartUpsell` `<LayoutGate>`) while it's true. When no ladder
+  qualifies, the rail returns and the admin layout flag governs as
+  before.
 
 ### Fulfilment toggle, address, dine-in
 

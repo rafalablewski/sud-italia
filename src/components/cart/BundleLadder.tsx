@@ -29,6 +29,16 @@ interface BundleLadderProps {
   fulfillmentType?: FulfillmentType;
   activeComboSavings?: number;
   activeComboName?: string | null;
+  /**
+   * Fires whenever the ladder's "is a real bundle offer on screen?" state
+   * flips. The drawer uses it to run the Chipotle "bundle is the path"
+   * suppression — when a ladder is showing, the à-la-carte cross-sell
+   * chips are hidden so the whole-meal upsell owns the moment (audit
+   * elite-qsr §6). Reported from the same `showLadder + visibleBundles`
+   * computation that gates the render below, so the signal can never
+   * drift from what the customer actually sees.
+   */
+  onVisibilityChange?: (visible: boolean) => void;
 }
 
 /**
@@ -57,6 +67,7 @@ export function BundleLadder({
   fulfillmentType = "takeout",
   activeComboSavings = 0,
   activeComboName = null,
+  onVisibilityChange,
 }: BundleLadderProps) {
   const items = useCartStore((s) => s.items);
   const locationSlug = useCartStore((s) => s.locationSlug);
@@ -152,6 +163,17 @@ export function BundleLadder({
   }, [allBundles, allMenuItems, period, items]);
 
   const [composerBundle, setComposerBundle] = useState<BundleTier | null>(null);
+
+  // A real bundle offer is on screen only when a period resolved to "show"
+  // AND at least one of its tiers survived slot/min-mains resolution — the
+  // exact compound the render guard below uses. Report it up so the drawer
+  // can hide the competing cross-sell chips (audit elite-qsr §6). Reset to
+  // false on unmount so an emptied cart doesn't leave the parent latched.
+  const ladderShowing = showLadder && visibleBundles.length > 0;
+  useEffect(() => {
+    onVisibilityChange?.(ladderShowing);
+    return () => onVisibilityChange?.(false);
+  }, [ladderShowing, onVisibilityChange]);
 
   const sentImpressionsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
