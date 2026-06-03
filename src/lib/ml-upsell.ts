@@ -92,7 +92,7 @@ function clamp01(x: number): number {
 }
 
 function hasAnchor(items: CartItem[]): boolean {
-  return items.some((ci) => ANCHOR_CATEGORIES.includes(ci.menuItem.category));
+  return items.some((ci) => ci.menuItem && ANCHOR_CATEGORIES.includes(ci.menuItem.category));
 }
 
 function isAttachCandidate(item: MenuItem): boolean {
@@ -169,8 +169,12 @@ function computeAggregates(anchorOrders: Order[], menuItems: MenuItem[]): Traini
 
   for (const order of anchorOrders) {
     const hour = hourOf(order.createdAt);
-    const present = new Set(order.items.map((ci) => ci.menuItem.id));
-    const presentCats = new Set(order.items.map((ci) => ci.menuItem.category));
+    const present = new Set(
+      order.items.map((ci) => ci.menuItem?.id).filter((id): id is string => !!id),
+    );
+    const presentCats = new Set(
+      order.items.map((ci) => ci.menuItem?.category).filter((c): c is MenuCategory => !!c),
+    );
     for (const c of candidates) {
       if (present.has(c.id)) itemAttachCount[c.id] += 1;
     }
@@ -222,7 +226,9 @@ export function buildTrainingSet(
   for (const order of sorted) {
     const phone = order.customerPhone || "anon";
     const hour = hourOf(order.createdAt);
-    const present = new Set(order.items.map((ci) => ci.menuItem.id));
+    const present = new Set(
+      order.items.map((ci) => ci.menuItem?.id).filter((id): id is string => !!id),
+    );
     const pOrders = priorOrders[phone] ?? 0;
     const pAttach = priorAttach[phone] ?? {};
 

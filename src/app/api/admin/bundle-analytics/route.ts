@@ -334,7 +334,7 @@ function topRefundReason(refunds: OrderRefund[]): string | null {
       bestN = n;
     }
   }
-  return best ? REFUND_REASON_LABELS[best] : null;
+  return best ? (REFUND_REASON_LABELS[best] ?? null) : null;
 }
 
 /** thumbsUp / thumbsDown per bundle id from the voice-of-customer log. */

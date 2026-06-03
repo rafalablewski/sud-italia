@@ -264,9 +264,12 @@ export function recommendDecision(
   }
   if (!result.enoughData || observedTrials < requiredTrials) {
     const remaining = Math.max(0, requiredTrials - observedTrials);
+    // requiredTrials is Infinity when the baseline rate is 0/1 (no power
+    // estimate possible) — don't render "~Infinity more orders".
+    const remainingText = Number.isFinite(remaining) ? `~${remaining} more` : "more";
     return {
       kind: "collect_more",
-      reason: `Not conclusive yet — ~${remaining} more orders needed for a ${result.direction === "flat" ? "" : result.direction + " "}signal at 95% confidence.`,
+      reason: `Not conclusive yet — ${remainingText} orders needed for a ${result.direction === "flat" ? "" : result.direction + " "}signal at 95% confidence.`,
     };
   }
   return {

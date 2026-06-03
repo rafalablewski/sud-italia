@@ -183,8 +183,12 @@ export function CartDrawer() {
   useEffect(() => {
     const m = document.cookie.match(/(?:^|;\s*)sud-italia-referral=([^;]+)/);
     if (m) {
-      const code = decodeURIComponent(m[1]).toUpperCase();
-      if (code) setReferralCode(code);
+      try {
+        const code = decodeURIComponent(m[1]).toUpperCase();
+        if (code) setReferralCode(code);
+      } catch {
+        // Malformed cookie value (bad %-escape) — ignore rather than crash mount.
+      }
     }
   }, []);
 

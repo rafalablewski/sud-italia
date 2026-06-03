@@ -66,11 +66,11 @@ const ATTACH_SET = new Set<string>(ATTACH_CATEGORIES);
 const ANCHOR_SET = new Set<string>(ANCHOR_CATEGORIES);
 
 function orderHasAnchor(order: Order): boolean {
-  return order.items.some((ci) => ANCHOR_SET.has(ci.menuItem.category));
+  return order.items.some((ci) => ci.menuItem?.category && ANCHOR_SET.has(ci.menuItem.category));
 }
 
 function orderHasAttach(order: Order): boolean {
-  return order.items.some((ci) => ATTACH_SET.has(ci.menuItem.category));
+  return order.items.some((ci) => ci.menuItem?.category && ATTACH_SET.has(ci.menuItem.category));
 }
 
 function variance(values: number[], mean: number): number {
