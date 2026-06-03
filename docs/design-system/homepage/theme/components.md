@@ -38,10 +38,12 @@ rather than rolling its own visibility logic.
 
 ## Pulse micro-survey — `<SurveyPrompt />` (`.v8-pulse-*`)
 
-The NPS-style one-tap star survey that slides up bottom-right (a
+The NPS-style one-tap star survey that eases in from the bottom-left (a
 full-width sheet under 520px) when the trigger engine elects a survey.
 The storefront's voice-of-customer probe — quick, dismissible, at most
-one per session.
+one per session. The entrance is a soft 0.56s `cubic-bezier(0.22, 1,
+0.36, 1)` glide — slides in from the left + up with a subtle scale,
+anchored to its `bottom left` corner.
 
 Live code:
 

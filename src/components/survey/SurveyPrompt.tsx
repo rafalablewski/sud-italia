@@ -10,8 +10,8 @@ import type { PublicSurvey } from "@/lib/public-settings";
 import type { SurveyContext } from "@/store/survey";
 
 /**
- * The Pulse micro-survey card. A small, dismissible prompt that slides up
- * bottom-right (full-width on phones) when the trigger engine
+ * The Pulse micro-survey card. A small, dismissible prompt that eases in
+ * from the bottom-left (full-width on phones) when the trigger engine
  * (`useSurveyStore`) elects a survey. One tap to rate (1–5 stars), an
  * optional one-line comment, Send. Fire-and-forget POST to /api/surveys.
  *
