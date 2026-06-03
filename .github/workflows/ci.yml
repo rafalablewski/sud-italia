@@ -41,10 +41,12 @@ jobs:
         run: npx eslint "src/**/*.{ts,tsx}"
 
       - name: Test
-        # Pure-logic unit suite (node:test via tsx) — loyalty/points math,
-        # combo-deal savings, delivery thresholds, recipe base-slug, cohort
-        # retention + CLTV. Fast and dependency-free; runs before build so a
-        # broken invariant fails the PR loudly rather than shipping silently.
+        # node:test suite via tsx — mostly pure-logic invariants (loyalty/points
+        # math, combo-deal savings, delivery thresholds, recipe base-slug, cohort
+        # retention + CLTV) plus a happy-dom render regression test for the inline
+        # BundleComposer (guards the mount → fetch → init flow that shipped two
+        # stuck-loading / lost-prefill bugs). Runs before build so a broken
+        # invariant fails the PR loudly rather than shipping silently.
         run: npm test
 
       - name: Build
