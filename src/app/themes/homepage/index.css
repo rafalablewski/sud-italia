@@ -8641,7 +8641,7 @@ body.v8-cart-open .v8-abandoned {
 .v8-pulse {
   position: fixed;
   z-index: 60;
-  right: 20px;
+  left: 20px;
   bottom: 20px;
   width: 340px;
   max-width: calc(100vw - 32px);
@@ -8652,11 +8652,14 @@ body.v8-cart-open .v8-abandoned {
   padding: 18px 18px 16px;
   font-family: var(--font-body);
   color: var(--color-ink);
-  animation: v8-pulse-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom left;
+  animation: v8-pulse-in 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
 }
 @keyframes v8-pulse-in {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateX(-22px) translateY(10px) scale(0.96); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
 }
 @media (max-width: 520px) {
   .v8-pulse {
@@ -8664,6 +8667,7 @@ body.v8-cart-open .v8-abandoned {
     left: 12px;
     bottom: 12px;
     width: auto;
+    transform-origin: bottom center;
   }
 }
 @media (prefers-reduced-motion: reduce) {
