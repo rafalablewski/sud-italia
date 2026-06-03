@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
-import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import {
   type BundleTier,
+  type BundleMealPeriod,
   computeBundlePrice,
   isDynamicBundle,
   resolveBundleSlots,
 } from "@/lib/bundles";
-import type { CartItem, MenuItem } from "@/data/types";
+import { MENU_CATEGORY_LABELS, type CartItem, type MenuCategory, type MenuItem } from "@/data/types";
 
 /**
  * Bundle composition picker (Domino's "Mix & Match" × McDonald's "Make
@@ -20,6 +21,14 @@ import type { CartItem, MenuItem } from "@/data/types";
  * applies the bundle with the chosen line-up — the price reflects the
  * exact items they'll be charged for (closes the limonata margin leak
  * that the old "tap → silently cheapest" flow used to expose).
+ *
+ * V8 Trattoria redesign (June 2026): dressed in the same parchment /
+ * Cormorant / terracotta language as the BundleLadder that launches it,
+ * so the sheet no longer clashes with the polished cart drawer. Native
+ * <select> dropdowns are gone — each slot is a tactile tap-to-expand
+ * card (one open at a time, big 52px+ targets, grid-rows height animation)
+ * tuned for one-thumb mobile use. A hero ribbon leads with the savings +
+ * per-person framing; the sticky footer mirrors the ladder CTA.
  *
  * Compared to the auto-apply path (`buildBundleCartLines` from
  * BundleLadder.tsx), this gives the customer explicit agency over add-on
@@ -45,6 +54,24 @@ interface BundleComposerSheetProps {
   onApply: (lines: CartItem[], priceGrosze: number) => void;
 }
 
+/** Italian flourish per meal period — mirrors the BundleLadder header so
+ *  the sheet reads as the same offer the customer just tapped. */
+const PERIOD_IT: Record<BundleMealPeriod, string> = {
+  lunch: "il pranzo",
+  family: "festa di famiglia",
+  lateNight: "la cena tardi",
+};
+
+/** A warm glyph per category for the slot eyebrow. Decorative only. */
+const CATEGORY_GLYPH: Record<MenuCategory, string> = {
+  pizza: "🍕",
+  pasta: "🍝",
+  antipasti: "🫒",
+  panini: "🥪",
+  drinks: "🥤",
+  desserts: "🍰",
+};
+
 export function BundleComposerSheet({
   open,
   onClose,
@@ -57,6 +84,9 @@ export function BundleComposerSheet({
 }: BundleComposerSheetProps) {
   const [lastComposition, setLastComposition] = useState<{ menuItemId: string; quantity: number }[] | null>(null);
   const [lastFetchedFor, setLastFetchedFor] = useState<string | null>(null);
+  // Which slot/unit chooser is expanded — only one open at a time keeps the
+  // mobile sheet calm. Key is `${slotIdx}:${unitIdx}`.
+  const [openKey, setOpenKey] = useState<string | null>(null);
   useEffect(() => {
     if (!open || !bundle || !customerPhone || !locationSlug) return;
     const key = `${bundle.id}|${customerPhone}|${locationSlug}`;
@@ -74,6 +104,13 @@ export function BundleComposerSheet({
       })
       .catch(() => setLastComposition(null));
   }, [open, bundle, customerPhone, locationSlug, lastFetchedFor]);
+
+  // Collapse any open chooser as the sheet closes so it reopens clean.
+  const handleClose = () => {
+    setOpenKey(null);
+    onClose();
+  };
+
   const resolved = useMemo(
     () => (bundle && menuItems.length > 0 ? resolveBundleSlots(bundle, menuItems) : null),
     [bundle, menuItems],
@@ -141,9 +178,9 @@ export function BundleComposerSheet({
 
   if (!bundle || !resolved || !picks) {
     return (
-      <Sheet open={open} onClose={onClose} title="Build your bundle">
-        <div className="px-5 py-8 text-center text-sm text-italia-gray">
-          Loading bundle…
+      <Sheet open={open} onClose={handleClose}>
+        <div className="v8-composer">
+          <div className="v8-composer-loading">Apparecchiando la tavola…</div>
         </div>
       </Sheet>
     );
@@ -158,15 +195,17 @@ export function BundleComposerSheet({
       next[slotIdx][unitIdx] = cand;
       return next;
     });
+    setOpenKey(null);
   };
 
   // Compute the live price from current picks. Dynamic bundles apply the
   // tier's discount %s to mains-from-cart + the selected add-ons; fixed
   // bundles ignore picks and use the stored price.
+  const mainLines: CartItem[] = isDynamicBundle(bundle)
+    ? cartItems.filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
+    : [];
   const mainsSubtotal = isDynamicBundle(bundle)
-    ? cartItems
-        .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
-        .reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0)
+    ? mainLines.reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0)
     : 0;
   const addOnsSubtotal = picks.flat().reduce((s, m) => s + m.price, 0);
   const livePricing = (() => {
@@ -183,99 +222,199 @@ export function BundleComposerSheet({
       priceGrosze,
       refPriceGrosze: refPrice,
       savings: Math.max(0, refPrice - priceGrosze),
-      mainsCount: cartItems
-        .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
-        .reduce((s, ci) => s + ci.quantity, 0),
+      mainsCount: mainLines.reduce((s, ci) => s + ci.quantity, 0),
       mainsSubtotal,
       addOnsSubtotal,
     };
   })();
 
+  // Per-person framing — how many people this feast feeds. Dynamic tiers
+  // use the actual mains-in-cart count; fixed tiers count the pizza/pasta
+  // units baked into the composition.
+  const serves = isDynamicBundle(bundle)
+    ? livePricing?.mainsCount ?? 0
+    : bundle.composition.reduce((s, slot) => {
+        const isMain =
+          slot.kind === "category"
+            ? slot.category === "pizza" || slot.category === "pasta"
+            : /pizza|pasta/.test(slot.itemIdSuffix);
+        return isMain ? s + slot.quantity : s;
+      }, 0);
+  const perPerson = serves >= 2 && livePricing ? Math.round(livePricing.priceGrosze / serves) : null;
+
   const handleApply = () => {
     if (!livePricing) return;
     const mainsLines: CartItem[] = isDynamicBundle(bundle)
-      ? cartItems
-          .filter((ci) => bundle.mainCategories.includes(ci.menuItem.category))
-          .map((ci) => ({ ...ci, locationSlug }))
+      ? mainLines.map((ci) => ({ ...ci, locationSlug }))
       : [];
     const addOnLines: CartItem[] = picks
       .flat()
       .map((m) => ({ menuItem: m, quantity: 1, locationSlug }));
     onApply([...mainsLines, ...addOnLines], livePricing.priceGrosze);
-    onClose();
+    handleClose();
   };
 
-  const slotLabel = (slot: { kind: string; quantity: number; category?: string; itemIdSuffix?: string }) => {
-    if (slot.kind === "category") return `${slot.quantity} × ${slot.category}`;
+  const slotHeading = (slot: { kind: string; quantity: number; category?: MenuCategory; itemIdSuffix?: string }) => {
+    if (slot.kind === "category" && slot.category) {
+      const label = MENU_CATEGORY_LABELS[slot.category];
+      return slot.quantity === 1 ? `Choose your ${label.toLowerCase()}` : `Choose ${slot.quantity} ${label.toLowerCase()}`;
+    }
     const friendly = slot.itemIdSuffix
       ?.replace(/^anti-/, "")
       .replace(/^dessert-/, "")
       .replace(/^drink-/, "")
       .replace(/-/g, " ");
-    return `${slot.quantity} × ${friendly ?? "item"}`;
+    return `Includes ${friendly ?? "item"}`;
   };
 
+  const priceLabel = livePricing ? formatPrice(livePricing.priceGrosze) : "—";
+
   return (
-    <Sheet open={open} onClose={onClose} title={`Make it a ${bundle.tier}`}>
-      <div className="px-5 py-4 space-y-4">
-        <div className="rounded-xl bg-italia-cream/40 border border-italia-gold/20 px-3 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-italia-gold-dark">
-            {bundle.name}
-          </p>
-          <p className="text-xs text-italia-gray mt-0.5">{bundle.description}</p>
-          {livePricing && livePricing.savings > 0 && (
-            <p className="text-xs text-italia-green-dark font-semibold mt-1.5">
-              Without the bundle you&rsquo;d pay {formatPrice(livePricing.refPriceGrosze)} ·
-              save {formatPrice(livePricing.savings)}
-            </p>
-          )}
-          {lastComposition && lastComposition.length > 0 && (
-            <p className="text-[11px] text-italia-gold-dark font-semibold mt-1.5">
-              ★ Same as your last {bundle.tier} — confirm or tweak below
-            </p>
-          )}
+    <Sheet open={open} onClose={handleClose}>
+      <div className="v8-composer">
+        {/* Header */}
+        <div className="v8-composer-head">
+          <div>
+            <p className="v8-composer-eyebrow">Compose your bundle</p>
+            <h2 className="v8-composer-title">
+              Make it a {bundle.tier}
+              <span className="v8-composer-title-it"> · {PERIOD_IT[bundle.mealPeriod]}</span>
+            </h2>
+          </div>
+          <button type="button" onClick={handleClose} className="v8-composer-close" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {resolved.map((r, slotIdx) => (
-          <div key={slotIdx}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-italia-gray mb-1.5">
-              Pick {slotLabel(r.slot)}
-            </p>
-            <div className="space-y-1.5">
-              {picks[slotIdx].map((pick, unitIdx) => (
-                <div key={unitIdx} className="flex items-center gap-2">
-                  <span className="text-[10px] text-italia-gray w-4 text-right">
-                    #{unitIdx + 1}
-                  </span>
-                  <select
-                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-sm bg-white"
-                    value={pick.id}
-                    onChange={(e) => swapUnit(slotIdx, unitIdx, e.target.value)}
-                  >
-                    {r.candidates.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} · {formatPrice(c.price)}
-                      </option>
-                    ))}
-                  </select>
+        <div className="v8-composer-body">
+          {/* Hero — savings + per-person framing */}
+          <div className="v8-composer-hero">
+            <p className="v8-composer-hero-name">{bundle.name}</p>
+            <p className="v8-composer-hero-desc">{bundle.description}</p>
+            {livePricing && livePricing.savings > 0 && (
+              <div className="v8-composer-hero-deal">
+                <span className="v8-composer-hero-save">Save {formatPrice(livePricing.savings)}</span>
+                <span className="v8-composer-hero-ref">
+                  à la carte {formatPrice(livePricing.refPriceGrosze)}
+                </span>
+              </div>
+            )}
+            {perPerson !== null && (
+              <span className="v8-composer-hero-pp">
+                ~{formatPrice(perPerson)} <em>/ person</em> · feeds {serves}
+              </span>
+            )}
+            {lastComposition && lastComposition.length > 0 && (
+              <p className="v8-composer-lastorder">
+                ★ Same as your last {bundle.tier} — confirm or tweak below
+              </p>
+            )}
+          </div>
+
+          {/* Read-only mains carried in from the cart (dynamic tiers) */}
+          {mainLines.length > 0 && (
+            <div className="v8-composer-mains">
+              <p className="v8-composer-mains-title">Your mains — folded into the feast</p>
+              {mainLines.map((ci) => (
+                <div key={ci.menuItem.id} className="v8-composer-mains-row">
+                  <span className="v8-composer-mains-qty">{ci.quantity}×</span>
+                  <span className="v8-composer-mains-name">{ci.menuItem.name}</span>
+                  <span className="v8-composer-mains-price">{formatPrice(ci.menuItem.price * ci.quantity)}</span>
                 </div>
               ))}
             </div>
-          </div>
-        ))}
-      </div>
+          )}
 
-      {/* Sticky confirm bar */}
-      <div className="sticky bottom-0 border-t border-gray-100 bg-white px-5 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-        <div className="flex items-baseline justify-between mb-2">
-          <span className="text-xs text-italia-gray">Bundle total</span>
-          <span className="text-xl font-bold text-italia-red">
-            {livePricing ? formatPrice(livePricing.priceGrosze) : "—"}
-          </span>
+          {/* Slot pickers */}
+          {resolved.map((r, slotIdx) => {
+            const glyph = r.slot.kind === "category" && r.slot.category ? CATEGORY_GLYPH[r.slot.category] : "✨";
+            return (
+              <div key={slotIdx} className="v8-composer-slot">
+                <p className="v8-composer-slot-label">
+                  <span aria-hidden className="v8-composer-slot-glyph">{glyph}</span>
+                  {slotHeading(r.slot)}
+                </p>
+                <div className="v8-composer-units">
+                  {picks[slotIdx].map((pick, unitIdx) => {
+                    const single = r.candidates.length === 1;
+                    if (single) {
+                      return (
+                        <div key={unitIdx} className="v8-composer-included">
+                          <span className="v8-composer-pick-name">{pick.name}</span>
+                          <span className="v8-composer-included-tag">included</span>
+                        </div>
+                      );
+                    }
+                    const key = `${slotIdx}:${unitIdx}`;
+                    const isOpen = openKey === key;
+                    return (
+                      <div key={unitIdx} className="v8-composer-unit">
+                        <button
+                          type="button"
+                          className={`v8-composer-pick${isOpen ? " is-open" : ""}`}
+                          onClick={() => setOpenKey(isOpen ? null : key)}
+                          aria-expanded={isOpen}
+                        >
+                          {picks[slotIdx].length > 1 && (
+                            <span className="v8-composer-unit-tag">#{unitIdx + 1}</span>
+                          )}
+                          <span className="v8-composer-pick-name">{pick.name}</span>
+                          <span className="v8-composer-pick-price">{formatPrice(pick.price)}</span>
+                          <ChevronDown
+                            className={`v8-composer-pick-chevron${isOpen ? " is-open" : ""}`}
+                            aria-hidden
+                          />
+                        </button>
+                        <div className={`v8-composer-options${isOpen ? " is-open" : ""}`}>
+                          <div className="v8-composer-options-inner">
+                            {r.candidates.map((c) => {
+                              const selected = c.id === pick.id;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  className={`v8-composer-option${selected ? " is-selected" : ""}`}
+                                  onClick={() => swapUnit(slotIdx, unitIdx, c.id)}
+                                >
+                                  <span className="v8-composer-option-check" aria-hidden>
+                                    {selected && <Check className="h-3.5 w-3.5" />}
+                                  </span>
+                                  <span className="v8-composer-option-name">{c.name}</span>
+                                  <span className="v8-composer-option-price">{formatPrice(c.price)}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <Button onClick={handleApply} disabled={!livePricing} className="w-full">
-          Apply {bundle.tier} · {livePricing ? formatPrice(livePricing.priceGrosze) : "—"}
-        </Button>
+
+        {/* Sticky confirm bar */}
+        <div className="v8-composer-foot">
+          <div className="v8-composer-foot-row">
+            <span className="v8-composer-total-label">
+              Bundle total
+              {perPerson !== null && (
+                <em className="v8-composer-total-pp"> · ~{formatPrice(perPerson)}/person</em>
+              )}
+            </span>
+            <span className="v8-composer-total-now">{priceLabel}</span>
+          </div>
+          <button
+            type="button"
+            className="v8-composer-apply"
+            onClick={handleApply}
+            disabled={!livePricing}
+          >
+            Apply {bundle.tier} · {priceLabel}
+          </button>
+        </div>
       </div>
     </Sheet>
   );

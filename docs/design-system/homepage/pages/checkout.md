@@ -295,6 +295,7 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
 | `<ComboDealBanner />`      | `.v8-cart-combo-*`            | Italian Classic / Pasta Combo paper card with hairline progress |
 | `<SlotPicker />`           | `.v8-cart-days-* .v8-cart-slot-*` | Date strip + slot grid with italic Lora scarcity copy     |
 | `<BundleLadder />`         | `.v8-cart-ladder-*`           | Make-it-a-bundle paper card + primary CTA + chip ladder (audit §3.2) |
+| `<BundleComposerSheet />`  | `.v8-composer-*`              | Feast builder sheet opened from the ladder — tap-to-expand slot pickers + savings hero + sticky apply CTA |
 
 #### Notes on the bigger sub-components
 
