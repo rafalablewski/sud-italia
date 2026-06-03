@@ -2,7 +2,7 @@
 ## Brutal Institutional Diligence on Brand, Product, Ops, and Tech
 
 **Date:** 14 May 2026
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass — see the dated Update sections below; §1–§14 bodies and the 2026-05-21/29 sections are preserved as historical snapshots, current state consolidated in the dated 2026-06-03 Update at the end)
 **Branch:** `claude/restaurant-audit-framework-d9sQD`
 **Auditor lens:** Senior hospitality-tech consultant + restaurant operations expert + Series-A diligence partner + elite product teardown
 **Codebase under review:** `sud-italia` — Next.js 16 / React 19 / TypeScript / Tailwind 4 / Zustand / Stripe / Neon Postgres / Upstash Redis
@@ -877,3 +877,80 @@ The V8 `/rewards` rebuild introduced **hardcoded display values** this diligence
 **The §0 verdict is unchanged: Sud Italia would not survive NYC or Singapore as-is.** Fifteen days of shipping closed half of the UX burn-down list and rebuilt the operational spine, but the seven binding constraints (aggregators, USD/SGD settlement, SOC 2, real test coverage, food photography, offline POS, MFA) are exactly where the 14 May audit left them. The §13 Phase 1–3 sequencing remains the right path; the operator is now meaningfully ahead on the *UX* and *ops* dimensions of Phase 1–4 and has not started the *channel* (Phase 3) or *enterprise-hardening* (Phase 5) work the two cities actually require.
 
 — *Re-run lens: same five auditors, fifteen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — four of the seven blockers fall; the §0 verdict still holds on channel + local payments
+
+Five days and **211 commits** since the 2026-05-29 pass (`git log --since=2026-05-29`, HEAD `cb49026`), plus a same-day follow-up branch (`claude/sharp-galileo-qlIve`) closing the last code-fixable items. Every claim below was re-verified against the running code and a green suite (`npm test` → 181/181; `tsc`/`eslint`/`build` clean). **This is the largest single movement on the *enterprise-hardening* and *operations* axes since the 14 May audit — but the §0 "would not survive NYC/SG as-is" verdict stands, because the surviving open blockers are exactly the two cities' load-bearing ones: third-party aggregators and local-currency/payment settlement.**
+
+### The seven structural blockers — status
+
+| # | Blocker | 2026-05-29 | **2026-06-03** |
+|---|---|---|---|
+| 1 | Aggregator integration (Uber Eats / DoorDash / GrabFood / foodpanda) | ❌ | ❌ **Unmoved.** Wolt/Glovo are still scaffolds (real HMAC, RPC bodies throw); the four city-dominant marketplaces aren't designed for. This is now the single biggest NYC/SG-specific gap. |
+| 2 | USD/SGD settlement (per-region Stripe merchant) | ❌ display-only | ❌ **Unmoved.** Currency *display* (USD/SGD/EUR/PLN) ships; charges still settle PLN. Apple Pay/Google Pay primary, saved cards, saved addresses, promo-code field — all still absent (Stripe Checkout redirect, fresh card each order). |
+| 3 | SOC 2 | ❌ | 🟡 **Materially advanced.** `src/lib/soc2.ts` builds a **12-control Trust-Services register that introspects real runtime posture** (session secret, password hash, Stripe webhook verification, distributed lock, CI pipeline, role separation, audit-log recency), scored met/partial/gap, surfaced at `/admin/soc2`. Not a SOC 2 *Type II external audit* (that's an auditor engagement, not a code task), but the §6.4/§11.3 "walk me through your SOC 2 controls" question now has a real, evidence-backed answer. |
+| 4 | Real test coverage | ❌ (2 pure-fn files) | ✅ **CLOSED in substance.** 29 `*.test.ts` / 181 assertions (`tsx --test`) in a real CI gate (`.github/workflows/ci.yml`: typecheck→lint→test→build on every PR), covering the exact paths the audit called malpractice to leave untested — **checkout pricing, slot oversell, refund, RBAC scope** — plus loyalty, cohort, LTV/CAC, TOTP, password, receipt ESC/POS, POS coursing. Residual: no integration/coverage tooling, no Playwright smoke. |
+| 5 | Food photography | ❌ empty | 🟡 **Operator action in progress (photographer booked).** Now an ops task, not a code gap: the render path already supports real imagery (`MenuItem.image` renders when set; emoji/gradient is only the fallback), so the shoot drops straight in. Per Rule #1 no placeholder/stock URL was wired in the interim. The §1.2 hard-truth #4 frame is now "wiring ready, shoot pending" rather than "absent." |
+| 6 | Offline-first POS | ❌ | ❌ **Unmoved.** `AdminPos` is still a network no-op when LTE drops; the generic IndexedDB outbox isn't wired into POS/KDS. The §4.1 "12:10 — kitchen goes blind" failure mode stands. |
+| 7 | MFA on admin | ❌ shared password | ✅ **CLOSED.** Salted **scrypt** via `ADMIN_PASSWORD_HASH` (constant-time verify) replaces the plaintext compare; **TOTP** MFA (per-user, mandatory when enabled), **WebAuthn passkeys**, salted-scrypt **PIN** terminal login; **per-route rate-limit** via `withAdmin` + opt-in `ADMIN_IP_ALLOWLIST`. The §1.4 risk #2 / §6.3 "single shared `ADMIN_PASSWORD` = insider access, no per-human audit" is closed. |
+
+**Tally: 2 closed (tests, MFA), 1 materially advanced (SOC 2 register), 1 moved to operator-in-progress (photography), 3 hard-open (aggregators, USD/SGD settlement, offline POS).**
+
+### §2 / §3 / §10 Customer flow — most of the §12.2 "highest-ROI" list shipped
+
+| Item (audit ref) | 2026-05-29 | **2026-06-03** |
+|---|---|---|
+| Address autocomplete (§2.3, §3.1 #7, §12.2 #6) | ✗ | ✅ `AddressAutocomplete` — Google Places when keyed, OpenStreetMap Nominatim fallback, server-proxied. |
+| Pre-payment ETA (§2.3, §3.1 #8, §12.2 #2) | ✗ | ✅ Cart shows "Ready by …" before pay (slot time or prep estimate). |
+| Points preview in cart (§3.3, §12.2 #3) | ✗ | ✅ `LoyaltyEarnPreview` + an "Earning points as …" chip in the cart. |
+| Item modifiers end-to-end (§3.1 #5, §4.1 #6, §5.2, §10.2 #2) | ⚠ schema+editor, no picker/KDS render | ✅ Customer picker → cart → KDS ticket → Stripe line description → receipt (`api/checkout/route.ts`). The "freeform `notes` is the only signal the cook sees" failure mode is closed. |
+| One-click reorder (§3.4, §10 "Order again", §12.2 #5) | ✗ | ✅ `ReorderSection` on location pages (reads real order history). Home-page placement still a nice-to-have. |
+| Post-order single-tap upsell | ✗ | ✅ `PostOrderUpsell` on the confirmation page (same `getCartSuggestions` engine, adds to the live cart). |
+| Order tracking transport (§2.3, §5.1) | 10s poll | ✅ Now SSE-push (`/api/orders/stream`) with a poll fallback. (Live *driver map* still not added — transport improved, not the map.) |
+| Rewards Rule #1 regressions (§2.1, §10 "fake rewards values") | streak "2" / "33%" / `Math.random()` referral | ✅ All wired to real data (`/api/customer/rewards-stats` + `src/lib/rewards-progress.ts`, 9-assertion suite); the `Math.random()` `generateReferralCode()` helper deleted. |
+| Apple/Google Pay primary, saved cards/addresses, promo field (§2.3, §12.2 #1/#4/#7) | ✗ | ❌ **Still open** — Stripe Checkout redirect, no Payment Request API, fresh card each order, no promo input. |
+| `libphonenumber-js` E.164 + country selector (§2.4) | ✗ | ❌ Still PL-style loose validation — a `+1`/`+65` number isn't first-class. A blocker for real NYC/SG phone capture. |
+| Localization for the two cities | pl/en/de/en-SG | ❌ **Spanish (NYC) and Chinese/Malay/Tamil (SG) still absent** — `i18n.ts` is still the four-locale set. |
+
+### §4 / §6 / §10 / §12.4 Operations — the operator-criticism list (§11.2) is largely answered
+
+- **Receipt printer (§4.3, §12.4 #7)** → ✅ real ESC/POS driver (`src/lib/receipt/escpos.ts`, unit-tested), TCP-to-printer with simulator + go-live guide. **Cash-drawer pulse + hardware bump bar still ✗.**
+- **Shift handover / waste log / HACCP temperature log (§6.2, §12.4 #1/#5)** → ✅ all three shipped, audit-logged (`AdminHandover`/`AdminWaste`/`AdminHaccp`). Cash reconciliation with variance is part of handover.
+- **Refunds with reason codes + manager approval (§10, §12.1 #9, §12.4 #2)** → ✅ per-refund cap + per-actor daily comp cap behind a manager-approval gate.
+- **Coursing** → ✅ **restored** (`src/lib/pos-coursing.ts` + test) — reverses the 2026-05-29 "coursing dropped in the rewrite" finding. Starter/main/dessert/drink with per-course firing onto the server-owned `PosTab`.
+- **LTV/CAC + cohort retention (§6.2, §10, §11.3, §12.5 #5)** → ✅ `/admin/reports/cohort` + `/admin/reports/ltv-cac` over real orders; weekly RFM segmentation; **Customer Intelligence engine + Win-back auto-retention** (`customer-intelligence.ts`/`retention.ts`) address the §3.4 win-back lever.
+- **Still ✗:** offline POS, hardware bump bar, cash-drawer pulse, batch consolidation, hold/transfer between stations, real-time menu sync *to aggregators* (no aggregators), KDS client list virtualization.
+
+### §9 Tech & §6 Admin — the enterprise-hardening floor lifted
+
+- **Auth/RBAC:** scrypt + MFA + passkeys + PIN; **60+ granular permissions** with custom grants overriding role rank; **location scope cryptographically bound into the session HMAC**; role-prefixed portals (`/manager/*`, `/franchisee/*`, owner-only `/admin/*`); a unified `sessionLocationScope()` resolver that fixed a real PIN/passkey over-grant bug. §6.4 "disqualified from chains >25 locations / investor DD / regulated jurisdictions" is materially softened (SAML/OIDC/SCIM still absent; the register is a controls register, not an external audit).
+- **Backups (§6.4, §11.3):** nightly logical dump → S3 (SigV4) + documented restore runbook + dry-run-on-a-Neon-branch procedure. "No backup/restore SLA → disqualified from insurance underwriting" is closed.
+- **Persistence (§9.1/§9.4):** still mid-migration — orders/slots normalized relational-first with a kv mirror; no row-level transaction on order-create; self-bootstrapping DDL; `store.ts` now ~11,880 lines. Unmoved since 2026-05-29; correctly low-priority at two trucks.
+- **Real-time:** customer tracker + legacy kitchen board both moved off 10s polling onto the order-event SSE; KDS v2 already was. Push end-to-end. (The §5.4 "WebSocket / LISTEN-NOTIFY instead of SSE-of-full-array" upgrade and KDS virtualization are still open.)
+
+### The five §1.2 "Hard Truths" — re-verified 2026-06-03
+
+1. **"AI" is a random number generator** → **Resolved** (real Claude agent layer; heuristics deleted) — unchanged from 2026-05-29.
+2. **Order pipeline serializes on two global locks** → **Mitigated** (DB-first relational path, kv mirror fire-and-forget) — unchanged.
+3. **No real third-party delivery** → **Still true.** The defining NYC/SG blocker. WhatsApp bot is an owned channel, not an aggregator.
+4. **The customer never sees their food** → **Wiring ready, shoot pending** (photographer booked) — the only change is that this is now an ops task, not a code gap.
+5. **Zero automated tests** → **Now false.** 29 files / 181 assertions in a CI gate covering payment/refund/RBAC/slot. The single most-repeated investor objection in this audit is retired.
+
+### Net read on the §1.1 scorecard
+
+| §1.1 row | 2026-05-29 | **2026-06-03** | Why |
+|---|---:|---:|---|
+| **Overall** | 55 | **61** | Enterprise-hardening + ops + customer-flow gains; NYC/SG viability still gated by aggregators + local payments. |
+| **NYC viability** | 27 | **32** | Modifiers, ETA, autocomplete, points preview, refund governance, real-time tracking, credible security/tests. Still no Uber/DoorDash, no USD settlement, no Spanish, photo not yet shot, no Apple Pay. |
+| **Singapore viability** | 31 | **34** | Same operational + trust gains. Still no GrabFood/foodpanda, no SGD/PayNow/PayLah!, no Chinese/Malay/Tamil, NEA A–D auto-grade still blocked on `saturatedFatPerUnit`. |
+| **Operational maturity** | 70 | **78** | Modifiers end-to-end, coursing restored, ESC/POS receipts, HACCP/waste/handover, cash reconciliation, refund reason-codes + manager approval. Capped by no offline POS, no hardware bump bar/cash-drawer, no aggregator menu/status sync. |
+| **UX maturity** | 64 | **71** | Address autocomplete + pre-pay ETA + points-in-cart + reorder + post-order upsell + SSE tracking + rewards values now real. Capped by the pending photo shoot, no Apple Pay/saved cards, PL-only phone validation, two legacy-palette surfaces. |
+| **Scalability** | 70 | **73** | Real CI test gate is the regression shield the audit tied scalability to; relational migration continues. Still single-region DB, no KDS virtualization. |
+| **Franchise readiness** | 35 | **40** | Granular per-location RBAC + role-prefixed portals + SOC 2 register + backups. Royalty splits, FDD scaffolding, per-tenant isolation still ✗. |
+| **Investor readiness** | 48 | **62** | The big move: scrypt+MFA+passkeys, a green CI gate with payment/refund/RBAC tests, S3 backups + restore runbook, SOC 2 controls register, rate-limit + location-scoped RBAC everywhere. Floor remaining: no aggregators, no USD/SGD settlement, photo pending, no SOC 2 Type II audit. |
+
+**The §0 verdict holds — but the shape of the "no" has changed.** On 14 May the answer was "no — fails on ops, enterprise-hardening, *and* channel." As of 2026-06-03 the **ops spine and the enterprise-hardening floor are credible** (tests, MFA, backups, SOC 2 posture, RBAC, receipts, HACCP, refund governance, modifiers). What still kills a NYC/SG launch is now a *shorter, sharper* list: **(1) no Uber Eats/DoorDash/GrabFood/foodpanda — surrendering 60–85% of the addressable market; (2) no local-currency settlement or Apple Pay/PayNow/PayLah! — a 10–20% conversion floor; (3) no offline POS for a metal box on a sidewalk; (4) no Spanish / Chinese-Malay-Tamil; (5) the booked-but-unshot food photography.** That is the §13 Phase 3 (channel) + the local-payments slice of Phase 2 + the Phase 4 offline-POS item — three concrete workstreams, not a rebuild. The operator has effectively completed Phase 1 and most of Phase 2/4-ops; the two cities now gate on Phase 3 and local payments specifically.
+
+— *Re-run lens: same five auditors, twenty days after the original — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` green at 181/181.*
