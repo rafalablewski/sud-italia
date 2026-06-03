@@ -118,6 +118,19 @@ The AOV machinery: bundle ladders + modifier gating.
   re-tune discount % / minMains and retry. Catches an underwater
   discount at save instead of one order later via the post-order
   `bundle_low_margin` alert — both read the same floor.
+- **Experiments tab — A/B ledger** (`ExperimentEditor`). One per-location
+  experiment with weighted variants + per-bundle discount overrides.
+  Lifecycle controls: a **status pill** (draft / running / stopped) with
+  **Start / Stop** (Start needs ≥2 variants; assignment only runs while
+  `running`), a **control-variant** selector (the baseline the others are
+  measured against), and a **primary-metric** selector (contribution /
+  AOV / conversion) that decides which significance verdict drives the
+  call. Each variant row carries a **Promote winner → live bundles**
+  action: it copies that variant's overrides into the live bundle config,
+  stops the experiment, and records a `result` (winner + promoted). The
+  promoted discounts pass back through the margin-floor guardian on the
+  next save. Verdicts themselves are read on the Reports bundle-analytics
+  card (see [`finance.md`](./finance.md)).
 
 ## Cross-sell — `/admin/crosssell`
 
