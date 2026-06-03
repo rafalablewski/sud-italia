@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
-import { getOrders, getLoyaltyMember } from "@/lib/store";
+import { normalizePlPhoneE164 } from "@/lib/phone";
+import { getOrdersByPhone, getLoyaltyMember } from "@/lib/store";
 import {
   getOrCreateReferralCode,
   countQualifiedReferralsSince,
@@ -41,15 +41,10 @@ export async function GET() {
   const now = new Date();
   const weekStartMs = weekStart(now).getTime();
 
-  const all = await getOrders();
-  // Confirmed+ orders only — pending (not yet paid) and cancelled orders
-  // shouldn't count toward streaks or challenges.
-  const mine = all.filter(
-    (o) =>
-      phonesEqualPl(o.customerPhone, phone) &&
-      o.status !== "pending" &&
-      o.status !== "cancelled",
-  );
+  // Indexed by-phone read (DB filters phone + excludes pending/simulated) so
+  // this scales with one customer's order count, not the whole order book.
+  // Drop cancelled too — neither should count toward streaks or challenges.
+  const mine = (await getOrdersByPhone(phone)).filter((o) => o.status !== "cancelled");
 
   const weekStreak = computeWeekStreak(
     mine.map((o) => o.createdAt),

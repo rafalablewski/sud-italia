@@ -199,10 +199,18 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
       if (pollTimer || cancelled) return;
       pollTimer = setInterval(() => fetchOrders({ silent: true }), 10_000);
     };
+    const stopFallbackPoll = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
 
     if (typeof window !== "undefined" && "EventSource" in window) {
       try {
         source = new EventSource("/api/kitchen/orders/stream");
+        // On (re)connect, drop the fallback poll — the stream is live again.
+        source.onopen = () => stopFallbackPoll();
         source.onmessage = (ev) => {
           if (cancelled) return;
           try {
@@ -215,11 +223,9 @@ export function KitchenOrderBoard({ locationName, slug }: Props) {
             /* ignore malformed frame */
           }
         };
-        source.onerror = () => {
-          source?.close();
-          source = null;
-          startFallbackPoll();
-        };
+        // Don't close the source — let EventSource auto-reconnect natively.
+        // Poll bridges the gap meanwhile; onopen clears it on reconnect.
+        source.onerror = () => startFallbackPoll();
       } catch {
         startFallbackPoll();
       }

@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
         if (closed) return;
         try {
           const order = await getOrderById(orderId);
-          if (!order) return;
+          // The client may have disconnected during the await — re-check before
+          // enqueuing so we never write to an already-closed controller.
+          if (closed || !order) return;
           const payload = JSON.stringify({
             order: {
               id: order.id,

@@ -142,12 +142,20 @@ export function OrderTracker({ orderId }: OrderTrackerProps) {
       if (pollTimer || cancelled) return;
       pollTimer = setInterval(fetchOrder, 10_000);
     };
+    const stopFallbackPoll = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
 
     fetchOrder();
 
     if (typeof window !== "undefined" && "EventSource" in window) {
       try {
         source = new EventSource(`/api/orders/stream?orderId=${encodeURIComponent(orderId)}`);
+        // On (re)connect, drop the fallback poll — the stream is live again.
+        source.onopen = () => stopFallbackPoll();
         source.onmessage = (ev) => {
           if (cancelled) return;
           try {
@@ -161,11 +169,9 @@ export function OrderTracker({ orderId }: OrderTrackerProps) {
             /* ignore malformed frame */
           }
         };
-        source.onerror = () => {
-          source?.close();
-          source = null;
-          startFallbackPoll();
-        };
+        // Don't close the source — let EventSource auto-reconnect natively.
+        // Poll bridges the gap meanwhile; onopen clears it on reconnect.
+        source.onerror = () => startFallbackPoll();
       } catch {
         startFallbackPoll();
       }
