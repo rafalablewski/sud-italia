@@ -5840,6 +5840,60 @@ export async function getBundleFunnelEvents(opts?: {
   });
 }
 
+// ─── Bundle feedback (voice-of-customer, audit elite-qsr §2) ─────────────
+//
+// The bundle audit log captures WHAT was sold; this captures what the
+// customer thought of the value. A post-receipt thumbs-up/down per bundle
+// order so a bundle that converts well but is disliked (a profit centre
+// burning brand equity) becomes visible on BundleAnalyticsCard instead of
+// being discovered from a one-star review. Upsert by orderId so a
+// customer can change their mind without skewing the rate.
+
+export interface BundleFeedbackEvent {
+  id: string;
+  orderId: string;
+  bundleId: string;
+  bundleName: string;
+  locationSlug: string;
+  rating: "up" | "down";
+  createdAt: string;
+}
+
+export async function appendBundleFeedback(event: BundleFeedbackEvent): Promise<void> {
+  await withLock("bundle-feedback.json", async () => {
+    const list = await readJSON<BundleFeedbackEvent[]>("bundle-feedback.json", []);
+    const next = list.filter((e) => e.orderId !== event.orderId);
+    next.push(event);
+    await writeJSON("bundle-feedback.json", next);
+  });
+  incrCounter(`bundles.feedback.${event.rating}`);
+}
+
+export async function getBundleFeedback(opts?: {
+  locationSlug?: string;
+  sinceIso?: string;
+}): Promise<BundleFeedbackEvent[]> {
+  const all = await readJSON<BundleFeedbackEvent[]>("bundle-feedback.json", []);
+  return all.filter((e) => {
+    if (opts?.locationSlug && e.locationSlug !== opts.locationSlug) return false;
+    if (opts?.sinceIso && e.createdAt < opts.sinceIso) return false;
+    return true;
+  });
+}
+
+/** The most-recent bundle event for an order (one bundle per order), used
+ *  to resolve whether an order was a bundle + which bundle, for the
+ *  post-order feedback prompt. */
+export async function getBundleEventByOrderId(
+  orderId: string,
+): Promise<BundleEvent | null> {
+  const all = await readJSON<BundleEvent[]>("bundle-events.json", []);
+  for (let i = all.length - 1; i >= 0; i--) {
+    if (all[i].orderId === orderId) return all[i];
+  }
+  return null;
+}
+
 // ─── Scheduled bundle intents (Sprint 4 #17) ─────────────────────────────
 //
 // Pret-style "make this my weekly usual" intent capture. Phase 1 just

@@ -56,7 +56,11 @@ The tabbed analytics surface — revenue, orders, items, cohort, exports.
   signal at 95% confidence"). The control row is marked and listed first;
   the experiment's primary metric + lifecycle status label the section.
   The operator reads the verdict here, then promotes the winner from the
-  Upsell → Experiments tab (see [`growth.md`](./growth.md)).
+  Upsell → Experiments tab (see [`growth.md`](./growth.md)). The "By
+  bundle" table also carries a **Value** column — voice-of-customer
+  thumbs (👍 / 👎) from the post-order `BundleFeedbackPrompt`, amber-
+  flagged when ≥20% thumbs-down on ≥5 ratings so a high-converting-but-
+  disliked bundle is caught before it becomes a one-star review.
 
 ## Cash — `/admin/cash`
 

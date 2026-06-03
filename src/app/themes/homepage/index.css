@@ -6344,6 +6344,63 @@ body.v8-detail-open { overflow: hidden; }
 .v8-order-comeback-link.is-basil:hover { color: var(--color-basil); }
 
 /* ------------------------------------------------------------------
+   BundleFeedbackPrompt — voice-of-customer bundle value thumbs.
+   Renders only on bundle orders (self-gated by the component).
+   ------------------------------------------------------------------ */
+.v8-bundle-feedback-q {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--color-espresso);
+}
+.v8-bundle-feedback-sub {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.v8-bundle-feedback-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.v8-bundle-feedback-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--color-line);
+  background: var(--color-parchment-deep);
+  color: var(--color-espresso);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.v8-bundle-feedback-btn:disabled { opacity: 0.6; cursor: default; }
+.v8-bundle-feedback-btn.is-up:hover:not(:disabled) {
+  border-color: rgba(74, 124, 89, 0.5);
+  background: rgba(74, 124, 89, 0.1);
+  color: var(--color-basil-deep);
+}
+.v8-bundle-feedback-btn.is-down:hover:not(:disabled) {
+  border-color: rgba(122, 43, 43, 0.4);
+  background: rgba(122, 43, 43, 0.07);
+  color: var(--color-oxblood);
+}
+.v8-bundle-feedback.is-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--color-espresso);
+}
+.v8-bundle-feedback.is-done em { font-family: var(--font-heading); font-style: italic; }
+
+/* ------------------------------------------------------------------
    CustomerMilestone — round-number recognition card.
    ------------------------------------------------------------------ */
 .v8-order-milestone {

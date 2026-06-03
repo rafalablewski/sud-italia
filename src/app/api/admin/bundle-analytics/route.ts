@@ -3,9 +3,11 @@ import { withAdmin } from "@/lib/api-middleware";
 import {
   getBundleEvents,
   getBundleFunnelEvents,
+  getBundleFeedback,
   getUpsellSettings,
   type BundleEvent,
   type BundleFunnelEvent,
+  type BundleFeedbackEvent,
 } from "@/lib/store";
 import type { Experiment, ExperimentMetric } from "@/lib/experiments";
 import {
@@ -37,6 +39,11 @@ interface BundleRollup {
   totalSavingsGrosze: number;
   /** % discount given relative to refPrice across all events. */
   effectiveDiscount: number;
+  /** Voice-of-customer (audit elite-qsr §2): post-order thumbs on this
+   *  bundle. thumbsDownRate flags a bundle that sells but disappoints. */
+  thumbsUp: number;
+  thumbsDown: number;
+  thumbsDownRate: number;
 }
 
 interface VariantVerdict {
@@ -296,12 +303,26 @@ function experimentSummary(experiment: Experiment | null): ExperimentSummary | n
   };
 }
 
+/** thumbsUp / thumbsDown per bundle id from the voice-of-customer log. */
+function feedbackByBundle(feedback: BundleFeedbackEvent[]): Map<string, { up: number; down: number }> {
+  const m = new Map<string, { up: number; down: number }>();
+  for (const f of feedback) {
+    const cur = m.get(f.bundleId) ?? { up: 0, down: 0 };
+    if (f.rating === "up") cur.up++;
+    else cur.down++;
+    m.set(f.bundleId, cur);
+  }
+  return m;
+}
+
 function rollup(
   events: BundleEvent[],
   funnel: BundleFunnelEvent[],
+  feedback: BundleFeedbackEvent[],
   windowDays: number,
   experiment: Experiment | null,
 ): BundleAnalytics {
+  const feedbackMap = feedbackByBundle(feedback);
   const byBundle = new Map<string, BundleEvent[]>();
   const byVariant = new Map<string, BundleEvent[]>();
   const byDay = new Map<string, BundleEvent[]>();
@@ -330,6 +351,8 @@ function rollup(
         const totalRev = list.reduce((s, e) => s + e.finalPriceGrosze, 0);
         const totalRef = list.reduce((s, e) => s + e.refPriceGrosze, 0);
         const totalSav = list.reduce((s, e) => s + e.savingsGrosze, 0);
+        const fb = feedbackMap.get(bundleId) ?? { up: 0, down: 0 };
+        const fbTotal = fb.up + fb.down;
         return {
           bundleId,
           bundleName: list[0].bundleName,
@@ -341,6 +364,9 @@ function rollup(
           totalRevenueGrosze: totalRev,
           totalSavingsGrosze: totalSav,
           effectiveDiscount: totalRef === 0 ? 0 : (totalRef - totalRev) / totalRef,
+          thumbsUp: fb.up,
+          thumbsDown: fb.down,
+          thumbsDownRate: fbTotal === 0 ? 0 : fb.down / fbTotal,
         };
       })
       .sort((a, b) => b.count - a.count),
@@ -378,12 +404,13 @@ export const GET = withAdmin({}, async (req) => {
   // The verdict math is per-location (an experiment lives on one location's
   // upsell config). Chain-wide views (no location) skip the experiment so
   // we never compare variants pooled across different live experiments.
-  const [events, funnel, experiment] = await Promise.all([
+  const [events, funnel, feedback, experiment] = await Promise.all([
     getBundleEvents({ locationSlug, sinceIso }),
     getBundleFunnelEvents({ locationSlug, sinceIso }),
+    getBundleFeedback({ locationSlug, sinceIso }),
     locationSlug
       ? getUpsellSettings().then((s) => s[locationSlug]?.experiment ?? null)
       : Promise.resolve(null),
   ]);
-  return NextResponse.json(rollup(events, funnel, days, experiment));
+  return NextResponse.json(rollup(events, funnel, feedback, days, experiment));
 });

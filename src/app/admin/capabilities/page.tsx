@@ -879,6 +879,12 @@ export default async function CapabilitiesPage() {
           summary: "BundleAnalyticsCard on Reports surfaces bundle orders, revenue, total savings given, anchor conversion %, decoy CTR, per-bundle effective discount + avg mains, A/B variant uplift, conversion funnel, AND a new-vs-repeat-customer cohort split (target ≥25% new-customer share among bundle orders proves acquisition role). Slot links persisted per BundleEvent for follow-up capacity analysis.",
         },
         {
+          name: "Bundle value feedback (voice-of-customer)",
+          status: "live",
+          href: "/admin/reports",
+          summary: "Post-receipt thumbs up/down on every bundle order — the one signal the bundle audit log can't capture (what the customer thought of the value). BundleFeedbackPrompt on /order-confirmation self-gates to bundle orders (GET /api/customer/bundle-feedback?orderId=), records an upsert-by-order rating (POST same route; bundle id/name/location resolved server-side from the BundleEvent so it can't be spoofed), persisted to bundle-feedback.json. BundleAnalyticsCard's 'By bundle' table shows the 👍/👎 split per bundle and amber-flags ≥20% thumbs-down on ≥5 ratings so a high-converting-but-disliked bundle (a profit centre burning brand equity) is caught before it surfaces as a one-star review.",
+        },
+        {
           name: "Bundle low-margin operator alert + save-time guardian",
           status: "live",
           href: "/admin/upsell",

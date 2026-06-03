@@ -18,6 +18,9 @@ interface BundleAnalytics {
     totalRevenueGrosze: number;
     totalSavingsGrosze: number;
     effectiveDiscount: number;
+    thumbsUp: number;
+    thumbsDown: number;
+    thumbsDownRate: number;
   }[];
   byVariant: {
     variantId: string;
@@ -157,6 +160,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                       <th className="py-1 pr-2 text-right">Avg save</th>
                       <th className="py-1 pr-2 text-right">Eff. disc.</th>
                       <th className="py-1 pr-2 text-right">Avg mains</th>
+                      <th className="py-1 pr-2 text-right">Value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -171,6 +175,9 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
                         </td>
                         <td className="py-1 pr-2 text-right admin-text-secondary">
                           {b.avgMainsCount.toFixed(1)}
+                        </td>
+                        <td className="py-1 pr-2 text-right">
+                          <BundleSentiment up={b.thumbsUp} down={b.thumbsDown} rate={b.thumbsDownRate} />
                         </td>
                       </tr>
                     ))}
@@ -339,6 +346,21 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
         </>
       )}
     </div>
+  );
+}
+
+/** Voice-of-customer sentiment for a bundle. Shows the thumbs split and
+ *  flags a high disappointment rate (≥20% down on ≥5 ratings) in amber so
+ *  a high-converting-but-disliked bundle is visible (audit elite-qsr §2). */
+function BundleSentiment({ up, down, rate }: { up: number; down: number; rate: number }) {
+  const total = up + down;
+  if (total === 0) return <span className="admin-text-secondary">—</span>;
+  const flag = total >= 5 && rate >= 0.2;
+  return (
+    <span className={flag ? "text-[var(--warning)] font-semibold" : "admin-text-secondary"}>
+      👍 {up} · 👎 {down}
+      {flag ? ` (${(rate * 100).toFixed(0)}% ↓)` : ""}
+    </span>
   );
 }
 
