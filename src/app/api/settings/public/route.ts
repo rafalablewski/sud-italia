@@ -11,11 +11,17 @@ import {
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
-  const [settings, appSettings, activeSurveys] = await Promise.all([
+  const [settings, appSettings] = await Promise.all([
     getLoyaltySettings(),
     getSettings(),
-    getActiveSurveys(),
   ]);
+  // Merge over the defaults so every flag is a guaranteed boolean even for
+  // installs whose persisted layout predates a newer toggle (getSettings
+  // doesn't inject DEFAULT_LAYOUT_SETTINGS into a saved partial).
+  const layout = { ...DEFAULT_LAYOUT_SETTINGS, ...(appSettings.layout ?? {}) };
+  // Only read + ship the Pulse catalogue when the feature is on, so the
+  // kill-switch truly drops it out (no per-request read, no payload weight).
+  const activeSurveys = layout.showNpsSurvey ? await getActiveSurveys() : [];
   const location = req.nextUrl.searchParams.get("location");
 
   // Filter seasonal items by location if specified
@@ -109,7 +115,7 @@ export async function GET(req: NextRequest) {
      *  Components like CurrencySwitcher read these and return null when
      *  the corresponding flag is false, so the surface loses its DOM
      *  and visible CSS without a code change. */
-    layout: appSettings.layout ?? DEFAULT_LAYOUT_SETTINGS,
+    layout,
     /** Live NPS-style Pulse surveys (active only). The storefront trigger
      *  engine matches one to a fired signal (post-order, prolonged-browse,
      *  exit-intent, …). Only customer-facing copy is shipped — no operator

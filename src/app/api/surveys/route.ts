@@ -11,10 +11,15 @@ import type { SurveyResponse } from "@/lib/surveys";
  * way /api/feedback is, so a single guest can't stuff the board.
  */
 export async function POST(req: NextRequest) {
+  // Same posture as /api/feedback: 5/min/IP + 5/min/phone. This is an
+  // anonymous, best-effort endpoint, so rate limiting (not identity) is the
+  // abuse control; a determined attacker rotating IPs is an accepted residual
+  // risk, which is why the admin Pulse score is always read against response
+  // volume (see the MetricExplainer on /admin/surveys).
   const ipLimit = await enforceRateLimit({
     key: "survey-ip",
     id: getClientIp(req),
-    limit: 12,
+    limit: 5,
     windowSec: 60,
   });
   if (ipLimit) return ipLimit;
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
     const phoneLimit = await enforceRateLimit({
       key: "survey-phone",
       id: normalizedPhone,
-      limit: 8,
+      limit: 5,
       windowSec: 60,
     });
     if (phoneLimit) return phoneLimit;
@@ -93,7 +98,7 @@ export async function POST(req: NextRequest) {
         : undefined,
     locationSlug:
       typeof locationSlug === "string" && locationSlug.trim()
-        ? locationSlug.trim()
+        ? locationSlug.trim().slice(0, 80)
         : undefined,
     pagePath:
       typeof pagePath === "string" && pagePath.trim()

@@ -23,6 +23,7 @@ import {
   type Column,
 } from "./v2/ui";
 import { BarChart, KpiCard } from "./v2/charts";
+import { StarRating } from "@/components/rating/StarRating";
 import {
   MetricExplainer,
   PageExplainer,
@@ -33,8 +34,8 @@ import {
 } from "./Explainers";
 import {
   averageStars,
-  classifyRating,
   computePulseScore,
+  pulseBreakdown,
   SURVEY_TRIGGER_LABEL,
   type SurveyDefinition,
   type SurveyResponse,
@@ -57,24 +58,6 @@ function pulseTone(score: number): "success" | "info" | "warning" | "danger" {
   if (score >= 0) return "info";
   if (score >= -25) return "warning";
   return "danger";
-}
-
-function Stars({ n }: { n: number }) {
-  return (
-    <span style={{ display: "inline-flex", gap: 1 }} aria-label={`${n} of 5`}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star
-          key={s}
-          className="h-3.5 w-3.5"
-          style={{
-            fill: s <= n ? "var(--accent, #C9A23E)" : "none",
-            color: s <= n ? "var(--accent, #C9A23E)" : "var(--border)",
-          }}
-          aria-hidden
-        />
-      ))}
-    </span>
-  );
 }
 
 export function AdminSurveys() {
@@ -107,19 +90,15 @@ export function AdminSurveys() {
   }, [load]);
 
   const totals = useMemo(() => {
-    const total = responses.length;
-    const pulse = computePulseScore(responses);
+    const { total, pulse, promoters, detractors } = pulseBreakdown(responses);
     const avg = averageStars(responses);
-    let promoters = 0;
-    let detractors = 0;
+    const counts = [0, 0, 0, 0, 0];
     for (const r of responses) {
-      const c = classifyRating(r.rating);
-      if (c === "promoter") promoters++;
-      else if (c === "detractor") detractors++;
+      if (r.rating >= 1 && r.rating <= 5) counts[r.rating - 1]++;
     }
     const ratingDist = [1, 2, 3, 4, 5].map((star) => ({
       rating: `${star}★`,
-      count: responses.filter((r) => r.rating === star).length,
+      count: counts[star - 1],
     }));
     return { total, pulse, avg, promoters, detractors, ratingDist };
   }, [responses]);
@@ -249,7 +228,7 @@ export function AdminSurveys() {
     {
       key: "rating",
       header: "Rating",
-      cell: (r) => <Stars n={r.rating} />,
+      cell: (r) => <StarRating rating={r.rating} size="sm" showValue={false} />,
     },
     {
       key: "survey",
@@ -395,7 +374,15 @@ export function AdminSurveys() {
           value={totals.avg}
           display={totals.avg ? `${totals.avg.toFixed(2)} ★` : "—"}
           icon={Star}
-          tone={totals.avg >= 4 ? "success" : totals.avg >= 3 ? "warning" : "danger"}
+          tone={
+            totals.total === 0
+              ? "neutral"
+              : totals.avg >= 4
+                ? "success"
+                : totals.avg >= 3
+                  ? "warning"
+                  : "danger"
+          }
         />
         <KpiCard
           label="Promoters (5★)"

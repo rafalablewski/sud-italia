@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   classifyRating,
   computePulseScore,
+  pulseBreakdown,
   averageStars,
   mergeSurveysWithDefaults,
   DEFAULT_SURVEYS,
@@ -35,6 +36,29 @@ test("computePulseScore handles the extremes and empty set", () => {
   assert.equal(computePulseScore([{ rating: 1 }, { rating: 3 }]), -100);
   // All passives net to zero (neither promoter nor detractor).
   assert.equal(computePulseScore([{ rating: 4 }, { rating: 4 }]), 0);
+});
+
+test("pulseBreakdown counts buckets in one pass and agrees with computePulseScore", () => {
+  const responses = [
+    ...Array(60).fill({ rating: 5 }),
+    ...Array(25).fill({ rating: 4 }),
+    ...Array(15).fill({ rating: 2 }),
+  ];
+  const b = pulseBreakdown(responses);
+  assert.equal(b.total, 100);
+  assert.equal(b.promoters, 60);
+  assert.equal(b.passives, 25);
+  assert.equal(b.detractors, 15);
+  assert.equal(b.pulse, 45);
+  assert.equal(b.pulse, computePulseScore(responses));
+  // Empty set is all-zero, not NaN.
+  assert.deepEqual(pulseBreakdown([]), {
+    total: 0,
+    promoters: 0,
+    passives: 0,
+    detractors: 0,
+    pulse: 0,
+  });
 });
 
 test("averageStars is a plain mean, 0 when empty", () => {

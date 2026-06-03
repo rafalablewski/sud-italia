@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Star, Send, X, CheckCircle } from "lucide-react";
+import { Send, X, CheckCircle } from "lucide-react";
+import { StarRating } from "@/components/rating/StarRating";
 import { useSurveyStore } from "@/store/survey";
 import { useCustomer } from "@/store/customer";
 import type { PublicSurvey } from "@/lib/public-settings";
@@ -48,13 +49,19 @@ function PromptCard({
   context: SurveyContext;
 }) {
   const dismiss = useSurveyStore((s) => s.dismiss);
+  const markShown = useSurveyStore((s) => s.markShown);
   const markAnswered = useSurveyStore((s) => s.markAnswered);
   const { customer } = useCustomer();
 
   const [rating, setRating] = useState(0);
-  const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState("");
   const [phase, setPhase] = useState<"ask" | "submitting" | "thanks">("ask");
+
+  // The card painted — only now do we burn the per-survey "seen" + global-gap
+  // budgets, so a guest who navigates away before this never gets locked out.
+  useEffect(() => {
+    markShown(survey.id);
+  }, [survey.id, markShown]);
 
   // Auto-close the thank-you flash.
   useEffect(() => {
@@ -62,8 +69,6 @@ function PromptCard({
     const t = setTimeout(() => markAnswered(survey.id), 2200);
     return () => clearTimeout(t);
   }, [phase, survey.id, markAnswered]);
-
-  const shown = hovered || rating;
 
   const submit = async () => {
     if (rating < 1) return;
@@ -115,39 +120,14 @@ function PromptCard({
           <h3 className="v8-pulse-question">{survey.question}</h3>
           {survey.subtext && <p className="v8-pulse-sub">{survey.subtext}</p>}
 
-          <div
-            className="v8-pulse-stars"
-            role="radiogroup"
-            aria-label={survey.question}
-          >
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                role="radio"
-                aria-checked={rating === star}
-                aria-label={`${star} star${star > 1 ? "s" : ""}`}
-                className="v8-pulse-star"
-                disabled={phase === "submitting"}
-                onMouseEnter={() => setHovered(star)}
-                onMouseLeave={() => setHovered(0)}
-                onClick={() => setRating(star)}
-              >
-                <Star
-                  className="h-7 w-7"
-                  style={{
-                    fill: star <= shown ? "var(--color-italia-gold, #e0a106)" : "none",
-                    color:
-                      star <= shown
-                        ? "var(--color-italia-gold, #e0a106)"
-                        : "var(--color-muted, #b8b0a4)",
-                    transition: "transform .12s, fill .12s, color .12s",
-                    transform: star <= shown ? "scale(1.06)" : "none",
-                  }}
-                  aria-hidden
-                />
-              </button>
-            ))}
+          <div className="v8-pulse-stars">
+            <StarRating
+              rating={rating}
+              interactive={phase === "ask"}
+              size="lg"
+              showValue={false}
+              onRate={setRating}
+            />
           </div>
 
           <div className="v8-pulse-scale">

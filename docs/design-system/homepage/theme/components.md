@@ -68,8 +68,10 @@ Anatomy of the card (`.v8-pulse`):
   "seen" for cooldown).
 - **`.v8-pulse-question`** / **`.v8-pulse-sub`** — Cormorant headline +
   Lora subtext, matching the order-card editorial voice.
-- **`.v8-pulse-stars`** / **`.v8-pulse-star`** — the 1–5 control. Gold
-  fill (`--color-italia-gold`) on hover/selection.
+- **`.v8-pulse-stars`** — wraps the 1–5 control, which is the shared
+  [`<StarRating>`](#starrating--srccomponentsratingstarratingtsx) primitive
+  (`size="lg"`, `showValue={false}`) — not a bespoke widget, so the gold
+  fill / hover / a11y stay identical to the post-order `<FeedbackSurvey>`.
 - **`.v8-pulse-scale`** — the low/high anchor labels under the stars.
 - **`.v8-pulse-followup`** — slides in once rated: `.v8-pulse-textarea`
   (optional comment) + `.v8-pulse-send` (terracotta CTA, same vocabulary
@@ -158,11 +160,17 @@ on the storefront wraps in `<Container />` for consistent gutter.
 
 ### `<StarRating />` — `src/components/rating/StarRating.tsx`
 
-The 5-star display for feedback + reviews.
+The shared 5-star control for feedback + reviews — both read-only display
+and interactive input (`interactive` + `onRate`). Used by the post-order
+`<FeedbackSurvey>`, the Pulse `<SurveyPrompt>`, and the admin Pulse board,
+so the star vocabulary is defined once.
 
 - Filled star: `fill-italia-gold text-italia-gold`.
 - Empty star: `fill-transparent text-italia-gold` (outline only).
 - Half star supported via SVG mask.
+- `size`: `"sm"` (14px) · `"md"` (20px) · `"lg"` (28px, the Pulse prompt).
+- `showValue` (default `true`): set `false` to hide the numeric "4.0" label
+  beside the stars (the Pulse prompt + admin table use this).
 - Inline rating count: `text-italia-gray` at body-sm.
 
 ### `<NavDropdown />` — `src/components/ui/NavDropdown.tsx`

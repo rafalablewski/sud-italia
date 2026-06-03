@@ -243,21 +243,42 @@ export function classifyRating(
   return "detractor";
 }
 
+export interface PulseBreakdown {
+  total: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  /** NPS-style net score on a −100…+100 scale. */
+  pulse: number;
+}
+
+/**
+ * Single-pass NPS breakdown — promoter/passive/detractor counts plus the net
+ * Pulse score. The one place the promoter/detractor definition lives, so the
+ * admin board and the score never drift.
+ */
+export function pulseBreakdown(responses: { rating: number }[]): PulseBreakdown {
+  let promoters = 0;
+  let passives = 0;
+  let detractors = 0;
+  for (const r of responses) {
+    const c = classifyRating(r.rating);
+    if (c === "promoter") promoters++;
+    else if (c === "passive") passives++;
+    else detractors++;
+  }
+  const total = responses.length;
+  const pulse = total === 0 ? 0 : Math.round(((promoters - detractors) / total) * 100);
+  return { total, promoters, passives, detractors, pulse };
+}
+
 /**
  * The Pulse score — an NPS-style net of promoters minus detractors as a
  * percentage of all answers, on a −100…+100 scale. Identical maths to a
  * classic NPS, just sourced from the 5-star control.
  */
 export function computePulseScore(responses: { rating: number }[]): number {
-  if (responses.length === 0) return 0;
-  let promoters = 0;
-  let detractors = 0;
-  for (const r of responses) {
-    const c = classifyRating(r.rating);
-    if (c === "promoter") promoters++;
-    else if (c === "detractor") detractors++;
-  }
-  return Math.round(((promoters - detractors) / responses.length) * 100);
+  return pulseBreakdown(responses).pulse;
 }
 
 /** Simple mean of the star ratings (0 when empty). */

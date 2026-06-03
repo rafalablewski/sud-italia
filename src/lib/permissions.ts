@@ -383,6 +383,10 @@ export function permissionForApiPath(
     case "corporate":
       return write ? "corporate.edit" : "corporate.view";
     case "feedback":
+    case "surveys":
+      // Pulse surveys live under the feedback permission — the API gate must
+      // match the page gate (permissionForAdminPage) so a custom-permission
+      // user can't read response PII via the API after being denied the page.
       return write ? "feedback.respond" : "feedback.view";
     case "reports":
       if (sub.includes("export")) return "reports.export";

@@ -8708,15 +8708,7 @@ body.v8-cart-open .v8-abandoned {
   gap: 6px;
   margin: 4px 0 6px;
 }
-.v8-pulse-star {
-  border: none;
-  background: transparent;
-  padding: 2px;
-  cursor: pointer;
-  line-height: 0;
-}
-.v8-pulse-star:disabled { cursor: default; }
-.v8-pulse-star:hover { transform: scale(1.08); }
+/* The stars themselves are the shared <StarRating size="lg"> primitive. */
 .v8-pulse-scale {
   display: flex;
   justify-content: space-between;

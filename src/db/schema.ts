@@ -475,6 +475,33 @@ export const feedback = pgTable(
   ],
 );
 
+// --- Pulse surveys (NPS-style micro-surveys) ---------------------------
+// Sibling of `feedback` — same PII shape, same admin board. A dedicated
+// indexed table (not a kv blob) so reads stay cheap and writes are a single
+// indexed INSERT regardless of volume.
+
+export const surveyResponses = pgTable(
+  "survey_responses",
+  {
+    id: text("id").primaryKey(),
+    surveyId: text("survey_id").notNull(),
+    trigger: text("trigger").notNull(),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    customerPhone: text("customer_phone"),
+    customerName: text("customer_name"),
+    locationSlug: text("location_slug"),
+    pagePath: text("page_path"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("survey_responses_created_idx").on(table.createdAt),
+    index("survey_responses_survey_idx").on(table.surveyId),
+    index("survey_responses_trigger_idx").on(table.trigger),
+  ],
+);
+
+
 // --- Phase 1: staff / shifts / time-punches (m1_8a) ---------------------
 
 export const staff = pgTable(

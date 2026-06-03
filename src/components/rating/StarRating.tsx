@@ -6,9 +6,11 @@ import { Star } from "lucide-react";
 interface StarRatingProps {
   rating?: number;
   reviewCount?: number;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   interactive?: boolean;
   onRate?: (rating: number) => void;
+  /** Show the numeric "4.0" label beside the stars. Default true. */
+  showValue?: boolean;
 }
 
 export function StarRating({
@@ -17,12 +19,13 @@ export function StarRating({
   size = "sm",
   interactive = false,
   onRate,
+  showValue = true,
 }: StarRatingProps) {
   const [hovered, setHovered] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
   const displayRating = hovered ?? selected ?? rating;
-  const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+  const iconSize = size === "sm" ? "h-3.5 w-3.5" : size === "lg" ? "h-7 w-7" : "h-5 w-5";
 
   const handleClick = (star: number) => {
     if (!interactive) return;
@@ -52,7 +55,7 @@ export function StarRating({
           </button>
         ))}
       </div>
-      {rating > 0 && (
+      {showValue && rating > 0 && (
         <span className="text-xs text-italia-gray font-medium ml-0.5">
           {rating.toFixed(1)}
         </span>

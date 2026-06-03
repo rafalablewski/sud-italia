@@ -90,8 +90,16 @@ export function SurveyTriggerEngine() {
     const onMouseOut = (e: MouseEvent) => {
       if (!armed) return;
       if (e.clientY <= 0 && !e.relatedTarget) {
+        // Disarm while the request is in flight so we don't fire twice, but
+        // re-arm if the engine declined (cooldown / kill-switch / a prompt
+        // already shown this session) — otherwise the signal is spent on a
+        // no-op and a later genuine exit can never prompt.
         armed = false;
-        void request("exit-intent", { locationSlug, pagePath: pathname });
+        void request("exit-intent", { locationSlug, pagePath: pathname }).then(
+          (opened) => {
+            if (!opened) armed = true;
+          },
+        );
       }
     };
     const finePointer =

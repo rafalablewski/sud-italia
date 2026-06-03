@@ -29,7 +29,7 @@ import { appendOutboxEvent } from "@/lib/outbox";
 import { incrCounter } from "@/lib/metrics";
 import { and, asc, desc, eq, gte, inArray, lt, ne, sql as drizzleSql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientProducts as ingredientProductsTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
+import { allergenIncidents as allergenIncidentsTable, auditLog as auditLogTable, brands as brandsTable, customerNotes as customerNotesTable, customers as customersTable, feedback as feedbackTable, franchisees as franchiseesTable, ingredientProducts as ingredientProductsTable, ingredientStock as ingredientStockTable, ingredients as ingredientsTable, kdsTickets as kdsTicketsTable, locationAssignments as locationAssignmentsTable, loyaltyMembers as loyaltyMembersTable, menuItemStation as menuItemStationTable, orderItems as orderItemsTable, orders as ordersTable, pointAdjustments as pointAdjustmentsTable, recipes as recipesTable, royaltyStatements as royaltyStatementsTable, shifts as shiftsTable, slots as slotsTable, staff as staffTable, stations as stationsTable, stockMovements as stockMovementsTable, surveyResponses as surveyResponsesTable, tempLogs as tempLogsTable, timePunches as timePunchesTable, whatsappMessages as whatsappMessagesTable } from "@/db/schema";
 import { lte } from "drizzle-orm";
 import { bumpLazyBackfillHit, ensureTable } from "@/db/migrate";
 import { dbBreakerOpen, withDbTimeout } from "@/lib/db-resilience";
@@ -5489,14 +5489,15 @@ export async function setFeedbackAnalysis(
 // --- Pulse surveys (NPS-style micro-surveys) -------------------------
 //
 // Shape + seed catalogue + scoring live in the pure `@/lib/surveys`
-// module (client-safe). Persistence goes through readJSON/writeJSON so it
-// rides the generic kv_store on Postgres and the filesystem fallback in
-// local dev (CLAUDE rule 2) — no bespoke table needed for this volume.
+// module (client-safe). The catalogue (a small, bounded list) rides the
+// generic kv_store via readJSON/writeJSON. Responses, which grow without
+// bound, use a dedicated indexed `survey_responses` table with a
+// filesystem-JSON fallback for local dev — the same dual-write pattern as
+// `feedback` above, so an indexed INSERT replaces a read-modify-write of an
+// ever-growing blob (and nothing is silently evicted).
 
 const SURVEY_DEFS_KEY = "survey-definitions.json";
 const SURVEY_RESPONSES_KEY = "survey-responses.json";
-/** Bound the responses blob so the kv row stays small; keep the newest. */
-const SURVEY_RESPONSES_CAP = 5000;
 
 /**
  * The full survey catalogue — persisted operator edits merged over the
@@ -5527,32 +5528,132 @@ export async function updateSurvey(
     );
     const idx = list.findIndex((s) => s.id === id);
     if (idx === -1) return null;
-    // `trigger` is wired to concrete client signals — never let an edit
-    // point a survey at a trigger that can't fire.
-    const { trigger: _ignoreTrigger, ...safe } = updates;
+    // `trigger` is intentionally never read from `updates` — it is wired to
+    // concrete client signals and must not be repointed. Defence-in-depth on
+    // top of the route's field whitelist: clamp/coerce so a direct caller
+    // can't persist an oversized or wrong-typed definition.
+    const safe: Partial<SurveyDefinition> = {};
+    if (typeof updates.active === "boolean") safe.active = updates.active;
+    if (typeof updates.question === "string") safe.question = updates.question.slice(0, 160);
+    if (typeof updates.subtext === "string") safe.subtext = updates.subtext.slice(0, 200);
+    if (typeof updates.scaleLow === "string") safe.scaleLow = updates.scaleLow.slice(0, 40);
+    if (typeof updates.scaleHigh === "string") safe.scaleHigh = updates.scaleHigh.slice(0, 40);
+    if (typeof updates.commentPrompt === "string")
+      safe.commentPrompt = updates.commentPrompt.slice(0, 160);
+    if (typeof updates.cooldownDays === "number" && Number.isFinite(updates.cooldownDays))
+      safe.cooldownDays = Math.min(365, Math.max(0, Math.round(updates.cooldownDays)));
     list[idx] = { ...list[idx], ...safe };
     await writeJSON(SURVEY_DEFS_KEY, list);
     return list[idx];
   });
 }
 
+const SURVEY_RESPONSES_DDL = [
+  `CREATE TABLE IF NOT EXISTS survey_responses (
+    id text PRIMARY KEY,
+    survey_id text NOT NULL,
+    trigger text NOT NULL,
+    rating integer NOT NULL,
+    comment text,
+    customer_phone text,
+    customer_name text,
+    location_slug text,
+    page_path text,
+    created_at timestamptz NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS survey_responses_created_idx
+    ON survey_responses (created_at)`,
+  `CREATE INDEX IF NOT EXISTS survey_responses_survey_idx ON survey_responses (survey_id)`,
+  `CREATE INDEX IF NOT EXISTS survey_responses_trigger_idx ON survey_responses (trigger)`,
+];
+
+async function ensureSurveyResponsesTable(): Promise<void> {
+  await ensureTable("survey_responses", SURVEY_RESPONSES_DDL);
+}
+
+function rowToSurveyResponse(
+  row: typeof surveyResponsesTable.$inferSelect,
+): SurveyResponse {
+  return {
+    id: row.id,
+    surveyId: row.surveyId,
+    trigger: row.trigger as SurveyResponse["trigger"],
+    rating: row.rating,
+    comment: row.comment ?? undefined,
+    customerPhone: row.customerPhone ?? undefined,
+    customerName: row.customerName ?? undefined,
+    locationSlug: row.locationSlug ?? undefined,
+    pagePath: row.pagePath ?? undefined,
+    date: row.createdAt.toISOString(),
+  };
+}
+
+async function dualWriteSurveyResponse(entry: SurveyResponse): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  try {
+    await ensureSurveyResponsesTable();
+    const values = {
+      id: entry.id,
+      surveyId: entry.surveyId,
+      trigger: entry.trigger,
+      rating: entry.rating,
+      comment: entry.comment ?? null,
+      customerPhone: entry.customerPhone ?? null,
+      customerName: entry.customerName ?? null,
+      locationSlug: entry.locationSlug ?? null,
+      pagePath: entry.pagePath ?? null,
+      createdAt: new Date(entry.date),
+    };
+    await db
+      .insert(surveyResponsesTable)
+      .values(values)
+      .onConflictDoUpdate({ target: surveyResponsesTable.id, set: values });
+  } catch (err) {
+    logger.warn(
+      "dualWriteSurveyResponse failed",
+      { id: entry.id, layer: "store.surveys" },
+      err,
+    );
+  }
+}
+
 export async function getSurveyResponses(): Promise<SurveyResponse[]> {
-  return readJSON<SurveyResponse[]>(SURVEY_RESPONSES_KEY, []);
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureSurveyResponsesTable();
+      const rows = await db
+        .select()
+        .from(surveyResponsesTable)
+        .orderBy(desc(surveyResponsesTable.createdAt));
+      if (rows.length > 0) return rows.map(rowToSurveyResponse);
+    } catch (err) {
+      logger.warn(
+        "getSurveyResponses DB read failed; falling back",
+        { layer: "store.surveys" },
+        err,
+      );
+    }
+  }
+  const list = await readJSON<SurveyResponse[]>(SURVEY_RESPONSES_KEY, []);
+  if (list.length > 0) {
+    bumpLazyBackfillHit("survey_responses");
+    void Promise.all(list.map((r) => dualWriteSurveyResponse(r)));
+  }
+  return list;
 }
 
 export async function saveSurveyResponse(
   entry: SurveyResponse,
 ): Promise<SurveyResponse> {
-  return withLock(SURVEY_RESPONSES_KEY, async () => {
+  await withLock(SURVEY_RESPONSES_KEY, async () => {
     const list = await readJSON<SurveyResponse[]>(SURVEY_RESPONSES_KEY, []);
     list.push(entry);
-    const capped =
-      list.length > SURVEY_RESPONSES_CAP
-        ? list.slice(list.length - SURVEY_RESPONSES_CAP)
-        : list;
-    await writeJSON(SURVEY_RESPONSES_KEY, capped);
-    return entry;
+    await writeJSON(SURVEY_RESPONSES_KEY, list);
   });
+  await dualWriteSurveyResponse(entry);
+  return entry;
 }
 
 // ── Chatbot FAQ ──────────────────────────────────────────────

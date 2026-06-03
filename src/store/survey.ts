@@ -92,9 +92,19 @@ interface SurveyStore {
    */
   request: (trigger: PublicSurvey["trigger"], context?: SurveyContext) => Promise<boolean>;
   /** Dismiss without answering — still counts as "seen" for cooldown. */
+  /** Record that the elected prompt actually painted — burns the global gap
+   *  + per-survey "seen" budgets. Called by SurveyPrompt on mount so a guest
+   *  who is never shown anything (fast navigation) isn't locked out. */
+  markShown: (surveyId: string) => void;
   dismiss: () => void;
   /** Record a submitted answer + close. */
   markAnswered: (surveyId: string) => void;
+}
+
+/** Is this survey within its per-person cooldown (seen OR answered)? */
+function inCooldown(log: SurveyLog, survey: PublicSurvey): boolean {
+  const cd = survey.cooldownDays;
+  return daysSince(log.seen[survey.id]) < cd || daysSince(log.answered[survey.id]) < cd;
 }
 
 export const useSurveyStore = create<SurveyStore>((set, get) => ({
@@ -102,32 +112,42 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   promptedThisSession: false,
 
   request: async (trigger, context = {}) => {
-    const state = get();
-    if (state.active || state.promptedThisSession) return false;
+    if (get().active || get().promptedThisSession) return false;
 
     const settings = await fetchPublicSettings(context.locationSlug);
+    // Re-check after the await: a second trigger (or a StrictMode double
+    // invoke) could have elected a prompt while this one was in flight.
+    if (get().active || get().promptedThisSession) return false;
+
     // Umbrella kill-switch (Settings → Layout) — fail safe to OFF only when
     // explicitly false; absent settings keep the historical behaviour.
     if (settings?.layout?.showNpsSurvey === false) return false;
-    const surveys = settings?.surveys ?? [];
-    const survey = surveys.find((s) => s.trigger === trigger);
-    if (!survey) return false;
 
     const log = readLog();
-    // Global gap across sessions.
+    // Global gap across sessions — measured from the last prompt actually
+    // shown (markShown), not merely elected.
     if (hoursSince(log.lastPromptAt) < GLOBAL_MIN_GAP_HOURS) return false;
-    // Per-survey cooldown — seen (dismissed) or answered both count.
-    const cd = survey.cooldownDays;
-    if (daysSince(log.seen[survey.id]) < cd) return false;
-    if (daysSince(log.answered[survey.id]) < cd) return false;
 
-    // Eligible — open it, and burn the session + global + seen budgets now.
-    const now = new Date().toISOString();
-    log.seen[survey.id] = now;
-    log.lastPromptAt = now;
-    writeLog(log);
+    // Pick the FIRST active survey for this trigger that isn't in cooldown —
+    // operators can activate several per trigger to rotate questions, and a
+    // cooled-down leader shouldn't suppress the others.
+    const candidates = (settings?.surveys ?? []).filter((s) => s.trigger === trigger);
+    const survey = candidates.find((s) => !inCooldown(log, s));
+    if (!survey) return false;
+
+    // Reserve the in-memory session slot now (prevents a concurrent trigger
+    // from also opening), but DON'T burn the persistent seen/gap budgets until
+    // the card paints — see markShown.
     set({ active: { survey, context }, promptedThisSession: true });
     return true;
+  },
+
+  markShown: (surveyId) => {
+    const log = readLog();
+    const now = new Date().toISOString();
+    log.seen[surveyId] = now;
+    log.lastPromptAt = now;
+    writeLog(log);
   },
 
   dismiss: () => set({ active: null }),
