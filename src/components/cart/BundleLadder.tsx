@@ -19,7 +19,7 @@ import { resolveClientVariant, type Experiment } from "@/lib/experiments";
 import { useCustomer } from "@/store/customer";
 import type { CartItem, MenuItem, FulfillmentType } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
-import { BundleComposerSheet } from "./BundleComposerSheet";
+import { BundleComposer } from "./BundleComposer";
 
 interface BundleLadderProps {
   allMenuItems: MenuItem[];
@@ -253,6 +253,8 @@ export function BundleLadder({
   const handleComposerApply = (lines: CartItem[], priceGrosze: number) => {
     if (!composerBundle || priceGrosze <= 0) return;
     applyBundle(composerBundle.id, priceGrosze, lines, locationSlug);
+    // Collapse back to the ladder, which now reflects the applied tier.
+    setComposerBundle(null);
   };
 
   const familyMinSavings =
@@ -313,6 +315,19 @@ export function BundleLadder({
       )}
 
       {showLadder && visibleBundles.length > 0 && primaryTier && primaryPricing && (
+        composerBundle ? (
+          /* Inline feast builder — rendered in place of the ladder, inside
+             the cart, so a guest edits the deal without leaving their cart. */
+          <BundleComposer
+            bundle={composerBundle}
+            cartItems={items}
+            menuItems={allMenuItems}
+            locationSlug={locationSlug}
+            customerPhone={customer?.phone ?? null}
+            onCancel={handleComposerClose}
+            onApply={handleComposerApply}
+          />
+        ) : (
         <div className="v8-cart-ladder">
           <div className="v8-cart-ladder-head">
             <div className="v8-cart-ladder-title">
@@ -378,18 +393,8 @@ export function BundleLadder({
             </div>
           )}
         </div>
+        )
       )}
-
-      <BundleComposerSheet
-        open={composerBundle !== null}
-        onClose={handleComposerClose}
-        bundle={composerBundle}
-        cartItems={items}
-        menuItems={allMenuItems}
-        locationSlug={locationSlug}
-        customerPhone={customer?.phone ?? null}
-        onApply={handleComposerApply}
-      />
     </>
   );
 }
