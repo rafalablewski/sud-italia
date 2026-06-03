@@ -278,18 +278,12 @@ export function AdminSurveys() {
   ];
 
   if (loading) {
+    // Canonical admin loading state — the .v2-page-loading pill wrapped in
+    // .v2-page (admin/theme/components.md → "Loading states"), same as every
+    // other admin page. Never an EmptyState.
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Pulse surveys</h1>
-          </div>
-        </header>
-        <Card>
-          <CardBody>
-            <EmptyState icon={Gauge} title="Loading surveys…" compact />
-          </CardBody>
-        </Card>
+        <div className="v2-page-loading">Loading surveys…</div>
       </div>
     );
   }
