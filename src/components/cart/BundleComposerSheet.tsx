@@ -54,6 +54,13 @@ interface BundleComposerSheetProps {
   onApply: (lines: CartItem[], priceGrosze: number) => void;
 }
 
+/** The composer is launched from inside the cart drawer (`.v8-cart-sheet`,
+ *  z-index 95) and portals as a sibling under <body>, so it must stack
+ *  ABOVE the drawer — otherwise it opens trapped behind the cart and a
+ *  guest can't edit the deal without closing their cart. 120 clears every
+ *  storefront overlay; the backdrop (119) dims the drawer behind it. */
+const COMPOSER_Z = 120;
+
 /** Italian flourish per meal period — mirrors the BundleLadder header so
  *  the sheet reads as the same offer the customer just tapped. */
 const PERIOD_IT: Record<BundleMealPeriod, string> = {
@@ -178,7 +185,7 @@ export function BundleComposerSheet({
 
   if (!bundle || !resolved || !picks) {
     return (
-      <Sheet open={open} onClose={handleClose}>
+      <Sheet open={open} onClose={handleClose} z={COMPOSER_Z}>
         <div className="v8-composer">
           <div className="v8-composer-loading">Apparecchiando la tavola…</div>
         </div>

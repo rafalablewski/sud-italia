@@ -10,9 +10,20 @@ interface SheetProps {
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
+  /**
+   * Base stacking level for the panel; the backdrop sits one below it.
+   * Defaults to 50. Raise it when the sheet is launched from on top of
+   * another portalled overlay — e.g. the BundleComposerSheet opens from
+   * inside the cart drawer (`.v8-cart-sheet`, z-index 95), so it passes a
+   * level above that or it renders trapped behind the cart. Applied as an
+   * inline z-index (not a Tailwind class) so the value can be dynamic
+   * without tripping the JIT and so it deterministically beats the
+   * plain-CSS z-indexes the storefront overlays use.
+   */
+  z?: number;
 }
 
-export function Sheet({ open, onClose, children, title }: SheetProps) {
+export function Sheet({ open, onClose, children, title, z = 50 }: SheetProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,8 +48,9 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
     <>
       {/* Backdrop */}
       <div
+        style={{ zIndex: z - 1 }}
         className={cn(
-          "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
+          "fixed inset-0 bg-black/50 transition-opacity duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -48,8 +60,9 @@ export function Sheet({ open, onClose, children, title }: SheetProps) {
           bleed banners, etc). Without it the whole drawer becomes
           horizontally scrollable and reveals empty space past the edge. */}
       <div
+        style={{ zIndex: z }}
         className={cn(
-          "fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-xl transition-transform duration-300 ease-in-out overflow-y-auto overflow-x-hidden",
+          "fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transition-transform duration-300 ease-in-out overflow-y-auto overflow-x-hidden",
           open ? "translate-x-0" : "translate-x-full"
         )}
       >

@@ -1190,6 +1190,13 @@ the shared `<Sheet>` panel; `.v8-composer` fills it with the parchment
 ground and lays out a sticky header → scrolling body → sticky footer in
 the same paper / Cormorant / terracotta language as the ladder.
 
+Because it launches from *inside* the cart drawer (`.v8-cart-sheet`,
+z-index 95) and both portal as siblings under `<body>`, the sheet passes
+`z={120}` to `<Sheet>` so it stacks **above** the drawer — without it the
+composer opens trapped behind the cart and a guest can't edit the deal
+without closing their cart. The backdrop dims the drawer behind it, and
+closing the composer returns the guest straight to their cart.
+
 - `.v8-composer-head` sticky parchment bar (blur) — `.v8-composer-eyebrow`
   uppercase "Compose your bundle" + `.v8-composer-title` italic Cormorant
   oxblood "Make it a *Family*" with a muted `.v8-composer-title-it`
