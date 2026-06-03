@@ -1,14 +1,14 @@
 # Sud Italia — Bundle Ladder & Revenue Architecture Rebuild
 
 **Date:** 15 May 2026
-**Last updated:** 2026-05-29 (re-run pass — see the dated Update sections below; the body has been brought current to the code as of this date)
+**Last updated:** 2026-06-03 (re-run pass + one-time Rule #11 fold-in into the body; dated Update sections retained as history)
 **Branch:** `claude/restaurant-revenue-audit-5jrVU`
 **Auditor lens:** Restaurant revenue strategist + menu engineer + pricing psychologist + enterprise POS auditor
 **Stance:** Post-audit ship. Companion to `2026-05-revenue-growth-psychology-redesign.md`.
 
 This audit dropped the politeness of the previous one and shipped every recommendation that survived 30 minutes of red-team review. The companion audit ("How To Squeeze 30–60% More Revenue Out Of The Same Trucks") laid the framework; this audit applied it to the bundle/combo/menu architecture and shipped the actual code.
 
-> **Status as of 2026-05-29.** Bundle ladder + pricing all verified intact and exact against current menu data, now rendering on the V8 Tuscany storefront with a relational cost store behind it. Two changes since the original ship: the dynamic **cross-sell engine was replaced by a fixed four-slot panel** (see the corrected "Cross-sell engine" section), and all five "Next steps" (customer modifier picker, save-time margin gate, espresso A/B, zone delivery surcharge) remain ✗. Full detail in the dated 2026-05-29 Update below.
+> **Status as of 2026-06-03.** Bundle ladder + pricing all verified intact and exact against current menu data, on the V8 Tuscany storefront with a relational cost store behind it. **Two of the audit's open items closed since 2026-05-29:** the **customer-facing per-item modifier picker shipped** (the single highest-value un-shipped item this audit named — crust/toppings now flow customer picker → cart → KDS → Stripe → receipt), and the **`/rewards` Rule #1 regression** (hardcoded streak/challenge + `Math.random()` referral code) is **wired to real data**. The dynamic cross-sell engine remains a fixed four-slot panel; the remaining three "Next steps" (save-time margin gate, espresso A/B, zone delivery surcharge) remain ✗. Full detail in the dated 2026-06-03 Update below.
 
 ---
 
@@ -123,7 +123,7 @@ This rebuild shipped a dynamic, cart-aware cross-sell engine — quantity upsell
 
 | Item | Reason |
 |---|---|
-| Full menu-page modifier picker | Modifier data + cart math + admin viewer shipped; per-item picker UI on `/locations/[slug]` is a discrete follow-up (large diff, separate UX review). |
+| ~~Full menu-page modifier picker~~ ✅ **SHIPPED 2026-06-03** | The per-item picker now renders on the customer menu; crust/toppings flow customer → cart → KDS ticket → Stripe line → receipt. The "discrete follow-up" landed. |
 | Cart abandonment SMS | Existing `AbandonedCartBanner.tsx` handles the local-storage banner. A re-engagement SMS path needs comms ops sign-off. |
 | Dynamic surge pricing | Bundle discounts auto-suspend during peak times — admin can toggle bundles by weekday today. Full surge layer is its own audit. |
 | Per-zone delivery surcharge | Current flat 7 zł works; per-zone needs the postcode → zone mapper which is a separate ticket. |
@@ -170,7 +170,7 @@ Conservative reconstruction at 100 orders/day/truck:
 ## Next steps
 
 1. **Instrument and measure.** 30-day window post-deploy. Track: espresso attach, Family Pack penetration, slice tier velocity, modifier attach (target 8–15%).
-2. **Ship the per-item modifier picker** on the customer menu page. Schema and cart math are ready.
+2. ✅ ~~**Ship the per-item modifier picker** on the customer menu page.~~ **DONE 2026-06-03** — picker → cart → KDS → Stripe → receipt.
 3. **Build the per-bundle margin floor enforcement** in the admin save flow.
 4. **A/B test the espresso reprice.** Confirm attach rate doesn't dip more than 4% (revenue still up if it does).
 5. **Add zone-based delivery surcharge** once the postcode → zone mapper lands.
@@ -280,3 +280,26 @@ Eight days on. No new bundle *economics* shipped, but the surface the ladder ren
 **Net read.** The bundle architecture this audit shipped is intact, now rendered on the premium surface its companion docs called for, and now backed by a relational cost store + real-order simulation. The PLN ~261k/truck recovery hypothesis is unchanged and more checkable than before. But the four discrete build items (modifier picker, save-time margin gate, espresso A/B, zone surcharge) that were ✗ on 2026-05-21 are **all still ✗** on 2026-05-29 — the eight days of shipping went into the storefront rebuild and the data-layer migration, not into closing this audit's open list.
 
 — *Re-run lens: same revenue/menu-engineering audit, fourteen days later — 29 May 2026*
+
+---
+
+## 2026-06-03 Update — the modifier picker shipped; the rewards regression is wired
+
+Five days on (+211 commits, HEAD `cb49026`, plus the `claude/sharp-galileo-qlIve` fix branch). The headline: **the single highest-value un-shipped item this audit named for three consecutive passes — the customer-facing per-item modifier picker — shipped**, and the Rule #1 rewards regression this audit flagged on 2026-05-29 is closed.
+
+**Next step #2 — Per-item modifier picker → ✅ SHIPPED.** Verified against the running app and a green suite (`npm test` 181/181). Crust / toppings / spice now render as a first-class customer picker; selections flow customer → `CartItem.selectedModifiers` → `effectiveUnitPrice`/`effectiveUnitCost` cart math → server checkout total → **KDS ticket render** → **Stripe line description** → **ESC/POS receipt** (`api/checkout/route.ts`). The modifier economics this audit shipped (crust +5, buffalo mozz +9, truffle oil +8, etc.) are now actually reachable by the customer — the +PLN 13,140/truck "modifier attach" line in the recovery table is now a live lever, not a dormant schema.
+
+**The 2026-05-29 `/rewards` Rule #1 regression → ✅ RESOLVED.** Streak, weekly-challenge progress, and the referral code are all wired to real data (`/api/customer/rewards-stats` + `src/lib/rewards-progress.ts`, with a 9-assertion unit suite); the `Math.random()` `generateReferralCode()` helper was deleted. The retention surface the bundle ladder feeds no longer measures fiction.
+
+**The remaining "Next steps" — re-verified, still ✗:**
+
+| # | Next step | Status 2026-06-03 |
+|---|---|---|
+| 1 | Instrument and measure (A/B experiment ledger) | 🟡 Simulation reads real-order actuals; a dedicated A/B experiment ledger still doesn't exist — measurement remains observational. |
+| 3 | Per-bundle margin floor enforcement at admin save-time | ❌ Still ✗ — alert still fires post-order; the relational per-distributor cost ledger keeps the half-day estimate. |
+| 4 | A/B test the espresso reprice | ❌ Still ✗ — no experiment ledger. |
+| 5 | Zone-based delivery surcharge | ❌ Still ✗ — flat 7 zł; no postcode→zone mapper. |
+
+**Net read.** Of the five named "Next steps," #2 — the one this audit called *"the single highest-value un-shipped item"* — is now done, and the cross-cutting rewards regression is closed. The three remaining (#3 margin gate, #4 espresso A/B, #5 zone surcharge) plus the A/B-ledger half of #1 are the open list; all are admin/analytics work, none customer-facing. The bundle economics and the PLN ~261k/truck recovery hypothesis are unchanged and now fully reachable by the customer.
+
+— *Re-run lens: same revenue/menu-engineering audit, nineteen days later — 03 June 2026. Verified against HEAD `cb49026` + branch `claude/sharp-galileo-qlIve`; `npm test` 181/181.*
