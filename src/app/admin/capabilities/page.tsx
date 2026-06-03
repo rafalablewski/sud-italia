@@ -837,6 +837,12 @@ export default async function CapabilitiesPage() {
           summary: "Cart upsell chips re-rank by composite score combining margin × attach, hour-of-day bias (espresso 0.82 at 11:00, 0.31 at 19:00), per-customer attach history (`you added it 3 of last 4 visits`), and a small novelty decay so chips rotate. Pure scorePairing() in upsell.ts; cart drawer feeds context via /api/customer/attach-history. Audit §3.1.",
         },
         {
+          name: "Per-customer ML upsell ranker",
+          status: "live",
+          href: "/admin/upsell",
+          summary: "Logistic-regression cross-sell ranker trained on REAL orders (audit elite-qsr §1) — no hardcoded weights. src/lib/ml-upsell.ts builds a leakage-controlled training set (one example per anchor-order × attach-candidate; per-customer attach features use only prior orders), fits weights by gradient descent over 7 learned features (personal attach rate, has-ordered, global attach rate, category×hour attach, item margin, tenure, new-customer flag), and ranks candidates by expected contribution (P(attach) × margin). POST /api/admin/ml-upsell/train pulls getOrders for the window + getMenuWithOverrides per location and persists per-location models (ml-upsell-models.json); GET returns model status (trainedAt, sampleCount, positiveRate, logLoss). Cold-start locations (<200 examples) are skipped → rules ranker stays in use. Shipped behind an A/B variant; inference swaps in via the cart's existing PairingContext. 12 unit tests cover separation, no-leakage construction, and recovery of a synthetic per-hour preference.",
+        },
+        {
           name: "Bundle architecture (Lunch / Family / Late-night)",
           status: "live",
           href: "/admin/upsell",

@@ -12,6 +12,7 @@ import {
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import type { Experiment } from "@/lib/experiments";
+import type { MLUpsellModel } from "@/lib/ml-upsell";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -5983,6 +5984,35 @@ export async function updateLocationUpsell(
     settings[locationSlug] = config;
     await writeJSON("upsell-settings.json", settings);
     return settings;
+  });
+}
+
+// ─── ML upsell ranker models (audit elite-qsr §1) ────────────────────────
+//
+// Per-location logistic-regression weights + learned attach aggregates,
+// trained from real orders by /api/admin/ml-upsell/train and read by the
+// inference path when a customer is bucketed into the ML variant. Keyed
+// by location slug (menus differ per location, so models do too).
+
+export type MLUpsellModels = Record<string, MLUpsellModel>;
+
+export async function getMLUpsellModels(): Promise<MLUpsellModels> {
+  return readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+}
+
+export async function getMLUpsellModel(
+  locationSlug: string,
+): Promise<MLUpsellModel | null> {
+  const all = await readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+  return all[locationSlug] ?? null;
+}
+
+export async function saveMLUpsellModel(model: MLUpsellModel): Promise<void> {
+  if (!model.locationSlug) return;
+  await withLock("ml-upsell-models.json", async () => {
+    const all = await readJSON<MLUpsellModels>("ml-upsell-models.json", {});
+    all[model.locationSlug as string] = model;
+    await writeJSON("ml-upsell-models.json", all);
   });
 }
 
