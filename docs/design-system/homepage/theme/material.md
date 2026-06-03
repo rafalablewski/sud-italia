@@ -122,7 +122,8 @@ material trait. The full keyframe library lives in
 | Free-delivery medallion award           | `--animate-delivery-medallion` (600ms spring at the unlock moment)   |
 | Free-delivery unlock card pop           | `--animate-delivery-unlock` (500ms cubic-bezier(0.34, 1.56, 0.64, 1)) |
 | Tier-up on the rewards page             | `--animate-bounce-in` (500ms spring)                                  |
-| Loyalty points "count up" on order page | `--animate-count-up` (300ms)                                          |
+| Loyalty points "count up" on order page | `--animate-count-up` (300ms)                                           |
+| Pulse micro-survey card enter           | `v8-pulse-in` (560ms cubic-bezier(0.22, 1, 0.36, 1), from bottom-left) |
 | Pulse on the live "Open now" pill       | `--animate-pulse-soft` (2s loop)                                      |
 
 **Spring physics are allowed.** Unlike Core (where spring on 12
