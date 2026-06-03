@@ -25,6 +25,7 @@ V8 since Step 14 — all selectors live under `.v8-order-*` in
 | Customer milestone             | `src/components/order/CustomerMilestone.tsx`               | `.v8-order-milestone`                       |
 | Push opt-in                    | `src/components/order/PushOptInButton.tsx`                 | `.v8-order-push`, `.v8-order-push-confirmed`|
 | Feedback survey                | `src/components/order/FeedbackSurvey.tsx`                  | `.v8-order-feedback*`                       |
+| Pulse micro-survey (NPS)       | global `src/components/survey/SurveyPrompt.tsx` (fired post-order) | `.v8-pulse-*` (portalled to `body`)  |
 | Share / referral               | inline (`Share2` / `Link2` icons + copy)                   | `.v8-order-review-link`, `.v8-order-action` |
 | Continue browsing CTA          | inline `ArrowLeft` link back to the location               | `.v8-order-action.is-primary`               |
 
@@ -205,6 +206,24 @@ Quiet, non-intrusive recognition. Triggers on 1st / 5th / 10th /
   + ochre "+10 loyalty points · punti aggiunti" callout.
 - The submission feeds the admin Feedback surface
   ([`../admin/sections/customers.md`](../../admin/sections/customers.md)).
+
+### Pulse micro-survey (NPS) — `<SurveyPrompt />` (fired post-order)
+
+- **Not a page-local component.** This is the global storefront Pulse
+  prompt (`src/components/survey/SurveyPrompt.tsx`, portalled to
+  `document.body`, `.v8-pulse-*`) documented in full under
+  [`../theme/components.md`](../theme/components.md). The order page only
+  *fires* it: ~6s after the receipt lands, `useSurveyStore.request(
+  "post-order")` is called so the single-question pulse (e.g. "How easy
+  was placing your order?") slides in **beside** — never on top of — the
+  detailed `<FeedbackSurvey />`.
+- The two are complementary: `<FeedbackSurvey />` is the deep, per-dish
+  review; the Pulse prompt is the one-tap NPS read on the *process*.
+- Frequency-capped by the engine (one prompt per session, 8h global gap,
+  per-survey cooldown) and gated by `<LayoutGate flag="showNpsSurvey">`
+  at the layout level, so it can be absent entirely. Answers POST to
+  `/api/surveys` and feed the admin Pulse board
+  ([`../../admin/sections/customers.md`](../../admin/sections/customers.md)).
 
 ### Limited-time come-back — inline
 

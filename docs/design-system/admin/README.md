@@ -27,7 +27,7 @@ What this doc covers (the admin back-office):
 | Operations    | Menu, Recipes, HACCP log, Waste log, Shift handover (Slots + Floor merged into the Core **Service** surface) |
 | Inventory     | Stock, Suppliers, Purchase orders                                      |
 | People        | Staff, Schedule                                                        |
-| Customers     | Customers, Corporate, Feedback                                         |
+| Customers     | Customers, Corporate, Feedback, Pulse surveys                          |
 | Finance       | Reports, Cash, Business costs, Calculator                              |
 | Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Truck ops            |
 | Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
@@ -204,7 +204,7 @@ Progress:
 - [`sections/operations.md`](./sections/operations.md) — menu, recipes (chain-wide rule), HACCP log, waste log, shift handover (slots + floor merged into the Core Service surface — `../core/modules/service.md`)
 - [`sections/inventory.md`](./sections/inventory.md) — stock, suppliers, POs, low-stock alerts during service
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
-- [`sections/customers.md`](./sections/customers.md) — customers, corporate, feedback (loyalty moved to the Core Guest hub — see `../core/modules/loyalty.md`)
+- [`sections/customers.md`](./sections/customers.md) — customers, corporate, feedback, Pulse surveys (NPS board) (loyalty moved to the Core Guest hub — see `../core/modules/loyalty.md`)
 - [`sections/finance.md`](./sections/finance.md) — reports, cash, business costs, calculator
 - [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, truck ops
 - [`sections/intelligence.md`](./sections/intelligence.md) — multi-location, manage-locations, cohort/CLTV, menu engineering, AI insights, expansion

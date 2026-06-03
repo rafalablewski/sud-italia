@@ -25,6 +25,7 @@ import {
 import { BarChart, KpiCard } from "./v2/charts";
 import {
   MetricExplainer,
+  PageExplainer,
   InstitutionalAnalysis,
   PlainTalk,
   Tips,
@@ -410,6 +411,61 @@ export function AdminSurveys() {
           higherIsBetter={false}
         />
       </section>
+
+      <div style={{ margin: "1rem 0" }}>
+        <PageExplainer
+          title="How Pulse surveys work"
+          hint="NPS, the easy way"
+          description="Pulse fires a one-tap 1–5★ question at the right moment in a guest's visit, then nets the answers into an NPS-style score so you can see — and move — how guests actually feel."
+          institutional={
+            <InstitutionalAnalysis>
+              Treat this as a continuous relationship-NPS instrument, not a
+              one-off CSAT poll. The gate: a Pulse score below 0 is a churn
+              signal, 0–30 workable, 30–50 good, 50+ best-in-class for QSR.
+              Always read a score against its response count — anything under
+              ~30 answers is directional, not decisive. Because every prompt is
+              tagged with the moment it fired (after ordering, prolonged
+              browsing, exit intent…), you can localise a problem to a stage of
+              the funnel instead of guessing.
+            </InstitutionalAnalysis>
+          }
+          plain={
+            <PlainTalk>
+              Think of it as quietly asking guests &ldquo;would you tell a
+              friend?&rdquo; at the moments that matter. If 100 people answer
+              after ordering — 60 tap 5★, 25 tap 4★, 15 tap ≤3★ — your Pulse is
+              60 − 15 = <strong>+45</strong>. The same gut-feel a regular who
+              spends 50 zł a week would give when a friend asks &ldquo;is that
+              pizza place any good?&rdquo;
+            </PlainTalk>
+          }
+          tips={
+            <Tips headline="Tips — how to push this lever">
+              <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>
+                <li><strong>Activate the right surveys</strong> in the Catalogue tab — start with the two defaults (after ordering, prolonged browsing), then add one at a time so you can read each signal cleanly.</li>
+                <li><strong>Read every detractor comment</strong> in the Responses tab and fix the top recurring snag first — that single fix moves the score most.</li>
+                <li><strong>Use the trigger breakdown</strong>: a weak &ldquo;prolonged browsing&rdquo; Pulse means the menu is hard to navigate; a weak &ldquo;after ordering&rdquo; Pulse means checkout friction.</li>
+                <li><strong>Don&apos;t over-ask.</strong> The storefront already caps prompts to one per session with an 8h gap and a per-survey cooldown — adding more active surveys widens coverage, it doesn&apos;t nag the same guest more.</li>
+              </ul>
+            </Tips>
+          }
+          methodology={
+            <Methodology>
+              Prompts are elected client-side by the trigger engine
+              (<code>src/store/survey.ts</code> + <code>SurveyTriggerEngine</code>)
+              and rendered by <code>SurveyPrompt</code>; answers POST to
+              <code>/api/surveys</code> (rate-limited per IP + phone) and persist
+              via the store. Active surveys ship to the storefront through
+              <code>/api/settings/public</code>; the whole feature is gated by
+              the <code>showNpsSurvey</code> Layout toggle. Pulse score =
+              <code>round((promoters − detractors) / total × 100)</code> with
+              promoter = 5★, detractor ≤ 3★, passive = 4★ ignored
+              (<code>computePulseScore</code> in <code>src/lib/surveys.ts</code>).
+              No sampling — every response counts.
+            </Methodology>
+          }
+        />
+      </div>
 
       <div style={{ margin: "1rem 0" }}>
         <Tabs
