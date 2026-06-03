@@ -13,6 +13,7 @@ import {
 } from "./AdminSellingShared";
 import { BundleManager } from "./bundle-manager/BundleManager";
 import { ModifierInventory } from "./ModifierInventory";
+import { MLUpsellPanel } from "./MLUpsellPanel";
 
 type TabKey = "bundles" | "modifiers";
 
@@ -192,6 +193,12 @@ export function AdminUpsell() {
               onPromote={handlePromoteVariant}
             />
           </section>
+
+          <MLUpsellPanel
+            locationSlug={activeLocation}
+            rolloutPct={config.mlUpsellRolloutPct ?? 0}
+            onRolloutChange={(mlUpsellRolloutPct) => updateConfig({ mlUpsellRolloutPct })}
+          />
         </div>
       )}
 

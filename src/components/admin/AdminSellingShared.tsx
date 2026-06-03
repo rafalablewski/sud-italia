@@ -183,6 +183,10 @@ export interface LocationConfig {
    *  in src/lib/experiments.ts phone-hashes assignment so client and
    *  server agree on the same variant for the same customer. */
   experiment?: ExperimentConfig | null;
+  /** ML upsell ranker rollout % (0–100, audit elite-qsr §1). Deterministic
+   *  phone-bucketed share served the ML-ranked cross-sell; falls back to
+   *  rules when unset/0 or no trained model. */
+  mlUpsellRolloutPct?: number;
 }
 
 export type AllSettings = Record<string, LocationConfig>;

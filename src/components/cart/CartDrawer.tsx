@@ -25,6 +25,7 @@ import {
   computeDeliveryFee,
   UpsellConfig,
   PairingContext,
+  UpsellSuggestion,
 } from "@/lib/upsell";
 import { calculateTier } from "@/lib/loyalty";
 import { Star, Clock, Check, Trash2 } from "lucide-react";
@@ -455,10 +456,68 @@ export function CartDrawer() {
     }),
     [attachHistory],
   );
-  const suggestions = useMemo(
-    () => getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig, pairingContext),
-    [items, resolvedMenuItems, upsellConfig, pairingContext]
+  // Per-customer ML ranker (audit elite-qsr §1). When the customer is
+  // bucketed into the ML rollout arm and the location has a trained model,
+  // /api/customer/upsell-rank returns a personalised candidate order;
+  // otherwise it returns ranker:"rules" and we use the existing engine, so
+  // cross-sell can never break. The model lives server-side, hence the
+  // round-trip rather than scoring in the browser.
+  const [mlRankedItemIds, setMlRankedItemIds] = useState<string[] | null>(null);
+  const cartItemIdSig = useMemo(
+    () => items.map((i) => i.menuItem.id).sort().join(","),
+    [items],
   );
+  useEffect(() => {
+    if (!open || !locationSlug || !loyaltyCustomer?.phone || items.length === 0) {
+      setMlRankedItemIds(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/customer/upsell-rank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: loyaltyCustomer.phone,
+        locationSlug,
+        cartItemIds: items.map((i) => i.menuItem.id),
+        hour: new Date().getHours(),
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setMlRankedItemIds(d && d.ranker === "ml" && Array.isArray(d.itemIds) ? d.itemIds : null);
+      })
+      .catch(() => {
+        if (!cancelled) setMlRankedItemIds(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // cartItemIdSig captures the cart's item set; quantity-only changes
+    // needn't re-rank. items is read fresh inside.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, locationSlug, loyaltyCustomer?.phone, cartItemIdSig]);
+
+  const suggestions = useMemo<UpsellSuggestion[]>(() => {
+    if (mlRankedItemIds && mlRankedItemIds.length > 0) {
+      const byId = new Map(resolvedMenuItems.map((m) => [m.id, m]));
+      const inCart = new Set(items.map((i) => i.menuItem.id));
+      const picks: UpsellSuggestion[] = [];
+      for (const id of mlRankedItemIds) {
+        if (picks.length >= 4) break;
+        const item = byId.get(id);
+        if (!item || !item.available || inCart.has(item.id)) continue;
+        picks.push({
+          item,
+          reason: (item.description?.split(/[.;]/)[0] || "Picked for your order").trim(),
+          priority: picks.length,
+        });
+      }
+      if (picks.length > 0) return picks;
+    }
+    return getCartSuggestions(items, resolvedMenuItems, 4, upsellConfig, pairingContext);
+  }, [mlRankedItemIds, items, resolvedMenuItems, upsellConfig, pairingContext]);
 
   const handlePhoneChange = (value: string) => {
     setCustomerPhone(value);

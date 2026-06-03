@@ -358,6 +358,14 @@ sommelier rail:
   another increment (mirrors the audit §2.2 chip behaviour).
 - Wired through the same `getCartSuggestions()` upstream ranking
   with `PairingContext` (hour-of-day + per-customer attach history).
+- **Per-customer ML ranker (audit elite-qsr §1).** When the customer is
+  bucketed into the ML rollout arm and the location has a trained model,
+  the drawer POSTs the cart to `/api/customer/upsell-rank` and orders the
+  rail by the model's `itemIds` (predicted attach × margin) instead of the
+  rules ranker. The endpoint returns `ranker:"rules"` for the control arm,
+  cold-start customers, or untrained locations, so the rail falls back to
+  `getCartSuggestions` and can never break. The model lives server-side
+  (hence the round-trip); the same `.v8-cart-pairs` UI renders either way.
 - **"Bundle is the path" suppression (audit elite-qsr §6).** The rail
   is hidden whenever `<BundleLadder />` reports a real offer on screen.
   The ladder fires `onVisibilityChange(true|false)` off the same

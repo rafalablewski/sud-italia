@@ -5631,6 +5631,14 @@ export interface LocationUpsellConfig {
    * persisted shape so reads + writes are type-checked end to end.
    */
   experiment?: Experiment | null;
+  /**
+   * ML upsell ranker rollout (audit elite-qsr §1). 0–100 = % of customers
+   * (deterministically phone-bucketed) served the ML-ranked cross-sell
+   * instead of the rules ranker. 0 / unset = off (rules for everyone).
+   * Falls back to rules when no trained model exists for the location, so
+   * turning this up before training simply changes nothing.
+   */
+  mlUpsellRolloutPct?: number;
 }
 
 export type UpsellSettings = Record<string, LocationUpsellConfig>;

@@ -131,6 +131,16 @@ The AOV machinery: bundle ladders + modifier gating.
   promoted discounts pass back through the margin-floor guardian on the
   next save. Verdicts themselves are read on the Reports bundle-analytics
   card (see [`finance.md`](./finance.md)).
+- **Cross-sell intelligence — ML ranker panel** (`MLUpsellPanel`). A
+  per-customer logistic ranker trained on the truck's real orders.
+  Shows model status (trained-at, training examples, base attach rate,
+  log loss), a **Train now** button (POST `/api/admin/ml-upsell`, writes
+  the model immediately), and a **rollout %** slider — the deterministic
+  phone-bucketed share served the ML-ranked cross-sell vs the rules
+  ranker (persisted in `LocationUpsellConfig.mlUpsellRolloutPct` on Save
+  changes). 0% or no trained model = rules ranker for everyone, so the
+  slider is safe to raise before training (it does nothing until a model
+  exists).
 
 ## Cross-sell — `/admin/crosssell`
 
