@@ -122,9 +122,11 @@ voice-of-customer probe — one-tap 1–5★ micro-surveys fired across the
 storefront (after ordering, on prolonged browsing, on exit intent, on
 the rewards page, for returning visitors).
 
-- **Header:** `Pulse surveys` (h1) + subtitle. KPI row: **Pulse score**
-  (NPS-style, with the five-part ⓘ `MetricExplainer` per rule 12), avg
-  rating, promoters (5★), detractors (≤3★).
+- **Header:** `Pulse surveys` (h1) with a title-level ⓘ `InfoButton`
+  ("How Pulse surveys work" — the page-level five-part `MetricExplainer`,
+  on-demand rather than a standing intro card) + subtitle. KPI row:
+  **Pulse score** (NPS-style, with its own five-part ⓘ `MetricExplainer`
+  per rule 12), avg rating, promoters (5★), detractors (≤3★).
 - **Tabs:** Overview (rating distribution + responses-by-trigger bar
   charts) · Catalogue · Responses.
 - **Catalogue:** the 12-survey seed table — question, the moment it
