@@ -1230,6 +1230,12 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-switch:disabled { opacity: 0.5; cursor: not-allowed; }
 .v2-switch:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 
+/* On/off settings use the Switch primitive (above). The native checkboxes /
+   radios that remain are for genuine multi-select only — brand-tint them so no
+   raw blue OS control shows in admin chrome. */
+[data-admin-theme] input[type="checkbox"],
+[data-admin-theme] input[type="radio"] { accent-color: var(--brand); }
+
 /* Icon-button size + tone modifiers (base .v2-icon-btn lives in the shell block). */
 .v2-icon-btn-sm { width: 28px; height: 28px; border-radius: var(--radius-sm); }
 .v2-icon-btn-danger { color: var(--danger); }

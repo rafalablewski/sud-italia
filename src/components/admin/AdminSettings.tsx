@@ -29,6 +29,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
+  Switch,
   Tabs,
   Table,
   type Column,
@@ -885,11 +886,11 @@ function AdminSettingsDesktop() {
                     ticket.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={kdsSimulatorEnabled}
-                      onChange={(e) => toggleKdsSimulator(e.target.checked)}
+                      onChange={(v) => toggleKdsSimulator(v)}
                       disabled={kdsSimBusy}
+                      label="KDS simulator"
                     />
                     <span className="v2-muted text-sm">
                       {kdsSimulatorEnabled
@@ -909,11 +910,11 @@ function AdminSettingsDesktop() {
                     conversation.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={whatsappSimulatorEnabled}
-                      onChange={(e) => toggleWhatsappSimulator(e.target.checked)}
+                      onChange={(v) => toggleWhatsappSimulator(v)}
                       disabled={whatsappSimBusy}
+                      label="WhatsApp simulator"
                     />
                     <span className="v2-muted text-sm">
                       {whatsappSimulatorEnabled
@@ -930,11 +931,11 @@ function AdminSettingsDesktop() {
                     business-costs ledger — nothing here writes to your books.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={simulationEnabled}
-                      onChange={(e) => toggleSimulation(e.target.checked)}
+                      onChange={(v) => toggleSimulation(v)}
                       disabled={simBusy}
+                      label="Financials simulator"
                     />
                     <span className="v2-muted text-sm">
                       {simulationEnabled
@@ -952,19 +953,19 @@ function AdminSettingsDesktop() {
                     levers. Read-only on the data — nothing here writes to orders, CRM or reports.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={cohortSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "cohortSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setCohortSimulationEnabled,
                           setCohortSimBusy,
                           "Cohort & CLTV simulator",
                         )
                       }
                       disabled={cohortSimBusy}
+                      label="Cohort & CLTV simulator"
                     />
                     <span className="v2-muted text-sm">
                       {cohortSimulationEnabled
@@ -982,19 +983,19 @@ function AdminSettingsDesktop() {
                     ratio, payback and profit-per-customer move against the 3× gate.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={ltvCacSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "ltvCacSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setLtvCacSimulationEnabled,
                           setLtvCacSimBusy,
                           "LTV / CAC simulator",
                         )
                       }
                       disabled={ltvCacSimBusy}
+                      label="LTV / CAC simulator"
                     />
                     <span className="v2-muted text-sm">
                       {ltvCacSimulationEnabled
@@ -1012,19 +1013,19 @@ function AdminSettingsDesktop() {
                     margin and the quadrant reshuffle before you touch the live menu.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={menuEngineeringSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "menuEngineeringSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setMenuEngineeringSimulationEnabled,
                           setMenuEngSimBusy,
                           "Menu engineering simulator",
                         )
                       }
                       disabled={menuEngSimBusy}
+                      label="Menu engineering simulator"
                     />
                     <span className="v2-muted text-sm">
                       {menuEngineeringSimulationEnabled
@@ -1124,11 +1125,11 @@ function AdminSettingsDesktop() {
                           <span className="v2-field-label">{spec.label}</span>
                           <span className="v2-muted text-sm">{spec.description}</span>
                           <span className="inline-flex items-center gap-2 mt-1">
-                            <input
-                              type="checkbox"
+                            <Switch
                               checked={value}
-                              onChange={(e) => toggleLayoutFlag(spec, e.target.checked)}
+                              onChange={(v) => toggleLayoutFlag(spec, v)}
                               disabled={busy || !settings}
+                              label={spec.label}
                             />
                             <span className="v2-muted text-sm">
                               {value ? spec.onCopy : spec.offCopy}

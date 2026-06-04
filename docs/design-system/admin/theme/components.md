@@ -423,10 +423,22 @@ stroke icon.
 
 ## Toggles
 
-`.sw-toggle` — 38×22 pill, off = `--surface-3` + `--border-strong`, on =
-`--brand` + transparent border, thumb fades from `--fg-muted` to white.
-Toggle = saved (persist immediately, no separate Save button) — see
-`CLAUDE.md` rule #7.
+`.v2-switch` (the `Switch` primitive, `v2/ui/Switch.tsx`) — a 40×22 pill,
+`role="switch"`. Off = `--surface-3` track + `--border` hairline + `--fg-subtle`
+thumb; on = `--success-soft` track + `--success` border-mix + `--success` thumb,
+thumb travels 18px on `--duration-base`/`--ease`. The green "on" reads as a
+live/enabled state and keeps "brand" reserved for primary actions.
+
+**On/off settings always use `Switch`, never a native `<input type="checkbox">`.**
+A native checkbox is reserved for **genuine multi-select** (picking several items
+in a list — table row-select, menu modifiers, bundle item pickers), not a switch.
+If a control means "enabled / disabled," it's a Switch. Toggle = saved: persist
+immediately on change, no separate Save button — see `CLAUDE.md` rule #7. (The
+whole admin Settings page follows this — every sandbox/layout toggle is a `Switch`.)
+
+The native checkboxes/radios that remain (the genuine multi-select ones) are
+brand-tinted globally via `accent-color: var(--brand)` scoped to
+`[data-admin-theme]`, so no raw blue OS control appears in admin chrome.
 
 ## Component checklist (when building a new one)
 
