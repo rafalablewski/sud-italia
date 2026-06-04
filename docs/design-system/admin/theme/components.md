@@ -477,8 +477,17 @@ every page**:
   (centered headline numbers, `--font-display`, divider between) · `actions`
   (right; icon-only secondary + a compressed primary) · `search` + `filters`
   (folded into a second tier under a hairline). Top row is a
-  `1fr auto 1fr` grid (lead | centered stats | actions). Golden reference:
+  `1fr auto 1fr` grid whose three slots are **pinned to explicit columns**
+  (`grid-column` 1/2/3) so `actions` stay hard-right even when there are no
+  centered stats — never rely on source order. Golden reference:
   `AdminPurchaseOrders`. **Use this on every page** — don't hand-roll a header.
+  - **`filters` is for compact `Tabs variant="pill"` / segmented filters only**
+    (status, category). **Section-navigation or `variant="underline"` tabs go
+    BELOW the hero**, as a sibling after `</PageHero>` — never in `filters`
+    (they read as a cramped strip inside the panel). See `AdminCrossSell` /
+    `AdminScheduledBundles`.
+  - **`actions` are icon-only** (compressed primary + secondary) and always
+    carry an `aria-label` + `title` tooltip for the dropped text.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary

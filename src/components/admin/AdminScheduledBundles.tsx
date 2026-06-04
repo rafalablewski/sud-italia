@@ -97,15 +97,14 @@ export function AdminScheduledBundles() {
           </>
         }
         locations={<LocationFilter value={activeLocation} onChange={setActiveLocation} />}
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as "all" | Status)}
-            tabs={STATUS_TABS}
-            variant="underline"
-            ariaLabel="Status filter"
-          />
-        }
+      />
+
+      <Tabs
+        value={statusFilter}
+        onChange={(v) => setStatusFilter(v as "all" | Status)}
+        tabs={STATUS_TABS}
+        variant="underline"
+        ariaLabel="Status filter"
       />
 
       {err && (

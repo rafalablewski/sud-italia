@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { LocationFilter, PageHero, Tabs } from "./v2/ui";
+import { Button, LocationFilter, PageHero, Tabs } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -114,28 +114,18 @@ export function AdminUpsell() {
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
         }
+        locations={<LocationFilter value={activeLocation} onChange={setActiveLocation} />}
         actions={
-          <button
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={saving || !isDirty}
-            className="v2-btn v2-btn-primary v2-btn-sm"
-          >
-            {saved ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                {saving ? "Saving…" : "Save changes"}
-              </>
-            )}
-          </button>
+            aria-label="Save changes"
+            title={saved ? "Saved" : saving ? "Saving…" : "Save changes"}
+            leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+          />
         }
       />
-
-      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
 
       <Tabs
         value={tab}
