@@ -143,16 +143,18 @@ Placed inline in the tags row on a POS product card.
 
 Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
 `v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
-site**, and it renders **one thing everywhere: a pill row** (`MapPin` + city,
-the selected pill in `--brand-soft`). It replaced two drifting patterns — the
-hand-rolled `LocationTabs` pills and the inline `v2-field-inline` + `Select`
-block copy-pasted into a dozen page headers — so every page now looks
-identical, operational views and selling-rule editors alike.
+site**, and it's always the **same shape: a pill row** (`MapPin` + city, active
+pill in `--brand-soft`). It replaced two drifting patterns — the hand-rolled
+`LocationTabs` pills and the inline `v2-field-inline` + `Select` copy-pasted into
+a dozen page headers.
 
-**There is deliberately no `variant` prop.** A second rendering mode (a
-dropdown) is exactly how the original drift started; one look is the whole
-point. If a future need can't be met by pills, change the component once — for
-everyone — rather than reintroducing a per-page branch.
+**It scales without changing shape.** The pills live in a horizontal scroller
+(`.v2-locscroll` → `.v2-locscroll-track`): pills never wrap or shrink, and when
+they overflow, the track scrolls with **left/right chevron controls + edge fades**
+(`.v2-locscroll-arrow`, shown only when `is-l` / `is-r`). So a 2-truck shop sees
+two pills (no arrows) and a 15-site network sees a tidy left/right scroll — never
+a wrap, a squeeze, or a different widget. **No per-page `variant`** — a dropdown /
+second mode is exactly how the old drift started.
 
 It is **controlled** (`value` / `onChange`) and derives its option list from
 `getActiveLocations()`, so a page never hand-builds `{ value, label }` arrays.
@@ -512,7 +514,10 @@ every page**:
     sections, Cross-sell/Upsell tabs, Orders Kanban/Table, AI insights, Growth
     sections). Pick by *role*, not by what the page happened to use before.
   - **`actions` are icon-only** (compressed primary + secondary) with an
-    `aria-label` + `title` tooltip for the dropped text.
+    `aria-label` + `title` tooltip for the dropped text, and all render at **one
+    size (md / 34px)** regardless of the `size` prop a page passes — CSS
+    (`.v2-hero .v2-page-actions .v2-btn`) normalises it, since `actions` is the
+    one free-form slot the data API can't type-enforce.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary

@@ -1931,8 +1931,43 @@ button.v2-card:active { transform: translateY(0); }
 .v2-hero-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .v2-hero-meta { align-items: flex-start; }            /* row 2: description ⟷ actions */
 .v2-hero-meta .v2-page-actions { margin-left: auto; }
+/* Every hero action button is one size (md / 34px) regardless of the `size`
+   prop a page passes — so the action cluster is uniform on every page. */
+.v2-hero .v2-page-actions .v2-btn { min-height: 34px; font-size: var(--text-sm); }
+.v2-hero .v2-page-actions .v2-btn:not(:has(.v2-btn-label)) { width: 34px; padding: 0; }
 .v2-hero-find .v2-hero-search { flex: 1 1 240px; min-width: 200px; }  /* row 3: search ⟷ location */
-.v2-hero-find .v2-hero-loc { margin-left: auto; }
+.v2-hero-find .v2-hero-loc { margin-left: auto; min-width: 0; }
+
+/* LocationFilter — a horizontal pill scroller. Pills never wrap or shrink; when
+   they overflow, the track scrolls and the chevron controls + edge fades appear.
+   Scales from 2 sites (no arrows) to 15 (tidy left/right scroll) with no shape change. */
+.v2-locscroll { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.v2-locscroll-track {
+  display: flex; gap: 6px; overflow-x: auto; scroll-behavior: smooth; min-width: 0;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.v2-locscroll-track::-webkit-scrollbar { display: none; }
+.v2-locscroll.is-l .v2-locscroll-track { -webkit-mask-image: linear-gradient(to right, transparent, #000 22px); mask-image: linear-gradient(to right, transparent, #000 22px); }
+.v2-locscroll.is-r .v2-locscroll-track { -webkit-mask-image: linear-gradient(to left, transparent, #000 22px); mask-image: linear-gradient(to left, transparent, #000 22px); }
+.v2-locscroll.is-l.is-r .v2-locscroll-track { -webkit-mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent); }
+.v2-locscroll-arrow {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--radius-pill);
+  display: none; align-items: center; justify-content: center;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-locscroll-arrow:hover { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+.v2-locscroll.is-l .v2-locscroll-arrow-l { display: inline-flex; }
+.v2-locscroll.is-r .v2-locscroll-arrow-r { display: inline-flex; }
+.v2-locpill {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: transparent; color: var(--fg-subtle);
+  font-size: var(--text-sm); font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-locpill:hover { color: var(--fg); background: var(--surface-hover); }
+.v2-locpill.is-active { background: var(--brand-soft); color: var(--brand-text); border-color: transparent; }
 .v2-hero-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
 /* A segmented control inside the hero never widens the panel — it caps at the
    available width and scrolls internally (contain → wrap → scroll, never overflow). */
