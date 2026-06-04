@@ -12,7 +12,6 @@ import {
   Plus,
   Salad,
   Sandwich,
-  Search,
   Trash2,
   Utensils,
   UtensilsCrossed,
@@ -40,9 +39,9 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Table,
-  Tabs,
   Textarea,
   type Column,
 } from "./v2/ui";
@@ -285,40 +284,42 @@ export function AdminRecipes() {
   return <AdminRecipesDesktop />;
 }
 
+/** Panel-switch nav config (Recipes ⟷ Ingredients), passed to each panel
+ *  so its `PageHero` renders the shared underline-tabs section nav. */
+function makeViewNav(tab: TabKey, setTab: (t: TabKey) => void) {
+  return {
+    value: tab,
+    onChange: (v: string) => setTab(v as TabKey),
+    ariaLabel: "View mode",
+    options: [
+      { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
+      { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
+    ],
+  };
+}
+
 function AdminRecipesDesktop() {
   const [tab, setTab] = useState<TabKey>("recipes");
+  const viewNav = makeViewNav(tab, setTab);
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Recipes & Ingredients</h1>
-          <p className="v2-page-subtitle">
-            Build recipes for every dish. Costs and margins recalculate from real ingredient prices.
-          </p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
-            { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="View mode"
-        />
-      </header>
-
-      {tab === "recipes" ? <RecipesPanel /> : <IngredientsPanel />}
+      {tab === "recipes" ? (
+        <RecipesPanel viewNav={viewNav} />
+      ) : (
+        <IngredientsPanel viewNav={viewNav} />
+      )}
     </div>
   );
 }
+
+type ViewNav = ReturnType<typeof makeViewNav>;
 
 // =============================================================
 // Recipes panel
 // =============================================================
 
-function RecipesPanel() {
+function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
   const toast = useToast();
 
   // Recipes + ingredients are chain-wide; menus are per-location. We pull
@@ -338,7 +339,6 @@ function RecipesPanel() {
     open: false,
     ingredient: null,
   });
-  const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<MenuCategory | "all">("all");
 
   const fetchAll = useCallback(async () => {
@@ -422,13 +422,11 @@ function RecipesPanel() {
   }, [menusByLoc]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return dishes.filter((d) => {
       if (filterCat !== "all" && d.category !== filterCat) return false;
-      if (!q) return true;
-      return d.name.toLowerCase().includes(q);
+      return true;
     });
-  }, [dishes, search, filterCat]);
+  }, [dishes, filterCat]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, DishGroup[]>();
@@ -453,30 +451,24 @@ function RecipesPanel() {
 
   return (
     <>
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search dishes…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={filterCat}
-          onChange={(v) => setFilterCat(v as MenuCategory | "all")}
-          tabs={[
+      <PageHero
+        title="Recipes & Ingredients"
+        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
+        filter={{
+          value: filterCat,
+          onChange: (v) => setFilterCat(v as MenuCategory | "all"),
+          ariaLabel: "Category filter",
+          options: [
             { value: "all", label: "All", count: dishes.length },
             ...categories.map((c) => ({
               value: c,
               label: MENU_CATEGORY_LABELS[c],
               count: dishes.filter((d) => d.category === c).length,
             })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-      </div>
+          ],
+        }}
+        nav={viewNav}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Recipes…</div>
@@ -1671,11 +1663,10 @@ interface IngredientDialogState {
   ingredient: IngredientData | null;
 }
 
-function IngredientsPanel() {
+function IngredientsPanel({ viewNav }: { viewNav: ViewNav }) {
   const toast = useToast();
   const [list, setList] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<IngredientCategory | "all">("all");
   const [dialog, setDialog] = useState<IngredientDialogState>({ open: false, ingredient: null });
   const [pendingDelete, setPendingDelete] = useState<IngredientData | null>(null);
@@ -1698,16 +1689,11 @@ function IngredientsPanel() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((i) => {
       if (catFilter !== "all" && i.category !== catFilter) return false;
-      if (!q) return true;
-      return (
-        i.name.toLowerCase().includes(q) ||
-        (i.supplier?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, catFilter]);
+  }, [list, catFilter]);
 
   const cols: Column<IngredientData>[] = [
     {
@@ -1796,37 +1782,31 @@ function IngredientsPanel() {
 
   return (
     <>
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search ingredients or suppliers…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={catFilter}
-          onChange={(v) => setCatFilter(v as IngredientCategory | "all")}
-          tabs={[
-            { value: "all", label: "All", count: list.length },
-            ...INGREDIENT_CATEGORIES.map((c) => ({
-              value: c,
-              label: c,
-              count: list.filter((i) => i.category === c).length,
-            })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-        <Button
-          variant="primary"
-          leadingIcon={<Plus className="h-3.5 w-3.5" />}
-          onClick={() => setDialog({ open: true, ingredient: null })}
-        >
-          New ingredient
-        </Button>
-      </div>
+      <PageHero
+        title="Recipes & Ingredients"
+        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
+        actions={
+          <Button
+            variant="primary"
+            leadingIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={() => setDialog({ open: true, ingredient: null })}
+          >
+            New ingredient
+          </Button>
+        }
+        dropdowns={[
+          {
+            ariaLabel: "Category filter",
+            value: catFilter,
+            onChange: (v) => setCatFilter(v as IngredientCategory | "all"),
+            options: [
+              { value: "all", label: "All categories" },
+              ...INGREDIENT_CATEGORIES.map((c) => ({ value: c, label: c })),
+            ],
+          },
+        ]}
+        nav={viewNav}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Recipes…</div>
@@ -1849,9 +1829,7 @@ function IngredientsPanel() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(i) => i.id} defaultSort={{ key: "name", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(i) => i.id} defaultSort={{ key: "name", dir: "asc" }} />
         </Card>
       )}
 

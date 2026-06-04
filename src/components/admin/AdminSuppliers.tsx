@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Mail, Pencil, Phone, Plus, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Building2, Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -12,6 +12,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Table,
   Textarea,
   type Column,
@@ -41,7 +42,6 @@ function AdminSuppliersDesktop() {
   const toast = useToast();
   const [list, setList] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<DialogState>({ open: false, supplier: null });
   const [pendingDelete, setPendingDelete] = useState<Supplier | null>(null);
 
@@ -62,18 +62,7 @@ function AdminSuppliersDesktop() {
     fetchAll();
   }, [fetchAll]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return list.filter((s) => {
-      if (!q) return true;
-      return (
-        s.name.toLowerCase().includes(q) ||
-        (s.contactName?.toLowerCase().includes(q) ?? false) ||
-        (s.email?.toLowerCase().includes(q) ?? false) ||
-        (s.phone?.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [list, query]);
+  const filtered = list;
 
   const cols: Column<Supplier>[] = [
     {
@@ -152,28 +141,13 @@ function AdminSuppliersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Suppliers</h1>
-          <p className="v2-page-subtitle">Vendor directory feeding purchase orders and inventory restocks.</p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })}>
-            New supplier
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, contact, email or phone…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <PageHero
+        title="Suppliers"
+        subtitle="Vendor directory feeding purchase orders and inventory restocks."
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })} aria-label="New supplier" title="New supplier" />
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Suppliers…</div>
@@ -196,9 +170,7 @@ function AdminSuppliersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
         </Card>
       )}
 

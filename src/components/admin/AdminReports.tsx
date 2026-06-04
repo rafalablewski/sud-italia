@@ -26,7 +26,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
-  Tabs,
+  PageHero,
   Table,
   type Column,
 } from "./v2/ui";
@@ -290,53 +290,50 @@ function AdminReportsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Reports & Finance</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Reports & Finance"
+        subtitle={
+          <>
             {location ? `${location.toUpperCase()} · ` : "All locations · "}
             Revenue, cost of goods, profit, category mix. Real numbers from real orders.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Tabs
-            value={preset}
-            onChange={(v) => onPreset(v as RangePreset)}
-            tabs={[
-              { value: "today", label: "Today" },
-              { value: "7d", label: "7d" },
-              { value: "30d", label: "30d" },
-              { value: "90d", label: "90d" },
-              { value: "custom", label: "Custom" },
-            ]}
-            variant="pill"
-            ariaLabel="Range preset"
-          />
-          <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary}>
-            Export CSV
-          </Button>
-          <Button
-            variant="secondary"
-            leadingIcon={<Download className="h-3.5 w-3.5" />}
-            onClick={() => {
-              // Trigger a same-tab navigation to the JPK endpoint — the
-              // Content-Disposition header makes the browser download it.
-              const locParam = location ? `&location=${location}` : "";
-              window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
-            }}
-            title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
-          >
-            Export JPK_V7M
-          </Button>
-        </div>
-      </header>
-
-      {preset === "custom" && (
-        <div className="v2-filters">
-          <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
-      )}
+          </>
+        }
+        actions={
+          <>
+            {preset === "custom" && (
+              <>
+                <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+              </>
+            )}
+            <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary} aria-label="Export CSV" title="Export CSV" />
+            <Button
+              variant="secondary"
+              leadingIcon={<Download className="h-3.5 w-3.5" />}
+              onClick={() => {
+                // Trigger a same-tab navigation to the JPK endpoint — the
+                // Content-Disposition header makes the browser download it.
+                const locParam = location ? `&location=${location}` : "";
+                window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
+              }}
+              aria-label="Export JPK_V7M"
+              title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
+            />
+          </>
+        }
+        filter={{
+          value: preset,
+          onChange: (v) => onPreset(v as RangePreset),
+          ariaLabel: "Range preset",
+          options: [
+            { value: "today", label: "Today" },
+            { value: "7d", label: "7d" },
+            { value: "30d", label: "30d" },
+            { value: "90d", label: "90d" },
+            { value: "custom", label: "Custom" },
+          ],
+        }}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -469,26 +466,26 @@ function AdminReportsDesktop() {
       <section>
         <Card padding="none">
           <CardHeader title="Category P&L" description="Per dish category, sortable" />
-          <CardBody>
-            {categoryRows.length === 0 ? (
+          {categoryRows.length === 0 ? (
+            <CardBody>
               <EmptyState icon={BarChart3} title="No category data" compact />
-            ) : (
-              <Table rows={categoryRows} columns={categoryCols} rowKey={(r) => r.category} defaultSort={{ key: "rev", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={categoryRows} columns={categoryCols} rowKey={(r) => r.category} defaultSort={{ key: "rev", dir: "desc" }} />
+          )}
         </Card>
       </section>
 
       <section>
         <Card padding="none">
           <CardHeader title="Top items" description="Best-selling SKUs in the selected period" />
-          <CardBody>
-            {topItems.length === 0 ? (
+          {topItems.length === 0 ? (
+            <CardBody>
               <EmptyState icon={ShoppingCart} title="No items sold" compact />
-            ) : (
-              <Table rows={topItems} columns={itemCols} rowKey={(r) => r.name} defaultSort={{ key: "rev", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={topItems} columns={itemCols} rowKey={(r) => r.name} defaultSort={{ key: "rev", dir: "desc" }} />
+          )}
         </Card>
       </section>
 

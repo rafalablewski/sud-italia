@@ -34,11 +34,10 @@ import {
   EmptyState,
   Input,
   Select,
-  Tabs,
   Table,
   Textarea,
   type Column,
-  LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -271,27 +270,20 @@ function AdminTruckDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Truck operations</h1>
-          <p className="v2-page-subtitle">
-            Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as Tab)}
-            tabs={[
-              { value: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
-              { value: "routes", label: "Routes", icon: <Route className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="Section"
-          />
-        </div>
-      </header>
+      <PageHero
+        title="Truck operations"
+        subtitle="Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view."
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as Tab),
+          options: [
+            { value: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
+            { value: "routes", label: "Routes", icon: <Route className="h-3.5 w-3.5" /> },
+          ],
+          ariaLabel: "Section",
+        }}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -352,9 +344,7 @@ function AdminTruckDesktop() {
             </Card>
           ) : (
             <Card padding="none">
-              <CardBody>
-                <Table rows={events} columns={eventCols} rowKey={(e) => e.id} defaultSort={{ key: "date", dir: "desc" }} />
-              </CardBody>
+              <Table flush rows={events} columns={eventCols} rowKey={(e) => e.id} defaultSort={{ key: "date", dir: "desc" }} />
             </Card>
           )}
 

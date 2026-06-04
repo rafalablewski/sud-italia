@@ -14,7 +14,7 @@ import {
   Tag,
   Sandwich,
 } from "lucide-react";
-import { LocationFilter, Tabs } from "./v2/ui";
+import { Button, PageHero } from "./v2/ui";
 import {
   ComboEditor,
   ItemMultiSelect,
@@ -74,48 +74,36 @@ export function AdminCrossSell() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Cross-sell</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Cross-sell"
+        subtitle={
+          <>
             Suggest complementary items alongside what&rsquo;s in the cart — pairings, combos, and contextual nudges.
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <button
+          </>
+        }
+        location={{ value: activeLocation, onChange: setActiveLocation }}
+        actions={
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={saving || !isDirty}
-            className="v2-btn v2-btn-primary v2-btn-sm"
-          >
-            {saved ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                {saving ? "Saving…" : "Save changes"}
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
-
-      <Tabs
-        value={tab}
-        onChange={(v) => setTab(v as TabKey)}
-        tabs={[
-          { value: "pairings", label: "Cart pairings", icon: <Star className="h-3.5 w-3.5" /> },
-          { value: "combos", label: "Combo deals", icon: <Sparkles className="h-3.5 w-3.5" /> },
-          { value: "timeOfDay", label: "Time-of-day", icon: <Clock className="h-3.5 w-3.5" /> },
-          { value: "badges", label: "Menu badges", icon: <Tag className="h-3.5 w-3.5" /> },
-        ]}
-        variant="underline"
-        ariaLabel="Cross-sell view"
+            aria-label="Save changes"
+            title={saved ? "Saved" : saving ? "Saving…" : "Save changes"}
+            leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+          />
+        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          ariaLabel: "Cross-sell view",
+          options: [
+            { value: "pairings", label: "Cart pairings", icon: <Star className="h-3.5 w-3.5" /> },
+            { value: "combos", label: "Combo deals", icon: <Sparkles className="h-3.5 w-3.5" /> },
+            { value: "timeOfDay", label: "Time-of-day", icon: <Clock className="h-3.5 w-3.5" /> },
+            { value: "badges", label: "Menu badges", icon: <Tag className="h-3.5 w-3.5" /> },
+          ],
+        }}
       />
 
       {tab === "pairings" && (

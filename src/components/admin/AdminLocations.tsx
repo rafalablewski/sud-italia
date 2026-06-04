@@ -12,7 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHeader, EmptyState, Tabs } from "./v2/ui";
+import { Badge, Card, CardBody, CardHeader, EmptyState, PageHero } from "./v2/ui";
 
 import { AreaChart, BarChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -194,24 +194,21 @@ function AdminLocationsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Multi-location</h1>
-          <p className="v2-page-subtitle">Side-by-side benchmark across active locations.</p>
-        </div>
-        <Tabs
-          value={period}
-          onChange={(v) => setPeriod(v as Period)}
-          tabs={[
+      <PageHero
+        title="Multi-location"
+        subtitle="Side-by-side benchmark across active locations."
+        filter={{
+          value: period,
+          onChange: (v) => setPeriod(v as Period),
+          ariaLabel: "Range",
+          options: [
             { value: "today", label: "Today" },
             { value: "7d", label: "7d" },
             { value: "30d", label: "30d" },
             { value: "90d", label: "90d" },
-          ]}
-          variant="pill"
-          ariaLabel="Range"
-        />
-      </header>
+          ],
+        }}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Multi-location…</div>

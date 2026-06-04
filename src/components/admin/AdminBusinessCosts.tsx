@@ -11,7 +11,6 @@ import {
   Coins,
   Pencil,
   Plus,
-  Search,
   Trash2,
   Users,
   Wallet,
@@ -39,10 +38,11 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Table,
-  Tabs,
   Textarea,
   type Column,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -127,7 +127,6 @@ export function AdminBusinessCosts() {
 
   const [list, setList] = useState<BusinessCost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [categoryFilter, setCategoryFilter] = useState<"all" | BusinessCostCategory>("all");
   const [dialog, setDialog] = useState<DialogState>({ open: false, cost: null });
@@ -153,20 +152,12 @@ export function AdminBusinessCosts() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((c) => {
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (categoryFilter !== "all" && c.category !== categoryFilter) return false;
-      if (!q) return true;
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        (c.vendor?.toLowerCase().includes(q) ?? false) ||
-        (c.payrollRole?.toLowerCase().includes(q) ?? false) ||
-        (c.notes?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, statusFilter, categoryFilter]);
+  }, [list, statusFilter, categoryFilter]);
 
   const totals = useMemo(() => {
     const active = list.filter((c) => c.status === "active");
@@ -366,23 +357,43 @@ export function AdminBusinessCosts() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Business costs</h1>
-          <p className="v2-page-subtitle">
-            Operating expense ledger — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses and one-off purchases. Recurring amounts normalize to per-month so totals stay comparable.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Business costs"
+        subtitle="Operating expense ledger — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses and one-off purchases. Recurring amounts normalize to per-month so totals stay comparable."
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setDialog({ open: true, cost: null })}
-          >
-            New cost
-          </Button>
-        </div>
-      </header>
+            aria-label="New cost"
+            title="New cost"
+          />
+        }
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
+            { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
+            { value: "all", label: "All", count: list.length },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Category filter",
+            value: categoryFilter,
+            onChange: (v) => setCategoryFilter(v as typeof categoryFilter),
+            options: [
+              { value: "all", label: "All categories" },
+              ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
+                value: k,
+                label: CATEGORY_LABEL[k],
+              })),
+            ],
+          },
+        ]}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -525,39 +536,6 @@ export function AdminBusinessCosts() {
         </Card>
       )}
 
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, vendor, category, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value as typeof categoryFilter)}
-          options={[
-            { value: "all", label: "All categories" },
-            ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
-              value: k,
-              label: CATEGORY_LABEL[k],
-            })),
-          ]}
-        />
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
-            { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
-            { value: "all", label: "All", count: list.length },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
-
       {loading ? (
         <div className="v2-page-loading">Loading Business costs…</div>
       ) : filtered.length === 0 ? (
@@ -587,14 +565,13 @@ export function AdminBusinessCosts() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table
-              rows={filtered}
-              columns={cols}
-              rowKey={(c) => c.id}
-              defaultSort={{ key: "monthly", dir: "desc" }}
-            />
-          </CardBody>
+          <Table
+            flush
+            rows={filtered}
+            columns={cols}
+            rowKey={(c) => c.id}
+            defaultSort={{ key: "monthly", dir: "desc" }}
+          />
         </Card>
       )}
 
@@ -868,10 +845,10 @@ function BusinessCostDialog({ state, onClose, onSaved }: DialogProps) {
           <label className="v2-field">
             <span className="v2-field-label">Tax deductible</span>
             <span className="inline-flex items-center gap-2 mt-1">
-              <input
-                type="checkbox"
+              <Switch
                 checked={taxDeductible}
-                onChange={(e) => setTaxDeductible(e.target.checked)}
+                onChange={(v) => setTaxDeductible(v)}
+                label="Tax deductible"
               />
               <span className="v2-muted text-sm">Mark this cost as deductible for VAT/CIT.</span>
             </span>

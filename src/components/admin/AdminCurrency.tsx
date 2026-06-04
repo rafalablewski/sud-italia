@@ -9,7 +9,9 @@ import {
   CardBody,
   CardHeader,
   Input,
+  PageHero,
   Select,
+  Switch,
   useToast,
 } from "./v2/ui";
 
@@ -159,9 +161,7 @@ export function AdminCurrency() {
   if (!config) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <h1 className="v2-page-title">Currency</h1>
-        </header>
+        <PageHero title="Currency" />
         <div className="v2-page-loading">Loading Currency…</div>
       </div>
     );
@@ -169,19 +169,14 @@ export function AdminCurrency() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title flex items-center gap-2">
+      <PageHero
+        title={
+          <span className="flex items-center gap-2">
             <Coins className="h-6 w-6" /> Currency
-          </h1>
-          <p className="v2-page-subtitle">
-            Configure which currencies the customer-facing switcher exposes
-            on the homepage, set per-currency display rates against PLN,
-            and choose the default the site loads with. Orders are always
-            charged in PLN — non-PLN selections are a reference display.
-          </p>
-        </div>
-      </header>
+          </span>
+        }
+        subtitle="Configure which currencies the customer-facing switcher exposes on the homepage, set per-currency display rates against PLN, and choose the default the site loads with. Orders are always charged in PLN — non-PLN selections are a reference display."
+      />
 
       <div className="grid gap-4 md:gap-6">
         <Card>
@@ -193,9 +188,9 @@ export function AdminCurrency() {
                 const on = enabled[c];
                 const locked = c === "PLN";
                 return (
-                  <label
+                  <div
                     key={c}
-                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition ${
+                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition ${
                       on
                         ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
@@ -209,14 +204,13 @@ export function AdminCurrency() {
                       </span>
                       <span className="admin-text-secondary text-xs">{meta.label}</span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5"
+                    <Switch
                       checked={on}
                       disabled={locked}
-                      onChange={(e) => toggle(c, e.target.checked)}
+                      onChange={(v) => toggle(c, v)}
+                      label={`Enable ${c}`}
                     />
-                  </label>
+                  </div>
                 );
               })}
             </div>

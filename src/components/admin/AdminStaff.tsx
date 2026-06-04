@@ -12,7 +12,6 @@ import {
   Monitor,
   Pencil,
   Plus,
-  Search,
   Trash2,
   User,
   Users,
@@ -40,9 +39,9 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Switch,
-  Tabs,
   Table,
   Textarea,
   type Column,
@@ -86,7 +85,6 @@ export function AdminStaff() {
   const [list, setList] = useState<StaffMember[]>([]);
   const [punches, setPunches] = useState<TimePunch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [dialog, setDialog] = useState<DialogState>({ open: false, member: null });
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
@@ -124,18 +122,11 @@ export function AdminStaff() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((s) => {
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        s.name.toLowerCase().includes(q) ||
-        s.role.toLowerCase().includes(q) ||
-        (s.phone?.toLowerCase().includes(q) ?? false) ||
-        (s.email?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, statusFilter]);
+  }, [list, statusFilter]);
 
   const totals = useMemo(() => {
     const active = list.filter((s) => s.status === "active");
@@ -308,19 +299,23 @@ export function AdminStaff() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Staff</h1>
-          <p className="v2-page-subtitle">
-            Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })}>
-            {canHire ? "Hire employee" : "New staff member"}
-          </Button>
-        </div>
-      </header>
+      <PageHero
+        title="Staff"
+        subtitle="Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches."
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })} aria-label="Hire employee" title={canHire ? "Hire employee" : "New staff member"} />
+        }
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          options: [
+            { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
+            { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
+            { value: "all", label: "All", count: list.length },
+          ],
+          ariaLabel: "Status filter",
+        }}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Active staff" value={totals.activeCount} icon={Users} tone="info" />
@@ -340,28 +335,6 @@ export function AdminStaff() {
           tone="brand"
         />
       </section>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, phone, email, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
-            { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
-            { value: "all", label: "All", count: list.length },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Staff…</div>
@@ -388,9 +361,7 @@ export function AdminStaff() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
         </Card>
       )}
 
@@ -646,7 +617,7 @@ function StaffDialog({ canHire, state, onClose, onSaved }: { canHire: boolean; s
 
             {grantLogin && (
               <>
-                <div className="v2-note">
+                <div className="v2-callout">
                   <Monitor className="h-4 w-4" />
                   <span>
                     Access tier: <strong>{accessRole}</strong> · lands on{" "}

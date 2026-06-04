@@ -197,8 +197,10 @@ export function MobileAlerts() {
                 className="v2-m-btn v2-m-btn-ghost"
                 style={{ minHeight: 32, padding: "0 10px" }}
                 onClick={markAllRead}
+                aria-label="Mark all read"
+                title="Mark all read"
               >
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> Mark all read
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
               </button>
             ) : null
           }

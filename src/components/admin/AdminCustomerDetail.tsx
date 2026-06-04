@@ -30,6 +30,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Table,
   Textarea,
   type Column,
@@ -278,13 +279,13 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
-          </Link>
-          <h1 className="v2-page-title">{fullName}</h1>
-          <p className="v2-page-subtitle v2-inline">
+      <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
+        <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
+      </Link>
+      <PageHero
+        title={fullName}
+        subtitle={
+          <span className="v2-inline">
             <Phone className="h-3 w-3 v2-muted" />
             <span className="mono">{data.phone}</span>
             {data.member?.email && (
@@ -299,14 +300,12 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
                 Member since {fmtDate(data.member.signedUpAt)}
               </>
             )}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setNoteDialogOpen(true)}>
-            Add note
-          </Button>
-        </div>
-      </header>
+          </span>
+        }
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setNoteDialogOpen(true)} aria-label="Add note" title="Add note" />
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -344,13 +343,13 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
       <section className="v2-grid-2-1">
         <Card padding="none">
           <CardHeader title="Order history" description={`${data.orders.length} non-pending orders`} />
-          <CardBody>
-            {data.orders.length === 0 ? (
+          {data.orders.length === 0 ? (
+            <CardBody>
               <EmptyState icon={ShoppingBag} title="No orders yet" compact />
-            ) : (
-              <Table rows={data.orders} columns={orderCols} rowKey={(o) => o.id} defaultSort={{ key: "date", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={data.orders} columns={orderCols} rowKey={(o) => o.id} defaultSort={{ key: "date", dir: "desc" }} />
+          )}
         </Card>
 
         <Card>

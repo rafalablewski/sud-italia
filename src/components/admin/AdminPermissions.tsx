@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Grid3x3, KeyRound, Minus, Search, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
+import { Check, Grid3x3, KeyRound, Minus, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
 import type { AdminRole, AdminUser } from "@/data/types";
 import { ROLE_RANK } from "@/lib/admin-roles";
 import {
@@ -13,7 +13,7 @@ import {
   type PermissionKey,
 } from "@/lib/permissions";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Card, CardBody, Chip, EmptyState, Input, Tabs } from "./v2/ui";
+import { Badge, Card, CardBody, EmptyState, PageHero } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
 /** Row shape from /api/admin/users (secrets stripped; `permissions` kept). */
@@ -66,7 +66,6 @@ export function AdminPermissions() {
   const [loading, setLoading] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
   const [view, setView] = useState<ViewMode>("role");
-  const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string>("all");
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
@@ -89,21 +88,14 @@ export function AdminPermissions() {
       .catch(() => {});
   }, [fetchUsers]);
 
-  // Permission rows after search + group filter, kept grouped.
+  // Permission rows after the group filter, kept grouped.
   const groups = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return PERMISSION_GROUPS.map((g) => ({
       id: g.id,
       label: g.label,
-      permissions: g.permissions.filter(
-        (p) =>
-          !q ||
-          p.label.toLowerCase().includes(q) ||
-          p.key.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q),
-      ),
+      permissions: g.permissions.slice(),
     })).filter((g) => (group === "all" || g.id === group) && g.permissions.length > 0);
-  }, [query, group]);
+  }, [group]);
 
   // Users sorted owners → rank → name, for stable columns. Rank comes from the
   // live ROLE_RANK table so a new role slots in automatically.
@@ -161,14 +153,34 @@ export function AdminPermissions() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Permission matrix</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Permission matrix"
+        subtitle={
+          <>
             Live cross-tab of every capability against your roles and your real accounts — built from the permission catalog (<span className="mono">src/lib/permissions.ts</span>), the role presets, and the current user list. Nothing here is hand-maintained: add a capability or a user and it shows up. <strong>By role</strong> shows the default grant each role inherits; <strong>By user</strong> shows each account&rsquo;s effective access (custom grants override their role) and lets an owner flip a cell to grant or revoke.
-          </p>
-        </div>
-      </header>
+          </>
+        }
+        filter={{
+          value: view,
+          onChange: (v) => setView(v as ViewMode),
+          ariaLabel: "Matrix view",
+          options: [
+            { value: "role", label: "By role" },
+            { value: "user", label: "By user", count: users.length },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Permission group",
+            value: group,
+            onChange: setGroup,
+            options: [
+              { value: "all", label: "All groups" },
+              ...PERMISSION_GROUPS.map((g) => ({ value: g.id, label: g.label })),
+            ],
+          },
+        ]}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Capabilities" value={ALL_PERMISSION_KEYS.length} icon={KeyRound} tone="brand" />
@@ -177,44 +189,12 @@ export function AdminPermissions() {
         <KpiCard label="Custom grants" value={customCount} icon={UserCog} tone={customCount > 0 ? "warning" : "neutral"} />
       </section>
 
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search capabilities by name, key, or description…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={view}
-          onChange={(v) => setView(v as ViewMode)}
-          tabs={[
-            { value: "role", label: "By role" },
-            { value: "user", label: "By user", count: users.length },
-          ]}
-          variant="pill"
-          ariaLabel="Matrix view"
-        />
-      </div>
-
-      <div className="v2-filters" style={{ flexWrap: "wrap", gap: 6 }}>
-        <Chip selected={group === "all"} onClick={() => setGroup("all")}>
-          All groups
-        </Chip>
-        {PERMISSION_GROUPS.map((g) => (
-          <Chip key={g.id} selected={group === g.id} onClick={() => setGroup(g.id)}>
-            {g.label}
-          </Chip>
-        ))}
-      </div>
-
       {loading ? (
         <div className="v2-page-loading">Loading permission matrix…</div>
       ) : visiblePermCount === 0 ? (
         <Card>
           <CardBody>
-            <EmptyState icon={Grid3x3} title="No matching capabilities" description="Try clearing the search or group filter." />
+            <EmptyState icon={Grid3x3} title="No matching capabilities" description="Try a different group filter." />
           </CardBody>
         </Card>
       ) : view === "role" ? (
@@ -230,7 +210,7 @@ export function AdminPermissions() {
       )}
 
       <Card padding="compact">
-        <div className="v2-note">
+        <div className="v2-callout">
           <ShieldCheck className="h-4 w-4" />
           <span>
             <strong>Owners are always all-access</strong> and can&rsquo;t be narrowed. Toggling a cell in <strong>By user</strong> writes that account a fully-custom grant (it stops inheriting its role defaults) and persists immediately through the owner-only <span className="mono">/api/admin/users</span> — the same gate the Users editor uses. The matrix re-reads after every write, so what you see is what the server enforces.

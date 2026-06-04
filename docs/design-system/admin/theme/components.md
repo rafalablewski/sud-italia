@@ -32,6 +32,14 @@ treatment:
 | lg | 38–42px | 0 17–18px | Page-level CTAs |
 | xl | 46px | 0 22px | Hero CTAs (Charge, big bumps). Full-width when alone. |
 
+**Icon-only buttons.** A `.v2-btn` rendered with an icon but **no** `.v2-btn-label`
+(i.e. `<Button leadingIcon={…} />` with no children) auto-collapses to a square
+via `.v2-btn:not(:has(.v2-btn-label))` — no width/padding overrides needed. This
+is the standard for **all `PageHero` action buttons** (New, Save, Refresh,
+Export…): icon only, always with an `aria-label` + `title` carrying the dropped
+text for accessibility + a hover tooltip. Keep text labels on in-body / table /
+dialog buttons.
+
 ### Variants
 
 | Variant | Bg | Border | Use |
@@ -126,21 +134,27 @@ Placed inline in the tags row on a POS product card.
 - **`.viewswitch`** — the shared **role/view** switcher (KDS Fleet / Floor /
   Chef, Guest Inbox / Guests / Concierge). Same look as `.seg` so the suite
   reads as one product.
+- **`.v2-tabs-pill`** — the `Tabs` segmented variant (period filters, Kanban/
+  Table toggles). Sized to **34px to match `.v2-btn-md`** (3px track pad + 1px
+  border + 26px tab; 8px radius ≈ the button's 7px) so it sits flush beside
+  buttons in a page-header toolbar.
 
 ## Location filter — one component, one look
 
 Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
 `v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
-site**, and it renders **one thing everywhere: a pill row** (`MapPin` + city,
-the selected pill in `--brand-soft`). It replaced two drifting patterns — the
-hand-rolled `LocationTabs` pills and the inline `v2-field-inline` + `Select`
-block copy-pasted into a dozen page headers — so every page now looks
-identical, operational views and selling-rule editors alike.
+site**, and it's always the **same shape: a pill row** (`MapPin` + city, active
+pill in `--brand-soft`). It replaced two drifting patterns — the hand-rolled
+`LocationTabs` pills and the inline `v2-field-inline` + `Select` copy-pasted into
+a dozen page headers.
 
-**There is deliberately no `variant` prop.** A second rendering mode (a
-dropdown) is exactly how the original drift started; one look is the whole
-point. If a future need can't be met by pills, change the component once — for
-everyone — rather than reintroducing a per-page branch.
+**It scales without changing shape.** The pills live in a horizontal scroller
+(`.v2-locscroll` → `.v2-locscroll-track`): pills never wrap or shrink, and when
+they overflow, the track scrolls with **left/right chevron controls + edge fades**
+(`.v2-locscroll-arrow`, shown only when `is-l` / `is-r`). So a 2-truck shop sees
+two pills (no arrows) and a 15-site network sees a tidy left/right scroll — never
+a wrap, a squeeze, or a different widget. **No per-page `variant`** — a dropdown /
+second mode is exactly how the old drift started.
 
 It is **controlled** (`value` / `onChange`) and derives its option list from
 `getActiveLocations()`, so a page never hand-builds `{ value, label }` arrays.
@@ -180,7 +194,23 @@ box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,.04)
 ```
 
 The `inset 0 1px 0 …` is the **1px hairline top-light** — a refined
-material touch, not a gradient. Hover lifts the border, not the whole card.
+material touch, not a gradient. Static content cards stay flat.
+
+**Interactive cards lift.** A clickable card — `.v2-card-interactive`, or an
+`a`/`button` that *is* a `.v2-card` — gets a tactile hover: border → `--border-strong`,
+`--shadow-sm`, and `translateY(-1px)` on `--duration-fast`, settling back on
+`:active`. KPI tiles (`.v2-kpi`) share the same lift. Reduced-motion drops the
+transform. Don't put the lift on a static card — motion implies "click me."
+
+**KPI tiles are clean & minimal.** No coloured top bar. A `KpiCard`'s `tone`
+(`brand`/`info`/`success`/`warning`/`danger`) colours **only the icon chip**
+(`.v2-kpi-tone-*`) — the surface stays calm and standardised. The label is a
+**2xs uppercase eyebrow** (`.07em` tracked, `--fg-subtle`); the value is the
+**Fraunces display numeral** (`--font-display`, `--text-3xl`, weight 500,
+`tabular-nums`) — the "investment-grade tell" per
+[typography → Display numerals](./typography.md#display-numerals-kpis); the icon
+sits in a `--radius-md` tone chip. Crisp metric eyebrow → refined serif hero
+number is the KPI rhythm.
 
 ### Menu / product cards — text-forward
 
@@ -388,6 +418,112 @@ See the core side in [core components → Sidebar](../../core/theme/components.m
 - Hairline `--border` between rows. Hover lifts the row background only.
 - Column header eyebrows: `11px uppercase 600 / .08em tracked` in
   `--fg-subtle`.
+- **`flush` inside a Card (no double border).** By default `.v2-table-wrap`
+  carries its own border + `--radius-lg` + `--surface-1` — correct when the
+  table stands alone on a page. But dropped inside a `<Card>` that already
+  supplies all three, you get the **box-in-a-box** look (a border hugging a
+  border). Pass `<Table flush>` to strip the wrapper chrome
+  (`.v2-table-flush`), and set the card to `<Card padding="none">` so the table
+  fills edge-to-edge under the card header. The card's `overflow: hidden` +
+  radius clip the corners. **This is the standard for any card-nested table** —
+  it ships across the admin (Dashboard, Reports, Inventory, Customers,
+  Suppliers, Staff, Users, AI, Compliance, Surveys, …). When the card body has
+  mixed content (a header row or controls beside the table, e.g.
+  `AdminLocationsManager`), keep default card padding and pass `flush` alone —
+  the table inset loses its border without forcing the rest edge-to-edge. A
+  table that stands **alone on the page** (not in a card, e.g. `AdminOrders`)
+  keeps its own wrapper border — don't flush it. See
+  [material → Nested surfaces](./material.md#nested-surfaces--one-border-per-box).
+
+## Callouts — `.v2-callout`
+
+The standard inline **info panel** (the "only an owner can…" notice, simulator
+caveats, security notes). A `--surface-2` inset well with a **left accent rail**
+and a **CSS-chipped icon** (the leading `<svg>` gets a padded tinted background —
+no markup wrapper needed; usages just set the class). Structure:
+
+```
+<div className="v2-callout v2-callout-platinum">
+  <ShieldCheck className="h-4 w-4" />     {/* auto-chipped by CSS */}
+  <span><strong>Lead-in.</strong> Body copy…</span>
+</div>
+```
+
+- **Tones:** base (neutral rail), `-info`, `-warning`, `-danger`, `-platinum`.
+  The tone colours both the rail and the icon chip. **Platinum is the owner-tier
+  tone** — use it for owner-only notices (per the platinum-for-owner doctrine).
+- **Don't wrap a lone callout in its own `<Card>`** — the callout already carries
+  surface + border, so a card around just a callout double-borders. Render it
+  standalone (e.g. the AdminUsers owner notice) or as one item inside a larger
+  card body.
+- **Not to be confused with `.v2-note`**, which is the **CRM customer note card**
+  (`AdminCustomerDetail` — body + foot + delete). The two used to share the
+  `.v2-note` name and collided; the callout is now its own `.v2-callout`.
+
+## Kanban (Orders board)
+
+`.v2-kanban-col` lanes carry a **2px status-colour cap** (`.v2-kanban-col-{warning
+|info|success|danger|neutral}` → `--kcol-accent`, mapped from `ORDER_STATUS_TONE`)
+so pending / in-progress / ready / cancelled read at a glance — the same accent-cap
+language as the KPI tiles. `.v2-kanban-card`s lift on hover
+(`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
+interactive-card behaviour.
+
+## Page hero & section eyebrows
+
+Every admin page is fronted by **one shared hero panel** — a raised
+`--surface-1` card with a **`--platinum`** left rail — so the title, location
+filter, filters and actions live in the **same place on
+every page**:
+
+- **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
+  `3px --platinum` left rail + `--radius-lg`, `16px 22px` padding. The title
+  (`.v2-page-title`) is serif **`--font-display`** at `--text-2xl` weight 500
+  (don't bold past 500 — typography doctrine).
+- **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
+  fills the panel as **fixed stacked rows** (`.v2-hero` is `flex-column`,
+  `gap:14px`). **Data-driven & enforced:** every control role takes DATA (not
+  JSX) and the hero renders the *one* canonical widget for it, so a page cannot
+  substitute a different widget and the controls can never drift apart. Every
+  row is optional and collapses gracefully; **all controls live inside the panel
+  — nothing floats below.** The rows, top → bottom:
+  1. **`title`** — alone (`.v2-page-title`).
+  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
+     only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
+  3. **`location`** — `.v2-hero-find`. `{value,onChange,includeAll?}` → **always**
+     the pill `LocationFilter` (never a `<Select>`), left-aligned under the title.
+  4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
+     (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
+     **always** `Select`s, rendered beside the pill.
+  5. **`nav`** = `{value,onChange,options}` → **always** an underline `Tabs`
+     (`.v2-hero-tabs`) for section navigation, full width.
+  **No `search` slot** — text search was removed from every admin hero by design
+  (lists keep their `filter` / `dropdowns` / `nav`); re-add per page only if asked.
+  **No stats slot** — headline numbers belong in the KPI grid below, not the
+  hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
+  hand-roll a header, and never pass a raw control where a data prop exists.
+  - **Rows never overflow** (structure rule: *contain → wrap → scroll, never
+    overflow*): every row is `flex-wrap:wrap`; a segmented control caps at
+    `max-width:100%` and scrolls internally. Below `820px` the right-aligned
+    items (`actions`, `location`) drop left as rows stack.
+  - **Choosing the slot by role** (this is what keeps widgets consistent):
+    **filter a list with a few short options → `filter`** (pill — Orders status,
+    Menu category, Customers segment). **A filter with many/long options →
+    `dropdowns`** (Select — Users security, Permissions groups, ingredient
+    categories). **Switch between sub-views/panels → `nav`** (underline — Settings
+    sections, Cross-sell/Upsell tabs, Orders Kanban/Table, AI insights, Growth
+    sections). Pick by *role*, not by what the page happened to use before.
+  - **`actions` are icon-only** (compressed primary + secondary) with an
+    `aria-label` + `title` tooltip for the dropped text, and all render at **one
+    size (md / 34px)** regardless of the `size` prop a page passes — CSS
+    (`.v2-hero .v2-page-actions .v2-btn`) normalises it, since `actions` is the
+    one free-form slot the data API can't type-enforce.
+- **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
+  trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
+  below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary
+  KPIs) / **Operations & risk** (the 4 secondary KPIs) / **Performance** (trend +
+  alerts) / **Demand** (top sellers + heatmap) / **Network** (location table).
+  KPIs are split into two `.v2-kpi-grid` tiers under their eyebrows for hierarchy.
 
 ## Iconography — custom stroke, no emoji in UI
 
@@ -407,10 +543,22 @@ stroke icon.
 
 ## Toggles
 
-`.sw-toggle` — 38×22 pill, off = `--surface-3` + `--border-strong`, on =
-`--brand` + transparent border, thumb fades from `--fg-muted` to white.
-Toggle = saved (persist immediately, no separate Save button) — see
-`CLAUDE.md` rule #7.
+`.v2-switch` (the `Switch` primitive, `v2/ui/Switch.tsx`) — a 40×22 pill,
+`role="switch"`. Off = `--surface-3` track + `--border` hairline + `--fg-subtle`
+thumb; on = `--success-soft` track + `--success` border-mix + `--success` thumb,
+thumb travels 18px on `--duration-base`/`--ease`. The green "on" reads as a
+live/enabled state and keeps "brand" reserved for primary actions.
+
+**On/off settings always use `Switch`, never a native `<input type="checkbox">`.**
+A native checkbox is reserved for **genuine multi-select** (picking several items
+in a list — table row-select, menu modifiers, bundle item pickers), not a switch.
+If a control means "enabled / disabled," it's a Switch. Toggle = saved: persist
+immediately on change, no separate Save button — see `CLAUDE.md` rule #7. (The
+whole admin Settings page follows this — every sandbox/layout toggle is a `Switch`.)
+
+The native checkboxes/radios that remain (the genuine multi-select ones) are
+brand-tinted globally via `accent-color: var(--brand)` scoped to
+`[data-admin-theme]`, so no raw blue OS control appears in admin chrome.
 
 ## Component checklist (when building a new one)
 

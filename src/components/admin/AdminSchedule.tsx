@@ -20,7 +20,7 @@ import {
   EmptyState,
   Input,
   Select,
-  LocationFilter,
+  PageHero,
 } from "./v2/ui";
 
 const activeLocations = getActiveLocations();
@@ -207,18 +207,12 @@ function AdminScheduleDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Schedule</h1>
-          <p className="v2-page-subtitle">
-            Weekly grid · drag-style add per day · cost rolls up from real hourly rates.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
-          <DatePager unit="week" value={weekStart} onChange={setWeekStart} />
-        </div>
-      </header>
+      <PageHero
+        title="Schedule"
+        subtitle="Weekly grid · drag-style add per day · cost rolls up from real hourly rates."
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        actions={<DatePager unit="week" value={weekStart} onChange={setWeekStart} />}
+      />
 
       <Card padding="compact">
         <div className="v2-summary-row">

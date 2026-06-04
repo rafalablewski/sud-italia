@@ -11,7 +11,6 @@ import {
   PackagePlus,
   Plus,
   Scale,
-  Search,
   Trash2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -34,11 +33,10 @@ import {
   EmptyState,
   Input,
   Select,
-  Tabs,
   Table,
   Textarea,
   type Column,
-  LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -144,7 +142,6 @@ function AdminInventoryDesktop() {
     varianceCostGrosze: number;
   }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const [movementDialog, setMovementDialog] = useState<{
@@ -177,18 +174,12 @@ function AdminInventoryDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return stock.filter((r) => {
       const status = classifyStatus(r);
       if (statusFilter !== "all" && statusFilter !== status) return false;
-      if (!q) return true;
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        (r.supplier?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [stock, search, statusFilter]);
+  }, [stock, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: stock.length, ok: 0, low: 0, out: 0 };
@@ -365,26 +356,32 @@ function AdminInventoryDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Inventory</h1>
-          <p className="v2-page-subtitle">
-            On-hand stock per location · low-stock alerts · receive / waste / consume log.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+      <PageHero
+        title="Inventory"
+        subtitle="On-hand stock per location · low-stock alerts · receive / waste / consume log."
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setAddDialog(true)}
             disabled={untracked.length === 0}
-            title={untracked.length === 0 ? "All ingredients are tracked here." : undefined}
-          >
-            Track ingredient
-          </Button>
-        </div>
-      </header>
+            aria-label="Track ingredient"
+            title={untracked.length === 0 ? "All ingredients are tracked here." : "Track ingredient"}
+          />
+        }
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "ok", label: "Healthy", count: counts.ok },
+            { value: "low", label: "Low", count: counts.low },
+            { value: "out", label: "Out", count: counts.out },
+          ],
+        }}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -421,29 +418,6 @@ function AdminInventoryDesktop() {
 
       <VarianceCard rows={variance} />
 
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search ingredient, supplier…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "ok", label: "Healthy", count: counts.ok },
-            { value: "low", label: "Low", count: counts.low },
-            { value: "out", label: "Out", count: counts.out },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
-
       <div className="v2-grid-2-1">
         {loading ? (
           <div className="v2-page-loading">Loading Stock…</div>
@@ -470,14 +444,13 @@ function AdminInventoryDesktop() {
           </Card>
         ) : (
           <Card padding="none">
-            <CardBody>
-              <Table
-                rows={filtered}
-                columns={cols}
-                rowKey={(r) => r.ingredientId}
-                defaultSort={{ key: "status", dir: "asc" }}
-              />
-            </CardBody>
+            <Table
+              flush
+              rows={filtered}
+              columns={cols}
+              rowKey={(r) => r.ingredientId}
+              defaultSort={{ key: "status", dir: "asc" }}
+            />
           </Card>
         )}
 

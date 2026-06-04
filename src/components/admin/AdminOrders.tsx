@@ -12,7 +12,6 @@ import {
   Printer,
   RefreshCw,
   RotateCcw,
-  Search,
   TableProperties,
   Trash2,
   Users,
@@ -48,6 +47,7 @@ import {
   EmptyState,
   Input,
   ORDER_STATUS_TONE,
+  PageHero,
   Select,
   Tabs,
   Table,
@@ -107,7 +107,6 @@ function AdminOrdersDesktop() {
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [query, setQuery] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
@@ -204,16 +203,11 @@ function AdminOrdersDesktop() {
 
   // --- Filtering ---
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return orders.filter((o) => {
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
-      if (!q) return true;
-      if (o.id.toLowerCase().includes(q)) return true;
-      if (o.customerName.toLowerCase().includes(q)) return true;
-      if (o.customerPhone.toLowerCase().includes(q)) return true;
-      return false;
+      return true;
     });
-  }, [orders, statusFilter, query]);
+  }, [orders, statusFilter]);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -241,50 +235,25 @@ function AdminOrdersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Orders</h1>
-          <p className="v2-page-subtitle">
-            Track every order from payment through fulfillment.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Tabs
-            value={view}
-            onChange={(v) => setView(v as "kanban" | "table")}
-            tabs={[
-              { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
-              { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="View mode"
-          />
+      <PageHero
+        title="Orders"
+        subtitle="Track every order from payment through fulfillment."
+        actions={
           <Button
             variant="secondary"
             size="sm"
             leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
             onClick={onRefresh}
             disabled={refreshing}
-          >
-            Refresh
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by id, name, or phone…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search orders"
+            aria-label="Refresh"
+            title="Refresh"
           />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
+        }
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
             { value: "all", label: "All", count: counts.all },
             { value: "pending", label: STATUS_LABEL.pending, count: counts.pending },
             { value: "confirmed", label: STATUS_LABEL.confirmed, count: counts.confirmed },
@@ -292,11 +261,18 @@ function AdminOrdersDesktop() {
             { value: "ready", label: STATUS_LABEL.ready, count: counts.ready },
             { value: "completed", label: STATUS_LABEL.completed, count: counts.completed },
             { value: "cancelled", label: STATUS_LABEL.cancelled, count: counts.cancelled },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
+          ],
+        }}
+        nav={{
+          value: view,
+          onChange: (v) => setView(v as "kanban" | "table"),
+          ariaLabel: "View mode",
+          options: [
+            { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
+            { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
+          ],
+        }}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Orders…</div>
@@ -309,7 +285,7 @@ function AdminOrdersDesktop() {
               description={
                 orders.length === 0
                   ? "When a customer pays through Stripe, orders appear here."
-                  : "Try clearing the search or selecting a different status."
+                  : "Try selecting a different status."
               }
             />
           </CardBody>
@@ -451,7 +427,7 @@ function Kanban({ orders, onOpen, onAdvance, updating }: KanbanProps) {
       {KANBAN_COLUMNS.map((col) => {
         const list = grouped.get(col) || [];
         return (
-          <div key={col} className="v2-kanban-col">
+          <div key={col} className={`v2-kanban-col v2-kanban-col-${ORDER_STATUS_TONE[col]}`}>
             <div className="v2-kanban-col-header">
               <Badge tone={ORDER_STATUS_TONE[col]} variant="soft" dot>
                 {STATUS_LABEL[col]}

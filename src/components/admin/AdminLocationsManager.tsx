@@ -14,6 +14,8 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
+  Switch,
   Table,
   Textarea,
   type Column,
@@ -288,31 +290,38 @@ export function AdminLocationsManager() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Locations</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Locations"
+        subtitle={
+          <>
             Add a truck without a deploy. Active locations appear on the
             public landing page and in every admin tab. The hardcoded seed
             in <code className="mono">src/data/locations.ts</code> is the
             first-deploy fallback only.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={busy}
-            onClick={reseed}
-            title="Upsert the in-code seed into the DB"
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Re-seed from code
-          </Button>
-          <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5" /> Add location
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={busy}
+              onClick={reseed}
+              leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
+              aria-label="Re-seed from code"
+              title="Re-seed from code — upsert the in-code seed into the DB"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={openCreate}
+              leadingIcon={<Plus className="h-3.5 w-3.5" />}
+              aria-label="Add location"
+              title="Add location"
+            />
+          </>
+        }
+      />
 
       <Card>
         <CardBody>
@@ -332,7 +341,7 @@ export function AdminLocationsManager() {
               description="Add the first truck or re-seed from the hardcoded list."
             />
           ) : (
-            <Table columns={cols} rows={list} rowKey={(l) => l.slug} />
+            <Table flush columns={cols} rows={list} rowKey={(l) => l.slug} />
           )}
         </CardBody>
       </Card>
@@ -536,10 +545,10 @@ export function AdminLocationsManager() {
             <div className="v2-field">
               <label className="v2-field-label">Visibility</label>
               <label className="v2-detail-toggle">
-                <input
-                  type="checkbox"
+                <Switch
                   checked={editing.form.isActive}
-                  onChange={(e) => setField("isActive", e.target.checked)}
+                  onChange={(v) => setField("isActive", v)}
+                  label="Active — show on public site"
                 />
                 <span>Active — show on public site</span>
               </label>
@@ -547,10 +556,10 @@ export function AdminLocationsManager() {
             <div className="v2-field">
               <label className="v2-field-label">Licensing</label>
               <label className="v2-detail-toggle">
-                <input
-                  type="checkbox"
+                <Switch
                   checked={editing.form.servesAlcohol}
-                  onChange={(e) => setField("servesAlcohol", e.target.checked)}
+                  onChange={(v) => setField("servesAlcohol", v)}
+                  label="Serves alcohol"
                 />
                 <span>Serves alcohol</span>
               </label>

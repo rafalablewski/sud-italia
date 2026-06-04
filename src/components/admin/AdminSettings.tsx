@@ -29,7 +29,8 @@ import {
   CardHeader,
   EmptyState,
   Input,
-  Tabs,
+  PageHero,
+  Switch,
   Table,
   type Column,
 } from "./v2/ui";
@@ -685,26 +686,23 @@ function AdminSettingsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Settings</h1>
-          <p className="v2-page-subtitle">Account, business config, and the audit trail of administrative changes.</p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
+      <PageHero
+        title="Settings"
+        subtitle="Account, business config, and the audit trail of administrative changes."
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          options: [
             { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
             { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
             { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
             { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
             { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
             { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="Settings section"
-        />
-      </header>
+          ],
+          ariaLabel: "Settings section",
+        }}
+      />
 
       {tab === "general" && (
         <>
@@ -885,11 +883,11 @@ function AdminSettingsDesktop() {
                     ticket.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={kdsSimulatorEnabled}
-                      onChange={(e) => toggleKdsSimulator(e.target.checked)}
+                      onChange={(v) => toggleKdsSimulator(v)}
                       disabled={kdsSimBusy}
+                      label="KDS simulator"
                     />
                     <span className="v2-muted text-sm">
                       {kdsSimulatorEnabled
@@ -909,11 +907,11 @@ function AdminSettingsDesktop() {
                     conversation.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={whatsappSimulatorEnabled}
-                      onChange={(e) => toggleWhatsappSimulator(e.target.checked)}
+                      onChange={(v) => toggleWhatsappSimulator(v)}
                       disabled={whatsappSimBusy}
+                      label="WhatsApp simulator"
                     />
                     <span className="v2-muted text-sm">
                       {whatsappSimulatorEnabled
@@ -930,11 +928,11 @@ function AdminSettingsDesktop() {
                     business-costs ledger — nothing here writes to your books.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={simulationEnabled}
-                      onChange={(e) => toggleSimulation(e.target.checked)}
+                      onChange={(v) => toggleSimulation(v)}
                       disabled={simBusy}
+                      label="Financials simulator"
                     />
                     <span className="v2-muted text-sm">
                       {simulationEnabled
@@ -952,19 +950,19 @@ function AdminSettingsDesktop() {
                     levers. Read-only on the data — nothing here writes to orders, CRM or reports.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={cohortSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "cohortSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setCohortSimulationEnabled,
                           setCohortSimBusy,
                           "Cohort & CLTV simulator",
                         )
                       }
                       disabled={cohortSimBusy}
+                      label="Cohort & CLTV simulator"
                     />
                     <span className="v2-muted text-sm">
                       {cohortSimulationEnabled
@@ -982,19 +980,19 @@ function AdminSettingsDesktop() {
                     ratio, payback and profit-per-customer move against the 3× gate.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={ltvCacSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "ltvCacSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setLtvCacSimulationEnabled,
                           setLtvCacSimBusy,
                           "LTV / CAC simulator",
                         )
                       }
                       disabled={ltvCacSimBusy}
+                      label="LTV / CAC simulator"
                     />
                     <span className="v2-muted text-sm">
                       {ltvCacSimulationEnabled
@@ -1012,19 +1010,19 @@ function AdminSettingsDesktop() {
                     margin and the quadrant reshuffle before you touch the live menu.
                   </span>
                   <span className="inline-flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={menuEngineeringSimulationEnabled}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         toggleAnalyticsSim(
                           "menuEngineeringSimulationEnabled",
-                          e.target.checked,
+                          v,
                           setMenuEngineeringSimulationEnabled,
                           setMenuEngSimBusy,
                           "Menu engineering simulator",
                         )
                       }
                       disabled={menuEngSimBusy}
+                      label="Menu engineering simulator"
                     />
                     <span className="v2-muted text-sm">
                       {menuEngineeringSimulationEnabled
@@ -1124,11 +1122,11 @@ function AdminSettingsDesktop() {
                           <span className="v2-field-label">{spec.label}</span>
                           <span className="v2-muted text-sm">{spec.description}</span>
                           <span className="inline-flex items-center gap-2 mt-1">
-                            <input
-                              type="checkbox"
+                            <Switch
                               checked={value}
-                              onChange={(e) => toggleLayoutFlag(spec, e.target.checked)}
+                              onChange={(v) => toggleLayoutFlag(spec, v)}
                               disabled={busy || !settings}
+                              label={spec.label}
                             />
                             <span className="v2-muted text-sm">
                               {value ? spec.onCopy : spec.offCopy}
@@ -1163,7 +1161,7 @@ function AdminSettingsDesktop() {
                   <Badge tone="brand" variant="soft">{me.role}</Badge>
                 </div>
 
-                <div className="v2-note">
+                <div className="v2-callout">
                   <ShieldCheck className="h-4 w-4" />
                   <span>
                     You sign in at <span className="mono">{me.signIn.door}</span>
@@ -1206,7 +1204,7 @@ function AdminSettingsDesktop() {
                 </div>
 
                 {(me.signIn.shared || !me.signIn.mfa) && (
-                  <div className="v2-note">
+                  <div className="v2-callout">
                     <ShieldCheck className="h-4 w-4" />
                     <span>
                       {me.signIn.shared && (
@@ -1289,9 +1287,7 @@ function AdminSettingsDesktop() {
             </Card>
           ) : (
             <Card padding="none">
-              <CardBody>
-                <Table rows={audit} columns={auditCols} rowKey={(e) => e.id} defaultSort={{ key: "when", dir: "desc" }} />
-              </CardBody>
+              <Table flush rows={audit} columns={auditCols} rowKey={(e) => e.id} defaultSort={{ key: "when", dir: "desc" }} />
             </Card>
           )}
         </>

@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Plus,
-  Search,
   Send,
   Trash2,
   X,
@@ -35,6 +34,7 @@ import {
   Textarea,
   type Column,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 
 interface SupplierLite {
@@ -116,7 +116,6 @@ function AdminPurchaseOrdersDesktop() {
   const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<PORow | null>(null);
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PORow | null>(null);
@@ -143,17 +142,11 @@ function AdminPurchaseOrdersDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return orders.filter((p) => {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        p.id.toLowerCase().includes(q) ||
-        p.supplierName.toLowerCase().includes(q) ||
-        p.lines.some((l) => l.name?.toLowerCase().includes(q))
-      );
+      return true;
     });
-  }, [orders, statusFilter, search]);
+  }, [orders, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: orders.length, draft: 0, sent: 0, received: 0, cancelled: 0 };
@@ -276,56 +269,39 @@ function AdminPurchaseOrdersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Purchase orders</h1>
-          <p className="v2-page-subtitle">
-            Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+      <PageHero
+        title="Purchase orders"
+        subtitle="Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log."
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setCreating(true)}
             disabled={suppliers.length === 0 || ingredients.length === 0}
+            aria-label="New PO"
             title={
               suppliers.length === 0
                 ? "Add a supplier first."
                 : ingredients.length === 0
                   ? "Add ingredients first."
-                  : undefined
+                  : "New PO"
             }
-          >
-            New PO
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by PO id, supplier, or ingredient…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
+        }
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
             { value: "all", label: "All", count: counts.all },
             { value: "draft", label: "Draft", count: counts.draft },
             { value: "sent", label: "Sent", count: counts.sent },
             { value: "received", label: "Received", count: counts.received },
             { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
+          ],
+        }}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Purchase orders…</div>
@@ -335,15 +311,13 @@ function AdminPurchaseOrdersDesktop() {
             <EmptyState
               icon={ClipboardList}
               title={orders.length === 0 ? "No purchase orders yet" : "No matches"}
-              description={orders.length === 0 ? "Create a PO to start restocking." : "Try a different status or clear the search."}
+              description={orders.length === 0 ? "Create a PO to start restocking." : "Try a different status."}
             />
           </CardBody>
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(p) => p.id} defaultSort={{ key: "created", dir: "desc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(p) => p.id} defaultSort={{ key: "created", dir: "desc" }} />
         </Card>
       )}
 

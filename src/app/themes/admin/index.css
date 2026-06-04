@@ -1088,6 +1088,13 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-btn-md { padding: 6px 14px; font-size: var(--text-base); min-height: 34px; }
 .v2-btn-lg { padding: 9px 18px; font-size: var(--text-md); min-height: 42px; }
 
+/* Icon-only buttons — a `.v2-btn` with no `.v2-btn-label` (icon child only)
+   collapses to a square so every compressed action reads as a clean icon
+   affordance. Always pair with an `aria-label` + `title` for the dropped text. */
+.v2-btn:not(:has(.v2-btn-label)) { padding: 0; width: 34px; aspect-ratio: 1; }
+.v2-btn-sm:not(:has(.v2-btn-label)) { width: 26px; }
+.v2-btn-lg:not(:has(.v2-btn-label)) { width: 42px; }
+
 .v2-btn-primary {
   background: var(--brand);
   color: var(--brand-fg);
@@ -1229,6 +1236,12 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-switch.is-on::after { transform: translateX(18px); background: var(--success); }
 .v2-switch:disabled { opacity: 0.5; cursor: not-allowed; }
 .v2-switch:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+/* On/off settings use the Switch primitive (above). The native checkboxes /
+   radios that remain are for genuine multi-select only — brand-tint them so no
+   raw blue OS control shows in admin chrome. */
+[data-admin-theme] input[type="checkbox"],
+[data-admin-theme] input[type="radio"] { accent-color: var(--brand); }
 
 /* Icon-button size + tone modifiers (base .v2-icon-btn lives in the shell block). */
 .v2-icon-btn-sm { width: 28px; height: 28px; border-radius: var(--radius-sm); }
@@ -1548,17 +1561,20 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-tabs-underline .v2-tab:hover:not(:disabled) { color: var(--fg); }
 .v2-tabs-underline .v2-tab.is-active { color: var(--fg); border-bottom-color: var(--brand); }
 
-/* Pill variant */
+/* Pill variant — segmented control. Sized to match a `.v2-btn-md` (34px) so it
+   sits flush beside buttons in a page-header toolbar (3px pad + 1px border +
+   26px tab = 34px; radius 8px ≈ the button's 7px). */
 .v2-tabs-pill {
   padding: 3px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   gap: 2px;
 }
 .v2-tabs-pill .v2-tab {
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 5px;
 }
 .v2-tabs-pill .v2-tab:hover:not(:disabled) { color: var(--fg); }
 .v2-tabs-pill .v2-tab.is-active {
@@ -1576,6 +1592,10 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   border-radius: var(--radius-lg);
   background: var(--surface-1);
 }
+/* Flush variant — drop the wrapper chrome when the table lives inside a Card,
+   which already supplies the border + radius + surface. Avoids the
+   double-border "box in a box" look. Pair with <Card padding="none">. */
+.v2-table-wrap.v2-table-flush { border: 0; border-radius: 0; background: transparent; }
 .v2-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .v2-table thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); }
 .v2-table tbody tr { background: var(--surface-1); }
@@ -1764,20 +1784,52 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   gap: 10px;
   min-height: 132px;
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  position: relative;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
-.v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+/* Clean & minimal — KPI tiles carry no coloured top bar. Colour lives only in
+   the tone icon chip (`.v2-kpi-tone-*`), keeping the grid calm and standardised
+   (per the Paydo-style reference). */
+.v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+
+/* Opt-in interactive elevation for clickable cards. Static content cards stay
+   flat; add this class (or it's applied to a/button.v2-card) for a tactile
+   hover lift — the depth hierarchy the all-flat look lacked. */
+.v2-card-interactive,
+a.v2-card,
+button.v2-card {
+  cursor: pointer;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
+}
+.v2-card-interactive:hover,
+a.v2-card:hover,
+button.v2-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.v2-card-interactive:active,
+a.v2-card:active,
+button.v2-card:active { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .v2-kpi:hover,
+  .v2-card-interactive:hover,
+  .v2-card-interactive:active,
+  a.v2-card:hover,
+  button.v2-card:hover { transform: none; }
+}
 .v2-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .v2-kpi-label {
-  font-size: var(--text-xs);
-  font-weight: 500;
+  font-size: var(--text-2xs);
+  font-weight: 600;
   color: var(--fg-subtle);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 .v2-kpi-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1791,12 +1843,14 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 
 .v2-kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
 .v2-kpi-value {
+  font-family: var(--font-display);
   font-size: var(--text-3xl);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg);
   line-height: 1.05;
-  letter-spacing: -0.02em;
-  font-feature-settings: "tnum", "cv11";
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 .v2-kpi-unit { font-size: var(--text-base); color: var(--fg-muted); font-weight: 500; }
 
@@ -1835,23 +1889,113 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 }
 @media (max-width: 720px) { .v2-page { --page-pad: 14px; gap: 14px; } }
 
+/* Every admin page header is the shared hero panel: a raised surface card with
+   a platinum left rail. The `PageHero` component (`.v2-hero`) stacks it into
+   fixed rows — title / description⟷actions / search⟷location / filters / tabs.
+   One look on all ~38 admin pages. */
 .v2-page-header {
+  position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding: 16px 22px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--platinum);
+  border-radius: var(--radius-lg);
 }
 .v2-page-title-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .v2-page-title {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   margin: 0;
 }
-.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; }
+.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; max-width: 78ch; line-height: 1.5; }
 .v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* PageHero — full V5.1 structure (stats centered + folded second tier).
+   Each slot is pinned to its grid column so the layout is stable no matter
+   which slots are present — actions stay hard-right even when there are no
+   centered stats. */
+/* Fixed stacked rows so every page reads identically:
+   1 title · 2 description⟷actions · 3 search⟷location · 4 filters · 5 tabs.
+   Each row is optional + collapses; all controls stay inside the panel and
+   wrap (never overflow). No centered column — left group left, right group right. */
+.v2-hero { flex-direction: column; align-items: stretch; gap: 14px; }
+.v2-hero .v2-page-title { font-size: var(--text-2xl); }
+.v2-hero-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.v2-hero-meta { align-items: flex-start; }            /* row 2: description ⟷ actions */
+.v2-hero-meta .v2-page-actions { margin-left: auto; }
+/* Every hero action button is one size (md / 34px) regardless of the `size`
+   prop a page passes — so the action cluster is uniform on every page. */
+.v2-hero .v2-page-actions .v2-btn { min-height: 34px; font-size: var(--text-sm); }
+.v2-hero .v2-page-actions .v2-btn:not(:has(.v2-btn-label)) { width: 34px; padding: 0; }
+.v2-hero-find .v2-hero-loc { min-width: 0; }   /* row 3: location, left-aligned */
+
+/* LocationFilter — a horizontal pill scroller. Pills never wrap or shrink; when
+   they overflow, the track scrolls and the chevron controls + edge fades appear.
+   Scales from 2 sites (no arrows) to 15 (tidy left/right scroll) with no shape change. */
+.v2-locscroll { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.v2-locscroll-track {
+  display: flex; gap: 6px; overflow-x: auto; scroll-behavior: smooth; min-width: 0;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.v2-locscroll-track::-webkit-scrollbar { display: none; }
+.v2-locscroll.is-l .v2-locscroll-track { -webkit-mask-image: linear-gradient(to right, transparent, #000 22px); mask-image: linear-gradient(to right, transparent, #000 22px); }
+.v2-locscroll.is-r .v2-locscroll-track { -webkit-mask-image: linear-gradient(to left, transparent, #000 22px); mask-image: linear-gradient(to left, transparent, #000 22px); }
+.v2-locscroll.is-l.is-r .v2-locscroll-track { -webkit-mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(to right, transparent, #000 22px, #000 calc(100% - 22px), transparent); }
+.v2-locscroll-arrow {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--radius-pill);
+  display: none; align-items: center; justify-content: center;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-muted); cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-locscroll-arrow:hover { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
+.v2-locscroll.is-l .v2-locscroll-arrow-l { display: inline-flex; }
+.v2-locscroll.is-r .v2-locscroll-arrow-r { display: inline-flex; }
+.v2-locpill {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: transparent; color: var(--fg-subtle);
+  font-size: var(--text-sm); font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-locpill:hover { color: var(--fg); background: var(--surface-hover); }
+.v2-locpill.is-active { background: var(--brand-soft); color: var(--brand-text); border-color: transparent; }
+.v2-hero-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+/* A segmented control inside the hero never widens the panel — it caps at the
+   available width and scrolls internally (contain → wrap → scroll, never overflow). */
+.v2-hero-filters .v2-tabs, .v2-hero-tabs .v2-tabs { max-width: 100%; }
+.v2-hero-tabs { min-width: 0; }
+@media (max-width: 820px) {
+  .v2-hero-meta .v2-page-actions { margin-left: 0; }
+}
+
+/* Section eyebrow — an uppercase label trailed by a hairline rule, used to
+   group the dashboard into editorial bands (Headline / Operations / Performance
+   / Demand / Network) instead of a flat stack of cards. */
+.v2-section-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: -6px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.v2-section-eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 .v2-page-loading {
   position: fixed;
   bottom: 16px;
@@ -1998,6 +2142,89 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-loc-cell { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
 .v2-loc-cell-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
 
+/* "Next 60 minutes" strip (dashboard).
+   The parent <Card padding="none"> already supplies the outer border + radius,
+   so the strip uses only internal hairlines — no inner box. Each tile shows a
+   plain tabular number (coloured by tone via a status dot), not a heavy pill.
+
+   Dividers via the grid-gap hairline trick: a 1px gap reveals the container's
+   --border background as a clean line *between* tiles only — never at the outer
+   edge — so it adapts to any wrap (both row + column dividers appear, nothing
+   bleeds onto the card edge). Robust where a per-tile border-right would leave
+   a dangling edge on the wrap row. */
+.v2-next60-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--border);
+}
+.v2-next60-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  min-width: 0;
+  background: var(--surface-1);
+}
+.v2-next60-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.v2-next60-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--fg);
+}
+.v2-next60-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.v2-next60-dot-neutral { background: var(--fg-subtle); }
+.v2-next60-dot-success { background: var(--success); }
+.v2-next60-dot-warning { background: var(--warning); }
+.v2-next60-dot-danger { background: var(--danger); }
+.v2-next60-hint { font-size: var(--text-xs); color: var(--fg-muted); line-height: 1.4; }
+
+/* Detail lists below the strip (tickets due / low stock), separated by a single
+   top hairline rather than wrapped in their own boxes. */
+.v2-next60-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.v2-next60-detail-title {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 8px;
+}
+.v2-next60-detail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.v2-next60-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm);
+}
+
 /* Page-content reset for the rewritten admin pages so the legacy .admin-bg
    wrapper from layout.tsx doesn't force a dark background on light theme.
    Legacy pages keep their dark look; pages built on .v2-page get the
@@ -2016,7 +2243,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   gap: 12px;
   flex-wrap: wrap;
 }
-.v2-filter-search { flex: 1; min-width: 220px; max-width: 380px; }
 
 /* Cell helpers used across tables */
 .v2-cell-stack { display: flex; flex-direction: column; line-height: 1.2; }
@@ -2027,15 +2253,43 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
    role-gate footnote on /admin/users). Top-aligns the icon with the first
    line of wrapped text so it doesn't drift to the vertical centre when the
    message breaks across two lines. */
-.v2-note {
+/* Callout — an inset info panel: icon chip + left accent rail + semantic tones.
+   Replaces the old bare .v2-note callout (which collided with the CRM note card).
+   Reads as an inset well inside a card, or a banner standalone. The icon is
+   chipped purely in CSS (padded svg background) so usages only swap the class. */
+.v2-callout {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
   font-size: var(--text-sm);
   line-height: 1.55;
   color: var(--fg-muted);
 }
-.v2-note > svg { flex-shrink: 0; margin-top: 3px; color: var(--fg-subtle); }
+.v2-callout > svg {
+  box-sizing: content-box;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--fg-subtle);
+}
+.v2-callout strong { color: var(--fg); font-weight: 600; }
+/* Semantic tones — accent rail + icon chip take the status colour. */
+.v2-callout-info { border-left-color: var(--info); }
+.v2-callout-info > svg { background: var(--info-soft); color: var(--info); }
+.v2-callout-warning { border-left-color: var(--warning); }
+.v2-callout-warning > svg { background: var(--warning-soft); color: var(--warning); }
+.v2-callout-danger { border-left-color: var(--danger); }
+.v2-callout-danger > svg { background: var(--danger-soft); color: var(--danger); }
+.v2-callout-platinum { border-left-color: var(--platinum); background: var(--platinum-soft); }
+.v2-callout-platinum > svg { background: var(--platinum-soft-strong); color: var(--platinum); }
 
 /* Kanban */
 .v2-kanban {
@@ -2057,7 +2311,26 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   min-height: 240px;
   max-height: calc(100vh - 240px);
+  position: relative;
+  overflow: hidden;
 }
+/* Status-colour cap so each lane reads at a glance (warning→pending,
+   info→confirmed/preparing, success→ready/completed, danger→cancelled). */
+.v2-kanban-col::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--kcol-accent, transparent);
+  z-index: 1;
+}
+.v2-kanban-col-warning { --kcol-accent: var(--warning); }
+.v2-kanban-col-info { --kcol-accent: var(--info); }
+.v2-kanban-col-success { --kcol-accent: var(--success); }
+.v2-kanban-col-danger { --kcol-accent: var(--danger); }
+.v2-kanban-col-neutral { --kcol-accent: var(--fg-subtle); }
 .v2-kanban-col-header {
   display: flex;
   align-items: center;
@@ -2085,7 +2358,8 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   cursor: pointer;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
-.v2-kanban-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.v2-kanban-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) { .v2-kanban-card:hover { transform: none; } }
 .v2-kanban-card:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
 .v2-kanban-card-top { display: flex; justify-content: space-between; align-items: center; }
 .v2-kanban-card-id { font-size: var(--text-xs); color: var(--fg-muted); font-weight: 600; letter-spacing: 0.04em; }
@@ -3463,73 +3737,6 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-callout-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .v2-callout-list li { font-size: var(--text-sm); color: var(--fg); }
 .v2-callout-source { font-size: var(--text-2xs); color: var(--fg-muted); }
-
-/* Next 60 minutes — tile strip + secondary detail */
-.v2-next60-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--surface-1);
-}
-.v2-next60-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  border-right: 1px solid var(--border);
-  min-width: 0;
-}
-.v2-next60-tile:last-child { border-right: 0; }
-.v2-next60-tile-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  color: var(--fg-subtle);
-}
-.v2-next60-tile-label > svg { color: var(--fg-subtle); }
-.v2-next60-tile-value {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.v2-next60-tile-hint {
-  font-size: var(--text-xs);
-  color: var(--fg-muted);
-}
-
-.v2-next60-detail {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-  margin-top: 12px;
-}
-.v2-next60-detail-col { display: flex; flex-direction: column; gap: 6px; }
-.v2-next60-detail-label {
-  font-size: var(--text-2xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-subtle);
-}
-.v2-next60-detail-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.v2-next60-detail-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-sm);
-}
 
 /* Locations manager — repeating row editor for hours-of-operation. Day
  * label + two time inputs + hover-revealed delete, all on one line so

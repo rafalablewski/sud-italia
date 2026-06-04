@@ -8,7 +8,9 @@ import {
   Card,
   CardBody,
   CardHeader,
+  PageHero,
   Select,
+  Switch,
   useToast,
 } from "./v2/ui";
 
@@ -114,9 +116,7 @@ export function AdminLanguages() {
   if (!config) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <h1 className="v2-page-title">Languages</h1>
-        </header>
+        <PageHero title="Languages" />
         <div className="v2-page-loading">Loading Languages…</div>
       </div>
     );
@@ -124,20 +124,14 @@ export function AdminLanguages() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title flex items-center gap-2">
+      <PageHero
+        title={
+          <span className="flex items-center gap-2">
             <Languages className="h-6 w-6" /> Languages
-          </h1>
-          <p className="v2-page-subtitle">
-            Pick which languages the customer site exposes in the
-            header switcher and which loads by default. Supports Polish,
-            English, German, and Singapore English — the first three power
-            DACH expansion, the last pairs with the SGD currency for the
-            Singapore market.
-          </p>
-        </div>
-      </header>
+          </span>
+        }
+        subtitle="Pick which languages the customer site exposes in the header switcher and which loads by default. Supports Polish, English, German, and Singapore English — the first three power DACH expansion, the last pairs with the SGD currency for the Singapore market."
+      />
 
       <div className="grid gap-4 md:gap-6">
         <Card>
@@ -151,9 +145,9 @@ export function AdminLanguages() {
                 const meta = META[l];
                 const on = enabled[l];
                 return (
-                  <label
+                  <div
                     key={l}
-                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition ${
+                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition ${
                       on
                         ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
@@ -171,14 +165,13 @@ export function AdminLanguages() {
                         Code: {l}
                       </span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5"
+                    <Switch
                       checked={on}
                       disabled={saving}
-                      onChange={(e) => toggle(l, e.target.checked)}
+                      onChange={(v) => toggle(l, v)}
+                      label={`Enable ${meta.native}`}
                     />
-                  </label>
+                  </div>
                 );
               })}
             </div>

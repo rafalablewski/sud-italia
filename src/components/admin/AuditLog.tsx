@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, Minus, Plus, RefreshCw, Search } from "lucide-react";
+import { History, Minus, Plus, RefreshCw } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -10,8 +10,7 @@ import {
   Card,
   CardBody,
   EmptyState,
-  Input,
-  Tabs,
+  PageHero,
 } from "./v2/ui";
 
 interface AuditLogEntry {
@@ -62,7 +61,6 @@ function AuditLogDesktop() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
-  const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const fetchEntries = useCallback(async () => {
@@ -100,18 +98,11 @@ function AuditLogDesktop() {
   }, [entries]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return entries.filter((e) => {
       if (actionFilter !== "all" && actionGroup(e.action) !== actionFilter) return false;
-      if (!q) return true;
-      return (
-        e.action.toLowerCase().includes(q) ||
-        e.actor.toLowerCase().includes(q) ||
-        (e.entityId || "").toLowerCase().includes(q) ||
-        (e.entityType || "").toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [entries, actionFilter, query]);
+  }, [entries, actionFilter]);
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -124,39 +115,25 @@ function AuditLogDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Audit log</h1>
-          <p className="v2-page-subtitle">
-            Every mutation across the admin surface. Expand a row to see the field-by-field diff.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Audit log"
+        subtitle="Every mutation across the admin surface. Expand a row to see the field-by-field diff."
+        actions={
           <Button
             variant="secondary"
             size="sm"
             leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
             onClick={fetchEntries}
             disabled={loading}
-          >
-            Refresh
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by actor, action, entity id…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Refresh"
+            title="Refresh"
           />
-        </div>
-        <Tabs
-          value={actionFilter}
-          onChange={(v) => setActionFilter(v as ActionFilter)}
-          tabs={[
+        }
+        filter={{
+          value: actionFilter,
+          onChange: (v) => setActionFilter(v as ActionFilter),
+          ariaLabel: "Action filter",
+          options: [
             { value: "all", label: "All", count: counts.all },
             { value: "orders", label: "Orders", count: counts.orders },
             { value: "menu", label: "Menu", count: counts.menu },
@@ -165,11 +142,9 @@ function AuditLogDesktop() {
             { value: "loyalty", label: "Loyalty", count: counts.loyalty },
             { value: "staff", label: "Staff", count: counts.staff },
             { value: "other", label: "Other", count: counts.other },
-          ]}
-          variant="pill"
-          ariaLabel="Action filter"
-        />
-      </div>
+          ],
+        }}
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Audit log…</div>

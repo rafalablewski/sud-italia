@@ -9,7 +9,6 @@ import {
   Frown,
   MapPin,
   MessageSquare,
-  Search,
   Smile,
   Sparkles,
   Star,
@@ -24,8 +23,7 @@ import {
   CardBody,
   CardHeader,
   EmptyState,
-  Input,
-  Tabs,
+  PageHero,
   Table,
   type Column,
 } from "./v2/ui";
@@ -104,7 +102,6 @@ function AdminFeedbackDesktop() {
   const toast = useToast();
   const [list, setList] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [analyzing, setAnalyzing] = useState(false);
@@ -127,20 +124,13 @@ function AdminFeedbackDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((f) => {
       if (location && f.locationSlug !== location) return false;
       if (statusFilter !== "all" && f.status !== statusFilter) return false;
       if (ratingFilter !== "all" && f.overallRating !== Number(ratingFilter)) return false;
-      if (!q) return true;
-      return (
-        f.customerName.toLowerCase().includes(q) ||
-        f.customerPhone.includes(q) ||
-        f.orderId.toLowerCase().includes(q) ||
-        f.comment.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [list, query, statusFilter, ratingFilter, location]);
+  }, [list, statusFilter, ratingFilter, location]);
 
   const totals = useMemo(() => {
     const rated = list.filter((f) => f.overallRating > 0);
@@ -341,34 +331,53 @@ function AdminFeedbackDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Customer feedback</h1>
-          <p className="v2-page-subtitle">
-            Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Customer feedback"
+        subtitle={'Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.'}
+        actions={
           <Button
             variant="secondary"
             size="sm"
             leadingIcon={<Sparkles className="h-3.5 w-3.5" />}
             onClick={handleAnalyze}
             disabled={analyzing || unanalyzedCount === 0}
+            aria-label="Analyze comments"
             title={
               unanalyzedCount === 0
                 ? "All comments are already analyzed."
-                : `Send ${unanalyzedCount} unanalyzed comments to Claude for sentiment + themes`
+                : analyzing
+                  ? "Analyzing…"
+                  : `Send ${unanalyzedCount} unanalyzed comments to Claude for sentiment + themes`
             }
-          >
-            {analyzing
-              ? "Analyzing…"
-              : unanalyzedCount > 0
-                ? `Analyze ${unanalyzedCount}`
-                : "Analyze"}
-          </Button>
-        </div>
-      </header>
+          />
+        }
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: statusCounts.all },
+            { value: "new", label: "New", count: statusCounts.new },
+            { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
+            { value: "responded", label: "Responded", count: statusCounts.responded },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Rating filter",
+            value: ratingFilter,
+            onChange: (v) => setRatingFilter(v as RatingFilter),
+            options: [
+              { value: "all", label: "All ★" },
+              { value: "5", label: "5 ★" },
+              { value: "4", label: "4 ★" },
+              { value: "3", label: "3 ★" },
+              { value: "2", label: "2 ★" },
+              { value: "1", label: "1 ★" },
+            ],
+          },
+        ]}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard
@@ -470,43 +479,6 @@ function AdminFeedbackDesktop() {
         </CardBody>
       </Card>
 
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, phone, order id, or comment…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: statusCounts.all },
-            { value: "new", label: "New", count: statusCounts.new },
-            { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
-            { value: "responded", label: "Responded", count: statusCounts.responded },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-        <Tabs
-          value={ratingFilter}
-          onChange={(v) => setRatingFilter(v as RatingFilter)}
-          tabs={[
-            { value: "all", label: "All ★" },
-            { value: "5", label: "5" },
-            { value: "4", label: "4" },
-            { value: "3", label: "3" },
-            { value: "2", label: "2" },
-            { value: "1", label: "1" },
-          ]}
-          variant="pill"
-          ariaLabel="Rating filter"
-        />
-      </div>
-
       {loading ? (
         <div className="v2-page-loading">Loading Feedback…</div>
       ) : filtered.length === 0 ? (
@@ -525,9 +497,7 @@ function AdminFeedbackDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(f) => f.id} defaultSort={{ key: "date", dir: "desc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(f) => f.id} defaultSort={{ key: "date", dir: "desc" }} />
         </Card>
       )}
     </div>

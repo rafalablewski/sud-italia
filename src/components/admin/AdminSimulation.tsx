@@ -66,6 +66,7 @@ import {
   Dialog,
   InfoButton,
   Input,
+  PageHero,
   Select,
 } from "./v2/ui";
 import { Heatmap, KpiCard, LineChart, PieChart } from "./v2/charts";
@@ -10835,48 +10836,48 @@ export function AdminSimulation() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="v2-page-title">Calculator</h1>
+      <PageHero
+        title={
+          <span className="flex items-center gap-2 flex-wrap">
+            Calculator
             <Badge tone="warning" variant="soft" dot>
               Sandbox — not the real ledger
             </Badge>
-          </div>
-          <p className="v2-page-subtitle">
-            Sandbox monthly P&amp;L. Enter realistic orders, ticket size, labor mix and fixed costs;
+          </span>
+        }
+        subtitle="Sandbox monthly P&L. Enter realistic orders, ticket size, labor mix and fixed costs;
             see revenue, cost-by-category, net profit, margin and break-even update live. Edits
             never write to the business-costs ledger. Defaults reflect a Neapolitan pizza truck in
             Warsaw 2026 with a 12:00–22:00 service window plus prep + close-down (~11 h/day),
             hourly rates already include the ~22% ZUS pracodawcy narzut, food-truck pitch fees,
-            and 30% blended COGS.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button
-            variant="ghost"
-            leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
-            onClick={() => setResetConfirmOpen(true)}
-          >
-            Reset defaults
-          </Button>
-          <Button
-            variant="secondary"
-            leadingIcon={<Database className="h-3.5 w-3.5" />}
-            onClick={() => setSeedConfirmOpen(true)}
-          >
-            Seed from last 30 days
-          </Button>
-          <Button
-            variant="primary"
-            leadingIcon={<Save className="h-3.5 w-3.5" />}
-            onClick={() => persist(scenario)}
-            loading={saving}
-          >
-            Save scenario
-          </Button>
-        </div>
-      </header>
+            and 30% blended COGS."
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
+              onClick={() => setResetConfirmOpen(true)}
+              aria-label="Reset defaults"
+              title="Reset defaults"
+            />
+            <Button
+              variant="secondary"
+              leadingIcon={<Database className="h-3.5 w-3.5" />}
+              onClick={() => setSeedConfirmOpen(true)}
+              aria-label="Seed from last 30 days"
+              title="Seed from last 30 days"
+            />
+            <Button
+              variant="primary"
+              leadingIcon={<Save className="h-3.5 w-3.5" />}
+              onClick={() => persist(scenario)}
+              loading={saving}
+              aria-label="Save scenario"
+              title="Save scenario"
+            />
+          </>
+        }
+      />
 
       <section
         ref={kpiSectionRef}

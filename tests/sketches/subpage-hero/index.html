@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en" data-admin-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Subpage hero — 5 candidates · Sud Italia admin R&D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---- real dark admin tokens (src/app/themes/admin/index.css) ---- */
+  :root{
+    --bg:#0c0b0e; --s1:#17161c; --s2:#1d1b23; --s3:#262430; --s-hover:#2f2c39;
+    --border:rgba(255,255,255,.10); --border-strong:rgba(255,255,255,.16);
+    --fg:#f5f3ee; --muted:#c0b9b0; --subtle:#978e85;
+    --brand:#a62d49; --brand-soft:rgba(166,45,73,.16); --brand-soft-strong:rgba(166,45,73,.26); --brand-text:#e6889a;
+    --platinum:#cbb48a; --success:#2fa875; --success-soft:rgba(47,168,117,.14); --info:#6e92c0; --info-soft:rgba(110,146,192,.16);
+    --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+    --sans:'Inter',ui-sans-serif,system-ui,sans-serif; --serif:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:14px}
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 20px;background:rgba(12,11,14,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+  .topbar .brandline{font-family:var(--serif);font-weight:600;font-size:15px;margin-right:auto}
+  .topbar .brandline b{color:var(--platinum)}
+  .seg-switch{display:inline-flex;gap:2px;padding:3px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-md)}
+  .seg-switch button{appearance:none;border:0;background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;
+    font-weight:600;padding:6px 12px;border-radius:5px;cursor:pointer}
+  .seg-switch button.on{background:var(--brand);color:#fff}
+  .hint{color:var(--subtle);font-size:12px}
+
+  /* ---- faux admin frame ---- */
+  .frame{display:grid;grid-template-columns:228px 1fr;min-height:calc(100vh - 56px)}
+  .sidebar{background:var(--s1);border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:4px}
+  .sidebar .wm{font-family:var(--serif);font-size:18px;font-weight:600;padding:6px 10px 14px;color:var(--fg)}
+  .sidebar .wm span{color:var(--platinum)}
+  .nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--muted);font-weight:500;font-size:13px}
+  .nav.on{background:var(--brand-soft);color:var(--brand-text)}
+  .nav svg{width:16px;height:16px}
+  .content{padding:24px;display:flex;flex-direction:column;gap:18px;min-width:0}
+
+  /* ---- shared control primitives (match real heights: 34px) ---- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:7px;
+    border:1px solid var(--border);background:var(--s2);color:var(--fg);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:var(--s3);border-color:var(--border-strong)}
+  .btn.primary{background:var(--brand);border-color:transparent;color:#fff}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.icon{width:34px;padding:0}
+  .btn svg{width:15px;height:15px}
+  .input{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:7px;background:var(--s2);
+    border:1px solid var(--border);color:var(--subtle);min-width:0}
+  .input svg{width:15px;height:15px;flex:0 0 auto}
+  .input input{border:0;background:transparent;color:var(--fg);font-family:var(--sans);font-size:13px;outline:none;width:100%}
+  .input input::placeholder{color:var(--subtle)}
+  .seg{display:inline-flex;gap:2px;padding:3px;background:var(--s2);border:1px solid var(--border);border-radius:8px}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:500;
+    height:26px;padding:0 12px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .seg button.on{background:var(--s1);color:var(--fg);font-weight:600}
+  .seg .ct{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 6px;border-radius:9px;
+    background:var(--s3);color:var(--subtle);font-size:11px;font-weight:600}
+  .seg button.on .ct{background:var(--brand-soft);color:var(--brand-text)}
+  .pill{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:var(--r-pill);
+    border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer}
+  .pill svg{width:14px;height:14px}
+  .pill.on{background:var(--brand-soft);border-color:transparent;color:var(--brand-text);font-weight:600}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--r-pill);
+    border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px}
+
+  /* ---- the hero shells ---- */
+  .hero-title{font-family:var(--serif);font-weight:500;letter-spacing:-.01em;color:var(--fg);margin:0}
+  .hero-sub{color:var(--muted);font-size:13px;margin:2px 0 0;max-width:78ch;line-height:1.5}
+  .underscore{width:54px;height:2.5px;border-radius:2px;background:var(--platinum);margin-top:8px}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1 1 auto;min-width:0}
+  .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+  /* V1 structured */
+  .v1 .hero-title{font-size:30px}
+  .v1 .topline{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding-bottom:16px;border-bottom:1px solid var(--border);position:relative}
+  .v1 .topline::after{content:"";position:absolute;left:0;bottom:-1px;width:54px;height:2px;background:var(--platinum)}
+  .v1 .filterow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
+
+  /* V2 unified band */
+  .v2 .band{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--s1);border:1px solid var(--border);border-radius:12px;flex-wrap:nowrap}
+  .v2 .hero-title{font-size:20px;white-space:nowrap}
+  .v2 .divider{width:1px;height:26px;background:var(--border);flex:0 0 auto}
+  .v2 .seg button,.v2 .pill,.v2 .btn,.v2 .input{height:32px}
+  .v2 .seg button{height:24px}
+
+  /* V3 editorial */
+  .v3 .hero-title{font-size:30px}
+  .v3 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+
+  /* V4 minimal */
+  .v4 .topline{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .v4 .topline::after{content:"";position:absolute;left:0;bottom:-1px;width:48px;height:2px;background:var(--platinum)}
+  .v4 .hero-title{font-size:26px}
+  .v4 .chips{display:flex;align-items:center;gap:8px;margin-top:12px}
+
+  /* V5 rich panel */
+  .v5 .panel{display:flex;align-items:center;gap:20px;padding:18px 22px;background:var(--s1);border:1px solid var(--border);
+    border-radius:14px;border-left:3px solid var(--platinum);flex-wrap:wrap}
+  .v5 .hero-title{font-size:24px}
+  .v5 .stat{display:flex;flex-direction:column;align-items:flex-end}
+  .v5 .stat .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .v5 .stat .v{font-family:var(--serif);font-weight:600;font-size:24px;color:var(--fg);line-height:1.1}
+  .v5 .vdiv{width:1px;align-self:stretch;background:var(--border)}
+
+  /* V5.1 refined panel */
+  .v51 .panel{background:var(--s1);border:1px solid var(--border);border-radius:14px;border-left:3px solid var(--platinum);padding:16px 22px;display:flex;flex-direction:column}
+  .v51 .toprow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px}
+  .v51 .lead{min-width:0}
+  .v51 .stats{display:flex;align-items:center;gap:26px;justify-self:center}
+  .v51 .acts{display:flex;align-items:center;gap:8px;justify-self:end}
+  .v51 .stat{display:flex;flex-direction:column;align-items:center}
+  .v51 .stat .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .v51 .stat .v{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--fg);line-height:1.1}
+  .v51 .vdiv{width:1px;height:40px;background:var(--border)}
+  .v51 .tier2{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  @media(max-width:760px){.v51 .toprow{grid-template-columns:1fr;gap:14px}.v51 .stats,.v51 .acts{justify-self:start}}
+
+  /* ---- stub page content so the hero is shown in context ---- */
+  .eyebrow{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle)}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--border)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-height:104px;display:flex;flex-direction:column;gap:10px}
+  .kpi .lab{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle);display:flex;justify-content:space-between;align-items:center}
+  .kpi .chipi{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--info-soft);color:var(--info)}
+  .kpi .chipi.s{background:var(--success-soft);color:var(--success)}
+  .kpi .chipi.b{background:var(--brand-soft);color:var(--brand-text)}
+  .kpi .val{font-family:var(--serif);font-weight:500;font-size:32px;line-height:1;color:var(--fg)}
+  .tbl{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .tbl .hd,.tbl .tr{display:grid;grid-template-columns:1.4fr 1fr 1fr .8fr;gap:12px;padding:11px 16px;align-items:center}
+  .tbl .hd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);border-bottom:1px solid var(--border);background:var(--s2)}
+  .tbl .tr{border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+  .muted{color:var(--subtle)}
+  @media(max-width:900px){.frame{grid-template-columns:1fr}.sidebar{display:none}.kpis{grid-template-columns:repeat(2,1fr)}}
+  /* all-mode */
+  .allwrap{display:flex;flex-direction:column;gap:0}
+  .vcard{padding:22px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .vcard h3{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--platinum);margin:0 0 2px}
+  .vcard h3 span{color:var(--fg);font-family:var(--serif);font-weight:600;letter-spacing:0;margin-left:10px;font-size:15px}
+  .vcard p{color:var(--subtle);font-size:12.5px;margin:0 0 16px;max-width:90ch}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brandline">Sud Italia · <b>subpage hero</b> R&amp;D</div>
+    <span class="hint">Click to compare →</span>
+    <div class="seg-switch" id="switch">
+      <button data-v="all" class="on">All</button>
+      <button data-v="1">V1</button>
+      <button data-v="2">V2</button>
+      <button data-v="3">V3</button>
+      <button data-v="4">V4</button>
+      <button data-v="5">V5</button>
+      <button data-v="5.1">V5.1</button>
+    </div>
+  </div>
+
+  <div class="frame">
+    <aside class="sidebar">
+      <div class="wm">Sud <span>Italia</span></div>
+      <div class="nav" data-i="dash">▦ Dashboard</div>
+      <div class="nav" data-i="ord">▤ Orders</div>
+      <div class="nav on">▣ Purchase orders</div>
+      <div class="nav" data-i="inv">▥ Inventory</div>
+      <div class="nav" data-i="cust">◍ Customers</div>
+      <div class="nav" data-i="rep">◷ Reports</div>
+    </aside>
+    <main class="content" id="content"><!-- injected --></main>
+  </div>
+
+<script>
+const I = {
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  pin:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  sliders:'<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  chev:'<polyline points="6 9 12 15 18 9"/>'
+};
+const ic = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+
+const TITLE='Purchase orders';
+const SUB='Raise, send and reconcile supplier orders across both kitchens.';
+const STATUS=[['All',0],['Draft',0],['Sent',0],['Received',0],['Cancelled',0]];
+const seg=(items,withCount)=>`<div class="seg">${items.map((it,i)=>{const l=withCount?it[0]:it;const c=withCount?`<span class="ct">${it[1]}</span>`:'';return `<button class="${i===0?'on':''}">${l}${c}</button>`}).join('')}</div>`;
+const loc=`<button class="pill on">${ic('pin')}Kraków</button><button class="pill">${ic('pin')}Warszawa</button>`;
+const search=(ph)=>`<div class="input grow">${ic('search')}<input placeholder="${ph}" /></div>`;
+const iconBtn=n=>`<button class="btn icon" title="${n}">${ic(n)}</button>`;
+const prim=`<button class="btn primary">${ic('plus')}New PO</button>`;
+
+const HEROES = {
+ 1: ()=>`<div class="v1">
+   <div class="topline">
+     <div><h1 class="hero-title">${TITLE}</h1><p class="hero-sub">${SUB}</p></div>
+     <div class="right">${loc}${iconBtn('refresh')}${iconBtn('download')}${prim}</div>
+   </div>
+   <div class="filterow row" style="display:flex;justify-content:space-between;margin-top:14px">${seg(STATUS,true)}<span class="muted" style="font-size:12px">0 orders</span></div>
+ </div>`,
+
+ 2: ()=>`<div class="v2"><div class="band">
+   <h1 class="hero-title">${TITLE}</h1><div class="divider"></div>${loc}
+   ${search('Search PO id, supplier…')}
+   ${seg(['All','Draft','Sent','Received'],false)}
+   ${iconBtn('refresh')}${iconBtn('download')}${prim}
+ </div></div>`,
+
+ 3: ()=>`<div class="v3">
+   <h1 class="hero-title">${TITLE}</h1><div class="underscore"></div>
+   <div class="toolbar">${loc}${search('Search by PO id, supplier, or ingredient…')}${seg(STATUS,true)}${iconBtn('refresh')}${iconBtn('download')}${prim}</div>
+ </div>`,
+
+ 4: ()=>`<div class="v4">
+   <div class="topline">
+     <h1 class="hero-title">${TITLE}</h1>
+     <div class="right">
+       <button class="btn">${ic('pin')}Kraków ${ic('chev')}</button>
+       ${iconBtn('search')}${iconBtn('sliders')}${iconBtn('refresh')}${iconBtn('download')}${prim}
+     </div>
+   </div>
+   <div class="chips"><span class="muted" style="font-size:12px">Filters:</span><span class="chip">${ic('sliders')}Draft · 0</span></div>
+ </div>`,
+
+ 5: ()=>`<div class="v5"><div class="panel">
+   <div><h1 class="hero-title">${TITLE}</h1><p class="hero-sub" style="margin-bottom:8px">Across both kitchens</p><div class="row">${loc}</div></div>
+   <div class="right">
+     <div class="stat"><span class="k">Value (PLN)</span><span class="v">0</span></div>
+     <div class="vdiv"></div>
+     <div class="stat"><span class="k">Open</span><span class="v">0</span></div>
+     ${iconBtn('refresh')}${iconBtn('download')}${prim}
+   </div>
+ </div></div>`,
+
+ '5.1': ()=>`<div class="v51"><div class="panel">
+   <div class="toprow">
+     <div class="lead"><h1 class="hero-title">${TITLE}</h1><p class="hero-sub" style="margin-bottom:8px">Across both kitchens</p><div class="row">${loc}</div></div>
+     <div class="stats">
+       <div class="stat"><span class="k">Value (PLN)</span><span class="v">0</span></div>
+       <div class="vdiv"></div>
+       <div class="stat"><span class="k">Open</span><span class="v">0</span></div>
+     </div>
+     <div class="acts">${iconBtn('refresh')}${iconBtn('download')}<button class="btn primary icon" title="New PO">${ic('plus')}</button></div>
+   </div>
+   <div class="tier2">${seg(STATUS,true)}<span class="muted" style="font-size:12px;margin-left:auto">0 orders</span></div>
+ </div></div>`
+};
+
+const STUB = `
+  <div class="eyebrow">Overview</div>
+  <div class="kpis">
+    <div class="kpi"><div class="lab">Open POs<span class="chipi b">${ic('plus')}</span></div><div class="val">0</div></div>
+    <div class="kpi"><div class="lab">Awaiting delivery<span class="chipi">${ic('download')}</span></div><div class="val">0</div></div>
+    <div class="kpi"><div class="lab">Received (7d)<span class="chipi s">${ic('refresh')}</span></div><div class="val">0</div></div>
+    <div class="kpi"><div class="lab">Spend (PLN)<span class="chipi b">${ic('pin')}</span></div><div class="val">0</div></div>
+  </div>
+  <div class="eyebrow">Orders</div>
+  <div class="tbl">
+    <div class="hd"><span>PO / supplier</span><span>Status</span><span>Items</span><span>Total</span></div>
+    <div class="tr"><span class="muted">No purchase orders yet — create one with <b style="color:var(--fg)">+ New PO</b>.</span><span></span><span></span><span></span></div>
+  </div>`;
+
+const DESCS = {
+ 1:['Structured + filter strip','Two rows. Title + one-line description top-left, actions top-right (secondary = icon-only), then a separate row of status filters below. Roomiest, most classic.'],
+ 2:['Unified toolbar band','Everything in one contained box on a single row — title · location · search · filters · actions. Tightest, most app-like.'],
+ 3:['Editorial hero','Serif title alone with the platinum underline, then ONE clean control row; search stretches to fill. Most on-brand, scales to any page.'],
+ 4:['Minimal · icon-first','Only + New keeps words; search / filter / refresh / export collapse to icons, location is a dropdown. Most content space; active filters show as chips.'],
+ 5:['Rich split panel','Raised panel: title + location left, a couple of big live numbers + primary on the right. Most premium — best where a headline stat matters.'],
+ '5.1':['Rich split panel — refined','Your pick, refined: status filters (All/Draft/Sent/Received/Cancelled) folded into a second tier inside the panel; Value/Open centered; primary compressed to a plain icon.']
+};
+
+const content = document.getElementById('content');
+function show(v){
+  if(v==='all'){
+    let html='<div class="allwrap">';
+    for(const k of [1,2,3,4,5,'5.1']){
+      html+=`<div class="vcard"><h3>V${k}<span>${DESCS[k][0]}</span></h3><p>${DESCS[k][1]}</p>${HEROES[k]()}</div>`;
+    }
+    html+='</div>';
+    content.innerHTML=html;
+  }else{
+    content.innerHTML = HEROES[v]() + STUB;
+  }
+  // wire segmented interactivity
+  content.querySelectorAll('.seg').forEach(s=>s.querySelectorAll('button').forEach(b=>b.onclick=()=>{s.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')}));
+  content.querySelectorAll('.pill').forEach(p=>{if(p.parentElement.classList.contains('right')||p.parentElement.classList.contains('row')||true){p.onclick=()=>{[...p.parentElement.querySelectorAll('.pill')].forEach(x=>x.classList.remove('on'));p.classList.add('on')}}});
+}
+document.getElementById('switch').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  show(b.dataset.v);
+});
+show('all');
+</script>
+</body>
+</html>

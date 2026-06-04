@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
-import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
+import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "./v2/ui";
 import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -117,12 +117,10 @@ function AdminCohortReportDesktop() {
   if (!data) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Cohort retention &amp; CLTV</h1>
-            <p className="v2-page-subtitle">No paid orders yet — nothing to bucket.</p>
-          </div>
-        </header>
+        <PageHero
+          title={<>Cohort retention &amp; CLTV</>}
+          subtitle="No paid orders yet — nothing to bucket."
+        />
         <Card>
           <CardBody>
             <EmptyState
@@ -139,23 +137,29 @@ function AdminCohortReportDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Cohort retention &amp; CLTV</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title={<>Cohort retention &amp; CLTV</>}
+        subtitle={
+          <>
             Every customer is bucketed by their first-paid-order month.
             Retention shows what % of that bucket reordered N months later;
             CLTV columns are mean revenue per cohort customer through each
             horizon. Generated{" "}
             {new Date(data.generatedAt).toLocaleString("pl-PL")}.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="ghost" size="sm" loading={busy} onClick={rebuild}>
-            <RotateCcw className="h-3.5 w-3.5" /> Rebuild segments
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={busy}
+            onClick={rebuild}
+            leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
+            aria-label="Rebuild segments"
+            title="Rebuild segments"
+          />
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

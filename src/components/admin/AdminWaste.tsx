@@ -13,7 +13,7 @@ import {
   EmptyState,
   Input,
   Select,
-  LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -142,18 +142,11 @@ export function AdminWaste() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Waste log</h1>
-          <p className="v2-page-subtitle">
-            Reason-coded record of food binned outside a sale. Rolls up to a daily write-off cost —
-            the number that quietly eats margin.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
-        </div>
-      </header>
+      <PageHero
+        title="Waste log"
+        subtitle="Reason-coded record of food binned outside a sale. Rolls up to a daily write-off cost — the number that quietly eats margin."
+        location={{ value: pageLoc, onChange: setPageLoc }}
+      />
 
       <section className="v2-kpi-grid">
         <Card padding="compact">

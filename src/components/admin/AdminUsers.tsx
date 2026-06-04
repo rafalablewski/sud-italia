@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Fingerprint, KeyRound, Lock, MapPin, MoreHorizontal, Pencil, Plus, Power, RotateCcw, Search, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
+import { Eye, Fingerprint, KeyRound, Lock, MapPin, MoreHorizontal, Pencil, Plus, Power, RotateCcw, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
@@ -37,10 +37,10 @@ import {
   EmptyState,
   IconButton,
   Input,
+  PageHero,
   Popover,
   Select,
   Switch,
-  Tabs,
   Table,
   Textarea,
   type Column,
@@ -263,7 +263,6 @@ function AdminUsersDesktop() {
   const toast = useToast();
   const [list, setList] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
   const [secFilter, setSecFilter] = useState<SecurityFilter>("all");
   const [locFilter, setLocFilter] = useState<string>("all");
@@ -297,7 +296,6 @@ function AdminUsersDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
       if (locFilter !== "all" && !userLocationSlugs(u).includes(locFilter)) return false;
@@ -305,14 +303,9 @@ function AdminUsersDesktop() {
       if (secFilter === "no2fa" && has2fa(u)) return false;
       if (secFilter === "shared" && u.hasPassword) return false;
       if (secFilter === "passkey" && (u.webauthnKeys?.length ?? 0) === 0) return false;
-      if (!q) return true;
-      return (
-        u.name.toLowerCase().includes(q) ||
-        (u.email?.toLowerCase().includes(q) ?? false) ||
-        u.role.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [list, query, roleFilter, secFilter, locFilter]);
+  }, [list, roleFilter, secFilter, locFilter]);
 
   // KPI strip — real auth-posture coverage across the roster.
   const kpis = useMemo(() => {
@@ -465,18 +458,51 @@ function AdminUsersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Users & roles</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Users & roles"
+        subtitle={
+          <>
             Per-user accounts, roles, granular permissions, and two-factor auth. Each non-owner account can either inherit its role&rsquo;s default permissions or carry a fully-custom, action-level grant. Permissions are enforced everywhere — the sidebar hides what a user can&rsquo;t reach and every admin API rejects calls they aren&rsquo;t granted. Owners always have full access.
-          </p>
-        </div>
-        <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
-          New user
-        </Button>
-      </header>
+          </>
+        }
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
+        }
+        location={{
+          value: locFilter === "all" ? "" : locFilter,
+          onChange: (s) => setLocFilter(s || "all"),
+          includeAll: true,
+          allLabel: "All locations",
+        }}
+        filter={{
+          value: roleFilter,
+          onChange: (v) => setRoleFilter(v as AdminRole | "all"),
+          ariaLabel: "Role filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
+            { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
+            { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
+            { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Security filter",
+            value: secFilter,
+            onChange: (v) => setSecFilter(v as SecurityFilter),
+            options: [
+              { value: "all", label: "All security" },
+              { value: "secured", label: "Secured (pwd + 2FA)" },
+              { value: "no2fa", label: "No 2FA" },
+              { value: "shared", label: "On shared password" },
+              { value: "passkey", label: "Has passkey" },
+            ],
+          },
+        ]}
+      />
 
+      <div className="v2-section-eyebrow">Roster health</div>
       <section className="v2-kpi-grid">
         <KpiCard label="Accounts" value={kpis.total} icon={UsersIcon} tone="info" />
         <KpiCard label="Active" value={kpis.active} icon={Power} tone={kpis.active > 0 ? "success" : "neutral"} />
@@ -495,55 +521,6 @@ function AdminUsersDesktop() {
         />
       </section>
 
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, email, or role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={roleFilter}
-          onChange={(v) => setRoleFilter(v as AdminRole | "all")}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
-            { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
-            { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
-            { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
-          ]}
-          variant="pill"
-          ariaLabel="Role filter"
-        />
-      </div>
-
-      <div className="v2-filters" style={{ flexWrap: "wrap", gap: 8 }}>
-        <Select
-          label=""
-          aria-label="Security filter"
-          value={secFilter}
-          onChange={(e) => setSecFilter(e.target.value as SecurityFilter)}
-          options={[
-            { value: "all", label: "All security" },
-            { value: "secured", label: "Secured (pwd + 2FA)" },
-            { value: "no2fa", label: "No 2FA" },
-            { value: "shared", label: "On shared password" },
-            { value: "passkey", label: "Has passkey" },
-          ]}
-        />
-        <Select
-          label=""
-          aria-label="Location filter"
-          value={locFilter}
-          onChange={(e) => setLocFilter(e.target.value)}
-          options={[
-            { value: "all", label: "All locations" },
-            ...activeLocations.map((l) => ({ value: l.slug, label: l.city })),
-          ]}
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Users & roles…</div>
@@ -570,20 +547,16 @@ function AdminUsersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(u) => u.id} defaultSort={{ key: "role", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(u) => u.id} defaultSort={{ key: "role", dir: "asc" }} />
         </Card>
       )}
 
-      <Card padding="compact">
-        <div className="v2-note">
-          <ShieldCheck className="h-4 w-4" />
-          <span>
-            <strong>Only an owner can manage users and grant permissions.</strong> Granular permissions are enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls, and high-value actions (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
-          </span>
-        </div>
-      </Card>
+      <div className="v2-callout v2-callout-platinum">
+        <ShieldCheck className="h-4 w-4" />
+        <span>
+          <strong>Only an owner can manage users and grant permissions.</strong> Granular permissions are enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls, and high-value actions (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
+        </span>
+      </div>
 
       <UserDialog state={dialog} onClose={() => setDialog({ open: false, user: null })} onSaved={async () => {
         setDialog({ open: false, user: null });
@@ -858,7 +831,7 @@ function PasskeyDialog({
       footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
     >
       <div className="v2-stack-12">
-        <div className="v2-note">
+        <div className="v2-callout">
           <Fingerprint className="h-4 w-4" />
           <span>
             Phishing-resistant sign-in with a hardware key (YubiKey) or device passkey (Touch ID, Windows Hello). At their sign-in page (<span className="mono">/login</span>, or <span className="mono">/admin/login</span> for owners), the holder enters their email and taps the key — no password needed.
@@ -965,7 +938,7 @@ function CredentialsDialog({
         {(() => {
           const d = describeLogin(user);
           return (
-            <div className="v2-note">
+            <div className="v2-callout">
               <Lock className="h-4 w-4" />
               <span>
                 <strong>How {user.name} signs in</strong>
@@ -1119,7 +1092,7 @@ function MfaDialog({
       <div className="v2-stack-12">
         {user.totpEnabled ? (
           <>
-            <div className="v2-note">
+            <div className="v2-callout">
               <ShieldCheck className="h-4 w-4" />
               <span>MFA is <strong>enabled</strong> for this account. A 6-digit code is required at login.</span>
             </div>
@@ -1158,7 +1131,7 @@ function MfaDialog({
             <p className="v2-muted">
               Add this secret to your authenticator app, then enter the current code to confirm.
             </p>
-            <div className="v2-note">
+            <div className="v2-callout">
               <span>
                 Setup key: <span className="mono" style={{ wordBreak: "break-all" }}>{enrollment.secret}</span>
               </span>

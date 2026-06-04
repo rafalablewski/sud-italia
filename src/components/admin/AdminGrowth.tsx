@@ -32,9 +32,10 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
+  Switch,
   Table,
-  Tabs,
   Textarea,
   type Column,
 } from "./v2/ui";
@@ -301,11 +302,7 @@ export function AdminGrowth() {
   if (loading || !settings) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Growth</h1>
-          </div>
-        </header>
+        <PageHero title="Growth" />
         <div className="v2-page-loading">Loading Campaigns…</div>
       </div>
     );
@@ -313,26 +310,21 @@ export function AdminGrowth() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Growth engine</h1>
-          <p className="v2-page-subtitle">
-            Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets.
-          </p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
+      <PageHero
+        title="Growth engine"
+        subtitle="Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets."
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          ariaLabel: "Growth section",
+          options: [
             { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
             { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
             { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
             { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="Growth section"
-        />
-      </header>
+          ],
+        }}
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Active rewards" value={settings.rewards.filter((r) => r.active).length} icon={Gift} tone="success" hint={`${settings.rewards.length} total`} />
@@ -448,10 +440,10 @@ export function AdminGrowth() {
             <CardBody>
               <div className="v2-stack-12">
                 <label className="v2-toggle">
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={settings.referral.active}
-                    onChange={() => updateReferral({ active: !settings.referral.active })}
+                    onChange={(v) => updateReferral({ active: v })}
+                    label="Referral program"
                   />
                   <span>{settings.referral.active ? "Active" : "Disabled"}</span>
                 </label>
@@ -482,13 +474,13 @@ export function AdminGrowth() {
               title="Existing codes"
               description={`${referrals.length} code${referrals.length === 1 ? "" : "s"} in circulation · ${refTotals.totalUses} uses · ${formatPrice(refTotals.totalEarned * 100)} of points awarded`}
             />
-            <CardBody>
-              {referrals.length === 0 ? (
+            {referrals.length === 0 ? (
+              <CardBody>
                 <EmptyState icon={Heart} title="No referral codes yet" description="Codes are created automatically when customers tap Share on the rewards screen." compact />
-              ) : (
-                <Table rows={referrals} columns={refCols} rowKey={(r) => r.code} defaultSort={{ key: "used", dir: "desc" }} />
-              )}
-            </CardBody>
+              </CardBody>
+            ) : (
+              <Table flush rows={referrals} columns={refCols} rowKey={(r) => r.code} defaultSort={{ key: "used", dir: "desc" }} />
+            )}
           </Card>
         </>
       )}
@@ -619,7 +611,7 @@ function LiveWidgetsPanel({ widgets, onEdit, onDelete, onToggle, onReorder, onAd
                       {locationLabel(w.locationSlugs)}
                     </Badge>
                     <label className="v2-toggle">
-                      <input type="checkbox" checked={w.active} onChange={() => onToggle(w.id)} />
+                      <Switch checked={w.active} onChange={() => onToggle(w.id)} label="Widget active" />
                       <span>{w.active ? "On" : "Off"}</span>
                     </label>
                     <span className="v2-widget-actions">
@@ -799,7 +791,7 @@ function WidgetDialog({ widget, onClose, onSubmit }: WidgetDialogProps) {
           <span className="v2-field-desc">Select one or more cities; clear all to broadcast everywhere.</span>
         </div>
         <label className="v2-toggle">
-          <input type="checkbox" checked={active} onChange={() => setActive((v) => !v)} />
+          <Switch checked={active} onChange={(v) => setActive(v)} label="Active" />
           <span>Active</span>
         </label>
       </div>

@@ -12,7 +12,6 @@ import {
   Plus,
   Salad,
   Sandwich,
-  Search,
   Trash2,
   UtensilsCrossed,
   type LucideIcon,
@@ -30,8 +29,9 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
-  Tabs,
+  Switch,
   Textarea,
 } from "./v2/ui";
 
@@ -183,7 +183,6 @@ function AdminMenuDesktop() {
    *  at multiple trucks. Optimistic updates mutate this map directly. */
   const [menusByLocation, setMenusByLocation] = useState<Record<string, MenuItemData[]>>({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -729,18 +728,12 @@ function AdminMenuDesktop() {
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return unifiedItems.filter((u) => {
       if (u.hidden && !showHidden) return false;
       if (category !== "all" && u.category !== category) return false;
-      if (!q) return true;
-      return (
-        u.name.toLowerCase().includes(q) ||
-        u.description.toLowerCase().includes(q) ||
-        u.tags.some((t) => t.toLowerCase().includes(q))
-      );
+      return true;
     });
-  }, [unifiedItems, search, category, showHidden]);
+  }, [unifiedItems, category, showHidden]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, UnifiedItem[]>();
@@ -756,57 +749,50 @@ function AdminMenuDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Menu</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Menu"
+        subtitle={
+          <>
             {unifiedItems.length} {unifiedItems.length === 1 ? "product" : "products"} across {activeLocations.length} location{activeLocations.length === 1 ? "" : "s"}
             {unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          {hiddenCount > 0 && (
+          </>
+        }
+        actions={
+          <>
+            {hiddenCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHidden((v) => !v)}
+                leadingIcon={showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                aria-label={showHidden ? "Hide hidden" : "Show hidden"}
+                title={showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+              />
+            )}
             <Button
-              variant="ghost"
+              variant="primary"
               size="sm"
-              onClick={() => setShowHidden((v) => !v)}
-              title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
-            >
-              {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
-            </Button>
-          )}
-          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-            <Plus className="h-3.5 w-3.5" />
-            Add item
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search items, descriptions, tags…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search menu"
-          />
-        </div>
-        <Tabs
-          value={category}
-          onChange={(v) => setCategory(v as MenuCategory | "all")}
-          tabs={[
+              onClick={() => setCreating(true)}
+              leadingIcon={<Plus className="h-3.5 w-3.5" />}
+              aria-label="Add item"
+              title="Add item"
+            />
+          </>
+        }
+        filter={{
+          value: category,
+          onChange: (v) => setCategory(v as MenuCategory | "all"),
+          ariaLabel: "Category filter",
+          options: [
             { value: "all", label: "All", count: unifiedItems.length },
             ...categories.map((c) => ({
               value: c,
               label: MENU_CATEGORY_LABELS[c],
               count: unifiedItems.filter((u) => u.category === c).length,
             })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-      </div>
+          ],
+        }}
+      />
 
       {selectedIds.size > 0 && (
         <div
@@ -908,7 +894,7 @@ function AdminMenuDesktop() {
               description={
                 unifiedItems.length === 0
                   ? "Menu data lives in src/data/menus/*.ts. Add items there to see them here."
-                  : "Clear the search or pick another category."
+                  : "Pick another category."
               }
             />
           </CardBody>
@@ -1583,11 +1569,11 @@ function BulkEditDialog({
               fontSize: "0.875rem",
             }}
           >
-            <input
-              type="checkbox"
+            <Switch
               checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
+              onChange={(v) => setAvailable(v)}
               disabled={!enabled.available}
+              label="Available to customers"
             />
             {available ? "Available" : "Sold out / hidden"}
           </label>,
@@ -1654,11 +1640,11 @@ function BulkEditDialog({
               fontSize: "0.875rem",
             }}
           >
-            <input
-              type="checkbox"
+            <Switch
               checked={deliveryOnly}
-              onChange={(e) => setDeliveryOnly(e.target.checked)}
+              onChange={(v) => setDeliveryOnly(v)}
               disabled={!enabled.deliveryOnly}
+              label="Delivery-only"
             />
             {deliveryOnly ? "Delivery only" : "Available on every channel"}
           </label>,
@@ -2112,10 +2098,10 @@ function CreateItemDialog({ open, onClose, onCreate }: CreateItemDialogProps) {
             fontSize: "var(--text-sm)",
           }}
         >
-          <input
-            type="checkbox"
+          <Switch
             checked={available}
-            onChange={(e) => setAvailable(e.target.checked)}
+            onChange={(v) => setAvailable(v)}
+            label="Available to customers immediately"
           />
           Available to customers immediately
         </label>

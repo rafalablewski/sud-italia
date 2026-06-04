@@ -27,6 +27,7 @@ import {
   Table,
   Textarea,
   type Column,
+  PageHero,
 } from "./v2/ui";
 import { locations as ALL_LOCATIONS } from "@/data/locations";
 import {
@@ -185,19 +186,13 @@ function AdminComplianceDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Compliance calendar</h1>
-          <p className="v2-page-subtitle">
-            License renewals, inspections, insurance. A lapsed permit closes the truck — track every expiry here.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="primary" size="sm" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCreating(true)}>
-            New item
-          </Button>
-        </div>
-      </header>
+      <PageHero
+        title="Compliance calendar"
+        subtitle="License renewals, inspections, insurance. A lapsed permit closes the truck — track every expiry here."
+        actions={
+          <Button variant="primary" size="sm" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCreating(true)} aria-label="New item" title="New item" />
+        }
+      />
 
       <section className="v2-kpi-grid">
         <Card padding="compact">
@@ -258,9 +253,7 @@ function AdminComplianceDesktop() {
       ) : (
         <Card padding="none">
           <CardHeader title="Tracked items" description="Sorted soonest-expiring first." />
-          <CardBody>
-            <Table rows={items} columns={cols} rowKey={(c) => c.id} defaultSort={{ key: "expires", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={items} columns={cols} rowKey={(c) => c.id} defaultSort={{ key: "expires", dir: "asc" }} />
         </Card>
       )}
 

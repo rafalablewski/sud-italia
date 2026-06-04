@@ -26,6 +26,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Tabs,
   Textarea,
@@ -213,11 +214,7 @@ function AdminExpansionDesktop() {
   if (loading) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Expansion</h1>
-          </div>
-        </header>
+        <PageHero title="Expansion" />
         <div className="v2-page-loading">Loading Expansion…</div>
       </div>
     );
@@ -225,19 +222,13 @@ function AdminExpansionDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Expansion</h1>
-          <p className="v2-page-subtitle">
-            Per-location readiness checklist + notes. Active locations track gaps; planned locations let you start prepping months ahead.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setAddOpen(true)}>
-            Plan new location
-          </Button>
-        </div>
-      </header>
+      <PageHero
+        title="Expansion"
+        subtitle="Per-location readiness checklist + notes. Active locations track gaps; planned locations let you start prepping months ahead."
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setAddOpen(true)} aria-label="Plan new location" title="Plan new location" />
+        }
+      />
 
       <div className="v2-grid-2-1">
         <div className="v2-rewards-grid">

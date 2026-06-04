@@ -19,6 +19,7 @@ import {
   CardHeader,
   EmptyState,
   InfoButton,
+  PageHero,
   Select,
   Table,
   type BadgeTone,
@@ -264,12 +265,11 @@ export function AdminMenuEngineering() {
 
   return (
     <div className="v2-page">
-      <Card>
-        <CardHeader
-          title="Menu engineering"
-          description="Kasavana-Smith quadrants over real order line items — every item that sold ≥ 1 unit in the window, plotted by velocity (units sold) and per-unit gross profit. Cuts at the median of each."
-          actions={
-            <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+      <PageHero
+        title="Menu engineering"
+        subtitle="Kasavana-Smith quadrants over real order line items — every item that sold ≥ 1 unit in the window, plotted by velocity (units sold) and per-unit gross profit. Cuts at the median of each."
+        actions={
+          <>
               <InfoButton title="Menu engineering" label="About the Kasavana-Smith matrix">
                 <p>
                   The standard QSR menu-engineering tool. Each item is plotted on two axes:
@@ -295,17 +295,14 @@ export function AdminMenuEngineering() {
                   options={WINDOW_OPTIONS}
                 />
               </div>
-            </span>
-          }
-        />
-        <CardBody>
-          <div className="v2-muted" style={{ fontSize: 13 }}>
-            Scope: <strong>{locationLabel}</strong>
-            {data ? ` · ${summary.items} items sold in the last ${data.windowDays} days` : ""}
-            {" "}— switch location from the top-bar selector.
-          </div>
-        </CardBody>
-      </Card>
+          </>
+        }
+      />
+      <div className="v2-muted" style={{ fontSize: 13, marginTop: -4 }}>
+        Scope: <strong>{locationLabel}</strong>
+        {data ? ` · ${summary.items} items sold in the last ${data.windowDays} days` : ""}
+        {" "}— switch location from the top-bar selector.
+      </div>
 
       {loading && <div className="v2-page-loading">Loading Menu engineering…</div>}
 
@@ -632,17 +629,16 @@ export function AdminMenuEngineering() {
             </Card>
           )}
 
-          <Card>
+          <Card padding="none">
             <CardHeader title="All items" description="Sortable. True CM1 nets per-unit GP against fees, waste, refunds and loyalty burn." />
-            <CardBody>
-              <Table
-                rows={rows}
-                columns={columns}
-                rowKey={(r) => r.menuItemId}
-                defaultSort={{ key: "revenue", dir: "desc" }}
-                density="compact"
-              />
-            </CardBody>
+            <Table
+              flush
+              rows={rows}
+              columns={columns}
+              rowKey={(r) => r.menuItemId}
+              defaultSort={{ key: "revenue", dir: "desc" }}
+              density="compact"
+            />
           </Card>
         </>
       )}

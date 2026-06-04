@@ -31,6 +31,10 @@ interface Props<R> {
   empty?: ReactNode;
   /** Smaller row padding. */
   density?: "default" | "compact";
+  /** Drops the wrapper's own border/radius/background so the table sits flush
+   *  inside a `Card` (which already supplies the container chrome) — avoids the
+   *  double-border "box in a box" look. */
+  flush?: boolean;
   /** Enables a checkbox column. Parent owns the Set of selected ids. */
   selectable?: boolean;
   /** Set of selected row ids (when selectable=true). */
@@ -47,6 +51,7 @@ export function Table<R>({
   onRowClick,
   empty,
   density = "default",
+  flush = false,
   selectable,
   selectedIds,
   onSelectionChange,
@@ -106,7 +111,7 @@ export function Table<R>({
   };
 
   return (
-    <div className={`v2-table-wrap v2-table-${density}`}>
+    <div className={`v2-table-wrap v2-table-${density}${flush ? " v2-table-flush" : ""}`}>
       <table className="v2-table">
         <thead>
           <tr>

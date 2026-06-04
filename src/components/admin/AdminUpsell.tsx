@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { LocationFilter, Tabs } from "./v2/ui";
+import { Button, PageHero } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -106,46 +106,34 @@ export function AdminUpsell() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Upsell</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Upsell"
+        subtitle={
+          <>
             Lift the value of what they&rsquo;re already buying — tiered bundle ladders and gating rules.
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <button
+          </>
+        }
+        location={{ value: activeLocation, onChange: setActiveLocation }}
+        actions={
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={saving || !isDirty}
-            className="v2-btn v2-btn-primary v2-btn-sm"
-          >
-            {saved ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                {saving ? "Saving…" : "Save changes"}
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
-
-      <Tabs
-        value={tab}
-        onChange={(v) => setTab(v as TabKey)}
-        tabs={[
-          { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
-          { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
-        ]}
-        variant="underline"
-        ariaLabel="Upsell view"
+            aria-label="Save changes"
+            title={saved ? "Saved" : saving ? "Saving…" : "Save changes"}
+            leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+          />
+        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          options: [
+            { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
+            { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
+          ],
+          ariaLabel: "Upsell view",
+        }}
       />
 
       {tab === "bundles" && (
