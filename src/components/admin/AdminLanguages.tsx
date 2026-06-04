@@ -9,6 +9,7 @@ import {
   CardBody,
   CardHeader,
   Select,
+  Switch,
   useToast,
 } from "./v2/ui";
 
@@ -151,9 +152,9 @@ export function AdminLanguages() {
                 const meta = META[l];
                 const on = enabled[l];
                 return (
-                  <label
+                  <div
                     key={l}
-                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition ${
+                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition ${
                       on
                         ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
@@ -171,14 +172,13 @@ export function AdminLanguages() {
                         Code: {l}
                       </span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5"
+                    <Switch
                       checked={on}
                       disabled={saving}
-                      onChange={(e) => toggle(l, e.target.checked)}
+                      onChange={(v) => toggle(l, v)}
+                      label={`Enable ${meta.native}`}
                     />
-                  </label>
+                  </div>
                 );
               })}
             </div>

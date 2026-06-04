@@ -10,6 +10,7 @@ import {
   CardHeader,
   Input,
   Select,
+  Switch,
   useToast,
 } from "./v2/ui";
 
@@ -193,9 +194,9 @@ export function AdminCurrency() {
                 const on = enabled[c];
                 const locked = c === "PLN";
                 return (
-                  <label
+                  <div
                     key={c}
-                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition ${
+                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition ${
                       on
                         ? "border-[color-mix(in_oklab,var(--success)_35%,transparent)] bg-[var(--success-soft)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
@@ -209,14 +210,13 @@ export function AdminCurrency() {
                       </span>
                       <span className="admin-text-secondary text-xs">{meta.label}</span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5"
+                    <Switch
                       checked={on}
                       disabled={locked}
-                      onChange={(e) => toggle(c, e.target.checked)}
+                      onChange={(v) => toggle(c, v)}
+                      label={`Enable ${c}`}
                     />
-                  </label>
+                  </div>
                 );
               })}
             </div>
