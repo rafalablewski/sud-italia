@@ -348,7 +348,7 @@ function AdminDashboardDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
+      <header className="v2-page-header v2-dash-hero">
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Executive Overview</h1>
           <p className="v2-page-subtitle">
@@ -396,6 +396,7 @@ function AdminDashboardDesktop() {
         openShifts={laborRatio?.openShifts ?? 0}
       />
 
+      <div className="v2-section-eyebrow">Headline</div>
       <section className="v2-kpi-grid">
         <KpiCard
           label="Revenue"
@@ -437,6 +438,10 @@ function AdminDashboardDesktop() {
           tone="success"
           hint={`Net ${fmtCurrency(kpis.profit)}`}
         />
+      </section>
+
+      <div className="v2-section-eyebrow">Operations &amp; risk</div>
+      <section className="v2-kpi-grid">
         <KpiCard
           label="Repeat customers"
           value={insights?.repeatCustomers.length ?? 0}
@@ -563,6 +568,7 @@ function AdminDashboardDesktop() {
         );
       })()}
 
+      <div className="v2-section-eyebrow">Performance</div>
       <section className="v2-grid-2-1">
         <Card>
           <CardHeader
@@ -636,6 +642,7 @@ function AdminDashboardDesktop() {
         </Card>
       </section>
 
+      <div className="v2-section-eyebrow">Demand</div>
       <section className="v2-grid-2">
         <Card>
           <CardHeader
@@ -674,6 +681,7 @@ function AdminDashboardDesktop() {
         </Card>
       </section>
 
+      <div className="v2-section-eyebrow">Network</div>
       <section>
         <Card padding="none">
           <CardHeader

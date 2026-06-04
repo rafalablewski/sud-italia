@@ -455,6 +455,20 @@ language as the KPI tiles. `.v2-kanban-card`s lift on hover
 (`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
 interactive-card behaviour.
 
+## Dashboard hero & section eyebrows
+
+The `/admin` Dashboard reads as **editorial bands**, not a flat card stack:
+
+- **`.v2-dash-hero`** — the page header gets a serif **`--font-display`** title at
+  `--text-3xl` plus a short **`--platinum`** underscore (the owner-tier flourish)
+  and a bottom hairline. Scoped to the hero so other pages keep the sans title.
+- **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
+  trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
+  below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary
+  KPIs) / **Operations & risk** (the 4 secondary KPIs) / **Performance** (trend +
+  alerts) / **Demand** (top sellers + heatmap) / **Network** (location table).
+  KPIs are split into two `.v2-kpi-grid` tiers under their eyebrows for hierarchy.
+
 ## Iconography — custom stroke, no emoji in UI
 
 - Inline SVG, `stroke: currentColor`, `fill: none`,
