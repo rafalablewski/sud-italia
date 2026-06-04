@@ -388,6 +388,15 @@ See the core side in [core components → Sidebar](../../core/theme/components.m
 - Hairline `--border` between rows. Hover lifts the row background only.
 - Column header eyebrows: `11px uppercase 600 / .08em tracked` in
   `--fg-subtle`.
+- **`flush` inside a Card (no double border).** By default `.v2-table-wrap`
+  carries its own border + `--radius-lg` + `--surface-1` — correct when the
+  table stands alone on a page. But dropped inside a `<Card>` that already
+  supplies all three, you get the **box-in-a-box** look (a border hugging a
+  border). Pass `<Table flush>` to strip the wrapper chrome
+  (`.v2-table-flush`), and set the card to `<Card padding="none">` so the table
+  fills edge-to-edge under the card header. The card's `overflow: hidden` +
+  radius clip the corners. See [material → Nested surfaces](./material.md#nested-surfaces--one-border-per-box)
+  and the live use in `AdminDashboard.tsx` (Location performance).
 
 ## Iconography — custom stroke, no emoji in UI
 

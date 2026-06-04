@@ -675,18 +675,18 @@ function AdminDashboardDesktop() {
       </section>
 
       <section>
-        <Card>
+        <Card padding="none">
           <CardHeader
             title="Location performance"
             description="Side-by-side benchmark for active locations"
           />
-          <CardBody>
-            {insights?.locationComparison && insights.locationComparison.length > 0 ? (
-              <LocationTable rows={insights.locationComparison} />
-            ) : (
+          {insights?.locationComparison && insights.locationComparison.length > 0 ? (
+            <LocationTable rows={insights.locationComparison} />
+          ) : (
+            <CardBody>
               <EmptyState icon={MapPin} title="Need more data" description="Once orders exist across locations, comparison appears here." compact />
-            )}
-          </CardBody>
+            </CardBody>
+          )}
         </Card>
       </section>
 
@@ -761,6 +761,7 @@ function LocationTable({ rows }: { rows: LocationComparison[] }) {
       columns={cols}
       rowKey={(r) => r.locationSlug}
       defaultSort={{ key: "revenue", dir: "desc" }}
+      flush
     />
   );
 }
@@ -821,30 +822,28 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
     )
     .slice(0, 5);
 
-  const tile = (title: string, count: number, hint: string, tone: "neutral" | "warning" | "danger" | "success", icon: React.ReactNode) => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.25rem",
-        padding: "0.75rem 1rem",
-        borderRight: "1px solid var(--border)",
-        minWidth: 0,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-muted)" }}>
+  const tile = (
+    title: string,
+    count: number,
+    hint: string,
+    tone: "neutral" | "warning" | "danger" | "success",
+    icon: React.ReactNode,
+  ) => (
+    <div className="v2-next60-tile">
+      <div className="v2-next60-eyebrow">
         {icon}
         {title}
       </div>
-      <div style={{ fontSize: "1.5rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-        <Badge tone={tone} variant="soft">{count}</Badge>
+      <div className="v2-next60-value">
+        <span className={`v2-next60-dot v2-next60-dot-${tone}`} aria-hidden />
+        {count}
       </div>
-      <div style={{ fontSize: "0.75rem", color: "var(--fg-muted)" }}>{hint}</div>
+      <div className="v2-next60-hint">{hint}</div>
     </div>
   );
 
   return (
-    <Card>
+    <Card padding="none">
       <CardHeader
         title={`Next 60 minutes — until ${horizonClock}`}
         description={
@@ -853,107 +852,86 @@ function Next60Widget({ location, orders, slots, lowStock, openShifts }: Next60P
             : "Pick a single truck to see live ops here."
         }
       />
-      <CardBody>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            border: "1px solid var(--border)",
-            borderRadius: "0.5rem",
-            overflow: "hidden",
-          }}
-        >
-          {tile(
-            "Slots",
-            upcomingSlots.length,
-            upcomingSlots.length > 0
-              ? `${upcomingCapacity} spots left · earliest ${upcomingSlots[0].time}`
-              : location
-                ? "No slots in the next hour."
-                : "—",
-            upcomingCapacity === 0 && upcomingSlots.length > 0 ? "danger" : upcomingSlots.length > 0 ? "success" : "neutral",
-            <Clock className="h-3.5 w-3.5" />,
+      <div className="v2-next60-grid">
+        {tile(
+          "Slots",
+          upcomingSlots.length,
+          upcomingSlots.length > 0
+            ? `${upcomingCapacity} spots left · earliest ${upcomingSlots[0].time}`
+            : location
+              ? "No slots in the next hour."
+              : "—",
+          upcomingCapacity === 0 && upcomingSlots.length > 0 ? "danger" : upcomingSlots.length > 0 ? "success" : "neutral",
+          <Clock className="h-3.5 w-3.5" />,
+        )}
+        {tile(
+          "Tickets due",
+          dueOrders.length,
+          dueOrders.length > 0
+            ? `next ${dueOrders[0].slotTime} · ${dueOrders[0].customerName || "Guest"}`
+            : "Nothing coming due.",
+          dueOrders.length > 5 ? "warning" : dueOrders.length > 0 ? "success" : "neutral",
+          <ChefHat className="h-3.5 w-3.5" />,
+        )}
+        {tile(
+          "Low stock",
+          sortedLowStock.length,
+          sortedLowStock.length > 0
+            ? `${sortedLowStock[0].name} ${sortedLowStock[0].onHand}${sortedLowStock[0].unit} of ${sortedLowStock[0].reorderPoint}${sortedLowStock[0].unit}`
+            : location
+              ? "All ingredients above reorder."
+              : "—",
+          sortedLowStock.length > 0 ? "danger" : "success",
+          <Boxes className="h-3.5 w-3.5" />,
+        )}
+        {tile(
+          "On the floor",
+          openShifts,
+          openShifts > 0 ? "currently clocked in" : "No one clocked in.",
+          openShifts > 0 ? "success" : "warning",
+          <HardHat className="h-3.5 w-3.5" />,
+        )}
+      </div>
+
+      {(dueOrders.length > 0 || sortedLowStock.length > 0) && (
+        <div className="v2-next60-detail">
+          {dueOrders.length > 0 && (
+            <div>
+              <div className="v2-next60-detail-title">Tickets due</div>
+              <ul className="v2-next60-detail-list">
+                {dueOrders.map((o) => (
+                  <li key={o.id} className="v2-next60-detail-row">
+                    <Link href={`${withAdminBase(base, "/admin/orders")}#${o.id}`} className="v2-link-cell">
+                      <span className="mono">{o.id.slice(-6).toUpperCase()}</span>
+                      <span className="v2-muted"> · {o.customerName || "Guest"}</span>
+                    </Link>
+                    <span className="v2-muted">{o.slotTime}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-          {tile(
-            "Tickets due",
-            dueOrders.length,
-            dueOrders.length > 0
-              ? `next ${dueOrders[0].slotTime} · ${dueOrders[0].customerName || "Guest"}`
-              : "Nothing coming due.",
-            dueOrders.length > 5 ? "warning" : dueOrders.length > 0 ? "success" : "neutral",
-            <ChefHat className="h-3.5 w-3.5" />,
-          )}
-          {tile(
-            "Low stock",
-            sortedLowStock.length,
-            sortedLowStock.length > 0
-              ? `${sortedLowStock[0].name} ${sortedLowStock[0].onHand}${sortedLowStock[0].unit} of ${sortedLowStock[0].reorderPoint}${sortedLowStock[0].unit}`
-              : location
-                ? "All ingredients above reorder."
-                : "—",
-            sortedLowStock.length > 0 ? "danger" : "success",
-            <Boxes className="h-3.5 w-3.5" />,
-          )}
-          {tile(
-            "On the floor",
-            openShifts,
-            openShifts > 0 ? "currently clocked in" : "No one clocked in.",
-            openShifts > 0 ? "success" : "warning",
-            <HardHat className="h-3.5 w-3.5" />,
+          {sortedLowStock.length > 0 && (
+            <div>
+              <div className="v2-next60-detail-title">Low stock</div>
+              <ul className="v2-next60-detail-list">
+                {sortedLowStock.map((s) => (
+                  <li key={s.name} className="v2-next60-detail-row">
+                    <Link href={withAdminBase(base, "/admin/inventory")} className="v2-link-cell">
+                      {s.name}
+                    </Link>
+                    <span className="v2-muted">
+                      {s.onHand}
+                      {s.unit} / {s.reorderPoint}
+                      {s.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
-
-        {(dueOrders.length > 0 || sortedLowStock.length > 0) && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "0.75rem",
-              marginTop: "0.75rem",
-            }}
-          >
-            {dueOrders.length > 0 && (
-              <div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
-                  TICKETS DUE
-                </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                  {dueOrders.map((o) => (
-                    <li key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
-                      <Link href={`${withAdminBase(base, "/admin/orders")}#${o.id}`} className="v2-link-cell">
-                        <span className="mono">{o.id.slice(-6).toUpperCase()}</span>
-                        <span className="v2-muted"> · {o.customerName || "Guest"}</span>
-                      </Link>
-                      <span className="v2-muted">{o.slotTime}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {sortedLowStock.length > 0 && (
-              <div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--fg-muted)", marginBottom: "0.25rem" }}>
-                  LOW STOCK
-                </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                  {sortedLowStock.map((s) => (
-                    <li key={s.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
-                      <Link href={withAdminBase(base, "/admin/inventory")} className="v2-link-cell">
-                        {s.name}
-                      </Link>
-                      <span className="v2-muted">
-                        {s.onHand}
-                        {s.unit} / {s.reorderPoint}
-                        {s.unit}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </CardBody>
+      )}
     </Card>
   );
 }

@@ -60,6 +60,37 @@ the POS product cards.
 Hairlines do most of the structural work. Use them instead of boxed
 backgrounds for separation wherever you can.
 
+## Nested surfaces — one border per box
+
+**A child surface never repeats the border its parent already drew.** A
+`.v2-card` is the box; anything living inside it — a table, a tile strip, a
+list — separates with **internal hairlines only**, not a second boxed border.
+Wrapping a bordered element inside a bordered card produces the *box-in-a-box*
+look (a line hugging a line, a corner radius inside a corner radius) — it reads
+busy and cheap, the opposite of the platinum-hairline discipline.
+
+Rules of thumb:
+
+- **One border defines a box.** If the parent is already a card, the child gets
+  `border: 0` and leans on `--border` dividers (row hairlines, a `border-right`
+  between tiles, a `border-top` between sections).
+- **Dividers, not boxes.** Reach for a single hairline (`border-top` /
+  `border-bottom` / `border-right`) before you reach for a bordered, rounded,
+  filled sub-panel. See [Hairlines](#hairlines).
+- **Pull components flush.** When a self-bordered component (a table, an inset
+  grid) is the card's main content, use `<Card padding="none">` + the
+  component's flush variant so it fills the card edge-to-edge under the header,
+  inheriting the card's single border + radius. The card's `overflow: hidden`
+  clips the corners.
+- **No badge pill for a hero number.** A plain `tabular-nums` figure (coloured
+  by a 7px status dot when it needs a state) reads cleaner than wrapping the
+  number in a soft `Badge` — that's yet another bordered box inside the tile.
+
+Reference implementations: `.v2-table-flush` (see
+[components → Tables](./components.md#tables)) and the dashboard's
+`.v2-next60-*` strip (`AdminDashboard.tsx` → `Next60Widget`), which both drop
+their own border to sit inside a single card.
+
 ## Radius scale
 
 | Token | Value | Use |
