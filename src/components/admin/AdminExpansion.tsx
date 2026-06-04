@@ -230,9 +230,7 @@ function AdminExpansionDesktop() {
         title="Expansion"
         subtitle="Per-location readiness checklist + notes. Active locations track gaps; planned locations let you start prepping months ahead."
         actions={
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setAddOpen(true)}>
-            Plan new location
-          </Button>
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setAddOpen(true)} aria-label="Plan new location" title="Plan new location" />
         }
       />
 

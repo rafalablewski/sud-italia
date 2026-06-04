@@ -376,9 +376,9 @@ export function AdminBusinessCosts() {
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setDialog({ open: true, cost: null })}
-          >
-            New cost
-          </Button>
+            aria-label="New cost"
+            title="New cost"
+          />
         }
       />
 

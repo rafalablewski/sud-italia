@@ -773,15 +773,19 @@ function AdminMenuDesktop() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowHidden((v) => !v)}
-                title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
-              >
-                {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
-              </Button>
+                leadingIcon={showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                aria-label={showHidden ? "Hide hidden" : "Show hidden"}
+                title={showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+              />
             )}
-            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-              <Plus className="h-3.5 w-3.5" />
-              Add item
-            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setCreating(true)}
+              leadingIcon={<Plus className="h-3.5 w-3.5" />}
+              aria-label="Add item"
+              title="Add item"
+            />
           </>
         }
         search={

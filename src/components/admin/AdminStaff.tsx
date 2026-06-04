@@ -313,9 +313,7 @@ export function AdminStaff() {
         title="Staff"
         subtitle="Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches."
         actions={
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })}>
-            {canHire ? "Hire employee" : "New staff member"}
-          </Button>
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })} aria-label="Hire employee" title={canHire ? "Hire employee" : "New staff member"} />
         }
       />
 

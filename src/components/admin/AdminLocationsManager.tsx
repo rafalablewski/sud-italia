@@ -307,13 +307,18 @@ export function AdminLocationsManager() {
               size="sm"
               loading={busy}
               onClick={reseed}
-              title="Upsert the in-code seed into the DB"
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Re-seed from code
-            </Button>
-            <Button variant="primary" size="sm" onClick={openCreate}>
-              <Plus className="h-3.5 w-3.5" /> Add location
-            </Button>
+              leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
+              aria-label="Re-seed from code"
+              title="Re-seed from code — upsert the in-code seed into the DB"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={openCreate}
+              leadingIcon={<Plus className="h-3.5 w-3.5" />}
+              aria-label="Add location"
+              title="Add location"
+            />
           </>
         }
       />

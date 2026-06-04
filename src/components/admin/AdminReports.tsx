@@ -301,9 +301,7 @@ function AdminReportsDesktop() {
         }
         actions={
           <>
-            <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary}>
-              Export CSV
-            </Button>
+            <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary} aria-label="Export CSV" title="Export CSV" />
             <Button
               variant="secondary"
               leadingIcon={<Download className="h-3.5 w-3.5" />}
@@ -313,10 +311,9 @@ function AdminReportsDesktop() {
                 const locParam = location ? `&location=${location}` : "";
                 window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
               }}
+              aria-label="Export JPK_V7M"
               title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
-            >
-              Export JPK_V7M
-            </Button>
+            />
           </>
         }
         search={

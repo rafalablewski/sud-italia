@@ -375,9 +375,10 @@ function AdminDashboardDesktop() {
             <Link
               href={withAdminBase(base, "/admin/capabilities")}
               className="v2-btn v2-btn-secondary v2-btn-sm inline-flex items-center gap-1.5"
+              aria-label="Capabilities"
+              title="Capabilities"
             >
               <Activity className="h-3.5 w-3.5" />
-              Capabilities
             </Link>
             <Button
               variant="secondary"
@@ -385,9 +386,9 @@ function AdminDashboardDesktop() {
               leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
               onClick={onManualRefresh}
               disabled={refreshing}
-            >
-              Refresh
-            </Button>
+              aria-label="Refresh"
+              title="Refresh"
+            />
           </>
         }
       />

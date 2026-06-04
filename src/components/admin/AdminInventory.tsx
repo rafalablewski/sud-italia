@@ -376,10 +376,9 @@ function AdminInventoryDesktop() {
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setAddDialog(true)}
             disabled={untracked.length === 0}
-            title={untracked.length === 0 ? "All ingredients are tracked here." : undefined}
-          >
-            Track ingredient
-          </Button>
+            aria-label="Track ingredient"
+            title={untracked.length === 0 ? "All ingredients are tracked here." : "Track ingredient"}
+          />
         }
       />
 

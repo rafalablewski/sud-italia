@@ -135,9 +135,9 @@ function AuditLogDesktop() {
             leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
             onClick={fetchEntries}
             disabled={loading}
-          >
-            Refresh
-          </Button>
+            aria-label="Refresh"
+            title="Refresh"
+          />
         }
         search={
           <Input

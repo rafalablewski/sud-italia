@@ -474,9 +474,7 @@ function AdminUsersDesktop() {
           </>
         }
         actions={
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
-            New user
-          </Button>
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
         }
       />
 

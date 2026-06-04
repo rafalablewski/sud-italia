@@ -171,14 +171,13 @@ function AdminCashDesktop() {
             leadingIcon={<Unlock className="h-3.5 w-3.5" />}
             onClick={() => setOpenDialog(true)}
             disabled={!!openSession}
+            aria-label="Open session"
             title={
               openSession
                 ? "A session is already open for this location"
                 : "Open a new cash session"
             }
-          >
-            Open session
-          </Button>
+          />
         }
       />
 

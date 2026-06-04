@@ -157,9 +157,7 @@ function AdminSuppliersDesktop() {
         title="Suppliers"
         subtitle="Vendor directory feeding purchase orders and inventory restocks."
         actions={
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })}>
-            New supplier
-          </Button>
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })} aria-label="New supplier" title="New supplier" />
         }
         search={
           <Input

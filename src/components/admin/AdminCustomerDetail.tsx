@@ -303,9 +303,7 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
           </span>
         }
         actions={
-          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setNoteDialogOpen(true)}>
-            Add note
-          </Button>
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setNoteDialogOpen(true)} aria-label="Add note" title="Add note" />
         }
       />
 

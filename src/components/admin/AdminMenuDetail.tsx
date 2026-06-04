@@ -697,12 +697,23 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
         }
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </Button>
-            <Button variant="primary" size="sm" loading={busy} onClick={save}>
-              <Check className="h-3.5 w-3.5" /> Save changes
-            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(withAdminBase(base, "/admin/menu"))}
+              leadingIcon={<ArrowLeft className="h-3.5 w-3.5" />}
+              aria-label="Back"
+              title="Back"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              loading={busy}
+              onClick={save}
+              leadingIcon={<Check className="h-3.5 w-3.5" />}
+              aria-label="Save changes"
+              title="Save changes"
+            />
           </>
         }
       />

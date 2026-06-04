@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, Plus, Save, Trash2, Link2 } from "lucide-react";
+import { Building2, Plus, RefreshCw, Save, Trash2, Link2 } from "lucide-react";
 import { Button, PageHero } from "./v2/ui";
 
 interface CorporatePayload {
@@ -117,9 +117,14 @@ export function AdminCorporate() {
           </>
         }
         actions={
-          <Button variant="secondary" onClick={refresh} disabled={loading}>
-            {loading ? "Loading…" : "Refresh"}
-          </Button>
+          <Button
+            variant="secondary"
+            onClick={refresh}
+            disabled={loading}
+            leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
+            aria-label="Refresh"
+            title={loading ? "Loading…" : "Refresh"}
+          />
         }
       />
 

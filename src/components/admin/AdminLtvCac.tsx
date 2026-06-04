@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
-import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
+import { Coins, TrendingUp, Wallet, Timer, AlertTriangle, ExternalLink } from "lucide-react";
 import { MetricExplainer, PageExplainer } from "./Explainers";
 import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
@@ -168,7 +168,13 @@ export function AdminLtvCac() {
         }
         actions={
           <Link href={withAdminBase(base, "/admin/reports/cohort")}>
-            <Button variant="ghost" size="sm">Cohort &amp; CLTV</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              leadingIcon={<ExternalLink className="h-3.5 w-3.5" />}
+              aria-label="Cohort & CLTV"
+              title="Cohort & CLTV"
+            />
           </Link>
         }
       />

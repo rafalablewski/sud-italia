@@ -10857,24 +10857,24 @@ export function AdminSimulation() {
               variant="ghost"
               leadingIcon={<RefreshCw className="h-3.5 w-3.5" />}
               onClick={() => setResetConfirmOpen(true)}
-            >
-              Reset defaults
-            </Button>
+              aria-label="Reset defaults"
+              title="Reset defaults"
+            />
             <Button
               variant="secondary"
               leadingIcon={<Database className="h-3.5 w-3.5" />}
               onClick={() => setSeedConfirmOpen(true)}
-            >
-              Seed from last 30 days
-            </Button>
+              aria-label="Seed from last 30 days"
+              title="Seed from last 30 days"
+            />
             <Button
               variant="primary"
               leadingIcon={<Save className="h-3.5 w-3.5" />}
               onClick={() => persist(scenario)}
               loading={saving}
-            >
-              Save scenario
-            </Button>
+              aria-label="Save scenario"
+              title="Save scenario"
+            />
           </>
         }
       />

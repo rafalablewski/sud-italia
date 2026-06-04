@@ -190,9 +190,7 @@ function AdminComplianceDesktop() {
         title="Compliance calendar"
         subtitle="License renewals, inspections, insurance. A lapsed permit closes the truck — track every expiry here."
         actions={
-          <Button variant="primary" size="sm" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCreating(true)}>
-            New item
-          </Button>
+          <Button variant="primary" size="sm" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCreating(true)} aria-label="New item" title="New item" />
         }
       />
 

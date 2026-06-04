@@ -252,9 +252,9 @@ function AdminOrdersDesktop() {
             leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
             onClick={onRefresh}
             disabled={refreshing}
-          >
-            Refresh
-          </Button>
+            aria-label="Refresh"
+            title="Refresh"
+          />
         }
         search={
           <Input

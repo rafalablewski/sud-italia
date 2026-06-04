@@ -352,18 +352,15 @@ function AdminFeedbackDesktop() {
             leadingIcon={<Sparkles className="h-3.5 w-3.5" />}
             onClick={handleAnalyze}
             disabled={analyzing || unanalyzedCount === 0}
+            aria-label="Analyze comments"
             title={
               unanalyzedCount === 0
                 ? "All comments are already analyzed."
-                : `Send ${unanalyzedCount} unanalyzed comments to Claude for sentiment + themes`
+                : analyzing
+                  ? "Analyzing…"
+                  : `Send ${unanalyzedCount} unanalyzed comments to Claude for sentiment + themes`
             }
-          >
-            {analyzing
-              ? "Analyzing…"
-              : unanalyzedCount > 0
-                ? `Analyze ${unanalyzedCount}`
-                : "Analyze"}
-          </Button>
+          />
         }
       />
 

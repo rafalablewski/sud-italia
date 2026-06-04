@@ -149,9 +149,15 @@ function AdminCohortReportDesktop() {
           </>
         }
         actions={
-          <Button variant="ghost" size="sm" loading={busy} onClick={rebuild}>
-            <RotateCcw className="h-3.5 w-3.5" /> Rebuild segments
-          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={busy}
+            onClick={rebuild}
+            leadingIcon={<RotateCcw className="h-3.5 w-3.5" />}
+            aria-label="Rebuild segments"
+            title="Rebuild segments"
+          />
         }
       />
 
