@@ -125,17 +125,18 @@ export function AdminUpsell() {
             leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
           />
         }
-      />
-
-      <Tabs
-        value={tab}
-        onChange={(v) => setTab(v as TabKey)}
-        tabs={[
-          { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
-          { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
-        ]}
-        variant="underline"
-        ariaLabel="Upsell view"
+        tabs={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
+              { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
+            ]}
+            variant="underline"
+            ariaLabel="Upsell view"
+          />
+        }
       />
 
       {tab === "bundles" && (

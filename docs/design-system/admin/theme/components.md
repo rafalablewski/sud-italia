@@ -484,7 +484,9 @@ every page**:
   gracefully**: `title` · `subtitle` · `locations` (under the title) · `stats[]`
   (centered headline numbers, `--font-display`, divider between) · `actions`
   (right; icon-only secondary + a compressed primary) · `search` + `filters`
-  (folded into a second tier under a hairline). Top row is a
+  (folded into a second tier under a hairline) · `tabs` (a full-width section-nav
+  strip as the panel's last row). **Everything lives inside the panel — nothing
+  floats below the hero.** Top row is a
   `1fr auto 1fr` grid whose three slots are **pinned to explicit columns**
   (`grid-column` 1/2/3) so `actions` stay hard-right even when there are no
   centered stats — never rely on source order. Golden reference:
@@ -492,8 +494,9 @@ every page**:
   Anatomy: `.v2-hero-top` (the grid) wraps `.v2-page-title-row` + `.v2-hero-loc`
   (col 1), `.v2-hero-stats` › `.v2-hero-stat` › `.v2-hero-stat-k`/`-v` (col 2),
   `.v2-page-actions` (col 3); `.v2-hero-tier2` is the folded row holding
-  `.v2-hero-search` + `.v2-hero-filters`. Below `820px` every slot stacks to a
-  single column.
+  `.v2-hero-search` + `.v2-hero-filters`; `.v2-hero-tabs` is the full-width
+  section-nav strip rendered as the panel's last row. Below `820px` every slot
+  stacks to a single column.
   - **The tier-2 row never overflows the panel** (structure rule: *contain →
     wrap → scroll, never overflow*): `.v2-hero-tier2` and `.v2-hero-filters`
     are `flex-wrap: wrap`; `.v2-hero-search` keeps a `min-width: 200px` floor so
@@ -502,11 +505,14 @@ every page**:
     page crams too many controls into the tier, they wrap to a new line — they
     must not widen the hero. (Orders — search + Kanban/Table + 7 status pills —
     is the stress case.)
-  - **`filters` is for compact `Tabs variant="pill"` / segmented filters only**
-    (status, category). **Section-navigation or `variant="underline"` tabs go
-    BELOW the hero**, as a sibling after `</PageHero>` — never in `filters`
-    (they read as a cramped strip inside the panel). See `AdminCrossSell` /
-    `AdminScheduledBundles`.
+  - **All controls live inside the panel — nothing floats below it.** Two slots
+    by control type: **list/status filters → `filters`** (compact
+    `Tabs variant="pill"`, in the tier-2 row beside search — e.g. Orders, PO,
+    Scheduled bundles). **Section-navigation tabs → `tabs`** (the full-width
+    `.v2-hero-tabs` strip at the bottom of the panel — e.g. Cross-sell's Cart
+    pairings/Combos/Time-of-day, Upsell's Bundles/Item modifiers). A list filter
+    is always a pill in `filters`, never an underline strip below the hero
+    (that earlier "tabs go below" pattern was reverted — it read as detached).
   - **`actions` are icon-only** (compressed primary + secondary) and always
     carry an `aria-label` + `title` tooltip for the dropped text.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label

@@ -93,19 +93,20 @@ export function AdminCrossSell() {
             leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
           />
         }
-      />
-
-      <Tabs
-        value={tab}
-        onChange={(v) => setTab(v as TabKey)}
-        tabs={[
-          { value: "pairings", label: "Cart pairings", icon: <Star className="h-3.5 w-3.5" /> },
-          { value: "combos", label: "Combo deals", icon: <Sparkles className="h-3.5 w-3.5" /> },
-          { value: "timeOfDay", label: "Time-of-day", icon: <Clock className="h-3.5 w-3.5" /> },
-          { value: "badges", label: "Menu badges", icon: <Tag className="h-3.5 w-3.5" /> },
-        ]}
-        variant="underline"
-        ariaLabel="Cross-sell view"
+        tabs={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "pairings", label: "Cart pairings", icon: <Star className="h-3.5 w-3.5" /> },
+              { value: "combos", label: "Combo deals", icon: <Sparkles className="h-3.5 w-3.5" /> },
+              { value: "timeOfDay", label: "Time-of-day", icon: <Clock className="h-3.5 w-3.5" /> },
+              { value: "badges", label: "Menu badges", icon: <Tag className="h-3.5 w-3.5" /> },
+            ]}
+            variant="underline"
+            ariaLabel="Cross-sell view"
+          />
+        }
       />
 
       {tab === "pairings" && (

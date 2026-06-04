@@ -1939,6 +1939,10 @@ button.v2-card:active { transform: translateY(0); }
    available width and scrolls internally. (Structure rule: contain, then wrap,
    then scroll — never overflow.) */
 .v2-hero-filters .v2-tabs { max-width: 100%; }
+/* Full-width tab strip inside the panel (section navigation) — keeps tabs
+   contained in the hero instead of floating below it. */
+.v2-hero-tabs { margin-top: 14px; min-width: 0; }
+.v2-hero-tabs .v2-tabs { max-width: 100%; }
 @media (max-width: 820px) {
   .v2-hero-top { grid-template-columns: 1fr; gap: 12px; }
   .v2-hero .v2-page-title-row,
