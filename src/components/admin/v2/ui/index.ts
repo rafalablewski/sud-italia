@@ -14,6 +14,6 @@ export { InfoButton } from "./InfoButton";
 export { Tabs } from "./Tabs";
 export { DatePager, type DatePagerUnit } from "./DatePager";
 export { LocationFilter } from "./LocationFilter";
-export { PageHero, type PageHeroStat } from "./PageHero";
+export { PageHero } from "./PageHero";
 export { Table, type Column } from "./Table";
 export { ToastProvider, useToast } from "./Toast";

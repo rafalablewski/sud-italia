@@ -471,52 +471,41 @@ interactive-card behaviour.
 
 Every admin page is fronted by **one shared hero panel** (design **V5.1**) — a
 raised `--surface-1` card with a **`--platinum`** left rail — so the title,
-location filter, stats, search, filters and actions live in the **same place on
+location filter, search, filters and actions live in the **same place on
 every page**:
 
 - **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
   `3px --platinum` left rail + `--radius-lg`, `16px 22px` padding. The title
   (`.v2-page-title`) is serif **`--font-display`** at `--text-2xl` weight 500
-  (don't bold past 500 — typography doctrine). Applies to **all ~42 pages**:
-  even a hand-rolled `title + actions` header renders as the panel.
+  (don't bold past 500 — typography doctrine).
 - **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
-  the component that fills the panel. Slots, all optional and **collapsing
-  gracefully**: `title` · `subtitle` · `locations` (under the title) · `stats[]`
-  (centered headline numbers, `--font-display`, divider between) · `actions`
-  (right; icon-only secondary + a compressed primary) · `search` + `filters`
-  (folded into a second tier under a hairline) · `tabs` (a full-width strip as
-  the panel's last row — section-nav tabs, or a secondary filter row of chips /
-  selects that don't fit the compact `filters` slot, e.g. Permissions' group
-  chips, Users' security + location selects). **Everything lives inside the
-  panel — nothing floats below the hero.** Top row is a
-  `1fr auto 1fr` grid whose three slots are **pinned to explicit columns**
-  (`grid-column` 1/2/3) so `actions` stay hard-right even when there are no
-  centered stats — never rely on source order. Golden reference:
-  `AdminPurchaseOrders`. **Use this on every page** — don't hand-roll a header.
-  Anatomy: `.v2-hero-top` (the grid) wraps `.v2-page-title-row` + `.v2-hero-loc`
-  (col 1), `.v2-hero-stats` › `.v2-hero-stat` › `.v2-hero-stat-k`/`-v` (col 2),
-  `.v2-page-actions` (col 3); `.v2-hero-tier2` is the folded row holding
-  `.v2-hero-search` + `.v2-hero-filters`; `.v2-hero-tabs` is the full-width
-  section-nav strip rendered as the panel's last row. Below `820px` every slot
-  stacks to a single column.
-  - **The tier-2 row never overflows the panel** (structure rule: *contain →
-    wrap → scroll, never overflow*): `.v2-hero-tier2` and `.v2-hero-filters`
-    are `flex-wrap: wrap`; `.v2-hero-search` keeps a `min-width: 200px` floor so
-    it stays usable rather than squeezing to "Sear…"; a segmented control inside
-    `.v2-hero-filters` caps at `max-width: 100%` and scrolls internally. If a
-    page crams too many controls into the tier, they wrap to a new line — they
-    must not widen the hero. (Orders — search + Kanban/Table + 7 status pills —
-    is the stress case.)
-  - **All controls live inside the panel — nothing floats below it.** Two slots
-    by control type: **list/status filters → `filters`** (compact
-    `Tabs variant="pill"`, in the tier-2 row beside search — e.g. Orders, PO,
-    Scheduled bundles). **Section-navigation tabs → `tabs`** (the full-width
-    `.v2-hero-tabs` strip at the bottom of the panel — e.g. Cross-sell's Cart
-    pairings/Combos/Time-of-day, Upsell's Bundles/Item modifiers). A list filter
-    is always a pill in `filters`, never an underline strip below the hero
-    (that earlier "tabs go below" pattern was reverted — it read as detached).
-  - **`actions` are icon-only** (compressed primary + secondary) and always
-    carry an `aria-label` + `title` tooltip for the dropped text.
+  fills the panel as **fixed stacked rows** (`.v2-hero` is `flex-column`,
+  `gap:14px`). Every row is optional and collapses gracefully; **all controls
+  live inside the panel — nothing floats below.** The rows, top → bottom:
+  1. **`title`** — alone (`.v2-page-title`).
+  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; actions pushed
+     right via `margin-left:auto`, icon-only (see below).
+  3. **`search` (left, grows) ⟷ `locations` (right)** — `.v2-hero-find`;
+     `.v2-hero-search` keeps a `min-width:200px` floor (no "Sear…" squeeze),
+     `.v2-hero-loc` is `margin-left:auto`.
+  4. **`filters`** — the list/status filter, a compact `Tabs variant="pill"`
+     (`.v2-hero-filters`).
+  5. **`tabs`** — section navigation (underline `Tabs`) or a secondary chip/select
+     filter row (`.v2-hero-tabs`), full width.
+  **No centered-stats slot** — headline numbers belong in the KPI grid below, not
+  the hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
+  hand-roll a header.
+  - **Rows never overflow** (structure rule: *contain → wrap → scroll, never
+    overflow*): every row is `flex-wrap:wrap`; a segmented control inside the
+    hero caps at `max-width:100%` and scrolls internally. Below `820px` the
+    right-aligned items (`actions`, `locations`) drop left as rows stack.
+  - **Filter vs nav:** a **list/status filter** → pill in `filters` (row 4 —
+    Orders, PO, Scheduled bundles). **Section navigation** (Cross-sell's Cart
+    pairings/Combos, Upsell's Bundles/Item modifiers) and **secondary chip/select
+    filter rows** (Permissions groups, Users security+location) → `tabs` (row 5).
+    Nothing sits outside the panel.
+  - **`actions` are icon-only** (compressed primary + secondary) with an
+    `aria-label` + `title` tooltip for the dropped text.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary

@@ -281,10 +281,6 @@ function AdminPurchaseOrdersDesktop() {
         title="Purchase orders"
         subtitle="Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log."
         locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
-        stats={[
-          { label: "Open", value: counts.draft + counts.sent },
-          { label: "Received", value: counts.received },
-        ]}
         actions={
           <Button
             variant="primary"
