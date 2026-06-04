@@ -570,9 +570,7 @@ function AdminUsersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(u) => u.id} defaultSort={{ key: "role", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(u) => u.id} defaultSort={{ key: "role", dir: "asc" }} />
         </Card>
       )}
 

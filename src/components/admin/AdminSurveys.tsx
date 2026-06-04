@@ -489,42 +489,42 @@ export function AdminSurveys() {
       )}
 
       {tab === "catalogue" && (
-        <Card>
+        <Card padding="none">
           <CardHeader
             title="Survey catalogue"
             description="Flip a survey live to start collecting. Each fires on a specific browsing moment; the storefront shows at most one per session and respects each survey's cooldown."
           />
-          <CardBody>
-            <Table
-              rows={perSurvey}
-              columns={catalogueCols}
-              rowKey={(r) => r.survey.id}
-              defaultSort={{ key: "count", dir: "desc" }}
-            />
-          </CardBody>
+          <Table
+            flush
+            rows={perSurvey}
+            columns={catalogueCols}
+            rowKey={(r) => r.survey.id}
+            defaultSort={{ key: "count", dir: "desc" }}
+          />
         </Card>
       )}
 
       {tab === "responses" && (
-        <Card>
+        <Card padding="none">
           <CardHeader title="Recent responses" description="Newest first — read the detractor comments." />
-          <CardBody>
-            {responses.length === 0 ? (
+          {responses.length === 0 ? (
+            <CardBody>
               <EmptyState
                 icon={MessageSquare}
                 title="No responses yet"
                 description="Activate a survey in the Catalogue tab to start collecting."
                 compact
               />
-            ) : (
-              <Table
-                rows={responses}
-                columns={responseCols}
-                rowKey={(r) => r.id}
-                defaultSort={{ key: "date", dir: "desc" }}
-              />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table
+              flush
+              rows={responses}
+              columns={responseCols}
+              rowKey={(r) => r.id}
+              defaultSort={{ key: "date", dir: "desc" }}
+            />
+          )}
         </Card>
       )}
     </div>

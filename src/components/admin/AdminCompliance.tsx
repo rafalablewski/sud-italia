@@ -258,9 +258,7 @@ function AdminComplianceDesktop() {
       ) : (
         <Card padding="none">
           <CardHeader title="Tracked items" description="Sorted soonest-expiring first." />
-          <CardBody>
-            <Table rows={items} columns={cols} rowKey={(c) => c.id} defaultSort={{ key: "expires", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={items} columns={cols} rowKey={(c) => c.id} defaultSort={{ key: "expires", dir: "asc" }} />
         </Card>
       )}
 

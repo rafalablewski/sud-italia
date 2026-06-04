@@ -632,17 +632,16 @@ export function AdminMenuEngineering() {
             </Card>
           )}
 
-          <Card>
+          <Card padding="none">
             <CardHeader title="All items" description="Sortable. True CM1 nets per-unit GP against fees, waste, refunds and loyalty burn." />
-            <CardBody>
-              <Table
-                rows={rows}
-                columns={columns}
-                rowKey={(r) => r.menuItemId}
-                defaultSort={{ key: "revenue", dir: "desc" }}
-                density="compact"
-              />
-            </CardBody>
+            <Table
+              flush
+              rows={rows}
+              columns={columns}
+              rowKey={(r) => r.menuItemId}
+              defaultSort={{ key: "revenue", dir: "desc" }}
+              density="compact"
+            />
           </Card>
         </>
       )}

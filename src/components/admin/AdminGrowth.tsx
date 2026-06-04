@@ -482,13 +482,13 @@ export function AdminGrowth() {
               title="Existing codes"
               description={`${referrals.length} code${referrals.length === 1 ? "" : "s"} in circulation · ${refTotals.totalUses} uses · ${formatPrice(refTotals.totalEarned * 100)} of points awarded`}
             />
-            <CardBody>
-              {referrals.length === 0 ? (
+            {referrals.length === 0 ? (
+              <CardBody>
                 <EmptyState icon={Heart} title="No referral codes yet" description="Codes are created automatically when customers tap Share on the rewards screen." compact />
-              ) : (
-                <Table rows={referrals} columns={refCols} rowKey={(r) => r.code} defaultSort={{ key: "used", dir: "desc" }} />
-              )}
-            </CardBody>
+              </CardBody>
+            ) : (
+              <Table flush rows={referrals} columns={refCols} rowKey={(r) => r.code} defaultSort={{ key: "used", dir: "desc" }} />
+            )}
           </Card>
         </>
       )}

@@ -196,9 +196,7 @@ function AdminSuppliersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(s) => s.id} defaultSort={{ key: "name", dir: "asc" }} />
         </Card>
       )}
 

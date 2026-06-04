@@ -344,13 +344,13 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
       <section className="v2-grid-2-1">
         <Card padding="none">
           <CardHeader title="Order history" description={`${data.orders.length} non-pending orders`} />
-          <CardBody>
-            {data.orders.length === 0 ? (
+          {data.orders.length === 0 ? (
+            <CardBody>
               <EmptyState icon={ShoppingBag} title="No orders yet" compact />
-            ) : (
-              <Table rows={data.orders} columns={orderCols} rowKey={(o) => o.id} defaultSort={{ key: "date", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={data.orders} columns={orderCols} rowKey={(o) => o.id} defaultSort={{ key: "date", dir: "desc" }} />
+          )}
         </Card>
 
         <Card>

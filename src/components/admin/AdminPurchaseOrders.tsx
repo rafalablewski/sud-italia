@@ -341,9 +341,7 @@ function AdminPurchaseOrdersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(p) => p.id} defaultSort={{ key: "created", dir: "desc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(p) => p.id} defaultSort={{ key: "created", dir: "desc" }} />
         </Card>
       )}
 

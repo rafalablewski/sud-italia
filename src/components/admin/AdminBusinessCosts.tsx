@@ -587,14 +587,13 @@ export function AdminBusinessCosts() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table
-              rows={filtered}
-              columns={cols}
-              rowKey={(c) => c.id}
-              defaultSort={{ key: "monthly", dir: "desc" }}
-            />
-          </CardBody>
+          <Table
+            flush
+            rows={filtered}
+            columns={cols}
+            rowKey={(c) => c.id}
+            defaultSort={{ key: "monthly", dir: "desc" }}
+          />
         </Card>
       )}
 

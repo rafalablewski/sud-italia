@@ -1289,9 +1289,7 @@ function AdminSettingsDesktop() {
             </Card>
           ) : (
             <Card padding="none">
-              <CardBody>
-                <Table rows={audit} columns={auditCols} rowKey={(e) => e.id} defaultSort={{ key: "when", dir: "desc" }} />
-              </CardBody>
+              <Table flush rows={audit} columns={auditCols} rowKey={(e) => e.id} defaultSort={{ key: "when", dir: "desc" }} />
             </Card>
           )}
         </>

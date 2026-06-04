@@ -352,9 +352,7 @@ function AdminTruckDesktop() {
             </Card>
           ) : (
             <Card padding="none">
-              <CardBody>
-                <Table rows={events} columns={eventCols} rowKey={(e) => e.id} defaultSort={{ key: "date", dir: "desc" }} />
-              </CardBody>
+              <Table flush rows={events} columns={eventCols} rowKey={(e) => e.id} defaultSort={{ key: "date", dir: "desc" }} />
             </Card>
           )}
 

@@ -469,26 +469,26 @@ function AdminReportsDesktop() {
       <section>
         <Card padding="none">
           <CardHeader title="Category P&L" description="Per dish category, sortable" />
-          <CardBody>
-            {categoryRows.length === 0 ? (
+          {categoryRows.length === 0 ? (
+            <CardBody>
               <EmptyState icon={BarChart3} title="No category data" compact />
-            ) : (
-              <Table rows={categoryRows} columns={categoryCols} rowKey={(r) => r.category} defaultSort={{ key: "rev", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={categoryRows} columns={categoryCols} rowKey={(r) => r.category} defaultSort={{ key: "rev", dir: "desc" }} />
+          )}
         </Card>
       </section>
 
       <section>
         <Card padding="none">
           <CardHeader title="Top items" description="Best-selling SKUs in the selected period" />
-          <CardBody>
-            {topItems.length === 0 ? (
+          {topItems.length === 0 ? (
+            <CardBody>
               <EmptyState icon={ShoppingCart} title="No items sold" compact />
-            ) : (
-              <Table rows={topItems} columns={itemCols} rowKey={(r) => r.name} defaultSort={{ key: "rev", dir: "desc" }} />
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            <Table flush rows={topItems} columns={itemCols} rowKey={(r) => r.name} defaultSort={{ key: "rev", dir: "desc" }} />
+          )}
         </Card>
       </section>
 

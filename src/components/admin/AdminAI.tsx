@@ -505,10 +505,10 @@ function AdminAIDesktop() {
             </section>
             <Card padding="none">
               <CardHeader title="Suggested reorder" description="Stock at or below reorder point. Quantity = par − on-hand." actions={<Lightbulb className="h-4 w-4 v2-muted" />} />
-              <CardBody>
-                <Table
-                  rows={reorderRows}
-                  columns={[
+              <Table
+                flush
+                rows={reorderRows}
+                columns={[
                     { key: "name", header: "Ingredient", cell: (r) => r.name, sortValue: (r) => r.name },
                     { key: "onhand", header: "On hand", align: "right", cell: (r) => `${r.onHand} ${r.unit}`, sortValue: (r) => r.onHand },
                     { key: "par", header: "Par", align: "right", cell: (r) => `${r.parLevel} ${r.unit}`, sortValue: (r) => r.parLevel },
@@ -527,10 +527,9 @@ function AdminAIDesktop() {
                       sortValue: (r) => r.estCost,
                     },
                   ]}
-                  rowKey={(r) => r.ingredientId}
-                  defaultSort={{ key: "cost", dir: "desc" }}
-                />
-              </CardBody>
+                rowKey={(r) => r.ingredientId}
+                defaultSort={{ key: "cost", dir: "desc" }}
+              />
             </Card>
           </>
         )
@@ -552,29 +551,28 @@ function AdminAIDesktop() {
               description="Hours of peak demand and a baseline headcount recommendation. Adjust based on prep complexity per item."
               actions={<ChefHat className="h-4 w-4 v2-muted" />}
             />
-            <CardBody>
-              <Table
-                rows={staffingRows}
-                columns={[
-                  { key: "hour", header: "Hour", cell: (r) => <span className="mono">{r.hour}</span>, sortValue: (r) => r.hour },
-                  { key: "orders", header: "Orders", align: "right", cell: (r) => r.orderCount, sortValue: (r) => r.orderCount },
-                  { key: "revenue", header: "Revenue", align: "right", cell: (r) => formatPrice(r.revenue), sortValue: (r) => r.revenue },
-                  {
-                    key: "headcount",
-                    header: "Suggested headcount",
-                    align: "right",
-                    cell: (r) => (
-                      <Badge tone={r.suggestedHeadcount >= 4 ? "danger" : r.suggestedHeadcount === 3 ? "warning" : "success"} variant="soft">
-                        {r.suggestedHeadcount}
-                      </Badge>
-                    ),
-                    sortValue: (r) => r.suggestedHeadcount,
-                  },
-                ]}
-                rowKey={(r) => r.hour}
-                defaultSort={{ key: "orders", dir: "desc" }}
-              />
-            </CardBody>
+            <Table
+              flush
+              rows={staffingRows}
+              columns={[
+                { key: "hour", header: "Hour", cell: (r) => <span className="mono">{r.hour}</span>, sortValue: (r) => r.hour },
+                { key: "orders", header: "Orders", align: "right", cell: (r) => r.orderCount, sortValue: (r) => r.orderCount },
+                { key: "revenue", header: "Revenue", align: "right", cell: (r) => formatPrice(r.revenue), sortValue: (r) => r.revenue },
+                {
+                  key: "headcount",
+                  header: "Suggested headcount",
+                  align: "right",
+                  cell: (r) => (
+                    <Badge tone={r.suggestedHeadcount >= 4 ? "danger" : r.suggestedHeadcount === 3 ? "warning" : "success"} variant="soft">
+                      {r.suggestedHeadcount}
+                    </Badge>
+                  ),
+                  sortValue: (r) => r.suggestedHeadcount,
+                },
+              ]}
+              rowKey={(r) => r.hour}
+              defaultSort={{ key: "orders", dir: "desc" }}
+            />
           </Card>
         )
       ) : (
@@ -603,9 +601,7 @@ function AdminAIDesktop() {
             </Card>
           ) : (
             <Card padding="none">
-              <CardBody>
-                <Table rows={faqs} columns={faqCols} rowKey={(f) => f.id} defaultSort={{ key: "hits", dir: "desc" }} />
-              </CardBody>
+              <Table flush rows={faqs} columns={faqCols} rowKey={(f) => f.id} defaultSort={{ key: "hits", dir: "desc" }} />
             </Card>
           )}
         </>

@@ -525,9 +525,7 @@ function AdminFeedbackDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(f) => f.id} defaultSort={{ key: "date", dir: "desc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(f) => f.id} defaultSort={{ key: "date", dir: "desc" }} />
         </Card>
       )}
     </div>

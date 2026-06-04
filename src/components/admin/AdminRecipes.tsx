@@ -1849,9 +1849,7 @@ function IngredientsPanel() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(i) => i.id} defaultSort={{ key: "name", dir: "asc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(i) => i.id} defaultSort={{ key: "name", dir: "asc" }} />
         </Card>
       )}
 

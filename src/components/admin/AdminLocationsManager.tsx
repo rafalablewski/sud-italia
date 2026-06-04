@@ -332,7 +332,7 @@ export function AdminLocationsManager() {
               description="Add the first truck or re-seed from the hardcoded list."
             />
           ) : (
-            <Table columns={cols} rows={list} rowKey={(l) => l.slug} />
+            <Table flush columns={cols} rows={list} rowKey={(l) => l.slug} />
           )}
         </CardBody>
       </Card>

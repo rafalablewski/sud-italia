@@ -331,9 +331,7 @@ function AdminCustomersDesktop() {
         </Card>
       ) : (
         <Card padding="none">
-          <CardBody>
-            <Table rows={filtered} columns={cols} rowKey={(c) => c.phone} defaultSort={{ key: "spent", dir: "desc" }} />
-          </CardBody>
+          <Table flush rows={filtered} columns={cols} rowKey={(c) => c.phone} defaultSort={{ key: "spent", dir: "desc" }} />
         </Card>
       )}
 
