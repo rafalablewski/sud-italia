@@ -1825,15 +1825,16 @@ button.v2-card:active { transform: translateY(0); }
 }
 .v2-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .v2-kpi-label {
-  font-size: var(--text-xs);
-  font-weight: 500;
+  font-size: var(--text-2xs);
+  font-weight: 600;
   color: var(--fg-subtle);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 .v2-kpi-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1848,10 +1849,10 @@ button.v2-card:active { transform: translateY(0); }
 .v2-kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
 .v2-kpi-value {
   font-size: var(--text-3xl);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg);
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   font-feature-settings: "tnum", "cv11";
 }
 .v2-kpi-unit { font-size: var(--text-base); color: var(--fg-muted); font-weight: 500; }

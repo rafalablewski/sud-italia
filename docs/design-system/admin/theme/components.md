@@ -193,7 +193,10 @@ transform. Don't put the lift on a static card — motion implies "click me."
 (`.v2-kpi-accent-*` → `--kpi-accent`), matching the tone of its icon chip. It
 gives the KPI grid colour and life without tinting the whole surface; `neutral`
 tiles stay capless. This is the sanctioned way to add colour to the dashboard —
-an accent cap, not a filled tile.
+an accent cap, not a filled tile. The label is a **2xs uppercase eyebrow**
+(`.07em` tracked, `--fg-subtle`); the value is **`--text-3xl` / weight 700**,
+tight tracking, tabular numerals; the icon sits in a `--radius-md` tone chip.
+Crisp metric label → bold hero number is the KPI rhythm.
 
 ### Menu / product cards — text-forward
 
