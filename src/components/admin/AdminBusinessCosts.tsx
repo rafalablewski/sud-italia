@@ -380,6 +380,40 @@ export function AdminBusinessCosts() {
             title="New cost"
           />
         }
+        search={
+          <Input
+            placeholder="Search by name, vendor, category, role…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <>
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as typeof categoryFilter)}
+              options={[
+                { value: "all", label: "All categories" },
+                ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
+                  value: k,
+                  label: CATEGORY_LABEL[k],
+                })),
+              ]}
+            />
+            <Tabs
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as StatusFilter)}
+              tabs={[
+                { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
+                { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
+                { value: "all", label: "All", count: list.length },
+              ]}
+              variant="pill"
+              ariaLabel="Status filter"
+            />
+          </>
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -522,39 +556,6 @@ export function AdminBusinessCosts() {
           </CardBody>
         </Card>
       )}
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, vendor, category, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value as typeof categoryFilter)}
-          options={[
-            { value: "all", label: "All categories" },
-            ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
-              value: k,
-              label: CATEGORY_LABEL[k],
-            })),
-          ]}
-        />
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
-            { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
-            { value: "all", label: "All", count: list.length },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Business costs…</div>

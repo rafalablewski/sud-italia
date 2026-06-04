@@ -218,6 +218,29 @@ function AdminCustomersDesktop() {
       <PageHero
         title="Customers"
         subtitle="Every customer who paid, ranked by lifetime spend. RFM-style status calculated from order recency + frequency."
+        search={
+          <Input
+            placeholder="Search by name, phone, or email…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <Tabs
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            tabs={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "active", label: "Active", count: counts.active },
+              { value: "repeat", label: "Repeat", count: counts.repeat },
+              { value: "new", label: "New", count: counts.new },
+              { value: "lapsed", label: "Lapsed", count: counts.lapsed },
+            ]}
+            variant="pill"
+            ariaLabel="Customer status"
+          />
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -284,30 +307,6 @@ function AdminCustomersDesktop() {
           </CardBody>
         </Card>
       )}
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, phone, or email…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "active", label: "Active", count: counts.active },
-            { value: "repeat", label: "Repeat", count: counts.repeat },
-            { value: "new", label: "New", count: counts.new },
-            { value: "lapsed", label: "Lapsed", count: counts.lapsed },
-          ]}
-          variant="pill"
-          ariaLabel="Customer status"
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Customers…</div>

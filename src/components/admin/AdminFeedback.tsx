@@ -362,6 +362,44 @@ function AdminFeedbackDesktop() {
             }
           />
         }
+        search={
+          <Input
+            placeholder="Search by name, phone, order id, or comment…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <>
+            <Tabs
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as StatusFilter)}
+              tabs={[
+                { value: "all", label: "All", count: statusCounts.all },
+                { value: "new", label: "New", count: statusCounts.new },
+                { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
+                { value: "responded", label: "Responded", count: statusCounts.responded },
+              ]}
+              variant="pill"
+              ariaLabel="Status filter"
+            />
+            <Tabs
+              value={ratingFilter}
+              onChange={(v) => setRatingFilter(v as RatingFilter)}
+              tabs={[
+                { value: "all", label: "All ★" },
+                { value: "5", label: "5" },
+                { value: "4", label: "4" },
+                { value: "3", label: "3" },
+                { value: "2", label: "2" },
+                { value: "1", label: "1" },
+              ]}
+              variant="pill"
+              ariaLabel="Rating filter"
+            />
+          </>
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -463,43 +501,6 @@ function AdminFeedbackDesktop() {
           )}
         </CardBody>
       </Card>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, phone, order id, or comment…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: statusCounts.all },
-            { value: "new", label: "New", count: statusCounts.new },
-            { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
-            { value: "responded", label: "Responded", count: statusCounts.responded },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-        <Tabs
-          value={ratingFilter}
-          onChange={(v) => setRatingFilter(v as RatingFilter)}
-          tabs={[
-            { value: "all", label: "All ★" },
-            { value: "5", label: "5" },
-            { value: "4", label: "4" },
-            { value: "3", label: "3" },
-            { value: "2", label: "2" },
-            { value: "1", label: "1" },
-          ]}
-          variant="pill"
-          ariaLabel="Rating filter"
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Feedback…</div>

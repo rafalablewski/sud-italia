@@ -168,6 +168,26 @@ export function AdminPermissions() {
             Live cross-tab of every capability against your roles and your real accounts — built from the permission catalog (<span className="mono">src/lib/permissions.ts</span>), the role presets, and the current user list. Nothing here is hand-maintained: add a capability or a user and it shows up. <strong>By role</strong> shows the default grant each role inherits; <strong>By user</strong> shows each account&rsquo;s effective access (custom grants override their role) and lets an owner flip a cell to grant or revoke.
           </>
         }
+        search={
+          <Input
+            placeholder="Search capabilities by name, key, or description…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <Tabs
+            value={view}
+            onChange={(v) => setView(v as ViewMode)}
+            tabs={[
+              { value: "role", label: "By role" },
+              { value: "user", label: "By user", count: users.length },
+            ]}
+            variant="pill"
+            ariaLabel="Matrix view"
+          />
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -176,27 +196,6 @@ export function AdminPermissions() {
         <KpiCard label="User accounts" value={users.length} icon={UsersIcon} tone="info" />
         <KpiCard label="Custom grants" value={customCount} icon={UserCog} tone={customCount > 0 ? "warning" : "neutral"} />
       </section>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search capabilities by name, key, or description…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={view}
-          onChange={(v) => setView(v as ViewMode)}
-          tabs={[
-            { value: "role", label: "By role" },
-            { value: "user", label: "By user", count: users.length },
-          ]}
-          variant="pill"
-          ariaLabel="Matrix view"
-        />
-      </div>
 
       <div className="v2-filters" style={{ flexWrap: "wrap", gap: 6 }}>
         <Chip selected={group === "all"} onClick={() => setGroup("all")}>

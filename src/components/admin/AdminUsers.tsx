@@ -476,6 +476,29 @@ function AdminUsersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
         }
+        search={
+          <Input
+            placeholder="Search by name, email, or role…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <Tabs
+            value={roleFilter}
+            onChange={(v) => setRoleFilter(v as AdminRole | "all")}
+            tabs={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
+              { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
+              { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
+              { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
+            ]}
+            variant="pill"
+            ariaLabel="Role filter"
+          />
+        }
       />
 
       <div className="v2-section-eyebrow">Roster health</div>
@@ -496,30 +519,6 @@ function AdminUsersDesktop() {
           tone={kpis.shared > 0 ? "warning" : "success"}
         />
       </section>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, email, or role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={roleFilter}
-          onChange={(v) => setRoleFilter(v as AdminRole | "all")}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
-            { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
-            { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
-            { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
-          ]}
-          variant="pill"
-          ariaLabel="Role filter"
-        />
-      </div>
 
       <div className="v2-filters" style={{ flexWrap: "wrap", gap: 8 }}>
         <Select

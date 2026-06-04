@@ -380,6 +380,28 @@ function AdminInventoryDesktop() {
             title={untracked.length === 0 ? "All ingredients are tracked here." : "Track ingredient"}
           />
         }
+        search={
+          <Input
+            placeholder="Search ingredient, supplier…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        }
+        filters={
+          <Tabs
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            tabs={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "ok", label: "Healthy", count: counts.ok },
+              { value: "low", label: "Low", count: counts.low },
+              { value: "out", label: "Out", count: counts.out },
+            ]}
+            variant="pill"
+            ariaLabel="Status filter"
+          />
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -416,29 +438,6 @@ function AdminInventoryDesktop() {
       </section>
 
       <VarianceCard rows={variance} />
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search ingredient, supplier…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "ok", label: "Healthy", count: counts.ok },
-            { value: "low", label: "Low", count: counts.low },
-            { value: "out", label: "Out", count: counts.out },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
 
       <div className="v2-grid-2-1">
         {loading ? (

@@ -289,26 +289,26 @@ export function AdminRecipes() {
 function AdminRecipesDesktop() {
   const [tab, setTab] = useState<TabKey>("recipes");
 
+  const viewTabs = (
+    <Tabs
+      value={tab}
+      onChange={(v) => setTab(v as TabKey)}
+      tabs={[
+        { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
+        { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
+      ]}
+      variant="pill"
+      ariaLabel="View mode"
+    />
+  );
+
   return (
     <div className="v2-page">
-      <PageHero
-        title="Recipes & Ingredients"
-        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
-        filters={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as TabKey)}
-            tabs={[
-              { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
-              { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="View mode"
-          />
-        }
-      />
-
-      {tab === "recipes" ? <RecipesPanel /> : <IngredientsPanel />}
+      {tab === "recipes" ? (
+        <RecipesPanel viewTabs={viewTabs} />
+      ) : (
+        <IngredientsPanel viewTabs={viewTabs} />
+      )}
     </div>
   );
 }
@@ -317,7 +317,7 @@ function AdminRecipesDesktop() {
 // Recipes panel
 // =============================================================
 
-function RecipesPanel() {
+function RecipesPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
   const toast = useToast();
 
   // Recipes + ingredients are chain-wide; menus are per-location. We pull
@@ -452,30 +452,37 @@ function RecipesPanel() {
 
   return (
     <>
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+      <PageHero
+        title="Recipes & Ingredients"
+        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
+        search={
           <Input
             placeholder="Search dishes…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-        <Tabs
-          value={filterCat}
-          onChange={(v) => setFilterCat(v as MenuCategory | "all")}
-          tabs={[
-            { value: "all", label: "All", count: dishes.length },
-            ...categories.map((c) => ({
-              value: c,
-              label: MENU_CATEGORY_LABELS[c],
-              count: dishes.filter((d) => d.category === c).length,
-            })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-      </div>
+        }
+        filters={
+          <>
+            {viewTabs}
+            <Tabs
+              value={filterCat}
+              onChange={(v) => setFilterCat(v as MenuCategory | "all")}
+              tabs={[
+                { value: "all", label: "All", count: dishes.length },
+                ...categories.map((c) => ({
+                  value: c,
+                  label: MENU_CATEGORY_LABELS[c],
+                  count: dishes.filter((d) => d.category === c).length,
+                })),
+              ]}
+              variant="pill"
+              ariaLabel="Category filter"
+            />
+          </>
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Recipes…</div>
@@ -1670,7 +1677,7 @@ interface IngredientDialogState {
   ingredient: IngredientData | null;
 }
 
-function IngredientsPanel() {
+function IngredientsPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
   const toast = useToast();
   const [list, setList] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1795,37 +1802,46 @@ function IngredientsPanel() {
 
   return (
     <>
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+      <PageHero
+        title="Recipes & Ingredients"
+        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
+        actions={
+          <Button
+            variant="primary"
+            leadingIcon={<Plus className="h-3.5 w-3.5" />}
+            onClick={() => setDialog({ open: true, ingredient: null })}
+          >
+            New ingredient
+          </Button>
+        }
+        search={
           <Input
             placeholder="Search ingredients or suppliers…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-        </div>
-        <Tabs
-          value={catFilter}
-          onChange={(v) => setCatFilter(v as IngredientCategory | "all")}
-          tabs={[
-            { value: "all", label: "All", count: list.length },
-            ...INGREDIENT_CATEGORIES.map((c) => ({
-              value: c,
-              label: c,
-              count: list.filter((i) => i.category === c).length,
-            })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-        <Button
-          variant="primary"
-          leadingIcon={<Plus className="h-3.5 w-3.5" />}
-          onClick={() => setDialog({ open: true, ingredient: null })}
-        >
-          New ingredient
-        </Button>
-      </div>
+        }
+        filters={
+          <>
+            {viewTabs}
+            <Tabs
+              value={catFilter}
+              onChange={(v) => setCatFilter(v as IngredientCategory | "all")}
+              tabs={[
+                { value: "all", label: "All", count: list.length },
+                ...INGREDIENT_CATEGORIES.map((c) => ({
+                  value: c,
+                  label: c,
+                  count: list.filter((i) => i.category === c).length,
+                })),
+              ]}
+              variant="pill"
+              ariaLabel="Category filter"
+            />
+          </>
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Recipes…</div>

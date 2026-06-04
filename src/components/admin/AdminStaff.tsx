@@ -315,6 +315,27 @@ export function AdminStaff() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })} aria-label="Hire employee" title={canHire ? "Hire employee" : "New staff member"} />
         }
+        search={
+          <Input
+            placeholder="Search by name, phone, email, role…"
+            leadingAdornment={<Search className="h-3.5 w-3.5" />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        }
+        filters={
+          <Tabs
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            tabs={[
+              { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
+              { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
+              { value: "all", label: "All", count: list.length },
+            ]}
+            variant="pill"
+            ariaLabel="Status filter"
+          />
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -335,28 +356,6 @@ export function AdminStaff() {
           tone="brand"
         />
       </section>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
-          <Input
-            placeholder="Search by name, phone, email, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
-            { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
-            { value: "all", label: "All", count: list.length },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Staff…</div>
