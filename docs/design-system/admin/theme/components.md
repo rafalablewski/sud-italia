@@ -493,7 +493,9 @@ every page**:
   3. **`search` (left, grows) ⟷ `location` (right)** — `.v2-hero-find`. `search`
      = `{value,onChange,placeholder}` → the one search `Input` (`min-width:200px`
      floor). `location` = `{value,onChange,includeAll?}` → **always** the pill
-     `LocationFilter` (never a `<Select>`).
+     `LocationFilter` (never a `<Select>`). Location hugs the right **only when a
+     search shares the row**; with no search it sits left under the title (so it
+     never floats bottom-right in a void).
   4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
      (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
      **always** `Select`s, rendered beside the pill.

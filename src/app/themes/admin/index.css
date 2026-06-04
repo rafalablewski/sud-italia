@@ -1936,7 +1936,10 @@ button.v2-card:active { transform: translateY(0); }
 .v2-hero .v2-page-actions .v2-btn { min-height: 34px; font-size: var(--text-sm); }
 .v2-hero .v2-page-actions .v2-btn:not(:has(.v2-btn-label)) { width: 34px; padding: 0; }
 .v2-hero-find .v2-hero-search { flex: 1 1 240px; min-width: 200px; }  /* row 3: search ⟷ location */
-.v2-hero-find .v2-hero-loc { margin-left: auto; min-width: 0; }
+.v2-hero-find .v2-hero-loc { min-width: 0; }
+/* Location hugs the right ONLY when there's a search to balance it. Alone (no
+   search) it sits left under the title, instead of floating bottom-right. */
+.v2-hero-find .v2-hero-search ~ .v2-hero-loc { margin-left: auto; }
 
 /* LocationFilter — a horizontal pill scroller. Pills never wrap or shrink; when
    they overflow, the track scrolls and the chevron controls + edge fades appear.
