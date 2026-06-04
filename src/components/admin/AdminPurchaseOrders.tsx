@@ -35,6 +35,7 @@ import {
   Textarea,
   type Column,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 
 interface SupplierLite {
@@ -276,56 +277,54 @@ function AdminPurchaseOrdersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Purchase orders</h1>
-          <p className="v2-page-subtitle">
-            Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+      <PageHero
+        title="Purchase orders"
+        subtitle="Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log."
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        stats={[
+          { label: "Open", value: counts.draft + counts.sent },
+          { label: "Received", value: counts.received },
+        ]}
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setCreating(true)}
             disabled={suppliers.length === 0 || ingredients.length === 0}
+            aria-label="New PO"
             title={
               suppliers.length === 0
                 ? "Add a supplier first."
                 : ingredients.length === 0
                   ? "Add ingredients first."
-                  : undefined
+                  : "New PO"
             }
-          >
-            New PO
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+          />
+        }
+        search={
           <Input
             placeholder="Search by PO id, supplier, or ingredient…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "draft", label: "Draft", count: counts.draft },
-            { value: "sent", label: "Sent", count: counts.sent },
-            { value: "received", label: "Received", count: counts.received },
-            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
+        }
+        filters={
+          <Tabs
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            tabs={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "draft", label: "Draft", count: counts.draft },
+              { value: "sent", label: "Sent", count: counts.sent },
+              { value: "received", label: "Received", count: counts.received },
+              { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+            ]}
+            variant="pill"
+            ariaLabel="Status filter"
+          />
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Purchase orders…</div>

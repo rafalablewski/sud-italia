@@ -1882,33 +1882,27 @@ button.v2-card:active { transform: translateY(0); }
 }
 @media (max-width: 720px) { .v2-page { --page-pad: 14px; gap: 14px; } }
 
-/* Every admin page is a hero band: editorial serif title + a short platinum
-   underscore (the owner-tier flourish) + a bottom hairline. This lives on the
-   shared `.v2-page-header`, so all ~42 pages get a consistent hero with no
-   per-page opt-in. */
+/* Every admin page header is the shared hero panel (design V5.1): a raised
+   surface card with a platinum left rail. Plain headers (title + actions) lay
+   out flush left/right; the `PageHero` component (`.v2-hero`) adds centered
+   stats + a folded search/filter tier. One look on all ~42 pages. */
 .v2-page-header {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.v2-page-header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 56px;
-  height: 2px;
-  background: var(--platinum);
+  padding: 16px 22px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--platinum);
+  border-radius: var(--radius-lg);
 }
 .v2-page-title-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .v2-page-title {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: var(--text-2xl);
   font-weight: 500;
   color: var(--fg);
   letter-spacing: -0.01em;
@@ -1916,6 +1910,27 @@ button.v2-card:active { transform: translateY(0); }
 }
 .v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; max-width: 78ch; line-height: 1.5; }
 .v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* PageHero — full V5.1 structure (stats centered + folded second tier). */
+.v2-hero { flex-direction: column; align-items: stretch; gap: 0; }
+.v2-hero-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; width: 100%; }
+.v2-hero-loc { margin-top: 8px; }
+.v2-hero-stats { justify-self: center; display: flex; align-items: center; }
+.v2-hero-stat { display: flex; flex-direction: column; align-items: center; padding: 0 26px; }
+.v2-hero-stat + .v2-hero-stat { border-left: 1px solid var(--border); }
+.v2-hero-stat-k { font-size: var(--text-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-subtle); }
+.v2-hero-stat-v { font-family: var(--font-display); font-weight: 500; font-size: var(--text-2xl); color: var(--fg); line-height: 1.1; }
+.v2-hero .v2-page-actions { justify-self: end; }
+.v2-hero-tier2 { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.v2-hero-search { flex: 1 1 auto; min-width: 0; }
+.v2-hero-filters { flex: 0 0 auto; }
+@media (max-width: 820px) {
+  .v2-hero-top { grid-template-columns: 1fr; gap: 12px; }
+  .v2-hero-stats, .v2-hero .v2-page-actions { justify-self: start; }
+  .v2-hero-stat { padding-left: 0; }
+  .v2-hero-stat + .v2-hero-stat { border-left: 0; }
+  .v2-hero-tier2 { flex-wrap: wrap; }
+}
 
 /* Section eyebrow — an uppercase label trailed by a hairline rule, used to
    group the dashboard into editorial bands (Headline / Operations / Performance

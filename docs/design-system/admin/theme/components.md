@@ -461,14 +461,24 @@ interactive-card behaviour.
 
 ## Page hero & section eyebrows
 
-Every admin page reads as an **editorial hero band**, not a flat card stack:
+Every admin page is fronted by **one shared hero panel** (design **V5.1**) — a
+raised `--surface-1` card with a **`--platinum`** left rail — so the title,
+location filter, stats, search, filters and actions live in the **same place on
+every page**:
 
-- **`.v2-page-header`** — the shared page header *is* the hero: its title
-  (`.v2-page-title`) renders in the serif **`--font-display`** at `--text-3xl`
-  weight 500, with a short **`--platinum`** underscore (the owner-tier flourish,
-  `::after`) and a bottom hairline. No opt-in class — all ~42 pages that use
-  `.v2-page-header` get the same hero automatically (shared-component
-  consistency). Don't bold the title past 500 (typography doctrine).
+- **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
+  `3px --platinum` left rail + `--radius-lg`, `16px 22px` padding. The title
+  (`.v2-page-title`) is serif **`--font-display`** at `--text-2xl` weight 500
+  (don't bold past 500 — typography doctrine). Applies to **all ~42 pages**:
+  even a hand-rolled `title + actions` header renders as the panel.
+- **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
+  the component that fills the panel. Slots, all optional and **collapsing
+  gracefully**: `title` · `subtitle` · `locations` (under the title) · `stats[]`
+  (centered headline numbers, `--font-display`, divider between) · `actions`
+  (right; icon-only secondary + a compressed primary) · `search` + `filters`
+  (folded into a second tier under a hairline). Top row is a
+  `1fr auto 1fr` grid (lead | centered stats | actions). Golden reference:
+  `AdminPurchaseOrders`. **Use this on every page** — don't hand-roll a header.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary
