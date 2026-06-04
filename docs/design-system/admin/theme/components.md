@@ -32,6 +32,14 @@ treatment:
 | lg | 38–42px | 0 17–18px | Page-level CTAs |
 | xl | 46px | 0 22px | Hero CTAs (Charge, big bumps). Full-width when alone. |
 
+**Icon-only buttons.** A `.v2-btn` rendered with an icon but **no** `.v2-btn-label`
+(i.e. `<Button leadingIcon={…} />` with no children) auto-collapses to a square
+via `.v2-btn:not(:has(.v2-btn-label))` — no width/padding overrides needed. This
+is the standard for **all `PageHero` action buttons** (New, Save, Refresh,
+Export…): icon only, always with an `aria-label` + `title` carrying the dropped
+text for accessibility + a hover tooltip. Keep text labels on in-body / table /
+dialog buttons.
+
 ### Variants
 
 | Variant | Bg | Border | Use |
