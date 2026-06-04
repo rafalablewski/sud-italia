@@ -1910,15 +1910,16 @@ button.v2-card:active { transform: translateY(0); }
 .v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; }
 .v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-/* Dashboard hero — editorial serif title + a short platinum underscore, the
-   owner-tier flourish. Scoped to the hero header so other pages keep the sans
-   title. */
-.v2-dash-hero {
+/* Page hero — editorial serif title + a short platinum underscore (the
+   owner-tier flourish) + a bottom hairline. Opt-in per hero surface
+   (`.v2-page-header.v2-page-hero`): Dashboard, Settings, Users. Plain pages
+   keep the sans `.v2-page-title`. */
+.v2-page-hero {
   position: relative;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
-.v2-dash-hero::after {
+.v2-page-hero::after {
   content: "";
   position: absolute;
   left: 0;
@@ -1927,7 +1928,7 @@ button.v2-card:active { transform: translateY(0); }
   height: 2px;
   background: var(--platinum);
 }
-.v2-dash-hero .v2-page-title {
+.v2-page-hero .v2-page-title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: 600;

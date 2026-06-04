@@ -455,13 +455,15 @@ language as the KPI tiles. `.v2-kanban-card`s lift on hover
 (`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
 interactive-card behaviour.
 
-## Dashboard hero & section eyebrows
+## Page hero & section eyebrows
 
-The `/admin` Dashboard reads as **editorial bands**, not a flat card stack:
+Hero surfaces (Dashboard, Settings, Users) read as **editorial bands**, not a flat
+card stack:
 
-- **`.v2-dash-hero`** — the page header gets a serif **`--font-display`** title at
-  `--text-3xl` plus a short **`--platinum`** underscore (the owner-tier flourish)
-  and a bottom hairline. Scoped to the hero so other pages keep the sans title.
+- **`.v2-page-hero`** — add to a `.v2-page-header` and its title renders in the
+  serif **`--font-display`** at `--text-3xl` with a short **`--platinum`**
+  underscore (the owner-tier flourish) and a bottom hairline. Opt-in per hero;
+  plain pages keep the sans title. Live on Dashboard / Settings / Users.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary

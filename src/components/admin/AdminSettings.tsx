@@ -686,7 +686,7 @@ function AdminSettingsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
+      <header className="v2-page-header v2-page-hero">
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Settings</h1>
           <p className="v2-page-subtitle">Account, business config, and the audit trail of administrative changes.</p>
