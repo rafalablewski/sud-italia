@@ -230,7 +230,7 @@ export function AdminPermissions() {
       )}
 
       <Card padding="compact">
-        <div className="v2-note">
+        <div className="v2-callout">
           <ShieldCheck className="h-4 w-4" />
           <span>
             <strong>Owners are always all-access</strong> and can&rsquo;t be narrowed. Toggling a cell in <strong>By user</strong> writes that account a fully-custom grant (it stops inheriting its role defaults) and persists immediately through the owner-only <span className="mono">/api/admin/users</span> — the same gate the Users editor uses. The matrix re-reads after every write, so what you see is what the server enforces.

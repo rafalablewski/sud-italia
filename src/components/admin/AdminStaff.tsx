@@ -644,7 +644,7 @@ function StaffDialog({ canHire, state, onClose, onSaved }: { canHire: boolean; s
 
             {grantLogin && (
               <>
-                <div className="v2-note">
+                <div className="v2-callout">
                   <Monitor className="h-4 w-4" />
                   <span>
                     Access tier: <strong>{accessRole}</strong> · lands on{" "}

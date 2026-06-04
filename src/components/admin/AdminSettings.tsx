@@ -1164,7 +1164,7 @@ function AdminSettingsDesktop() {
                   <Badge tone="brand" variant="soft">{me.role}</Badge>
                 </div>
 
-                <div className="v2-note">
+                <div className="v2-callout">
                   <ShieldCheck className="h-4 w-4" />
                   <span>
                     You sign in at <span className="mono">{me.signIn.door}</span>
@@ -1207,7 +1207,7 @@ function AdminSettingsDesktop() {
                 </div>
 
                 {(me.signIn.shared || !me.signIn.mfa) && (
-                  <div className="v2-note">
+                  <div className="v2-callout">
                     <ShieldCheck className="h-4 w-4" />
                     <span>
                       {me.signIn.shared && (

@@ -405,6 +405,31 @@ See the core side in [core components → Sidebar](../../core/theme/components.m
   keeps its own wrapper border — don't flush it. See
   [material → Nested surfaces](./material.md#nested-surfaces--one-border-per-box).
 
+## Callouts — `.v2-callout`
+
+The standard inline **info panel** (the "only an owner can…" notice, simulator
+caveats, security notes). A `--surface-2` inset well with a **left accent rail**
+and a **CSS-chipped icon** (the leading `<svg>` gets a padded tinted background —
+no markup wrapper needed; usages just set the class). Structure:
+
+```
+<div className="v2-callout v2-callout-platinum">
+  <ShieldCheck className="h-4 w-4" />     {/* auto-chipped by CSS */}
+  <span><strong>Lead-in.</strong> Body copy…</span>
+</div>
+```
+
+- **Tones:** base (neutral rail), `-info`, `-warning`, `-danger`, `-platinum`.
+  The tone colours both the rail and the icon chip. **Platinum is the owner-tier
+  tone** — use it for owner-only notices (per the platinum-for-owner doctrine).
+- **Don't wrap a lone callout in its own `<Card>`** — the callout already carries
+  surface + border, so a card around just a callout double-borders. Render it
+  standalone (e.g. the AdminUsers owner notice) or as one item inside a larger
+  card body.
+- **Not to be confused with `.v2-note`**, which is the **CRM customer note card**
+  (`AdminCustomerDetail` — body + foot + delete). The two used to share the
+  `.v2-note` name and collided; the callout is now its own `.v2-callout`.
+
 ## Iconography — custom stroke, no emoji in UI
 
 - Inline SVG, `stroke: currentColor`, `fill: none`,

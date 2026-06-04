@@ -574,14 +574,12 @@ function AdminUsersDesktop() {
         </Card>
       )}
 
-      <Card padding="compact">
-        <div className="v2-note">
-          <ShieldCheck className="h-4 w-4" />
-          <span>
-            <strong>Only an owner can manage users and grant permissions.</strong> Granular permissions are enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls, and high-value actions (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
-          </span>
-        </div>
-      </Card>
+      <div className="v2-callout v2-callout-platinum">
+        <ShieldCheck className="h-4 w-4" />
+        <span>
+          <strong>Only an owner can manage users and grant permissions.</strong> Granular permissions are enforced end-to-end: the sidebar + a page guard hide forbidden surfaces, <span className="mono">withAdmin</span> rejects ungranted <span className="mono">/api/admin/*</span> calls, and high-value actions (refunds, cash, GDPR export, loyalty adjustments, purchase orders, settings) re-check the specific capability at the call site. A user with a custom grant is governed by their permissions (not role rank); accounts left on &ldquo;role default&rdquo; keep the legacy role-rank behaviour. Owners are always full-access.
+        </span>
+      </div>
 
       <UserDialog state={dialog} onClose={() => setDialog({ open: false, user: null })} onSaved={async () => {
         setDialog({ open: false, user: null });
@@ -856,7 +854,7 @@ function PasskeyDialog({
       footer={<Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>}
     >
       <div className="v2-stack-12">
-        <div className="v2-note">
+        <div className="v2-callout">
           <Fingerprint className="h-4 w-4" />
           <span>
             Phishing-resistant sign-in with a hardware key (YubiKey) or device passkey (Touch ID, Windows Hello). At their sign-in page (<span className="mono">/login</span>, or <span className="mono">/admin/login</span> for owners), the holder enters their email and taps the key — no password needed.
@@ -963,7 +961,7 @@ function CredentialsDialog({
         {(() => {
           const d = describeLogin(user);
           return (
-            <div className="v2-note">
+            <div className="v2-callout">
               <Lock className="h-4 w-4" />
               <span>
                 <strong>How {user.name} signs in</strong>
@@ -1117,7 +1115,7 @@ function MfaDialog({
       <div className="v2-stack-12">
         {user.totpEnabled ? (
           <>
-            <div className="v2-note">
+            <div className="v2-callout">
               <ShieldCheck className="h-4 w-4" />
               <span>MFA is <strong>enabled</strong> for this account. A 6-digit code is required at login.</span>
             </div>
@@ -1156,7 +1154,7 @@ function MfaDialog({
             <p className="v2-muted">
               Add this secret to your authenticator app, then enter the current code to confirm.
             </p>
-            <div className="v2-note">
+            <div className="v2-callout">
               <span>
                 Setup key: <span className="mono" style={{ wordBreak: "break-all" }}>{enrollment.secret}</span>
               </span>

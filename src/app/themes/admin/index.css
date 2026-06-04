@@ -2120,15 +2120,43 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
    role-gate footnote on /admin/users). Top-aligns the icon with the first
    line of wrapped text so it doesn't drift to the vertical centre when the
    message breaks across two lines. */
-.v2-note {
+/* Callout — an inset info panel: icon chip + left accent rail + semantic tones.
+   Replaces the old bare .v2-note callout (which collided with the CRM note card).
+   Reads as an inset well inside a card, or a banner standalone. The icon is
+   chipped purely in CSS (padded svg background) so usages only swap the class. */
+.v2-callout {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
   font-size: var(--text-sm);
   line-height: 1.55;
   color: var(--fg-muted);
 }
-.v2-note > svg { flex-shrink: 0; margin-top: 3px; color: var(--fg-subtle); }
+.v2-callout > svg {
+  box-sizing: content-box;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--fg-subtle);
+}
+.v2-callout strong { color: var(--fg); font-weight: 600; }
+/* Semantic tones — accent rail + icon chip take the status colour. */
+.v2-callout-info { border-left-color: var(--info); }
+.v2-callout-info > svg { background: var(--info-soft); color: var(--info); }
+.v2-callout-warning { border-left-color: var(--warning); }
+.v2-callout-warning > svg { background: var(--warning-soft); color: var(--warning); }
+.v2-callout-danger { border-left-color: var(--danger); }
+.v2-callout-danger > svg { background: var(--danger-soft); color: var(--danger); }
+.v2-callout-platinum { border-left-color: var(--platinum); background: var(--platinum-soft); }
+.v2-callout-platinum > svg { background: var(--platinum-soft-strong); color: var(--platinum); }
 
 /* Kanban */
 .v2-kanban {
