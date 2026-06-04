@@ -168,6 +168,7 @@ variants.push((y) => {
   // right side
   let rx = PAD + CW - 18;
   const prim = button(0, 0, "New PO", { primary: true, icon: "plus", h: 32 }); rx -= prim.w; s += button(rx, by, "New PO", { primary: true, icon: "plus", h: 32 }).svg; rx -= 10;
+  for (const ic of ["download", "refresh"]) { rx -= 32; s += iconBtn(rx, by, ic, { h: 32 }).svg; rx -= 6; }
   const seg = segmented(0, 0, ["All", "Draft", "Sent", "Received"], 0, { h: 32 }); rx -= seg.w; s += segmented(rx, by, ["All", "Draft", "Sent", "Received"], 0, { h: 32 }).svg; rx -= 10;
   // search fills the middle
   const sxStart = x + lp.w + 14;
@@ -218,9 +219,11 @@ variants.push((y) => {
   s += title(x, y + 26, "Purchase orders", { size: 24 });
   s += text(x, y + 48, "Across both kitchens", { size: 12, fill: T.subtle });
   const lp = locPills(x, y + 56, { h: 28 }); s += lp.svg;
-  // right: stats + primary
+  // right: stats + primary (+ icon-only secondary)
   let rx = PAD + CW - 22;
-  const prim = button(0, 0, "New PO", { primary: true, icon: "plus" }); rx -= prim.w; s += button(rx, y + 24, "New PO", { primary: true, icon: "plus" }).svg; rx -= 28;
+  const prim = button(0, 0, "New PO", { primary: true, icon: "plus" }); rx -= prim.w; s += button(rx, y + 24, "New PO", { primary: true, icon: "plus" }).svg; rx -= 10;
+  for (const ic of ["download", "refresh"]) { rx -= 34; s += iconBtn(rx, y + 24, ic).svg; rx -= 6; }
+  rx -= 22;
   const stat = (sx, label, val) => text(sx, y + 22, label, { size: 11, fill: T.subtle, anchor: "end" }) + text(sx, y + 46, val, { size: 22, fill: T.fg, family: SERIF, weight: 600, anchor: "end" });
   s += stat(rx, "OPEN", "0"); rx -= 90;
   s += stat(rx, "VALUE (PLN)", "0"); rx -= 130;
@@ -230,30 +233,54 @@ variants.push((y) => {
 
 // ===================== COMPOSE =====================
 const names = [
-  ["V1", "Structured + filter strip", "Title & subtitle left, actions right, status filters on their own row below."],
-  ["V2", "Unified toolbar band", "Everything in one contained elevated panel — title · location · search · filters · action."],
-  ["V3", "Editorial hero", "Big serif title alone up top; one clean toolbar row beneath (search grows to fill)."],
-  ["V4", "Minimal · icon-first", "Compressed: secondary actions become icon buttons; filters behind a chip/menu."],
-  ["V5", "Rich split panel", "ss5-style: title + location left, inline KPI stats + primary action right, in a panel."],
+  ["V1", "Structured + filter strip", "Two rows. Title (and a one-line description) sit top-left, the buttons top-right, then a separate row of status filters underneath. Roomy and familiar — the most 'classic admin' feel."],
+  ["V2", "Unified toolbar band", "One slim box holds everything in a single row — title, location, search, filters, buttons. The tightest, most 'app-like' option; great for dense pages."],
+  ["V3", "Editorial hero", "The serif title stands alone like a magazine headline with its platinum underline, then ONE clean row of controls beneath it. Search stretches to fill the middle. Most on-brand."],
+  ["V4", "Minimal · icon-first", "Stripped back. Only the main + button keeps words; search / filter / refresh / export collapse to small icons, and location is a compact dropdown. Hands the most space back to the page content."],
+  ["V5", "Rich split panel", "A raised panel: name + location on the left, a couple of big live numbers (e.g. open POs, value) plus the main button on the right. Most premium — best where a headline stat matters."],
 ];
-const BLOCK = 132;
-const top = 70;
-const H = top + variants.length * BLOCK + 30;
+
+function render(svg, file, w, h) {
+  const png = new Resvg(svg, { background: T.bg, fitTo: { mode: "width", value: w * 2 } }).render().asPng();
+  writeFileSync(new URL("./" + file, import.meta.url), png);
+  console.log("wrote", file, png.length, "bytes,", h, "tall");
+}
+
+// --- individual large images, one per variant ---
+function wrapLines(str, max) {
+  const words = str.split(" "); const lines = []; let cur = "";
+  for (const w of words) { if ((cur + " " + w).trim().length > max) { lines.push(cur.trim()); cur = w; } else cur += " " + w; }
+  if (cur.trim()) lines.push(cur.trim());
+  return lines;
+}
+variants.forEach((fn, i) => {
+  const [tag, name, desc] = names[i];
+  const descLines = wrapLines(desc, 120);
+  const top = 30 + descLines.length * 18 + 18;
+  const H = top + 120;
+  let head = text(PAD, 34, tag, { size: 15, fill: T.platinum, family: SANS, weight: 700, spacing: 1 }) +
+    text(PAD + 36, 34, name, { size: 17, fill: T.fg, family: SERIF, weight: 600 });
+  descLines.forEach((ln, k) => { head += text(PAD, 58 + k * 18, ln, { size: 13, fill: T.muted }); });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<rect width="${W}" height="${H}" fill="${T.bg}"/>
+${head}
+${fn(top - 8)}
+</svg>`;
+  render(svg, `variant-${i + 1}.png`, W, H);
+});
+
+// --- combined overview (kept for the repo) ---
+const BLOCK = 132, top = 70, H = top + variants.length * BLOCK + 30;
 let body = "";
 variants.forEach((fn, i) => {
   const y0 = top + i * BLOCK;
-  body += caption(PAD, y0 + 4, names[i][0], names[i][1], names[i][2]);
+  body += caption(PAD, y0 + 4, names[i][0], names[i][1], names[i][2].slice(0, 90));
   body += fn(y0 + 26);
   if (i < variants.length - 1) body += rrect(PAD, y0 + BLOCK - 4, CW, 1, 0, { fill: "rgba(255,255,255,0.05)" });
 });
-
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+render(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <rect width="${W}" height="${H}" fill="${T.bg}"/>
 ${text(PAD, 36, "Subpage hero — 5 candidates", { size: 18, fill: T.fg, family: SERIF, weight: 600 })}
-${text(PAD, 54, "Same content (Purchase orders) in each. Dark admin palette. Pick one (or mix) and I'll build it as the one shared hero.", { size: 12.5, fill: T.muted })}
+${text(PAD, 54, "Same content (Purchase orders) in each. Secondary actions are icon-only. Pick one (or mix).", { size: 12.5, fill: T.muted })}
 ${body}
-</svg>`;
-
-const png = new Resvg(svg, { background: T.bg, fitTo: { mode: "width", value: W * 2 } }).render().asPng();
-writeFileSync(new URL("./hero-variants.png", import.meta.url), png);
-console.log("wrote hero-variants.png", png.length, "bytes,", H, "tall");
+</svg>`, "hero-variants.png", W, H);
