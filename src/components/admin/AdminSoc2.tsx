@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck } from "lucide-react";
-import { Badge, Card, CardBody } from "./v2/ui";
+import { Badge, Card, CardBody, PageHero } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import type { BadgeTone } from "./v2/ui/Badge";
 
@@ -51,19 +51,19 @@ export function AdminSoc2({ register }: { register: Soc2Register }) {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">SOC 2 controls</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="SOC 2 controls"
+        subtitle={
+          <>
             Live mapping of the platform&apos;s actual runtime posture to the
             SOC 2 Trust Services Criteria. Every status is introspected from
             real config, the admin-user table, and the audit log — not a static
             checklist. This is readiness, not certification (a Type II audit
             needs an external auditor + an observation window). Generated{" "}
             {new Date(register.generatedAt).toLocaleString("pl-PL")}.
-          </p>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

@@ -12,6 +12,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
+  PageHero,
   Select,
   LocationFilter,
 } from "./v2/ui";
@@ -129,18 +130,11 @@ export function AdminHaccp() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">HACCP temperature log</h1>
-          <p className="v2-page-subtitle">
-            Cold- and hot-holding checks per shift. Out-of-range readings are flagged and
-            audit-logged for inspectors and insurers.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
-        </div>
-      </header>
+      <PageHero
+        title="HACCP temperature log"
+        subtitle="Cold- and hot-holding checks per shift. Out-of-range readings are flagged and audit-logged for inspectors and insurers."
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+      />
 
       <section className="v2-kpi-grid">
         <Card padding="compact">

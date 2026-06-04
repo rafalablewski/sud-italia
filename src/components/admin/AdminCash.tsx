@@ -28,6 +28,7 @@ import {
   Select,
   Textarea,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
@@ -154,16 +155,16 @@ function AdminCashDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Cash management</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Cash management"
+        subtitle={
+          <>
             Open the till at the start of service, record drops, count at close. Variance &gt; 10 zł is the #1
             theft / over-ring signal — track every shift.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+          </>
+        }
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        actions={
           <Button
             variant="primary"
             size="sm"
@@ -178,8 +179,8 @@ function AdminCashDesktop() {
           >
             Open session
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Cash…</div>

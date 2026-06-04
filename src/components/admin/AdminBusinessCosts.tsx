@@ -44,6 +44,7 @@ import {
   Tabs,
   Textarea,
   type Column,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -367,14 +368,10 @@ export function AdminBusinessCosts() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Business costs</h1>
-          <p className="v2-page-subtitle">
-            Operating expense ledger — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses and one-off purchases. Recurring amounts normalize to per-month so totals stay comparable.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Business costs"
+        subtitle="Operating expense ledger — payroll (pizzaiolo, chefs, waiting staff), rent, utilities, fuel, insurance, licenses and one-off purchases. Recurring amounts normalize to per-month so totals stay comparable."
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
@@ -382,8 +379,8 @@ export function AdminBusinessCosts() {
           >
             New cost
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

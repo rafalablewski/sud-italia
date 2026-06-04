@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Tabs, type Column, Table } from "./v2/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, PageHero, Tabs, type Column, Table } from "./v2/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
 
@@ -348,15 +348,15 @@ function AdminDashboardDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Executive Overview</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Executive Overview"
+        subtitle={
+          <>
             {location ? `${location.toUpperCase()} • ` : "All locations • "}
             Real-time operations, finance, and customer health.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+          </>
+        }
+        filters={
           <Tabs
             value={period}
             onChange={(v) => setPeriod(v as Period)}
@@ -369,24 +369,28 @@ function AdminDashboardDesktop() {
             variant="pill"
             ariaLabel="Date range"
           />
-          <Link
-            href={withAdminBase(base, "/admin/capabilities")}
-            className="v2-btn v2-btn-secondary v2-btn-sm inline-flex items-center gap-1.5"
-          >
-            <Activity className="h-3.5 w-3.5" />
-            Capabilities
-          </Link>
-          <Button
-            variant="secondary"
-            size="sm"
-            leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
-            onClick={onManualRefresh}
-            disabled={refreshing}
-          >
-            Refresh
-          </Button>
-        </div>
-      </header>
+        }
+        actions={
+          <>
+            <Link
+              href={withAdminBase(base, "/admin/capabilities")}
+              className="v2-btn v2-btn-secondary v2-btn-sm inline-flex items-center gap-1.5"
+            >
+              <Activity className="h-3.5 w-3.5" />
+              Capabilities
+            </Link>
+            <Button
+              variant="secondary"
+              size="sm"
+              leadingIcon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "v2-spin" : ""}`} />}
+              onClick={onManualRefresh}
+              disabled={refreshing}
+            >
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <Next60Widget
         location={location}

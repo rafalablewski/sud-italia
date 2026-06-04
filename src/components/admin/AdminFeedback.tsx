@@ -25,6 +25,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
+  PageHero,
   Tabs,
   Table,
   type Column,
@@ -341,14 +342,10 @@ function AdminFeedbackDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Customer feedback</h1>
-          <p className="v2-page-subtitle">
-            Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Customer feedback"
+        subtitle={'Per-order ratings + comments. Stay on top of negative scores — every "new" row is a customer to call back.'}
+        actions={
           <Button
             variant="secondary"
             size="sm"
@@ -367,8 +364,8 @@ function AdminFeedbackDesktop() {
                 ? `Analyze ${unanalyzedCount}`
                 : "Analyze"}
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

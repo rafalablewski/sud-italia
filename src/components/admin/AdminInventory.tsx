@@ -39,6 +39,7 @@ import {
   Textarea,
   type Column,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -365,15 +366,11 @@ function AdminInventoryDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Inventory</h1>
-          <p className="v2-page-subtitle">
-            On-hand stock per location · low-stock alerts · receive / waste / consume log.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+      <PageHero
+        title="Inventory"
+        subtitle="On-hand stock per location · low-stock alerts · receive / waste / consume log."
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
@@ -383,8 +380,8 @@ function AdminInventoryDesktop() {
           >
             Track ingredient
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

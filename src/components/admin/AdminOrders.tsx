@@ -48,6 +48,7 @@ import {
   EmptyState,
   Input,
   ORDER_STATUS_TONE,
+  PageHero,
   Select,
   Tabs,
   Table,
@@ -241,24 +242,10 @@ function AdminOrdersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Orders</h1>
-          <p className="v2-page-subtitle">
-            Track every order from payment through fulfillment.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Tabs
-            value={view}
-            onChange={(v) => setView(v as "kanban" | "table")}
-            tabs={[
-              { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
-              { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="View mode"
-          />
+      <PageHero
+        title="Orders"
+        subtitle="Track every order from payment through fulfillment."
+        actions={
           <Button
             variant="secondary"
             size="sm"
@@ -268,11 +255,8 @@ function AdminOrdersDesktop() {
           >
             Refresh
           </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+        }
+        search={
           <Input
             placeholder="Search by id, name, or phone…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
@@ -280,23 +264,37 @@ function AdminOrdersDesktop() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search orders"
           />
-        </div>
-        <Tabs
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "pending", label: STATUS_LABEL.pending, count: counts.pending },
-            { value: "confirmed", label: STATUS_LABEL.confirmed, count: counts.confirmed },
-            { value: "preparing", label: STATUS_LABEL.preparing, count: counts.preparing },
-            { value: "ready", label: STATUS_LABEL.ready, count: counts.ready },
-            { value: "completed", label: STATUS_LABEL.completed, count: counts.completed },
-            { value: "cancelled", label: STATUS_LABEL.cancelled, count: counts.cancelled },
-          ]}
-          variant="pill"
-          ariaLabel="Status filter"
-        />
-      </div>
+        }
+        filters={
+          <>
+            <Tabs
+              value={view}
+              onChange={(v) => setView(v as "kanban" | "table")}
+              tabs={[
+                { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
+                { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
+              ]}
+              variant="pill"
+              ariaLabel="View mode"
+            />
+            <Tabs
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as StatusFilter)}
+              tabs={[
+                { value: "all", label: "All", count: counts.all },
+                { value: "pending", label: STATUS_LABEL.pending, count: counts.pending },
+                { value: "confirmed", label: STATUS_LABEL.confirmed, count: counts.confirmed },
+                { value: "preparing", label: STATUS_LABEL.preparing, count: counts.preparing },
+                { value: "ready", label: STATUS_LABEL.ready, count: counts.ready },
+                { value: "completed", label: STATUS_LABEL.completed, count: counts.completed },
+                { value: "cancelled", label: STATUS_LABEL.cancelled, count: counts.cancelled },
+              ]}
+              variant="pill"
+              ariaLabel="Status filter"
+            />
+          </>
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Orders…</div>

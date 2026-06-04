@@ -6,7 +6,7 @@ import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle } from "lucide-react";
 import { MetricExplainer, PageExplainer } from "./Explainers";
-import { Button, Card, CardBody, EmptyState, InfoButton } from "./v2/ui";
+import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -133,12 +133,10 @@ export function AdminLtvCac() {
   if (!data || data.totals.newCustomers === 0) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">LTV / CAC</h1>
-            <p className="v2-page-subtitle">No paid customers yet — nothing to value.</p>
-          </div>
-        </header>
+        <PageHero
+          title="LTV / CAC"
+          subtitle="No paid customers yet — nothing to value."
+        />
         <Card>
           <CardBody>
             <EmptyState
@@ -157,23 +155,23 @@ export function AdminLtvCac() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">LTV / CAC</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="LTV / CAC"
+        subtitle={
+          <>
             Lifetime value from paid-order cohorts, acquisition cost from your{" "}
             <Link href={withAdminBase(base, "/admin/business-costs")} className="v2-link">marketing-cost ledger</Link>.
             LTV is margin-adjusted at the blended {data.blendedMarginPct}% gross margin
             derived from order line items. Generated{" "}
             {new Date(data.generatedAt).toLocaleString("pl-PL")}.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+          </>
+        }
+        actions={
           <Link href={withAdminBase(base, "/admin/reports/cohort")}>
             <Button variant="ghost" size="sm">Cohort &amp; CLTV</Button>
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       {!t.hasMarketingData && (
         <Card>

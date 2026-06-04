@@ -9,6 +9,7 @@ import {
   CardBody,
   CardHeader,
   Input,
+  PageHero,
   Select,
   Switch,
   useToast,
@@ -170,19 +171,14 @@ export function AdminCurrency() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title flex items-center gap-2">
+      <PageHero
+        title={
+          <span className="flex items-center gap-2">
             <Coins className="h-6 w-6" /> Currency
-          </h1>
-          <p className="v2-page-subtitle">
-            Configure which currencies the customer-facing switcher exposes
-            on the homepage, set per-currency display rates against PLN,
-            and choose the default the site loads with. Orders are always
-            charged in PLN — non-PLN selections are a reference display.
-          </p>
-        </div>
-      </header>
+          </span>
+        }
+        subtitle="Configure which currencies the customer-facing switcher exposes on the homepage, set per-currency display rates against PLN, and choose the default the site loads with. Orders are always charged in PLN — non-PLN selections are a reference display."
+      />
 
       <div className="grid gap-4 md:gap-6">
         <Card>

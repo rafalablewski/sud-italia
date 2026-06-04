@@ -40,6 +40,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Switch,
   Tabs,
@@ -308,19 +309,15 @@ export function AdminStaff() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Staff</h1>
-          <p className="v2-page-subtitle">
-            Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Staff"
+        subtitle="Hire your team — pizzaiolo, chef, KP, waiter — and give each a personal login that lands on the right surface (kitchen → KDS, floor → POS). Roster, hourly rates, clock-in / clock-out, and 7-day labor cost from real time punches."
+        actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })}>
             {canHire ? "Hire employee" : "New staff member"}
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Active staff" value={totals.activeCount} icon={Users} tone="info" />

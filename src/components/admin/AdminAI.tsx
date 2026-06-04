@@ -32,6 +32,7 @@ import {
   Table,
   Textarea,
   type Column,
+  PageHero,
 } from "./v2/ui";
 import { AreaChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -310,12 +311,10 @@ function AdminAIDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Insights</h1>
-          <p className="v2-page-subtitle">
-            Heuristic forecasts, anomaly checks, reorder suggestions and staffing tips computed from real orders + stock data. No ML model is in the loop yet.
-          </p>
+      <PageHero
+        title="Insights"
+        subtitle="Heuristic forecasts, anomaly checks, reorder suggestions and staffing tips computed from real orders + stock data. No ML model is in the loop yet."
+        actions={
           <a
             href="/admin/ai/agent"
             className="v2-btn v2-btn-primary v2-btn-sm inline-flex items-center gap-1.5 mt-2 w-fit"
@@ -323,21 +322,23 @@ function AdminAIDesktop() {
             <Sparkles className="h-3.5 w-3.5" />
             Open Ops Agent
           </a>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "forecast", label: "Forecast", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-            { value: "anomalies", label: "Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomalies.length },
-            { value: "reorder", label: "Reorder", icon: <Boxes className="h-3.5 w-3.5" />, count: reorderRows.length },
-            { value: "staffing", label: "Staffing", icon: <ChefHat className="h-3.5 w-3.5" /> },
-            { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
-          ]}
-          variant="pill"
-          ariaLabel="Insights section"
-        />
-      </header>
+        }
+        filters={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "forecast", label: "Forecast", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+              { value: "anomalies", label: "Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomalies.length },
+              { value: "reorder", label: "Reorder", icon: <Boxes className="h-3.5 w-3.5" />, count: reorderRows.length },
+              { value: "staffing", label: "Staffing", icon: <ChefHat className="h-3.5 w-3.5" /> },
+              { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
+            ]}
+            variant="pill"
+            ariaLabel="Insights section"
+          />
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Insights…</div>

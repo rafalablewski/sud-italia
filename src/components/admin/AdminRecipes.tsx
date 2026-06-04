@@ -40,6 +40,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Table,
   Tabs,
@@ -290,24 +291,22 @@ function AdminRecipesDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Recipes & Ingredients</h1>
-          <p className="v2-page-subtitle">
-            Build recipes for every dish. Costs and margins recalculate from real ingredient prices.
-          </p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
-            { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="View mode"
-        />
-      </header>
+      <PageHero
+        title="Recipes & Ingredients"
+        subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
+        filters={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
+              { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
+            ]}
+            variant="pill"
+            ariaLabel="View mode"
+          />
+        }
+      />
 
       {tab === "recipes" ? <RecipesPanel /> : <IngredientsPanel />}
     </div>

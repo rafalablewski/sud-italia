@@ -19,7 +19,7 @@ import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
-import { Button, Card, CardBody, Input, Switch } from "./v2/ui";
+import { Button, Card, CardBody, Input, PageHero, Switch } from "./v2/ui";
 import { ModifierMatrix } from "./menu/ModifierEditor";
 
 interface MenuItemData {
@@ -637,15 +637,15 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
   if (notFound) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Product not found</h1>
-            <p className="v2-page-subtitle">
+        <PageHero
+          title="Product not found"
+          subtitle={
+            <>
               No menu row matches the base slug{" "}
               <code>{baseSlug}</code>.
-            </p>
-          </div>
-        </header>
+            </>
+          }
+        />
         <Card>
           <CardBody>
             <Button variant="ghost" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
@@ -662,29 +662,29 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <nav
-            aria-label="Breadcrumb"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.25rem",
-              fontSize: "var(--text-xs)",
-              color: "var(--fg-muted)",
-            }}
-          >
-            <Link
-              href={withAdminBase(base, "/admin/menu")}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-            >
-              <ArrowLeft className="h-3 w-3" /> Menu
-            </Link>
-            <ChevronRight className="h-3 w-3" aria-hidden />
-            <span>{chain.name || primary.name}</span>
-          </nav>
-          <h1 className="v2-page-title">{chain.name || primary.name}</h1>
-          <p className="v2-page-subtitle">
+      <nav
+        aria-label="Breadcrumb"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.25rem",
+          fontSize: "var(--text-xs)",
+          color: "var(--fg-muted)",
+        }}
+      >
+        <Link
+          href={withAdminBase(base, "/admin/menu")}
+          style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          <ArrowLeft className="h-3 w-3" /> Menu
+        </Link>
+        <ChevronRight className="h-3 w-3" aria-hidden />
+        <span>{chain.name || primary.name}</span>
+      </nav>
+      <PageHero
+        title={chain.name || primary.name}
+        subtitle={
+          <>
             {present.length} of {activeLocations.length} location
             {activeLocations.length === 1 ? "" : "s"}
             {" · "}
@@ -693,17 +693,19 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               : formatPrice(priceMin)}
             {overrideCount > 0 && ` · ${overrideCount} override${overrideCount === 1 ? "" : "s"}`}
             {hasRecipeAnywhere && " · cost from recipe"}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button variant="ghost" size="sm" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
-            <ArrowLeft className="h-3.5 w-3.5" /> Back
-          </Button>
-          <Button variant="primary" size="sm" loading={busy} onClick={save}>
-            <Check className="h-3.5 w-3.5" /> Save changes
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => router.push(withAdminBase(base, "/admin/menu"))}>
+              <ArrowLeft className="h-3.5 w-3.5" /> Back
+            </Button>
+            <Button variant="primary" size="sm" loading={busy} onClick={save}>
+              <Check className="h-3.5 w-3.5" /> Save changes
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardBody>

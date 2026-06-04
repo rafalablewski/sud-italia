@@ -37,6 +37,7 @@ import {
   EmptyState,
   IconButton,
   Input,
+  PageHero,
   Popover,
   Select,
   Switch,
@@ -465,17 +466,19 @@ function AdminUsersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Users & roles</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Users & roles"
+        subtitle={
+          <>
             Per-user accounts, roles, granular permissions, and two-factor auth. Each non-owner account can either inherit its role&rsquo;s default permissions or carry a fully-custom, action-level grant. Permissions are enforced everywhere — the sidebar hides what a user can&rsquo;t reach and every admin API rejects calls they aren&rsquo;t granted. Owners always have full access.
-          </p>
-        </div>
-        <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
-          New user
-        </Button>
-      </header>
+          </>
+        }
+        actions={
+          <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })}>
+            New user
+          </Button>
+        }
+      />
 
       <div className="v2-section-eyebrow">Roster health</div>
       <section className="v2-kpi-grid">

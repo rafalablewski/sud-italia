@@ -39,6 +39,7 @@ import {
   Textarea,
   type Column,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
@@ -271,15 +272,11 @@ function AdminTruckDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Truck operations</h1>
-          <p className="v2-page-subtitle">
-            Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
+      <PageHero
+        title="Truck operations"
+        subtitle="Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view."
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        filters={
           <Tabs
             value={tab}
             onChange={(v) => setTab(v as Tab)}
@@ -290,8 +287,8 @@ function AdminTruckDesktop() {
             variant="pill"
             ariaLabel="Section"
           />
-        </div>
-      </header>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

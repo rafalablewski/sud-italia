@@ -32,6 +32,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Switch,
   Table,
@@ -314,26 +315,24 @@ export function AdminGrowth() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Growth engine</h1>
-          <p className="v2-page-subtitle">
-            Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets.
-          </p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
-            { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
-            { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
-            { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="Growth section"
-        />
-      </header>
+      <PageHero
+        title="Growth engine"
+        subtitle="Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets."
+        filters={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
+              { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
+              { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
+              { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
+            ]}
+            variant="pill"
+            ariaLabel="Growth section"
+          />
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Active rewards" value={settings.rewards.filter((r) => r.active).length} icon={Gift} tone="success" hint={`${settings.rewards.length} total`} />

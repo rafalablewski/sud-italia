@@ -11,6 +11,7 @@ import {
   CardBody,
   EmptyState,
   Input,
+  PageHero,
   Tabs,
 } from "./v2/ui";
 
@@ -124,14 +125,10 @@ function AuditLogDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Audit log</h1>
-          <p className="v2-page-subtitle">
-            Every mutation across the admin surface. Expand a row to see the field-by-field diff.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Audit log"
+        subtitle="Every mutation across the admin surface. Expand a row to see the field-by-field diff."
+        actions={
           <Button
             variant="secondary"
             size="sm"
@@ -141,35 +138,34 @@ function AuditLogDesktop() {
           >
             Refresh
           </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+        }
+        search={
           <Input
             placeholder="Search by actor, action, entity id…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-        </div>
-        <Tabs
-          value={actionFilter}
-          onChange={(v) => setActionFilter(v as ActionFilter)}
-          tabs={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "orders", label: "Orders", count: counts.orders },
-            { value: "menu", label: "Menu", count: counts.menu },
-            { value: "feedback", label: "Feedback", count: counts.feedback },
-            { value: "settings", label: "Settings", count: counts.settings },
-            { value: "loyalty", label: "Loyalty", count: counts.loyalty },
-            { value: "staff", label: "Staff", count: counts.staff },
-            { value: "other", label: "Other", count: counts.other },
-          ]}
-          variant="pill"
-          ariaLabel="Action filter"
-        />
-      </div>
+        }
+        filters={
+          <Tabs
+            value={actionFilter}
+            onChange={(v) => setActionFilter(v as ActionFilter)}
+            tabs={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "orders", label: "Orders", count: counts.orders },
+              { value: "menu", label: "Menu", count: counts.menu },
+              { value: "feedback", label: "Feedback", count: counts.feedback },
+              { value: "settings", label: "Settings", count: counts.settings },
+              { value: "loyalty", label: "Loyalty", count: counts.loyalty },
+              { value: "staff", label: "Staff", count: counts.staff },
+              { value: "other", label: "Other", count: counts.other },
+            ]}
+            variant="pill"
+            ariaLabel="Action filter"
+          />
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Audit log…</div>

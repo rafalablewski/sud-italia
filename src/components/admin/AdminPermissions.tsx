@@ -13,7 +13,7 @@ import {
   type PermissionKey,
 } from "@/lib/permissions";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Card, CardBody, Chip, EmptyState, Input, Tabs } from "./v2/ui";
+import { Badge, Card, CardBody, Chip, EmptyState, Input, PageHero, Tabs } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
 /** Row shape from /api/admin/users (secrets stripped; `permissions` kept). */
@@ -161,14 +161,14 @@ export function AdminPermissions() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Permission matrix</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Permission matrix"
+        subtitle={
+          <>
             Live cross-tab of every capability against your roles and your real accounts — built from the permission catalog (<span className="mono">src/lib/permissions.ts</span>), the role presets, and the current user list. Nothing here is hand-maintained: add a capability or a user and it shows up. <strong>By role</strong> shows the default grant each role inherits; <strong>By user</strong> shows each account&rsquo;s effective access (custom grants override their role) and lets an owner flip a cell to grant or revoke.
-          </p>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard label="Capabilities" value={ALL_PERMISSION_KEYS.length} icon={KeyRound} tone="brand" />

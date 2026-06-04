@@ -14,6 +14,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Switch,
   Table,
   Textarea,
@@ -289,31 +290,33 @@ export function AdminLocationsManager() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Locations</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Locations"
+        subtitle={
+          <>
             Add a truck without a deploy. Active locations appear on the
             public landing page and in every admin tab. The hardcoded seed
             in <code className="mono">src/data/locations.ts</code> is the
             first-deploy fallback only.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={busy}
-            onClick={reseed}
-            title="Upsert the in-code seed into the DB"
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Re-seed from code
-          </Button>
-          <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5" /> Add location
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={busy}
+              onClick={reseed}
+              title="Upsert the in-code seed into the DB"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Re-seed from code
+            </Button>
+            <Button variant="primary" size="sm" onClick={openCreate}>
+              <Plus className="h-3.5 w-3.5" /> Add location
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardBody>

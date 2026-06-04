@@ -16,6 +16,7 @@ import {
   CardHeader,
   EmptyState,
   InfoButton,
+  PageHero,
   Switch,
   Table,
   Tabs,
@@ -290,12 +291,9 @@ export function AdminSurveys() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1
-            className="v2-page-title"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-          >
+      <PageHero
+        title={
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             Pulse surveys
             <InfoButton title="How Pulse surveys work" size="md">
               <MetricExplainer
@@ -346,13 +344,10 @@ export function AdminSurveys() {
                 }
               />
             </InfoButton>
-          </h1>
-          <p className="v2-page-subtitle">
-            NPS-style micro-surveys captured across the storefront — after
-            ordering, on prolonged browsing, on exit intent. One tap, 1–5 stars.
-          </p>
-        </div>
-      </header>
+          </span>
+        }
+        subtitle="NPS-style micro-surveys captured across the storefront — after ordering, on prolonged browsing, on exit intent. One tap, 1–5 stars."
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

@@ -26,6 +26,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
+  PageHero,
   Tabs,
   Table,
   type Column,
@@ -290,15 +291,43 @@ function AdminReportsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Reports & Finance</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Reports & Finance"
+        subtitle={
+          <>
             {location ? `${location.toUpperCase()} · ` : "All locations · "}
             Revenue, cost of goods, profit, category mix. Real numbers from real orders.
-          </p>
-        </div>
-        <div className="v2-page-actions">
+          </>
+        }
+        actions={
+          <>
+            <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary}>
+              Export CSV
+            </Button>
+            <Button
+              variant="secondary"
+              leadingIcon={<Download className="h-3.5 w-3.5" />}
+              onClick={() => {
+                // Trigger a same-tab navigation to the JPK endpoint — the
+                // Content-Disposition header makes the browser download it.
+                const locParam = location ? `&location=${location}` : "";
+                window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
+              }}
+              title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
+            >
+              Export JPK_V7M
+            </Button>
+          </>
+        }
+        search={
+          preset === "custom" ? (
+            <>
+              <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+            </>
+          ) : undefined
+        }
+        filters={
           <Tabs
             value={preset}
             onChange={(v) => onPreset(v as RangePreset)}
@@ -312,31 +341,8 @@ function AdminReportsDesktop() {
             variant="pill"
             ariaLabel="Range preset"
           />
-          <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary}>
-            Export CSV
-          </Button>
-          <Button
-            variant="secondary"
-            leadingIcon={<Download className="h-3.5 w-3.5" />}
-            onClick={() => {
-              // Trigger a same-tab navigation to the JPK endpoint — the
-              // Content-Disposition header makes the browser download it.
-              const locParam = location ? `&location=${location}` : "";
-              window.location.href = `/api/admin/reports/jpk?from=${from}&to=${to}${locParam}`;
-            }}
-            title="Download JPK_V7M XML for the selected date range (Polish VAT mandatory file)."
-          >
-            Export JPK_V7M
-          </Button>
-        </div>
-      </header>
-
-      {preset === "custom" && (
-        <div className="v2-filters">
-          <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
-      )}
+        }
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

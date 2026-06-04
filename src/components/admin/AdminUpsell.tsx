@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { LocationFilter, Tabs } from "./v2/ui";
+import { LocationFilter, PageHero, Tabs } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -106,15 +106,15 @@ export function AdminUpsell() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Upsell</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Upsell"
+        subtitle={
+          <>
             Lift the value of what they&rsquo;re already buying — tiered bundle ladders and gating rules.
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
-          </p>
-        </div>
-        <div className="v2-page-actions">
+          </>
+        }
+        actions={
           <button
             onClick={handleSave}
             disabled={saving || !isDirty}
@@ -132,8 +132,8 @@ export function AdminUpsell() {
               </>
             )}
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <LocationFilter value={activeLocation} onChange={setActiveLocation} />
 

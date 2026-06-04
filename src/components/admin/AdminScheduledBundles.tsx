@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Calendar, Pause, Play, X, Loader2, AlertCircle } from "lucide-react";
-import { LocationFilter, Tabs } from "./v2/ui";
+import { LocationFilter, PageHero, Tabs } from "./v2/ui";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 
@@ -87,25 +87,25 @@ export function AdminScheduledBundles() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Scheduled bundles</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Scheduled bundles"
+        subtitle={
+          <>
             Pret-style &ldquo;weekly usual&rdquo; intents customers opted into after applying a bundle. Phase-1
             captures + lets the operator approve / pause / cancel; Phase-2 wires Stripe Subscriptions for
             actual recurring billing.
-          </p>
-        </div>
-      </header>
-
-      <LocationFilter value={activeLocation} onChange={setActiveLocation} />
-
-      <Tabs
-        value={statusFilter}
-        onChange={(v) => setStatusFilter(v as "all" | Status)}
-        tabs={STATUS_TABS}
-        variant="underline"
-        ariaLabel="Status filter"
+          </>
+        }
+        locations={<LocationFilter value={activeLocation} onChange={setActiveLocation} />}
+        filters={
+          <Tabs
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as "all" | Status)}
+            tabs={STATUS_TABS}
+            variant="underline"
+            ariaLabel="Status filter"
+          />
+        }
       />
 
       {err && (

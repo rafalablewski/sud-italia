@@ -29,6 +29,7 @@ import {
   CardHeader,
   EmptyState,
   Input,
+  PageHero,
   Switch,
   Tabs,
   Table,
@@ -686,26 +687,26 @@ function AdminSettingsDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Settings</h1>
-          <p className="v2-page-subtitle">Account, business config, and the audit trail of administrative changes.</p>
-        </div>
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          tabs={[
-            { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
-            { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-            { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
-            { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
-            { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
-            { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-          ]}
-          variant="pill"
-          ariaLabel="Settings section"
-        />
-      </header>
+      <PageHero
+        title="Settings"
+        subtitle="Account, business config, and the audit trail of administrative changes."
+        filters={
+          <Tabs
+            value={tab}
+            onChange={(v) => setTab(v as TabKey)}
+            tabs={[
+              { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
+              { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+              { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
+              { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
+              { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
+              { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+            ]}
+            variant="pill"
+            ariaLabel="Settings section"
+          />
+        }
+      />
 
       {tab === "general" && (
         <>

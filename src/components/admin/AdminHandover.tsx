@@ -16,6 +16,7 @@ import {
   Switch,
   Textarea,
   LocationFilter,
+  PageHero,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
@@ -179,18 +180,11 @@ export function AdminHandover() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Shift handover</h1>
-          <p className="v2-page-subtitle">
-            The end-of-shift sign-off: count the drawer (reconciled against the cash session),
-            confirm temps + waste are logged, leave a note, name the outgoing manager.
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          <LocationFilter value={pageLoc} onChange={setPageLoc} />
-        </div>
-      </header>
+      <PageHero
+        title="Shift handover"
+        subtitle="The end-of-shift sign-off: count the drawer (reconciled against the cash session), confirm temps + waste are logged, leave a note, name the outgoing manager."
+        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+      />
 
       <Card>
         <CardHeader title="Record a handover" />

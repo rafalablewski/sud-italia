@@ -12,6 +12,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Table,
   Textarea,
   type Column,
@@ -152,28 +153,23 @@ function AdminSuppliersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Suppliers</h1>
-          <p className="v2-page-subtitle">Vendor directory feeding purchase orders and inventory restocks.</p>
-        </div>
-        <div className="v2-page-actions">
+      <PageHero
+        title="Suppliers"
+        subtitle="Vendor directory feeding purchase orders and inventory restocks."
+        actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })}>
             New supplier
           </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+        }
+        search={
           <Input
             placeholder="Search by name, contact, email or phone…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
         <div className="v2-page-loading">Loading Suppliers…</div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Building2, Plus, Save, Trash2, Link2 } from "lucide-react";
-import { Button } from "./v2/ui";
+import { Button, PageHero } from "./v2/ui";
 
 interface CorporatePayload {
   slug: string;
@@ -106,20 +106,22 @@ export function AdminCorporate() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Corporate</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Corporate"
+        subtitle={
+          <>
             Sud Italia Corporate — productised bulk-ordering for companies
             with 6+ employees. Company head pays one card, employees earn
             personal points, head earns 20% of the corporate pool. Public
             landing at /corporate/[slug].
-          </p>
-        </div>
-        <Button variant="secondary" onClick={refresh} disabled={loading}>
-          {loading ? "Loading…" : "Refresh"}
-        </Button>
-      </header>
+          </>
+        }
+        actions={
+          <Button variant="secondary" onClick={refresh} disabled={loading}>
+            {loading ? "Loading…" : "Refresh"}
+          </Button>
+        }
+      />
 
       {loading && <div className="v2-page-loading">Loading Corporate…</div>}
 

@@ -19,12 +19,12 @@ import { useAdminLocation } from "./v2/LocationContext";
 
 import {
   Badge,
-  Button,
   Card,
   CardBody,
   CardHeader,
   EmptyState,
   Input,
+  PageHero,
   Tabs,
   Table,
   type Column,
@@ -215,14 +215,10 @@ function AdminCustomersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Customers</h1>
-          <p className="v2-page-subtitle">
-            Every customer who paid, ranked by lifetime spend. RFM-style status calculated from order recency + frequency.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        title="Customers"
+        subtitle="Every customer who paid, ranked by lifetime spend. RFM-style status calculated from order recency + frequency."
+      />
 
       <section className="v2-kpi-grid">
         <KpiCard

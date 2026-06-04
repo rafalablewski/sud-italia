@@ -30,6 +30,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  PageHero,
   Select,
   Switch,
   Tabs,
@@ -757,34 +758,33 @@ function AdminMenuDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Menu</h1>
-          <p className="v2-page-subtitle">
+      <PageHero
+        title="Menu"
+        subtitle={
+          <>
             {unifiedItems.length} {unifiedItems.length === 1 ? "product" : "products"} across {activeLocations.length} location{activeLocations.length === 1 ? "" : "s"}
             {unavailableCount > 0 && ` · ${unavailableCount} hidden from customers`}
-          </p>
-        </div>
-        <div className="v2-page-actions">
-          {hiddenCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHidden((v) => !v)}
-              title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
-            >
-              {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+          </>
+        }
+        actions={
+          <>
+            {hiddenCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHidden((v) => !v)}
+                title={showHidden ? "Hide soft-deleted items" : "Reveal soft-deleted items so you can restore them"}
+              >
+                {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}
+              </Button>
+            )}
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Add item
             </Button>
-          )}
-          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-            <Plus className="h-3.5 w-3.5" />
-            Add item
-          </Button>
-        </div>
-      </header>
-
-      <div className="v2-filters">
-        <div className="v2-filter-search">
+          </>
+        }
+        search={
           <Input
             placeholder="Search items, descriptions, tags…"
             leadingAdornment={<Search className="h-3.5 w-3.5" />}
@@ -792,22 +792,24 @@ function AdminMenuDesktop() {
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search menu"
           />
-        </div>
-        <Tabs
-          value={category}
-          onChange={(v) => setCategory(v as MenuCategory | "all")}
-          tabs={[
-            { value: "all", label: "All", count: unifiedItems.length },
-            ...categories.map((c) => ({
-              value: c,
-              label: MENU_CATEGORY_LABELS[c],
-              count: unifiedItems.filter((u) => u.category === c).length,
-            })),
-          ]}
-          variant="pill"
-          ariaLabel="Category filter"
-        />
-      </div>
+        }
+        filters={
+          <Tabs
+            value={category}
+            onChange={(v) => setCategory(v as MenuCategory | "all")}
+            tabs={[
+              { value: "all", label: "All", count: unifiedItems.length },
+              ...categories.map((c) => ({
+                value: c,
+                label: MENU_CATEGORY_LABELS[c],
+                count: unifiedItems.filter((u) => u.category === c).length,
+              })),
+            ]}
+            variant="pill"
+            ariaLabel="Category filter"
+          />
+        }
+      />
 
       {selectedIds.size > 0 && (
         <div
