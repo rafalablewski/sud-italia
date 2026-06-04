@@ -67,7 +67,7 @@ export function KpiCard({
   }
 
   return (
-    <div className="v2-kpi">
+    <div className={`v2-kpi v2-kpi-accent-${tone}`}>
       <div className="v2-kpi-top">
         <div className="v2-kpi-label">{label}</div>
         {Icon && (

@@ -1774,8 +1774,27 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   gap: 10px;
   min-height: 132px;
+  position: relative;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
+/* Tone accent — a 2px coloured cap that gives the KPI grid life without
+   tinting the whole tile. Neutral tiles stay capless. Reads as "more colour"
+   while keeping the surface itself restrained. */
+.v2-kpi::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--kpi-accent, transparent);
+}
+.v2-kpi-accent-brand { --kpi-accent: var(--brand); }
+.v2-kpi-accent-info { --kpi-accent: var(--info); }
+.v2-kpi-accent-success { --kpi-accent: var(--success); }
+.v2-kpi-accent-warning { --kpi-accent: var(--warning); }
+.v2-kpi-accent-danger { --kpi-accent: var(--danger); }
 .v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
 
 /* Opt-in interactive elevation for clickable cards. Static content cards stay

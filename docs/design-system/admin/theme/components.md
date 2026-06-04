@@ -188,6 +188,13 @@ material touch, not a gradient. Static content cards stay flat.
 `:active`. KPI tiles (`.v2-kpi`) share the same lift. Reduced-motion drops the
 transform. Don't put the lift on a static card — motion implies "click me."
 
+**KPI tone accent.** A `KpiCard`'s `tone` (`brand`/`info`/`success`/`warning`/
+`danger`) paints a 2px coloured cap along the tile's top edge
+(`.v2-kpi-accent-*` → `--kpi-accent`), matching the tone of its icon chip. It
+gives the KPI grid colour and life without tinting the whole surface; `neutral`
+tiles stay capless. This is the sanctioned way to add colour to the dashboard —
+an accent cap, not a filled tile.
+
 ### Menu / product cards — text-forward
 
 Until real food photography exists, **menu cards are text-forward**. The
