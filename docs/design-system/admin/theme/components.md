@@ -471,9 +471,9 @@ interactive-card behaviour.
 
 ## Page hero & section eyebrows
 
-Every admin page is fronted by **one shared hero panel** (design **V5.1**) — a
-raised `--surface-1` card with a **`--platinum`** left rail — so the title,
-location filter, search, filters and actions live in the **same place on
+Every admin page is fronted by **one shared hero panel** — a raised
+`--surface-1` card with a **`--platinum`** left rail — so the title, location
+filter, filters and actions live in the **same place on
 every page**:
 
 - **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
@@ -490,17 +490,15 @@ every page**:
   1. **`title`** — alone (`.v2-page-title`).
   2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
      only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
-  3. **`search` (left, grows) ⟷ `location` (right)** — `.v2-hero-find`. `search`
-     = `{value,onChange,placeholder}` → the one search `Input` (`min-width:200px`
-     floor). `location` = `{value,onChange,includeAll?}` → **always** the pill
-     `LocationFilter` (never a `<Select>`). Location hugs the right **only when a
-     search shares the row**; with no search it sits left under the title (so it
-     never floats bottom-right in a void).
+  3. **`location`** — `.v2-hero-find`. `{value,onChange,includeAll?}` → **always**
+     the pill `LocationFilter` (never a `<Select>`), left-aligned under the title.
   4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
      (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
      **always** `Select`s, rendered beside the pill.
   5. **`nav`** = `{value,onChange,options}` → **always** an underline `Tabs`
      (`.v2-hero-tabs`) for section navigation, full width.
+  **No `search` slot** — text search was removed from every admin hero by design
+  (lists keep their `filter` / `dropdowns` / `nav`); re-add per page only if asked.
   **No stats slot** — headline numbers belong in the KPI grid below, not the
   hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
   hand-roll a header, and never pass a raw control where a data prop exists.

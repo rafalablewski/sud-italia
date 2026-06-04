@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
-import { Search } from "lucide-react";
 import { LocationFilter } from "./LocationFilter";
-import { Input } from "./Input";
 import { Select } from "./Select";
 import { Tabs } from "./Tabs";
 
@@ -23,10 +21,8 @@ interface Props {
   subtitle?: ReactNode;
   /** Icon-only action buttons — row 2, right. The only free-form slot. */
   actions?: ReactNode;
-  /** Location filter — row 3, right. ALWAYS rendered as the pill `LocationFilter`. */
+  /** Location filter — row 3. ALWAYS rendered as the pill `LocationFilter`. */
   location?: { value: string; onChange: (slug: string) => void; includeAll?: boolean; allLabel?: string };
-  /** Search — row 3, left (grows). ALWAYS the one search `Input`. */
-  search?: { value: string; onChange: (value: string) => void; placeholder?: string };
   /** Primary list/status filter — row 4. ALWAYS a pill `Tabs`. Use for short option sets. */
   filter?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
   /** Secondary filters with many/long options — row 4, after the pill filter.
@@ -42,21 +38,20 @@ interface Props {
  *
  *   1. title
  *   2. subtitle (left) ⟷ actions (right)
- *   3. search (left) ⟷ location (right)
+ *   3. location
  *   4. filter (pill) + verbose dropdowns
  *   5. nav (underline tabs)
  *
  * **Data-driven and enforced:** every role takes DATA (not JSX) and the hero
  * renders the single canonical widget for it — location is always the pill
- * `LocationFilter`, search is always the one `Input`, the primary filter is
- * always a pill `Tabs`, verbose filters are always `Select`s, section nav is
- * always an underline `Tabs`. A page cannot substitute a different widget, so
- * the controls can never drift apart again. Every row is optional and collapses;
- * all controls live inside the panel. See `docs/design-system/admin/theme/components.md`.
+ * `LocationFilter`, the primary filter is always a pill `Tabs`, verbose filters
+ * are always `Select`s, section nav is always an underline `Tabs`. A page cannot
+ * substitute a different widget, so the controls can never drift apart. Every
+ * row is optional and collapses; all controls live inside the panel. See
+ * `docs/design-system/admin/theme/components.md`.
  */
-export function PageHero({ title, subtitle, actions, location, search, filter, dropdowns, nav }: Props) {
+export function PageHero({ title, subtitle, actions, location, filter, dropdowns, nav }: Props) {
   const hasMeta = !!(subtitle || actions);
-  const hasFind = !!(search || location);
   const hasFilters = !!(filter || dropdowns?.length);
   return (
     <header className="v2-page-header v2-hero">
@@ -69,28 +64,16 @@ export function PageHero({ title, subtitle, actions, location, search, filter, d
         </div>
       )}
 
-      {hasFind && (
+      {location && (
         <div className="v2-hero-row v2-hero-find">
-          {search && (
-            <div className="v2-hero-search">
-              <Input
-                value={search.value}
-                onChange={(e) => search.onChange(e.target.value)}
-                placeholder={search.placeholder ?? "Search…"}
-                leadingAdornment={<Search className="h-3.5 w-3.5" />}
-              />
-            </div>
-          )}
-          {location && (
-            <div className="v2-hero-loc">
-              <LocationFilter
-                value={location.value}
-                onChange={location.onChange}
-                includeAll={location.includeAll}
-                allLabel={location.allLabel}
-              />
-            </div>
-          )}
+          <div className="v2-hero-loc">
+            <LocationFilter
+              value={location.value}
+              onChange={location.onChange}
+              includeAll={location.includeAll}
+              allLabel={location.allLabel}
+            />
+          </div>
         </div>
       )}
 

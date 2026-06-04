@@ -1935,11 +1935,7 @@ button.v2-card:active { transform: translateY(0); }
    prop a page passes — so the action cluster is uniform on every page. */
 .v2-hero .v2-page-actions .v2-btn { min-height: 34px; font-size: var(--text-sm); }
 .v2-hero .v2-page-actions .v2-btn:not(:has(.v2-btn-label)) { width: 34px; padding: 0; }
-.v2-hero-find .v2-hero-search { flex: 1 1 240px; min-width: 200px; }  /* row 3: search ⟷ location */
-.v2-hero-find .v2-hero-loc { min-width: 0; }
-/* Location hugs the right ONLY when there's a search to balance it. Alone (no
-   search) it sits left under the title, instead of floating bottom-right. */
-.v2-hero-find .v2-hero-search ~ .v2-hero-loc { margin-left: auto; }
+.v2-hero-find .v2-hero-loc { min-width: 0; }   /* row 3: location, left-aligned */
 
 /* LocationFilter — a horizontal pill scroller. Pills never wrap or shrink; when
    they overflow, the track scrolls and the chevron controls + edge fades appear.
@@ -1977,8 +1973,7 @@ button.v2-card:active { transform: translateY(0); }
 .v2-hero-filters .v2-tabs, .v2-hero-tabs .v2-tabs { max-width: 100%; }
 .v2-hero-tabs { min-width: 0; }
 @media (max-width: 820px) {
-  .v2-hero-meta .v2-page-actions,
-  .v2-hero-find .v2-hero-loc { margin-left: 0; }
+  .v2-hero-meta .v2-page-actions { margin-left: 0; }
 }
 
 /* Section eyebrow — an uppercase label trailed by a hairline rule, used to
@@ -2248,7 +2243,6 @@ button.v2-card:active { transform: translateY(0); }
   gap: 12px;
   flex-wrap: wrap;
 }
-.v2-filter-search { flex: 1; min-width: 220px; max-width: 380px; }
 
 /* Cell helpers used across tables */
 .v2-cell-stack { display: flex; flex-direction: column; line-height: 1.2; }
