@@ -395,8 +395,15 @@ See the core side in [core components → Sidebar](../../core/theme/components.m
   border). Pass `<Table flush>` to strip the wrapper chrome
   (`.v2-table-flush`), and set the card to `<Card padding="none">` so the table
   fills edge-to-edge under the card header. The card's `overflow: hidden` +
-  radius clip the corners. See [material → Nested surfaces](./material.md#nested-surfaces--one-border-per-box)
-  and the live use in `AdminDashboard.tsx` (Location performance).
+  radius clip the corners. **This is the standard for any card-nested table** —
+  it ships across the admin (Dashboard, Reports, Inventory, Customers,
+  Suppliers, Staff, Users, AI, Compliance, Surveys, …). When the card body has
+  mixed content (a header row or controls beside the table, e.g.
+  `AdminLocationsManager`), keep default card padding and pass `flush` alone —
+  the table inset loses its border without forcing the rest edge-to-edge. A
+  table that stands **alone on the page** (not in a card, e.g. `AdminOrders`)
+  keeps its own wrapper border — don't flush it. See
+  [material → Nested surfaces](./material.md#nested-surfaces--one-border-per-box).
 
 ## Iconography — custom stroke, no emoji in UI
 
