@@ -231,6 +231,36 @@ variants.push((y) => {
   return s;
 });
 
+// V5.1 — refined panel: filters folded into a 2nd tier, stats centered, icon-only primary
+function V51(y) {
+  const Hp = 150;
+  let s = rrect(PAD, y, CW, Hp, 14, { fill: T.s1, stroke: T.border, sw: 1 });
+  s += rrect(PAD, y, 3, Hp, 2, { fill: T.platinum });
+  // left: title + sub + location
+  const lx = PAD + 24;
+  s += title(lx, y + 30, "Purchase orders", { size: 23 });
+  s += text(lx, y + 52, "Across both kitchens", { size: 12, fill: T.subtle });
+  s += locPills(lx, y + 62, { h: 28 }).svg;
+  // centered stats
+  const cx = PAD + CW / 2;
+  const stat = (scx, label, val) =>
+    text(scx, y + 42, label, { size: 11, fill: T.subtle, anchor: "middle", spacing: 0.5 }) +
+    text(scx, y + 70, val, { size: 26, fill: T.fg, family: SERIF, weight: 600, anchor: "middle" });
+  s += stat(cx - 82, "VALUE (PLN)", "0");
+  s += rrect(cx - 1, y + 34, 1, 44, 0, { fill: T.border });
+  s += stat(cx + 70, "OPEN", "0");
+  // right: icon-only actions (refresh, export, + primary as plain icon)
+  let rx = PAD + CW - 24;
+  rx -= 36; s += rrect(rx, y + 28, 36, 36, 8, { fill: T.brand }) + icon("plus", rx + 10.5, y + 28 + 10.5, "#fff", 15);
+  rx -= 10;
+  for (const i of ["download", "refresh"]) { rx -= 34; s += iconBtn(rx, y + 29, i).svg; rx -= 8; }
+  // 2nd tier: status filters folded into the panel
+  s += rrect(PAD + 20, y + 100, CW - 40, 1, 0, { fill: T.border });
+  s += segmented(PAD + 22, y + 112, [{ label: "All", count: 0 }, { label: "Draft", count: 0 }, { label: "Sent", count: 0 }, { label: "Received", count: 0 }, { label: "Cancelled", count: 0 }], 0, { counts: true, h: 30 }).svg;
+  s += text(PAD + CW - 24, y + 112 + 15, "0 orders", { size: 12, fill: T.subtle, anchor: "end" });
+  return s;
+}
+
 // ===================== COMPOSE =====================
 const names = [
   ["V1", "Structured + filter strip", "Two rows. Title (and a one-line description) sit top-left, the buttons top-right, then a separate row of status filters underneath. Roomy and familiar — the most 'classic admin' feel."],
@@ -268,6 +298,22 @@ ${fn(top - 8)}
 </svg>`;
   render(svg, `variant-${i + 1}.png`, W, H);
 });
+
+// --- V5.1 refined panel (own image) ---
+{
+  const desc = "Your pick, refined: the status filters (All/Draft/Sent/Received/Cancelled) fold into a second tier inside the panel, the Value/Open stats are centered, and the primary action is compressed to a plain icon.";
+  const descLines = wrapLines(desc, 120);
+  const topY = 30 + descLines.length * 18 + 18;
+  const H = topY + 165;
+  let head = text(PAD, 34, "V5.1", { size: 15, fill: T.platinum, family: SANS, weight: 700, spacing: 1 }) +
+    text(PAD + 48, 34, "Rich split panel — refined", { size: 17, fill: T.fg, family: SERIF, weight: 600 });
+  descLines.forEach((ln, k) => { head += text(PAD, 58 + k * 18, ln, { size: 13, fill: T.muted }); });
+  render(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<rect width="${W}" height="${H}" fill="${T.bg}"/>
+${head}
+${V51(topY)}
+</svg>`, "variant-5-1.png", W, H);
+}
 
 // --- combined overview (kept for the repo) ---
 const BLOCK = 132, top = 70, H = top + variants.length * BLOCK + 30;
