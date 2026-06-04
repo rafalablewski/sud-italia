@@ -214,11 +214,7 @@ function AdminExpansionDesktop() {
   if (loading) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Expansion</h1>
-          </div>
-        </header>
+        <PageHero title="Expansion" />
         <div className="v2-page-loading">Loading Expansion…</div>
       </div>
     );

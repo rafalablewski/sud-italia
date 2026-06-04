@@ -303,11 +303,7 @@ export function AdminGrowth() {
   if (loading || !settings) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <div className="v2-page-title-row">
-            <h1 className="v2-page-title">Growth</h1>
-          </div>
-        </header>
+        <PageHero title="Growth" />
         <div className="v2-page-loading">Loading Campaigns…</div>
       </div>
     );

@@ -161,9 +161,7 @@ export function AdminCurrency() {
   if (!config) {
     return (
       <div className="v2-page">
-        <header className="v2-page-header">
-          <h1 className="v2-page-title">Currency</h1>
-        </header>
+        <PageHero title="Currency" />
         <div className="v2-page-loading">Loading Currency…</div>
       </div>
     );
