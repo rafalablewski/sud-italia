@@ -484,9 +484,11 @@ every page**:
   gracefully**: `title` · `subtitle` · `locations` (under the title) · `stats[]`
   (centered headline numbers, `--font-display`, divider between) · `actions`
   (right; icon-only secondary + a compressed primary) · `search` + `filters`
-  (folded into a second tier under a hairline) · `tabs` (a full-width section-nav
-  strip as the panel's last row). **Everything lives inside the panel — nothing
-  floats below the hero.** Top row is a
+  (folded into a second tier under a hairline) · `tabs` (a full-width strip as
+  the panel's last row — section-nav tabs, or a secondary filter row of chips /
+  selects that don't fit the compact `filters` slot, e.g. Permissions' group
+  chips, Users' security + location selects). **Everything lives inside the
+  panel — nothing floats below the hero.** Top row is a
   `1fr auto 1fr` grid whose three slots are **pinned to explicit columns**
   (`grid-column` 1/2/3) so `actions` stay hard-right even when there are no
   centered stats — never rely on source order. Golden reference:

@@ -499,6 +499,33 @@ function AdminUsersDesktop() {
             ariaLabel="Role filter"
           />
         }
+        tabs={
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <Select
+              label=""
+              aria-label="Security filter"
+              value={secFilter}
+              onChange={(e) => setSecFilter(e.target.value as SecurityFilter)}
+              options={[
+                { value: "all", label: "All security" },
+                { value: "secured", label: "Secured (pwd + 2FA)" },
+                { value: "no2fa", label: "No 2FA" },
+                { value: "shared", label: "On shared password" },
+                { value: "passkey", label: "Has passkey" },
+              ]}
+            />
+            <Select
+              label=""
+              aria-label="Location filter"
+              value={locFilter}
+              onChange={(e) => setLocFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All locations" },
+                ...activeLocations.map((l) => ({ value: l.slug, label: l.city })),
+              ]}
+            />
+          </div>
+        }
       />
 
       <div className="v2-section-eyebrow">Roster health</div>
@@ -520,31 +547,6 @@ function AdminUsersDesktop() {
         />
       </section>
 
-      <div className="v2-filters" style={{ flexWrap: "wrap", gap: 8 }}>
-        <Select
-          label=""
-          aria-label="Security filter"
-          value={secFilter}
-          onChange={(e) => setSecFilter(e.target.value as SecurityFilter)}
-          options={[
-            { value: "all", label: "All security" },
-            { value: "secured", label: "Secured (pwd + 2FA)" },
-            { value: "no2fa", label: "No 2FA" },
-            { value: "shared", label: "On shared password" },
-            { value: "passkey", label: "Has passkey" },
-          ]}
-        />
-        <Select
-          label=""
-          aria-label="Location filter"
-          value={locFilter}
-          onChange={(e) => setLocFilter(e.target.value)}
-          options={[
-            { value: "all", label: "All locations" },
-            ...activeLocations.map((l) => ({ value: l.slug, label: l.city })),
-          ]}
-        />
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading Users & roles…</div>

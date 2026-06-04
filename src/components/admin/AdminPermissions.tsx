@@ -188,6 +188,18 @@ export function AdminPermissions() {
             ariaLabel="Matrix view"
           />
         }
+        tabs={
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <Chip selected={group === "all"} onClick={() => setGroup("all")}>
+              All groups
+            </Chip>
+            {PERMISSION_GROUPS.map((g) => (
+              <Chip key={g.id} selected={group === g.id} onClick={() => setGroup(g.id)}>
+                {g.label}
+              </Chip>
+            ))}
+          </div>
+        }
       />
 
       <section className="v2-kpi-grid">
@@ -196,17 +208,6 @@ export function AdminPermissions() {
         <KpiCard label="User accounts" value={users.length} icon={UsersIcon} tone="info" />
         <KpiCard label="Custom grants" value={customCount} icon={UserCog} tone={customCount > 0 ? "warning" : "neutral"} />
       </section>
-
-      <div className="v2-filters" style={{ flexWrap: "wrap", gap: 6 }}>
-        <Chip selected={group === "all"} onClick={() => setGroup("all")}>
-          All groups
-        </Chip>
-        {PERMISSION_GROUPS.map((g) => (
-          <Chip key={g.id} selected={group === g.id} onClick={() => setGroup(g.id)}>
-            {g.label}
-          </Chip>
-        ))}
-      </div>
 
       {loading ? (
         <div className="v2-page-loading">Loading permission matrix…</div>

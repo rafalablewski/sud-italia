@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentAdminUser } from "@/lib/admin-auth";
 import { adminBaseForRole, withAdminBase, type AdminBase } from "@/lib/admin-base";
 import { gatewayConfigured } from "@/lib/ai/gateway";
+import { PageHero } from "@/components/admin/v2/ui";
 
 /**
  * Platform capabilities ledger. Every feature shipped across Phases
@@ -1632,14 +1633,10 @@ export default async function CapabilitiesPage() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header">
-        <div className="v2-page-title-row">
-          <h1 className="v2-page-title">Platform capabilities</h1>
-          <p className="v2-page-subtitle">
-            Every feature shipped across Phases 0-5, grouped by domain. Status reflects current env config — flip a needs-config entry to live by setting the listed env vars and redeploying.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        title="Platform capabilities"
+        subtitle="Every feature shipped across Phases 0-5, grouped by domain. Status reflects current env config — flip a needs-config entry to live by setting the listed env vars and redeploying."
+      />
 
       <div className="grid gap-4 md:gap-6">
         {groups.map((group) => (
