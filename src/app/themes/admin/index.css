@@ -2005,10 +2005,18 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 /* "Next 60 minutes" strip (dashboard).
    The parent <Card padding="none"> already supplies the outer border + radius,
    so the strip uses only internal hairlines — no inner box. Each tile shows a
-   plain tabular number (coloured by tone via a status dot), not a heavy pill. */
+   plain tabular number (coloured by tone via a status dot), not a heavy pill.
+
+   Dividers via the grid-gap hairline trick: a 1px gap reveals the container's
+   --border background as a clean line *between* tiles only — never at the outer
+   edge — so it adapts to any wrap (both row + column dividers appear, nothing
+   bleeds onto the card edge). Robust where a per-tile border-right would leave
+   a dangling edge on the wrap row. */
 .v2-next60-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--border);
 }
 .v2-next60-tile {
   display: flex;
@@ -2016,9 +2024,8 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   gap: 4px;
   padding: 14px 16px;
   min-width: 0;
-  border-right: 1px solid var(--border);
+  background: var(--surface-1);
 }
-.v2-next60-tile:last-child { border-right: 0; }
 .v2-next60-eyebrow {
   display: flex;
   align-items: center;

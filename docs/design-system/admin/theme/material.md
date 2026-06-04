@@ -72,11 +72,18 @@ busy and cheap, the opposite of the platinum-hairline discipline.
 Rules of thumb:
 
 - **One border defines a box.** If the parent is already a card, the child gets
-  `border: 0` and leans on `--border` dividers (row hairlines, a `border-right`
-  between tiles, a `border-top` between sections).
+  `border: 0` and leans on `--border` dividers (row hairlines, a tile-grid gap
+  hairline, a `border-top` between sections).
 - **Dividers, not boxes.** Reach for a single hairline (`border-top` /
-  `border-bottom` / `border-right`) before you reach for a bordered, rounded,
-  filled sub-panel. See [Hairlines](#hairlines).
+  `border-bottom`, or a grid-gap hairline) before you reach for a bordered,
+  rounded, filled sub-panel. See [Hairlines](#hairlines).
+- **Tile dividers via the grid-gap hairline, not per-tile borders.** For a
+  wrapping tile strip, set `gap: 1px` + `background: var(--border)` on the grid
+  and `background: var(--surface-1)` on the tiles. The gap reveals the border
+  colour *between* tiles only — never at the outer edge — so it draws clean row
+  **and** column dividers at any wrap with nothing bleeding onto the card edge.
+  A per-tile `border-right` leaves a dangling edge on the wrap row, so prefer
+  the gap trick (see `.v2-next60-grid`).
 - **Pull components flush.** When a self-bordered component (a table, an inset
   grid) is the card's main content, use `<Card padding="none">` + the
   component's flush variant so it fills the card edge-to-edge under the header,
