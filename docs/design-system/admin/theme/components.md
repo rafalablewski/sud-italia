@@ -494,6 +494,14 @@ every page**:
   `.v2-page-actions` (col 3); `.v2-hero-tier2` is the folded row holding
   `.v2-hero-search` + `.v2-hero-filters`. Below `820px` every slot stacks to a
   single column.
+  - **The tier-2 row never overflows the panel** (structure rule: *contain →
+    wrap → scroll, never overflow*): `.v2-hero-tier2` and `.v2-hero-filters`
+    are `flex-wrap: wrap`; `.v2-hero-search` keeps a `min-width: 200px` floor so
+    it stays usable rather than squeezing to "Sear…"; a segmented control inside
+    `.v2-hero-filters` caps at `max-width: 100%` and scrolls internally. If a
+    page crams too many controls into the tier, they wrap to a new line — they
+    must not widen the hero. (Orders — search + Kanban/Table + 7 status pills —
+    is the stress case.)
   - **`filters` is for compact `Tabs variant="pill"` / segmented filters only**
     (status, category). **Section-navigation or `variant="underline"` tabs go
     BELOW the hero**, as a sibling after `</PageHero>` — never in `filters`
