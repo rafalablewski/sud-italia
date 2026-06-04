@@ -85,7 +85,6 @@ export function AdminStaff() {
   const [list, setList] = useState<StaffMember[]>([]);
   const [punches, setPunches] = useState<TimePunch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [dialog, setDialog] = useState<DialogState>({ open: false, member: null });
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
@@ -123,18 +122,11 @@ export function AdminStaff() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((s) => {
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        s.name.toLowerCase().includes(q) ||
-        s.role.toLowerCase().includes(q) ||
-        (s.phone?.toLowerCase().includes(q) ?? false) ||
-        (s.email?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, statusFilter]);
+  }, [list, statusFilter]);
 
   const totals = useMemo(() => {
     const active = list.filter((s) => s.status === "active");
@@ -313,11 +305,6 @@ export function AdminStaff() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })} aria-label="Hire employee" title={canHire ? "Hire employee" : "New staff member"} />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, phone, email, role…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),

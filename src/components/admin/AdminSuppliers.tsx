@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Building2, Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
@@ -42,7 +42,6 @@ function AdminSuppliersDesktop() {
   const toast = useToast();
   const [list, setList] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<DialogState>({ open: false, supplier: null });
   const [pendingDelete, setPendingDelete] = useState<Supplier | null>(null);
 
@@ -63,18 +62,7 @@ function AdminSuppliersDesktop() {
     fetchAll();
   }, [fetchAll]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return list.filter((s) => {
-      if (!q) return true;
-      return (
-        s.name.toLowerCase().includes(q) ||
-        (s.contactName?.toLowerCase().includes(q) ?? false) ||
-        (s.email?.toLowerCase().includes(q) ?? false) ||
-        (s.phone?.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [list, query]);
+  const filtered = list;
 
   const cols: Column<Supplier>[] = [
     {
@@ -159,11 +147,6 @@ function AdminSuppliersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })} aria-label="New supplier" title="New supplier" />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, contact, email or phone…",
-        }}
       />
 
       {loading ? (

@@ -102,7 +102,6 @@ function AdminFeedbackDesktop() {
   const toast = useToast();
   const [list, setList] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [analyzing, setAnalyzing] = useState(false);
@@ -125,20 +124,13 @@ function AdminFeedbackDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((f) => {
       if (location && f.locationSlug !== location) return false;
       if (statusFilter !== "all" && f.status !== statusFilter) return false;
       if (ratingFilter !== "all" && f.overallRating !== Number(ratingFilter)) return false;
-      if (!q) return true;
-      return (
-        f.customerName.toLowerCase().includes(q) ||
-        f.customerPhone.includes(q) ||
-        f.orderId.toLowerCase().includes(q) ||
-        f.comment.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [list, query, statusFilter, ratingFilter, location]);
+  }, [list, statusFilter, ratingFilter, location]);
 
   const totals = useMemo(() => {
     const rated = list.filter((f) => f.overallRating > 0);
@@ -359,11 +351,6 @@ function AdminFeedbackDesktop() {
             }
           />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, phone, order id, or comment…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),

@@ -142,7 +142,6 @@ function AdminInventoryDesktop() {
     varianceCostGrosze: number;
   }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const [movementDialog, setMovementDialog] = useState<{
@@ -175,18 +174,12 @@ function AdminInventoryDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return stock.filter((r) => {
       const status = classifyStatus(r);
       if (statusFilter !== "all" && statusFilter !== status) return false;
-      if (!q) return true;
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        (r.supplier?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [stock, search, statusFilter]);
+  }, [stock, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: stock.length, ok: 0, low: 0, out: 0 };
@@ -377,11 +370,6 @@ function AdminInventoryDesktop() {
             title={untracked.length === 0 ? "All ingredients are tracked here." : "Track ingredient"}
           />
         }
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: "Search ingredient, supplier…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),

@@ -339,7 +339,6 @@ function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
     open: false,
     ingredient: null,
   });
-  const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<MenuCategory | "all">("all");
 
   const fetchAll = useCallback(async () => {
@@ -423,13 +422,11 @@ function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
   }, [menusByLoc]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return dishes.filter((d) => {
       if (filterCat !== "all" && d.category !== filterCat) return false;
-      if (!q) return true;
-      return d.name.toLowerCase().includes(q);
+      return true;
     });
-  }, [dishes, search, filterCat]);
+  }, [dishes, filterCat]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, DishGroup[]>();
@@ -457,11 +454,6 @@ function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
       <PageHero
         title="Recipes & Ingredients"
         subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: "Search dishes…",
-        }}
         filter={{
           value: filterCat,
           onChange: (v) => setFilterCat(v as MenuCategory | "all"),
@@ -1675,7 +1667,6 @@ function IngredientsPanel({ viewNav }: { viewNav: ViewNav }) {
   const toast = useToast();
   const [list, setList] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<IngredientCategory | "all">("all");
   const [dialog, setDialog] = useState<IngredientDialogState>({ open: false, ingredient: null });
   const [pendingDelete, setPendingDelete] = useState<IngredientData | null>(null);
@@ -1698,16 +1689,11 @@ function IngredientsPanel({ viewNav }: { viewNav: ViewNav }) {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((i) => {
       if (catFilter !== "all" && i.category !== catFilter) return false;
-      if (!q) return true;
-      return (
-        i.name.toLowerCase().includes(q) ||
-        (i.supplier?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, catFilter]);
+  }, [list, catFilter]);
 
   const cols: Column<IngredientData>[] = [
     {
@@ -1808,11 +1794,6 @@ function IngredientsPanel({ viewNav }: { viewNav: ViewNav }) {
             New ingredient
           </Button>
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search ingredients or suppliers…",
-        }}
         dropdowns={[
           {
             ariaLabel: "Category filter",

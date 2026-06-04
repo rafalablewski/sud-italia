@@ -183,7 +183,6 @@ function AdminMenuDesktop() {
    *  at multiple trucks. Optimistic updates mutate this map directly. */
   const [menusByLocation, setMenusByLocation] = useState<Record<string, MenuItemData[]>>({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [category, setCategory] = useState<MenuCategory | "all">("all");
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -729,18 +728,12 @@ function AdminMenuDesktop() {
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return unifiedItems.filter((u) => {
       if (u.hidden && !showHidden) return false;
       if (category !== "all" && u.category !== category) return false;
-      if (!q) return true;
-      return (
-        u.name.toLowerCase().includes(q) ||
-        u.description.toLowerCase().includes(q) ||
-        u.tags.some((t) => t.toLowerCase().includes(q))
-      );
+      return true;
     });
-  }, [unifiedItems, search, category, showHidden]);
+  }, [unifiedItems, category, showHidden]);
 
   const grouped = useMemo(() => {
     const m = new Map<MenuCategory, UnifiedItem[]>();
@@ -786,11 +779,6 @@ function AdminMenuDesktop() {
             />
           </>
         }
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: "Search items, descriptions, tags…",
-        }}
         filter={{
           value: category,
           onChange: (v) => setCategory(v as MenuCategory | "all"),
@@ -906,7 +894,7 @@ function AdminMenuDesktop() {
               description={
                 unifiedItems.length === 0
                   ? "Menu data lives in src/data/menus/*.ts. Add items there to see them here."
-                  : "Clear the search or pick another category."
+                  : "Pick another category."
               }
             />
           </CardBody>

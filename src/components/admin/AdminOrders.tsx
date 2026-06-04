@@ -107,7 +107,6 @@ function AdminOrdersDesktop() {
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [query, setQuery] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
@@ -204,16 +203,11 @@ function AdminOrdersDesktop() {
 
   // --- Filtering ---
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return orders.filter((o) => {
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
-      if (!q) return true;
-      if (o.id.toLowerCase().includes(q)) return true;
-      if (o.customerName.toLowerCase().includes(q)) return true;
-      if (o.customerPhone.toLowerCase().includes(q)) return true;
-      return false;
+      return true;
     });
-  }, [orders, statusFilter, query]);
+  }, [orders, statusFilter]);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -255,11 +249,6 @@ function AdminOrdersDesktop() {
             title="Refresh"
           />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by id, name, or phone…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),
@@ -296,7 +285,7 @@ function AdminOrdersDesktop() {
               description={
                 orders.length === 0
                   ? "When a customer pays through Stripe, orders appear here."
-                  : "Try clearing the search or selecting a different status."
+                  : "Try selecting a different status."
               }
             />
           </CardBody>

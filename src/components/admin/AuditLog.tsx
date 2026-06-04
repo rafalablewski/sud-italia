@@ -61,7 +61,6 @@ function AuditLogDesktop() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
-  const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const fetchEntries = useCallback(async () => {
@@ -99,18 +98,11 @@ function AuditLogDesktop() {
   }, [entries]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return entries.filter((e) => {
       if (actionFilter !== "all" && actionGroup(e.action) !== actionFilter) return false;
-      if (!q) return true;
-      return (
-        e.action.toLowerCase().includes(q) ||
-        e.actor.toLowerCase().includes(q) ||
-        (e.entityId || "").toLowerCase().includes(q) ||
-        (e.entityType || "").toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [entries, actionFilter, query]);
+  }, [entries, actionFilter]);
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -137,11 +129,6 @@ function AuditLogDesktop() {
             title="Refresh"
           />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by actor, action, entity id…",
-        }}
         filter={{
           value: actionFilter,
           onChange: (v) => setActionFilter(v as ActionFilter),

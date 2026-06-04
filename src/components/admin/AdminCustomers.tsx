@@ -86,7 +86,6 @@ function AdminCustomersDesktop() {
   const [list, setList] = useState<CustomerSummary[]>([]);
   const [triggers, setTriggers] = useState<TriggerRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const fetchAll = useCallback(async () => {
@@ -108,18 +107,12 @@ function AdminCustomersDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((c) => {
       if (location && !c.locations.includes(location) && c.locations.length > 0) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, statusFilter, location]);
+  }, [list, statusFilter, location]);
 
   const counts = useMemo(() => {
     const c = { all: list.length, new: 0, active: 0, repeat: 0, lapsed: 0 };
@@ -215,11 +208,6 @@ function AdminCustomersDesktop() {
       <PageHero
         title="Customers"
         subtitle="Every customer who paid, ranked by lifetime spend. RFM-style status calculated from order recency + frequency."
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, phone, or email…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),

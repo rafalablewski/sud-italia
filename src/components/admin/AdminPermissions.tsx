@@ -66,7 +66,6 @@ export function AdminPermissions() {
   const [loading, setLoading] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
   const [view, setView] = useState<ViewMode>("role");
-  const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string>("all");
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
@@ -89,21 +88,14 @@ export function AdminPermissions() {
       .catch(() => {});
   }, [fetchUsers]);
 
-  // Permission rows after search + group filter, kept grouped.
+  // Permission rows after the group filter, kept grouped.
   const groups = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return PERMISSION_GROUPS.map((g) => ({
       id: g.id,
       label: g.label,
-      permissions: g.permissions.filter(
-        (p) =>
-          !q ||
-          p.label.toLowerCase().includes(q) ||
-          p.key.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q),
-      ),
+      permissions: g.permissions.slice(),
     })).filter((g) => (group === "all" || g.id === group) && g.permissions.length > 0);
-  }, [query, group]);
+  }, [group]);
 
   // Users sorted owners → rank → name, for stable columns. Rank comes from the
   // live ROLE_RANK table so a new role slots in automatically.
@@ -168,11 +160,6 @@ export function AdminPermissions() {
             Live cross-tab of every capability against your roles and your real accounts — built from the permission catalog (<span className="mono">src/lib/permissions.ts</span>), the role presets, and the current user list. Nothing here is hand-maintained: add a capability or a user and it shows up. <strong>By role</strong> shows the default grant each role inherits; <strong>By user</strong> shows each account&rsquo;s effective access (custom grants override their role) and lets an owner flip a cell to grant or revoke.
           </>
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search capabilities by name, key, or description…",
-        }}
         filter={{
           value: view,
           onChange: (v) => setView(v as ViewMode),
@@ -207,7 +194,7 @@ export function AdminPermissions() {
       ) : visiblePermCount === 0 ? (
         <Card>
           <CardBody>
-            <EmptyState icon={Grid3x3} title="No matching capabilities" description="Try clearing the search or group filter." />
+            <EmptyState icon={Grid3x3} title="No matching capabilities" description="Try a different group filter." />
           </CardBody>
         </Card>
       ) : view === "role" ? (

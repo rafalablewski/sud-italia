@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Plus,
-  Search,
   Send,
   Trash2,
   X,
@@ -117,7 +116,6 @@ function AdminPurchaseOrdersDesktop() {
   const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<PORow | null>(null);
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PORow | null>(null);
@@ -144,17 +142,11 @@ function AdminPurchaseOrdersDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return orders.filter((p) => {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        p.id.toLowerCase().includes(q) ||
-        p.supplierName.toLowerCase().includes(q) ||
-        p.lines.some((l) => l.name?.toLowerCase().includes(q))
-      );
+      return true;
     });
-  }, [orders, statusFilter, search]);
+  }, [orders, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: orders.length, draft: 0, sent: 0, received: 0, cancelled: 0 };
@@ -296,11 +288,6 @@ function AdminPurchaseOrdersDesktop() {
             }
           />
         }
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: "Search by PO id, supplier, or ingredient…",
-        }}
         location={{ value: pageLoc, onChange: setPageLoc }}
         filter={{
           value: statusFilter,
@@ -324,7 +311,7 @@ function AdminPurchaseOrdersDesktop() {
             <EmptyState
               icon={ClipboardList}
               title={orders.length === 0 ? "No purchase orders yet" : "No matches"}
-              description={orders.length === 0 ? "Create a PO to start restocking." : "Try a different status or clear the search."}
+              description={orders.length === 0 ? "Create a PO to start restocking." : "Try a different status."}
             />
           </CardBody>
         </Card>

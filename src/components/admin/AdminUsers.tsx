@@ -263,7 +263,6 @@ function AdminUsersDesktop() {
   const toast = useToast();
   const [list, setList] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
   const [secFilter, setSecFilter] = useState<SecurityFilter>("all");
   const [locFilter, setLocFilter] = useState<string>("all");
@@ -297,7 +296,6 @@ function AdminUsersDesktop() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
       if (locFilter !== "all" && !userLocationSlugs(u).includes(locFilter)) return false;
@@ -305,14 +303,9 @@ function AdminUsersDesktop() {
       if (secFilter === "no2fa" && has2fa(u)) return false;
       if (secFilter === "shared" && u.hasPassword) return false;
       if (secFilter === "passkey" && (u.webauthnKeys?.length ?? 0) === 0) return false;
-      if (!q) return true;
-      return (
-        u.name.toLowerCase().includes(q) ||
-        (u.email?.toLowerCase().includes(q) ?? false) ||
-        u.role.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [list, query, roleFilter, secFilter, locFilter]);
+  }, [list, roleFilter, secFilter, locFilter]);
 
   // KPI strip — real auth-posture coverage across the roster.
   const kpis = useMemo(() => {
@@ -475,11 +468,6 @@ function AdminUsersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, email, or role…",
-        }}
         location={{
           value: locFilter === "all" ? "" : locFilter,
           onChange: (s) => setLocFilter(s || "all"),

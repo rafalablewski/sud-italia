@@ -127,7 +127,6 @@ export function AdminBusinessCosts() {
 
   const [list, setList] = useState<BusinessCost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [categoryFilter, setCategoryFilter] = useState<"all" | BusinessCostCategory>("all");
   const [dialog, setDialog] = useState<DialogState>({ open: false, cost: null });
@@ -153,20 +152,12 @@ export function AdminBusinessCosts() {
   }, [fetchAll]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return list.filter((c) => {
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (categoryFilter !== "all" && c.category !== categoryFilter) return false;
-      if (!q) return true;
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        (c.vendor?.toLowerCase().includes(q) ?? false) ||
-        (c.payrollRole?.toLowerCase().includes(q) ?? false) ||
-        (c.notes?.toLowerCase().includes(q) ?? false)
-      );
+      return true;
     });
-  }, [list, query, statusFilter, categoryFilter]);
+  }, [list, statusFilter, categoryFilter]);
 
   const totals = useMemo(() => {
     const active = list.filter((c) => c.status === "active");
@@ -378,11 +369,6 @@ export function AdminBusinessCosts() {
             title="New cost"
           />
         }
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: "Search by name, vendor, category, role…",
-        }}
         filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),
