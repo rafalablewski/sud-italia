@@ -31,6 +31,7 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Tabs,
   Textarea,
 } from "./v2/ui";
@@ -1583,11 +1584,11 @@ function BulkEditDialog({
               fontSize: "0.875rem",
             }}
           >
-            <input
-              type="checkbox"
+            <Switch
               checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
+              onChange={(v) => setAvailable(v)}
               disabled={!enabled.available}
+              label="Available to customers"
             />
             {available ? "Available" : "Sold out / hidden"}
           </label>,
@@ -1654,11 +1655,11 @@ function BulkEditDialog({
               fontSize: "0.875rem",
             }}
           >
-            <input
-              type="checkbox"
+            <Switch
               checked={deliveryOnly}
-              onChange={(e) => setDeliveryOnly(e.target.checked)}
+              onChange={(v) => setDeliveryOnly(v)}
               disabled={!enabled.deliveryOnly}
+              label="Delivery-only"
             />
             {deliveryOnly ? "Delivery only" : "Available on every channel"}
           </label>,
@@ -2112,10 +2113,10 @@ function CreateItemDialog({ open, onClose, onCreate }: CreateItemDialogProps) {
             fontSize: "var(--text-sm)",
           }}
         >
-          <input
-            type="checkbox"
+          <Switch
             checked={available}
-            onChange={(e) => setAvailable(e.target.checked)}
+            onChange={(v) => setAvailable(v)}
+            label="Available to customers immediately"
           />
           Available to customers immediately
         </label>

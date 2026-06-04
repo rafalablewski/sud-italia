@@ -33,6 +33,7 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Table,
   Tabs,
   Textarea,
@@ -448,10 +449,10 @@ export function AdminGrowth() {
             <CardBody>
               <div className="v2-stack-12">
                 <label className="v2-toggle">
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={settings.referral.active}
-                    onChange={() => updateReferral({ active: !settings.referral.active })}
+                    onChange={(v) => updateReferral({ active: v })}
+                    label="Referral program"
                   />
                   <span>{settings.referral.active ? "Active" : "Disabled"}</span>
                 </label>
@@ -619,7 +620,7 @@ function LiveWidgetsPanel({ widgets, onEdit, onDelete, onToggle, onReorder, onAd
                       {locationLabel(w.locationSlugs)}
                     </Badge>
                     <label className="v2-toggle">
-                      <input type="checkbox" checked={w.active} onChange={() => onToggle(w.id)} />
+                      <Switch checked={w.active} onChange={() => onToggle(w.id)} label="Widget active" />
                       <span>{w.active ? "On" : "Off"}</span>
                     </label>
                     <span className="v2-widget-actions">
@@ -799,7 +800,7 @@ function WidgetDialog({ widget, onClose, onSubmit }: WidgetDialogProps) {
           <span className="v2-field-desc">Select one or more cities; clear all to broadcast everywhere.</span>
         </div>
         <label className="v2-toggle">
-          <input type="checkbox" checked={active} onChange={() => setActive((v) => !v)} />
+          <Switch checked={active} onChange={(v) => setActive(v)} label="Active" />
           <span>Active</span>
         </label>
       </div>

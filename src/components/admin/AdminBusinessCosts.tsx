@@ -39,6 +39,7 @@ import {
   EmptyState,
   Input,
   Select,
+  Switch,
   Table,
   Tabs,
   Textarea,
@@ -867,10 +868,10 @@ function BusinessCostDialog({ state, onClose, onSaved }: DialogProps) {
           <label className="v2-field">
             <span className="v2-field-label">Tax deductible</span>
             <span className="inline-flex items-center gap-2 mt-1">
-              <input
-                type="checkbox"
+              <Switch
                 checked={taxDeductible}
-                onChange={(e) => setTaxDeductible(e.target.checked)}
+                onChange={(v) => setTaxDeductible(v)}
+                label="Tax deductible"
               />
               <span className="v2-muted text-sm">Mark this cost as deductible for VAT/CIT.</span>
             </span>

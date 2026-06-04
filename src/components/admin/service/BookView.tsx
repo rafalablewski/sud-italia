@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw, Sparkles, Users } from "lucide-react";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { findReservationConflicts } from "@/lib/floor";
+import { Switch } from "../v2/ui";
 import { useToast } from "../v2/ui/Toast";
 
 /**
@@ -280,7 +281,7 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
 
           <div className="svc-actions">
             <label className="svc-override">
-              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
+              <Switch checked={override} onChange={(v) => setOverride(v)} label="Override conflicts & capacity" />
               Override conflicts &amp; capacity
             </label>
             <button type="button" className="btn primary" disabled={!canBook} onClick={() => void book()}>

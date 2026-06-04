@@ -19,7 +19,7 @@ import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { useToast } from "./v2/ui/Toast";
-import { Button, Card, CardBody, Input } from "./v2/ui";
+import { Button, Card, CardBody, Input, Switch } from "./v2/ui";
 import { ModifierMatrix } from "./menu/ModifierEditor";
 
 interface MenuItemData {
@@ -987,12 +987,12 @@ export function AdminMenuDetail({ baseSlug }: { baseSlug: string }) {
               <div className="v2-field">
                 <label className="v2-field-label">Channel</label>
                 <label className="v2-detail-toggle">
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={chain.deliveryOnly}
-                    onChange={(e) =>
-                      setChain((c) => ({ ...c, deliveryOnly: e.target.checked }))
+                    onChange={(v) =>
+                      setChain((c) => ({ ...c, deliveryOnly: v }))
                     }
+                    label="Delivery-only item"
                   />
                   <span>Delivery-only item</span>
                 </label>

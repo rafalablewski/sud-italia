@@ -406,10 +406,10 @@ export function WhatsAppSettingsDialog({
                       disabled={day.closed}
                     />
                     <label className="wa-cfg-hour-closed">
-                      <input
-                        type="checkbox"
+                      <Switch
                         checked={day.closed}
-                        onChange={(e) => setDay(i, { closed: e.target.checked })}
+                        onChange={(v) => setDay(i, { closed: v })}
+                        label={`${DAY_LABELS[i]} closed`}
                       />
                       <span>Closed</span>
                     </label>

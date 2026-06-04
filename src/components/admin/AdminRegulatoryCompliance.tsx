@@ -10,6 +10,7 @@ import {
   CardHeader,
   Input,
   Select,
+  Switch,
   Textarea,
   useToast,
 } from "./v2/ui";
@@ -283,16 +284,15 @@ export function AdminRegulatoryCompliance() {
                     </div>
 
                     <label className="flex items-center gap-2 admin-text text-sm">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
+                      <Switch
                         checked={!!active.calorieDisclosureRequired}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           setActive({
                             ...active,
-                            calorieDisclosureRequired: e.target.checked,
+                            calorieDisclosureRequired: v,
                           })
                         }
+                        label="Calorie disclosure required"
                       />
                       Show per-item kcal next to every price (§81.50)
                     </label>
@@ -356,32 +356,30 @@ export function AdminRegulatoryCompliance() {
                     </div>
 
                     <label className="flex items-center gap-2 admin-text text-sm">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
+                      <Switch
                         checked={!!active.nutriGradeRequired}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           setActive({
                             ...active,
-                            nutriGradeRequired: e.target.checked,
+                            nutriGradeRequired: v,
                           })
                         }
+                        label="Nutri-Grade required"
                       />
                       Surface NEA Nutri-Grade badges on beverages with a grade set
                     </label>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <label className="flex items-center gap-2 admin-text text-sm">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
+                        <Switch
                           checked={!!active.gstRegistered}
-                          onChange={(e) =>
+                          onChange={(v) =>
                             setActive({
                               ...active,
-                              gstRegistered: e.target.checked,
+                              gstRegistered: v,
                             })
                           }
+                          label="GST registered"
                         />
                         GST-registered (IRAS)
                       </label>
@@ -479,16 +477,15 @@ export function AdminRegulatoryCompliance() {
                       </div>
                     </div>
                     <label className="flex items-center gap-2 admin-text text-sm">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
+                      <Switch
                         checked={!!active.calorieDisclosureRequired}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           setActive({
                             ...active,
-                            calorieDisclosureRequired: e.target.checked,
+                            calorieDisclosureRequired: v,
                           })
                         }
+                        label="Calorie disclosure required"
                       />
                       Show per-item kcal voluntarily (UK 2022 Calorie Labelling
                       style — useful if you serve UK tourists or franchise into

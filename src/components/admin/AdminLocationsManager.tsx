@@ -14,6 +14,7 @@ import {
   Dialog,
   EmptyState,
   Input,
+  Switch,
   Table,
   Textarea,
   type Column,
@@ -536,10 +537,10 @@ export function AdminLocationsManager() {
             <div className="v2-field">
               <label className="v2-field-label">Visibility</label>
               <label className="v2-detail-toggle">
-                <input
-                  type="checkbox"
+                <Switch
                   checked={editing.form.isActive}
-                  onChange={(e) => setField("isActive", e.target.checked)}
+                  onChange={(v) => setField("isActive", v)}
+                  label="Active — show on public site"
                 />
                 <span>Active — show on public site</span>
               </label>
@@ -547,10 +548,10 @@ export function AdminLocationsManager() {
             <div className="v2-field">
               <label className="v2-field-label">Licensing</label>
               <label className="v2-detail-toggle">
-                <input
-                  type="checkbox"
+                <Switch
                   checked={editing.form.servesAlcohol}
-                  onChange={(e) => setField("servesAlcohol", e.target.checked)}
+                  onChange={(v) => setField("servesAlcohol", v)}
+                  label="Serves alcohol"
                 />
                 <span>Serves alcohol</span>
               </label>
