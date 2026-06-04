@@ -1848,12 +1848,14 @@ button.v2-card:active { transform: translateY(0); }
 
 .v2-kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
 .v2-kpi-value {
+  font-family: var(--font-display);
   font-size: var(--text-3xl);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--fg);
   line-height: 1.05;
-  letter-spacing: -0.025em;
-  font-feature-settings: "tnum", "cv11";
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 .v2-kpi-unit { font-size: var(--text-base); color: var(--fg-muted); font-weight: 500; }
 
@@ -1907,7 +1909,7 @@ button.v2-card:active { transform: translateY(0); }
   letter-spacing: -0.02em;
   margin: 0;
 }
-.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; }
+.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; max-width: 78ch; line-height: 1.5; }
 .v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Page hero — editorial serif title + a short platinum underscore (the
@@ -1931,7 +1933,7 @@ button.v2-card:active { transform: translateY(0); }
 .v2-page-hero .v2-page-title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
