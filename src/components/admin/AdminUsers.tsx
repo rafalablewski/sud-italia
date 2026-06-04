@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Fingerprint, KeyRound, Lock, MapPin, MoreHorizontal, Pencil, Plus, Power, RotateCcw, Search, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
+import { Eye, Fingerprint, KeyRound, Lock, MapPin, MoreHorizontal, Pencil, Plus, Power, RotateCcw, ShieldAlert, ShieldCheck, Smartphone, Trash2, UserCog, Users as UsersIcon } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
@@ -41,7 +41,6 @@ import {
   Popover,
   Select,
   Switch,
-  Tabs,
   Table,
   Textarea,
   type Column,
@@ -476,56 +475,43 @@ function AdminUsersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
         }
-        search={
-          <Input
-            placeholder="Search by name, email, or role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={roleFilter}
-            onChange={(v) => setRoleFilter(v as AdminRole | "all")}
-            tabs={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
-              { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
-              { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
-              { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
-            ]}
-            variant="pill"
-            ariaLabel="Role filter"
-          />
-        }
-        tabs={
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            <Select
-              label=""
-              aria-label="Security filter"
-              value={secFilter}
-              onChange={(e) => setSecFilter(e.target.value as SecurityFilter)}
-              options={[
-                { value: "all", label: "All security" },
-                { value: "secured", label: "Secured (pwd + 2FA)" },
-                { value: "no2fa", label: "No 2FA" },
-                { value: "shared", label: "On shared password" },
-                { value: "passkey", label: "Has passkey" },
-              ]}
-            />
-            <Select
-              label=""
-              aria-label="Location filter"
-              value={locFilter}
-              onChange={(e) => setLocFilter(e.target.value)}
-              options={[
-                { value: "all", label: "All locations" },
-                ...activeLocations.map((l) => ({ value: l.slug, label: l.city })),
-              ]}
-            />
-          </div>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, email, or role…",
+        }}
+        location={{
+          value: locFilter === "all" ? "" : locFilter,
+          onChange: (s) => setLocFilter(s || "all"),
+          includeAll: true,
+          allLabel: "All locations",
+        }}
+        filter={{
+          value: roleFilter,
+          onChange: (v) => setRoleFilter(v as AdminRole | "all"),
+          ariaLabel: "Role filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "owner", label: ROLE_LABEL.owner, count: counts.owner },
+            { value: "manager", label: ROLE_LABEL.manager, count: counts.manager },
+            { value: "staff", label: ROLE_LABEL.staff, count: counts.staff },
+            { value: "kitchen", label: ROLE_LABEL.kitchen, count: counts.kitchen },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Security filter",
+            value: secFilter,
+            onChange: (v) => setSecFilter(v as SecurityFilter),
+            options: [
+              { value: "all", label: "All security" },
+              { value: "secured", label: "Secured (pwd + 2FA)" },
+              { value: "no2fa", label: "No 2FA" },
+              { value: "shared", label: "On shared password" },
+              { value: "passkey", label: "Has passkey" },
+            ],
+          },
+        ]}
       />
 
       <div className="v2-section-eyebrow">Roster health</div>

@@ -15,7 +15,6 @@ import {
   Select,
   Switch,
   Textarea,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
@@ -183,7 +182,7 @@ export function AdminHandover() {
       <PageHero
         title="Shift handover"
         subtitle="The end-of-shift sign-off: count the drawer (reconciled against the cash session), confirm temps + waste are logged, leave a note, name the outgoing manager."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
       />
 
       <Card>

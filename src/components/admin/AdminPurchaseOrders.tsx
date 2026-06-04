@@ -280,7 +280,6 @@ function AdminPurchaseOrdersDesktop() {
       <PageHero
         title="Purchase orders"
         subtitle="Raise POs against suppliers. Marking one received auto-credits stock and updates the audit log."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
         actions={
           <Button
             variant="primary"
@@ -297,29 +296,24 @@ function AdminPurchaseOrdersDesktop() {
             }
           />
         }
-        search={
-          <Input
-            placeholder="Search by PO id, supplier, or ingredient…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as StatusFilter)}
-            tabs={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "draft", label: "Draft", count: counts.draft },
-              { value: "sent", label: "Sent", count: counts.sent },
-              { value: "received", label: "Received", count: counts.received },
-              { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-            ]}
-            variant="pill"
-            ariaLabel="Status filter"
-          />
-        }
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: "Search by PO id, supplier, or ingredient…",
+        }}
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "draft", label: "Draft", count: counts.draft },
+            { value: "sent", label: "Sent", count: counts.sent },
+            { value: "received", label: "Received", count: counts.received },
+            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+          ],
+        }}
       />
 
       {loading ? (

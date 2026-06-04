@@ -27,7 +27,6 @@ import {
   EmptyState,
   Input,
   PageHero,
-  Tabs,
   Table,
   type Column,
 } from "./v2/ui";
@@ -301,6 +300,12 @@ function AdminReportsDesktop() {
         }
         actions={
           <>
+            {preset === "custom" && (
+              <>
+                <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
+              </>
+            )}
             <Button variant="secondary" leadingIcon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={!summary} aria-label="Export CSV" title="Export CSV" />
             <Button
               variant="secondary"
@@ -316,29 +321,18 @@ function AdminReportsDesktop() {
             />
           </>
         }
-        search={
-          preset === "custom" ? (
-            <>
-              <Input type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} />
-              <Input type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} />
-            </>
-          ) : undefined
-        }
-        filters={
-          <Tabs
-            value={preset}
-            onChange={(v) => onPreset(v as RangePreset)}
-            tabs={[
-              { value: "today", label: "Today" },
-              { value: "7d", label: "7d" },
-              { value: "30d", label: "30d" },
-              { value: "90d", label: "90d" },
-              { value: "custom", label: "Custom" },
-            ]}
-            variant="pill"
-            ariaLabel="Range preset"
-          />
-        }
+        filter={{
+          value: preset,
+          onChange: (v) => onPreset(v as RangePreset),
+          ariaLabel: "Range preset",
+          options: [
+            { value: "today", label: "Today" },
+            { value: "7d", label: "7d" },
+            { value: "30d", label: "30d" },
+            { value: "90d", label: "90d" },
+            { value: "custom", label: "Custom" },
+          ],
+        }}
       />
 
       <section className="v2-kpi-grid">

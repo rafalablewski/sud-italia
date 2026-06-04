@@ -480,30 +480,37 @@ every page**:
   (don't bold past 500 — typography doctrine).
 - **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
   fills the panel as **fixed stacked rows** (`.v2-hero` is `flex-column`,
-  `gap:14px`). Every row is optional and collapses gracefully; **all controls
-  live inside the panel — nothing floats below.** The rows, top → bottom:
+  `gap:14px`). **Data-driven & enforced:** every control role takes DATA (not
+  JSX) and the hero renders the *one* canonical widget for it, so a page cannot
+  substitute a different widget and the controls can never drift apart. Every
+  row is optional and collapses gracefully; **all controls live inside the panel
+  — nothing floats below.** The rows, top → bottom:
   1. **`title`** — alone (`.v2-page-title`).
-  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; actions pushed
-     right via `margin-left:auto`, icon-only (see below).
-  3. **`search` (left, grows) ⟷ `locations` (right)** — `.v2-hero-find`;
-     `.v2-hero-search` keeps a `min-width:200px` floor (no "Sear…" squeeze),
-     `.v2-hero-loc` is `margin-left:auto`.
-  4. **`filters`** — the list/status filter, a compact `Tabs variant="pill"`
-     (`.v2-hero-filters`).
-  5. **`tabs`** — section navigation (underline `Tabs`) or a secondary chip/select
-     filter row (`.v2-hero-tabs`), full width.
-  **No centered-stats slot** — headline numbers belong in the KPI grid below, not
-  the hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
-  hand-roll a header.
+  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
+     only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
+  3. **`search` (left, grows) ⟷ `location` (right)** — `.v2-hero-find`. `search`
+     = `{value,onChange,placeholder}` → the one search `Input` (`min-width:200px`
+     floor). `location` = `{value,onChange,includeAll?}` → **always** the pill
+     `LocationFilter` (never a `<Select>`).
+  4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
+     (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
+     **always** `Select`s, rendered beside the pill.
+  5. **`nav`** = `{value,onChange,options}` → **always** an underline `Tabs`
+     (`.v2-hero-tabs`) for section navigation, full width.
+  **No stats slot** — headline numbers belong in the KPI grid below, not the
+  hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
+  hand-roll a header, and never pass a raw control where a data prop exists.
   - **Rows never overflow** (structure rule: *contain → wrap → scroll, never
-    overflow*): every row is `flex-wrap:wrap`; a segmented control inside the
-    hero caps at `max-width:100%` and scrolls internally. Below `820px` the
-    right-aligned items (`actions`, `locations`) drop left as rows stack.
-  - **Filter vs nav:** a **list/status filter** → pill in `filters` (row 4 —
-    Orders, PO, Scheduled bundles). **Section navigation** (Cross-sell's Cart
-    pairings/Combos, Upsell's Bundles/Item modifiers) and **secondary chip/select
-    filter rows** (Permissions groups, Users security+location) → `tabs` (row 5).
-    Nothing sits outside the panel.
+    overflow*): every row is `flex-wrap:wrap`; a segmented control caps at
+    `max-width:100%` and scrolls internally. Below `820px` the right-aligned
+    items (`actions`, `location`) drop left as rows stack.
+  - **Choosing the slot by role** (this is what keeps widgets consistent):
+    **filter a list with a few short options → `filter`** (pill — Orders status,
+    Menu category, Customers segment). **A filter with many/long options →
+    `dropdowns`** (Select — Users security, Permissions groups, ingredient
+    categories). **Switch between sub-views/panels → `nav`** (underline — Settings
+    sections, Cross-sell/Upsell tabs, Orders Kanban/Table, AI insights, Growth
+    sections). Pick by *role*, not by what the page happened to use before.
   - **`actions` are icon-only** (compressed primary + secondary) with an
     `aria-label` + `title` tooltip for the dropped text.
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label

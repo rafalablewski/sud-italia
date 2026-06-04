@@ -11,7 +11,6 @@ import {
   PackagePlus,
   Plus,
   Scale,
-  Search,
   Trash2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -34,11 +33,9 @@ import {
   EmptyState,
   Input,
   Select,
-  Tabs,
   Table,
   Textarea,
   type Column,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
@@ -369,7 +366,7 @@ function AdminInventoryDesktop() {
       <PageHero
         title="Inventory"
         subtitle="On-hand stock per location · low-stock alerts · receive / waste / consume log."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
         actions={
           <Button
             variant="primary"
@@ -380,28 +377,22 @@ function AdminInventoryDesktop() {
             title={untracked.length === 0 ? "All ingredients are tracked here." : "Track ingredient"}
           />
         }
-        search={
-          <Input
-            placeholder="Search ingredient, supplier…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as StatusFilter)}
-            tabs={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "ok", label: "Healthy", count: counts.ok },
-              { value: "low", label: "Low", count: counts.low },
-              { value: "out", label: "Out", count: counts.out },
-            ]}
-            variant="pill"
-            ariaLabel="Status filter"
-          />
-        }
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: "Search ingredient, supplier…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "ok", label: "Healthy", count: counts.ok },
+            { value: "low", label: "Low", count: counts.low },
+            { value: "out", label: "Out", count: counts.out },
+          ],
+        }}
       />
 
       <section className="v2-kpi-grid">

@@ -10,7 +10,6 @@ import {
   Coffee,
   Frown,
   PartyPopper,
-  Search,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -23,9 +22,7 @@ import {
   CardBody,
   CardHeader,
   EmptyState,
-  Input,
   PageHero,
-  Tabs,
   Table,
   type Column,
 } from "./v2/ui";
@@ -218,29 +215,23 @@ function AdminCustomersDesktop() {
       <PageHero
         title="Customers"
         subtitle="Every customer who paid, ranked by lifetime spend. RFM-style status calculated from order recency + frequency."
-        search={
-          <Input
-            placeholder="Search by name, phone, or email…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as StatusFilter)}
-            tabs={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "active", label: "Active", count: counts.active },
-              { value: "repeat", label: "Repeat", count: counts.repeat },
-              { value: "new", label: "New", count: counts.new },
-              { value: "lapsed", label: "Lapsed", count: counts.lapsed },
-            ]}
-            variant="pill"
-            ariaLabel="Customer status"
-          />
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, phone, or email…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Customer status",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "active", label: "Active", count: counts.active },
+            { value: "repeat", label: "Repeat", count: counts.repeat },
+            { value: "new", label: "New", count: counts.new },
+            { value: "lapsed", label: "Lapsed", count: counts.lapsed },
+          ],
+        }}
       />
 
       <section className="v2-kpi-grid">

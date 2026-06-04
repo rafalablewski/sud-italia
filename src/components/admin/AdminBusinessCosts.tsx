@@ -11,7 +11,6 @@ import {
   Coins,
   Pencil,
   Plus,
-  Search,
   Trash2,
   Users,
   Wallet,
@@ -41,7 +40,6 @@ import {
   Select,
   Switch,
   Table,
-  Tabs,
   Textarea,
   type Column,
   PageHero,
@@ -380,40 +378,35 @@ export function AdminBusinessCosts() {
             title="New cost"
           />
         }
-        search={
-          <Input
-            placeholder="Search by name, vendor, category, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <>
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as typeof categoryFilter)}
-              options={[
-                { value: "all", label: "All categories" },
-                ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
-                  value: k,
-                  label: CATEGORY_LABEL[k],
-                })),
-              ]}
-            />
-            <Tabs
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as StatusFilter)}
-              tabs={[
-                { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
-                { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
-                { value: "all", label: "All", count: list.length },
-              ]}
-              variant="pill"
-              ariaLabel="Status filter"
-            />
-          </>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, vendor, category, role…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "active", label: "Active", count: list.filter((c) => c.status === "active").length },
+            { value: "archived", label: "Archived", count: list.filter((c) => c.status === "archived").length },
+            { value: "all", label: "All", count: list.length },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Category filter",
+            value: categoryFilter,
+            onChange: (v) => setCategoryFilter(v as typeof categoryFilter),
+            options: [
+              { value: "all", label: "All categories" },
+              ...(Object.keys(CATEGORY_LABEL) as BusinessCostCategory[]).map((k) => ({
+                value: k,
+                label: CATEGORY_LABEL[k],
+              })),
+            ],
+          },
+        ]}
       />
 
       <section className="v2-kpi-grid">

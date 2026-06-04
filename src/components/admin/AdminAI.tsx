@@ -28,7 +28,6 @@ import {
   Dialog,
   EmptyState,
   Input,
-  Tabs,
   Table,
   Textarea,
   type Column,
@@ -324,21 +323,18 @@ function AdminAIDesktop() {
             <Sparkles className="h-3.5 w-3.5" />
           </a>
         }
-        filters={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as TabKey)}
-            tabs={[
-              { value: "forecast", label: "Forecast", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-              { value: "anomalies", label: "Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomalies.length },
-              { value: "reorder", label: "Reorder", icon: <Boxes className="h-3.5 w-3.5" />, count: reorderRows.length },
-              { value: "staffing", label: "Staffing", icon: <ChefHat className="h-3.5 w-3.5" /> },
-              { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
-            ]}
-            variant="pill"
-            ariaLabel="Insights section"
-          />
-        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          ariaLabel: "Insights section",
+          options: [
+            { value: "forecast", label: "Forecast", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+            { value: "anomalies", label: "Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomalies.length },
+            { value: "reorder", label: "Reorder", icon: <Boxes className="h-3.5 w-3.5" />, count: reorderRows.length },
+            { value: "staffing", label: "Staffing", icon: <ChefHat className="h-3.5 w-3.5" /> },
+            { value: "faq", label: "Chatbot FAQ", icon: <MessageSquare className="h-3.5 w-3.5" />, count: faqs.length },
+          ],
+        }}
       />
 
       {loading ? (

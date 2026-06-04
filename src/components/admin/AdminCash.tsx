@@ -27,7 +27,6 @@ import {
   Input,
   Select,
   Textarea,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 import { formatPrice } from "@/lib/utils";
@@ -163,7 +162,7 @@ function AdminCashDesktop() {
             theft / over-ring signal — track every shift.
           </>
         }
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
         actions={
           <Button
             variant="primary"

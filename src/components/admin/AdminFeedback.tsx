@@ -9,7 +9,6 @@ import {
   Frown,
   MapPin,
   MessageSquare,
-  Search,
   Smile,
   Sparkles,
   Star,
@@ -24,9 +23,7 @@ import {
   CardBody,
   CardHeader,
   EmptyState,
-  Input,
   PageHero,
-  Tabs,
   Table,
   type Column,
 } from "./v2/ui";
@@ -362,44 +359,37 @@ function AdminFeedbackDesktop() {
             }
           />
         }
-        search={
-          <Input
-            placeholder="Search by name, phone, order id, or comment…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <>
-            <Tabs
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as StatusFilter)}
-              tabs={[
-                { value: "all", label: "All", count: statusCounts.all },
-                { value: "new", label: "New", count: statusCounts.new },
-                { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
-                { value: "responded", label: "Responded", count: statusCounts.responded },
-              ]}
-              variant="pill"
-              ariaLabel="Status filter"
-            />
-            <Tabs
-              value={ratingFilter}
-              onChange={(v) => setRatingFilter(v as RatingFilter)}
-              tabs={[
-                { value: "all", label: "All ★" },
-                { value: "5", label: "5" },
-                { value: "4", label: "4" },
-                { value: "3", label: "3" },
-                { value: "2", label: "2" },
-                { value: "1", label: "1" },
-              ]}
-              variant="pill"
-              ariaLabel="Rating filter"
-            />
-          </>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, phone, order id, or comment…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: statusCounts.all },
+            { value: "new", label: "New", count: statusCounts.new },
+            { value: "reviewed", label: "Reviewed", count: statusCounts.reviewed },
+            { value: "responded", label: "Responded", count: statusCounts.responded },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Rating filter",
+            value: ratingFilter,
+            onChange: (v) => setRatingFilter(v as RatingFilter),
+            options: [
+              { value: "all", label: "All ★" },
+              { value: "5", label: "5 ★" },
+              { value: "4", label: "4 ★" },
+              { value: "3", label: "3 ★" },
+              { value: "2", label: "2 ★" },
+              { value: "1", label: "1 ★" },
+            ],
+          },
+        ]}
       />
 
       <section className="v2-kpi-grid">

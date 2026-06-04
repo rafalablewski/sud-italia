@@ -20,7 +20,6 @@ import {
   EmptyState,
   Input,
   Select,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 
@@ -211,7 +210,7 @@ function AdminScheduleDesktop() {
       <PageHero
         title="Schedule"
         subtitle="Weekly grid · drag-style add per day · cost rolls up from real hourly rates."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
         actions={<DatePager unit="week" value={weekStart} onChange={setWeekStart} />}
       />
 

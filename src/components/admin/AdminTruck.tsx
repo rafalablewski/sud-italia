@@ -34,11 +34,9 @@ import {
   EmptyState,
   Input,
   Select,
-  Tabs,
   Table,
   Textarea,
   type Column,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
@@ -275,19 +273,16 @@ function AdminTruckDesktop() {
       <PageHero
         title="Truck operations"
         subtitle="Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
-        filters={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as Tab)}
-            tabs={[
-              { value: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
-              { value: "routes", label: "Routes", icon: <Route className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="Section"
-          />
-        }
+        location={{ value: pageLoc, onChange: setPageLoc }}
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as Tab),
+          options: [
+            { value: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
+            { value: "routes", label: "Routes", icon: <Route className="h-3.5 w-3.5" /> },
+          ],
+          ariaLabel: "Section",
+        }}
       />
 
       <section className="v2-kpi-grid">

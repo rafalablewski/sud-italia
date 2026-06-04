@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Mail, Pencil, Phone, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -159,14 +159,11 @@ function AdminSuppliersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, supplier: null })} aria-label="New supplier" title="New supplier" />
         }
-        search={
-          <Input
-            placeholder="Search by name, contact, email or phone…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, contact, email or phone…",
+        }}
       />
 
       {loading ? (

@@ -12,7 +12,6 @@ import {
   Plus,
   Salad,
   Sandwich,
-  Search,
   Trash2,
   Utensils,
   UtensilsCrossed,
@@ -43,7 +42,6 @@ import {
   PageHero,
   Select,
   Table,
-  Tabs,
   Textarea,
   type Column,
 } from "./v2/ui";
@@ -286,38 +284,42 @@ export function AdminRecipes() {
   return <AdminRecipesDesktop />;
 }
 
+/** Panel-switch nav config (Recipes ⟷ Ingredients), passed to each panel
+ *  so its `PageHero` renders the shared underline-tabs section nav. */
+function makeViewNav(tab: TabKey, setTab: (t: TabKey) => void) {
+  return {
+    value: tab,
+    onChange: (v: string) => setTab(v as TabKey),
+    ariaLabel: "View mode",
+    options: [
+      { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
+      { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
+    ],
+  };
+}
+
 function AdminRecipesDesktop() {
   const [tab, setTab] = useState<TabKey>("recipes");
-
-  const viewTabs = (
-    <Tabs
-      value={tab}
-      onChange={(v) => setTab(v as TabKey)}
-      tabs={[
-        { value: "recipes", label: "Recipes", icon: <Utensils className="h-3.5 w-3.5" /> },
-        { value: "ingredients", label: "Ingredients", icon: <Leaf className="h-3.5 w-3.5" /> },
-      ]}
-      variant="pill"
-      ariaLabel="View mode"
-    />
-  );
+  const viewNav = makeViewNav(tab, setTab);
 
   return (
     <div className="v2-page">
       {tab === "recipes" ? (
-        <RecipesPanel viewTabs={viewTabs} />
+        <RecipesPanel viewNav={viewNav} />
       ) : (
-        <IngredientsPanel viewTabs={viewTabs} />
+        <IngredientsPanel viewNav={viewNav} />
       )}
     </div>
   );
 }
 
+type ViewNav = ReturnType<typeof makeViewNav>;
+
 // =============================================================
 // Recipes panel
 // =============================================================
 
-function RecipesPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
+function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
   const toast = useToast();
 
   // Recipes + ingredients are chain-wide; menus are per-location. We pull
@@ -455,33 +457,25 @@ function RecipesPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
       <PageHero
         title="Recipes & Ingredients"
         subtitle="Build recipes for every dish. Costs and margins recalculate from real ingredient prices."
-        search={
-          <Input
-            placeholder="Search dishes…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        }
-        filters={
-          <>
-            {viewTabs}
-            <Tabs
-              value={filterCat}
-              onChange={(v) => setFilterCat(v as MenuCategory | "all")}
-              tabs={[
-                { value: "all", label: "All", count: dishes.length },
-                ...categories.map((c) => ({
-                  value: c,
-                  label: MENU_CATEGORY_LABELS[c],
-                  count: dishes.filter((d) => d.category === c).length,
-                })),
-              ]}
-              variant="pill"
-              ariaLabel="Category filter"
-            />
-          </>
-        }
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: "Search dishes…",
+        }}
+        filter={{
+          value: filterCat,
+          onChange: (v) => setFilterCat(v as MenuCategory | "all"),
+          ariaLabel: "Category filter",
+          options: [
+            { value: "all", label: "All", count: dishes.length },
+            ...categories.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+              count: dishes.filter((d) => d.category === c).length,
+            })),
+          ],
+        }}
+        nav={viewNav}
       />
 
       {loading ? (
@@ -1677,7 +1671,7 @@ interface IngredientDialogState {
   ingredient: IngredientData | null;
 }
 
-function IngredientsPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
+function IngredientsPanel({ viewNav }: { viewNav: ViewNav }) {
   const toast = useToast();
   const [list, setList] = useState<IngredientData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1814,33 +1808,23 @@ function IngredientsPanel({ viewTabs }: { viewTabs: React.ReactNode }) {
             New ingredient
           </Button>
         }
-        search={
-          <Input
-            placeholder="Search ingredients or suppliers…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <>
-            {viewTabs}
-            <Tabs
-              value={catFilter}
-              onChange={(v) => setCatFilter(v as IngredientCategory | "all")}
-              tabs={[
-                { value: "all", label: "All", count: list.length },
-                ...INGREDIENT_CATEGORIES.map((c) => ({
-                  value: c,
-                  label: c,
-                  count: list.filter((i) => i.category === c).length,
-                })),
-              ]}
-              variant="pill"
-              ariaLabel="Category filter"
-            />
-          </>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search ingredients or suppliers…",
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Category filter",
+            value: catFilter,
+            onChange: (v) => setCatFilter(v as IngredientCategory | "all"),
+            options: [
+              { value: "all", label: "All categories" },
+              ...INGREDIENT_CATEGORIES.map((c) => ({ value: c, label: c })),
+            ],
+          },
+        ]}
+        nav={viewNav}
       />
 
       {loading ? (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Calendar, Pause, Play, X, Loader2, AlertCircle } from "lucide-react";
-import { LocationFilter, PageHero, Tabs } from "./v2/ui";
+import { PageHero } from "./v2/ui";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 
@@ -96,16 +96,13 @@ export function AdminScheduledBundles() {
             actual recurring billing.
           </>
         }
-        locations={<LocationFilter value={activeLocation} onChange={setActiveLocation} />}
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as "all" | Status)}
-            tabs={STATUS_TABS}
-            variant="pill"
-            ariaLabel="Status filter"
-          />
-        }
+        location={{ value: activeLocation, onChange: setActiveLocation }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as "all" | Status),
+          options: STATUS_TABS,
+          ariaLabel: "Status filter",
+        }}
       />
 
       {err && (

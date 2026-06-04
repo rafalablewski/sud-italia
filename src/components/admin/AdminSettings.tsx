@@ -31,7 +31,6 @@ import {
   Input,
   PageHero,
   Switch,
-  Tabs,
   Table,
   type Column,
 } from "./v2/ui";
@@ -690,22 +689,19 @@ function AdminSettingsDesktop() {
       <PageHero
         title="Settings"
         subtitle="Account, business config, and the audit trail of administrative changes."
-        filters={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as TabKey)}
-            tabs={[
-              { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
-              { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-              { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
-              { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
-              { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
-              { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="Settings section"
-          />
-        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          options: [
+            { value: "general", label: "General", icon: <Truck className="h-3.5 w-3.5" /> },
+            { value: "layout", label: "Layout", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+            { value: "themes", label: "Themes", icon: <Palette className="h-3.5 w-3.5" /> },
+            { value: "security", label: "Security", icon: <KeyRound className="h-3.5 w-3.5" /> },
+            { value: "audit", label: "Audit log", icon: <History className="h-3.5 w-3.5" />, count: audit.length },
+            { value: "danger", label: "Advanced", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+          ],
+          ariaLabel: "Settings section",
+        }}
       />
 
       {tab === "general" && (

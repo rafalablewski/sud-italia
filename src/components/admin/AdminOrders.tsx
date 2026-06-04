@@ -12,7 +12,6 @@ import {
   Printer,
   RefreshCw,
   RotateCcw,
-  Search,
   TableProperties,
   Trash2,
   Users,
@@ -256,44 +255,34 @@ function AdminOrdersDesktop() {
             title="Refresh"
           />
         }
-        search={
-          <Input
-            placeholder="Search by id, name, or phone…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search orders"
-          />
-        }
-        filters={
-          <>
-            <Tabs
-              value={view}
-              onChange={(v) => setView(v as "kanban" | "table")}
-              tabs={[
-                { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
-                { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
-              ]}
-              variant="pill"
-              ariaLabel="View mode"
-            />
-            <Tabs
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as StatusFilter)}
-              tabs={[
-                { value: "all", label: "All", count: counts.all },
-                { value: "pending", label: STATUS_LABEL.pending, count: counts.pending },
-                { value: "confirmed", label: STATUS_LABEL.confirmed, count: counts.confirmed },
-                { value: "preparing", label: STATUS_LABEL.preparing, count: counts.preparing },
-                { value: "ready", label: STATUS_LABEL.ready, count: counts.ready },
-                { value: "completed", label: STATUS_LABEL.completed, count: counts.completed },
-                { value: "cancelled", label: STATUS_LABEL.cancelled, count: counts.cancelled },
-              ]}
-              variant="pill"
-              ariaLabel="Status filter"
-            />
-          </>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by id, name, or phone…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          ariaLabel: "Status filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "pending", label: STATUS_LABEL.pending, count: counts.pending },
+            { value: "confirmed", label: STATUS_LABEL.confirmed, count: counts.confirmed },
+            { value: "preparing", label: STATUS_LABEL.preparing, count: counts.preparing },
+            { value: "ready", label: STATUS_LABEL.ready, count: counts.ready },
+            { value: "completed", label: STATUS_LABEL.completed, count: counts.completed },
+            { value: "cancelled", label: STATUS_LABEL.cancelled, count: counts.cancelled },
+          ],
+        }}
+        nav={{
+          value: view,
+          onChange: (v) => setView(v as "kanban" | "table"),
+          ariaLabel: "View mode",
+          options: [
+            { value: "kanban", label: "Kanban", icon: <KanbanSquare className="h-3.5 w-3.5" /> },
+            { value: "table", label: "Table", icon: <TableProperties className="h-3.5 w-3.5" /> },
+          ],
+        }}
       />
 
       {loading ? (

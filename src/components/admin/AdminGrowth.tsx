@@ -36,7 +36,6 @@ import {
   Select,
   Switch,
   Table,
-  Tabs,
   Textarea,
   type Column,
 } from "./v2/ui";
@@ -314,20 +313,17 @@ export function AdminGrowth() {
       <PageHero
         title="Growth engine"
         subtitle="Tier thresholds, redeemable rewards, referral mechanics, and the customer-site live-activity widgets."
-        filters={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as TabKey)}
-            tabs={[
-              { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
-              { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
-              { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
-              { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
-            ]}
-            variant="pill"
-            ariaLabel="Growth section"
-          />
-        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          ariaLabel: "Growth section",
+          options: [
+            { value: "rewards", label: "Rewards", icon: <Gift className="h-3.5 w-3.5" /> },
+            { value: "tiers", label: "Tiers", icon: <Crown className="h-3.5 w-3.5" /> },
+            { value: "referrals", label: "Referrals", icon: <Users className="h-3.5 w-3.5" /> },
+            { value: "live", label: "Live widgets", icon: <Rocket className="h-3.5 w-3.5" /> },
+          ],
+        }}
       />
 
       <section className="v2-kpi-grid">

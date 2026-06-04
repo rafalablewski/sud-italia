@@ -13,7 +13,6 @@ import {
   EmptyState,
   Input,
   Select,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
@@ -146,7 +145,7 @@ export function AdminWaste() {
       <PageHero
         title="Waste log"
         subtitle="Reason-coded record of food binned outside a sale. Rolls up to a daily write-off cost — the number that quietly eats margin."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
       />
 
       <section className="v2-kpi-grid">

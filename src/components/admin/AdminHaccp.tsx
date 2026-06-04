@@ -14,7 +14,6 @@ import {
   Input,
   PageHero,
   Select,
-  LocationFilter,
 } from "./v2/ui";
 import { getActiveLocations } from "@/data/locations";
 import { HACCP_SENSORS, rangeForSensor, tempVerdict } from "@/lib/haccp";
@@ -133,7 +132,7 @@ export function AdminHaccp() {
       <PageHero
         title="HACCP temperature log"
         subtitle="Cold- and hot-holding checks per shift. Out-of-range readings are flagged and audit-logged for inspectors and insurers."
-        locations={<LocationFilter value={pageLoc} onChange={setPageLoc} />}
+        location={{ value: pageLoc, onChange: setPageLoc }}
       />
 
       <section className="v2-kpi-grid">

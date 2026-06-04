@@ -12,7 +12,6 @@ import {
   Plus,
   Salad,
   Sandwich,
-  Search,
   Trash2,
   UtensilsCrossed,
   type LucideIcon,
@@ -33,7 +32,6 @@ import {
   PageHero,
   Select,
   Switch,
-  Tabs,
   Textarea,
 } from "./v2/ui";
 
@@ -788,31 +786,24 @@ function AdminMenuDesktop() {
             />
           </>
         }
-        search={
-          <Input
-            placeholder="Search items, descriptions, tags…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search menu"
-          />
-        }
-        filters={
-          <Tabs
-            value={category}
-            onChange={(v) => setCategory(v as MenuCategory | "all")}
-            tabs={[
-              { value: "all", label: "All", count: unifiedItems.length },
-              ...categories.map((c) => ({
-                value: c,
-                label: MENU_CATEGORY_LABELS[c],
-                count: unifiedItems.filter((u) => u.category === c).length,
-              })),
-            ]}
-            variant="pill"
-            ariaLabel="Category filter"
-          />
-        }
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: "Search items, descriptions, tags…",
+        }}
+        filter={{
+          value: category,
+          onChange: (v) => setCategory(v as MenuCategory | "all"),
+          ariaLabel: "Category filter",
+          options: [
+            { value: "all", label: "All", count: unifiedItems.length },
+            ...categories.map((c) => ({
+              value: c,
+              label: MENU_CATEGORY_LABELS[c],
+              count: unifiedItems.filter((u) => u.category === c).length,
+            })),
+          ],
+        }}
       />
 
       {selectedIds.size > 0 && (

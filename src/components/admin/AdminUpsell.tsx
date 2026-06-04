@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { Button, LocationFilter, PageHero, Tabs } from "./v2/ui";
+import { Button, PageHero } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -114,7 +114,7 @@ export function AdminUpsell() {
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
         }
-        locations={<LocationFilter value={activeLocation} onChange={setActiveLocation} />}
+        location={{ value: activeLocation, onChange: setActiveLocation }}
         actions={
           <Button
             variant="primary"
@@ -125,18 +125,15 @@ export function AdminUpsell() {
             leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
           />
         }
-        tabs={
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v as TabKey)}
-            tabs={[
-              { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
-              { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
-            ]}
-            variant="underline"
-            ariaLabel="Upsell view"
-          />
-        }
+        nav={{
+          value: tab,
+          onChange: (v) => setTab(v as TabKey),
+          options: [
+            { value: "bundles", label: "Bundles", icon: <Layers className="h-3.5 w-3.5" /> },
+            { value: "modifiers", label: "Item modifiers", icon: <Sliders className="h-3.5 w-3.5" /> },
+          ],
+          ariaLabel: "Upsell view",
+        }}
       />
 
       {tab === "bundles" && (

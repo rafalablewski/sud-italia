@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, PageHero, Tabs, type Column, Table } from "./v2/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, PageHero, type Column, Table } from "./v2/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
 
@@ -356,20 +356,17 @@ function AdminDashboardDesktop() {
             Real-time operations, finance, and customer health.
           </>
         }
-        filters={
-          <Tabs
-            value={period}
-            onChange={(v) => setPeriod(v as Period)}
-            tabs={[
-              { value: "today", label: "Today" },
-              { value: "7d", label: "7d" },
-              { value: "30d", label: "30d" },
-              { value: "90d", label: "90d" },
-            ]}
-            variant="pill"
-            ariaLabel="Date range"
-          />
-        }
+        filter={{
+          value: period,
+          onChange: (v) => setPeriod(v as Period),
+          ariaLabel: "Date range",
+          options: [
+            { value: "today", label: "Today" },
+            { value: "7d", label: "7d" },
+            { value: "30d", label: "30d" },
+            { value: "90d", label: "90d" },
+          ],
+        }}
         actions={
           <>
             <Link

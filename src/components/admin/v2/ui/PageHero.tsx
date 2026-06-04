@@ -1,56 +1,133 @@
 import type { ReactNode } from "react";
+import { Search } from "lucide-react";
+import { LocationFilter } from "./LocationFilter";
+import { Input } from "./Input";
+import { Select } from "./Select";
+import { Tabs } from "./Tabs";
+
+interface TabOption {
+  value: string;
+  label: ReactNode;
+  icon?: ReactNode;
+  count?: number;
+}
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
 interface Props {
-  /** Page title — the serif display h1, alone on row 1. */
+  /** Page title — serif h1, row 1. */
   title: ReactNode;
   /** One-line description — row 2, left. */
   subtitle?: ReactNode;
-  /** Location filter (e.g. `<LocationFilter />`) — row 3, right. */
-  locations?: ReactNode;
-  /** Icon-only actions (compressed primary + secondary) — row 2, right. */
+  /** Icon-only action buttons — row 2, right. The only free-form slot. */
   actions?: ReactNode;
-  /** Search control — row 3, left (grows). */
-  search?: ReactNode;
-  /** List/status filter (`Tabs variant="pill"`) — row 4. */
-  filters?: ReactNode;
-  /** Section-navigation tabs / secondary filter row — row 5. */
-  tabs?: ReactNode;
+  /** Location filter — row 3, right. ALWAYS rendered as the pill `LocationFilter`. */
+  location?: { value: string; onChange: (slug: string) => void; includeAll?: boolean; allLabel?: string };
+  /** Search — row 3, left (grows). ALWAYS the one search `Input`. */
+  search?: { value: string; onChange: (value: string) => void; placeholder?: string };
+  /** Primary list/status filter — row 4. ALWAYS a pill `Tabs`. Use for short option sets. */
+  filter?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
+  /** Secondary filters with many/long options — row 4, after the pill filter.
+   *  ALWAYS rendered as `Select` dropdowns (consistent verbose-filter widget). */
+  dropdowns?: { ariaLabel: string; value: string; onChange: (value: string) => void; options: SelectOption[] }[];
+  /** Section navigation — row 5. ALWAYS an underline `Tabs`. */
+  nav?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
 }
 
 /**
- * The one shared subpage hero. A raised panel with a platinum left rail, laid
- * out as fixed stacked rows so every admin page reads identically:
+ * The one shared subpage hero — a raised panel (platinum left rail) laid out as
+ * fixed stacked rows so every `/admin` page reads identically:
  *
  *   1. title
- *   2. description (left) ⟷ actions (right)
+ *   2. subtitle (left) ⟷ actions (right)
  *   3. search (left) ⟷ location (right)
- *   4. filters (list/status pill)
- *   5. tabs (section navigation / secondary filters)
+ *   4. filter (pill) + verbose dropdowns
+ *   5. nav (underline tabs)
  *
- * Every row is optional and collapses gracefully; all controls live INSIDE the
- * panel — nothing floats below. Used by every `/admin` page (Core-shell surfaces
- * excepted). See `docs/design-system/admin/theme/components.md` (Page hero).
+ * **Data-driven and enforced:** every role takes DATA (not JSX) and the hero
+ * renders the single canonical widget for it — location is always the pill
+ * `LocationFilter`, search is always the one `Input`, the primary filter is
+ * always a pill `Tabs`, verbose filters are always `Select`s, section nav is
+ * always an underline `Tabs`. A page cannot substitute a different widget, so
+ * the controls can never drift apart again. Every row is optional and collapses;
+ * all controls live inside the panel. See `docs/design-system/admin/theme/components.md`.
  */
-export function PageHero({ title, subtitle, locations, actions, search, filters, tabs }: Props) {
+export function PageHero({ title, subtitle, actions, location, search, filter, dropdowns, nav }: Props) {
   const hasMeta = !!(subtitle || actions);
-  const hasFind = !!(search || locations);
+  const hasFind = !!(search || location);
+  const hasFilters = !!(filter || dropdowns?.length);
   return (
     <header className="v2-page-header v2-hero">
       <h1 className="v2-page-title">{title}</h1>
+
       {hasMeta && (
         <div className="v2-hero-row v2-hero-meta">
           {subtitle && <p className="v2-page-subtitle">{subtitle}</p>}
           {actions && <div className="v2-page-actions">{actions}</div>}
         </div>
       )}
+
       {hasFind && (
         <div className="v2-hero-row v2-hero-find">
-          {search && <div className="v2-hero-search">{search}</div>}
-          {locations && <div className="v2-hero-loc">{locations}</div>}
+          {search && (
+            <div className="v2-hero-search">
+              <Input
+                value={search.value}
+                onChange={(e) => search.onChange(e.target.value)}
+                placeholder={search.placeholder ?? "Search…"}
+                leadingAdornment={<Search className="h-3.5 w-3.5" />}
+              />
+            </div>
+          )}
+          {location && (
+            <div className="v2-hero-loc">
+              <LocationFilter
+                value={location.value}
+                onChange={location.onChange}
+                includeAll={location.includeAll}
+                allLabel={location.allLabel}
+              />
+            </div>
+          )}
         </div>
       )}
-      {filters && <div className="v2-hero-filters">{filters}</div>}
-      {tabs && <div className="v2-hero-tabs">{tabs}</div>}
+
+      {hasFilters && (
+        <div className="v2-hero-filters">
+          {filter && (
+            <Tabs
+              value={filter.value}
+              onChange={filter.onChange}
+              tabs={filter.options}
+              variant="pill"
+              ariaLabel={filter.ariaLabel ?? "Filter"}
+            />
+          )}
+          {dropdowns?.map((d, i) => (
+            <Select
+              key={i}
+              aria-label={d.ariaLabel}
+              value={d.value}
+              onChange={(e) => d.onChange(e.target.value)}
+              options={d.options}
+            />
+          ))}
+        </div>
+      )}
+
+      {nav && (
+        <div className="v2-hero-tabs">
+          <Tabs
+            value={nav.value}
+            onChange={nav.onChange}
+            tabs={nav.options}
+            variant="underline"
+            ariaLabel={nav.ariaLabel ?? "View"}
+          />
+        </div>
+      )}
     </header>
   );
 }

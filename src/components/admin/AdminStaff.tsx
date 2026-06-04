@@ -12,7 +12,6 @@ import {
   Monitor,
   Pencil,
   Plus,
-  Search,
   Trash2,
   User,
   Users,
@@ -43,7 +42,6 @@ import {
   PageHero,
   Select,
   Switch,
-  Tabs,
   Table,
   Textarea,
   type Column,
@@ -315,27 +313,21 @@ export function AdminStaff() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, member: null })} aria-label="Hire employee" title={canHire ? "Hire employee" : "New staff member"} />
         }
-        search={
-          <Input
-            placeholder="Search by name, phone, email, role…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as StatusFilter)}
-            tabs={[
-              { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
-              { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
-              { value: "all", label: "All", count: list.length },
-            ]}
-            variant="pill"
-            ariaLabel="Status filter"
-          />
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by name, phone, email, role…",
+        }}
+        filter={{
+          value: statusFilter,
+          onChange: (v) => setStatusFilter(v as StatusFilter),
+          options: [
+            { value: "active", label: "Active", count: list.filter((s) => s.status === "active").length },
+            { value: "inactive", label: "Inactive", count: list.filter((s) => s.status === "inactive").length },
+            { value: "all", label: "All", count: list.length },
+          ],
+          ariaLabel: "Status filter",
+        }}
       />
 
       <section className="v2-kpi-grid">

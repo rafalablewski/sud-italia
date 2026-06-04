@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, Minus, Plus, RefreshCw, Search } from "lucide-react";
+import { History, Minus, Plus, RefreshCw } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -10,9 +10,7 @@ import {
   Card,
   CardBody,
   EmptyState,
-  Input,
   PageHero,
-  Tabs,
 } from "./v2/ui";
 
 interface AuditLogEntry {
@@ -139,32 +137,26 @@ function AuditLogDesktop() {
             title="Refresh"
           />
         }
-        search={
-          <Input
-            placeholder="Search by actor, action, entity id…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={actionFilter}
-            onChange={(v) => setActionFilter(v as ActionFilter)}
-            tabs={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "orders", label: "Orders", count: counts.orders },
-              { value: "menu", label: "Menu", count: counts.menu },
-              { value: "feedback", label: "Feedback", count: counts.feedback },
-              { value: "settings", label: "Settings", count: counts.settings },
-              { value: "loyalty", label: "Loyalty", count: counts.loyalty },
-              { value: "staff", label: "Staff", count: counts.staff },
-              { value: "other", label: "Other", count: counts.other },
-            ]}
-            variant="pill"
-            ariaLabel="Action filter"
-          />
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search by actor, action, entity id…",
+        }}
+        filter={{
+          value: actionFilter,
+          onChange: (v) => setActionFilter(v as ActionFilter),
+          ariaLabel: "Action filter",
+          options: [
+            { value: "all", label: "All", count: counts.all },
+            { value: "orders", label: "Orders", count: counts.orders },
+            { value: "menu", label: "Menu", count: counts.menu },
+            { value: "feedback", label: "Feedback", count: counts.feedback },
+            { value: "settings", label: "Settings", count: counts.settings },
+            { value: "loyalty", label: "Loyalty", count: counts.loyalty },
+            { value: "staff", label: "Staff", count: counts.staff },
+            { value: "other", label: "Other", count: counts.other },
+          ],
+        }}
       />
 
       {loading ? (

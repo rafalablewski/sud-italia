@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Grid3x3, KeyRound, Minus, Search, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
+import { Check, Grid3x3, KeyRound, Minus, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
 import type { AdminRole, AdminUser } from "@/data/types";
 import { ROLE_RANK } from "@/lib/admin-roles";
 import {
@@ -13,7 +13,7 @@ import {
   type PermissionKey,
 } from "@/lib/permissions";
 import { useToast } from "./v2/ui/Toast";
-import { Badge, Card, CardBody, Chip, EmptyState, Input, PageHero, Tabs } from "./v2/ui";
+import { Badge, Card, CardBody, EmptyState, PageHero } from "./v2/ui";
 import { KpiCard } from "./v2/charts";
 
 /** Row shape from /api/admin/users (secrets stripped; `permissions` kept). */
@@ -168,38 +168,31 @@ export function AdminPermissions() {
             Live cross-tab of every capability against your roles and your real accounts — built from the permission catalog (<span className="mono">src/lib/permissions.ts</span>), the role presets, and the current user list. Nothing here is hand-maintained: add a capability or a user and it shows up. <strong>By role</strong> shows the default grant each role inherits; <strong>By user</strong> shows each account&rsquo;s effective access (custom grants override their role) and lets an owner flip a cell to grant or revoke.
           </>
         }
-        search={
-          <Input
-            placeholder="Search capabilities by name, key, or description…"
-            leadingAdornment={<Search className="h-3.5 w-3.5" />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        }
-        filters={
-          <Tabs
-            value={view}
-            onChange={(v) => setView(v as ViewMode)}
-            tabs={[
-              { value: "role", label: "By role" },
-              { value: "user", label: "By user", count: users.length },
-            ]}
-            variant="pill"
-            ariaLabel="Matrix view"
-          />
-        }
-        tabs={
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            <Chip selected={group === "all"} onClick={() => setGroup("all")}>
-              All groups
-            </Chip>
-            {PERMISSION_GROUPS.map((g) => (
-              <Chip key={g.id} selected={group === g.id} onClick={() => setGroup(g.id)}>
-                {g.label}
-              </Chip>
-            ))}
-          </div>
-        }
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Search capabilities by name, key, or description…",
+        }}
+        filter={{
+          value: view,
+          onChange: (v) => setView(v as ViewMode),
+          ariaLabel: "Matrix view",
+          options: [
+            { value: "role", label: "By role" },
+            { value: "user", label: "By user", count: users.length },
+          ],
+        }}
+        dropdowns={[
+          {
+            ariaLabel: "Permission group",
+            value: group,
+            onChange: setGroup,
+            options: [
+              { value: "all", label: "All groups" },
+              ...PERMISSION_GROUPS.map((g) => ({ value: g.id, label: g.label })),
+            ],
+          },
+        ]}
       />
 
       <section className="v2-kpi-grid">

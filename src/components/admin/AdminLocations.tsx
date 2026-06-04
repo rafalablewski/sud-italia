@@ -12,7 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHeader, EmptyState, PageHero, Tabs } from "./v2/ui";
+import { Badge, Card, CardBody, CardHeader, EmptyState, PageHero } from "./v2/ui";
 
 import { AreaChart, BarChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";
@@ -197,20 +197,17 @@ function AdminLocationsDesktop() {
       <PageHero
         title="Multi-location"
         subtitle="Side-by-side benchmark across active locations."
-        filters={
-          <Tabs
-            value={period}
-            onChange={(v) => setPeriod(v as Period)}
-            tabs={[
-              { value: "today", label: "Today" },
-              { value: "7d", label: "7d" },
-              { value: "30d", label: "30d" },
-              { value: "90d", label: "90d" },
-            ]}
-            variant="pill"
-            ariaLabel="Range"
-          />
-        }
+        filter={{
+          value: period,
+          onChange: (v) => setPeriod(v as Period),
+          ariaLabel: "Range",
+          options: [
+            { value: "today", label: "Today" },
+            { value: "7d", label: "7d" },
+            { value: "30d", label: "30d" },
+            { value: "90d", label: "90d" },
+          ],
+        }}
       />
 
       {loading ? (
