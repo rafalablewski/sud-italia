@@ -489,6 +489,11 @@ every page**:
   (`grid-column` 1/2/3) so `actions` stay hard-right even when there are no
   centered stats — never rely on source order. Golden reference:
   `AdminPurchaseOrders`. **Use this on every page** — don't hand-roll a header.
+  Anatomy: `.v2-hero-top` (the grid) wraps `.v2-page-title-row` + `.v2-hero-loc`
+  (col 1), `.v2-hero-stats` › `.v2-hero-stat` › `.v2-hero-stat-k`/`-v` (col 2),
+  `.v2-page-actions` (col 3); `.v2-hero-tier2` is the folded row holding
+  `.v2-hero-search` + `.v2-hero-filters`. Below `820px` every slot stacks to a
+  single column.
   - **`filters` is for compact `Tabs variant="pill"` / segmented filters only**
     (status, category). **Section-navigation or `variant="underline"` tabs go
     BELOW the hero**, as a sibling after `</PageHero>` — never in `filters`

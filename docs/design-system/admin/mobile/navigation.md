@@ -258,8 +258,11 @@ We deliberately **do not** ship a generic `<Modal>` on mobile. Anything that wou
 .v2-m-topbar     { padding-top: var(--m-safe-top); }
 .v2-m-bottom-nav { padding-bottom: var(--m-safe-bottom); }
 .v2-m-sheet      { padding-bottom: max(var(--m-pad-md), var(--m-safe-bottom)); }
-.v2-m-fab        { bottom: calc(64px + 16px + var(--m-safe-bottom)); }
 ```
+
+(The FAB — `.v2-m-bottom-fab` — sits inside `.v2-m-bottom-nav`, so the nav's
+`padding-bottom` already lifts it clear of the home indicator; it needs no
+safe-area rule of its own.)
 
 This handles iPhone notch + home indicator + Android nav bar in one ruleset.
 
