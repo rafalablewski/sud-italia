@@ -180,7 +180,13 @@ box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,.04)
 ```
 
 The `inset 0 1px 0 …` is the **1px hairline top-light** — a refined
-material touch, not a gradient. Hover lifts the border, not the whole card.
+material touch, not a gradient. Static content cards stay flat.
+
+**Interactive cards lift.** A clickable card — `.v2-card-interactive`, or an
+`a`/`button` that *is* a `.v2-card` — gets a tactile hover: border → `--border-strong`,
+`--shadow-sm`, and `translateY(-1px)` on `--duration-fast`, settling back on
+`:active`. KPI tiles (`.v2-kpi`) share the same lift. Reduced-motion drops the
+transform. Don't put the lift on a static card — motion implies "click me."
 
 ### Menu / product cards — text-forward
 

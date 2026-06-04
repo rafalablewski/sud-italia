@@ -1774,9 +1774,36 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   flex-direction: column;
   gap: 10px;
   min-height: 132px;
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
-.v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+
+/* Opt-in interactive elevation for clickable cards. Static content cards stay
+   flat; add this class (or it's applied to a/button.v2-card) for a tactile
+   hover lift — the depth hierarchy the all-flat look lacked. */
+.v2-card-interactive,
+a.v2-card,
+button.v2-card {
+  cursor: pointer;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
+}
+.v2-card-interactive:hover,
+a.v2-card:hover,
+button.v2-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.v2-card-interactive:active,
+a.v2-card:active,
+button.v2-card:active { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .v2-kpi:hover,
+  .v2-card-interactive:hover,
+  .v2-card-interactive:active,
+  a.v2-card:hover,
+  button.v2-card:hover { transform: none; }
+}
 .v2-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .v2-kpi-label {
   font-size: var(--text-xs);
