@@ -443,6 +443,15 @@ no markup wrapper needed; usages just set the class). Structure:
   (`AdminCustomerDetail` — body + foot + delete). The two used to share the
   `.v2-note` name and collided; the callout is now its own `.v2-callout`.
 
+## Kanban (Orders board)
+
+`.v2-kanban-col` lanes carry a **2px status-colour cap** (`.v2-kanban-col-{warning
+|info|success|danger|neutral}` → `--kcol-accent`, mapped from `ORDER_STATUS_TONE`)
+so pending / in-progress / ready / cancelled read at a glance — the same accent-cap
+language as the KPI tiles. `.v2-kanban-card`s lift on hover
+(`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
+interactive-card behaviour.
+
 ## Iconography — custom stroke, no emoji in UI
 
 - Inline SVG, `stroke: currentColor`, `fill: none`,

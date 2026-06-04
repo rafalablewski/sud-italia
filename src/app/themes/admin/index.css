@@ -2224,7 +2224,26 @@ button.v2-card:active { transform: translateY(0); }
   flex-direction: column;
   min-height: 240px;
   max-height: calc(100vh - 240px);
+  position: relative;
+  overflow: hidden;
 }
+/* Status-colour cap so each lane reads at a glance (warning→pending,
+   info→confirmed/preparing, success→ready/completed, danger→cancelled). */
+.v2-kanban-col::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--kcol-accent, transparent);
+  z-index: 1;
+}
+.v2-kanban-col-warning { --kcol-accent: var(--warning); }
+.v2-kanban-col-info { --kcol-accent: var(--info); }
+.v2-kanban-col-success { --kcol-accent: var(--success); }
+.v2-kanban-col-danger { --kcol-accent: var(--danger); }
+.v2-kanban-col-neutral { --kcol-accent: var(--fg-subtle); }
 .v2-kanban-col-header {
   display: flex;
   align-items: center;
@@ -2252,7 +2271,8 @@ button.v2-card:active { transform: translateY(0); }
   cursor: pointer;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
-.v2-kanban-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.v2-kanban-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) { .v2-kanban-card:hover { transform: none; } }
 .v2-kanban-card:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
 .v2-kanban-card-top { display: flex; justify-content: space-between; align-items: center; }
 .v2-kanban-card-id { font-size: var(--text-xs); color: var(--fg-muted); font-weight: 600; letter-spacing: 0.04em; }

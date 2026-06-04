@@ -451,7 +451,7 @@ function Kanban({ orders, onOpen, onAdvance, updating }: KanbanProps) {
       {KANBAN_COLUMNS.map((col) => {
         const list = grouped.get(col) || [];
         return (
-          <div key={col} className="v2-kanban-col">
+          <div key={col} className={`v2-kanban-col v2-kanban-col-${ORDER_STATUS_TONE[col]}`}>
             <div className="v2-kanban-col-header">
               <Badge tone={ORDER_STATUS_TONE[col]} variant="soft" dot>
                 {STATUS_LABEL[col]}
