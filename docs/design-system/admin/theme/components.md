@@ -126,6 +126,10 @@ Placed inline in the tags row on a POS product card.
 - **`.viewswitch`** — the shared **role/view** switcher (KDS Fleet / Floor /
   Chef, Guest Inbox / Guests / Concierge). Same look as `.seg` so the suite
   reads as one product.
+- **`.v2-tabs-pill`** — the `Tabs` segmented variant (period filters, Kanban/
+  Table toggles). Sized to **34px to match `.v2-btn-md`** (3px track pad + 1px
+  border + 26px tab; 8px radius ≈ the button's 7px) so it sits flush beside
+  buttons in a page-header toolbar.
 
 ## Location filter — one component, one look
 
@@ -188,17 +192,15 @@ material touch, not a gradient. Static content cards stay flat.
 `:active`. KPI tiles (`.v2-kpi`) share the same lift. Reduced-motion drops the
 transform. Don't put the lift on a static card — motion implies "click me."
 
-**KPI tone accent.** A `KpiCard`'s `tone` (`brand`/`info`/`success`/`warning`/
-`danger`) paints a 2px coloured cap along the tile's top edge
-(`.v2-kpi-accent-*` → `--kpi-accent`), matching the tone of its icon chip. It
-gives the KPI grid colour and life without tinting the whole surface; `neutral`
-tiles stay capless. This is the sanctioned way to add colour to the dashboard —
-an accent cap, not a filled tile. The label is a **2xs uppercase eyebrow**
-(`.07em` tracked, `--fg-subtle`); the value is the **Fraunces display numeral**
-(`--font-display`, `--text-3xl`, weight 500, `tabular-nums`) — the
-"investment-grade tell" per [typography → Display numerals](./typography.md#display-numerals-kpis);
-the icon sits in a `--radius-md` tone chip. Crisp metric eyebrow → refined serif
-hero number is the KPI rhythm.
+**KPI tiles are clean & minimal.** No coloured top bar. A `KpiCard`'s `tone`
+(`brand`/`info`/`success`/`warning`/`danger`) colours **only the icon chip**
+(`.v2-kpi-tone-*`) — the surface stays calm and standardised. The label is a
+**2xs uppercase eyebrow** (`.07em` tracked, `--fg-subtle`); the value is the
+**Fraunces display numeral** (`--font-display`, `--text-3xl`, weight 500,
+`tabular-nums`) — the "investment-grade tell" per
+[typography → Display numerals](./typography.md#display-numerals-kpis); the icon
+sits in a `--radius-md` tone chip. Crisp metric eyebrow → refined serif hero
+number is the KPI rhythm.
 
 ### Menu / product cards — text-forward
 
@@ -459,13 +461,14 @@ interactive-card behaviour.
 
 ## Page hero & section eyebrows
 
-Hero surfaces (Dashboard, Settings, Users) read as **editorial bands**, not a flat
-card stack:
+Every admin page reads as an **editorial hero band**, not a flat card stack:
 
-- **`.v2-page-hero`** — add to a `.v2-page-header` and its title renders in the
-  serif **`--font-display`** at `--text-3xl` with a short **`--platinum`**
-  underscore (the owner-tier flourish) and a bottom hairline. Opt-in per hero;
-  plain pages keep the sans title. Live on Dashboard / Settings / Users.
+- **`.v2-page-header`** — the shared page header *is* the hero: its title
+  (`.v2-page-title`) renders in the serif **`--font-display`** at `--text-3xl`
+  weight 500, with a short **`--platinum`** underscore (the owner-tier flourish,
+  `::after`) and a bottom hairline. No opt-in class — all ~42 pages that use
+  `.v2-page-header` get the same hero automatically (shared-component
+  consistency). Don't bold the title past 500 (typography doctrine).
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary

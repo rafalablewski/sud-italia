@@ -465,7 +465,7 @@ function AdminUsersDesktop() {
 
   return (
     <div className="v2-page">
-      <header className="v2-page-header v2-page-hero">
+      <header className="v2-page-header">
         <div className="v2-page-title-row">
           <h1 className="v2-page-title">Users & roles</h1>
           <p className="v2-page-subtitle">

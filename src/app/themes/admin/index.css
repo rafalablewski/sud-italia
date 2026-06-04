@@ -1554,17 +1554,20 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
 .v2-tabs-underline .v2-tab:hover:not(:disabled) { color: var(--fg); }
 .v2-tabs-underline .v2-tab.is-active { color: var(--fg); border-bottom-color: var(--brand); }
 
-/* Pill variant */
+/* Pill variant — segmented control. Sized to match a `.v2-btn-md` (34px) so it
+   sits flush beside buttons in a page-header toolbar (3px pad + 1px border +
+   26px tab = 34px; radius 8px ≈ the button's 7px). */
 .v2-tabs-pill {
   padding: 3px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   gap: 2px;
 }
 .v2-tabs-pill .v2-tab {
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 5px;
 }
 .v2-tabs-pill .v2-tab:hover:not(:disabled) { color: var(--fg); }
 .v2-tabs-pill .v2-tab.is-active {
@@ -1777,24 +1780,9 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   position: relative;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
-/* Tone accent — a 2px coloured cap that gives the KPI grid life without
-   tinting the whole tile. Neutral tiles stay capless. Reads as "more colour"
-   while keeping the surface itself restrained. */
-.v2-kpi::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--kpi-accent, transparent);
-}
-.v2-kpi-accent-brand { --kpi-accent: var(--brand); }
-.v2-kpi-accent-info { --kpi-accent: var(--info); }
-.v2-kpi-accent-success { --kpi-accent: var(--success); }
-.v2-kpi-accent-warning { --kpi-accent: var(--warning); }
-.v2-kpi-accent-danger { --kpi-accent: var(--danger); }
+/* Clean & minimal — KPI tiles carry no coloured top bar. Colour lives only in
+   the tone icon chip (`.v2-kpi-tone-*`), keeping the grid calm and standardised
+   (per the Paydo-style reference). */
 .v2-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
 
 /* Opt-in interactive elevation for clickable cards. Static content cards stay
@@ -1894,34 +1882,21 @@ button.v2-card:active { transform: translateY(0); }
 }
 @media (max-width: 720px) { .v2-page { --page-pad: 14px; gap: 14px; } }
 
+/* Every admin page is a hero band: editorial serif title + a short platinum
+   underscore (the owner-tier flourish) + a bottom hairline. This lives on the
+   shared `.v2-page-header`, so all ~42 pages get a consistent hero with no
+   per-page opt-in. */
 .v2-page-header {
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-}
-.v2-page-title-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.v2-page-title {
-  font-size: var(--text-2xl);
-  font-weight: 600;
-  color: var(--fg);
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; max-width: 78ch; line-height: 1.5; }
-.v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-/* Page hero — editorial serif title + a short platinum underscore (the
-   owner-tier flourish) + a bottom hairline. Opt-in per hero surface
-   (`.v2-page-header.v2-page-hero`): Dashboard, Settings, Users. Plain pages
-   keep the sans `.v2-page-title`. */
-.v2-page-hero {
-  position: relative;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
-.v2-page-hero::after {
+.v2-page-header::after {
   content: "";
   position: absolute;
   left: 0;
@@ -1930,12 +1905,17 @@ button.v2-card:active { transform: translateY(0); }
   height: 2px;
   background: var(--platinum);
 }
-.v2-page-hero .v2-page-title {
+.v2-page-title-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.v2-page-title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: 500;
+  color: var(--fg);
   letter-spacing: -0.01em;
+  margin: 0;
 }
+.v2-page-subtitle { font-size: var(--text-sm); color: var(--fg-muted); margin: 0; max-width: 78ch; line-height: 1.5; }
+.v2-page-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Section eyebrow — an uppercase label trailed by a hairline rule, used to
    group the dashboard into editorial bands (Headline / Operations / Performance
