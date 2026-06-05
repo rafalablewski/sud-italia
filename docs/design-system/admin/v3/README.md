@@ -143,5 +143,11 @@ refetches every 30s.
   waste KPIs, status chips) + movements view + edit dialog (par/reorder/on-hand
   via `PUT /api/admin/stock`, log receive/waste/adjust via
   `POST /api/admin/stock-movements`). Aggregates across trucks when scope = all
-- [ ] Operations (Menu/Recipes/HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
+- [x] Menu (`/admin-v3/menu`) — chain-wide product board, **one row per dish**
+  (deduped by `getBaseSlug`, rule #10): price shown as a range + "varies" badge
+  when sites diverge, margin, availability. Edit dialog edits chain-wide
+  metadata (name/description/category — propagated to every site) + per-site
+  price/cost/availability via `PUT /api/admin/menu`. (Modifier editor +
+  add/clone/delete deferred.)
+- [ ] Operations (Recipes/HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

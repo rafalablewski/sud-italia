@@ -88,7 +88,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     id: "operations",
     label: "Operations",
     items: [
-      { href: `${P}/menu`, label: "Menu", icon: UtensilsCrossed, requiredRole: "manager", pending: true },
+      { href: `${P}/menu`, label: "Menu", icon: UtensilsCrossed, requiredRole: "manager" },
       { href: `${P}/recipes`, label: "Recipes", icon: FlaskConical, requiredRole: "manager", pending: true },
       { href: `${P}/haccp`, label: "HACCP log", icon: Thermometer, requiredRole: "staff", pending: true },
       { href: `${P}/waste`, label: "Waste log", icon: Trash2, requiredRole: "staff", pending: true },

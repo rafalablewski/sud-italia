@@ -780,3 +780,14 @@
 .av3-select { appearance: none; cursor: pointer; }
 .av3-formrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .av3-subhead { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--av3-subtle); margin: 16px 0 8px; }
+
+/* per-location price rows (Menu editor) */
+.av3-locrow { display: grid; grid-template-columns: 1fr 92px 92px 56px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--av3-line); }
+.av3-locrow:last-child { border-bottom: none; }
+.av3-locrow-city { font-size: 13px; font-weight: 500; }
+.av3-locrow-head { display: grid; grid-template-columns: 1fr 92px 92px 56px; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--av3-subtle); padding-bottom: 4px; }
+.av3-locrow .av3-input { height: 30px; width: 100%; }
+.av3-toggle { height: 30px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm); background: var(--av3-s2); color: var(--av3-muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.av3-toggle[data-on="true"] { background: var(--av3-ok-soft); border-color: color-mix(in oklab, var(--av3-ok) 35%, transparent); color: var(--av3-ok); }
+.av3-pricecell { display: inline-flex; align-items: center; gap: 6px; }
+.av3-varies { font-size: 9.5px; }
