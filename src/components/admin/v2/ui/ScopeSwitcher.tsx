@@ -35,14 +35,14 @@ interface Props {
  * shell breadcrumb in Phase 2.
  */
 export function ScopeSwitcher({ value, onChange, includeAll = false, allLabel = "All locations", searchThreshold = 7, className = "" }: Props) {
-  const active = getActiveLocations();
-  const options = useMemo(
-    () =>
-      includeAll
-        ? [{ slug: "", city: allLabel }, ...active.map((l) => ({ slug: l.slug, city: l.city }))]
-        : active.map((l) => ({ slug: l.slug, city: l.city })),
-    [active, includeAll, allLabel],
-  );
+  const options = useMemo(() => {
+    // Call inside the memo: getActiveLocations() returns a fresh array each call,
+    // so depending on it would defeat memoization. Recompute only on the inputs.
+    const active = getActiveLocations();
+    return includeAll
+      ? [{ slug: "", city: allLabel }, ...active.map((l) => ({ slug: l.slug, city: l.city }))]
+      : active.map((l) => ({ slug: l.slug, city: l.city }));
+  }, [includeAll, allLabel]);
 
   const current = options.find((o) => o.slug === value) ?? options[0];
 

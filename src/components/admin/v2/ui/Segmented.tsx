@@ -50,7 +50,7 @@ export function Segmented<V extends string>({ value, onChange, options, block = 
       onChange(enabled[next].value);
       const root = e.currentTarget.parentElement;
       const btns = root?.querySelectorAll<HTMLButtonElement>('button[role="radio"]');
-      btns?.item(enabled[next].i).focus();
+      btns?.item(enabled[next].i)?.focus();
     },
     [onChange, options],
   );

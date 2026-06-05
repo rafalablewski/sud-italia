@@ -24,6 +24,10 @@ export function useSaveState(saveFn: () => void | Promise<void>) {
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest-ref so `save` keeps a stable identity even when the caller passes an
+  // inline `saveFn` that's recreated every render (the common case).
+  const saveFnRef = useRef(saveFn);
+  useEffect(() => { saveFnRef.current = saveFn; }, [saveFn]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -31,7 +35,7 @@ export function useSaveState(saveFn: () => void | Promise<void>) {
     setStatus("saving");
     setError(null);
     try {
-      await saveFn();
+      await saveFnRef.current();
       setStatus("saved");
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 1500);
@@ -39,7 +43,7 @@ export function useSaveState(saveFn: () => void | Promise<void>) {
       setStatus("error");
       setError(e instanceof Error ? e.message : "Couldn't save");
     }
-  }, [saveFn]);
+  }, []);
 
   const reset = useCallback(() => {
     setStatus("idle");

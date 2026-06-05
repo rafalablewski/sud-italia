@@ -447,7 +447,7 @@ function AdminCohortReportDesktop() {
                             className="v2-cohort-td-cell tabular"
                             style={{
                               background: pct > 0 ? heatColor(pct) : undefined,
-                              color: pct > 30 ? "#fff" : undefined,
+                              color: pct > 30 ? "var(--brand-fg)" : undefined,
                             }}
                             title={`${r.retained}/${c.cohortSize} reordered · ${formatPrice(r.revenueGrosze)}`}
                           >

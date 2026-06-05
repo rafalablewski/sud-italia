@@ -16,8 +16,11 @@
  */
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
+// fileURLToPath (not `new URL(...).pathname`) so the path is correct on Windows
+// too (the raw pathname carries a leading slash before the drive letter).
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 function pascal(slug: string): string {
   return slug

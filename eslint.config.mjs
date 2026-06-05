@@ -104,7 +104,11 @@ const eslintConfig = defineConfig([
             "Design system: glass-* classes are legacy. Use <Card> / <Input> / <Button> from v2/ui (blueprint §6, Phase 4).",
         },
         {
-          selector: "Literal[value=/^#[0-9a-fA-F]{6}$/]",
+          // Whole-value hex literals (3/4/6/8-digit) in JSX string literals AND
+          // template expressions. Anchored so it never flags a `var(--x, #hex)`
+          // fallback (that whole string isn't a bare hex).
+          selector:
+            "Literal[value=/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/], TemplateElement[value.raw=/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]",
           message:
             "Design system: inline hex is banned — use a var(--token) colour (blueprint §3.5 / §5).",
         },
