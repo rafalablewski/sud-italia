@@ -217,7 +217,9 @@ refetches every 30s.
   repeat/CLV KPIs, per-customer detail) derived from real orders
 - [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
-  and AI sentiment (`POST /api/admin/feedback/analyze`)
+  and AI sentiment (`POST /api/admin/feedback/analyze`). **Charts restored (flag
+  #4):** a rating-distribution `BarChart` + a sentiment `Donut` + legend, both
+  derived from the loaded reviews.
 - [x] Corporate (`/admin-v3/corporate`) — B2B wallet-backed accounts: members /
   pool / head-bonus KPIs + edit dialog (billing, bonus %, min staff, home site,
   auto-preorder) via `PUT /api/admin/corporate`
@@ -267,7 +269,9 @@ refetches every 30s.
   read-only cross-location inventory. All config round-trips through
   `PUT /api/admin/upsell` (saves on change, rule #7).
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
-  cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
+  cross-site comparison table + chain KPIs (`/api/admin/insights`), plus a
+  **revenue-share `Donut`** + **orders-by-site `BarChart`** (flag #4, restored
+  cross-site viz). Menu
   engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
   classification with window select, quadrant chips + per-dish verdict
   (`/api/admin/menu-engineering`); **Rule #12:** all four quadrant KPIs now

@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Banknote, MapPin, Percent } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { Kpi, Table, type ColumnV3 } from "./ui";
+import { BarChart, Card, CardBody, CardHead, ChartLegend, Donut, Kpi, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
+
+const SITE_PALETTE = ["--av3-c1", "--av3-c3", "--av3-c4", "--av3-c2", "--av3-c5", "--av3-c6"];
 
 interface LocCmp {
   locationSlug: string;
@@ -38,6 +40,17 @@ export function MultiLocationV3() {
 
   const sorted = useMemo(() => [...rows].sort((a, b) => b.revenue - a.revenue), [rows]);
 
+  // Revenue values stay in grosze (the donut only needs proportions; the
+  // legend + centre format with formatPrice).
+  const revShare = useMemo<DonutDatum[]>(
+    () => sorted.map((r, i) => ({ label: r.city, value: r.revenue, colorVar: SITE_PALETTE[i % SITE_PALETTE.length] })),
+    [sorted],
+  );
+  const ordersByCity = useMemo<BarDatum[]>(
+    () => sorted.map((r, i) => ({ label: r.city, value: r.orderCount, colorVar: SITE_PALETTE[i % SITE_PALETTE.length] })),
+    [sorted],
+  );
+
   const cols: ColumnV3<LocCmp>[] = [
     { key: "city", header: "Location", render: (r) => <span style={{ fontWeight: 600 }}>{r.city}</span> },
     { key: "rev", header: "Revenue", num: true, render: (r) => formatPrice(r.revenue) },
@@ -62,6 +75,24 @@ export function MultiLocationV3() {
         <Kpi label="Chain orders" icon={MapPin} value={totals.orders.toLocaleString("pl-PL")} accentVar="--av3-c3" />
         <Kpi label="Avg margin" icon={Percent} value={`${totals.margin.toFixed(1)}%`} accentVar="--av3-c4" />
       </div>
+
+      {!loading && sorted.length > 0 && (
+        <div className="av3-grid-2">
+          <Card>
+            <CardHead title="Revenue share" description="Each site's slice of chain revenue" />
+            <CardBody>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                <Donut data={revShare} size={150} centerValue={formatPrice(totals.revenue)} centerLabel="CHAIN" />
+                <ChartLegend items={revShare} format={(n) => `${formatPrice(n)} · ${totals.revenue ? Math.round((n / totals.revenue) * 100) : 0}%`} />
+              </div>
+            </CardBody>
+          </Card>
+          <Card>
+            <CardHead title="Orders by site" description="Order volume · last 30 days" />
+            <CardBody><BarChart data={ordersByCity} height={150} /></CardBody>
+          </Card>
+        </div>
+      )}
 
       {loading ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading location comparison…</div>
