@@ -155,5 +155,12 @@ refetches every 30s.
   shared catalog + qty + waste% + yield) with a live cost estimate; saves once
   chain-wide via `POST /api/admin/recipes`, deletes via `DELETE`. (Ingredient
   catalog / distributor offerings / nutrition manager deferred.)
-- [ ] Operations (HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
+- [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
+  live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
+- [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
+  entries + write-off cost KPI (`POST /api/admin/waste`)
+- [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
+  counted → variance, temp/waste/equipment checks, managers, comment) + the
+  week's log (`POST /api/admin/handover`)
+- [ ] Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

@@ -90,9 +90,9 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     items: [
       { href: `${P}/menu`, label: "Menu", icon: UtensilsCrossed, requiredRole: "manager" },
       { href: `${P}/recipes`, label: "Recipes", icon: FlaskConical, requiredRole: "manager" },
-      { href: `${P}/haccp`, label: "HACCP log", icon: Thermometer, requiredRole: "staff", pending: true },
-      { href: `${P}/waste`, label: "Waste log", icon: Trash2, requiredRole: "staff", pending: true },
-      { href: `${P}/handover`, label: "Shift handover", icon: ClipboardCheck, requiredRole: "manager", pending: true },
+      { href: `${P}/haccp`, label: "HACCP log", icon: Thermometer, requiredRole: "staff" },
+      { href: `${P}/waste`, label: "Waste log", icon: Trash2, requiredRole: "staff" },
+      { href: `${P}/handover`, label: "Shift handover", icon: ClipboardCheck, requiredRole: "manager" },
     ],
   },
   {
