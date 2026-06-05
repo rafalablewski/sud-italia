@@ -187,6 +187,14 @@ refetches every 30s.
   network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
   from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
   (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
+- [x] Ops Agent (`/admin-v3/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
+  (`AgentV3`). Claude with role-gated read+write tools over
+  `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,
+  **human-in-the-loop tool approval** (mutating tools render a pending card with
+  a Confirm & execute button; re-sends the turn with the approved tool id),
+  executed/error tool cards with expandable input/output, recent-conversation
+  list, session-cost readout, and the API-key-not-configured empty state. CSS
+  §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
 - [x] Alerts (`/admin-v3/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/

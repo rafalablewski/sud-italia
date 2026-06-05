@@ -949,3 +949,28 @@
 .av3-detail-list { display: flex; flex-direction: column; }
 .av3-formrow-note { display: grid; grid-template-columns: 1fr 160px auto; gap: var(--av3-gap-2); align-items: end; }
 @media (max-width: 720px) { .av3-formrow-note { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   17. Ops Agent chat (/admin-v3/ai/agent) — conversation + tool approval
+   ========================================================================== */
+.av3-conv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 9px; border: none; background: none; border-radius: var(--av3-r-sm); color: var(--av3-fg); font-size: 13px; cursor: pointer; }
+.av3-conv-row:hover { background: var(--av3-hover); }
+.av3-conv-row.is-active { background: var(--av3-s3); }
+.av3-chat-scroll { display: flex; flex-direction: column; gap: 16px; max-height: 55vh; overflow-y: auto; padding-right: 4px; }
+.av3-chat-turn { display: flex; flex-direction: column; gap: 10px; }
+.av3-chat-user { align-self: flex-end; max-width: 80%; padding: 8px 12px; border-radius: 13px 13px 3px 13px; background: var(--av3-brand-soft); color: var(--av3-fg); font-size: 13px; }
+.av3-chat-bot { align-self: flex-start; max-width: 85%; padding: 8px 12px; border-radius: 13px 13px 13px 3px; background: var(--av3-s2); border: 1px solid var(--av3-line); color: var(--av3-fg); font-size: 13px; white-space: pre-wrap; }
+.av3-tool { align-self: flex-start; max-width: 85%; padding: 9px 11px; border-radius: var(--av3-r-md); border: 1px solid var(--av3-line); font-size: 12px; }
+.av3-tool.is-pending { border-color: color-mix(in oklab, var(--av3-warn) 35%, transparent); background: var(--av3-warn-soft); }
+.av3-tool.is-error { border-color: color-mix(in oklab, var(--av3-bad) 35%, transparent); background: var(--av3-bad-soft); }
+.av3-tool.is-ok { border-color: color-mix(in oklab, var(--av3-ok) 35%, transparent); background: var(--av3-ok-soft); }
+.av3-tool-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.av3-tool-name { font-family: var(--av3-mono); font-weight: 600; font-size: 12px; }
+.av3-tool-preview { font-size: 12px; color: var(--av3-fg); margin-bottom: 8px; }
+.av3-tool-details { margin-top: 6px; }
+.av3-tool-details summary { cursor: pointer; color: var(--av3-subtle); font-size: 10.5px; list-style: none; }
+.av3-tool-details pre { margin-top: 6px; max-height: 160px; overflow: auto; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); padding: 8px; font-size: 10.5px; font-family: var(--av3-mono); }
+.av3-chat-error { margin-top: 12px; padding: 8px 12px; border-radius: var(--av3-r-sm); background: var(--av3-bad-soft); border: 1px solid color-mix(in oklab, var(--av3-bad) 35%, transparent); color: var(--av3-bad); font-size: 13px; }
+.av3-chat-composer { display: flex; gap: var(--av3-gap-2); margin-top: 14px; align-items: flex-end; }
+.av3-chat-input { flex: 1; min-height: 56px; height: auto; padding: 8px 10px; resize: vertical; font-family: var(--av3-ui); }
+@media (max-width: 560px) { .av3-chat-user, .av3-chat-bot, .av3-tool { max-width: 100%; } }

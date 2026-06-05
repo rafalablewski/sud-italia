@@ -67,10 +67,10 @@ touch*. Read that section before adding more (Rule #11).
 The owner is verifying the full v3 on the preview before any swap. Do **not**
 flip routing or delete v2 until told to. The plan, when greenlit:
 
-1. **One v2-only surface still needs a v3 home** before a clean full swap:
-   - `ai/agent` → `OpsAgentChat` (`src/components/admin/OpsAgentChat.tsx`) — the
-     ops-assistant chat. No v3 equivalent yet (v3 `/ai` is Insights, a different
-     thing).
+1. **Both v2-only surfaces now have a v3 home** (a clean full swap is unblocked):
+   - ~~`ai/agent` → `OpsAgentChat`~~ — **DONE.** Re-homed as `AgentV3` at
+     `/admin-v3/ai/agent` (Intelligence nav). Same `/api/admin/ai-agent/*`
+     endpoints, v3-styled tool-approval flow.
    - ~~`alerts` → `MobileAlerts`~~ — **DONE.** Re-homed as `AlertsV3` at
      `/admin-v3/alerts` (see README migration status). Nav entry added.
    - Every other `/admin`-only route is either a `/core/*` redirect stub

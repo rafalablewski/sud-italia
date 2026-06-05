@@ -31,11 +31,12 @@ false positives or intentional v3 density decisions** and were dropped:
   `/api/admin/notifications` (filter chips with counts, Today/Yesterday/Earlier
   buckets, per-type tone+icon, mark-read / mark-all-read, tap-to-navigate).
   Nav entry (Overview), CSS §14, docs, mockup `admin-v3/alerts.html`. **DONE.**
-- [ ] **2. Ops Agent chat** — `/admin-v3/ai/agent`. v2 `OpsAgentChat` has no v3
-  home (confirmed). Build `AgentV3` (conversational ops assistant: tool-approval
-  flow, executed/error tool cards, conversation history, cost readout) over the
-  same `/api/admin/agent` endpoints. Add nav entry (Intelligence), CSS, docs,
-  mockup.
+- [x] **2. Ops Agent chat** — `/admin-v3/ai/agent`. `AgentV3` — conversational
+  ops assistant over `/api/admin/ai-agent/*` (conversations + turn): tool-approval
+  flow (human-in-the-loop on mutating tools), executed/error tool cards with
+  expandable I/O, conversation history, session cost readout, and the
+  gateway-not-configured empty state. Nav entry (Intelligence), CSS §17, mockup
+  `admin-v3/agent.html`. **DONE — both v2-only surfaces now have a v3 home.**
 - [x] **3. Audit-log diff view** — row click opens a v3 detail `Dialog` with a
   native `DiffRenderer` (added/removed/changed keys, before↔after blocks,
   pretty-JSON for nested shapes) over the API's `before`/`after`. CSS §15,
