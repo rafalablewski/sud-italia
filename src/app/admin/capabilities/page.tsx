@@ -38,6 +38,12 @@ export default async function CapabilitiesPage() {
       title: "Core platform",
       items: [
         {
+          name: "Admin v3 (Operator Terminal) — preview",
+          status: "live",
+          href: "/admin-v3",
+          summary: "Ground-up, density-first rebuild of the admin back-office (isolated under themes/admin-v3 + components/admin/v3 so v2 can be deleted at parity). Live at /admin-v3; the Dashboard is wired to the real analytics/insights/orders/labour APIs. Operations→System pages migrate next. Core (POS/KDS/Guest) is untouched.",
+        },
+        {
           name: "Distributed locks (Upstash)",
           status: has("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN") ? "live" : "needs-config",
           envVars: ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
