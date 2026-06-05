@@ -897,3 +897,29 @@
 .av3-iconbtn-sm svg { width: 14px; height: 14px; }
 .av3-recipe-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--av3-line-strong); }
 .av3-recipe-summary .v { font-family: var(--av3-mono); font-size: 18px; font-weight: 600; }
+
+/* ==========================================================================
+   14. Alerts inbox (/admin-v3/alerts) — bucketed action queue
+   ========================================================================== */
+.av3-alert-sect-h { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); padding: 13px 14px 3px; }
+.av3-alert-list { display: flex; flex-direction: column; }
+.av3-alert-row { display: flex; align-items: flex-start; gap: 11px; width: 100%; text-align: left; padding: 10px 14px; background: none; border: none; border-top: 1px solid var(--av3-line); cursor: pointer; font: inherit; color: var(--av3-fg); transition: background var(--av3-t-fast) var(--av3-ease); }
+.av3-alert-list .av3-alert-row:first-child { border-top: none; }
+.av3-alert-row:hover { background: var(--av3-hover); }
+.av3-alert-ico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--av3-r-sm); flex-shrink: 0; }
+.av3-alert-ico svg { width: 15px; height: 15px; }
+.av3-alert-ico[data-tone="ok"] { color: var(--av3-ok); background: var(--av3-ok-soft); }
+.av3-alert-ico[data-tone="warn"] { color: var(--av3-warn); background: var(--av3-warn-soft); }
+.av3-alert-ico[data-tone="bad"] { color: var(--av3-bad); background: var(--av3-bad-soft); }
+.av3-alert-ico[data-tone="info"] { color: var(--av3-info); background: var(--av3-info-soft); }
+.av3-alert-ico[data-tone="neutral"] { color: var(--av3-muted); background: var(--av3-s3); }
+.av3-alert-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.av3-alert-title { font-size: 12.5px; font-weight: 500; }
+.av3-alert-row[data-unread="true"] .av3-alert-title { font-weight: 650; }
+.av3-alert-msg { font-size: 11.5px; color: var(--av3-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av3-alert-meta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; padding-top: 2px; }
+.av3-alert-loc { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--av3-subtle); background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); padding: 1px 5px; }
+.av3-alert-time { font-family: var(--av3-mono); font-size: 10.5px; color: var(--av3-subtle); font-variant-numeric: tabular-nums; }
+.av3-alert-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--av3-brand); flex-shrink: 0; }
+.av3-alert-chev { width: 14px; height: 14px; color: var(--av3-subtle); }
+@media (pointer: coarse) { .av3-alert-row { min-height: 44px; } }

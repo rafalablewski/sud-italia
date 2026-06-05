@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Alerts inbox — mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root, [data-theme="dark"] {
+      --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+      --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+      --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+      --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+      --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+      --av3-ok-soft:color-mix(in oklab,#34b27b 16%,#141417); --av3-warn-soft:color-mix(in oklab,#e0a93f 16%,#141417);
+      --av3-bad-soft:color-mix(in oklab,#e8554f 16%,#141417); --av3-info-soft:color-mix(in oklab,#5f9bd6 16%,#141417);
+      --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
+    }
+    [data-theme="light"] {
+      --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+      --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+      --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73;
+      --av3-brand:#a82940; --av3-platinum:#9c7e4e;
+      --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694;
+      --av3-ok-soft:color-mix(in oklab,#1f8a60 14%,#fff); --av3-warn-soft:color-mix(in oklab,#b5781d 14%,#fff);
+      --av3-bad-soft:color-mix(in oklab,#cc3a35 14%,#fff); --av3-info-soft:color-mix(in oklab,#3d6694 14%,#fff);
+      --av3-sh-1:0 1px 2px rgba(28,24,21,.06);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    .mono { font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; }
+    a { color:inherit; text-decoration:none; }
+    .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c;
+      background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; letter-spacing:.02em; }
+    .shell { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 28px); }
+    .side { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; background:var(--av3-s1); border-right:1px solid var(--av3-line); overflow:hidden; }
+    .brand { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--av3-line); flex-shrink:0; }
+    .brand-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:5px; background:var(--av3-brand); color:#fff; font-family:"Fraunces",serif; font-size:12px; font-weight:600; box-shadow:inset 0 0 0 1px rgba(203,180,138,.5); }
+    .brand-name { font-family:"Fraunces",serif; font-size:14px; font-weight:600; line-height:1.1; }
+    .brand-sub { font-size:9.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .side-scroll { flex:1; overflow-y:auto; padding:12px 8px; }
+    .group { margin-bottom:12px; }
+    .eyebrow { padding:6px 8px 3px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .nav { position:relative; display:flex; align-items:center; gap:10px; height:30px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12.5px; font-weight:500; }
+    .nav svg { width:16px; height:16px; flex-shrink:0; }
+    .nav.active { background:var(--av3-s3); color:var(--av3-fg); }
+    .nav.active::before { content:""; position:absolute; left:-8px; top:7px; bottom:7px; width:2px; border-radius:0 2px 2px 0; background:var(--av3-platinum); }
+    .main { display:flex; flex-direction:column; min-width:0; }
+    .topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; height:44px; padding:0 14px; border-bottom:1px solid var(--av3-line);
+      background:color-mix(in oklab,var(--av3-bg) 80%,transparent); backdrop-filter:saturate(150%) blur(10px); }
+    .crumbs { display:flex; align-items:center; gap:6px; font-size:12.5px; } .crumbs .cur { font-weight:600; } .spacer { flex:1; }
+    .icon-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--av3-muted); position:relative; cursor:pointer; }
+    .icon-btn:hover { background:var(--av3-s2); color:var(--av3-fg); } .icon-btn svg { width:15px; height:15px; }
+    .bell-badge { position:absolute; top:1px; right:1px; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:var(--av3-brand); color:#fff; font-size:9px; font-weight:700; line-height:14px; text-align:center; }
+    .scope { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--av3-line); border-radius:5px; background:var(--av3-s1); color:var(--av3-fg); font-size:12.5px; }
+    .scope svg { width:13px; height:13px; color:var(--av3-subtle); }
+    .content { padding:16px; display:flex; flex-direction:column; gap:16px; }
+    .pagehead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+    .pagehead h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; letter-spacing:-.01em; }
+    .pagehead-sub { margin-top:2px; font-size:12.5px; color:var(--av3-muted); }
+    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:5px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; }
+    .btn svg { width:14px; height:14px; }
+    /* filter chips with counts */
+    .filterchips { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; flex-wrap:wrap; }
+    .fchip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:5px; border:0; background:transparent; color:var(--av3-muted); font-size:12px; font-weight:500; cursor:pointer; }
+    .fchip.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); }
+    .fchip-count { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--av3-subtle); }
+    .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); overflow:hidden; }
+    /* alerts inbox */
+    .sect-h { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); padding:13px 14px 3px; }
+    .arow { display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left; padding:10px 14px; background:none; border:0; border-top:1px solid var(--av3-line); cursor:pointer; color:var(--av3-fg); }
+    .arow:hover { background:var(--av3-hover); }
+    .aico { display:grid; place-items:center; width:28px; height:28px; border-radius:6px; flex-shrink:0; }
+    .aico svg { width:15px; height:15px; }
+    .aico.ok { color:var(--av3-ok); background:var(--av3-ok-soft); } .aico.warn { color:var(--av3-warn); background:var(--av3-warn-soft); }
+    .aico.bad { color:var(--av3-bad); background:var(--av3-bad-soft); } .aico.info { color:var(--av3-info); background:var(--av3-info-soft); }
+    .abody { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .atitle { font-size:12.5px; font-weight:500; } .arow.unread .atitle { font-weight:650; }
+    .amsg { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+    .ameta { display:flex; align-items:center; gap:7px; flex-shrink:0; padding-top:2px; }
+    .aloc { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--av3-subtle); background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:5px; padding:1px 5px; }
+    .atime { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--av3-subtle); }
+    .adot { width:6px; height:6px; border-radius:50%; background:var(--av3-brand); flex-shrink:0; }
+    .achev { width:14px; height:14px; color:var(--av3-subtle); }
+    @media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} }
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · illustrative figures — the live build at <strong style="margin:0 4px">/admin-v3/alerts</strong> wires every row to <strong style="margin:0 4px">/api/admin/notifications</strong></div>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group">
+          <div class="eyebrow">Overview</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Orders</a>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <nav class="crumbs"><span class="cur">Alerts</span></nav>
+        <div class="spacer"></div>
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button>
+      </header>
+      <main class="content">
+        <div class="pagehead">
+          <div><h1>Alerts</h1><div class="pagehead-sub">3 unread of 6 · the full action queue</div></div>
+          <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>Mark all read</button>
+        </div>
+
+        <div class="filterchips">
+          <span class="fchip active">Unread<span class="fchip-count">3</span></span>
+          <span class="fchip">All<span class="fchip-count">6</span></span>
+          <span class="fchip">Orders<span class="fchip-count">2</span></span>
+          <span class="fchip">Slots<span class="fchip-count">1</span></span>
+          <span class="fchip">Stock<span class="fchip-count">1</span></span>
+          <span class="fchip">Money<span class="fchip-count">1</span></span>
+        </div>
+
+        <div class="card">
+          <div class="sect-h">Today</div>
+          <button class="arow unread">
+            <span class="aico warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+            <span class="abody"><span class="atitle">San Marzano DOP low</span><span class="amsg">Kraków · 4 kg left, below reorder point</span></span>
+            <span class="ameta"><span class="aloc">krakow</span><span class="atime">6m</span><span class="adot"></span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+          <button class="arow unread">
+            <span class="aico info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+            <span class="abody"><span class="atitle">New order #20871</span><span class="amsg">Warszawa · delivery · 64,80 zł</span></span>
+            <span class="ameta"><span class="aloc">warszawa</span><span class="atime">11m</span><span class="adot"></span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+          <button class="arow unread">
+            <span class="aico warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+            <span class="abody"><span class="atitle">18:30 slot almost full</span><span class="amsg">Kraków · 2 of 12 spots left</span></span>
+            <span class="ameta"><span class="aloc">krakow</span><span class="atime">23m</span><span class="adot"></span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+          <button class="arow">
+            <span class="aico ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.9 5.8H20l-5 3.6 1.9 5.8-5-3.6-5 3.6L8.9 12.4 4 8.8h6.1z"/></svg></span>
+            <span class="abody"><span class="atitle">Daily summary ready</span><span class="amsg">Chain · 48 920 zł across 1 284 orders</span></span>
+            <span class="ameta"><span class="atime">2h</span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="sect-h">Yesterday</div>
+          <button class="arow">
+            <span class="aico ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+            <span class="abody"><span class="atitle">Order #20859 completed</span><span class="amsg">Warszawa · picked up on time</span></span>
+            <span class="ameta"><span class="aloc">warszawa</span><span class="atime">1d</span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+          <button class="arow">
+            <span class="aico bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+            <span class="abody"><span class="atitle">Payment dispute opened</span><span class="amsg">Kra029 · 52,30 zł · respond within 7 days</span></span>
+            <span class="ameta"><span class="aloc">krakow</span><span class="atime">1d</span><svg class="achev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+          </button>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
+</body>
+</html>

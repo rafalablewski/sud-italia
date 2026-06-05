@@ -30,6 +30,7 @@ import {
   Map,
   MapPin,
   Brain,
+  Bell,
   ShieldCheck,
   Grid3x3,
   History,
@@ -72,6 +73,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     items: [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
       { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
+      { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
     ],
   },
   {

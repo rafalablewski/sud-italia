@@ -6,17 +6,23 @@ import {
   Banknote,
   CheckCircle2,
   ChefHat,
+  ClipboardList,
   Coins,
   Flame,
   Pencil,
+  Percent,
+  PiggyBank,
+  Receipt,
   RefreshCw,
   Target,
   TrendingUp,
   Users,
+  XCircle,
 } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 import { isLocationOpenNow } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Button } from "./ui";
+import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, Kpi, Table, type ColumnV3 } from "./ui";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function zl(grosze: number): string {
@@ -39,17 +45,49 @@ function relTime(iso: string): string {
 }
 
 // ── payload shapes (the subset we read) ─────────────────────────────────────
+interface DailyStat { date: string; revenue: number; orderCount: number }
+interface TopItem { name: string; quantity: number; revenue: number }
 interface Summary {
   totalRevenue: number;
   totalProfit: number;
   profitMargin: number; // whole-number percent
   totalOrders: number;
   avgOrderValue: number; // grosze
+  dailyStats?: DailyStat[];
+  topItems?: TopItem[];
+}
+interface LocCompare {
+  locationSlug: string;
+  city: string;
+  revenue: number;
+  profit?: number;
+  profitMargin?: number;
+  orderCount: number;
+  avgOrderValue?: number;
+  cancellationRate?: number;
 }
 interface Insights {
   avgItemsPerOrder: number;
   cancellationRate: number; // whole-number percent
-  locationComparison: { locationSlug: string; city: string; revenue: number; orderCount: number }[];
+  locationComparison: LocCompare[];
+}
+
+// ── executive overview (analytics report — matches the dashboard mockup) ─────
+type ExecPeriod = "today" | "7d" | "30d" | "90d";
+const EX_DAYS: Record<ExecPeriod, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+const EX_OPTS: { value: ExecPeriod; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "7d", label: "7d" },
+  { value: "30d", label: "30d" },
+  { value: "90d", label: "90d" },
+];
+function execRange(period: ExecPeriod) {
+  const days = EX_DAYS[period];
+  const to = new Date();
+  const from = new Date(Date.now() - (days - 1) * 86400000);
+  const pTo = new Date(from.getTime() - 86400000);
+  const pFrom = new Date(pTo.getTime() - (days - 1) * 86400000);
+  return { from: isoDay(from), to: isoDay(to), pFrom: isoDay(pFrom), pTo: isoDay(pTo) };
 }
 interface FleetTile {
   slug: string;
@@ -122,6 +160,34 @@ export function DashboardV3() {
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalDraft, setGoalDraft] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
+
+  // executive overview (analytics report) — own period + payloads
+  const [exPeriod, setExPeriod] = useState<ExecPeriod>("7d");
+  const [exec, setExec] = useState<Summary | null>(null);
+  const [execPrev, setExecPrev] = useState<Summary | null>(null);
+  const [execIns, setExecIns] = useState<Insights | null>(null);
+  const [execInsPrev, setExecInsPrev] = useState<Insights | null>(null);
+
+  const fetchExec = useCallback(async () => {
+    const { from, to, pFrom, pTo } = execRange(exPeriod);
+    const loc = location ? `&location=${location}` : "";
+    try {
+      const [cur, prevp, ins, insPrev] = await Promise.all([
+        fetch(`/api/admin/analytics?from=${from}&to=${to}${loc}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/analytics?from=${pFrom}&to=${pTo}${loc}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/insights?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`/api/admin/insights?from=${pFrom}&to=${pTo}`).then((r) => (r.ok ? r.json() : null)),
+      ]);
+      setExec(cur);
+      setExecPrev(prevp);
+      setExecIns(ins);
+      setExecInsPrev(insPrev);
+    } catch (err) {
+      console.error("Executive overview refresh failed:", err);
+    }
+  }, [exPeriod, location]);
+
+  useEffect(() => { fetchExec(); }, [fetchExec]);
 
   const fetchAll = useCallback(async () => {
     const today = isoDay();
@@ -312,6 +378,31 @@ export function DashboardV3() {
   const aovDelta = pctDelta(aov, prev?.avgOrderValue ?? 0);
   const marginDelta = pctDelta(margin, prev?.profitMargin ?? 0);
 
+  // ── executive overview derivations ─────────────────────────────────────────
+  const exDaily = exec?.dailyStats ?? [];
+  const exRevSpark = exDaily.map((d) => Math.round(d.revenue / 100));
+  const exOrdSpark = exDaily.map((d) => d.orderCount);
+  const exAovSpark = exDaily.map((d) => (d.orderCount ? Math.round(d.revenue / d.orderCount / 100) : 0));
+  const exTop = (exec?.topItems ?? []).slice(0, 6);
+  const exTopMax = Math.max(1, ...exTop.map((t) => t.revenue));
+  const exCancel = execIns?.cancellationRate ?? 0;
+  const exLocRows = execIns?.locationComparison ?? [];
+  const exPeak = exDaily.length ? Math.max(...exDaily.map((d) => d.revenue)) : 0;
+  const exRevDelta = pctDelta(exec?.totalRevenue ?? 0, execPrev?.totalRevenue ?? 0);
+  const exOrdDelta = pctDelta(exec?.totalOrders ?? 0, execPrev?.totalOrders ?? 0);
+  const exAovDelta = pctDelta(exec?.avgOrderValue ?? 0, execPrev?.avgOrderValue ?? 0);
+  const exMarginDelta = pctDelta(exec?.profitMargin ?? 0, execPrev?.profitMargin ?? 0);
+  const exProfitDelta = pctDelta(exec?.totalProfit ?? 0, execPrev?.totalProfit ?? 0);
+  const exCancelDelta = pctDelta(exCancel, execInsPrev?.cancellationRate ?? 0);
+  const locCols: ColumnV3<LocCompare>[] = [
+    { key: "city", header: "Location", render: (l) => <span style={{ fontWeight: 600 }}>{l.city}</span> },
+    { key: "rev", header: "Revenue", num: true, render: (l) => formatPrice(l.revenue) },
+    { key: "ord", header: "Orders", num: true, render: (l) => l.orderCount.toLocaleString("pl-PL") },
+    { key: "aov", header: "AOV", num: true, render: (l) => formatPrice(l.avgOrderValue ?? 0) },
+    { key: "mar", header: "Margin", num: true, render: (l) => `${(l.profitMargin ?? 0).toFixed(0)}%` },
+    { key: "can", header: "Cancel", num: true, render: (l) => `${(l.cancellationRate ?? 0).toFixed(0)}%` },
+  ];
+
   return (
     <>
       <div className="av3-now">
@@ -320,7 +411,7 @@ export function DashboardV3() {
         <span className="mono" style={{ color: "var(--av3-muted)", fontSize: 12.5, fontFamily: "var(--av3-mono)" }}>
           {new Date().toLocaleString("pl-PL", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </span>
-        <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); fetchAll(); }} style={{ marginLeft: "auto" }}>
+        <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); fetchAll(); fetchExec(); }} style={{ marginLeft: "auto" }}>
           <RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} />
           Refresh
         </Button>
@@ -375,6 +466,67 @@ export function DashboardV3() {
         <div className="av3-tile"><div className="av3-tile-l"><AlertTriangle />Due / late</div><div className="av3-tile-v" style={{ color: (fleetScope?.late ?? 0) > 0 ? "var(--av3-bad)" : "var(--av3-fg)" }}>{fleetScope?.late ?? 0}</div><div className="av3-tile-s">past promised time</div></div>
         <div className="av3-tile"><div className="av3-tile-l"><Users />Covers today</div><div className="av3-tile-v">{covers.toLocaleString("pl-PL")}</div><div className="av3-tile-s">{summary?.totalOrders ?? 0} orders</div></div>
       </div>
+
+      {/* EXECUTIVE OVERVIEW — period-scoped analytics report (dashboard mockup) */}
+      <div className="av3-now" style={{ marginTop: 4 }}>
+        <TrendingUp style={{ width: 14, height: 14, color: "var(--av3-muted)" }} />
+        <span className="av3-section-label" style={{ marginBottom: 0 }}>Executive overview · {scopeCity}</span>
+        <span style={{ marginLeft: "auto" }}>
+          <ChipRow options={EX_OPTS} value={exPeriod} onChange={setExPeriod} ariaLabel="Executive period" />
+        </span>
+      </div>
+
+      <div className="av3-kpi-rail">
+        <Kpi label="Revenue" icon={Banknote} value={zl(exec?.totalRevenue ?? 0)} deltaPct={exRevDelta} spark={exRevSpark} accentVar="--av3-c1" />
+        <Kpi label="Orders" icon={ClipboardList} value={(exec?.totalOrders ?? 0).toLocaleString("pl-PL")} deltaPct={exOrdDelta} spark={exOrdSpark} accentVar="--av3-c3" />
+        <Kpi label="Avg order" icon={Receipt} value={formatPrice(exec?.avgOrderValue ?? 0)} deltaPct={exAovDelta} spark={exAovSpark} accentVar="--av3-c2" />
+        <Kpi label="Profit margin" icon={Percent} value={`${(exec?.profitMargin ?? 0).toFixed(0)}%`} deltaPct={exMarginDelta} accentVar="--av3-c4" />
+        <Kpi label="Gross profit" icon={PiggyBank} value={zl(exec?.totalProfit ?? 0)} deltaPct={exProfitDelta} accentVar="--av3-c4" />
+        <Kpi label="Cancellations" icon={XCircle} value={`${exCancel.toFixed(1)}%`} deltaPct={exCancelDelta} invertDelta accentVar="--av3-c1" />
+        <Kpi label="Labour ratio" icon={Coins} value={ratioPct != null ? `${ratioPct.toFixed(0)}%` : "—"} accentVar="--av3-c3" />
+      </div>
+
+      <div className="av3-grid-2-1">
+        <Card>
+          <CardHead title="Revenue trend" description={`Daily revenue · ${exPeriod === "today" ? "today" : `last ${EX_DAYS[exPeriod]} days`}`} />
+          <CardBody>
+            {exRevSpark.length < 2 ? (
+              <div className="av3-empty"><div className="av3-empty-text">Not enough days in range to chart.</div></div>
+            ) : (
+              <AreaChart data={exRevSpark} height={150} accentVar="--av3-c1" caption={[exDaily[0]?.date ?? "", `peak ${zl(exPeak)}`]} />
+            )}
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHead title="Top sellers" description="By revenue this period" />
+          <CardBody>
+            {exTop.length === 0 ? (
+              <div className="av3-empty"><div className="av3-empty-text">No items sold in range.</div></div>
+            ) : (
+              <div className="av3-bars">
+                {exTop.map((t) => (
+                  <div className="av3-bar-row" key={t.name}>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="av3-bar-label">{t.name}</div>
+                      <div className="av3-bar-track"><div className="av3-bar-fill" style={{ width: `${Math.max(4, (t.revenue / exTopMax) * 100)}%` }} /></div>
+                    </div>
+                    <div className="av3-bar-val">{zl(t.revenue)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHead title="Location network" description="Revenue, orders and margin by site" actions={<Badge tone="neutral">{exLocRows.length} sites</Badge>} />
+        {exLocRows.length === 0 ? (
+          <CardBody><div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No location data in range.</div></CardBody>
+        ) : (
+          <Table columns={locCols} rows={exLocRows} rowKey={(l) => l.locationSlug} />
+        )}
+      </Card>
 
       {/* body split: work column | live feed */}
       <div className="av3-bodysplit">

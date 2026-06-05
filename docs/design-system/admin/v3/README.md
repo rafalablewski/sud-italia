@@ -178,7 +178,21 @@ refetches every 30s.
 - [x] Shell — sidebar (collapsible rail) + topbar + scope switcher
 - [x] Dashboard — the **Operator Terminal** (live cockpit), owner-gated, wired
   to analytics / insights / KDS-fleet / labour / orders / notifications +
-  the configurable daily-goal setting (`/api/admin/ops-goals`)
+  the configurable daily-goal setting (`/api/admin/ops-goals`). **Executive
+  overview restored (matches `public/mockups/admin-v3/dashboard.html`):** below
+  the cockpit, a period-scoped (Today/7d/30d/90d) analytics block — a 7-KPI rail
+  (revenue, orders, avg order, profit margin, gross profit, cancellations,
+  labour ratio, each with vs-prior-period delta + sparkline), a **revenue-trend**
+  `AreaChart`, a **top-sellers** bar list (`.av3-bars`) and the **Location
+  network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
+  from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
+  (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
+- [x] Alerts (`/admin-v3/alerts`) — the v3 home for the v2 `MobileAlerts` action
+  queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
+  chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/
+  Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
+  and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
+  §14 (`.av3-alert-*`). Nav: Overview section.
 - [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
