@@ -160,8 +160,8 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     items: [
       { href: `${P}/users`, label: "Users & roles", icon: ShieldCheck, requiredRole: "owner" },
       { href: `${P}/permissions`, label: "Permission matrix", icon: Grid3x3, requiredRole: "owner" },
-      { href: `${P}/compliance`, label: "Compliance", icon: CalendarCheck2, requiredRole: "manager", pending: true },
-      { href: `${P}/regulatory-compliance`, label: "Regulatory disclosures", icon: ShieldCheck, requiredRole: "owner", pending: true },
+      { href: `${P}/compliance`, label: "Compliance", icon: CalendarCheck2, requiredRole: "manager" },
+      { href: `${P}/regulatory-compliance`, label: "Regulatory disclosures", icon: ShieldCheck, requiredRole: "owner" },
       { href: `${P}/soc2`, label: "SOC 2 controls", icon: ShieldCheck, requiredRole: "owner" },
       { href: `${P}/audit-log`, label: "Audit log", icon: History, requiredRole: "manager" },
       { href: `${P}/capabilities`, label: "Capabilities", icon: Layers, requiredRole: "manager" },

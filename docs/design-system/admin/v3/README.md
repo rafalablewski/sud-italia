@@ -224,5 +224,10 @@ refetches every 30s.
 - [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
   persisting custom grants (`PUT /api/admin/users`).
-- [ ] System remainder (Compliance, Regulatory, Settings), Finance·Calculator (AdminSimulation)
+- [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/
+  insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
+- [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
+  default pack + per-site EU/NYC/SG zone + disclosure toggles
+  (`PUT /api/admin/regulatory-compliance`).
+- [ ] Settings, Finance·Calculator (AdminSimulation)
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
