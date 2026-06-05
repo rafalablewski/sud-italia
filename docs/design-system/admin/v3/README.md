@@ -251,9 +251,15 @@ refetches every 30s.
   standing-pre-order status board (approve/pause/resume/cancel via
   `PATCH /api/admin/scheduled-bundles/:id`). Truck ops (`/admin-v3/truck`):
   events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
-  + `/api/admin/truck-routes`
+  + `/api/admin/truck-routes`, plus the **KPI rail** (events / revenue / expected
+  guests / live-upcoming) restored.
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
   (referral config + reward/challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
+  **Restored to v2 parity (flag #5):** the **Loyalty tiers** editor
+  (bronze/silver/gold/platinum — label / threshold / multiplier / perks, saved
+  on blur) and the **Live activity widgets** manager (7-type widget catalogue,
+  add/edit/delete/toggle/reorder + per-widget type-config + location targeting,
+  capped at `LIVE_WIDGET_LIMIT`).
   Cross-sell (`/admin-v3/crosssell`) — **full v2 parity (PR #139 follow-up):**
   four tabs over the per-location selling config (`PUT /api/admin/upsell`, full
   config round-tripped so nothing is lost): **Cart pairings** (Coffee/Dessert/

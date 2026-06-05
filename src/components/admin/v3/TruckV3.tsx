@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapPin, Plus, X } from "lucide-react";
+import { Banknote, MapPin, Plus, Radio, Truck, Users, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { TruckEvent, TruckEventStatus, TruckRoute, TruckStop } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 const STATUS_LABEL: Record<TruckEventStatus, string> = { scheduled: "Scheduled", live: "Live", done: "Done", cancelled: "Cancelled" };
 const STATUS_TONE: Record<TruckEventStatus, BadgeTone> = { scheduled: "warn", live: "info", done: "ok", cancelled: "neutral" };
@@ -68,6 +68,13 @@ export function TruckV3() {
             <Button variant="primary" size="sm" onClick={() => setRouteDialog("new")}><Plus className="av3-btn-ico" /> Add route</Button>
           )}
         </div>
+      </div>
+
+      <div className="av3-kpi-rail">
+        <Kpi label="Events" icon={Truck} value={`${events.length}`} accentVar="--av3-c3" />
+        <Kpi label="Revenue" icon={Banknote} value={formatPrice(events.reduce((s, e) => s + (e.actualRevenueGrosze ?? 0), 0))} accentVar="--av3-c1" />
+        <Kpi label="Expected guests" icon={Users} value={events.reduce((s, e) => s + (e.expectedAttendance ?? 0), 0).toLocaleString("pl-PL")} accentVar="--av3-c4" />
+        <Kpi label="Live / upcoming" icon={Radio} value={`${events.filter((e) => e.status === "live" || e.status === "scheduled").length}`} accentVar="--av3-c5" />
       </div>
 
       <div className="av3-filterchips">
