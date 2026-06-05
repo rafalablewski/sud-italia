@@ -340,7 +340,11 @@ refetches every 30s.
   `/api/admin/stock`, suggested qty + est cost), **Staffing** (peak-hour
   headcount from `/api/admin/insights`), and the **Chatbot FAQ** manager
   (`/api/admin/chatbot-faq`).
-- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read), SOC 2
+- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read +
+  **field-level diff restored**: a row click opens a detail dialog with a
+  v3-native `DiffRenderer` — added/removed/changed keys, before↔after blocks,
+  pretty-JSON nested shapes — over the API's `before`/`after` snapshots; CSS
+  §15 `.av3-diff-*`), SOC 2
   (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).

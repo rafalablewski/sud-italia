@@ -36,10 +36,10 @@ false positives or intentional v3 density decisions** and were dropped:
   flow, executed/error tool cards, conversation history, cost readout) over the
   same `/api/admin/agent` endpoints. Add nav entry (Intelligence), CSS, docs,
   mockup.
-- [ ] **3. Audit-log diff view** — `AuditLogV3` renders a flat table; the API
-  returns `before`/`after` per entry but v3 never shows the field-level diff.
-  Add an expandable row + v3-native `DiffRenderer` (added/removed/changed keys,
-  before↔after blocks). Docs, mockup.
+- [x] **3. Audit-log diff view** — row click opens a v3 detail `Dialog` with a
+  native `DiffRenderer` (added/removed/changed keys, before↔after blocks,
+  pretty-JSON for nested shapes) over the API's `before`/`after`. CSS §15,
+  mockup `admin-v3/audit-diff.html`. **DONE.**
 - [ ] **4. Customer detail depth** — `CustomersV3`'s detail dialog shows only 6
   summary fields. v2 `AdminCustomerDetail` additionally has: order history,
   manual point-adjustment history, redemption history, customer notes (add/

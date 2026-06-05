@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Audit log diff — mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root, [data-theme="dark"] {
+      --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+      --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+      --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+      --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+      --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    .mono { font-family:"JetBrains Mono",monospace; }
+    .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
+    .wrap { max-width:1080px; margin:0 auto; padding:18px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+    .col { flex:1; min-width:340px; display:flex; flex-direction:column; gap:12px; }
+    h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; }
+    .sub { font-size:12.5px; color:var(--av3-muted); margin-top:2px; }
+    .seclabel { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); }
+    .filterchips { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; flex-wrap:wrap; }
+    .fchip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:5px; color:var(--av3-muted); font-size:12px; font-weight:500; }
+    .fchip.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); }
+    .fchip-count { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--av3-subtle); }
+    .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); overflow:hidden; }
+    table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    th { text-align:left; padding:7px 14px; background:var(--av3-s2); color:var(--av3-subtle); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--av3-line); }
+    td { padding:8px 14px; border-bottom:1px solid var(--av3-line); } tr:last-child td { border-bottom:none; } tbody tr { cursor:pointer; } tbody tr:hover { background:var(--av3-hover); }
+    .cell-muted { color:var(--av3-muted); }
+    .badge { display:inline-flex; align-items:center; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; }
+    .b-bad { background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1)); color:var(--av3-bad); }
+    .b-info { background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); color:var(--av3-info); }
+    .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
+    /* detail dialog */
+    .dialog { background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; }
+    .dhead { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; border-bottom:1px solid var(--av3-line); }
+    .dtitle { font-size:14px; font-weight:600; } .dsub { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+    .dbody { padding:16px; }
+    .od-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-bottom:14px; }
+    .od-field .k { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); }
+    .od-field .v { font-size:13px; margin-top:2px; }
+    /* diff */
+    .diff { background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; padding:6px 10px; font-family:"JetBrains Mono",monospace; font-size:12px; }
+    .drow { display:flex; flex-direction:column; gap:3px; padding:6px 0; border-bottom:1px solid var(--av3-line); } .drow:last-child { border-bottom:none; }
+    .dkey { display:flex; align-items:center; gap:6px; font-weight:600; }
+    .d2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .dval { margin:0; white-space:pre-wrap; word-break:break-word; }
+    .added { color:var(--av3-ok); } .removed { color:var(--av3-bad); } .chg { color:var(--av3-warn); font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · the live <strong style="margin:0 4px">/admin-v3/audit-log</strong> opens a detail dialog with the field-by-field diff (before/after from the API)</div>
+  <div class="wrap">
+    <div class="col">
+      <div><h1>Audit log</h1><div class="sub">Every privileged action · append-only · last 500 · open a row for the field-by-field diff</div></div>
+      <div class="filterchips"><span class="fchip active">All<span class="fchip-count">312</span></span><span class="fchip">Orders<span class="fchip-count">141</span></span><span class="fchip">Menu<span class="fchip-count">58</span></span><span class="fchip">Settings<span class="fchip-count">22</span></span></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th></th></tr></thead>
+          <tbody>
+            <tr style="background:var(--av3-hover)"><td class="cell-muted">5 Jun 14:21</td><td style="font-weight:500">rafal</td><td><span class="badge b-bad">orders.refund_partial</span></td><td class="cell-muted">order · 8f3a1c9d</td><td><span class="badge b-neu">diff</span></td></tr>
+            <tr><td class="cell-muted">5 Jun 13:50</td><td style="font-weight:500">kasia</td><td><span class="badge b-info">menu.update</span></td><td class="cell-muted">menuItem · pizza-margherita</td><td><span class="badge b-neu">diff</span></td></tr>
+            <tr><td class="cell-muted">5 Jun 12:08</td><td style="font-weight:500">system</td><td><span class="badge b-neu">settings.view</span></td><td class="cell-muted">settings · loyalty</td><td><span class="cell-muted">—</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="seclabel">Row click → detail dialog</div>
+      <div class="dialog">
+        <div class="dhead">
+          <div><div class="dtitle">orders.refund_partial</div><div class="dsub">rafal · 5 Jun 14:21</div></div>
+          <span class="badge b-bad">orders</span>
+        </div>
+        <div class="dbody">
+          <div class="od-grid">
+            <div class="od-field"><div class="k">Actor</div><div class="v">rafal</div></div>
+            <div class="od-field"><div class="k">When</div><div class="v">5 Jun 14:21</div></div>
+            <div class="od-field"><div class="k">Entity</div><div class="v">order</div></div>
+            <div class="od-field"><div class="k">Entity ID</div><div class="v mono">8f3a1c9d</div></div>
+          </div>
+          <div class="seclabel" style="margin-bottom:8px">Field-by-field diff</div>
+          <div class="diff">
+            <div class="drow">
+              <div class="dkey"><span class="chg">~</span>status</div>
+              <div class="d2"><pre class="dval removed">"paid"</pre><pre class="dval added">"partially_refunded"</pre></div>
+            </div>
+            <div class="drow">
+              <div class="dkey"><span style="color:var(--av3-ok)">＋</span>refund</div>
+              <pre class="dval added">{
+  "type": "partial",
+  "amount": 1500,
+  "reason": "missing_item",
+  "stripeRefundId": "re_3Q…"
+}</pre>
+            </div>
+            <div class="drow">
+              <div class="dkey"><span class="chg">~</span>totalAmount</div>
+              <div class="d2"><pre class="dval removed">6480</pre><pre class="dval added">4980</pre></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

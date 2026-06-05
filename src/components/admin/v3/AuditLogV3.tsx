@@ -1,10 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { Badge, Button, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Minus, Plus, RefreshCw } from "lucide-react";
+import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
-interface Entry { id: string; actor: string; action: string; entityType?: string; entityId?: string; occurredAt: string }
+interface Entry {
+  id: string;
+  actor: string;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  before?: unknown;
+  after?: unknown;
+  occurredAt: string;
+}
 type Filter = "all" | "orders" | "menu" | "feedback" | "settings" | "loyalty" | "staff" | "other";
 
 function group(action: string): Filter {
@@ -23,12 +32,14 @@ function tone(action: string): BadgeTone {
   return "neutral";
 }
 function fmt(iso: string) { return new Date(iso).toLocaleString("pl-PL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+function isPlainObject(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
 
 export function AuditLogV3() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [detail, setDetail] = useState<Entry | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/audit-log?limit=500").then((r) => (r.ok ? r.json() : [])).catch(() => []);
@@ -50,6 +61,7 @@ export function AuditLogV3() {
     { key: "actor", header: "Actor", render: (e) => <span style={{ fontWeight: 500 }}>{e.actor}</span> },
     { key: "action", header: "Action", render: (e) => <Badge tone={tone(e.action)}>{e.action}</Badge> },
     { key: "entity", header: "Entity", render: (e) => <span className="av3-cell-muted">{e.entityType ? `${e.entityType}${e.entityId ? ` · ${e.entityId.slice(-8)}` : ""}` : "—"}</span> },
+    { key: "diff", header: "", render: (e) => (hasDiff(e) ? <Badge tone="neutral">diff</Badge> : <span className="av3-cell-muted">—</span>) },
   ];
 
   return (
@@ -57,7 +69,7 @@ export function AuditLogV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Audit log</h1>
-          <div className="av3-pagehead-sub">Every privileged action · append-only · last 500</div>
+          <div className="av3-pagehead-sub">Every privileged action · append-only · last 500 · open a row for the field-by-field diff</div>
         </div>
         <div className="av3-pagehead-actions">
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); load(); }}><RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} /> Refresh</Button>
@@ -79,10 +91,106 @@ export function AuditLogV3() {
           {rows.length === 0 ? (
             <div className="av3-empty"><div className="av3-empty-title">No entries</div><div className="av3-empty-text">Privileged actions are recorded here.</div></div>
           ) : (
-            <Table columns={cols} rows={rows} rowKey={(e) => e.id} />
+            <Table columns={cols} rows={rows} rowKey={(e) => e.id} onRowClick={setDetail} />
           )}
         </div>
       )}
+
+      <Dialog
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.action ?? "Audit entry"}
+        subtitle={detail ? `${detail.actor} · ${fmt(detail.occurredAt)}` : undefined}
+        headerExtra={detail ? <Badge tone={tone(detail.action)}>{group(detail.action)}</Badge> : undefined}
+        width={560}
+      >
+        {detail && (
+          <>
+            <div className="av3-od-grid">
+              <div className="av3-od-field"><div className="k">Actor</div><div className="v">{detail.actor}</div></div>
+              <div className="av3-od-field"><div className="k">When</div><div className="v">{fmt(detail.occurredAt)}</div></div>
+              <div className="av3-od-field"><div className="k">Entity</div><div className="v">{detail.entityType ?? "—"}</div></div>
+              <div className="av3-od-field"><div className="k">Entity ID</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{detail.entityId ?? "—"}</div></div>
+            </div>
+            <div className="av3-section-label" style={{ marginBottom: 8 }}>Field-by-field diff</div>
+            {hasDiff(detail) ? <DiffRenderer before={detail.before} after={detail.after} /> : <div className="av3-diff-empty">No snapshot recorded for this action (metadata only).</div>}
+          </>
+        )}
+      </Dialog>
     </>
   );
+}
+
+function hasDiff(e: Entry) { return e.before !== undefined || e.after !== undefined; }
+
+/**
+ * v3-native field-level diff (port of the v2 AuditLog DiffRenderer, restyled to
+ * `.av3-diff-*` tokens). Each key is added / removed / changed; objects + arrays
+ * render as pretty JSON so nested shapes (Order.refund, Order.dispute) stay legible.
+ */
+function DiffRenderer({ before, after }: { before: unknown; after: unknown }) {
+  const beforeObj = isPlainObject(before) ? before : null;
+  const afterObj = isPlainObject(after) ? after : null;
+
+  if (!beforeObj && !afterObj) {
+    return (
+      <div className="av3-diff-2">
+        <DiffBlock label="before" value={before} t="removed" />
+        <DiffBlock label="after" value={after} t="added" />
+      </div>
+    );
+  }
+
+  const keys = new Set<string>();
+  if (beforeObj) for (const k of Object.keys(beforeObj)) keys.add(k);
+  if (afterObj) for (const k of Object.keys(afterObj)) keys.add(k);
+
+  const rows: { key: string; kind: "added" | "removed" | "changed"; before: unknown; after: unknown }[] = [];
+  for (const key of keys) {
+    const b = beforeObj?.[key];
+    const a = afterObj?.[key];
+    const inB = beforeObj !== null && key in beforeObj;
+    const inA = afterObj !== null && key in afterObj;
+    if (inB && !inA) rows.push({ key, kind: "removed", before: b, after: undefined });
+    else if (!inB && inA) rows.push({ key, kind: "added", before: undefined, after: a });
+    else if (JSON.stringify(b) !== JSON.stringify(a)) rows.push({ key, kind: "changed", before: b, after: a });
+  }
+
+  if (rows.length === 0) return <div className="av3-diff-empty">No field-level differences (only metadata recorded).</div>;
+
+  return (
+    <div className="av3-diff">
+      {rows.map((r) => (
+        <div className="av3-diff-row" key={r.key}>
+          <div className="av3-diff-key">
+            {r.kind === "added" && <Plus style={{ color: "var(--av3-ok)" }} />}
+            {r.kind === "removed" && <Minus style={{ color: "var(--av3-bad)" }} />}
+            {r.kind === "changed" && <span style={{ color: "var(--av3-warn)", fontWeight: 700 }}>~</span>}
+            {r.key}
+          </div>
+          {r.kind === "removed" && <DiffValue value={r.before} t="removed" />}
+          {r.kind === "added" && <DiffValue value={r.after} t="added" />}
+          {r.kind === "changed" && (
+            <div className="av3-diff-2">
+              <DiffValue value={r.before} t="removed" />
+              <DiffValue value={r.after} t="added" />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DiffBlock({ label, value, t }: { label: string; value: unknown; t: "added" | "removed" }) {
+  return (
+    <div className="av3-diff-block">
+      <div className="av3-diff-block-l">{label}</div>
+      <DiffValue value={value} t={t} />
+    </div>
+  );
+}
+function DiffValue({ value, t }: { value: unknown; t: "added" | "removed" }) {
+  const text = value === undefined ? "—" : typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  return <pre className="av3-diff-val" data-tone={t}>{text}</pre>;
 }

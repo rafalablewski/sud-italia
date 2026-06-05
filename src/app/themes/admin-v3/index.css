@@ -923,3 +923,20 @@
 .av3-alert-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--av3-brand); flex-shrink: 0; }
 .av3-alert-chev { width: 14px; height: 14px; color: var(--av3-subtle); }
 @media (pointer: coarse) { .av3-alert-row { min-height: 44px; } }
+
+/* ==========================================================================
+   15. Audit-log field-level diff (/admin-v3/audit-log detail dialog)
+   ========================================================================== */
+.av3-diff { background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); padding: 6px 10px; font-family: var(--av3-mono); font-size: 12px; }
+.av3-diff-row { display: flex; flex-direction: column; gap: 3px; padding: 6px 0; border-bottom: 1px solid var(--av3-line); }
+.av3-diff-row:last-child { border-bottom: none; }
+.av3-diff-key { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--av3-fg); }
+.av3-diff-key svg { width: 12px; height: 12px; }
+.av3-diff-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.av3-diff-block { border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); padding: 6px 8px; background: var(--av3-s1); }
+.av3-diff-block-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--av3-subtle); margin-bottom: 3px; }
+.av3-diff-val { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--av3-mono); }
+.av3-diff-val[data-tone="added"] { color: var(--av3-ok); }
+.av3-diff-val[data-tone="removed"] { color: var(--av3-bad); }
+.av3-diff-empty { font-size: 12px; color: var(--av3-muted); }
+@media (max-width: 720px) { .av3-diff-2 { grid-template-columns: 1fr; } }
