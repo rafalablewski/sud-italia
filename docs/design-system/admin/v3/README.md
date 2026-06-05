@@ -177,5 +177,11 @@ refetches every 30s.
 - [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
   and AI sentiment (`POST /api/admin/feedback/analyze`)
-- [ ] Customers section remainder (Corporate, Pulse surveys), Finance, Growth, Intelligence, System
+- [x] Corporate (`/admin-v3/corporate`) — B2B wallet-backed accounts: members /
+  pool / head-bonus KPIs + edit dialog (billing, bonus %, min staff, home site,
+  auto-preorder) via `PUT /api/admin/corporate`
+- [x] Pulse surveys (`/admin-v3/surveys`) — NPS-style pulse + avg-rating KPIs
+  (shared `@/lib/surveys`), survey catalogue with active toggles
+  (`PUT /api/admin/surveys`), and a responses table
+- [ ] Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
