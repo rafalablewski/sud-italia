@@ -284,9 +284,15 @@ refetches every 30s.
   shared engine** — money returned in grosze (canonical unit) — and rendered as a
   grouped revenue/net-profit bar chart with a zero baseline (loss months dip red)
   plus year revenue/net totals.
-  **Next parts (Part 3):** the cohort / LTV-CAC, dayparts, hourly-throughput and
-  menu-engineering sandboxes (real data via `/api/admin/simulation/{cohorts,
-  dayparts,hourly,menu-engineering}`); then the five-section `MetricExplainer` ⓘ
-  pass (Rule #12).
+  **Part 3b shipped:** the real-order **Sandboxes** card — a window selector
+  (30/90/180d) over four tabs reading live order history: **Cohort / LTV-CAC**
+  (`/cohorts` — customers, repeat rate, orders/revenue/GP per customer, new/mo,
+  new-vs-returning revenue split), **Dayparts** (`/dayparts` — lunch/dinner/
+  late-night/off-peak orders, share, ticket, revenue, GP, GP-rate), **Hourly
+  throughput** (`/hourly` — 24-bar avg-orders-per-hour chart with amber≥85% /
+  red>100% capacity colouring) and **Menu engineering** (`/menu-engineering` —
+  star/plowhorse/puzzle/dog quadrant counts + per-item GP/unit, true-CM1 and
+  margin-trap / prep-heavy flags). All accept `?days=N`.
+  **Next part (Part 3c):** the five-section `MetricExplainer` ⓘ pass (Rule #12).
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

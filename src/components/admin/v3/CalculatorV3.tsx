@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { computeReturns, computeScenario, computeTornado, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationLaborLine, SimulationScenario } from "@/data/types";
-import { Button, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
 const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
@@ -280,9 +280,152 @@ export function CalculatorV3() {
         );
       })()}
 
+      {/* real-data sandboxes — independent of the hypothetical scenario above */}
+      <SimSandboxes />
+
       <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>
-        Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The cohort / LTV-CAC, dayparts, hourly-throughput and menu-engineering sandboxes land in the next Calculator parts.
+        Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The sandboxes below read <b>real orders</b>; the model above is hypothetical. Five-section ⓘ explainers (Rule #12) land next.
       </div>
     </>
+  );
+}
+
+/* ── real-data sandboxes (cohorts / dayparts / hourly / menu engineering) ── */
+type SandTab = "cohorts" | "dayparts" | "hourly" | "menu-eng";
+interface Cohort { windowDays: number; totalCustomers: number; repeatCustomers: number; repeatRatePct: number; avgOrdersPerCustomer: number; avgRevenuePerCustomerGrosze: number; avgGpPerCustomerGrosze: number; newCustomersPerMonth: number; newCustomerRevenueGrosze: number; returningCustomerRevenueGrosze: number }
+interface Daypart { key: string; label: string; hours: string; ordersCount: number; sharePct: number; avgTicketGrosze: number; revenueGrosze: number; gpGrosze: number; gpRatePct: number }
+interface Hourly { hour: number; totalOrders: number; avgOrdersPerHour: number; capacityUtilization: number }
+interface MenuEng { menuItemId: string; name: string; category: string; unitsSold: number; gpPerUnit: number; quadrant: "star" | "plowhorse" | "puzzle" | "dog"; menuRole?: string; marginTrap: boolean; prepHeavy: boolean; trueCm1PerUnit: number }
+
+const QUADRANT_TONE: Record<string, "ok" | "warn" | "info" | "bad"> = { star: "ok", plowhorse: "warn", puzzle: "info", dog: "bad" };
+
+function SimSandboxes() {
+  const [tab, setTab] = useState<SandTab>("cohorts");
+  const [days, setDays] = useState(90);
+  const [cohort, setCohort] = useState<Cohort | null>(null);
+  const [dayparts, setDayparts] = useState<Daypart[]>([]);
+  const [hourly, setHourly] = useState<Hourly[]>([]);
+  const [menuEng, setMenuEng] = useState<MenuEng[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      const url =
+        tab === "cohorts" ? `/api/admin/simulation/cohorts?days=${days}`
+        : tab === "dayparts" ? `/api/admin/simulation/dayparts?days=${days}`
+        : tab === "hourly" ? `/api/admin/simulation/hourly?days=${days}`
+        : `/api/admin/simulation/menu-engineering?days=${days}`;
+      const d = await fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (cancelled) return;
+      if (tab === "cohorts") setCohort(d);
+      else if (tab === "dayparts") setDayparts(d?.dayparts ?? []);
+      else if (tab === "hourly") setHourly(d?.hourly ?? []);
+      else setMenuEng(d?.items ?? []);
+      setLoading(false);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [tab, days]);
+
+  const quadCounts = useMemo(() => {
+    const c: Record<string, number> = { star: 0, plowhorse: 0, puzzle: 0, dog: 0 };
+    for (const m of menuEng) c[m.quadrant] = (c[m.quadrant] ?? 0) + 1;
+    return c;
+  }, [menuEng]);
+  const hourMax = Math.max(1, ...hourly.map((h) => h.avgOrdersPerHour));
+
+  return (
+    <Card>
+      <CardHead title="Sandboxes — real orders" description="Cohort/LTV · dayparts · hourly throughput · menu engineering, computed from real order history" actions={
+        <div className="av3-chiprow" role="tablist">
+          {[30, 90, 180].map((d) => <button key={d} type="button" role="tab" aria-selected={days === d} className={`av3-chip ${days === d ? "is-active" : ""}`} onClick={() => setDays(d)}>{d}d</button>)}
+        </div>
+      } />
+      <CardBody>
+        <div className="av3-filterchips" style={{ marginBottom: 12 }}>
+          {([["cohorts", "Cohort / LTV-CAC"], ["dayparts", "Dayparts"], ["hourly", "Hourly throughput"], ["menu-eng", "Menu engineering"]] as [SandTab, string][]).map(([k, label]) => (
+            <button key={k} type="button" className={`av3-fchip ${tab === k ? "is-active" : ""}`} onClick={() => setTab(k)}>{label}</button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="av3-loading"><span className="av3-spin" aria-hidden /> Crunching real orders…</div>
+        ) : tab === "cohorts" ? (
+          !cohort || cohort.totalCustomers === 0 ? <div className="av3-empty"><div className="av3-empty-text">No phone-identified orders in this window.</div></div> : (
+            <>
+              <div className="av3-kpi-rail">
+                <Kpi label="Customers" value={cohort.totalCustomers.toLocaleString("pl-PL")} accentVar="--av3-c3" />
+                <Kpi label="Repeat rate" value={`${(cohort.repeatRatePct * 100).toFixed(0)}%`} accentVar="--av3-c4" />
+                <Kpi label="Orders / cust" value={cohort.avgOrdersPerCustomer.toFixed(2)} accentVar="--av3-c2" />
+                <Kpi label="Revenue / cust" value={formatPrice(cohort.avgRevenuePerCustomerGrosze)} accentVar="--av3-c5" />
+                <Kpi label="GP / cust (LTV)" value={formatPrice(cohort.avgGpPerCustomerGrosze)} accentVar="--av3-c4" />
+                <Kpi label="New / mo" value={cohort.newCustomersPerMonth.toFixed(0)} accentVar="--av3-c1" />
+              </div>
+              <div className="av3-subhead">New vs returning revenue</div>
+              {(() => { const n = cohort.newCustomerRevenueGrosze, r = cohort.returningCustomerRevenueGrosze, tot = Math.max(1, n + r); return (
+                <>
+                  <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden" }}>
+                    <div title={`New ${formatPrice(n)}`} style={{ width: `${(n / tot) * 100}%`, background: "var(--av3-c3)" }} />
+                    <div title={`Returning ${formatPrice(r)}`} style={{ width: `${(r / tot) * 100}%`, background: "var(--av3-c4)" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 16, marginTop: 6, fontSize: 11, color: "var(--av3-muted)" }}>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c3)", marginRight: 5 }} />New {formatPrice(n)} ({Math.round((n / tot) * 100)}%)</span>
+                    <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--av3-c4)", marginRight: 5 }} />Returning {formatPrice(r)} ({Math.round((r / tot) * 100)}%)</span>
+                  </div>
+                </>
+              ); })()}
+            </>
+          )
+        ) : tab === "dayparts" ? (
+          dayparts.length === 0 ? <div className="av3-empty"><div className="av3-empty-text">No orders in this window.</div></div> : (
+            <div className="av3-table-wrap"><table className="av3-table">
+              <thead><tr><th>Daypart</th><th>Hours</th><th className="av3-th-num">Orders</th><th className="av3-th-num">Share</th><th className="av3-th-num">Avg ticket</th><th className="av3-th-num">Revenue</th><th className="av3-th-num">GP</th><th className="av3-th-num">GP rate</th></tr></thead>
+              <tbody>{dayparts.map((d) => (
+                <tr key={d.key}><td style={{ fontWeight: 600 }}>{d.label}</td><td className="av3-cell-muted">{d.hours}</td>
+                  <td className="av3-num">{d.ordersCount}</td><td className="av3-num">{(d.sharePct * 100).toFixed(0)}%</td>
+                  <td className="av3-num">{formatPrice(d.avgTicketGrosze)}</td><td className="av3-num">{formatPrice(d.revenueGrosze)}</td>
+                  <td className="av3-num">{formatPrice(d.gpGrosze)}</td><td className="av3-num"><Badge tone={d.gpRatePct >= 0.68 ? "ok" : d.gpRatePct >= 0.6 ? "warn" : "bad"}>{(d.gpRatePct * 100).toFixed(0)}%</Badge></td></tr>
+              ))}</tbody>
+            </table></div>
+          )
+        ) : tab === "hourly" ? (
+          hourly.length === 0 ? <div className="av3-empty"><div className="av3-empty-text">No orders in this window.</div></div> : (
+            <>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 120 }}>
+                {hourly.map((h) => { const over = h.capacityUtilization > 1; const near = h.capacityUtilization >= 0.85; return (
+                  <div key={h.hour} title={`${String(h.hour).padStart(2, "0")}:00 · ${h.avgOrdersPerHour.toFixed(1)}/hr${h.capacityUtilization > 0 ? ` · ${(h.capacityUtilization * 100).toFixed(0)}% cap` : ""}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
+                    <div style={{ height: `${(h.avgOrdersPerHour / hourMax) * 100}%`, background: over ? "var(--av3-bad)" : near ? "var(--av3-warn)" : "var(--av3-c3)", borderRadius: "2px 2px 0 0" }} />
+                  </div>
+                ); })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}><span>00h</span><span>peak {hourMax.toFixed(1)}/hr</span><span>23h</span></div>
+              <div style={{ fontSize: 10.5, color: "var(--av3-muted)", marginTop: 6 }}>Amber ≥85% capacity · red over capacity (set kitchen pizzas/hr in the model to see the ceiling).</div>
+            </>
+          )
+        ) : (
+          menuEng.length === 0 ? <div className="av3-empty"><div className="av3-empty-text">No items sold in this window.</div></div> : (
+            <>
+              <div className="av3-kpi-rail" style={{ marginBottom: 12 }}>
+                <Kpi label="Stars" value={`${quadCounts.star}`} accentVar="--av3-c4" />
+                <Kpi label="Plowhorses" value={`${quadCounts.plowhorse}`} accentVar="--av3-c5" />
+                <Kpi label="Puzzles" value={`${quadCounts.puzzle}`} accentVar="--av3-c3" />
+                <Kpi label="Dogs" value={`${quadCounts.dog}`} accentVar="--av3-c1" />
+              </div>
+              <div className="av3-table-wrap"><table className="av3-table">
+                <thead><tr><th>Item</th><th>Quadrant</th><th className="av3-th-num">Units</th><th className="av3-th-num">GP/unit</th><th className="av3-th-num">True CM1</th><th>Flags</th></tr></thead>
+                <tbody>{[...menuEng].sort((a, b) => b.unitsSold - a.unitsSold).slice(0, 30).map((m) => (
+                  <tr key={m.menuItemId}><td style={{ fontWeight: 600 }}>{m.name}<span className="av3-cell-muted" style={{ fontSize: 11, marginLeft: 6 }}>{m.category}</span></td>
+                    <td><Badge tone={QUADRANT_TONE[m.quadrant]}>{m.quadrant}</Badge></td>
+                    <td className="av3-num">{m.unitsSold}</td><td className="av3-num">{formatPrice(m.gpPerUnit)}</td><td className="av3-num">{formatPrice(m.trueCm1PerUnit)}</td>
+                    <td>{m.marginTrap && <Badge tone="bad">margin trap</Badge>}{m.prepHeavy && <Badge tone="warn">prep-heavy</Badge>}{m.menuRole && <Badge tone="neutral">{m.menuRole}</Badge>}</td></tr>
+                ))}</tbody>
+              </table></div>
+            </>
+          )
+        )}
+      </CardBody>
+    </Card>
   );
 }
