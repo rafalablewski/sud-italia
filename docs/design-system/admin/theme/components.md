@@ -139,55 +139,27 @@ Placed inline in the tags row on a POS product card.
   border + 26px tab; 8px radius ≈ the button's 7px) so it sits flush beside
   buttons in a page-header toolbar.
 
-## Location filter — one component, one look
+## Location → Scope (one switcher, shell-level)
 
-Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
-`v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
-site**, and it's always the **same shape: a pill row** (`MapPin` + city, active
-pill in **selection-as-raise** — `--surface-3` + `--border-strong`, as of the
-Phase 1 selection fix; it was the audit's headline brand-flood + border-drop bug).
-It replaced two drifting patterns — the hand-rolled `LocationTabs` pills and the
-inline `v2-field-inline` + `Select` copy-pasted into a dozen page headers.
+> **`LocationFilter` and the sidebar `LocationSwitcher` were removed in Phase 2.**
+> Location is operating **context**, not a per-page filter, so there is now **one**
+> control: `ScopeSwitcher` in the **topbar breadcrumb**, backed by the persisted
+> `useAdminLocation()` context. The two old components (the per-page pill row and
+> the sidebar switcher) coexisted and drifted — that coexistence was the bug.
 
-> **Being retired.** `LocationFilter` is superseded by `ScopeSwitcher` (location
-> is shell-level *scope*, not a per-page filter) — see
-> [Redesign primitives](#redesign-primitives-phase-0--additive-coexist-with-pagehero).
-> Phase 2 removes it. Don't add new usages; the Phase 1 selection fix above is
-> only to keep the interim look correct.
-
-**It scales without changing shape.** The pills live in a horizontal scroller
-(`.v2-locscroll` → `.v2-locscroll-track`): pills never wrap or shrink, and when
-they overflow, the track scrolls with **left/right chevron controls + edge fades**
-(`.v2-locscroll-arrow`, shown only when `is-l` / `is-r`). So a 2-truck shop sees
-two pills (no arrows) and a 15-site network sees a tidy left/right scroll — never
-a wrap, a squeeze, or a different widget. **No per-page `variant`** — a dropdown /
-second mode is exactly how the old drift started.
-
-It is **controlled** (`value` / `onChange`) and derives its option list from
-`getActiveLocations()`, so a page never hand-builds `{ value, label }` arrays.
-Wire it to whatever state the page already holds (page-local `pageLoc`, or the
-sidebar's `useAdminLocation()` context).
+**How a page reads the current site:** consume the shell scope, don't render a
+control.
 
 ```tsx
-// every page — operational views and config editors
-<LocationFilter value={pageLoc} onChange={setPageLoc} />
+const { location: scope } = useAdminLocation();   // "" = all locations
+// operational pages that can't span sites:
+const pageLoc = scope || FALLBACK_LOC;            // "all" → first active location
 ```
 
-Live on: HACCP, Cash, Schedule, Slots, Floor, Inventory, Purchase orders,
-Truck ops, Waste, Handover, Upsell, Cross-sell, Scheduled bundles.
-
-Props worth knowing:
-
-- `includeAll` (+ `allLabel`) — prepend an "all locations" pill (slug `""`).
-  Off by default; operational views that can't span sites leave it off.
-- `icon` — defaults to `MapPin`. **Keep it MapPin** for cross-page
-  consistency; the override exists only for genuinely different contexts.
-
-**Not the same as the sidebar switcher.** `v2/LocationSwitcher.tsx` is the
-**app-wide** location selector in the shell (backed by `useAdminLocation()`,
-persisted to `localStorage`). `LocationFilter` is the **per-page** filter. They
-coexist on purpose: the sidebar sets a global default; a page may still scope
-itself locally. Don't fold one into the other.
+The `ScopeSwitcher` (topbar) writes the scope; every page re-derives + re-fetches
+from it. See [ScopeSwitcher](#redesign-primitives-phase-0--additive-coexist-with-pagehero)
+for how the control scales 1 → N sites. Never reintroduce a per-page location
+pill — the lint guard + this doc are the contract.
 
 ## Cards
 
@@ -409,8 +381,8 @@ and `.core-suite` scopes, so the one component looks right in either shell.
   work via the global handler in `AdminShell.tsx` off `nav.config`, and the
   full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep
   `shortcut` in `nav.config`; it feeds the handler + the modal.
-- **Footer:** `LocationSwitcher` + Log out, on every surface (POS/Guest gained
-  these; the old core avatar foot is retired).
+- **Footer:** Log out, on every surface. (The location switcher moved out of the
+  sidebar footer to the topbar `ScopeSwitcher` in Phase 2 — one switcher, shell-level.)
 - **Scrolls with no visible scrollbar** (`.as-scroll`: `overflow-y:auto` +
   `scrollbar-width:none`). KDS is the exception — its own full-screen wall, no
   sidebar.
@@ -497,8 +469,8 @@ every page**:
   1. **`title`** — alone (`.v2-page-title`).
   2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
      only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
-  3. **`location`** — `.v2-hero-find`. `{value,onChange,includeAll?}` → **always**
-     the pill `LocationFilter` (never a `<Select>`), left-aligned under the title.
+     (Location was removed from the hero in Phase 2 — site context now lives in the
+     shell `ScopeSwitcher`, never per-page.)
   4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
      (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
      **always** `Select`s, rendered beside the pill.
@@ -536,8 +508,8 @@ every page**:
 
 > Shipped in the admin redesign (`../redesign-blueprint.md`,
 > tracked in `../redesign-progress.md`). These are **additive**: pages migrate
-> onto them in Phases 2–4; until then the legacy `PageHero` / `Tabs` pill /
-> `LocationFilter` stay live. **Selection language for all of them is
+> onto them in Phases 2–4; until then the legacy `PageHero` / `Tabs` pill stay
+> live (`LocationFilter` was removed in Phase 2). **Selection language for all of them is
 > selection-as-raise** — see [material → Selection](./material.md#selection--the-neutral-raise).
 
 ### Page command surface — `PageHeader` + `ViewToolbar`
@@ -588,8 +560,10 @@ supersedes for filtering.)
 ### `ScopeSwitcher` — the one location selector
 
 `v2/ui/ScopeSwitcher.tsx` (`.v2-scope`). Location is operating **context**, not a
-per-page filter, so this **one** control replaces both `LocationFilter` (per-page
-pills) and the sidebar `LocationSwitcher` (Phase 2 wires it into the breadcrumb).
+per-page filter, so this **one** control replaced both `LocationFilter` (per-page
+pills) and the sidebar `LocationSwitcher` — both removed in Phase 2. It now lives
+in the **topbar breadcrumb** (`Topbar.tsx`), wired to the persisted
+`useAdminLocation()` context, so a scope change drives every page.
 It **changes shape with scale, never identity**: 1 location → a static label
 (nothing to switch); 2–N → a trigger → searchable `Popover` list (search appears
 past `searchThreshold`, default 7). Selected row is selection-as-raise. Region

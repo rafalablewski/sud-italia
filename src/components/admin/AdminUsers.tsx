@@ -6,6 +6,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
 import { landingPathForRole } from "@/lib/staff-roles";
+import { useAdminLocation } from "./v2/LocationContext";
 
 /** A passkey / security key as listed by the API (no public key, no counter). */
 type WebauthnKey = { id: string; name?: string; createdAt: string; transports?: string[] };
@@ -265,7 +266,8 @@ function AdminUsersDesktop() {
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState<AdminRole | "all">("all");
   const [secFilter, setSecFilter] = useState<SecurityFilter>("all");
-  const [locFilter, setLocFilter] = useState<string>("all");
+  // Location filter follows the shell scope (topbar ScopeSwitcher); "" = all.
+  const { location: scope } = useAdminLocation();
   const [detail, setDetail] = useState<AdminUserRow | null>(null);
   const [dialog, setDialog] = useState<DialogState>({ open: false, user: null });
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
@@ -298,14 +300,14 @@ function AdminUsersDesktop() {
   const filtered = useMemo(() => {
     return list.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
-      if (locFilter !== "all" && !userLocationSlugs(u).includes(locFilter)) return false;
+      if (scope && !userLocationSlugs(u).includes(scope)) return false;
       if (secFilter === "secured" && !(u.hasPassword && has2fa(u))) return false;
       if (secFilter === "no2fa" && has2fa(u)) return false;
       if (secFilter === "shared" && u.hasPassword) return false;
       if (secFilter === "passkey" && (u.webauthnKeys?.length ?? 0) === 0) return false;
       return true;
     });
-  }, [list, roleFilter, secFilter, locFilter]);
+  }, [list, roleFilter, secFilter, scope]);
 
   // KPI strip — real auth-posture coverage across the roster.
   const kpis = useMemo(() => {
@@ -468,12 +470,6 @@ function AdminUsersDesktop() {
         actions={
           <Button variant="primary" leadingIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setDialog({ open: true, user: null })} aria-label="New user" title="New user" />
         }
-        location={{
-          value: locFilter === "all" ? "" : locFilter,
-          onChange: (s) => setLocFilter(s || "all"),
-          includeAll: true,
-          allLabel: "All locations",
-        }}
         filter={{
           value: roleFilter,
           onChange: (v) => setRoleFilter(v as AdminRole | "all"),

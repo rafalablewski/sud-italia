@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
+import { useAdminLocation } from "./v2/LocationContext";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES, BUNDLE_MARGIN_FLOOR } from "@/lib/bundles";
 import { worstBundleMargin } from "@/lib/bundle-margin";
@@ -361,7 +362,11 @@ export function useSellingSettings() {
   // seed catalogue. A slug stays absent until its fetch succeeds, which is
   // the signal to fall back to the seed menu for that location.
   const [liveMenus, setLiveMenus] = useState<Record<string, MenuItem[]>>({});
-  const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
+  // The location being edited follows the shell scope (topbar ScopeSwitcher) so
+  // there is one location switcher across the whole admin. Selling config is
+  // per-location, so an "all"/unknown scope falls back to the first location.
+  const { location: scope, setLocation: setActiveLocation } = useAdminLocation();
+  const activeLocation = scope && LOCATIONS.some((l) => l.slug === scope) ? scope : LOCATIONS[0].slug;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

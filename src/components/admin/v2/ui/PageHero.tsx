@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { LocationFilter } from "./LocationFilter";
 import { Select } from "./Select";
 import { Tabs } from "./Tabs";
 
@@ -21,8 +20,6 @@ interface Props {
   subtitle?: ReactNode;
   /** Icon-only action buttons — row 2, right. The only free-form slot. */
   actions?: ReactNode;
-  /** Location filter — row 3. ALWAYS rendered as the pill `LocationFilter`. */
-  location?: { value: string; onChange: (slug: string) => void; includeAll?: boolean; allLabel?: string };
   /** Primary list/status filter — row 4. ALWAYS a pill `Tabs`. Use for short option sets. */
   filter?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
   /** Secondary filters with many/long options — row 4, after the pill filter.
@@ -33,24 +30,21 @@ interface Props {
 }
 
 /**
- * The one shared subpage hero — a raised panel (platinum left rail) laid out as
- * fixed stacked rows so every `/admin` page reads identically:
+ * The legacy subpage hero — a raised panel (platinum left rail) laid out as
+ * fixed stacked rows:
  *
  *   1. title
  *   2. subtitle (left) ⟷ actions (right)
- *   3. location
- *   4. filter (pill) + verbose dropdowns
- *   5. nav (underline tabs)
+ *   3. filter (pill) + verbose dropdowns
+ *   4. nav (underline tabs)
  *
- * **Data-driven and enforced:** every role takes DATA (not JSX) and the hero
- * renders the single canonical widget for it — location is always the pill
- * `LocationFilter`, the primary filter is always a pill `Tabs`, verbose filters
- * are always `Select`s, section nav is always an underline `Tabs`. A page cannot
- * substitute a different widget, so the controls can never drift apart. Every
- * row is optional and collapses; all controls live inside the panel. See
- * `docs/design-system/admin/theme/components.md`.
+ * **Being retired** by the redesign: identity/control split into `PageHeader` +
+ * `ViewToolbar` (Phase 3). **Location was removed (Phase 2)** — site context now
+ * lives in the shell `ScopeSwitcher`, not in the hero. The primary filter is
+ * always a pill `Tabs`, verbose filters are `Select`s, section nav is an
+ * underline `Tabs`. See `docs/design-system/admin/theme/components.md`.
  */
-export function PageHero({ title, subtitle, actions, location, filter, dropdowns, nav }: Props) {
+export function PageHero({ title, subtitle, actions, filter, dropdowns, nav }: Props) {
   const hasMeta = !!(subtitle || actions);
   const hasFilters = !!(filter || dropdowns?.length);
   return (
@@ -61,19 +55,6 @@ export function PageHero({ title, subtitle, actions, location, filter, dropdowns
         <div className="v2-hero-row v2-hero-meta">
           {subtitle && <p className="v2-page-subtitle">{subtitle}</p>}
           {actions && <div className="v2-page-actions">{actions}</div>}
-        </div>
-      )}
-
-      {location && (
-        <div className="v2-hero-row v2-hero-find">
-          <div className="v2-hero-loc">
-            <LocationFilter
-              value={location.value}
-              onChange={location.onChange}
-              includeAll={location.includeAll}
-              allLabel={location.allLabel}
-            />
-          </div>
         </div>
       )}
 

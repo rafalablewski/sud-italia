@@ -28,7 +28,6 @@ type TabKey = "pairings" | "combos" | "timeOfDay" | "badges";
 export function AdminCrossSell() {
   const {
     activeLocation,
-    setActiveLocation,
     loc,
     config,
     loading,
@@ -81,9 +80,7 @@ export function AdminCrossSell() {
             Suggest complementary items alongside what&rsquo;s in the cart — pairings, combos, and contextual nudges.
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
-        }
-        location={{ value: activeLocation, onChange: setActiveLocation }}
-        actions={
+        }        actions={
           <Button
             variant="primary"
             onClick={handleSave}

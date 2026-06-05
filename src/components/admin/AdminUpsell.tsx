@@ -20,7 +20,6 @@ type TabKey = "bundles" | "modifiers";
 export function AdminUpsell() {
   const {
     activeLocation,
-    setActiveLocation,
     loc,
     config,
     loading,
@@ -113,9 +112,7 @@ export function AdminUpsell() {
             Lift the value of what they&rsquo;re already buying — tiered bundle ladders and gating rules.
             {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
-        }
-        location={{ value: activeLocation, onChange: setActiveLocation }}
-        actions={
+        }        actions={
           <Button
             variant="primary"
             onClick={handleSave}

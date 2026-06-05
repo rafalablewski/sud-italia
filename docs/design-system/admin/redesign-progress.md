@@ -5,7 +5,7 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 1 — Selection fix` ✅ complete · next: Phase 2 (Scope)
+**Current phase:** `Phase 2 — Scope` ✅ complete · next: Phase 3 (Header split)
 **Last updated:** 2026-06-05
 **Branch:** `claude/admin-subpages-analysis-1bsjz`
 
@@ -17,7 +17,7 @@
 |---|---|---|---|
 | **0** | Foundations — new primitives + lint (warn) | ✅ **complete** | primitives shipped + documented |
 | 1 | Selection fix (selection-as-raise, no brand flood) | ✅ **complete** | zero brand-on-selection |
-| 2 | Scope — replace LocationFilter + sidebar switcher | ⬜ not started | `LocationFilter` import count = 0 |
+| 2 | Scope — replace LocationFilter + sidebar switcher | ✅ **complete** | `LocationFilter` import count = 0 |
 | 3 | Header split — PageHero → PageHeader + ViewToolbar | ⬜ not started | `.v2-page-header` usage = 0 |
 | 4 | Growth island → Card/Input/Button + SaveDock | ⬜ not started | `glass-card`/`glass-input` = 0 |
 | 5 | Tokens + buttons sweep | ⬜ not started | `ds-drift` job = 0; lint → error |
@@ -123,9 +123,38 @@ Phase 1 scope, logged so they're not lost):**
 - `.v2-m-notif-row.is-unread .v2-m-notif-dot` has a brand ring glow (status
   indicator — review whether to keep as intentional unread emphasis).
 
-## ▶ Next up — Phase 2 (Scope)
-Wire `ScopeSwitcher` into the shell (breadcrumb), back it with a persisted
-session scope, and remove the per-page `LocationFilter` + sidebar
-`LocationSwitcher`. Exit gate: `LocationFilter` import count = 0. This is a
-behavioural change (touches the shell + every page that filters by location), so
-it warrants its own phase and careful end-to-end data-flow verification.
+## Phase 2 — Scope · done (2026-06-05)
+Collapsed the dual-switcher model (per-page `LocationFilter` + sidebar
+`LocationSwitcher`) into **one shell-level scope** = the existing persisted
+`useAdminLocation()` context, surfaced as `ScopeSwitcher` in the topbar breadcrumb.
+
+**Shell:** `ScopeSwitcher` added to `Topbar` (breadcrumb, `includeAll`, wired to
+`useAdminLocation`); `LocationSwitcher` removed from `Sidebar` footer.
+**PageHero:** `location` slot + `LocationFilter` import + `.v2-hero-find` row removed.
+**Pages migrated to read site from the scope (drop per-page filter):**
+- Operational (derive `pageLoc` from scope, `"all"`→first truck): HACCP, Waste,
+  Handover, Cash, Truck, Inventory, Schedule, Purchase orders.
+- `AdminUsers` (list filter `locFilter` → `scope`).
+- Selling family via `useSellingSettings` (`activeLocation` now derives from scope):
+  Upsell, Cross-sell. `AdminScheduledBundles` (own state → scope).
+**Deleted:** `v2/ui/LocationFilter.tsx`, `v2/LocationSwitcher.tsx`, their CSS
+(`.v2-locscroll*`, `.v2-locpill*`, `.v2-loc-trigger/menu/option/*`), barrel export.
+**Docs (Rule #11):** components.md (Location→Scope section rewrite, sidebar footer,
+hero row, ScopeSwitcher entry), extend.md (location guidance), sections/people.md
++ finance.md headers. (mobile/audit.md is RETIRED/historical — left as-is; the one
+`/core` components.md mention is an incidental CSS-reset note, out of scope.)
+
+**Exit gate met:** `grep -rn LocationFilter src --include=*.tsx` → 0 imports
+(only JSDoc prose mentions remain). `tsc` + `npm run build` clean.
+
+**Data-flow verified (Rule #8):** topbar `ScopeSwitcher` → `setLocation` →
+localStorage + context → each page's `globalLoc`/`scope` → keyed fetch effect
+re-runs → data re-scopes. Operational pages can't show "all" (fall back to first
+truck); aggregate-capable pages (Users) honour "" = all.
+
+## ▶ Next up — Phase 3 (Header split)
+Migrate pages from the `PageHero` panel to `PageHeader` + `ViewToolbar`, and
+retire `.v2-page-header`. Start with a golden-reference page (e.g. Purchase
+orders / Orders), prove the pattern, then roll across. Exit gate:
+`.v2-page-header` usage = 0. Fold in `SaveDock` for editor pages where it lands
+naturally (full SaveDock adoption is Phase 4 for the Growth island).

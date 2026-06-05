@@ -73,12 +73,8 @@ function varianceTone(g: number): "success" | "warning" | "danger" {
 export function AdminHandover() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(
-    globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC,
-  );
-  useEffect(() => {
-    if (globalLoc && globalLoc !== "all") setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher); "all" → first truck.
+  const pageLoc = globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC;
 
   const [history, setHistory] = useState<Handover[]>([]);
   const [sessions, setSessions] = useState<CashSession[]>([]);
@@ -181,9 +177,7 @@ export function AdminHandover() {
     <div className="v2-page">
       <PageHero
         title="Shift handover"
-        subtitle="The end-of-shift sign-off: count the drawer (reconciled against the cash session), confirm temps + waste are logged, leave a note, name the outgoing manager."
-        location={{ value: pageLoc, onChange: setPageLoc }}
-      />
+        subtitle="The end-of-shift sign-off: count the drawer (reconciled against the cash session), confirm temps + waste are logged, leave a note, name the outgoing manager."      />
 
       <Card>
         <CardHeader title="Record a handover" />

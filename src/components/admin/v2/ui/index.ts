@@ -14,7 +14,6 @@ export { InfoButton } from "./InfoButton";
 export { Tabs } from "./Tabs";
 export { Segmented } from "./Segmented";
 export { DatePager, type DatePagerUnit } from "./DatePager";
-export { LocationFilter } from "./LocationFilter";
 export { ScopeSwitcher } from "./ScopeSwitcher";
 export { PageHero } from "./PageHero";
 export { PageHeader } from "./PageHeader";

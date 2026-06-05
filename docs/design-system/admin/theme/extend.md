@@ -82,12 +82,12 @@ The page header pattern (use, don't redesign):
 />
 ```
 
-**Filtering by location?** Use `LocationFilter` from `v2/ui` — never
-hand-roll a pill row or an inline `Select`. It renders one look (a pill row)
-on every page and takes no `variant`; just wire `value` / `onChange`. See the
-[Location filter](./components.md#location-filter--one-component-one-look)
-component doc. (The sidebar's app-wide `LocationSwitcher` is a separate
-thing — don't reach for it per-page.)
+**Scoping by location?** Don't render a per-page control. Location is shell-level
+*scope*: read it with `const { location } = useAdminLocation()` (`""` = all sites)
+and filter your data by it; the topbar `ScopeSwitcher` is the single switcher. The
+old per-page `LocationFilter` and sidebar `LocationSwitcher` were removed in the
+redesign (Phase 2) — a per-page location pill is now lint-guarded. See
+[Location → Scope](./components.md#location--scope-one-switcher-shell-level).
 
 ## Add an icon
 

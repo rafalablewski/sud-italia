@@ -67,13 +67,9 @@ function AdminCashDesktop() {
   const toast = useToast();
 
   // Cash sessions are per-location and the API rejects "all locations" reads
-  // (a single drawer can't span trucks). When the sidebar is on "All
-  // locations", default to the first active truck and let the user pick from
-  // an in-page Select — mirrors the AdminInventory pattern.
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // (a single drawer can't span trucks). Site comes from the shell scope
+  // (topbar ScopeSwitcher); an "all" scope falls back to the first active truck.
+  const pageLoc = globalLoc || FALLBACK_LOC;
 
   const [sessions, setSessions] = useState<CashSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,9 +157,7 @@ function AdminCashDesktop() {
             Open the till at the start of service, record drops, count at close. Variance &gt; 10 zł is the #1
             theft / over-ring signal — track every shift.
           </>
-        }
-        location={{ value: pageLoc, onChange: setPageLoc }}
-        actions={
+        }        actions={
           <Button
             variant="primary"
             size="sm"
