@@ -4,57 +4,129 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Admin v3 · Customer detail — mockup</title>
+  <title>Admin v3 · Customers + detail — mockup</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    :root {
+    :root, [data-theme="dark"] {
       --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
       --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
       --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
       --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+      --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
+    }
+    [data-theme="light"] {
+      --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+      --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+      --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73; --av3-brand:#a82940; --av3-platinum:#9c7e4e; --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694;
+      --av3-c2:#9c7e4e; --av3-c3:#3d6694; --av3-c4:#1f8a60; --av3-sh-1:0 1px 2px rgba(28,24,21,.06);
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; min-height:100vh; }
-    .mono { font-family:"JetBrains Mono",monospace; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    .mono { font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; }
     .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
-    .scrim { flex:1; display:grid; place-items:start center; padding:24px; background:rgba(0,0,0,.55); }
+    .shell { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 28px); }
+    .side { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; background:var(--av3-s1); border-right:1px solid var(--av3-line); overflow:hidden; }
+    .brand { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--av3-line); flex-shrink:0; }
+    .brand-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:5px; background:var(--av3-brand); color:#fff; font-family:"Fraunces",serif; font-size:12px; font-weight:600; box-shadow:inset 0 0 0 1px rgba(203,180,138,.5); }
+    .brand-name { font-family:"Fraunces",serif; font-size:14px; font-weight:600; line-height:1.1; } .brand-sub { font-size:9.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .side-scroll { flex:1; overflow-y:auto; padding:12px 8px; } .group { margin-bottom:12px; } .eyebrow { padding:6px 8px 3px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .nav { position:relative; display:flex; align-items:center; gap:10px; height:30px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12.5px; font-weight:500; } .nav svg { width:16px; height:16px; flex-shrink:0; }
+    .nav.active { background:var(--av3-s3); color:var(--av3-fg); } .nav.active::before { content:""; position:absolute; left:-8px; top:7px; bottom:7px; width:2px; border-radius:0 2px 2px 0; background:var(--av3-platinum); }
+    .main { display:flex; flex-direction:column; min-width:0; }
+    .topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; height:44px; padding:0 14px; border-bottom:1px solid var(--av3-line); background:color-mix(in oklab,var(--av3-bg) 80%,transparent); backdrop-filter:saturate(150%) blur(10px); }
+    .crumbs { font-size:12.5px; } .crumbs .sep { color:var(--av3-subtle); margin:0 6px; } .crumbs .cur { font-weight:600; } .crumbs a { color:var(--av3-muted); } .spacer { flex:1; }
+    .icon-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--av3-muted); position:relative; cursor:pointer; } .icon-btn:hover { background:var(--av3-s2); color:var(--av3-fg); } .icon-btn svg { width:15px; height:15px; }
+    .scope { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--av3-line); border-radius:5px; background:var(--av3-s1); color:var(--av3-fg); font-size:12.5px; } .scope svg { width:13px; height:13px; color:var(--av3-subtle); }
+    .content { padding:16px; display:flex; flex-direction:column; gap:14px; }
+    .pagehead h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; } .sub { font-size:12.5px; color:var(--av3-muted); margin-top:2px; }
+    .kpi-rail { display:grid; grid-template-columns:repeat(auto-fit,minmax(176px,1fr)); gap:12px; }
+    .kpi { display:flex; flex-direction:column; gap:6px; padding:12px 16px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); }
+    .kpi-label { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); } .kpi-label svg { width:13px; height:13px; }
+    .kpi-value { font-family:"JetBrains Mono",monospace; font-size:23px; font-weight:500; line-height:1.05; }
+    .toolbar { display:flex; align-items:center; gap:12px; }
+    .input { height:32px; padding:0 10px; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font:inherit; font-size:12.5px; width:260px; }
+    .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); overflow:hidden; }
+    table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    th { text-align:left; padding:7px 14px; background:var(--av3-s2); color:var(--av3-subtle); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--av3-line); }
+    td { padding:8px 14px; border-bottom:1px solid var(--av3-line); } tr:last-child td { border-bottom:none; } tbody tr { cursor:pointer; } tbody tr:hover { background:var(--av3-hover); }
+    .num { text-align:right; font-family:"JetBrains Mono",monospace; } .th-num { text-align:right; } .cell-muted { color:var(--av3-muted); }
+    .badge { display:inline-flex; align-items:center; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; } .b-ok { background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1)); color:var(--av3-ok); } .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
+    /* dialog */
+    .scrim { position:fixed; inset:0; background:rgba(0,0,0,.55); display:grid; place-items:start center; padding:40px 16px; z-index:50; }
     .dialog { width:760px; max-width:100%; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; display:flex; flex-direction:column; max-height:calc(100vh - 80px); }
     .dhead { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; border-bottom:1px solid var(--av3-line); }
     .dtitle { font-size:15px; font-weight:600; } .dsub { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
-    .badge { display:inline-flex; align-items:center; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; }
-    .b-ok { background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1)); color:var(--av3-ok); }
-    .b-info { background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); color:var(--av3-info); }
-    .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
     .dbody { padding:16px; overflow-y:auto; }
     .dfoot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--av3-line); }
     .od-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px 16px; margin-bottom:6px; }
-    .k { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); }
-    .v { font-size:13px; margin-top:2px; }
+    .k { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); } .v { font-size:13px; margin-top:2px; }
     .ptsline { font-size:11.5px; color:var(--av3-muted); margin:6px 0 14px; }
     .seclabel { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); margin:16px 0 8px; }
-    .card { background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:9px; padding:12px; }
+    .subcard { background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:9px; padding:12px; }
     .ctitle { font-size:13px; font-weight:600; } .cdesc { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
     .formrow { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; margin-top:8px; }
     .field-label { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--av3-subtle); display:block; margin-bottom:4px; }
-    .input { width:100%; height:32px; padding:0 10px; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font-size:12.5px; font-family:inherit; }
-    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:6px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; }
-    .btn-primary { background:var(--av3-brand); border-color:var(--av3-brand); color:#fff; }
-    .btn-ghost { background:transparent; border-color:transparent; color:var(--av3-muted); }
-    .btn-danger { background:transparent; border-color:color-mix(in oklab,var(--av3-bad) 40%,transparent); color:var(--av3-bad); }
-    .btn svg { width:13px; height:13px; }
+    .input2 { width:100%; height:32px; padding:0 10px; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font-size:12.5px; font-family:inherit; }
+    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:6px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; } .btn svg { width:13px; height:13px; }
+    .btn-primary { background:var(--av3-brand); border-color:var(--av3-brand); color:#fff; } .btn-ghost { background:transparent; border-color:transparent; color:var(--av3-muted); } .btn-danger { background:transparent; border-color:color-mix(in oklab,var(--av3-bad) 40%,transparent); color:var(--av3-bad); }
     .line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--av3-line); font-size:13px; } .line:last-child { border-bottom:none; }
-    .q { font-family:"JetBrains Mono",monospace; color:var(--av3-muted); margin-right:8px; } .lp { font-family:"JetBrains Mono",monospace; color:var(--av3-muted); }
-    .note { font-size:11.5px; color:var(--av3-subtle); margin-top:1px; }
+    .q { font-family:"JetBrains Mono",monospace; color:var(--av3-muted); margin-right:8px; } .lp { font-family:"JetBrains Mono",monospace; color:var(--av3-muted); } .note { font-size:11.5px; color:var(--av3-subtle); margin-top:1px; }
     .iconbtn { display:grid; place-items:center; width:28px; height:28px; border:1px solid var(--av3-line); border-radius:6px; background:transparent; color:var(--av3-muted); cursor:pointer; } .iconbtn svg { width:14px; height:14px; }
+    @media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} }
   </style>
 </head>
 <body>
-  <div class="ribbon">Static design mockup · the live <strong style="margin:0 4px">/admin-v3/customers</strong> row opens this detail dialog — order history, points, notes &amp; GDPR over /api/admin/customers/[phone]</div>
+  <div class="ribbon">Static design mockup · the live <strong style="margin:0 4px">/admin-v3/customers</strong> row opens the detail dialog — order history, points, notes &amp; GDPR over /api/admin/customers/[phone]</div>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group"><div class="eyebrow">Overview</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts</a>
+        </div>
+        <div class="group"><div class="eyebrow">Customers</div>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 3.1a4 4 0 0 1 0 7.8"/></svg>Customers</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Corporate</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Feedback</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <nav class="crumbs"><a>Customers</a><span class="sep">/</span><span class="cur">Customers</span></nav>
+        <div class="spacer"></div>
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button>
+      </header>
+      <main class="content">
+        <div class="pagehead"><h1>Customers</h1><div class="sub">Phone-based directory · derived from real orders</div></div>
+        <div class="kpi-rail">
+          <div class="kpi"><div class="kpi-label">Customers</div><div class="kpi-value">1 842</div></div>
+          <div class="kpi"><div class="kpi-label">Repeat</div><div class="kpi-value">713</div></div>
+          <div class="kpi"><div class="kpi-label">Lifetime revenue</div><div class="kpi-value">214 380 zł</div></div>
+        </div>
+        <div class="toolbar"><input class="input" placeholder="Search name or phone…" /><span style="flex:1"></span><span class="cell-muted" style="font-size:12px">1 842 shown</span></div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Customer</th><th>Phone</th><th class="th-num">Orders</th><th class="th-num">Total spent</th><th class="th-num">Points</th><th>Last order</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:var(--av3-hover)"><td style="font-weight:600">Anna Kowalska</td><td class="cell-muted mono">+48 600 100 200</td><td class="num">17</td><td class="num">812,40 zł</td><td class="num">540</td><td class="cell-muted">3 Jun 26</td><td><span class="badge b-ok">Repeat</span></td></tr>
+              <tr><td style="font-weight:600">Marek Nowak</td><td class="cell-muted mono">+48 511 220 330</td><td class="num">9</td><td class="num">446,10 zł</td><td class="num">210</td><td class="cell-muted">1 Jun 26</td><td><span class="badge b-ok">Repeat</span></td></tr>
+              <tr><td style="font-weight:600">Jan Lewandowski</td><td class="cell-muted mono">+48 698 770 880</td><td class="num">1</td><td class="num">52,30 zł</td><td class="num">52</td><td class="cell-muted">28 May 26</td><td><span class="badge b-neu">New</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- detail dialog (row click) -->
   <div class="scrim">
     <div class="dialog">
       <div class="dhead">
         <div><div class="dtitle">Anna Kowalska</div><div class="dsub mono">+48 600 100 200</div></div>
-        <div style="display:flex;gap:8px"><span class="badge b-ok">Repeat</span></div>
+        <span class="badge b-ok">Repeat</span>
       </div>
       <div class="dbody">
         <div class="od-grid">
@@ -69,17 +141,17 @@
         </div>
         <div class="ptsline">Points: 812 earned · +50 manual · −322 redeemed</div>
 
-        <div class="card">
+        <div class="subcard">
           <div class="ctitle">Profile</div><div class="cdesc">DOB powers birthday triggers; email enables receipt + reactivation campaigns.</div>
           <div class="formrow">
-            <div><label class="field-label">Date of birth</label><input class="input" type="date" value="1992-06-05" /></div>
-            <div><label class="field-label">Email</label><input class="input" type="email" value="anna.k@example.com" /></div>
+            <div><label class="field-label">Date of birth</label><input class="input2" type="date" value="1992-06-05" /></div>
+            <div><label class="field-label">Email</label><input class="input2" type="email" value="anna.k@example.com" /></div>
             <button class="btn btn-primary">Save profile</button>
           </div>
         </div>
 
         <div class="seclabel">Order history · 17</div>
-        <div class="line"><span><span class="q">#K20871</span>krakow · delivery · 3 items</span><span style="display:inline-flex;align-items:center;gap:8px"><span class="badge b-info">preparing</span><span style="color:var(--av3-muted)">5 Jun 14:02</span><span class="lp">64,80 zł</span></span></div>
+        <div class="line"><span><span class="q">#K20871</span>krakow · delivery · 3 items</span><span style="display:inline-flex;align-items:center;gap:8px"><span class="badge b-neu">preparing</span><span style="color:var(--av3-muted)">5 Jun 14:02</span><span class="lp">64,80 zł</span></span></div>
         <div class="line"><span><span class="q">#K20712</span>krakow · pickup · 2 items</span><span style="display:inline-flex;align-items:center;gap:8px"><span class="badge b-ok">completed</span><span style="color:var(--av3-muted)">29 May 18:40</span><span class="lp">41,90 zł</span></span></div>
         <div class="line"><span><span class="q">#K20559</span>krakow · pickup · 4 items</span><span style="display:inline-flex;align-items:center;gap:8px"><span class="badge b-ok">completed</span><span style="color:var(--av3-muted)">21 May 13:11</span><span class="lp">88,20 zł</span></span></div>
 
@@ -91,8 +163,8 @@
 
         <div class="seclabel">Notes · 1</div>
         <div class="formrow" style="grid-template-columns:1fr 160px auto">
-          <input class="input" placeholder="Add a note (e.g. allergy, VIP, complaint follow-up)…" />
-          <input class="input" placeholder="tags, comma-sep" />
+          <input class="input2" placeholder="Add a note (e.g. allergy, VIP, complaint follow-up)…" />
+          <input class="input2" placeholder="tags, comma-sep" />
           <button class="btn">＋ Add</button>
         </div>
         <div class="line" style="align-items:flex-start;margin-top:8px"><span>Gluten-free — always confirm base.<span class="note">kasia · 21 May 13:14 · allergy, vip</span></span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>
@@ -105,5 +177,6 @@
       </div>
     </div>
   </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
 </body>
 </html>

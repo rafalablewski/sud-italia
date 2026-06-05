@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Admin v3 · Audit log diff — mockup</title>
+  <title>Admin v3 · Audit log + diff — mockup</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root, [data-theme="dark"] {
@@ -14,17 +14,34 @@
       --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
       --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
     }
+    [data-theme="light"] {
+      --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+      --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+      --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73; --av3-brand:#a82940; --av3-platinum:#9c7e4e; --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694;
+      --av3-sh-1:0 1px 2px rgba(28,24,21,.06);
+    }
     * { box-sizing:border-box; margin:0; padding:0; }
     body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
-    .mono { font-family:"JetBrains Mono",monospace; }
+    .mono { font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; }
     .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
-    .wrap { max-width:1080px; margin:0 auto; padding:18px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
-    .col { flex:1; min-width:340px; display:flex; flex-direction:column; gap:12px; }
-    h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; }
-    .sub { font-size:12.5px; color:var(--av3-muted); margin-top:2px; }
-    .seclabel { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); }
+    .shell { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 28px); }
+    .side { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; background:var(--av3-s1); border-right:1px solid var(--av3-line); overflow:hidden; }
+    .brand { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--av3-line); flex-shrink:0; }
+    .brand-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:5px; background:var(--av3-brand); color:#fff; font-family:"Fraunces",serif; font-size:12px; font-weight:600; box-shadow:inset 0 0 0 1px rgba(203,180,138,.5); }
+    .brand-name { font-family:"Fraunces",serif; font-size:14px; font-weight:600; line-height:1.1; } .brand-sub { font-size:9.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .side-scroll { flex:1; overflow-y:auto; padding:12px 8px; } .group { margin-bottom:12px; } .eyebrow { padding:6px 8px 3px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .nav { position:relative; display:flex; align-items:center; gap:10px; height:30px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12.5px; font-weight:500; } .nav svg { width:16px; height:16px; flex-shrink:0; }
+    .nav.active { background:var(--av3-s3); color:var(--av3-fg); } .nav.active::before { content:""; position:absolute; left:-8px; top:7px; bottom:7px; width:2px; border-radius:0 2px 2px 0; background:var(--av3-platinum); }
+    .main { display:flex; flex-direction:column; min-width:0; }
+    .topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; height:44px; padding:0 14px; border-bottom:1px solid var(--av3-line); background:color-mix(in oklab,var(--av3-bg) 80%,transparent); backdrop-filter:saturate(150%) blur(10px); }
+    .crumbs { font-size:12.5px; } .crumbs .sep { color:var(--av3-subtle); margin:0 6px; } .crumbs .cur { font-weight:600; } .crumbs a { color:var(--av3-muted); } .spacer { flex:1; }
+    .icon-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--av3-muted); position:relative; cursor:pointer; } .icon-btn:hover { background:var(--av3-s2); color:var(--av3-fg); } .icon-btn svg { width:15px; height:15px; }
+    .scope { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--av3-line); border-radius:5px; background:var(--av3-s1); color:var(--av3-fg); font-size:12.5px; } .scope svg { width:13px; height:13px; color:var(--av3-subtle); }
+    .content { padding:16px; display:flex; flex-direction:column; gap:14px; }
+    .pagehead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; } .pagehead h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; } .sub { font-size:12.5px; color:var(--av3-muted); margin-top:2px; }
+    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:5px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; } .btn svg { width:14px; height:14px; } .btn-ghost { background:transparent; border-color:transparent; color:var(--av3-muted); }
     .filterchips { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; flex-wrap:wrap; }
-    .fchip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:5px; color:var(--av3-muted); font-size:12px; font-weight:500; }
+    .fchip { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:5px; color:var(--av3-muted); font-size:12px; font-weight:500; text-transform:capitalize; }
     .fchip.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); }
     .fchip-count { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--av3-subtle); }
     .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); overflow:hidden; }
@@ -33,81 +50,99 @@
     td { padding:8px 14px; border-bottom:1px solid var(--av3-line); } tr:last-child td { border-bottom:none; } tbody tr { cursor:pointer; } tbody tr:hover { background:var(--av3-hover); }
     .cell-muted { color:var(--av3-muted); }
     .badge { display:inline-flex; align-items:center; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; }
-    .b-bad { background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1)); color:var(--av3-bad); }
-    .b-info { background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); color:var(--av3-info); }
-    .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
-    /* detail dialog */
-    .dialog { background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; }
+    .b-bad { background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1)); color:var(--av3-bad); } .b-info { background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); color:var(--av3-info); } .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
+    /* dialog overlay */
+    .scrim { position:fixed; inset:0; background:rgba(0,0,0,.55); display:grid; place-items:start center; padding:60px 16px; z-index:50; }
+    .dialog { width:560px; max-width:100%; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; }
     .dhead { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; border-bottom:1px solid var(--av3-line); }
     .dtitle { font-size:14px; font-weight:600; } .dsub { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
-    .dbody { padding:16px; }
+    .dbody { padding:16px; max-height:60vh; overflow-y:auto; }
     .od-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-bottom:14px; }
-    .od-field .k { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); }
-    .od-field .v { font-size:13px; margin-top:2px; }
-    /* diff */
+    .k { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); } .v { font-size:13px; margin-top:2px; }
+    .seclabel { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); margin-bottom:8px; }
     .diff { background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; padding:6px 10px; font-family:"JetBrains Mono",monospace; font-size:12px; }
     .drow { display:flex; flex-direction:column; gap:3px; padding:6px 0; border-bottom:1px solid var(--av3-line); } .drow:last-child { border-bottom:none; }
     .dkey { display:flex; align-items:center; gap:6px; font-weight:600; }
     .d2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .dval { margin:0; white-space:pre-wrap; word-break:break-word; }
     .added { color:var(--av3-ok); } .removed { color:var(--av3-bad); } .chg { color:var(--av3-warn); font-weight:700; }
+    @media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} }
   </style>
 </head>
 <body>
   <div class="ribbon">Static design mockup · the live <strong style="margin:0 4px">/admin-v3/audit-log</strong> opens a detail dialog with the field-by-field diff (before/after from the API)</div>
-  <div class="wrap">
-    <div class="col">
-      <div><h1>Audit log</h1><div class="sub">Every privileged action · append-only · last 500 · open a row for the field-by-field diff</div></div>
-      <div class="filterchips"><span class="fchip active">All<span class="fchip-count">312</span></span><span class="fchip">Orders<span class="fchip-count">141</span></span><span class="fchip">Menu<span class="fchip-count">58</span></span><span class="fchip">Settings<span class="fchip-count">22</span></span></div>
-      <div class="card">
-        <table>
-          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th></th></tr></thead>
-          <tbody>
-            <tr style="background:var(--av3-hover)"><td class="cell-muted">5 Jun 14:21</td><td style="font-weight:500">rafal</td><td><span class="badge b-bad">orders.refund_partial</span></td><td class="cell-muted">order · 8f3a1c9d</td><td><span class="badge b-neu">diff</span></td></tr>
-            <tr><td class="cell-muted">5 Jun 13:50</td><td style="font-weight:500">kasia</td><td><span class="badge b-info">menu.update</span></td><td class="cell-muted">menuItem · pizza-margherita</td><td><span class="badge b-neu">diff</span></td></tr>
-            <tr><td class="cell-muted">5 Jun 12:08</td><td style="font-weight:500">system</td><td><span class="badge b-neu">settings.view</span></td><td class="cell-muted">settings · loyalty</td><td><span class="cell-muted">—</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="seclabel">Row click → detail dialog</div>
-      <div class="dialog">
-        <div class="dhead">
-          <div><div class="dtitle">orders.refund_partial</div><div class="dsub">rafal · 5 Jun 14:21</div></div>
-          <span class="badge b-bad">orders</span>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group"><div class="eyebrow">Overview</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts</a>
         </div>
-        <div class="dbody">
-          <div class="od-grid">
-            <div class="od-field"><div class="k">Actor</div><div class="v">rafal</div></div>
-            <div class="od-field"><div class="k">When</div><div class="v">5 Jun 14:21</div></div>
-            <div class="od-field"><div class="k">Entity</div><div class="v">order</div></div>
-            <div class="od-field"><div class="k">Entity ID</div><div class="v mono">8f3a1c9d</div></div>
-          </div>
-          <div class="seclabel" style="margin-bottom:8px">Field-by-field diff</div>
-          <div class="diff">
-            <div class="drow">
-              <div class="dkey"><span class="chg">~</span>status</div>
-              <div class="d2"><pre class="dval removed">"paid"</pre><pre class="dval added">"partially_refunded"</pre></div>
-            </div>
-            <div class="drow">
-              <div class="dkey"><span style="color:var(--av3-ok)">＋</span>refund</div>
-              <pre class="dval added">{
+        <div class="group"><div class="eyebrow">System</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>Users &amp; roles</a>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>Audit log</a>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>SOC 2 controls</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <nav class="crumbs"><a>System</a><span class="sep">/</span><span class="cur">Audit log</span></nav>
+        <div class="spacer"></div>
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button>
+      </header>
+      <main class="content">
+        <div class="pagehead">
+          <div><h1>Audit log</h1><div class="sub">Every privileged action · append-only · last 500 · open a row for the field-by-field diff</div></div>
+          <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
+        </div>
+        <div class="filterchips"><span class="fchip active">all<span class="fchip-count">312</span></span><span class="fchip">orders<span class="fchip-count">141</span></span><span class="fchip">menu<span class="fchip-count">58</span></span><span class="fchip">settings<span class="fchip-count">22</span></span><span class="fchip">loyalty<span class="fchip-count">37</span></span><span class="fchip">staff<span class="fchip-count">29</span></span></div>
+        <div class="card">
+          <table>
+            <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:var(--av3-hover)"><td class="cell-muted">5 Jun 14:21</td><td style="font-weight:500">rafal</td><td><span class="badge b-bad">orders.refund_partial</span></td><td class="cell-muted">order · 8f3a1c9d</td><td><span class="badge b-neu">diff</span></td></tr>
+              <tr><td class="cell-muted">5 Jun 13:50</td><td style="font-weight:500">kasia</td><td><span class="badge b-info">menu.update</span></td><td class="cell-muted">menuItem · pizza-margherita</td><td><span class="badge b-neu">diff</span></td></tr>
+              <tr><td class="cell-muted">5 Jun 12:08</td><td style="font-weight:500">system</td><td><span class="badge b-neu">settings.view</span></td><td class="cell-muted">settings · loyalty</td><td><span class="cell-muted">—</span></td></tr>
+              <tr><td class="cell-muted">5 Jun 11:30</td><td style="font-weight:500">rafal</td><td><span class="badge b-info">staff.update</span></td><td class="cell-muted">staff · m_2841</td><td><span class="badge b-neu">diff</span></td></tr>
+              <tr><td class="cell-muted">4 Jun 21:02</td><td style="font-weight:500">kasia</td><td><span class="badge b-bad">menu.delete</span></td><td class="cell-muted">menuItem · waw-special-x</td><td><span class="badge b-neu">diff</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- detail dialog (row click) -->
+  <div class="scrim">
+    <div class="dialog">
+      <div class="dhead">
+        <div><div class="dtitle">orders.refund_partial</div><div class="dsub">rafal · 5 Jun 14:21</div></div>
+        <span class="badge b-bad">orders</span>
+      </div>
+      <div class="dbody">
+        <div class="od-grid">
+          <div><div class="k">Actor</div><div class="v">rafal</div></div>
+          <div><div class="k">When</div><div class="v">5 Jun 14:21</div></div>
+          <div><div class="k">Entity</div><div class="v">order</div></div>
+          <div><div class="k">Entity ID</div><div class="v mono">8f3a1c9d</div></div>
+        </div>
+        <div class="seclabel">Field-by-field diff</div>
+        <div class="diff">
+          <div class="drow"><div class="dkey"><span class="chg">~</span>status</div><div class="d2"><pre class="dval removed">"paid"</pre><pre class="dval added">"partially_refunded"</pre></div></div>
+          <div class="drow"><div class="dkey"><span style="color:var(--av3-ok)">＋</span>refund</div><pre class="dval added">{
   "type": "partial",
   "amount": 1500,
   "reason": "missing_item",
   "stripeRefundId": "re_3Q…"
-}</pre>
-            </div>
-            <div class="drow">
-              <div class="dkey"><span class="chg">~</span>totalAmount</div>
-              <div class="d2"><pre class="dval removed">6480</pre><pre class="dval added">4980</pre></div>
-            </div>
-          </div>
+}</pre></div>
+          <div class="drow"><div class="dkey"><span class="chg">~</span>totalAmount</div><div class="d2"><pre class="dval removed">6480</pre><pre class="dval added">4980</pre></div></div>
         </div>
       </div>
     </div>
   </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
 </body>
 </html>
