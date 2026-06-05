@@ -293,6 +293,16 @@ refetches every 30s.
   red>100% capacity colouring) and **Menu engineering** (`/menu-engineering` —
   star/plowhorse/puzzle/dog quadrant counts + per-item GP/unit, true-CM1 and
   margin-trap / prep-heavy flags). All accept `?days=N`.
-  **Next part (Part 3c):** the five-section `MetricExplainer` ⓘ pass (Rule #12).
+  **Part 3c shipped:** the five-section ⓘ explainer pass (Rule #12). A
+  v3-native `MetricExplainer` + `InfoButton` primitive
+  (`src/components/admin/v3/ui/Explainer.tsx`, exported from `ui`) renders the
+  five required sections in the fixed order/labels — description → INSTITUTIONAL
+  ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY (all five props required, so a
+  half-written explanation won't compile). It is the admin-v3 counterpart to
+  `src/components/admin/Explainers.tsx` (which imports the v2 theme and dies at
+  cutover). `Kpi` gained an optional `info` slot that renders the ⓘ trigger at
+  the end of the label row; the Calculator's six headline KPIs (net profit, net
+  margin, EBITDA, break-even/day, prime cost, payback) each carry a full
+  five-section explainer.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { computeReturns, computeScenario, computeTornado, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationLaborLine, SimulationScenario } from "@/data/types";
-import { Badge, Button, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
 const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
@@ -90,14 +90,56 @@ export function CalculatorV3() {
         </div>
       </div>
 
-      {/* headline KPIs */}
+      {/* headline KPIs — each carries a five-section ⓘ explainer (Rule #12) */}
       <div className="av3-kpi-rail">
-        <Kpi label="Net profit / mo" value={formatPrice(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} />
-        <Kpi label="Net margin" value={`${(c.margin * 100).toFixed(1)}%`} accentVar="--av3-c4" />
-        <Kpi label="EBITDA / mo" value={formatPrice(c.ebitda)} accentVar="--av3-c2" />
-        <Kpi label="Break-even / day" value={`${Math.ceil(c.breakEvenOrdersPerDay)}`} accentVar="--av3-c5" />
-        <Kpi label="Prime cost" value={`${(c.primeCostPct * 100).toFixed(0)}%`} accentVar="--av3-c3" />
-        <Kpi label="Payback" value={c.paybackMonths != null ? `${c.paybackMonths.toFixed(1)} mo` : "—"} accentVar="--av3-c1" />
+        <Kpi label="Net profit / mo" value={formatPrice(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
+          <InfoButton title="Net profit / month"
+            description="The bottom line — what's left each month after every cost, including tax, is paid."
+            institutional="The single number investors underwrite. For a single Neapolitan truck a healthy steady-state net margin is 10–18% of revenue; below ~6% the unit is fragile to one bad month, above ~20% you're likely under-investing in labour or marketing. The institutional gate: net profit must clear the owner's opportunity cost of capital AND service any debt with headroom."
+            plain="Say the truck does 48 000 zł of revenue this month. After food, labour, rent, fees, waste, D&A and CIT you keep 7 200 zł — that's a 15% net margin. That 7 200 zł is what actually funds your payback, a second truck, or your own salary."
+            tips="Pull the three biggest levers in order of leverage: lift avg ticket (attach a 9 zł espresso to 30% more orders), shave food cost 2–3pp via recipe/portion discipline, and right-size labour to volume (the labour-flex lever). Small ticket + COGS moves compound straight to the bottom line because fixed costs don't move."
+            methodology="netProfit = revenue − COGS − labour − fixed − payment fees − waste − refunds − loyalty − packaging − marketing(CAC) − depreciation − interest − CIT. Computed by computeScenario() in src/lib/simulation-engine.ts from the live levers; CIT applies only to positive pre-tax profit." />
+        } />
+        <Kpi label="Net margin" value={`${(c.margin * 100).toFixed(1)}%`} accentVar="--av3-c4" info={
+          <InfoButton title="Net margin"
+            description="Net profit as a percentage of revenue — profit quality independent of scale."
+            institutional="Margin is how you compare a 30-order day to a 300-order chain on equal footing. QSR/street-food benchmark for an owner-operated unit is 10–18% net; franchised systems run thinner (6–12%) after royalty + fund. A margin that's high but on tiny revenue isn't a business yet; a thin margin on high revenue can still be a great cash engine."
+            plain="Two trucks each net 7 200 zł. Truck A did it on 48 000 zł (15%), Truck B on 90 000 zł (8%). Truck B is bigger but more fragile per złoty — a 5% cost shock erases more of its thinner margin."
+            tips="Margin moves on mix, not just cost-cutting: shift volume toward high-CM items (the menu-engineering 'stars'), trim the 'dogs', and protect price (avoid blanket discounts — use targeted combos instead). Watch prime cost (below) — it's the fastest margin destroyer."
+            methodology="margin = netProfit ÷ monthlyRevenue. Returns 0 when revenue is 0. Same computeScenario() pipeline as net profit." />
+        } />
+        <Kpi label="EBITDA / mo" value={formatPrice(c.ebitda)} accentVar="--av3-c2" info={
+          <InfoButton title="EBITDA / month"
+            description="Operating cash generation before financing and accounting choices — earnings before interest, tax, depreciation & amortisation."
+            institutional="EBITDA is the multiple buyers pay on (a single truck might trade at 3–5× annual EBITDA; a proven multi-unit chain higher). It strips out how the truck was financed and how fast it's depreciated, so it compares operating quality across units. The gate for expansion: EBITDA must comfortably cover D&A + interest + a reinvestment buffer."
+            plain="If the truck throws off 9 500 zł of EBITDA a month but 2 300 zł goes to loan interest and equipment depreciation, the operation is healthy even though the after-tax 'net' looks thinner — the business is generating real cash, it's just paying down its build-out."
+            tips="EBITDA rises with the same operating levers as net profit (ticket, COGS, labour, fixed) but is blind to interest/D&A — so it's the cleanest scoreboard for operating decisions. To lift it, attack the controllable operating block, not the capital structure."
+            methodology="ebitda = revenue − variable costs (COGS + fees + waste + refunds + loyalty + packaging + CAC) − labour − fixed. Excludes depreciation and interest by definition. computeScenario(), src/lib/simulation-engine.ts." />
+        } />
+        <Kpi label="Break-even / day" value={`${Math.ceil(c.breakEvenOrdersPerDay)}`} accentVar="--av3-c5" info={
+          <InfoButton title="Break-even orders / day"
+            description="The number of orders per operating day at which the truck makes exactly zero profit — every order above this is pure contribution."
+            institutional="The most important survival number. Institutional view: your actual volume should sit at least 25–30% above break-even (a 'margin of safety') so a rainy week or a sick pizzaiolo doesn't tip you into a loss. If break-even is close to capacity, the model has no room to absorb shocks and shouldn't be financed."
+            plain="If fixed + labour costs are 36 000 zł/month and each order contributes 18 zł after variable costs, you need ~2 000 orders/month ≈ 77/day just to keep the lights on. Order 78 onward is the first złoty of profit."
+            tips="Lower break-even two ways: raise contribution per order (higher ticket or lower COGS — each złoty of CM1 drops the threshold), or cut fixed/labour drag (renegotiate rent, flex labour to demand). Converting a fixed cost to a variable one mechanically lowers the break-even line."
+            methodology="breakEvenOrdersPerMonth = (labour + fixed) ÷ contributionPerOrder, where contributionPerOrder = avgTicket × (1 − COGS% − fees% − waste% − refund% − loyalty%). Per-day = ÷ daysOpenPerMonth. computeScenario()." />
+        } />
+        <Kpi label="Prime cost" value={`${(c.primeCostPct * 100).toFixed(0)}%`} accentVar="--av3-c3" info={
+          <InfoButton title="Prime cost %"
+            description="Food cost plus labour as a share of revenue — the two biggest controllable lines combined."
+            institutional="The number every restaurant operator manages to. Industry rule of thumb: keep prime cost under 60% of revenue; 55% is excellent, above 65% the unit is structurally unprofitable no matter how busy. It's the headline because COGS and labour are where money actually leaks — rent and the rest are comparatively fixed and small."
+            plain="On 48 000 zł revenue, if food is 14 400 zł (30%) and labour 12 000 zł (25%), prime cost is 26 400 zł = 55%. That leaves 45% to cover rent, fees, marketing and profit — comfortable. Let it drift to 65% and there's almost nothing left."
+            tips="COGS side: tighten portioning, switch distributor offerings (the Recipes ingredient catalog), engineer the menu toward high-margin items. Labour side: schedule to the demand curve (use the hourly-throughput sandbox), cross-train so one fewer head covers a soft daypart. Track it weekly, not monthly."
+            methodology="primeCostPct = (COGS + labour) ÷ revenue. COGS = revenue × cogsPct; labour from the per-role headcount × hours × rate, flexed by volume. computeScenario(), src/lib/simulation-engine.ts." />
+        } />
+        <Kpi label="Payback" value={c.paybackMonths != null ? `${c.paybackMonths.toFixed(1)} mo` : "—"} accentVar="--av3-c1" info={
+          <InfoButton title="Payback period"
+            description="How many months of steady net profit it takes to earn back the upfront setup cost."
+            institutional="The headline risk metric for the build-out decision. Street-food / single-truck investors look for payback inside 18–30 months; beyond ~36 months the capital is better deployed elsewhere unless there's a strategic reason. Shorter payback = lower exposure to the unknowns of a young location. Pair it with NPV/IRR (Investor Returns card) for the full picture."
+            plain="If the truck cost 240 000 zł to build and fit out, and it nets 10 000 zł/month, you recover the cash in 24 months — two years before the project is truly 'in the black' on the original cheque."
+            tips="Two ways to shorten it: spend less up front (lease vs buy equipment, phase the fit-out) or net more per month (every lever that lifts net profit shortens payback proportionally). A 10% net-profit improvement turns a 24-month payback into ~21.8 months."
+            methodology="paybackMonths = setupCostGrosze ÷ monthlyNetProfit, shown only when setup cost > 0 and net profit > 0. The Investor Returns card adds the discounted view (NPV at 10/15/20% + bisected IRR). computeScenario() + computeReturns()." />
+        } />
       </div>
 
       <div className="av3-grid-2-1">
