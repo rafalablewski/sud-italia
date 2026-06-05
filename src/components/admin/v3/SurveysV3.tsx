@@ -9,7 +9,7 @@ import {
   type SurveyDefinition,
   type SurveyResponse,
 } from "@/lib/surveys";
-import { Badge, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, InfoButton, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 function pulseTone(score: number): BadgeTone {
   if (score >= 50) return "ok";
@@ -74,13 +74,38 @@ export function SurveysV3() {
     <>
       <div className="av3-pagehead">
         <div>
-          <h1>Pulse surveys</h1>
+          <h1 style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            Pulse surveys
+            <InfoButton
+              title="How Pulse surveys work"
+              description="Pulse fires a one-tap 1–5★ question at the right moment in a guest's visit, then nets the answers into an NPS-style score so you can see — and move — how guests actually feel."
+              institutional="A continuous voice-of-customer instrument, not a one-off CSAT poll. The gate: a Pulse score below 0 is a churn signal (more detractors than promoters); steer for 30+. Read it alongside response volume — a high score off a handful of answers is noise."
+              plain="Instead of a long survey nobody fills in, the storefront asks one star-rating at a telling moment (after ordering, on exit intent, on the rewards page). Each survey targets a specific moment, so a low score tells you exactly where the friction is."
+              tips="Activate the surveys whose 'Fires on' moment you most want to read; open the Responses tab and fix the top recurring detractor snag first; turn 4★ passives into promoters with a small post-order delight."
+              methodology="Per-survey results net into Pulse score = round((promoters − detractors) / total × 100), promoter = 5★, detractor ≤ 3★, passive = 4★. Source: every SurveyResponse in the store (computePulseScore / averageStars in src/lib/surveys.ts) — no sampling."
+            />
+          </h1>
           <div className="av3-pagehead-sub">One-tap guest sentiment · NPS-style pulse</div>
         </div>
       </div>
 
       <div className="av3-kpi-rail">
-        <Kpi label="Pulse score" icon={Gauge} value={`${pulse > 0 ? "+" : ""}${pulse}`} accentVar={pulseTone(pulse) === "ok" ? "--av3-c4" : pulseTone(pulse) === "bad" ? "--av3-c1" : "--av3-c3"} />
+        <Kpi
+          label="Pulse score"
+          icon={Gauge}
+          value={`${pulse > 0 ? "+" : ""}${pulse}`}
+          accentVar={pulseTone(pulse) === "ok" ? "--av3-c4" : pulseTone(pulse) === "bad" ? "--av3-c1" : "--av3-c3"}
+          info={
+            <InfoButton
+              title="Pulse score (NPS-style)"
+              description="The net of promoters (5★) minus detractors (1–3★) as a share of all answers, on a −100…+100 scale — a classic NPS computed from the 5-star Pulse prompts."
+              institutional="A standard relationship-NPS gate: below 0 means more detractors than promoters (churn risk), 0–30 is workable, 30–50 good, and 50+ is best-in-class loyalty for QSR. Read it alongside response volume — a +80 off 4 answers is noise; treat anything under ~30 responses as directional."
+              plain="If 100 guests tap a rating after ordering — 60 give 5★ (promoters), 25 give 4★ (passives, ignored), 15 give ≤3★ (detractors) — Pulse = 60 − 15 = +45. It's the same scorecard a 50 zł Margherita regular gives a friend: 'worth telling people about' vs 'meh'."
+              tips="Read every detractor comment in the Responses tab and fix the top recurring snag; use the 'Fires on' moment to localise it (a low 'prolonged browsing' pulse = hard-to-navigate menu; low 'after ordering' = checkout friction); convert a 4★ passive with a small post-order delight (a free-espresso voucher on the receipt)."
+              methodology="round((promoters − detractors) / total × 100), promoter = 5★, detractor ≤ 3★, passive = 4★ (ignored). Source: every SurveyResponse in the selected set (computePulseScore in src/lib/surveys.ts) — all answers counted, no sampling."
+            />
+          }
+        />
         <Kpi label="Avg rating" icon={Star} value={avg ? `${avg.toFixed(1)}` : "—"} accentVar="--av3-c2" />
         <Kpi label="Responses" icon={MessageSquare} value={`${responses.length}`} accentVar="--av3-c3" />
       </div>

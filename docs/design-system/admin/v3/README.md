@@ -138,7 +138,12 @@ refetches every 30s.
   the configurable daily-goal setting (`/api/admin/ops-goals`)
 - [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
-  `PUT /api/admin/orders`, staff+
+  `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
+  detail dialog opens a `RefundDialogV3` (full/partial via `ChipRow`, reason
+  code, notes, Stripe-reversal vs manager-comp note) wired to
+  `POST /api/admin/orders/:id/refund` with a live `evaluateRefundGuard` preview
+  (per-refund cap + daily comp budget → owner-approval gate); a refunded order
+  shows the amount + reason in the detail.
 - [x] Inventory (`/admin-v3/inventory`) — stock table (value / low-out / 7d
   waste KPIs, status chips) + movements view + edit dialog (par/reorder/on-hand
   via `PUT /api/admin/stock`, log receive/waste/adjust via
@@ -202,7 +207,9 @@ refetches every 30s.
   auto-preorder) via `PUT /api/admin/corporate`
 - [x] Pulse surveys (`/admin-v3/surveys`) — NPS-style pulse + avg-rating KPIs
   (shared `@/lib/surveys`), survey catalogue with active toggles
-  (`PUT /api/admin/surveys`), and a responses table
+  (`PUT /api/admin/surveys`), and a responses table. **Rule #12:** the
+  Pulse-score KPI and a page-title "How Pulse surveys work" trigger now carry
+  full five-section `InfoButton`/`MetricExplainer` blocks (restored from v2)
 - [x] Reports (`/admin-v3/reports`) — range presets, revenue/profit/margin/
   orders/AOV/tips KPIs, revenue-by-category bars, tips summary, top items, JPK
   export (`/api/admin/analytics` + `/reports/tips` + `/reports/jpk`)
@@ -242,7 +249,9 @@ refetches every 30s.
   cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
   engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
   classification with window select, quadrant chips + per-dish verdict
-  (`/api/admin/menu-engineering`). Expansion (`/admin-v3/expansion`):
+  (`/api/admin/menu-engineering`); **Rule #12:** all four quadrant KPIs now
+  carry full five-section `InfoButton`/`MetricExplainer` blocks (restored from
+  v2). Expansion (`/admin-v3/expansion`):
   new-site readiness checklists (toggle items, add planned site,
   `PUT /api/admin/expansion`).
 - [x] Intelligence complete — Manage locations (`/admin-v3/locations/manage`):
