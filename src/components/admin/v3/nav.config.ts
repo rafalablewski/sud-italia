@@ -147,11 +147,11 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     id: "intelligence",
     label: "Intelligence",
     items: [
-      { href: `${P}/locations`, label: "Multi-location", icon: Map, requiredRole: "owner", pending: true },
+      { href: `${P}/locations`, label: "Multi-location", icon: Map, requiredRole: "owner" },
       { href: `${P}/locations/manage`, label: "Manage locations", icon: MapPin, requiredRole: "owner", pending: true },
-      { href: `${P}/menu-engineering`, label: "Menu engineering", icon: UtensilsCrossed, requiredRole: "manager", pending: true },
+      { href: `${P}/menu-engineering`, label: "Menu engineering", icon: UtensilsCrossed, requiredRole: "manager" },
       { href: `${P}/ai`, label: "Insights", icon: Brain, requiredRole: "manager", pending: true },
-      { href: `${P}/expansion`, label: "Expansion", icon: Map, requiredRole: "owner", pending: true },
+      { href: `${P}/expansion`, label: "Expansion", icon: Map, requiredRole: "owner" },
     ],
   },
   {

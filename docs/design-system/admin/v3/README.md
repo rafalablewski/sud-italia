@@ -203,5 +203,12 @@ refetches every 30s.
   delete) that **round-trips the full location config** so bundles/badges are
   preserved (`PUT /api/admin/upsell`). Upsell (`/admin-v3/upsell`): bundle-ladder
   activation toggles (full ladder pricing stays in the classic admin).
-- [ ] Finance·Calculator (AdminSimulation), Intelligence, System
+- [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
+  cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
+  engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
+  classification with window select, quadrant chips + per-dish verdict
+  (`/api/admin/menu-engineering`). Expansion (`/admin-v3/expansion`):
+  new-site readiness checklists (toggle items, add planned site,
+  `PUT /api/admin/expansion`).
+- [ ] Intelligence remainder (Manage locations, Insights/AI), Finance·Calculator (AdminSimulation), System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
