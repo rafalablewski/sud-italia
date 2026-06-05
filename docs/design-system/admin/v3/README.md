@@ -139,5 +139,9 @@ refetches every 30s.
 - [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+
-- [ ] Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System
+- [x] Inventory (`/admin-v3/inventory`) — stock table (value / low-out / 7d
+  waste KPIs, status chips) + movements view + edit dialog (par/reorder/on-hand
+  via `PUT /api/admin/stock`, log receive/waste/adjust via
+  `POST /api/admin/stock-movements`). Aggregates across trucks when scope = all
+- [ ] Operations (Menu/Recipes/HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

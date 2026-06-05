@@ -765,3 +765,18 @@
 .av3-od-note { font-size: 11.5px; color: var(--av3-subtle); margin-top: 1px; }
 .av3-od-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--av3-line-strong); }
 .av3-od-total .v { font-family: var(--av3-mono); font-size: 19px; font-weight: 600; }
+
+/* ==========================================================================
+   14. Form fields (dialogs / editors)
+   ========================================================================== */
+.av3-field { display: flex; flex-direction: column; gap: 4px; }
+.av3-field-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
+.av3-input, .av3-select {
+  height: 32px; padding: 0 10px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm);
+  background: var(--av3-s1); color: var(--av3-fg); font: inherit; font-size: 13px;
+}
+.av3-input { font-family: var(--av3-mono); font-variant-numeric: tabular-nums; }
+.av3-input:focus, .av3-select:focus { outline: none; border-color: var(--av3-brand); }
+.av3-select { appearance: none; cursor: pointer; }
+.av3-formrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.av3-subhead { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--av3-subtle); margin: 16px 0 8px; }
