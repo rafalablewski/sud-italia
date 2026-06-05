@@ -292,8 +292,12 @@ refetches every 30s.
   `PUT /api/admin/expansion`).
 - [x] Intelligence complete — Manage locations (`/admin-v3/locations/manage`):
   site CRUD (hours editor, coordinates, active/alcohol) round-tripping the full
-  record + re-seed (`/api/admin/locations`). Insights (`/admin-v3/ai`): AI demand
-  forecast bars (`/api/admin/ai/forecast`) + chatbot-FAQ manager
+  record + re-seed (`/api/admin/locations`). Insights (`/admin-v3/ai`): **five
+  tabs restored to v2 parity (flag #5)** — **Forecast** bars
+  (`/api/admin/ai/forecast`), **Anomalies** (today vs trailing 28-day avg from
+  `/api/admin/analytics`), **Reorder** (SKUs ≤ reorder point from
+  `/api/admin/stock`, suggested qty + est cost), **Staffing** (peak-hour
+  headcount from `/api/admin/insights`), and the **Chatbot FAQ** manager
   (`/api/admin/chatbot-faq`).
 - [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read), SOC 2
   (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
