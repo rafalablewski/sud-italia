@@ -211,6 +211,36 @@ If a new module ships (e.g. a Reservations console):
 The closing "what this module is not" is the most important section.
 A module that doesn't know what it isn't will drift.
 
+## Design-system governance — the lint ratchet
+
+The admin **page layer** (`src/app/admin/**/*.tsx` + the top-level
+`src/components/admin/*.tsx`) is guarded by an ESLint `no-restricted-syntax` rule
+(in `eslint.config.mjs`) at **`error`**. It bans, in that layer:
+
+- raw `<button>` / `<input>` / `<select>` — use `Button` / `IconButton` / `Input` /
+  `Select` from `v2/ui`;
+- the legacy `glass-card` / `glass-input` / `glass-btn` classes — use `Card` /
+  `Input` / `Button` (the `.v2-*` classes / components);
+- inline 6-digit hex literals — use a `var(--token)` (CSS) or the `theme.ts`
+  palette (charts/JS).
+
+**It's a bulk-suppressions ratchet, not a wall.** Existing violations are
+grandfathered in `eslint-suppressions.json` (run `npx eslint --suppress-rule
+no-restricted-syntax` to regenerate the baseline). The count can only **shrink** —
+any *new* violation fails `npm run lint`. To clear a suppression:
+
+1. **Convert** to the primitive (`Button` / `Input` / `Select` / `Card`), or
+2. for a **legitimately custom** interactive element — a card-as-button, an icon
+   toggle, a table-row action with bespoke needs — keep it raw with an inline
+   `// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`. Reserve
+   the primitives for genuine **action buttons** and **form fields**; not every
+   `<button>` is a `<Button>`.
+
+After editing a file, run `npx eslint --prune-suppressions` to drop entries you've
+fixed (keeps the baseline honest). The `v2/` infrastructure and shell chrome are
+out of scope (they legitimately render raw elements). The live burn-down is
+tracked in [`../redesign-progress.md`](../redesign-progress.md).
+
 ## When in doubt
 
 Read [`philosophy.md`](./philosophy.md). The Rams / Ive / Thiel triad

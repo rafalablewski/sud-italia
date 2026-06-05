@@ -55,19 +55,29 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  // ── Admin redesign — design-system governance (Phase 0, WARN mode) ─────────
-  // Surfaces the control-layer drift the audit found (raw elements bypassing
-  // primitives, legacy glass-* classes, inline hex) without blocking PRs yet.
-  // Scoped to the admin PAGE layer (app/admin/** + the top-level Admin*.tsx
-  // components) — NOT the v2/ infrastructure, where the primitives themselves
-  // and the shell chrome legitimately render raw <button>/<input>. Flips to
-  // "error" in Phase 5 once the existing occurrences are swept to zero.
+  // ── Admin redesign — design-system governance (Phase 5+, ERROR + ratchet) ──
+  // Catches control-layer drift the audit found (raw elements bypassing
+  // primitives, legacy glass-* classes, inline hex). Scoped to the admin PAGE
+  // layer (app/admin/** + the top-level Admin*.tsx components) — NOT the v2/
+  // infrastructure, where the primitives themselves and the shell chrome
+  // legitimately render raw <button>/<input>.
+  //
+  // GOVERNANCE MODEL (Phase 5 decision): this is now `error`, with the existing
+  // violations grandfathered in `eslint-suppressions.json` (a bulk-suppressions
+  // ratchet — the count can only shrink, never grow). So NEW drift fails CI while
+  // legacy is tracked and burned down. Two ways to clear a suppression:
+  //   1. Convert to the primitive (`Button` / `Input` / `Select` / `Card`), or
+  //   2. For a *legitimately* custom interactive element (card-as-button, toggle,
+  //      table-row icon action), keep it raw with an inline
+  //      `// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`.
+  // Reserve the primitives for genuine action buttons / form fields. After
+  // editing, run `npx eslint --prune-suppressions` to drop stale entries.
   // See docs/design-system/admin/redesign-blueprint.md §7 + redesign-progress.md.
   {
     files: ["src/app/admin/**/*.tsx", "src/components/admin/*.tsx"],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector: "JSXOpeningElement[name.name='button']",
           message:

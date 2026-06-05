@@ -226,13 +226,23 @@ the island's dropdowns are native `<select>` or portaled, so no clipping risk.
 
 ## Phase 5 — Tokens + buttons sweep · 🟡 partial (2026-06-05)
 
-### Done this pass — the safe, complete *material* closeouts
+### Done this pass — material closeouts + the governance lock
 - **`glass-*` → 0 across all admin** — cleared the last `glass-card`
   (`/admin/capabilities`). The legacy glass system is fully retired from admin.
 - **Brand-tinted shadows removed** (the two Phase-1-deferred material violations):
   `.v2-m-btn-primary` box-shadow → neutral `--shadow-xs`; `.v2-m-notif-row.is-unread`
   dot → dropped the brand glow ring. Admin now has **no coloured glow shadows**.
-- `tsc` + `npm run build` clean.
+- **Governance: flipped the DS lint rule `warn → error` + bulk-suppressions ratchet**
+  (your "refine governance" decision). `eslint-suppressions.json` grandfathers the
+  226 existing page-layer violations (raw `<button>`/`<input>`/`<select>` + the 17
+  chart-hex); the count can only shrink. **New drift now fails `npm run lint`**
+  (verified: injecting a raw `<button>` errors; revert is clean). Legitimately-raw
+  elements use `// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`.
+  Documented in `theme/extend.md` → "Design-system governance — the lint ratchet".
+- `tsc` + `npm run build` clean (build doesn't lint; CI/`npm run lint` enforces).
+  Note: one **pre-existing, out-of-scope** lint error remains in
+  `scripts/legacy/verify-scalability-fixes.ts` (a `require()` import — not admin UI,
+  not touched here).
 
 ### NOT done — the raw-element + chart-hex sweep (deliberately deferred)
 This is the large, **visually-affecting** half, and it cannot be done safely in a
