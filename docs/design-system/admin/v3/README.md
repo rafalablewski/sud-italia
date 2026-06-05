@@ -81,8 +81,13 @@ same `requiredRole` model via `@/lib/admin-roles`).
 
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
-`Table` (compact, sticky header, right-aligned numerics). The set grows as
-pages migrate.
+`Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
+to `#admin-portal-root` per rule #4). The set grows as pages migrate.
+
+Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
+filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),
+the Kanban board (`.av3-kanban` / `.av3-kcol` / `.av3-ocard`), and the dialog
+(`.av3-dialog-*`).
 
 ## The Dashboard — "Operator Terminal"
 
@@ -131,5 +136,8 @@ refetches every 30s.
 - [x] Dashboard — the **Operator Terminal** (live cockpit), owner-gated, wired
   to analytics / insights / KDS-fleet / labour / orders / notifications +
   the configurable daily-goal setting (`/api/admin/ops-goals`)
+- [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
+  the real SSE order stream (`useAdminOrdersStream`); status advances via
+  `PUT /api/admin/orders`, staff+
 - [ ] Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

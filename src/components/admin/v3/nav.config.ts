@@ -71,7 +71,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     label: "Overview",
     items: [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
-      { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff", pending: true },
+      { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
     ],
   },
   {
