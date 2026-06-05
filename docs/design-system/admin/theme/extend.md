@@ -49,6 +49,16 @@ If you genuinely need a new surface treatment:
 
 ## Add an admin page
 
+**Start from the scaffold — never a blank file:**
+
+```
+npm run scaffold:admin-page -- <slug> "Page Title"
+```
+
+It emits a compliant `page.tsx` (thin server auth wrapper) + `Admin<Name>.tsx`
+(the `PageHeader` + `ViewToolbar` + `Card` command surface) so you can't
+accidentally ship a one-off header or a raw element. Then:
+
 The nav config lives in `src/components/admin/v2/nav.config.ts`. New
 pages must:
 
@@ -240,6 +250,16 @@ After editing a file, run `npx eslint --prune-suppressions` to drop entries you'
 fixed (keeps the baseline honest). The `v2/` infrastructure and shell chrome are
 out of scope (they legitimately render raw elements). The live burn-down is
 tracked in [`../redesign-progress.md`](../redesign-progress.md).
+
+**Enforcement (the lock):**
+- **CI** runs `npx eslint "src/**/*.{ts,tsx}"` (`.github/workflows/ci.yml`) on every
+  PR — since the rule is `error`, **new drift fails the build**; the suppressions
+  baseline grandfathers the legacy.
+- **CODEOWNERS** (`.github/CODEOWNERS`) routes changes to the primitives
+  (`v2/ui`), the theme (`themes/admin`, `theme.ts`), the lint config +
+  suppressions, and these docs to the **DS owner**. Pages compose primitives; they
+  don't fork them.
+- **Scaffold** (`npm run scaffold:admin-page`) means new pages start compliant.
 
 ## When in doubt
 

@@ -1,0 +1,20 @@
+# Design-system stewardship (admin redesign — Phase 6 lock).
+#
+# Changes to the shared admin primitives, the theme tokens/CSS, the lint
+# governance (the drift ratchet), and the design-system docs require review by the
+# DS owner. Product engineers OWN their pages and COMPOSE these primitives — they
+# don't fork them. See docs/design-system/admin/theme/extend.md.
+
+# The shared UI primitives — the only sanctioned source of admin UI components.
+/src/components/admin/v2/ui/            @rafalablewski
+
+# Theme tokens, material, the admin stylesheet.
+/src/app/themes/admin/                  @rafalablewski
+/src/components/admin/v2/theme.ts       @rafalablewski
+
+# Governance: the lint rules + the suppressions ratchet baseline.
+/eslint.config.mjs                      @rafalablewski
+/eslint-suppressions.json               @rafalablewski
+
+# The design-system documentation (the contract).
+/docs/design-system/                    @rafalablewski
