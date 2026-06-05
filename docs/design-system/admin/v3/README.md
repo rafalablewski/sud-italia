@@ -192,5 +192,10 @@ refetches every 30s.
 - [x] Cash (`/admin-v3/cash`) — till session lifecycle: open float, record
   cash-sale/drop/payout entries, expected-drawer KPI, close with counted-cash →
   live variance, and a closed-session history (`/api/admin/cash` + `?action=drop|close`)
-- [ ] Finance · Calculator (AdminSimulation, dedicated effort), Growth, Intelligence, System
+- [x] Growth (partial) — Scheduled bundles (`/admin-v3/scheduled-bundles`):
+  standing-pre-order status board (approve/pause/resume/cancel via
+  `PATCH /api/admin/scheduled-bundles/:id`). Truck ops (`/admin-v3/truck`):
+  events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
+  + `/api/admin/truck-routes`
+- [ ] Growth remainder (Campaigns, Upsell, Cross-sell), Finance·Calculator (AdminSimulation), Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

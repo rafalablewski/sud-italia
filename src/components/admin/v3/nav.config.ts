@@ -139,8 +139,8 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/growth`, label: "Campaigns", icon: Rocket, requiredRole: "manager", pending: true },
       { href: `${P}/upsell`, label: "Upsell", icon: TrendingUp, requiredRole: "manager", pending: true },
       { href: `${P}/crosssell`, label: "Cross-sell", icon: Sparkles, requiredRole: "manager", pending: true },
-      { href: `${P}/scheduled-bundles`, label: "Scheduled bundles", icon: Calendar, requiredRole: "manager", pending: true },
-      { href: `${P}/truck`, label: "Truck ops", icon: Truck, requiredRole: "manager", pending: true },
+      { href: `${P}/scheduled-bundles`, label: "Scheduled bundles", icon: Calendar, requiredRole: "manager" },
+      { href: `${P}/truck`, label: "Truck ops", icon: Truck, requiredRole: "manager" },
     ],
   },
   {
