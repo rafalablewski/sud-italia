@@ -210,5 +210,10 @@ refetches every 30s.
   (`/api/admin/menu-engineering`). Expansion (`/admin-v3/expansion`):
   new-site readiness checklists (toggle items, add planned site,
   `PUT /api/admin/expansion`).
-- [ ] Intelligence remainder (Manage locations, Insights/AI), Finance·Calculator (AdminSimulation), System
+- [x] Intelligence complete — Manage locations (`/admin-v3/locations/manage`):
+  site CRUD (hours editor, coordinates, active/alcohol) round-tripping the full
+  record + re-seed (`/api/admin/locations`). Insights (`/admin-v3/ai`): AI demand
+  forecast bars (`/api/admin/ai/forecast`) + chatbot-FAQ manager
+  (`/api/admin/chatbot-faq`).
+- [ ] System, Finance·Calculator (AdminSimulation)
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
