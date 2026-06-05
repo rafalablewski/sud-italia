@@ -3,7 +3,7 @@
 // All programme config (tier thresholds, multipliers, perks, labels,
 // rewards catalogue) lives in `LoyaltySettings` (see store.ts) and is
 // served to the customer site via /api/settings/public so admin edits
-// in /admin/loyalty land immediately. This module is the pure-compute
+// in /core/guest/loyalty land immediately. This module is the pure-compute
 // layer — every helper takes the tier ladder as a parameter so it's
 // trivially unit-testable + has no I/O.
 

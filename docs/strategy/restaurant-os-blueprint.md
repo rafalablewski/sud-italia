@@ -179,7 +179,7 @@ build pushes it to **per-slot, per-category** resolution so we can predict
 forecast can't fill.
 
 > **Status — keystone + first decision shipped.** The **Demand view** on
-> `/admin/slots` (`src/lib/demand-exchange.ts`, `GET/POST
+> `/core/service/slots` (`src/lib/demand-exchange.ts`, `GET/POST
 > /api/admin/demand-exchange`) forecasts covers per slot from same-weekday
 > history, compares against the kitchen's *demonstrated* covers/hour ceiling,
 > and prescribes the yield action (raise / trim / protect / hold). It
@@ -260,7 +260,7 @@ performance, bottleneck propagation. What we have vs. what to instrument:
 The twin fuses `floor.ts` (room state) with `kds-prediction.ts` (per-ticket
 `predictedReadyAtMs`, `atRisk`, bottleneck) into one forward simulation.
 
-> **Status — keystone shipped (v1).** The **Twin view** (Service › Floor, `/core/service?view=floor`)
+> **Status — keystone shipped (v1).** The **Twin view** (Service › Floor, `/core/service/floor`)
 > (`src/lib/floor-twin.ts`, `GET /api/admin/floor-twin`) derives per-table
 > realized turn-time + spend velocity, live occupancy and a predicted free-in
 > time, and a **predictive-seating recommender** (party size → best-fit open,

@@ -7,8 +7,9 @@ the Core theme docs for those surfaces; this doc covers the everything-else
 that runs the business behind the till.
 
 > **Floor + Slots are now Core, not admin.** They were merged and rebuilt on
-> the Core suite theme as the **Service** surface (`/core/service`); the old
-> `/admin/floor` and `/admin/slots` redirect there. Their anatomy lives under
+> the Core suite theme as the **Service** surface (`/core/service/{floor,slots}`,
+> nested routes; booking moved to `/core/guest/book`); the old `/admin/floor`
+> and `/admin/slots` stub pages were deleted. Their anatomy lives under
 > the Core theme ([`../core/modules/service.md`](../core/modules/service.md)),
 > no longer here.
 

@@ -14,7 +14,7 @@ interface LoyaltyEarnPreviewProps {
  * server is the source of truth for the points-earned number (it
  * resolves the customer's actual tier); this preview assumes bronze
  * and is intentionally cosmetic — it never gates anything. The
- * bronze multiplier is admin-editable in /admin/loyalty so the
+ * bronze multiplier is admin-editable in /core/guest/loyalty so the
  * preview tracks whatever earn rate the operator set.
  *
  * V8 styling lives on `.v8-cart-loyalty-preview` in

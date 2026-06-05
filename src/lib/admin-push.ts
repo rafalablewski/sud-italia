@@ -241,13 +241,13 @@ export const ADMIN_PUSH_TEMPLATES = {
   slotPressure: (locationSlug: string, slotTime: string): PushMessage => ({
     title: `Slot ${slotTime} is filling`,
     body: `${locationSlug} ${slotTime} only has 1 spot left.`,
-    url: "/admin/slots",
+    url: "/core/service/slots",
     tag: `admin:slot-pressure:${locationSlug}:${slotTime}`,
   }),
   slotFull: (locationSlug: string, slotTime: string): PushMessage => ({
     title: `Slot ${slotTime} is full`,
     body: `${locationSlug} ${slotTime} just sold out.`,
-    url: "/admin/slots",
+    url: "/core/service/slots",
     tag: `admin:slot-full:${locationSlug}:${slotTime}`,
   }),
   cashVariance: (locationSlug: string, varianceZl: string): PushMessage => ({

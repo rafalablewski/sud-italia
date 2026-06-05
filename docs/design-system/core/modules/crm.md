@@ -200,7 +200,7 @@ cleanup.
 - Not a campaign builder (that's in WhatsApp / Growth).
 - Not a chat hub (that's in WhatsApp).
 - Not a loyalty admin (that's the [Loyalty view](./loyalty.md),
-  `/core/guest?view=loyalty`).
+  `/core/guest/loyalty`).
 
 The CRM is the **system of record for the guest** — every channel and
 order rolled into one profile, with the next move surfaced.

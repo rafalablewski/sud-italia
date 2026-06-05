@@ -9,9 +9,10 @@ runs on:
   roster + wallets + redemptions), Concierge (AI capability layer + EU-14
   allergen matrix), WhatsApp (inbox + funnel)
 - **Service** (`/core/service`) — the merged Floor + Slots surface, on the
-  Core suite shell. Three views: **Book** (dine-in slot + table in one step),
-  **Floor** (live room + twin), **Slots** (capacity + demand). The old
-  `/admin/floor` and `/admin/slots` redirect in (`?view=floor|slots`).
+  Core suite shell. Two nested routes: **Floor** (`/core/service/floor`, live
+  room + twin) and **Slots** (`/core/service/slots`, capacity + demand). The
+  Book console moved to the Guest hub (`/core/guest/book`); the old
+  `/admin/floor` and `/admin/slots` stub pages were deleted.
 
 Core is a **separate theme**. It does not inherit from Admin or Homepage,
 and changes to those themes must not leak into Core. The doctrine is the
@@ -58,9 +59,10 @@ mockup** design (`public/mockups/core-suite/`):
   providers (location, toast, shell context). There is no admin chrome to
   step aside — unlike the old `/admin/*` placement, where AdminShell did.
 - **Surfaces:** **POS** (`/core/pos`, `pos.html`) and the **Guest
-  Engagement hub** (`/core/guest`, four views Inbox · Guests · Loyalty ·
-  Concierge — the old `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,
-  `/admin/whatsapp` redirect in) render on the `.core-suite` theme.
+  Engagement hub** (`/core/guest`, five nested-route views Inbox · Guests ·
+  Loyalty · Concierge · Book — the old `/admin/crm`, `/admin/loyalty`,
+  `/admin/concierge`, `/admin/whatsapp` stub pages were deleted) render on the
+  `.core-suite` theme.
   **KDS** (`/core/kds`, `kds*.html`) is the full-screen kitchen-wall
   display.
 - **Guest hub views:** the cross-view switcher (`<GuestViewNav>`) rides
