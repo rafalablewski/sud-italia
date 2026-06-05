@@ -320,7 +320,10 @@ refetches every 30s.
   insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
-  (`PUT /api/admin/regulatory-compliance`).
+  (`PUT /api/admin/regulatory-compliance`). **Toggle = saved (rule #7)** — the
+  zone select + disclosure toggles persist on change (no Save button); same
+  consistency fix applied to Currency + Languages (enable/default persist
+  immediately; FX rates save on blur).
 - [x] Settings (`/admin-v3/settings`, owner-only): five tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles + feature flags, toggle = saved),

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Languages as LangIcon } from "lucide-react";
-import { Badge, Button, Card, CardBody, CardHead } from "./ui";
+import { Badge, Card, CardBody, CardHead } from "./ui";
 
 type Locale = "pl" | "en" | "de" | "en-SG";
 const ALL: Locale[] = ["pl", "en", "de", "en-SG"];
@@ -12,7 +12,6 @@ export function LanguagesV3() {
   const [enabled, setEnabled] = useState<Record<Locale, boolean>>({ pl: true, en: true, de: false, "en-SG": false });
   const [def, setDef] = useState<Locale>("pl");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     const d = await fetch("/api/admin/languages").then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -24,16 +23,20 @@ export function LanguagesV3() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const save = async () => {
-    const enabledList = ALL.filter((l) => enabled[l]);
+  // Persist on every toggle (rule #7); guard against an empty enabled-list.
+  const persist = (en: Record<Locale, boolean>, df: Locale) => {
+    const enabledList = ALL.filter((l) => en[l]);
     if (enabledList.length === 0) return;
-    const safeDefault = enabledList.includes(def) ? def : enabledList[0];
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/languages", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ defaultLocale: safeDefault, enabledLocales: enabledList }) });
-      if (res.ok) await load();
-    } finally { setSaving(false); }
+    const safeDefault = enabledList.includes(df) ? df : enabledList[0];
+    return fetch("/api/admin/languages", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ defaultLocale: safeDefault, enabledLocales: enabledList }) });
   };
+  const toggleEnabled = (l: Locale) => {
+    const en = { ...enabled, [l]: !enabled[l] };
+    if (ALL.filter((x) => en[x]).length === 0) return; // never disable the last locale
+    const df = en[def] ? def : (ALL.find((x) => en[x]) ?? "pl");
+    setEnabled(en); setDef(df); persist(en, df);
+  };
+  const setDefault = (l: Locale) => { setDef(l); persist(enabled, l); };
 
   if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading languages…</div>;
 
@@ -42,9 +45,8 @@ export function LanguagesV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Languages</h1>
-          <div className="av3-pagehead-sub">Storefront locales offered to guests</div>
+          <div className="av3-pagehead-sub">Storefront locales offered to guests · changes save instantly</div>
         </div>
-        <div className="av3-pagehead-actions"><Button variant="primary" size="sm" loading={saving} onClick={save}>Save</Button></div>
       </div>
       <Card>
         <CardHead title="Locales" actions={<Badge tone="brand"><LangIcon style={{ width: 11, height: 11 }} /> default {LABEL[def]}</Badge>} />
@@ -52,8 +54,8 @@ export function LanguagesV3() {
           {ALL.map((l) => (
             <div key={l} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{LABEL[l]}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{l}</div></div>
-              <button type="button" className="av3-toggle" data-on={enabled[l]} onClick={() => setEnabled((e) => ({ ...e, [l]: !e[l] }))} style={{ height: 32 }}>{enabled[l] ? "On" : "Off"}</button>
-              <button type="button" className="av3-toggle" data-on={def === l} disabled={!enabled[l]} onClick={() => setDef(l)} style={{ height: 32 }}>{def === l ? "Default" : "Set"}</button>
+              <button type="button" className="av3-toggle" data-on={enabled[l]} onClick={() => toggleEnabled(l)} style={{ height: 32 }}>{enabled[l] ? "On" : "Off"}</button>
+              <button type="button" className="av3-toggle" data-on={def === l} disabled={!enabled[l]} onClick={() => setDefault(l)} style={{ height: 32 }}>{def === l ? "Default" : "Set"}</button>
             </div>
           ))}
         </CardBody>
