@@ -5,7 +5,7 @@ section-by-section status of what *is* done lives in `README.md`; this file is
 the forward-looking to-do so the next session (and the mobile-UI push) has a
 single source of truth. Keep it in sync as items land.
 
-_Last updated: 2026-06-05 (PR #139)._
+_Last updated: 2026-06-05 (mobile-responsiveness pass — foundation)._
 
 ## Status in one line
 
@@ -15,41 +15,52 @@ Operations/People/Customers/Finance/Intelligence/System surfaces). v2 is still
 live at `/admin/*`; v3 is the preview at `/admin-v3/*`. **Nothing in v2 has been
 deleted.** The cutover is intentionally on hold.
 
-## Next focus — mobile UI 📱
+## Mobile UI 📱 — foundation shipped, refinements remain
 
-The v3 shell + surfaces were built **desktop-first** (dense tables, fixed-width
-dialogs, multi-column grids). The next push is a **mobile-responsiveness pass**.
-Known gaps to tackle:
+The v3 shell + surfaces were built **desktop-first**. The mobile-responsiveness
+pass landed its **foundation** as a four-breakpoint cascade in
+`themes/admin-v3/index.css` §9 — documented in `README.md` → *Responsive &
+touch*. Read that section before adding more (Rule #11).
 
-- **Shell (`AdminShellV3` / `SidebarV3` / `TopbarV3`)** — the 232px sidebar
-  collapses to a 60px rail but there is no true mobile drawer; below ~720px the
-  sidebar should become an off-canvas drawer (hamburger in the topbar) rather
-  than eating horizontal space.
-- **Tables (`ui/Table.tsx`)** — hairline tables overflow on narrow screens. Add
-  a horizontal-scroll container (`.av3-table-wrap` already wraps; verify it
-  scrolls) and/or a card/stacked layout under a breakpoint for the busiest
-  tables (Menu board, Orders, Reports, the Calculator sandboxes).
-- **Dialogs (`ui/Dialog.tsx`)** — fixed `width` px values (520–640) overflow on
-  phones. Make `maxWidth` cap at `min(width, 100vw - 24px)` and let the body
-  scroll; the Menu/Recipe/Bundle editors are the tallest.
-- **KPI rail (`.av3-kpi-rail`)** — `auto-fit minmax(176px,1fr)` is fine, but
-  check it reflows to 1–2 columns cleanly on small screens.
-- **Calculator** — the `av3-grid-2-1` inputs/outputs split and the many
-  `flex-wrap` lever rows need a single-column stack under a breakpoint; the
-  12-month projection + hourly-throughput bar charts need a min-width or
-  horizontal scroll so bars stay legible.
-- **Forms** — `.av3-field` fixed widths (e.g. `w={120}`) should go full-width on
-  mobile. Consider a `.av3-field--fluid` modifier or a container query.
-- **Cross-sell / Upsell editors** — the multi-column `repeat(auto-fit,minmax(…))`
-  grids and the badge multi-select scroll boxes need touch-friendly hit targets
-  (min 40px) and single-column fallbacks.
-- **General** — audit tap-target sizes (`.av3-toggle`, `.av3-iconbtn-sm`,
-  `.av3-fchip`) for the 44px touch guideline; verify the theme toggle + scope
-  switcher fit the 44px topbar on mobile.
+### Done (foundation)
 
-When starting the mobile pass, read `docs/design-system/admin/v3/README.md` and
-`theme/extend.md` (the token/variant contract) before inventing new breakpoints
-or utility classes — add them through the documented pattern (Rule #11).
+- ✅ **Shell drawer** — below 900px `AdminShellV3` renders an off-canvas drawer
+  (`data-mobile-open`), `TopbarV3` shows a hamburger, a scrim closes it, and the
+  drawer ignores the desktop rail-collapsed state (full labels on a phone). The
+  breadcrumb keeps only its last segment so the scope + actions stay reachable.
+- ✅ **Tables** — `.av3-table-wrap` scrolls horizontally (verified; `overflow-x:
+  auto`). Card/stacked layouts for the busiest tables are still a *nice-to-have*
+  (see below), not a blocker.
+- ✅ **Dialogs** — width is capped by the dialog-root padding (already
+  `min(100% − pad, width)`); at ≤560px the root padding shrinks to near-bleed
+  and the footer buttons stack full-width. Body scrolls (`overflow-y: auto`).
+- ✅ **KPI rail / tiles / levers / mini2** — reflow to two-up (≤720) then one-up
+  (≤560) cleanly.
+- ✅ **Calculator** — the `.av3-grid-2-1` split and `.av3-leverrow` flex-wrap rows
+  stack under the breakpoint; the projection + hourly bars are `flex:1` so they
+  shrink to fit (no overflow). Deeper per-metric layout polish is optional.
+- ✅ **Forms** — `.av3-formrow` / `.av3-formrow-4` stack at ≤720; the seven
+  inline `1fr 1fr 1fr(1fr)` form grids were converted to these classes so they
+  actually stack (an inline `grid-template-columns` defeats the media override).
+- ✅ **Tap targets** — `.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`,
+  `.av3-toggle`, `.av3-iconbtn-sm`, `.av3-scope select` hit the 44px floor at
+  ≤560 + a `@media (pointer: coarse)` floor.
+
+### Still to do (refinements)
+
+- **Dense dialog editor rows** — the fixed-px inline grids in the *Menu*
+  modifier-group editor (`1fr 90px 90px 56px 28px`), *Cross-sell* combo/window
+  editors, *Upsell* route-stops, *Truck* route-stops, *Currency* rows, etc. get
+  a horizontal-scroll fallback (the dialog body computes `overflow-x: auto`) but
+  not a true stacked/labeled mobile layout. Convert the worst offenders to
+  `.av3-scroll-x` wrappers or a labeled-stack pattern when an operator actually
+  needs to edit these on a phone. Lower priority — deep config editing is rare
+  on mobile.
+- **Card/stacked table view** — for the densest boards (Menu, Orders, Reports,
+  Calculator sandboxes) a card-per-row layout under ~560px would beat horizontal
+  scroll. Optional; horizontal scroll is the acceptable baseline.
+- **Real-device QA** — verify safe-area insets (notch/home-indicator), drawer
+  gesture feel, and the topbar fit on a 360px viewport with a long location name.
 
 ## Cutover — on hold (pending owner verification)
 

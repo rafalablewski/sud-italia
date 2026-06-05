@@ -571,30 +571,108 @@
 .av3-theme-track { width: 30px; height: 30px; }
 
 /* --------------------------------------------------------------------------
-   9. Responsive — sidebar collapses to an off-canvas drawer below 900px
+   9. Responsive — desktop-dense, phone-usable. Four steps, narrowing in:
+        ≤1180  two-column page splits collapse (see the surface that owns them)
+        ≤900   sidebar → off-canvas drawer; topbar grows a hamburger
+        ≤720   gutter tightens; multi-column form/KPI grids stack
+        ≤560   phone: 44px touch targets, near-full-bleed dialogs
+      Plus a coarse-pointer floor so a touchscreen at any width gets real
+      hit areas. Add new responsive surfaces here, not as one-off media
+      queries scattered through the file (design-system Rule #11).
    -------------------------------------------------------------------------- */
+
+/* Responsive grid helpers — prefer these documented classes over an inline
+   `grid-template-columns` so a layout can actually stack on a phone (an inline
+   style beats the media-query override below and silently defeats it). */
+.av3-cols-2 { display: grid; grid-template-columns: 1fr 1fr; }
+.av3-cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+.av3-cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); }
+/* Compound selector so the 4-up modifier wins over `.av3-formrow` (§14)
+   regardless of source order. */
+.av3-formrow.av3-formrow-4 { grid-template-columns: repeat(4, 1fr); }
+.av3-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
 .av3-side-toggle-mobile { display: none; }
 @media (max-width: 900px) {
   .av3-shell { grid-template-columns: 1fr; }
   .av3-side {
     position: fixed;
+    inset: 0 auto 0 0;
     z-index: 60;
-    width: 248px;
+    width: min(264px, 84vw);
+    height: 100%;
     transform: translateX(-100%);
     transition: transform var(--av3-t-base) var(--av3-ease);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  .av3-shell[data-mobile-open="true"] .av3-side { transform: translateX(0); }
+  .av3-shell[data-mobile-open="true"] .av3-side { transform: translateX(0); box-shadow: var(--av3-sh-2); }
   .av3-scrim {
     position: fixed; inset: 0; z-index: 55;
     background: rgba(0, 0, 0, 0.5);
   }
   .av3-side-toggle-mobile { display: grid; }
   .av3-collapse-btn { display: none; }
+
+  /* The off-canvas drawer must ignore the desktop rail-collapsed state — a
+     phone user who left the sidebar collapsed still needs full labels. */
+  .av3-shell[data-collapsed="true"] .av3-brand-text { display: flex; }
+  .av3-shell[data-collapsed="true"] .av3-nav-label,
+  .av3-shell[data-collapsed="true"] .av3-foot-label { display: inline; }
+  .av3-shell[data-collapsed="true"] .av3-eyebrow { text-align: left; padding: 6px 8px 3px; }
+  .av3-shell[data-collapsed="true"] .av3-nav-item { justify-content: flex-start; padding: 0 9px; }
+  .av3-shell[data-collapsed="true"] .av3-logout { justify-content: flex-start; padding: 0 9px; }
+
+  /* Topbar: drop the ancestor crumbs so the scope + actions stay reachable. */
+  .av3-crumbs li:not(:last-child) { display: none; }
+  .av3-crumbs span[aria-current] { font-size: 13px; }
 }
+
 @media (max-width: 720px) {
-  .av3-content { padding: var(--av3-gap-3); }
+  .av3-content { padding: var(--av3-gap-3); gap: var(--av3-gap-3); }
   .av3-grid-2, .av3-grid-2-1 { grid-template-columns: 1fr; }
+  .av3-cols-3, .av3-cols-4 { grid-template-columns: 1fr 1fr; }
   .av3-pagehead { flex-direction: column; align-items: stretch; }
+  .av3-pagehead-actions { flex-wrap: wrap; }
+
+  /* Multi-column form scaffolds stack one-per-row. `!important` is deliberate:
+     many `.av3-formrow` call sites set an inline `grid-template-columns` (2-up,
+     4-up, mixed-px shapes), and an inline style would otherwise beat this and
+     keep a cramped multi-column form on a phone. Stacking is always right for a
+     form at this width, so we force it. */
+  .av3-formrow, .av3-formrow-4 { grid-template-columns: 1fr !important; }
+  .av3-od-grid { grid-template-columns: 1fr; }
+
+  /* Dense editor rows (per-location price, recipe lines) keep their column
+     shape but get a min-width so header + rows scroll together inside the
+     dialog body (which computes overflow-x:auto) rather than crushing. */
+  .av3-locrow, .av3-locrow-head,
+  .av3-reciperow, .av3-reciperow-head { min-width: 420px; }
+}
+
+@media (max-width: 560px) {
+  /* Comfortable touch targets — Apple HIG 44px floor, applied to the chrome
+     that's smaller than that at desktop density. */
+  .av3-icon-btn { width: 38px; height: 38px; }
+  .av3-nav-item { height: 40px; }
+  .av3-fchip { height: 34px; }
+  .av3-chip { height: 32px; }
+  .av3-toggle { height: 36px; }
+  .av3-iconbtn-sm { width: 36px; height: 36px; }
+  .av3-scope select { height: 36px; max-width: 138px; }
+
+  .av3-cols-3, .av3-cols-4 { grid-template-columns: 1fr; }
+
+  /* Dialogs go near-full-bleed; the footer buttons stack full-width. */
+  .av3-dialog-root { padding: 10px; }
+  .av3-dialog { max-height: calc(100vh - 20px); }
+  .av3-dialog-foot { flex-direction: column-reverse; align-items: stretch; }
+  .av3-dialog-foot > * { width: 100%; }
+}
+
+@media (pointer: coarse) {
+  /* A touchscreen at any width still earns real hit areas. */
+  .av3-nav-item { min-height: 40px; }
+  .av3-fchip { min-height: 34px; }
 }
 
 /* ==========================================================================
@@ -700,6 +778,11 @@
 }
 @media (max-width: 720px) {
   .av3-tiles, .av3-levers, .av3-mini2 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  /* one-up on a phone (overrides the two-up above — kept here, after it, so
+     source order wins; see §9 for why the global tile rule can't). */
+  .av3-tiles, .av3-levers, .av3-mini2 { grid-template-columns: 1fr; }
 }
 
 /* ==========================================================================

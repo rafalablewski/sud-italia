@@ -169,7 +169,7 @@ function ShiftDialog({ shift, date, locationSlug, staff, onClose, onSaved }: {
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Staff</span>
         <select className="av3-select" value={staffId} onChange={(e) => onPickStaff(e.target.value)}>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
       </div>
-      <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 10 }}>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Date</span><input className="av3-input" type="date" style={{ fontFamily: "var(--av3-ui)" }} value={d} onChange={(e) => setD(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Start</span><input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">End</span><input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={end} onChange={(e) => setEnd(e.target.value)} /></label>

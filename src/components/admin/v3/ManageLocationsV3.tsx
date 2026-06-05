@@ -111,13 +111,13 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
   return (
     <Dialog open onClose={onClose} title={location ? location.city : "New location"} width={560}
       footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} disabled={!city.trim()} onClick={save}>Save</Button></>}>
-      <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 10 }}>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">City</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={city} onChange={(e) => setCity(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Slug</span><input className="av3-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!location} placeholder="auto" /></label>
       </div>
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Address</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={address} onChange={(e) => setAddress(e.target.value)} /></label>
-      <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr", marginBottom: 10 }}>
+      <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Lat</span><input className="av3-input" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Lng</span><input className="av3-input" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Active</span><button type="button" className="av3-toggle" data-on={isActive} onClick={() => setIsActive((v) => !v)} style={{ height: 32 }}>{isActive ? "Yes" : "No"}</button></label>

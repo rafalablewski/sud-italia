@@ -77,6 +77,33 @@ theme toggle + notification bell, and a content well on a tight grid. Nav
 taxonomy + permission gating mirror v2 (`v3/nav.config.ts`, same sections,
 same `requiredRole` model via `@/lib/admin-roles`).
 
+## Responsive & touch
+
+v3 is **desktop-dense first**, but every surface stays usable down to a phone
+through a single responsive cascade in `themes/admin-v3/index.css` §9 — keep new
+responsive rules there, not as one-off media queries scattered through the file.
+Four breakpoints, narrowing in:
+
+| Width   | What changes |
+| ------- | ------------ |
+| ≤1180px | Two-column page splits (`.av3-bodysplit`) collapse to one column. |
+| ≤900px  | The sidebar becomes an **off-canvas drawer** — `AdminShellV3` toggles `data-mobile-open`, `TopbarV3` grows the hamburger (`.av3-side-toggle-mobile`), a scrim covers the content, and the drawer **ignores the desktop rail-collapsed state** so a phone user who left the sidebar collapsed still gets full labels. The breadcrumb keeps only its last segment. |
+| ≤720px  | Content gutter tightens; `.av3-grid-2` / `.av3-grid-2-1` / `.av3-formrow` / `.av3-formrow-4` / `.av3-od-grid` stack one-per-row; dense editor rows (`.av3-locrow`, `.av3-reciperow`) get a `min-width` so header + rows scroll together inside the dialog body rather than crushing. |
+| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, and dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width). |
+
+A `@media (pointer: coarse)` floor gives a touchscreen real hit areas at any width.
+
+**Responsive helpers (use these, not an inline `grid-template-columns`).** An
+inline grid style beats the media-query override and silently defeats stacking —
+so reach for a class:
+
+- `.av3-cols-2` / `.av3-cols-3` / `.av3-cols-4` — equal-column grids that reflow
+  (3/4-up → 2-up at ≤720 → 1-up at ≤560). Set `gap` inline at the call site.
+- `.av3-formrow` (3-up) / `.av3-formrow-4` (4-up) — dialog form scaffolds that
+  stack at ≤720. Don't override their `grid-template-columns` inline.
+- `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
+  keep its width (wide tables already wrap in `.av3-table-wrap`).
+
 ## Primitives (so far)
 
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Kpi` (the dense metric tile
