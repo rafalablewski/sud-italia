@@ -314,7 +314,16 @@ refetches every 30s.
   per-line cost-delta levers), and **Seasonality & weather** (four quarterly
   multipliers + a calibrated weather/holiday model). New CSS rows `.av3-leverrow`
   / `.av3-lever-name` in `themes/admin-v3/index.css` style the toggle+name+fields
-  layout. **Remaining v2 depth (not yet ported):** the fleet/franchise model and
-  the channel-economics breakdown — the deepest tail of the 17k-LOC v2 sim.
+  layout.
+  **Part 3e shipped — Calculator parity complete:** the fleet/franchise model
+  and the channel-economics breakdown (the last v2 sim depth) are now in the
+  shared engine (`computeFleetEconomics`, `computeChannelEconomics`) and the v3
+  Calculator. A **Channel mix & fleet** input card drives the per-channel fee mix
+  (cash / on-site card / Glovo / Wolt) and the multi-unit model (units, HQ
+  overhead, royalty + marketing-fund, DMA cannibalisation, supply-discount +
+  commissary triggers); a **Channel economics** output table shows unblended CM1
+  per channel, and a **Fleet economics** card (shown at >1 unit) gives fleet
+  revenue/EBITDA, avg EBITDA per unit, HQ absorption and a per-unit table. With
+  this the v3 Calculator is at functional parity with the v2 `AdminSimulation`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

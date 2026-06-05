@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { applyAnnualWeather, applyAssumptions, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
+import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -33,6 +33,7 @@ const INGREDIENT_SHARES: Record<IngKey, number> = { mozzarella: 0.28, tomato: 0.
 const INGREDIENT_LABELS: Record<IngKey, string> = { mozzarella: "Mozzarella", tomato: "Tomato", flour: "Flour", doughWeight: "Dough weight", oliveOil: "Olive oil", curedMeats: "Cured meats", buffaloMozz: "Buffalo mozz", eggs: "Eggs", ovenFuel: "Oven fuel", packaging: "Packaging" };
 const SEASONS: { key: keyof SimulationSeasonality; label: string }[] = [{ key: "winter", label: "Winter" }, { key: "spring", label: "Spring" }, { key: "summer", label: "Summer" }, { key: "autumn", label: "Autumn" }];
 const DEFAULT_WEATHER: SimulationWeather = { enabled: true, rainyDayMultiplier: 0.75, rainyShare: 0.30, heatwaveMultiplier: 1.40, heatwaveShare: 0.10, holidayClosedDaysPerMonth: 1, holidayPeakDaysPerMonth: 1, holidayPeakMultiplier: 1.60, schoolHolidayLunchMultiplier: 0.85, eventDaysPerMonth: 1, eventDayMultiplier: 1.50 };
+const DEFAULT_FLEET: SimulationFleetModel = { unitCount: 1, hqOverheadMonthlyGrosze: 0, supplyDiscountAtUnits: 5, supplyDiscountPct: 0.10, commissaryEnabledAtUnits: 4, commissarySavingsPct: 0.04, royaltyPct: 0.06, marketingFundPct: 0.02, dmaOverlapPct: 0.15, buildoutLearningPct: 0.05, buildoutFloorPct: 0.55 };
 
 // generic field helpers — money in zł, percent in %
 function Z({ label, grosze, onChange, w = 120 }: { label: string; grosze: number; onChange: (g: number) => void; w?: number }) {
@@ -79,6 +80,7 @@ export function CalculatorV3() {
   const patchAssume = (over: Partial<SimulationAssumptions>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, assumptions: { ...(s.assumptions ?? {}), ...over } }; });
   const patchWeather = (over: Partial<SimulationWeather>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, weather: { ...DEFAULT_WEATHER, ...(s.weather ?? {}), ...over } }; });
   const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
+  const patchFleet = (over: Partial<SimulationFleetModel>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, fleet: { ...DEFAULT_FLEET, ...(s.fleet ?? {}), ...over } }; });
 
   // Fold the behaviour levers + annual weather into the headline scenario so
   // the P&L / tornado / returns reflect them (rule #8 — end-to-end). The
@@ -90,6 +92,10 @@ export function CalculatorV3() {
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
   const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
   const projection = useMemo(() => (scn ? projectTwelveMonths(applyAssumptions(scn)) : []), [scn]);
+  // Channel economics + fleet read the RAW scenario (pre-assumptions) so the
+  // on-site card rate isn't the blended one (matches v2).
+  const channels = useMemo(() => (scn ? computeChannelEconomics(scn) : []), [scn]);
+  const fleet = useMemo(() => (scn ? computeFleetEconomics(scn, scn.setupCostGrosze ?? 0) : null), [scn]);
 
   const save = async () => {
     if (!scn) return;
@@ -306,6 +312,34 @@ export function CalculatorV3() {
               ); })()}
             </CardBody>
           </Card>
+          {/* channel mix + fleet/franchise model */}
+          <Card>
+            <CardHead title="Channel mix & fleet" description="Per-channel fee mix + multi-unit franchise economics" />
+            <CardBody>
+              <div className="av3-subhead" style={{ marginTop: 0 }}>Channel mix (on-site card = remainder)</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <P label="Cash %" frac={scn.cashSharePct ?? 0} onChange={(f) => patch({ cashSharePct: f })} w={86} />
+                <P label="Glovo %" frac={scn.glovoSharePct ?? 0} onChange={(f) => patch({ glovoSharePct: f })} w={86} />
+                <P label="Glovo fee %" frac={scn.glovoFeePct ?? 0} onChange={(f) => patch({ glovoFeePct: f })} w={96} />
+                <P label="Wolt %" frac={scn.woltSharePct ?? 0} onChange={(f) => patch({ woltSharePct: f })} w={86} />
+                <P label="Wolt fee %" frac={scn.woltFeePct ?? 0} onChange={(f) => patch({ woltFeePct: f })} w={96} />
+              </div>
+              <div className="av3-subhead">Fleet / franchise</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <N label="Units" value={scn.fleet?.unitCount ?? 1} onChange={(n) => patchFleet({ unitCount: Math.max(1, Math.round(n)) })} w={80} />
+                {(scn.fleet?.unitCount ?? 1) > 1 && scn.fleet && <>
+                  <Z label="HQ overhead/mo" grosze={scn.fleet.hqOverheadMonthlyGrosze} onChange={(g) => patchFleet({ hqOverheadMonthlyGrosze: g })} w={120} />
+                  <P label="Royalty %" frac={scn.fleet.royaltyPct} onChange={(f) => patchFleet({ royaltyPct: f })} w={92} />
+                  <P label="Mkt fund %" frac={scn.fleet.marketingFundPct} onChange={(f) => patchFleet({ marketingFundPct: f })} w={96} />
+                  <P label="DMA overlap %" frac={scn.fleet.dmaOverlapPct} onChange={(f) => patchFleet({ dmaOverlapPct: f })} w={108} />
+                  <N label="Supply disc. @units" value={scn.fleet.supplyDiscountAtUnits} onChange={(n) => patchFleet({ supplyDiscountAtUnits: Math.round(n) })} w={130} />
+                  <P label="Supply disc. %" frac={scn.fleet.supplyDiscountPct} onChange={(f) => patchFleet({ supplyDiscountPct: f })} w={110} />
+                  <N label="Commissary @units" value={scn.fleet.commissaryEnabledAtUnits} onChange={(n) => patchFleet({ commissaryEnabledAtUnits: Math.round(n) })} w={130} />
+                  <P label="Commissary save %" frac={scn.fleet.commissarySavingsPct} onChange={(f) => patchFleet({ commissarySavingsPct: f })} w={128} />
+                </>}
+              </div>
+            </CardBody>
+          </Card>
         </div>
 
         {/* OUTPUTS */}
@@ -335,6 +369,45 @@ export function CalculatorV3() {
               </div>
             </CardBody>
           </Card>
+
+          <Card>
+            <CardHead title="Channel economics" description="Per-channel CM1 — unblended, so you can see if delivery actually pays" />
+            <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
+              <div className="av3-table-wrap"><table className="av3-table">
+                <thead><tr><th>Channel</th><th className="av3-th-num">Share</th><th className="av3-th-num">Fee</th><th className="av3-th-num">CM1 / order</th><th className="av3-th-num">CM1 %</th><th className="av3-th-num">Monthly contrib.</th></tr></thead>
+                <tbody>{channels.map((ch) => (
+                  <tr key={ch.key}><td style={{ fontWeight: 600 }}>{ch.label}</td><td className="av3-num">{(ch.sharePct * 100).toFixed(0)}%</td>
+                    <td className="av3-num">{(ch.feePct * 100).toFixed(1)}%</td><td className="av3-num">{formatPrice(ch.cm1PerOrderGrosze)}</td>
+                    <td className="av3-num"><Badge tone={ch.cm1PctOfTicket >= 0.6 ? "ok" : ch.cm1PctOfTicket >= 0.4 ? "warn" : "bad"}>{(ch.cm1PctOfTicket * 100).toFixed(0)}%</Badge></td>
+                    <td className="av3-num">{formatPrice(Math.round(ch.monthlyContributionGrosze))}</td></tr>
+                ))}</tbody>
+              </table></div>
+            </CardBody>
+          </Card>
+
+          {fleet && (
+            <Card>
+              <CardHead title="Fleet economics" description={`${fleet.unitCount} units · DMA cannibalisation, supply/commissary savings, royalty + HQ`} actions={<div style={{ display: "flex", gap: 6 }}>{fleet.supplyDiscountActive && <Badge tone="ok">supply −</Badge>}{fleet.commissaryActive && <Badge tone="ok">commissary</Badge>}</div>} />
+              <CardBody>
+                <div className="av3-od-grid" style={{ marginBottom: 12 }}>
+                  <div className="av3-od-field"><div className="k">Fleet revenue / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalRevenue))}</div></div>
+                  <div className="av3-od-field"><div className="k">Fleet EBITDA / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: fleet.totalEbitda >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(Math.round(fleet.totalEbitda))}</div></div>
+                  <div className="av3-od-field"><div className="k">Avg EBITDA / unit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.avgEbitdaPerUnit))}</div></div>
+                  <div className="av3-od-field"><div className="k">HQ absorption</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{(fleet.hqOverheadAbsorption * 100).toFixed(1)}%</div></div>
+                  <div className="av3-od-field"><div className="k">Total build-out</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(fleet.totalSetupCost))}</div></div>
+                  <div className="av3-od-field"><div className="k">HQ overhead / mo</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(fleet.hqOverhead)}</div></div>
+                </div>
+                <div className="av3-table-wrap"><table className="av3-table">
+                  <thead><tr><th>Unit</th><th className="av3-th-num">Revenue</th><th className="av3-th-num">EBITDA</th><th className="av3-th-num">Royalty</th><th className="av3-th-num">Build-out</th></tr></thead>
+                  <tbody>{fleet.units.map((u) => (
+                    <tr key={u.unitIndex}><td>#{u.unitIndex}</td><td className="av3-num">{formatPrice(Math.round(u.revenue))}</td>
+                      <td className="av3-num" style={{ color: u.ebitda >= 0 ? undefined : "var(--av3-bad)" }}>{formatPrice(Math.round(u.ebitda))}</td>
+                      <td className="av3-num">{formatPrice(Math.round(u.royalty))}</td><td className="av3-num">{formatPrice(Math.round(u.setupCost))}</td></tr>
+                  ))}</tbody>
+                </table></div>
+              </CardBody>
+            </Card>
+          )}
 
           {ret && (scn.setupCostGrosze ?? 0) > 0 && (
             <Card>

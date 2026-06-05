@@ -13,6 +13,7 @@
 import type {
   BusinessCostPayrollRole,
   SimulationAttachLever,
+  SimulationFleetModel,
   SimulationScenario,
   SimulationSeasonality,
   SimulationWeather,
@@ -486,4 +487,117 @@ export function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
     ordersPerDay += (peakBonus + eventBonus) / daysOpen;
   }
   return { ...s, ordersPerDay, daysOpenPerMonth: daysOpen };
+}
+
+/* ── fleet / franchise economics ───────────────────────────────────────────
+ * Multi-unit model: DMA cannibalisation, supply + commissary COGS savings,
+ * royalty + marketing-fund, HQ overhead absorption, and a build-out learning
+ * curve. Extracted verbatim from v2. Returns null for a single unit. */
+export interface FleetEconomicsRow {
+  unitIndex: number;
+  revenue: number;
+  cogs: number;
+  labor: number;
+  fixedExHq: number;
+  royalty: number;
+  marketingFund: number;
+  ebitda: number;
+  setupCost: number;
+}
+export interface FleetEconomics {
+  unitCount: number;
+  units: FleetEconomicsRow[];
+  totalRevenue: number;
+  totalEbitda: number;
+  totalSetupCost: number;
+  hqOverhead: number;
+  supplyDiscountActive: boolean;
+  commissaryActive: boolean;
+  avgRevenuePerUnit: number;
+  avgEbitdaPerUnit: number;
+  hqOverheadAbsorption: number;
+}
+
+export function computeFleetEconomics(s: SimulationScenario, baseSetupCost: number): FleetEconomics | null {
+  const f: SimulationFleetModel | undefined = s.fleet;
+  if (!f || f.unitCount <= 1) return null;
+  const units: FleetEconomicsRow[] = [];
+  let effectiveCogsPct = s.cogsPct;
+  const supplyDiscountActive = f.unitCount >= f.supplyDiscountAtUnits && f.supplyDiscountPct > 0;
+  const commissaryActive = f.unitCount >= f.commissaryEnabledAtUnits && f.commissarySavingsPct > 0;
+  if (supplyDiscountActive) effectiveCogsPct *= 1 - f.supplyDiscountPct;
+  if (commissaryActive) effectiveCogsPct *= 1 - f.commissarySavingsPct;
+  effectiveCogsPct = Math.max(0, effectiveCogsPct);
+
+  const baseRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
+  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
+  const useMarketingAsCac = s.marketingAsCac !== false;
+  const baseFixedExHq = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
+    if (useMarketingAsCac && k === "marketing") return sum;
+    return sum + (v ?? 0);
+  }, 0);
+
+  for (let i = 0; i < f.unitCount; i++) {
+    const cannibalRetained = (1 - f.dmaOverlapPct) ** i;
+    const unitRevenue = baseRevenue * cannibalRetained;
+    const cogs = unitRevenue * effectiveCogsPct;
+    const labor = baseLabor;
+    const royalty = unitRevenue * f.royaltyPct;
+    const marketingFund = unitRevenue * f.marketingFundPct;
+    const variableLeakage = unitRevenue * ((s.paymentProcessorPct ?? 0) + (s.wastePct ?? 0) + (s.refundPct ?? 0) + (s.loyaltyBurnPct ?? 0));
+    const packaging = (s.packagingPerOrderGrosze ?? 0) * s.ordersPerDay * s.daysOpenPerMonth * cannibalRetained;
+    const marketingCac = useMarketingAsCac ? (s.fixedCosts.marketing ?? 0) : 0;
+    const ebitda = unitRevenue - cogs - labor - baseFixedExHq - royalty - marketingFund - variableLeakage - packaging - marketingCac;
+    const learning = (1 - f.buildoutLearningPct) ** i;
+    const learnedSetup = Math.max(baseSetupCost * f.buildoutFloorPct, baseSetupCost * learning);
+    units.push({ unitIndex: i + 1, revenue: unitRevenue, cogs, labor, fixedExHq: baseFixedExHq, royalty, marketingFund, ebitda, setupCost: learnedSetup });
+  }
+
+  const totalRevenue = units.reduce((sum, u) => sum + u.revenue, 0);
+  const totalEbitdaPreHq = units.reduce((sum, u) => sum + u.ebitda, 0);
+  const totalSetupCost = units.reduce((sum, u) => sum + u.setupCost, 0);
+  const hqOverhead = f.hqOverheadMonthlyGrosze;
+  const totalEbitda = totalEbitdaPreHq - hqOverhead;
+  return {
+    unitCount: f.unitCount, units, totalRevenue, totalEbitda, totalSetupCost, hqOverhead,
+    supplyDiscountActive, commissaryActive,
+    avgRevenuePerUnit: f.unitCount > 0 ? totalRevenue / f.unitCount : 0,
+    avgEbitdaPerUnit: f.unitCount > 0 ? totalEbitda / f.unitCount : 0,
+    hqOverheadAbsorption: totalRevenue > 0 ? hqOverhead / totalRevenue : 0,
+  };
+}
+
+/* ── per-channel CM1 ───────────────────────────────────────────────────────
+ * Contribution margin per order broken down by cash / on-site card / Glovo /
+ * Wolt — each channel pays a different fee, so the unblended view is what tells
+ * the operator whether delivery is actually profitable. Takes the RAW scenario
+ * (pre-applyAssumptions) so the on-site card rate isn't the blended one. */
+export interface ChannelEconomicsRow {
+  key: "cash" | "onSiteCard" | "glovo" | "wolt";
+  label: string;
+  sharePct: number;
+  feePct: number;
+  cm1PerOrderGrosze: number;
+  cm1PctOfTicket: number;
+  monthlyContributionGrosze: number;
+}
+
+export function computeChannelEconomics(s: SimulationScenario): ChannelEconomicsRow[] {
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const onSiteShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const variableExFee = s.cogsPct + (s.wastePct ?? 0) + (s.refundPct ?? 0) + (s.loyaltyBurnPct ?? 0);
+  const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  const buildRow = (key: ChannelEconomicsRow["key"], label: string, share: number, feePct: number): ChannelEconomicsRow => {
+    const cm1Pct = Math.max(0, 1 - variableExFee - feePct);
+    const cm1PerOrder = s.avgTicketGrosze * cm1Pct;
+    return { key, label, sharePct: share, feePct, cm1PerOrderGrosze: cm1PerOrder, cm1PctOfTicket: cm1Pct, monthlyContributionGrosze: cm1PerOrder * share * ordersPerMonth };
+  };
+  return [
+    buildRow("cash", "Cash", cashShare, 0),
+    buildRow("onSiteCard", "On-site card", onSiteShare, s.paymentProcessorPct ?? 0),
+    buildRow("glovo", "Glovo", glovoShare, s.glovoFeePct ?? 0),
+    buildRow("wolt", "Wolt", woltShare, s.woltFeePct ?? 0),
+  ];
 }
