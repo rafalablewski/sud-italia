@@ -219,10 +219,15 @@ refetches every 30s.
   + `/api/admin/truck-routes`
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
   (referral config + reward/challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
-  Cross-sell (`/admin-v3/crosssell`): per-location combo editor (add/edit/toggle/
-  delete) that **round-trips the full location config** so bundles/badges are
-  preserved (`PUT /api/admin/upsell`). Upsell (`/admin-v3/upsell`): bundle-ladder
-  activation toggles (full ladder pricing stays in the classic admin).
+  Cross-sell (`/admin-v3/crosssell`) — **full v2 parity (PR #139 follow-up):**
+  four tabs over the per-location selling config (`PUT /api/admin/upsell`, full
+  config round-tripped so nothing is lost): **Cart pairings** (Coffee/Dessert/
+  Side/Drink item slots), **Combo deals** (add/edit/toggle/delete), **Time-of-day**
+  windows (variant/hours/title/sub/badge/CTA/one-tap-add, add/edit/toggle/delete)
+  and **Menu badges** (Hero / Pizzaiolo's Choice / Chef's Signature / New /
+  Popular / Staff Pick multi-selects, with `menuRole`-intrinsic items shown
+  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`):
+  bundle-ladder activation toggles (full ladder editor / A-B / ML still pending).
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
   engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
