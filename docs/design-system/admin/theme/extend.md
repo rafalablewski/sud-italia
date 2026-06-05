@@ -249,7 +249,7 @@ any *new* violation fails `npm run lint`. To clear a suppression:
 After editing a file, run `npx eslint --prune-suppressions` to drop entries you've
 fixed (keeps the baseline honest). The `v2/` infrastructure and shell chrome are
 out of scope (they legitimately render raw elements). The live burn-down is
-tracked in [`../redesign-progress.md`](../redesign-progress.md).
+tracked in `eslint-suppressions.json` at the repo root.
 
 **Enforcement (the lock):**
 - **CI** runs `npx eslint "src/**/*.{ts,tsx}"` (`.github/workflows/ci.yml`) on every

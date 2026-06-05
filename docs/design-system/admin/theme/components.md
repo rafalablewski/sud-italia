@@ -489,8 +489,7 @@ secondaries); icon-only buttons auto-collapse to a 34px square via the global
 
 ## Redesign primitives — the command surface
 
-> Shipped in the admin redesign (`../redesign-blueprint.md`,
-> tracked in `../redesign-progress.md`). As of **Phase 3**, `PageHero` itself
+> Shipped in the admin redesign. As of **Phase 3**, `PageHero` itself
 > composes these (so every page already renders the new surface); new pages call
 > `PageHeader` + `ViewToolbar` directly. `LocationFilter` was removed in Phase 2.
 > **Selection language for all of them is selection-as-raise** — see
