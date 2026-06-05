@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles, Star } from "lucide-react";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, Dialog, Donut, Kpi, Table, type BadgeTone, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
 
 type Status = "new" | "reviewed" | "responded";
 interface FeedbackEntry {
@@ -57,6 +57,26 @@ export function FeedbackV3() {
   }, [list]);
   const avg = list.length ? list.reduce((s, f) => s + f.overallRating, 0) / list.length : 0;
 
+  const ratingDist = useMemo<BarDatum[]>(
+    () => [1, 2, 3, 4, 5].map((star) => ({
+      label: `${star}★`,
+      value: list.filter((f) => Math.round(f.overallRating) === star).length,
+      colorVar: star >= 4 ? "--av3-c4" : star === 3 ? "--av3-c5" : "--av3-c1",
+    })),
+    [list],
+  );
+  const sentimentMix = useMemo<DonutDatum[]>(() => {
+    const defs = [
+      { label: "Positive", key: "positive", colorVar: "--av3-c4" },
+      { label: "Neutral", key: "neutral", colorVar: "--av3-c2" },
+      { label: "Negative", key: "negative", colorVar: "--av3-c1" },
+    ] as const;
+    return defs
+      .map((d) => ({ label: d.label, value: list.filter((f) => f.sentiment === d.key).length, colorVar: d.colorVar }))
+      .filter((d) => d.value > 0);
+  }, [list]);
+  const sentimentTotal = sentimentMix.reduce((s, d) => s + d.value, 0);
+
   const rows = useMemo(() => {
     const r = filter === "all" ? list : list.filter((f) => f.status === filter);
     return [...r].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
@@ -107,6 +127,28 @@ export function FeedbackV3() {
         <Kpi label="Reviews" icon={Star} value={`${list.length}`} accentVar="--av3-c3" />
         <Kpi label="New" icon={Star} value={`${counts.new}`} accentVar="--av3-c1" />
       </div>
+
+      {list.length > 0 && (
+        <div className="av3-grid-2">
+          <Card>
+            <CardHead title="Rating distribution" description="All guest ratings, 1–5★" />
+            <CardBody><BarChart data={ratingDist} height={160} accentVar="--av3-c3" /></CardBody>
+          </Card>
+          <Card>
+            <CardHead title="Sentiment" description="AI-classified review sentiment" />
+            <CardBody>
+              {sentimentMix.length === 0 ? (
+                <div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>Run “Analyze sentiment” to classify reviews.</div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                  <Donut data={sentimentMix} size={140} centerValue={sentimentTotal} centerLabel="RATED" />
+                  <ChartLegend items={sentimentMix} format={(n) => `${n} · ${Math.round((n / sentimentTotal) * 100)}%`} />
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      )}
 
       <div className="av3-filterchips">
         {chips.map((f) => (

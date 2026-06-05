@@ -4,4 +4,5 @@ export { Dialog } from "./Dialog";
 export { MetricExplainer, InfoButton, type ExplainerProps } from "./Explainer";
 export { Kpi } from "./Kpi";
 export { Sparkline } from "./Sparkline";
+export { AreaChart, BarChart, Donut, ChartLegend, type AreaChartProps, type BarDatum, type DonutDatum } from "./Chart";
 export { Table, type ColumnV3 } from "./Table";

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en" data-admin-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin v3 — chart approach comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+  /* ---- av3 tokens (verbatim from src/app/themes/admin-v3/index.css) ---- */
+  :root, .av3-root {
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+    --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b;
+    --av3-c5:#d3884f; --av3-c6:#9b7ec0; --av3-c7:#e08aa2; --av3-c8:#80ac6e;
+    --av3-grid:rgba(255,255,255,.06);
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
+    --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif; --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  [data-admin-theme="light"] {
+    --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+    --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+    --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73;
+    --av3-brand:#a82940; --av3-platinum:#9c7e4e;
+    --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694;
+    --av3-c1:#a82940; --av3-c2:#9c7e4e; --av3-c3:#3d6694; --av3-c4:#1f8a60;
+    --av3-c5:#b56a3b; --av3-c6:#74599a; --av3-c7:#bc6a82; --av3-c8:#5e8049;
+    --av3-grid:rgba(28,24,21,.08);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--av3-bg); color:var(--av3-fg); font-family:var(--av3-ui); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px 20px 60px; }
+
+  /* page chrome */
+  .topnote { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  h1 { font-family:var(--av3-display); font-size:23px; font-weight:600; letter-spacing:-.01em; margin:0; }
+  .sub { font-size:12.5px; color:var(--av3-muted); margin-top:3px; max-width:640px; line-height:1.5; }
+  .seg { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:var(--av3-r-md); }
+  .seg button { height:28px; padding:0 12px; border:none; background:transparent; border-radius:var(--av3-r-sm); color:var(--av3-muted); font:inherit; font-size:12px; font-weight:500; cursor:pointer; }
+  .seg button.on { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); }
+
+  /* cards */
+  .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:var(--av3-r-lg); box-shadow:var(--av3-sh-1); }
+  .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid var(--av3-line); }
+  .card-title { font-size:13px; font-weight:600; }
+  .card-desc { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+  .card-body { padding:16px; }
+
+  /* KPI rail (shared, identical in both) */
+  .kpi-rail { display:grid; grid-template-columns:repeat(auto-fit,minmax(176px,1fr)); gap:12px; margin:14px 0; }
+  .kpi { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:var(--av3-r-lg); box-shadow:var(--av3-sh-1); padding:12px 16px; }
+  .kpi-label { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); }
+  .kpi-value { font-family:var(--av3-mono); font-size:23px; font-weight:500; line-height:1; margin-top:7px; font-variant-numeric:tabular-nums; }
+  .kpi-foot { margin-top:7px; font-size:11px; }
+  .delta-up { color:var(--av3-ok); } .delta-down { color:var(--av3-bad); }
+
+  /* section banners */
+  .lane { margin-top:26px; }
+  .lane-h { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .lane-tag { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; padding:3px 9px; border-radius:var(--av3-r-pill); }
+  .lane-a .lane-tag { background:color-mix(in oklab,var(--av3-c4) 18%,var(--av3-s1)); color:var(--av3-c4); }
+  .lane-b .lane-tag { background:color-mix(in oklab,var(--av3-platinum) 18%,var(--av3-s1)); color:var(--av3-platinum); }
+  .lane-h h2 { font-family:var(--av3-display); font-size:17px; font-weight:600; margin:0; }
+  .lane-h p { font-size:12px; color:var(--av3-muted); margin:0; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .grid2 { grid-template-columns:1fr; } }
+
+  .section-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); margin-bottom:10px; }
+
+  /* ---- Option B: dense CSS bar tracks (what v3 ships today) ---- */
+  .bars { display:flex; flex-direction:column; gap:9px; }
+  .bar { display:grid; grid-template-columns:96px 1fr 64px; align-items:center; gap:10px; }
+  .bar-label { font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar-track { position:relative; height:7px; border-radius:var(--av3-r-pill); background:var(--av3-s3); overflow:hidden; }
+  .bar-fill { position:absolute; inset:0 auto 0 0; border-radius:var(--av3-r-pill); background:var(--av3-brand); }
+  .bar-val { text-align:right; font-family:var(--av3-mono); font-size:11.5px; font-variant-numeric:tabular-nums; color:var(--av3-muted); }
+  .flow { display:flex; align-items:flex-end; gap:3px; height:46px; }
+  .flow > i { flex:1; background:var(--av3-c3); border-radius:2px 2px 0 0; opacity:.85; min-height:2px; }
+  .stackbar { display:flex; height:14px; border-radius:var(--av3-r-pill); overflow:hidden; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px 16px; margin-top:12px; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--av3-muted); }
+  .legend i { width:9px; height:9px; border-radius:2px; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th { text-align:left; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--av3-subtle); padding:0 0 7px; border-bottom:1px solid var(--av3-line); }
+  th.num, td.num { text-align:right; font-family:var(--av3-mono); font-variant-numeric:tabular-nums; }
+  td { padding:7px 0; border-bottom:1px solid var(--av3-line); }
+  tr:last-child td { border-bottom:none; }
+
+  /* svg chart frames */
+  .chart { width:100%; height:auto; display:block; }
+  .verdict { margin-top:14px; font-size:12px; color:var(--av3-muted); line-height:1.55; background:var(--av3-s2); border:1px solid var(--av3-line); border-left:3px solid var(--lc,var(--av3-line-strong)); border-radius:var(--av3-r-sm); padding:10px 12px; }
+  .verdict b { color:var(--av3-fg); }
+</style>
+</head>
+<body class="av3-root">
+<div class="wrap">
+
+  <div class="topnote">
+    <div>
+      <h1>Reports — chart approach comparison</h1>
+      <div class="sub">The same real data, rendered two ways, so you can pick the v3 direction. <b style="color:var(--av3-fg)">Option A</b> = a small inline-SVG chart primitive (area / bar / donut, drawn on av3 tokens, dependency-free — same technique as the existing <code>Sparkline</code>). <b style="color:var(--av3-fg)">Option B</b> = the dense CSS bar-track + table style v3 ships today. KPI rail is identical in both.</div>
+    </div>
+    <div class="seg" role="tablist" aria-label="Theme">
+      <button class="on" id="dk" onclick="setTheme('dark')">Dark</button>
+      <button id="lt" onclick="setTheme('light')">Light</button>
+    </div>
+  </div>
+
+  <!-- shared KPI rail -->
+  <div class="kpi-rail">
+    <div class="kpi"><div class="kpi-label">Revenue · 14d</div><div class="kpi-value">68 400 zł</div><div class="kpi-foot delta-up">▲ 18.2% vs prev</div></div>
+    <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-value">1 184</div><div class="kpi-foot delta-up">▲ 9.4%</div></div>
+    <div class="kpi"><div class="kpi-label">AOV</div><div class="kpi-value">57.80 zł</div><div class="kpi-foot delta-up">▲ 3.1%</div></div>
+    <div class="kpi"><div class="kpi-label">Gross margin</div><div class="kpi-value">63.5%</div><div class="kpi-foot delta-down">▼ 0.8%</div></div>
+  </div>
+
+  <!-- ============ OPTION A — inline-SVG charts ============ -->
+  <div class="lane lane-a">
+    <div class="lane-h">
+      <span class="lane-tag">Option A</span>
+      <div><h2>v3-native inline-SVG charts</h2><p>Area · grouped bar · donut · horizontal bars — drawn from data, no chart library.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Revenue trend</div><div class="card-desc">Daily, last 14 days · zł</div></div></div>
+        <div class="card-body"><svg class="chart" id="svgArea" viewBox="0 0 520 168" preserveAspectRatio="none" aria-label="Revenue area chart"></svg></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Revenue by daypart</div><div class="card-desc">Share of the window</div></div></div>
+        <div class="card-body"><svg class="chart" id="svgBars" viewBox="0 0 520 168" aria-label="Daypart bar chart"></svg></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Channel mix</div><div class="card-desc">Orders by fulfilment</div></div></div>
+        <div class="card-body" style="display:flex; align-items:center; gap:18px;">
+          <svg id="svgDonut" width="150" height="150" viewBox="0 0 150 150" aria-label="Channel mix donut"></svg>
+          <div class="legend" id="donutLegend" style="flex-direction:column; gap:9px; margin:0;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Top categories</div><div class="card-desc">Gross revenue</div></div></div>
+        <div class="card-body"><svg class="chart" id="svgHbar" viewBox="0 0 520 168" aria-label="Category bar chart"></svg></div>
+      </div>
+    </div>
+    <div class="verdict" style="--lc:var(--av3-c4)"><b>Why A:</b> reads a trend in one glance (the thing tables can't show), keeps the dense Bloomberg/Linear feel, and reuses the exact inline-SVG approach already in <code>Sparkline.tsx</code> — so it stays inside the v2-deletion isolation contract (no Recharts, no <code>v2/charts</code> import). Cost: ~1 small primitive file (<code>Chart.tsx</code>: area/bar/donut) to build + document once, then every surface (Reports, Feedback, Multi-location, Dashboard) reuses it.</div>
+  </div>
+
+  <!-- ============ OPTION B — dense CSS bars + tables ============ -->
+  <div class="lane lane-b">
+    <div class="lane-h">
+      <span class="lane-tag">Option B</span>
+      <div><h2>Dense bar-tracks + tables (today's v3)</h2><p>The same four datasets in the style v3 currently uses everywhere.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Revenue trend</div><div class="card-desc">Daily, last 14 days</div></div></div>
+        <div class="card-body">
+          <div class="flow" id="flow"></div>
+          <div style="display:flex; justify-content:space-between; margin-top:7px; font-size:10px; color:var(--av3-subtle); font-family:var(--av3-mono);"><span>14d ago</span><span>peak 6.9k</span><span>today</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Revenue by daypart</div><div class="card-desc">Share of the window</div></div></div>
+        <div class="card-body">
+          <div class="bars">
+            <div class="bar"><span class="bar-label">Dinner</span><span class="bar-track"><i class="bar-fill" style="width:100%"></i></span><span class="bar-val">31 900</span></div>
+            <div class="bar"><span class="bar-label">Lunch</span><span class="bar-track"><i class="bar-fill" style="width:71%"></i></span><span class="bar-val">22 600</span></div>
+            <div class="bar"><span class="bar-label">Late-night</span><span class="bar-track"><i class="bar-fill" style="width:27%"></i></span><span class="bar-val">8 700</span></div>
+            <div class="bar"><span class="bar-label">Off-peak</span><span class="bar-track"><i class="bar-fill" style="width:16%"></i></span><span class="bar-val">5 200</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Channel mix</div><div class="card-desc">Orders by fulfilment</div></div></div>
+        <div class="card-body">
+          <div class="stackbar">
+            <i style="width:44%; background:var(--av3-c1)"></i><i style="width:28%; background:var(--av3-c3)"></i><i style="width:18%; background:var(--av3-c4)"></i><i style="width:10%; background:var(--av3-c2)"></i>
+          </div>
+          <div class="legend">
+            <span><i style="background:var(--av3-c1)"></i>Dine-in · 44%</span>
+            <span><i style="background:var(--av3-c3)"></i>Takeout · 28%</span>
+            <span><i style="background:var(--av3-c4)"></i>Delivery · 18%</span>
+            <span><i style="background:var(--av3-c2)"></i>WhatsApp · 10%</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Top categories</div><div class="card-desc">Gross revenue</div></div></div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>Category</th><th class="num">Revenue</th><th class="num">Share</th></tr></thead>
+            <tbody>
+              <tr><td>Pizza</td><td class="num">29 400</td><td class="num">43%</td></tr>
+              <tr><td>Pasta</td><td class="num">14 700</td><td class="num">21%</td></tr>
+              <tr><td>Antipasti</td><td class="num">9 600</td><td class="num">14%</td></tr>
+              <tr><td>Drinks</td><td class="num">8 200</td><td class="num">12%</td></tr>
+              <tr><td>Desserts</td><td class="num">6 500</td><td class="num">10%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="verdict" style="--lc:var(--av3-platinum)"><b>Why B:</b> zero new primitives, maximally dense, every figure is exact + copy-pasteable, and it's already consistent across the app. Cost: no time-series story — you can't <em>see</em> a trend, a distribution shape, or a part-to-whole at a glance; the operator has to read numbers. Fine for rankings, weak for "what's happening over time / where's the spike."</div>
+  </div>
+
+  <p style="margin-top:30px; font-size:11.5px; color:var(--av3-subtle);">Draft mockup · <code>/tests/sketches/v3-charts-comparison.html</code> · not shipped. Tokens copied verbatim from <code>src/app/themes/admin-v3/index.css</code>.</p>
+</div>
+
+<script>
+function setTheme(t){ document.documentElement.setAttribute('data-admin-theme', t); dk.classList.toggle('on', t==='dark'); lt.classList.toggle('on', t==='light'); }
+const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();
+
+/* ---------- data (matches Option B exactly) ---------- */
+const revenue = [3200,3800,3400,4100,4600,5200,4800,4400,5100,5600,6100,5800,6400,6900];
+const dayparts = [{l:'Dinner',v:31900},{l:'Lunch',v:22600},{l:'Late',v:8700},{l:'Off-peak',v:5200}];
+const channels = [{l:'Dine-in',v:44,c:'--av3-c1'},{l:'Takeout',v:28,c:'--av3-c3'},{l:'Delivery',v:18,c:'--av3-c4'},{l:'WhatsApp',v:10,c:'--av3-c2'}];
+const cats = [{l:'Pizza',v:29400},{l:'Pasta',v:14700},{l:'Antipasti',v:9600},{l:'Drinks',v:8200},{l:'Desserts',v:6500}];
+
+/* ---------- A1: area chart ---------- */
+(function(){
+  const W=520,H=168, padX=10, padT=14, padB=22;
+  const min=Math.min(...revenue), max=Math.max(...revenue);
+  const x=i=>padX+(i/(revenue.length-1))*(W-2*padX);
+  const y=v=>(H-padB)-((v-min)/(max-min||1))*(H-padT-padB);
+  let line='', area='';
+  revenue.forEach((v,i)=>{ const px=x(i).toFixed(1), py=y(v).toFixed(1); line+=(i?'L':'M')+px+' '+py+' '; });
+  area = line + `L${x(revenue.length-1).toFixed(1)} ${H-padB} L${x(0).toFixed(1)} ${H-padB} Z`;
+  const accent=css('--av3-c4');
+  let grid='';
+  for(let g=0; g<=3; g++){ const gy=(padT+(g/3)*(H-padT-padB)).toFixed(1); grid+=`<line x1="${padX}" y1="${gy}" x2="${W-padX}" y2="${gy}" stroke="${css('--av3-grid')}" stroke-width="1"/>`; }
+  const lastX=x(revenue.length-1).toFixed(1), lastY=y(revenue[revenue.length-1]).toFixed(1);
+  document.getElementById('svgArea').innerHTML = `
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${accent}" stop-opacity="0.28"/><stop offset="100%" stop-color="${accent}" stop-opacity="0"/></linearGradient></defs>
+    ${grid}
+    <path d="${area}" fill="url(#ag)"/>
+    <path d="${line}" fill="none" stroke="${accent}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lastX}" cy="${lastY}" r="3.2" fill="${accent}" stroke="${css('--av3-s1')}" stroke-width="2"/>
+    <text x="${padX}" y="${H-6}" fill="${css('--av3-subtle')}" font-size="9" font-family="${css('--av3-mono')}">14d ago</text>
+    <text x="${W-padX}" y="${H-6}" text-anchor="end" fill="${css('--av3-subtle')}" font-size="9" font-family="${css('--av3-mono')}">today · 6 900 zł</text>`;
+})();
+
+/* ---------- A2: vertical bars ---------- */
+(function(){
+  const W=520,H=168, padX=12, padT=10, padB=26, n=dayparts.length;
+  const max=Math.max(...dayparts.map(d=>d.v));
+  const slot=(W-2*padX)/n, bw=slot*0.5;
+  let out='';
+  dayparts.forEach((d,i)=>{
+    const h=((d.v/max)*(H-padT-padB)); const bx=padX+i*slot+(slot-bw)/2; const by=(H-padB)-h;
+    out+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${css('--av3-c3')}"/>`;
+    out+=`<text x="${(bx+bw/2).toFixed(1)}" y="${by-5}" text-anchor="middle" fill="${css('--av3-fg')}" font-size="10" font-family="${css('--av3-mono')}">${(d.v/1000).toFixed(1)}k</text>`;
+    out+=`<text x="${(bx+bw/2).toFixed(1)}" y="${H-9}" text-anchor="middle" fill="${css('--av3-muted')}" font-size="10.5">${d.l}</text>`;
+  });
+  document.getElementById('svgBars').innerHTML=out;
+})();
+
+/* ---------- A3: donut ---------- */
+(function(){
+  const cx=75,cy=75,r=52,sw=18, C=2*Math.PI*r; let off=0; let out=''; let leg='';
+  channels.forEach(ch=>{
+    const frac=ch.v/100, len=frac*C;
+    out+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${css(ch.c)}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=len;
+    leg+=`<span><i style="background:${css(ch.c)}"></i>${ch.l} · ${ch.v}%</span>`;
+  });
+  out+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" fill="${css('--av3-fg')}" font-size="20" font-family="${css('--av3-mono')}" font-weight="500">1 184</text>`;
+  out+=`<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="${css('--av3-subtle')}" font-size="9" letter-spacing="1">ORDERS</text>`;
+  document.getElementById('svgDonut').innerHTML=out;
+  document.getElementById('donutLegend').innerHTML=leg;
+})();
+
+/* ---------- A4: horizontal bars ---------- */
+(function(){
+  const W=520,H=168, padL=78, padR=52, rowH=(H-12)/cats.length;
+  const max=Math.max(...cats.map(c=>c.v)); let out='';
+  cats.forEach((c,i)=>{
+    const cy=6+i*rowH+rowH/2; const bw=((c.v/max)*(W-padL-padR));
+    out+=`<text x="${padL-10}" y="${cy+4}" text-anchor="end" fill="${css('--av3-fg')}" font-size="12">${c.l}</text>`;
+    out+=`<rect x="${padL}" y="${cy-7}" width="${(W-padL-padR)}" height="14" rx="4" fill="${css('--av3-s3')}"/>`;
+    out+=`<rect x="${padL}" y="${cy-7}" width="${bw.toFixed(1)}" height="14" rx="4" fill="${css('--av3-brand')}"/>`;
+    out+=`<text x="${W-6}" y="${cy+4}" text-anchor="end" fill="${css('--av3-muted')}" font-size="11" font-family="${css('--av3-mono')}">${(c.v/1000).toFixed(1)}k</text>`;
+  });
+  document.getElementById('svgHbar').innerHTML=out;
+})();
+
+/* ---------- B: flow mini-bars ---------- */
+(function(){
+  const max=Math.max(...revenue);
+  document.getElementById('flow').innerHTML = revenue.map(v=>`<i style="height:${(v/max*100).toFixed(0)}%"></i>`).join('');
+})();
+</script>
+</body>
+</html>

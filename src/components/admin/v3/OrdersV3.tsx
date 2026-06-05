@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, KanbanSquare, MapPin, Phone, RefreshCw, TableProperties, User } from "lucide-react";
+import { Clock, KanbanSquare, MapPin, Phone, RefreshCw, RotateCcw, TableProperties, User } from "lucide-react";
 import type { Order, OrderStatus } from "@/data/types";
+import { REFUND_REASON_CODES, REFUND_REASON_LABELS, type RefundReasonCode } from "@/data/types";
+import { evaluateRefundGuard, type RefundGuardDecision } from "@/lib/refund-guard";
+import type { AdminRole } from "@/lib/admin-roles";
 import { formatPrice } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, ChipRow, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 const PIPELINE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
 const KANBAN_COLUMNS: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
@@ -70,6 +73,7 @@ export function OrdersV3() {
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [filter, setFilter] = useState<"all" | OrderStatus>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [refundId, setRefundId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -99,6 +103,7 @@ export function OrdersV3() {
   }, [orders, filter]);
 
   const detail = detailId ? orders.find((o) => o.id === detailId) ?? null : null;
+  const refundTarget = refundId ? orders.find((o) => o.id === refundId) ?? null : null;
 
   async function changeStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId);
@@ -113,6 +118,26 @@ export function OrdersV3() {
     } finally {
       setUpdating(null);
     }
+  }
+
+  // Refund reaches Stripe + reverses revenue rows — owner/manager + the
+  // orders.refund grant only (server-enforced). The SSE stream reconciles the
+  // order's `refund` field (and `cancelled` status for full refunds) after.
+  async function handleRefund(
+    orderId: string,
+    payload: { type: "full" | "partial"; amount?: number; reasonCode: RefundReasonCode; notes?: string },
+  ): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`/api/admin/orders/${orderId}/refund`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      refresh();
+      return { ok: true };
+    }
+    return { ok: false, error: data.error || "Refund failed" };
   }
 
   const filterChips: ("all" | OrderStatus)[] = ["all", "pending", "confirmed", "preparing", "ready", "completed", "cancelled"];
@@ -217,8 +242,13 @@ export function OrdersV3() {
         footer={
           detail && (
             <>
+              {!detail.refund && detail.status !== "cancelled" && detail.status !== "pending" && (
+                <Button variant="danger" size="sm" onClick={() => setRefundId(detail.id)} style={{ marginRight: "auto" }}>
+                  <RotateCcw className="av3-btn-ico" /> Refund
+                </Button>
+              )}
               {detail.status !== "cancelled" && detail.status !== "completed" && (
-                <Button variant="danger" size="sm" loading={updating === detail.id} onClick={() => changeStatus(detail.id, "cancelled")}>
+                <Button variant="ghost" size="sm" loading={updating === detail.id} onClick={() => changeStatus(detail.id, "cancelled")}>
                   Cancel order
                 </Button>
               )}
@@ -246,6 +276,14 @@ export function OrdersV3() {
               )}
             </div>
 
+            {detail.refund && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "8px 12px", background: "var(--av3-bad-soft)", border: "1px solid color-mix(in oklab, var(--av3-bad) 30%, transparent)", borderRadius: "var(--av3-r-sm)", fontSize: 12 }}>
+                <RotateCcw style={{ width: 14, height: 14, color: "var(--av3-bad)" }} />
+                <span style={{ color: "var(--av3-bad)", fontWeight: 600 }}>{detail.refund.type === "full" ? "Refunded" : "Partially refunded"}</span>
+                <span className="av3-cell-muted">{formatPrice(detail.refund.amount)} · {REFUND_REASON_LABELS[detail.refund.reasonCode]}</span>
+              </div>
+            )}
+
             <div className="av3-section-label" style={{ marginBottom: 6 }}>Items</div>
             {detail.items.map((it, i) => (
               <div className="av3-od-line" key={i}>
@@ -263,6 +301,183 @@ export function OrdersV3() {
           </>
         )}
       </Dialog>
+
+      {refundTarget && (
+        <RefundDialogV3
+          order={refundTarget}
+          onClose={() => setRefundId(null)}
+          onSubmit={async (payload) => {
+            const result = await handleRefund(refundTarget.id, payload);
+            if (result.ok) setRefundId(null);
+            return result;
+          }}
+        />
+      )}
     </>
+  );
+}
+
+interface RefundPolicy {
+  role: AdminRole;
+  ownerBypass: boolean;
+  singleMaxGrosze: number;
+  compDailyCapGrosze: number;
+  actorCompTotalTodayGrosze: number;
+}
+
+function RefundDialogV3({
+  order,
+  onClose,
+  onSubmit,
+}: {
+  order: Order;
+  onClose: () => void;
+  onSubmit: (p: { type: "full" | "partial"; amount?: number; reasonCode: RefundReasonCode; notes?: string }) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [type, setType] = useState<"full" | "partial">("full");
+  const [amountPln, setAmountPln] = useState("");
+  const [reasonCode, setReasonCode] = useState<RefundReasonCode>("customer_request");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [policy, setPolicy] = useState<RefundPolicy | null>(null);
+
+  // Preview the authorization decision (audit §11.2). Falls back to "allow" if
+  // the policy fetch fails; the server has the final word either way.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/admin/refund-policy?location=${encodeURIComponent(order.locationSlug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d) setPolicy(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [order.locationSlug]);
+
+  const partialGrosze = type === "partial" ? Math.round(parseFloat(amountPln || "0") * 100) : 0;
+  const partialValid =
+    type === "full" || (Number.isFinite(partialGrosze) && partialGrosze > 0 && partialGrosze < order.totalAmount);
+  const previewAmount = type === "full" ? order.totalAmount : partialGrosze;
+  const willReverseStripe = !!order.stripePaymentIntentId && reasonCode !== "manager_comp";
+
+  const guard: RefundGuardDecision =
+    policy && previewAmount > 0
+      ? evaluateRefundGuard({
+          role: policy.role,
+          reasonCode,
+          amountGrosze: previewAmount,
+          actorCompTotalTodayGrosze: policy.actorCompTotalTodayGrosze,
+          limits: { singleMaxGrosze: policy.singleMaxGrosze, compDailyCapGrosze: policy.compDailyCapGrosze },
+        })
+      : { allowed: true };
+  const compRemaining =
+    policy && !policy.ownerBypass && policy.compDailyCapGrosze > 0
+      ? Math.max(0, policy.compDailyCapGrosze - policy.actorCompTotalTodayGrosze)
+      : null;
+
+  const submit = async () => {
+    if (!partialValid || !guard.allowed) return;
+    setSubmitting(true);
+    setError(null);
+    const result = await onSubmit({
+      type,
+      amount: type === "partial" ? partialGrosze : undefined,
+      reasonCode,
+      notes: notes.trim() || undefined,
+    });
+    if (!result.ok) {
+      setSubmitting(false);
+      setError(result.error || "Refund failed");
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title="Refund order"
+      subtitle={`Original total ${formatPrice(order.totalAmount)} · ${order.customerName || "Guest"}`}
+      width={460}
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="danger" size="sm" loading={submitting} disabled={submitting || !partialValid || !guard.allowed} onClick={submit}>
+            <RotateCcw className="av3-btn-ico" />
+            {!guard.allowed ? "Owner approval required" : `Refund ${previewAmount > 0 ? formatPrice(previewAmount) : "…"}`}
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <ChipRow
+          options={[
+            { value: "full", label: "Full refund" },
+            { value: "partial", label: "Partial refund" },
+          ]}
+          value={type}
+          onChange={(v) => setType(v)}
+          ariaLabel="Refund type"
+        />
+
+        {type === "partial" && (
+          <label className="av3-field">
+            <span className="av3-field-label">Amount (PLN)</span>
+            <input className="av3-input" type="number" step="0.01" min="0.01" inputMode="decimal" value={amountPln} onChange={(e) => setAmountPln(e.target.value)} placeholder="0.00" />
+            <span style={{ fontSize: 11, color: amountPln && !partialValid ? "var(--av3-bad)" : "var(--av3-subtle)" }}>
+              {amountPln && !partialValid
+                ? `Enter an amount between 0.01 and ${(order.totalAmount / 100 - 0.01).toFixed(2)}`
+                : `Up to ${formatPrice(order.totalAmount - 1)}. Stored in grosze.`}
+            </span>
+          </label>
+        )}
+
+        <label className="av3-field">
+          <span className="av3-field-label">Reason</span>
+          <select className="av3-select" value={reasonCode} onChange={(e) => setReasonCode(e.target.value as RefundReasonCode)}>
+            {REFUND_REASON_CODES.map((c) => (
+              <option key={c} value={c}>{REFUND_REASON_LABELS[c]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="av3-field">
+          <span className="av3-field-label">Notes (optional)</span>
+          <textarea
+            className="av3-input"
+            rows={2}
+            style={{ height: "auto", fontFamily: "var(--av3-ui)", padding: "8px 10px", resize: "vertical" }}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Internal record — not sent to the customer."
+          />
+        </label>
+
+        <div style={{ background: "var(--av3-s2)", border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-sm)", padding: "10px 12px", fontSize: 12, lineHeight: 1.5, color: "var(--av3-muted)" }}>
+          {willReverseStripe ? (
+            <><strong>Stripe charge will be reversed</strong> for {formatPrice(previewAmount)}. Funds typically return in 5–10 business days.</>
+          ) : order.stripePaymentIntentId ? (
+            <><strong>Manager comp:</strong> recorded internally; the original Stripe charge will NOT be reversed. Use this when the customer is credited offline.</>
+          ) : (
+            <><strong>No Stripe charge on file</strong> (demo-mode order or webhook hadn&apos;t fired). The refund is recorded internally for accounting.</>
+          )}
+          {type === "full" && (
+            <><br />The order status will be set to <strong>cancelled</strong>.</>
+          )}
+          {reasonCode === "manager_comp" && compRemaining !== null && guard.allowed && (
+            <><br />Comp budget left today: <strong>{formatPrice(compRemaining)}</strong> of {formatPrice(policy!.compDailyCapGrosze)}.</>
+          )}
+        </div>
+
+        {!guard.allowed && guard.message && (
+          <div style={{ fontSize: 12, color: "var(--av3-bad)", background: "var(--av3-bad-soft)", border: "1px solid color-mix(in oklab, var(--av3-bad) 30%, transparent)", borderRadius: "var(--av3-r-sm)", padding: "8px 10px" }}>
+            {guard.message}
+          </div>
+        )}
+        {error && <div style={{ fontSize: 12, color: "var(--av3-bad)" }}>{error}</div>}
+      </div>
+    </Dialog>
   );
 }
