@@ -219,5 +219,10 @@ refetches every 30s.
   (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
-- [ ] System remainder (Users, Permissions, Compliance, Regulatory, Settings), Finance·Calculator (AdminSimulation)
+- [x] Users (`/admin-v3/users`, owner-only): account directory + add/edit/delete
+  dialog (role / status / site / optional password) over `/api/admin/users`.
+- [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
+  per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
+  persisting custom grants (`PUT /api/admin/users`).
+- [ ] System remainder (Compliance, Regulatory, Settings), Finance·Calculator (AdminSimulation)
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
