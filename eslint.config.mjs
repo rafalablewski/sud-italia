@@ -55,6 +55,52 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // ── Admin redesign — design-system governance (Phase 0, WARN mode) ─────────
+  // Surfaces the control-layer drift the audit found (raw elements bypassing
+  // primitives, legacy glass-* classes, inline hex) without blocking PRs yet.
+  // Scoped to the admin PAGE layer (app/admin/** + the top-level Admin*.tsx
+  // components) — NOT the v2/ infrastructure, where the primitives themselves
+  // and the shell chrome legitimately render raw <button>/<input>. Flips to
+  // "error" in Phase 5 once the existing occurrences are swept to zero.
+  // See docs/design-system/admin/redesign-blueprint.md §7 + redesign-progress.md.
+  {
+    files: ["src/app/admin/**/*.tsx", "src/components/admin/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message:
+            "Design system: use <Button> or <IconButton> from @/components/admin/v2/ui instead of a raw <button> (blueprint §3.1).",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='input']",
+          message:
+            "Design system: use <Input> / <Switch> from @/components/admin/v2/ui instead of a raw <input>.",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='select']",
+          message:
+            "Design system: use <Select> from @/components/admin/v2/ui instead of a raw <select>.",
+        },
+        {
+          selector: "Literal[value=/glass-(card|input|btn)/]",
+          message:
+            "Design system: glass-* classes are legacy. Use <Card> / <Input> / <Button> from v2/ui (blueprint §6, Phase 4).",
+        },
+        {
+          selector: "TemplateElement[value.raw=/glass-(card|input|btn)/]",
+          message:
+            "Design system: glass-* classes are legacy. Use <Card> / <Input> / <Button> from v2/ui (blueprint §6, Phase 4).",
+        },
+        {
+          selector: "Literal[value=/^#[0-9a-fA-F]{6}$/]",
+          message:
+            "Design system: inline hex is banned — use a var(--token) colour (blueprint §3.5 / §5).",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

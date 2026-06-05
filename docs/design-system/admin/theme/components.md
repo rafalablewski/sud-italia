@@ -525,6 +525,90 @@ every page**:
   alerts) / **Demand** (top sellers + heatmap) / **Network** (location table).
   KPIs are split into two `.v2-kpi-grid` tiers under their eyebrows for hierarchy.
 
+## Redesign primitives (Phase 0 — additive, coexist with `PageHero`)
+
+> Shipped in the admin redesign (`../redesign-blueprint.md`,
+> tracked in `../redesign-progress.md`). These are **additive**: pages migrate
+> onto them in Phases 2–4; until then the legacy `PageHero` / `Tabs` pill /
+> `LocationFilter` stay live. **Selection language for all of them is
+> selection-as-raise** — see [material → Selection](./material.md#selection--the-neutral-raise).
+
+### Page command surface — `PageHeader` + `ViewToolbar`
+
+The redesign **splits the monolithic `PageHero` panel into two slim, panel-less
+bars** so *identity* and *control* never merge (the cause of three switcher idioms
+stacking in one 120px panel). The heavy platinum-railed `.v2-page-header` is
+retired as pages migrate.
+
+- **`PageHeader`** (`v2/ui/PageHeader.tsx`, `.v2-pagehead`) — **identity only**: a
+  ~52px hairline-based bar (no card, no rail, no shadow). Slots: `title` (serif
+  display, the only h1), optional `info` (a quiet ⓘ → `Popover` of page help —
+  this **replaces the always-on subtitle**; it is page help, *not* a metric ⓘ),
+  `primaryAction` (the one labelled `<Button variant="primary">` — never
+  icon-only), `menu` (secondary actions collapsed under a `⋯` `Popover`, rows are
+  `.v2-menu-item`), and an optional `back` slot for detail pages. **No location,
+  no filters here.**
+- **`ViewToolbar`** (`v2/ui/ViewToolbar.tsx`, `.v2-toolbar`) — **control only**, a
+  44px bar attached to the data: `tabs` (underline `Tabs`, sub-view navigation
+  only) on the left; `children` (the filter / sort / display cluster) on the
+  right. `sticky` pins it under the header on long tables. The toolbar owns the
+  tabs' bottom border so the inner `Tabs` drops its own. Omit entirely when a page
+  has neither navigation nor filters.
+
+```tsx
+<PageHeader title="Orders" info={<>…how to read this…</>}
+            primaryAction={<Button variant="primary">New order</Button>}
+            menu={(close) => <button className="v2-menu-item" onClick={close}>Export CSV</button>} />
+<ViewToolbar
+  tabs={{ value: view, onChange: setView, options: [{value:"kanban",label:"Kanban"},{value:"table",label:"Table"}] }}
+  sticky
+>
+  <Segmented value={status} onChange={setStatus} options={STATUS} ariaLabel="Status" />
+</ViewToolbar>
+```
+
+### `Segmented` — the filter control
+
+`v2/ui/Segmented.tsx` (`.v2-seg`). The canonical **filter** widget for ≤ 4
+mutually-exclusive short options (status, view-mode, period). For 5+ / long
+options use `Select`; for stackable multi-dimensional filtering use filter chips;
+for sub-view navigation use the underline `Tabs`. `role="radiogroup"`, arrow-key
+roving. Active option is **selection-as-raise** (`--surface-3` + `--border-strong`
++ `--shadow-xs` + full `--fg`), never a brand flood — so there's zero layout shift
+between states. (Distinct from the legacy pill `Tabs variant="pill"`, which it
+supersedes for filtering.)
+
+### `ScopeSwitcher` — the one location selector
+
+`v2/ui/ScopeSwitcher.tsx` (`.v2-scope`). Location is operating **context**, not a
+per-page filter, so this **one** control replaces both `LocationFilter` (per-page
+pills) and the sidebar `LocationSwitcher` (Phase 2 wires it into the breadcrumb).
+It **changes shape with scale, never identity**: 1 location → a static label
+(nothing to switch); 2–N → a trigger → searchable `Popover` list (search appears
+past `searchThreshold`, default 7). Selected row is selection-as-raise. Region
+grouping / multi-select aggregate / saved scopes are the documented next step,
+gated on adding region metadata to the locations store.
+
+### `SaveDock` + `useSaveState` — the editor save language
+
+`v2/ui/SaveDock.tsx` (`.v2-savedock`). The **one** save surface for editor pages
+(Menu, Recipes, Growth, Users…): a transient pill-bar pinned bottom-centre that
+exists **only while dirty** (or while a save resolves), portaled to
+`#admin-portal-root` (Rule #4) and floating on `--shadow-md` (elevation = "this is
+transient / above", per [material → elevation](./material.md)). States:
+`dirty → saving → saved (auto-dismiss 1.5s) → idle`, plus a persistent `error`
+with Retry. `useSaveState(saveFn)` drives the saving/saved/error transitions;
+dirtiness stays page-owned. **Settings/toggles never use this** — they autosave
+(Rule #7). Replaces the parked, perpetually-disabled hero Save button.
+
+### `PageLoading` — the one loading state
+
+`v2/ui/PageLoading.tsx`. Wraps the `.v2-page-loading` pill and **guarantees the
+`.v2-page` wrapper** (the mobile-pill trap — see [Loading states](#loading-states--the-v2-page-loading-pill)).
+`<PageLoading name="Orders" />` for a sole render; add `inline` when page chrome
+already renders. Replaces the hand-written `Loading X…` early-returns that drifted
+(bare "Loading…", missing wrappers).
+
 ## Iconography — custom stroke, no emoji in UI
 
 - Inline SVG, `stroke: currentColor`, `fill: none`,

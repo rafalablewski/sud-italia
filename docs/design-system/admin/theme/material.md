@@ -163,6 +163,38 @@ outline-offset: 2px;
 On interactive surfaces inside the admin theme, the outline colour is
 sourced from the token so it adapts dark/light. Don't roll your own colour.
 
+## Selection — the neutral raise
+
+**Selection is a neutral raise, never a brand flood.** Any control's
+selected / active state — segmented option, scope row, selected table row, active
+nav — reads as a half-step lift, not a colour fill:
+
+```css
+.is-active {
+  background: var(--surface-3);      /* the lightest surface = raised */
+  border-color: var(--border-strong);
+  color: var(--fg);                  /* full contrast, not muted */
+  box-shadow: var(--shadow-xs);      /* optional, for tracked segments */
+}
+```
+
+Two rules this enforces:
+
+- **Brand is reserved for the one commit action** (the primary button). When
+  "this tab is selected" and "this button commits" use the same burgundy, the
+  operator can't tell state from action. Selection is neutral; brand means *do
+  the thing*. (The single sanctioned brand-as-state exception is the 2px
+  `--brand` underline on an active **underline tab** — a thin accent for
+  structural navigation, not a fill.)
+- **No border drop, no layout shift.** The inactive and active states carry the
+  *same* border box (transparent → `--border-strong`), so selecting never nudges
+  neighbours by a pixel. This kills the legacy `.v2-locpill.is-active` bug
+  (`border-color: transparent` + `--brand-soft` fill) that shifted the row and
+  tinted the whole control. `ScopeSwitcher` retires that pill.
+
+Live in the redesign primitives: `.v2-seg-opt.is-active`,
+`.v2-scope-opt.is-active` (see [components → Redesign primitives](./components.md#redesign-primitives-phase-0--additive-coexist-with-pagehero)).
+
 ## What "depth" looks like in practice
 
 A card sitting on the canvas:

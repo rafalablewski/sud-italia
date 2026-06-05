@@ -1976,6 +1976,235 @@ button.v2-card:active { transform: translateY(0); }
   .v2-hero-meta .v2-page-actions { margin-left: 0; }
 }
 
+/* ============================================================================
+   ADMIN REDESIGN — Phase 0 primitives (additive; coexist with the legacy hero
+   during migration). See docs/design-system/admin/redesign-blueprint.md and
+   redesign-progress.md. The selection language here is the canonical one:
+   SELECTION = NEUTRAL RAISE (--surface-3 + --border-strong + full --fg text),
+   never a brand flood, never a border drop. Brand is reserved for the one
+   commit action (the primary button) only.
+   ============================================================================ */
+
+/* --- Segmented control (filter; ≤4 mutually-exclusive options) ------------- */
+.v2-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  max-width: 100%;
+}
+.v2-seg-block { display: flex; width: 100%; }
+.v2-seg-block .v2-seg-opt { flex: 1; justify-content: center; }
+.v2-seg-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-seg-opt:hover:not(:disabled):not(.is-active) { color: var(--fg); }
+.v2-seg-opt:disabled { cursor: not-allowed; color: var(--fg-disabled); }
+.v2-seg-opt.is-active {
+  /* selection-as-raise */
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--fg);
+  box-shadow: var(--shadow-xs);
+}
+.v2-seg-icon { display: inline-flex; }
+.v2-seg-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 5px; border-radius: var(--radius-pill);
+  background: var(--surface-1); color: var(--fg-muted);
+  font-size: var(--text-2xs); font-weight: 600;
+}
+
+/* --- PageHeader (identity bar) --------------------------------------------- */
+.v2-pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 0;
+  /* panel-less by design — no card, no rail, no shadow. Just a hairline base. */
+  border-bottom: 1px solid var(--border);
+}
+.v2-pagehead-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.v2-pagehead-back { display: inline-flex; align-items: center; }
+.v2-pagehead-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v2-pagehead-info.v2-icon-btn { border-color: transparent; color: var(--fg-subtle); }
+.v2-pagehead-info.v2-icon-btn:hover { color: var(--fg); }
+.v2-pagehead-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.v2-pagehead-help {
+  max-width: 320px;
+  padding: 12px 14px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+/* --- ViewToolbar (control bar) -------------------------------------------- */
+.v2-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+}
+.v2-toolbar-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+}
+.v2-toolbar-nav { min-width: 0; flex: 1 1 auto; }
+/* The toolbar owns the tabs' bottom border, so the inner Tabs drops its own. */
+.v2-toolbar-nav .v2-tabs-underline { border-bottom: 0; }
+.v2-toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 6px 0;
+}
+
+/* --- SaveDock (transient editor save bar) ---------------------------------- */
+.v2-savedock {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 8px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  animation: v2-savedock-in var(--duration-slow) var(--ease);
+}
+@keyframes v2-savedock-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.v2-savedock-msg {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: var(--text-sm); font-weight: 500; color: var(--fg-muted);
+  white-space: nowrap;
+}
+.v2-savedock-msg-ok { color: var(--success); }
+.v2-savedock-msg-error { color: var(--danger); }
+.v2-savedock-dot {
+  width: 7px; height: 7px; border-radius: var(--radius-pill);
+  background: var(--warning);
+}
+.v2-savedock-actions { display: inline-flex; align-items: center; gap: 6px; }
+.v2-spin { animation: v2-spin 0.7s linear infinite; }
+@keyframes v2-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .v2-savedock { animation-duration: 0.01ms; }
+  .v2-spin { animation-duration: 0.01ms; }
+}
+
+/* --- ScopeSwitcher (location context selector) ---------------------------- */
+.v2-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg);
+}
+.v2-scope-static { color: var(--fg-muted); cursor: default; }
+.v2-scope-trigger {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+.v2-scope-trigger:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.v2-scope-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-scope-caret { color: var(--fg-subtle); }
+.v2-scope-panel { width: 248px; max-width: 86vw; padding: 6px; }
+.v2-scope-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-subtle);
+}
+.v2-scope-search input {
+  flex: 1; min-width: 0; border: 0; background: transparent;
+  color: var(--fg); font-family: var(--font-ui); font-size: var(--text-sm);
+  outline: none;
+}
+.v2-scope-list { display: flex; flex-direction: column; gap: 1px; max-height: 280px; overflow-y: auto; }
+.v2-scope-empty { padding: 10px 8px; font-size: var(--text-sm); color: var(--fg-subtle); }
+.v2-scope-opt {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
+  text-align: left; cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.v2-scope-opt:hover { background: var(--surface-hover); color: var(--fg); }
+.v2-scope-opt.is-active {
+  /* selection-as-raise */
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+.v2-scope-check { margin-left: auto; color: var(--fg-subtle); }
+
+/* --- Overflow menu rows (PageHeader ⋯ popover) ----------------------------- */
+.v2-menu { display: flex; flex-direction: column; gap: 1px; min-width: 180px; padding: 4px; }
+.v2-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 10px;
+  border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--fg-muted);
+  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
+  text-align: left; cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.v2-menu-item:hover { background: var(--surface-hover); color: var(--fg); }
+.v2-menu-item-danger { color: var(--danger); }
+.v2-menu-item-danger:hover { background: var(--danger-soft); color: var(--danger); }
+
 /* Section eyebrow — an uppercase label trailed by a hairline rule, used to
    group the dashboard into editorial bands (Headline / Operations / Performance
    / Demand / Network) instead of a flat stack of cards. */
