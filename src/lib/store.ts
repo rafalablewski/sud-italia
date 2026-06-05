@@ -3209,7 +3209,7 @@ export function resolveDailyGoal(goals: OpsGoals, location: string): number {
 
 // --- Concierge: agent-commerce capability exposure -----------------------
 //
-// The Concierge surface (/admin/concierge) exposes one capability layer to AI
+// The Concierge surface (/core/guest/concierge) exposes one capability layer to AI
 // assistants over MCP and to guests over WhatsApp. Each capability has an
 // operator-controlled exposure toggle — flipping it off removes the capability
 // from the public agent endpoint (/api/agent/[capability]) immediately. The

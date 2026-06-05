@@ -284,7 +284,7 @@ function RewardsDashboard() {
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "rewards" | "achievements" | "offers">("overview");
   // Loyalty programme config (tier ladder + active rewards) — admin-edited
-  // in /admin/loyalty, served via /api/settings/public. The dashboard
+  // in /core/guest/loyalty, served via /api/settings/public. The dashboard
   // renders nothing until it arrives so we don't flash bronze defaults.
   const [loyalty, setLoyalty] = useState<PublicLoyaltySettings | null>(null);
   useEffect(() => {

@@ -48,7 +48,7 @@ function formatRelative(iso: string): string {
 
 function notificationHref(n: NotificationRow): string {
   if (n.orderId) return `/admin/orders#${n.orderId}`;
-  if (n.type === "slot_full" || n.type === "low_slots") return "/admin/slots";
+  if (n.type === "slot_full" || n.type === "low_slots") return "/core/service/slots";
   if (n.type === "daily_summary") return "/admin/reports";
   return "/admin";
 }

@@ -13,7 +13,7 @@ import {
 // (ChatGPT / Claude / Perplexity over MCP) or any HTTP agent reads. Backed by
 // the same menu / availability / allergen / location data the customer site
 // serves, so nothing private is exposed. Each capability is gated by the
-// operator's exposure toggle (/admin/concierge); flipping it off returns 403.
+// operator's exposure toggle (/core/guest/concierge); flipping it off returns 403.
 
 const ACTIVE = new Set(["krakow", "warszawa"]);
 

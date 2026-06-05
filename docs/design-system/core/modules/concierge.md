@@ -142,7 +142,7 @@ A segmented control at the top-right:
   (the operational view).
 - **WhatsApp view** — the same capability layer rendered as it appears to
   the bot: connection status, capability chips (dimmed when off), a link
-  to `/admin/whatsapp` console, config hint if WHATSAPP_PHONE_NUMBER_ID +
+  to `/core/guest/whatsapp` console, config hint if WHATSAPP_PHONE_NUMBER_ID +
   WHATSAPP_ACCESS_TOKEN aren't set.
 
 ## Location scope

@@ -96,15 +96,14 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/core/pos", label: "POS", icon: Receipt, shortcut: "g", requiredRole: "staff" },
       { href: "/core/kds", label: "Kitchen Display", icon: ChefHat, shortcut: "k", requiredRole: "kitchen" },
-      // CRM, Loyalty, Concierge and WhatsApp are unified into one Guest
-      // Engagement hub (Inbox / Guests / Loyalty / Concierge views); the old
-      // /admin/crm, /admin/loyalty, /admin/concierge, /admin/whatsapp routes
-      // redirect here.
+      // CRM, Loyalty, Concierge, WhatsApp and Booking are unified into one Guest
+      // Engagement hub, each its own nested route: /core/guest/{whatsapp,crm,
+      // loyalty,concierge,book}. The bare /core/guest redirects to the Inbox.
       { href: "/core/guest", label: "Guest Engagement", icon: Contact, requiredRole: "staff" },
       // Service is the merged Floor + Slots surface on the Core suite shell:
-      // book a dine-in slot + assign a table in one step, plus Floor (live room
-      // + twin) and Slots (capacity + demand) as views. The old /admin/floor
-      // and /admin/slots redirect into it (?view=floor|slots).
+      // Floor (live room + twin) and Slots (capacity + demand), each its own
+      // nested route /core/service/{floor,slots}. The bare /core/service
+      // redirects to Floor; booking moved to /core/guest/book.
       { href: "/core/service", label: "Service", icon: CalendarCheck2, requiredRole: "staff" },
     ],
   },
@@ -145,7 +144,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       // Staff need to look up customers during phone orders.
       { href: "/admin/customers", label: "Customers", icon: Users, shortcut: "c", requiredRole: "staff" },
-      // Loyalty moved into the Core Guest Engagement hub (/core/guest?view=loyalty).
+      // Loyalty moved into the Core Guest Engagement hub (/core/guest/loyalty).
       { href: "/admin/corporate", label: "Corporate", icon: Building2, requiredRole: "manager" },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
       { href: "/admin/surveys", label: "Pulse surveys", icon: Gauge, requiredRole: "manager" },

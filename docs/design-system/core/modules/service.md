@@ -2,25 +2,29 @@
 
 The unified **Core** surface that collapses Slots (time-slot capacity) and Floor
 (tables + reservations) into one place, on the `.core-suite` theme (CoreShell),
-so it reads like POS / Guest / KDS. Three views ride the topbar `.viewnav`
-(`ServiceViewNav`, same pattern as the Guest hub):
+so it reads like POS / Guest / KDS. Two views ride the topbar `.viewnav`
+(`ServiceViewNav`, same pattern as the Guest hub), each its own nested route:
 
-- **Book** — book a dine-in slot **and** assign a table in one step.
-- **Floor** — the live room (Module 3's Twin): tables, occupancy, predicted
-  free-in, seat/clear, the seating recommender, the bottleneck banner, table CRUD.
-- **Slots** — time-slot capacity management + the Demand Exchange yield board.
+- **Floor** (`/core/service/floor`) — the live room (Module 3's Twin): tables,
+  occupancy, predicted free-in, seat/clear, the seating recommender, the
+  bottleneck banner, table CRUD.
+- **Slots** (`/core/service/slots`) — time-slot capacity management + the
+  Demand Exchange yield board.
 
-The old `/admin/floor` and `/admin/slots` routes now `redirect()` into
-`/core/service?view=floor|slots`; the separate nav entries are gone.
+**Booking moved out:** the Book console is now a Guest-hub view at
+`/core/guest/book` (`<GuestBook>` → `BookView`) — Service is Floor + Slots only.
+The old `/admin/floor` and `/admin/slots` stub pages were **deleted**; the bare
+`/core/service` `redirect()`s to `/core/service/floor`.
 
 ← back to [Core README](../README.md)
 
-> **Live code:** `src/app/core/service/page.tsx` (top-level `/core/*`
-> route under `src/app/core/layout.tsx` + `CoreProviders`, no admin
-> chrome), shell `ServiceConsole.tsx` + `ServiceViewNav.tsx`, views
-> `BookView.tsx` /
-> `FloorView.tsx` / `SlotsView.tsx` (all in
-> `src/components/core/service/`), styles under the `SERVICE` block in
+> **Live code:** nested routes `src/app/core/service/{floor,slots}/page.tsx`
+> (top-level `/core/*` under `src/app/core/layout.tsx` + `CoreProviders`, no
+> admin chrome), each rendering the shared `ServiceFrame.tsx` (CoreShell +
+> `ServiceViewNav.tsx` + the loc/date topbar) with its `view`. Views
+> `FloorView.tsx` / `SlotsView.tsx` (in `src/components/admin/service/`; the
+> shared `BookView.tsx` lives here too but is rendered by the Guest hub's
+> `GuestBook.tsx`). Styles under the `SERVICE` block in
 > `src/app/themes/core/suite.css` (`.svc-*` / `.flr-*` / `.slt-*`). Booking
 > engine `src/lib/booking.ts` + `POST /api/admin/booking`; Floor reuses
 > `/api/admin/floor-twin` + `/api/admin/floor/tables`; Slots reuses

@@ -17,8 +17,8 @@ feedback, and the NPS Pulse-survey board.
 
 > **Loyalty moved to the Core Guest hub.** The member roster + family
 > wallets + redemption log are now the **Loyalty** view of Guest
-> Engagement (`/core/guest?view=loyalty`; `/admin/loyalty` redirects
-> there), rebuilt onto the Core suite theme — see
+> Engagement (`/core/guest/loyalty`, its own nested route), rebuilt onto
+> the Core suite theme — see
 > [`../../core/modules/loyalty.md`](../../core/modules/loyalty.md). The
 > programme **config** (tiers / rewards / referral) is still edited under
 > [Growth](./growth.md).
@@ -75,7 +75,7 @@ The book of records: every customer who paid, ranked by lifetime spend.
 
 The loyalty roster (members / family wallets / redemptions) + manual
 point adjustment is now the **Loyalty** view of Guest Engagement
-(`/core/guest?view=loyalty`), rebuilt onto the Core suite theme. Its
+(`/core/guest/loyalty`), rebuilt onto the Core suite theme. Its
 anatomy is documented at
 [`../../core/modules/loyalty.md`](../../core/modules/loyalty.md). The
 programme **config** (tier ladder, rewards catalogue, referral mechanics)
@@ -151,10 +151,10 @@ the umbrella kill-switch is the `showNpsSurvey` Layout toggle.
 
 - It is **not** the live relationship layer — searching, conversation,
   AI recommendations, and the loyalty roster live in the **Core Guest
-  hub** (`/core/guest` — Inbox / Guests / Loyalty / Concierge), which is
+  hub** (`/core/guest` — Inbox / Guests / Loyalty / Concierge / Book), which is
   the productised IP, not the admin back-office.
 - It is **not** the loyalty roster — members / wallets / redemptions are
-  the Guest hub's Loyalty view (`/core/guest?view=loyalty`).
+  the Guest hub's Loyalty view (`/core/guest/loyalty`).
 - It is **not** marketing — campaigns, upsells, bundles live under
   Growth.
 - It is **not** analytics — cohort, CLTV, segmentation live under

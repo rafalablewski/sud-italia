@@ -80,7 +80,7 @@ function relTime(iso: string): string {
 
 function hrefFor(n: NotificationItem): string {
   if (n.orderId) return `/admin/orders#${n.orderId}`;
-  if (n.type === "slot_full" || n.type === "low_slots") return "/admin/slots";
+  if (n.type === "slot_full" || n.type === "low_slots") return "/core/service/slots";
   if (n.type === "daily_summary") return "/admin/reports";
   if (n.type === "low_stock") return "/admin/inventory";
   return "/admin";
