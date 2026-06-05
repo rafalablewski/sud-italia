@@ -183,5 +183,11 @@ refetches every 30s.
 - [x] Pulse surveys (`/admin-v3/surveys`) — NPS-style pulse + avg-rating KPIs
   (shared `@/lib/surveys`), survey catalogue with active toggles
   (`PUT /api/admin/surveys`), and a responses table
-- [ ] Finance, Growth, Intelligence, System
+- [x] Reports (`/admin-v3/reports`) — range presets, revenue/profit/margin/
+  orders/AOV/tips KPIs, revenue-by-category bars, tips summary, top items, JPK
+  export (`/api/admin/analytics` + `/reports/tips` + `/reports/jpk`)
+- [x] Business costs (`/admin-v3/business-costs`) — operating-expense register
+  with monthly-recurring / annualised / payroll / one-off KPIs (shared
+  `monthlyGrosze`), category chips, add/edit/delete dialog (`/api/admin/business-costs`)
+- [ ] Finance · Calculator (AdminSimulation, dedicated effort), Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

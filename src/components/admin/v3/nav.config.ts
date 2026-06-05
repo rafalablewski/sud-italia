@@ -126,9 +126,9 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     id: "finance",
     label: "Finance",
     items: [
-      { href: `${P}/reports`, label: "Reports", icon: BarChart3, requiredRole: "manager", pending: true },
+      { href: `${P}/reports`, label: "Reports", icon: BarChart3, requiredRole: "manager" },
       { href: `${P}/cash`, label: "Cash", icon: Banknote, requiredRole: "manager", pending: true },
-      { href: `${P}/business-costs`, label: "Business costs", icon: Wallet, requiredRole: "manager", pending: true },
+      { href: `${P}/business-costs`, label: "Business costs", icon: Wallet, requiredRole: "manager" },
       { href: `${P}/simulation`, label: "Calculator", icon: LineChart, requiredRole: "manager", pending: true },
     ],
   },
