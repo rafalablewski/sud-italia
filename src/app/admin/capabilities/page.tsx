@@ -1640,7 +1640,7 @@ export default async function CapabilitiesPage() {
 
       <div className="grid gap-4 md:gap-6">
         {groups.map((group) => (
-          <section key={group.id} className="glass-card p-4 md:p-5">
+          <section key={group.id} className="v2-card p-4 md:p-5">
             <h2 className="admin-text text-base font-semibold mb-3">{group.title}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {group.items.map((item) => (

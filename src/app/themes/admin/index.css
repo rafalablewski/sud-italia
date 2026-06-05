@@ -7865,7 +7865,9 @@ select.pub-input {
   flex-shrink: 0;
   background: var(--fg-disabled);
 }
-.v2-m-notif-row.is-unread .v2-m-notif-dot { background: var(--brand); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent); }
+/* Phase 5: dropped the brand glow ring (coloured glow shadows are forbidden);
+   the solid brand dot already reads as "unread". */
+.v2-m-notif-row.is-unread .v2-m-notif-dot { background: var(--brand); }
 .v2-m-notif-new_order .v2-m-notif-dot,
 .v2-m-notif-order_status .v2-m-notif-dot { background: var(--info); }
 .v2-m-notif-slot_full .v2-m-notif-dot,
@@ -8029,7 +8031,9 @@ select.pub-input {
 /* Buttons — calmer */
 .v2-m-btn { font-weight: 500; letter-spacing: 0; }
 .v2-m-btn-primary {
-  box-shadow: 0 1px 2px color-mix(in oklab, var(--brand) 30%, transparent);
+  /* Phase 5: neutral shadow — brand-tinted button shadows are forbidden
+     (material.md "no coloured glow shadows"; button doctrine = flat + dark edge). */
+  box-shadow: var(--shadow-xs);
 }
 
 /* Chips — flatter */

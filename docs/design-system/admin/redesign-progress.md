@@ -5,7 +5,7 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 4 — Growth island` ✅ complete · next: Phase 5 (Tokens + buttons sweep)
+**Current phase:** `Phase 5 — Tokens + buttons sweep` 🟡 in progress (material closeouts done; raw-element + chart-hex sweep remaining)
 **Last updated:** 2026-06-05
 **Branch:** `claude/admin-subpages-analysis-1bsjz`
 
@@ -20,7 +20,7 @@
 | 2 | Scope — replace LocationFilter + sidebar switcher | ✅ **complete** | `LocationFilter` import count = 0 |
 | 3 | Header split — PageHero → PageHeader + ViewToolbar | ✅ **complete** | `.v2-page-header` usage = 0 |
 | 4 | Growth island → Card/Input/Button + SaveDock | ✅ **complete** | `glass-card`/`glass-input` = 0 (family) |
-| 5 | Tokens + buttons sweep | ⬜ not started | `ds-drift` job = 0; lint → error |
+| 5 | Tokens + buttons sweep | 🟡 **in progress** | `ds-drift` job = 0; lint → error |
 | 6 | Lock — CI blocking, CODEOWNERS, scaffold | ⬜ not started | green build = consistent build |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ done · ⏸️ blocked
@@ -224,10 +224,43 @@ flex-direction:column; overflow:hidden` (the proven standard across the rest of
 admin). Portaled overlays (Dialog/Popover/Tooltip) are unaffected by `overflow`;
 the island's dropdowns are native `<select>` or portaled, so no clipping risk.
 
-## ▶ Next up — Phase 5 (Tokens + buttons sweep)
-Drive the `ds-drift` ratchet to zero: convert remaining raw `<button>`→`Button`,
-raw `<input>/<select>`→`Input`/`Select` (incl. the Growth island's now-`v2-input`
-raw elements), sweep the ~36 inline hex → tokens, clear the last `glass-card`
-(capabilities), and the two deferred brand-tint shadows (Phase 1 notes). Then flip
-the lint rules from **warn → error** and add the CI `ds-drift` job (Phase 6 lock).
-This is large + mechanical; tackle per-file with a build between batches.
+## Phase 5 — Tokens + buttons sweep · 🟡 partial (2026-06-05)
+
+### Done this pass — the safe, complete *material* closeouts
+- **`glass-*` → 0 across all admin** — cleared the last `glass-card`
+  (`/admin/capabilities`). The legacy glass system is fully retired from admin.
+- **Brand-tinted shadows removed** (the two Phase-1-deferred material violations):
+  `.v2-m-btn-primary` box-shadow → neutral `--shadow-xs`; `.v2-m-notif-row.is-unread`
+  dot → dropped the brand glow ring. Admin now has **no coloured glow shadows**.
+- `tsc` + `npm run build` clean.
+
+### NOT done — the raw-element + chart-hex sweep (deliberately deferred)
+This is the large, **visually-affecting** half, and it cannot be done safely in a
+single blind pass (no visual QA here; a bad mass-convert would break forms, charts
+and interactions across the whole admin, and flipping lint to `error` while any
+remain would **fail `next build`**). Current ratchet:
+
+| Pattern | Count | Why it's careful work, not a mechanical swap |
+|---|---|---|
+| raw `<button>` | 148 | Most carry bespoke styling; `<Button>` restyles them — visual change per site |
+| raw `<input>` | 50 | `<Input>` adds a `.v2-input-wrap`; width/flex classes must move to the wrapper |
+| raw `<select>` | 11 | → `<Select>` needs an `options` array + loses/【changes】the chevron |
+| inline hex | 17 | All **chart/heatmap palettes** that *drift from* the DS rule (color.md says charts use the centralized `theme.ts` `chart` palette + single-hue ramps). Fixing them **changes chart colours** → needs QA. Many live in the 17k-line `AdminSimulation`. |
+
+**Lint stays at WARN** (the ratchet keeps surfacing these); the **warn → error flip
+is gated on reaching zero** and moves to Phase 6.
+
+### Recommended way to land the rest (needs a decision — see chat)
+1. **Per-file, with visual QA** — convert one file at a time, you eyeball each, I
+   build between. Safest, slowest. OR
+2. **Refine governance** — accept that not every `<button>` is a `<Button>`
+   (interactive cards, toggles, table-row actions are legitimately raw); allow
+   *annotated* raw elements (`// ds-ok: <reason>`) and reserve the primitives for
+   genuine action buttons / form fields. Then the ratchet targets only true drift.
+3. **Charts** — centralize every chart palette into `theme.ts` `chart` (the DS
+   already mandates it) + single-hue ramps; verify each chart re-renders.
+
+## ▶ Next up — Phase 6 (Lock) + finish Phase 5 sweep
+Per the decision above: complete the raw-element + chart-hex sweep to zero, then
+flip lint **warn → error**, add the CI `ds-drift` job, CODEOWNERS on
+`v2/ui`/`themes/admin`/lint config, and the `scaffold admin-page` generator.
