@@ -197,5 +197,11 @@ refetches every 30s.
   `PATCH /api/admin/scheduled-bundles/:id`). Truck ops (`/admin-v3/truck`):
   events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
   + `/api/admin/truck-routes`
-- [ ] Growth remainder (Campaigns, Upsell, Cross-sell), Finance·Calculator (AdminSimulation), Intelligence, System
+- [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
+  (referral config + reward/challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
+  Cross-sell (`/admin-v3/crosssell`): per-location combo editor (add/edit/toggle/
+  delete) that **round-trips the full location config** so bundles/badges are
+  preserved (`PUT /api/admin/upsell`). Upsell (`/admin-v3/upsell`): bundle-ladder
+  activation toggles (full ladder pricing stays in the classic admin).
+- [ ] Finance·Calculator (AdminSimulation), Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
