@@ -260,7 +260,14 @@ refetches every 30s.
   anniversaries from `/api/admin/campaigns/triggers`, tap-to-call `tel:` links,
   name opens the detail) above the fold (rule #5), plus the **loyalty-points**
   column + detail field (`lifetimePoints` = earned + manual, from the customers
-  endpoint).
+  endpoint). **Detail dialog brought to v2 `AdminCustomerDetail` parity:** a
+  760px dialog over `/api/admin/customers/[phone]` with points breakdown
+  (earned/manual/redeemed/spendable), an inline **profile editor** (DOB/email →
+  `PUT /api/admin/members/profile`), **order history**, **point-adjustment
+  history**, **redemption history**, **notes** (add/delete via
+  `/api/admin/customer-notes`) and **GDPR controls** — Art. 15 export
+  (`/api/admin/gdpr/export`) + Art. 17 erasure (`POST /api/admin/gdpr/delete`,
+  confirm-gated). CSS §16 (`.av3-detail-*`).
 - [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
   and AI sentiment (`POST /api/admin/feedback/analyze`). **Charts restored (flag

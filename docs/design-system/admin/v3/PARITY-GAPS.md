@@ -40,12 +40,14 @@ false positives or intentional v3 density decisions** and were dropped:
   native `DiffRenderer` (added/removed/changed keys, before↔after blocks,
   pretty-JSON for nested shapes) over the API's `before`/`after`. CSS §15,
   mockup `admin-v3/audit-diff.html`. **DONE.**
-- [ ] **4. Customer detail depth** — `CustomersV3`'s detail dialog shows only 6
-  summary fields. v2 `AdminCustomerDetail` additionally has: order history,
-  manual point-adjustment history, redemption history, customer notes (add/
-  delete), DOB/email editor, and **GDPR Article 15 export + Article 17 erasure**.
-  Restore these into the v3 detail surface over the existing
-  `/api/admin/customers/[phone]` endpoints. Docs, mockup.
+- [x] **4. Customer detail depth** — `CustomersV3`'s row now opens a rich detail
+  `Dialog` (760px) with: points breakdown (earned/manual/redeemed/spendable),
+  profile editor (DOB/email → `PUT /api/admin/members/profile`), order history,
+  point-adjustment history, redemption history, notes (add `POST` / delete
+  `DELETE /api/admin/customer-notes`), and **GDPR Art. 15 export**
+  (`/api/admin/gdpr/export`) + **Art. 17 erasure** (`POST /api/admin/gdpr/delete`,
+  confirm-gated) — all over the existing `/api/admin/customers/[phone]` payload.
+  CSS §16, mockup `admin-v3/customer-detail.html`. **DONE.**
 - [x] **5. Dashboard executive overview** — the live `/admin-v3` cockpit was
   missing the analytics surface from `public/mockups/admin-v3/dashboard.html`
   (revenue, orders, avg order, profit margin, gross profit, cancellations, labour
