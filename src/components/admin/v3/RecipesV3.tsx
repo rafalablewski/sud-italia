@@ -1,28 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlaskConical, Plus, RefreshCw, X } from "lucide-react";
+import { FlaskConical, Plus, RefreshCw, Star, Trash2, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
-import type { MenuCategory } from "@/data/types";
+import { INGREDIENT_CATEGORY_LABELS } from "@/data/types";
+import type { IngredientCategory, IngredientUnit, MenuCategory } from "@/data/types";
 import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface MenuItemData { id: string; name: string; price: number; category: MenuCategory }
-interface Ingredient { id: string; name: string; unit: string; category?: string; costPerUnit: number }
-interface RecipeLine { ingredientId: string; quantity: number; wasteFactor?: number; name?: string; unit?: string; unitCost?: number; lineCost?: number }
-interface RecipeData { menuItemId: string; ingredients: RecipeLine[]; enrichedIngredients?: RecipeLine[]; yieldPortions?: number; calculatedCost?: number }
-
-interface Dish {
-  baseSlug: string;
-  name: string;
-  category: MenuCategory;
-  primaryId: string;
-  avgPrice: number;
-  siteCount: number;
+/** Ingredient joined to its active offering (cost + macros are read-only cache). */
+interface Ingredient {
+  id: string; name: string; category?: IngredientCategory; unit: IngredientUnit;
+  activeProductId?: string; notes?: string;
+  costPerUnit?: number; kcalPerUnit?: number; proteinPerUnit?: number; carbsPerUnit?: number;
+  sugarPerUnit?: number; fiberPerUnit?: number; fatPerUnit?: number; supplier?: string;
 }
+interface Offering {
+  id: string; ingredientId: string; supplierId: string; supplierSku?: string; displayName?: string;
+  costPerUnit: number; kcalPerUnit?: number; proteinPerUnit?: number; carbsPerUnit?: number;
+  sugarPerUnit?: number; fiberPerUnit?: number; fatPerUnit?: number; notes?: string;
+}
+interface Supplier { id: string; name: string }
+interface RecipeLine { ingredientId: string; quantity: number; wasteFactor?: number }
+interface RecipeData { menuItemId: string; ingredients: RecipeLine[]; yieldPortions?: number; prepTimeMinutes?: number; notes?: string; calculatedCost?: number; calculatedCalories?: number }
+
+interface Dish { baseSlug: string; name: string; category: MenuCategory; primaryId: string; avgPrice: number; siteCount: number }
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
 const CATEGORY_LABEL: Record<MenuCategory, string> = { pizza: "Pizza", pasta: "Pasta", antipasti: "Antipasti", panini: "Panini", drinks: "Drinks", desserts: "Desserts" };
+const ING_CATEGORIES = Object.keys(INGREDIENT_CATEGORY_LABELS) as IngredientCategory[];
+const ING_UNITS: IngredientUnit[] = ["kg", "g", "L", "ml", "piece", "bunch", "can", "bottle"];
+const COST_COLORS = ["--av3-c1", "--av3-c2", "--av3-c3", "--av3-c4", "--av3-c5", "--av3-c6", "--av3-c7", "--av3-c8"];
 
 function foodCostTone(pct: number): BadgeTone {
   if (pct <= 0) return "neutral";
@@ -33,26 +42,31 @@ function foodCostTone(pct: number): BadgeTone {
 
 export function RecipesV3() {
   const allLocations = useMemo(() => getActiveLocations(), []);
+  const [tab, setTab] = useState<"recipes" | "ingredients">("recipes");
   const [byLoc, setByLoc] = useState<Record<string, MenuItemData[]>>({});
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cat, setCat] = useState<"all" | MenuCategory>("all");
   const [editSlug, setEditSlug] = useState<string | null>(null);
+  const [editIng, setEditIng] = useState<Ingredient | "new" | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [menus, r, i] = await Promise.all([
+      const [menus, r, i, s] = await Promise.all([
         Promise.all(allLocations.map((l) => fetch(`/api/admin/menu?location=${l.slug}`).then((res) => (res.ok ? res.json() : [])).catch(() => []))),
         fetch(`/api/admin/recipes`).then((res) => (res.ok ? res.json() : [])).catch(() => []),
         fetch(`/api/admin/ingredients`).then((res) => (res.ok ? res.json() : [])).catch(() => []),
+        fetch(`/api/admin/suppliers`).then((res) => (res.ok ? res.json() : [])).catch(() => []),
       ]);
       const map: Record<string, MenuItemData[]> = {};
       allLocations.forEach((l, idx) => { map[l.slug] = Array.isArray(menus[idx]) ? menus[idx] : []; });
       setByLoc(map);
       setRecipes(Array.isArray(r) ? r : []);
       setIngredients(Array.isArray(i) ? i : []);
+      setSuppliers(Array.isArray(s) ? s : []);
     } catch (err) {
       console.error("Recipes refresh failed:", err);
     } finally {
@@ -98,6 +112,7 @@ export function RecipesV3() {
       return <Badge tone="info"><FlaskConical style={{ width: 11, height: 11 }} />{r.ingredients.length} ingredient{r.ingredients.length > 1 ? "s" : ""}</Badge>;
     } },
     { key: "cost", header: "Food cost", num: true, render: (d) => { const r = recipeByBase.get(d.baseSlug); return r?.calculatedCost ? formatPrice(r.calculatedCost) : <span className="av3-cell-muted">—</span>; } },
+    { key: "kcal", header: "kcal", num: true, render: (d) => { const r = recipeByBase.get(d.baseSlug); return r?.calculatedCalories ? <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{r.calculatedCalories}</span> : <span className="av3-cell-muted">—</span>; } },
     { key: "fcpct", header: "Cost %", num: true, render: (d) => {
       const r = recipeByBase.get(d.baseSlug);
       if (!r?.calculatedCost || !d.avgPrice) return <span className="av3-cell-muted">—</span>;
@@ -111,10 +126,11 @@ export function RecipesV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Recipes</h1>
-          <div className="av3-pagehead-sub">Chain-wide formulas · one recipe per dish, shared everywhere (rule #10)</div>
+          <div className="av3-pagehead-sub">Chain-wide formulas + ingredient catalog · one recipe per dish, shared everywhere (rule #10)</div>
         </div>
         <div className="av3-pagehead-actions">
-          <Badge tone="neutral">{counts.withRecipe}/{counts.all} costed</Badge>
+          {tab === "recipes" && <Badge tone="neutral">{counts.withRecipe}/{counts.all} costed</Badge>}
+          {tab === "ingredients" && <Button variant="secondary" size="sm" onClick={() => setEditIng("new")}><Plus className="av3-btn-ico" /> Add ingredient</Button>}
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); fetchAll(); }}>
             <RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} />
             Refresh
@@ -123,37 +139,45 @@ export function RecipesV3() {
       </div>
 
       <div className="av3-filterchips">
-        <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>
-        {CATEGORY_ORDER.filter((c) => counts[c]).map((c) => (
-          <button key={c} type="button" className={`av3-fchip ${cat === c ? "is-active" : ""}`} onClick={() => setCat(c)}>{CATEGORY_LABEL[c]}<span className="av3-fchip-count">{counts[c]}</span></button>
-        ))}
+        <button type="button" className={`av3-fchip ${tab === "recipes" ? "is-active" : ""}`} onClick={() => setTab("recipes")}>Recipes<span className="av3-fchip-count">{dishes.length}</span></button>
+        <button type="button" className={`av3-fchip ${tab === "ingredients" ? "is-active" : ""}`} onClick={() => setTab("ingredients")}>Ingredients<span className="av3-fchip-count">{ingredients.length}</span></button>
       </div>
 
-      {loading && dishes.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading recipes…</div>
-      ) : (
-        <div className="av3-card" style={{ padding: 0 }}>
-          {rows.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">Nothing in this category.</div></div>
+      {tab === "recipes" ? (
+        <>
+          <div className="av3-filterchips">
+            <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>
+            {CATEGORY_ORDER.filter((c) => counts[c]).map((c) => (
+              <button key={c} type="button" className={`av3-fchip ${cat === c ? "is-active" : ""}`} onClick={() => setCat(c)}>{CATEGORY_LABEL[c]}<span className="av3-fchip-count">{counts[c]}</span></button>
+            ))}
+          </div>
+          {loading && dishes.length === 0 ? (
+            <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading recipes…</div>
           ) : (
-            <Table columns={cols} rows={rows} rowKey={(d) => d.baseSlug} onRowClick={(d) => setEditSlug(d.baseSlug)} />
+            <div className="av3-card" style={{ padding: 0 }}>
+              {rows.length === 0 ? (
+                <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">Nothing in this category.</div></div>
+              ) : (
+                <Table columns={cols} rows={rows} rowKey={(d) => d.baseSlug} onRowClick={(d) => setEditSlug(d.baseSlug)} />
+              )}
+            </div>
           )}
-        </div>
+        </>
+      ) : (
+        <IngredientsPanel ingredients={ingredients} suppliers={suppliers} loading={loading} onEdit={(ing) => setEditIng(ing)} />
       )}
 
       {editing && (
-        <RecipeEditDialog
-          dish={editing}
-          recipe={recipeByBase.get(editing.baseSlug)}
-          ingredients={ingredients}
-          onClose={() => setEditSlug(null)}
-          onSaved={fetchAll}
-        />
+        <RecipeEditDialog dish={editing} recipe={recipeByBase.get(editing.baseSlug)} ingredients={ingredients} onClose={() => setEditSlug(null)} onSaved={fetchAll} />
+      )}
+      {editIng && (
+        <IngredientDialog ingredient={editIng === "new" ? null : editIng} suppliers={suppliers} onClose={() => setEditIng(null)} onSaved={fetchAll} />
       )}
     </>
   );
 }
 
+/* ── recipe editor ─────────────────────────────────────────────────────── */
 interface DraftLine { ingredientId: string; quantity: string; wastePct: string }
 
 function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
@@ -162,10 +186,14 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
   const ingById = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
   const sortedIngredients = useMemo(() => [...ingredients].sort((a, b) => a.name.localeCompare(b.name)), [ingredients]);
 
+  // wasteFactor is a MULTIPLIER in the store (1.1 = +10%). Convert to/from a
+  // human waste-% at the UI edge so the cost math matches the server exactly.
   const [lines, setLines] = useState<DraftLine[]>(
-    (recipe?.ingredients ?? []).map((l) => ({ ingredientId: l.ingredientId, quantity: String(l.quantity), wastePct: String(Math.round((l.wasteFactor ?? 0) * 100)) })),
+    (recipe?.ingredients ?? []).map((l) => ({ ingredientId: l.ingredientId, quantity: String(l.quantity), wastePct: String(Math.round(((l.wasteFactor ?? 1) - 1) * 100)) })),
   );
   const [yieldPortions, setYieldPortions] = useState(String(recipe?.yieldPortions ?? 1));
+  const [prepTime, setPrepTime] = useState(String(recipe?.prepTimeMinutes ?? ""));
+  const [notes, setNotes] = useState(recipe?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -173,15 +201,25 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
   const addLine = () => setLines((arr) => [...arr, { ingredientId: sortedIngredients[0]?.id ?? "", quantity: "", wastePct: "0" }]);
   const removeLine = (i: number) => setLines((arr) => arr.filter((_, idx) => idx !== i));
 
+  const wasteFactorOf = (l: DraftLine) => 1 + (Number(l.wastePct) || 0) / 100;
   const lineCost = (l: DraftLine): number => {
     const ing = ingById.get(l.ingredientId);
     if (!ing) return 0;
-    const qty = Number(l.quantity) || 0;
-    const waste = (Number(l.wastePct) || 0) / 100;
-    return qty * ing.costPerUnit * (1 + waste);
+    return (Number(l.quantity) || 0) * (ing.costPerUnit ?? 0) * wasteFactorOf(l);
   };
-  const estCost = lines.reduce((s, l) => s + lineCost(l), 0);
+  const yieldN = Math.max(1, Number(yieldPortions) || 1);
+  const batchCost = lines.reduce((s, l) => s + lineCost(l), 0);
+  const estCost = batchCost / yieldN;
   const fcPct = dish.avgPrice > 0 ? (estCost / dish.avgPrice) * 100 : 0;
+
+  // Live per-portion macros (trim covered by waste doesn't reach the plate → no
+  // wasteFactor on macros, matching the menu route).
+  const macro = (key: keyof Ingredient): number => {
+    let total = 0;
+    for (const l of lines) { const ing = ingById.get(l.ingredientId); const v = ing?.[key]; if (typeof v === "number") total += v * (Number(l.quantity) || 0); }
+    return Math.round(total / yieldN);
+  };
+  const missingKcal = lines.filter((l) => l.ingredientId && Number(l.quantity) > 0 && typeof ingById.get(l.ingredientId)?.kcalPerUnit !== "number");
 
   const save = async () => {
     setSaving(true);
@@ -193,49 +231,52 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
           menuItemId: dish.primaryId, // store derives the base slug → chain-wide
           ingredients: lines
             .filter((l) => l.ingredientId && Number(l.quantity) > 0)
-            .map((l) => ({ ingredientId: l.ingredientId, quantity: Number(l.quantity), wasteFactor: (Number(l.wastePct) || 0) / 100 })),
-          yieldPortions: Number(yieldPortions) || 1,
+            .map((l) => ({ ingredientId: l.ingredientId, quantity: Number(l.quantity), wasteFactor: wasteFactorOf(l) })),
+          yieldPortions: yieldN,
+          prepTimeMinutes: prepTime ? Number(prepTime) : undefined,
+          notes,
         }),
       });
       if (res.ok) { await onSaved(); onClose(); }
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
-
   const deleteRecipe = async () => {
     setDeleting(true);
     try {
       const res = await fetch(`/api/admin/recipes?menuItemId=${encodeURIComponent(dish.primaryId)}`, { method: "DELETE" });
       if (res.ok) { await onSaved(); onClose(); }
-    } finally {
-      setDeleting(false);
-    }
+    } finally { setDeleting(false); }
   };
 
   return (
     <Dialog
-      open
-      onClose={onClose}
-      title={dish.name}
+      open onClose={onClose} title={dish.name}
       subtitle={`Chain-wide recipe · applies to all ${dish.siteCount} site${dish.siteCount > 1 ? "s" : ""}`}
       headerExtra={<Badge tone="brand"><FlaskConical style={{ width: 11, height: 11 }} /> formula</Badge>}
-      width={580}
+      width={620}
       footer={
         <>
-          {recipe && (recipe.ingredients?.length ?? 0) > 0 && (
-            <Button variant="danger" size="sm" loading={deleting} onClick={deleteRecipe} style={{ marginRight: "auto" }}>Delete recipe</Button>
-          )}
+          {recipe && (recipe.ingredients?.length ?? 0) > 0 && <Button variant="danger" size="sm" loading={deleting} onClick={deleteRecipe} style={{ marginRight: "auto" }}>Delete recipe</Button>}
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" size="sm" loading={saving} onClick={save}>Save recipe</Button>
         </>
       }
     >
-      <div className="av3-formrow" style={{ gridTemplateColumns: "120px 1fr", alignItems: "end", marginBottom: 6 }}>
-        <label className="av3-field"><span className="av3-field-label">Yield (portions)</span><input className="av3-input" type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(e.target.value)} /></label>
+      {/* per-portion KPIs */}
+      <div className="av3-od-grid" style={{ marginBottom: 12 }}>
+        <div className="av3-od-field"><div className="k">Cost / portion</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(estCost))}</div></div>
+        <div className="av3-od-field"><div className="k">Food cost %</div><div className="v"><Badge tone={foodCostTone(fcPct)}>{fcPct.toFixed(0)}%</Badge></div></div>
+        <div className="av3-od-field"><div className="k">Batch cost</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(batchCost))}</div></div>
+        <div className="av3-od-field"><div className="k">kcal / portion</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro("kcalPerUnit") || "—"}</div></div>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+        <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Yield (portions)</span><input className="av3-input" type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(e.target.value)} /></label>
+        <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Prep (min)</span><input className="av3-input" type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(e.target.value)} placeholder="—" /></label>
       </div>
 
       <div className="av3-subhead">Ingredients</div>
+      {ingredients.length === 0 && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>No ingredients in the catalog yet — add some on the Ingredients tab first.</div>}
       {lines.length === 0 ? (
         <div className="av3-empty-text" style={{ padding: "8px 0", color: "var(--av3-subtle)" }}>No ingredients yet — add the first line.</div>
       ) : (
@@ -243,11 +284,16 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
           <div className="av3-reciperow-head"><span>Ingredient</span><span>Qty</span><span>Waste%</span><span style={{ textAlign: "right" }}>Cost</span><span /></div>
           {lines.map((l, i) => {
             const ing = ingById.get(l.ingredientId);
+            const noKcal = ing && typeof ing.kcalPerUnit !== "number";
+            const noOffering = ing && !ing.activeProductId;
             return (
               <div className="av3-reciperow" key={i}>
-                <select className="av3-select" value={l.ingredientId} onChange={(e) => setLine(i, { ingredientId: e.target.value })}>
-                  {sortedIngredients.map((ig) => <option key={ig.id} value={ig.id}>{ig.name}</option>)}
-                </select>
+                <div style={{ minWidth: 0 }}>
+                  <select className="av3-select" value={l.ingredientId} onChange={(e) => setLine(i, { ingredientId: e.target.value })}>
+                    {sortedIngredients.map((ig) => <option key={ig.id} value={ig.id}>{ig.name}</option>)}
+                  </select>
+                  {(noKcal || noOffering) && <div style={{ fontSize: 10, color: "var(--av3-warn)", marginTop: 2 }}>{noOffering ? "no distributor linked" : "missing kcal"}</div>}
+                </div>
                 <input className="av3-input" type="number" step="0.001" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} placeholder={ing?.unit ?? ""} />
                 <input className="av3-input" type="number" value={l.wastePct} onChange={(e) => setLine(i, { wastePct: e.target.value })} />
                 <span className="av3-reciperow-cost">{formatPrice(Math.round(lineCost(l)))}</span>
@@ -258,19 +304,258 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
         </>
       )}
       <div style={{ marginTop: 10 }}>
-        <Button variant="secondary" size="sm" onClick={addLine}><Plus className="av3-btn-ico" /> Add ingredient</Button>
+        <Button variant="secondary" size="sm" onClick={addLine} disabled={sortedIngredients.length === 0}><Plus className="av3-btn-ico" /> Add ingredient</Button>
       </div>
 
-      <div className="av3-recipe-summary">
-        <div>
-          <div className="av3-field-label">Estimated food cost</div>
-          <div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>vs avg price {formatPrice(Math.round(dish.avgPrice))} · server recomputes on save</div>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <span className="v">{formatPrice(Math.round(estCost))}</span>
-          {dish.avgPrice > 0 && <span style={{ marginLeft: 8 }}><Badge tone={foodCostTone(fcPct)}>{fcPct.toFixed(0)}%</Badge></span>}
-        </div>
+      {/* cost breakdown bar */}
+      {batchCost > 0 && (
+        <>
+          <div className="av3-subhead">Cost breakdown</div>
+          <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 6 }}>
+            {lines.map((l, i) => { const c = lineCost(l); if (c <= 0) return null; return <div key={i} title={`${ingById.get(l.ingredientId)?.name ?? ""}: ${formatPrice(Math.round(c))}`} style={{ width: `${(c / batchCost) * 100}%`, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />; })}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10.5, color: "var(--av3-muted)" }}>
+            {lines.filter((l) => lineCost(l) > 0).slice(0, 6).map((l, i) => <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 2, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />{ingById.get(l.ingredientId)?.name} {Math.round((lineCost(l) / batchCost) * 100)}%</span>)}
+          </div>
+        </>
+      )}
+
+      {/* macro grid */}
+      <div className="av3-subhead">Per-portion nutrition</div>
+      {missingKcal.length > 0 && <div style={{ fontSize: 10.5, color: "var(--av3-warn)", marginBottom: 6 }}>{missingKcal.length} ingredient{missingKcal.length > 1 ? "s" : ""} missing kcal — totals understated until set on the offering.</div>}
+      <div className="av3-od-grid">
+        {([["Protein", "proteinPerUnit"], ["Carbs", "carbsPerUnit"], ["Sugar", "sugarPerUnit"], ["Fiber", "fiberPerUnit"], ["Fat", "fatPerUnit"]] as [string, keyof Ingredient][]).map(([label, key]) => (
+          <div className="av3-od-field" key={key}><div className="k">{label}</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro(key)} g</div></div>
+        ))}
       </div>
+
+      <div className="av3-subhead">Notes (KDS / prep)</div>
+      <textarea className="av3-input" style={{ fontFamily: "var(--av3-ui)", minHeight: 54, resize: "vertical" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Method, plating, station notes…" />
+    </Dialog>
+  );
+}
+
+/* ── ingredients catalog panel ─────────────────────────────────────────── */
+function IngredientsPanel({ ingredients, suppliers, loading, onEdit }: {
+  ingredients: Ingredient[]; suppliers: Supplier[]; loading: boolean; onEdit: (ing: Ingredient) => void;
+}) {
+  const [q, setQ] = useState("");
+  const supplierName = (ing: Ingredient) => ing.supplier ?? (ing.activeProductId ? "—" : "not linked");
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return [...ingredients]
+      .filter((i) => !needle || i.name.toLowerCase().includes(needle) || (i.supplier ?? "").toLowerCase().includes(needle))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [ingredients, q]);
+
+  const cols: ColumnV3<Ingredient>[] = [
+    { key: "name", header: "Ingredient", render: (i) => <div><div style={{ fontWeight: 600 }}>{i.name}</div>{i.notes && <div className="av3-cell-muted" style={{ fontSize: 11, maxWidth: 320, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i.notes}</div>}</div> },
+    { key: "cat", header: "Category", render: (i) => <span className="av3-cell-muted">{i.category ? INGREDIENT_CATEGORY_LABELS[i.category] : "—"}</span> },
+    { key: "supplier", header: "Active supplier", render: (i) => i.activeProductId ? <Badge tone="ok" dot>{supplierName(i)}</Badge> : <Badge tone="warn">not linked</Badge> },
+    { key: "cost", header: "Cost / unit", num: true, render: (i) => i.costPerUnit != null ? <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(i.costPerUnit)}/{i.unit}</span> : <span className="av3-cell-muted">—</span> },
+    { key: "kcal", header: "kcal / unit", num: true, render: (i) => i.kcalPerUnit != null ? <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{i.kcalPerUnit}</span> : <span className="av3-cell-muted">—</span> },
+  ];
+
+  if (loading && ingredients.length === 0) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading ingredients…</div>;
+  return (
+    <>
+      <div className="av3-field" style={{ maxWidth: 280 }}><span className="av3-field-label">Search</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ingredient or supplier…" /></div>
+      <div className="av3-card" style={{ padding: 0 }}>
+        {filtered.length === 0 ? (
+          <div className="av3-empty"><div className="av3-empty-title">No ingredients</div><div className="av3-empty-text">{ingredients.length === 0 ? "Add the first ingredient to start costing recipes." : "Nothing matches your search."}</div></div>
+        ) : (
+          <Table columns={cols} rows={filtered} rowKey={(i) => i.id} onRowClick={onEdit} />
+        )}
+      </div>
+      {suppliers.length === 0 && <div className="av3-cell-muted" style={{ fontSize: 11.5 }}>Tip: add suppliers on the Suppliers page so offerings can be linked to a distributor.</div>}
+    </>
+  );
+}
+
+/* ── ingredient editor (identity + distributor offerings) ──────────────── */
+function IngredientDialog({ ingredient, suppliers, onClose, onSaved }: {
+  ingredient: Ingredient | null; suppliers: Supplier[]; onClose: () => void; onSaved: () => Promise<void>;
+}) {
+  const isNew = ingredient === null;
+  const [name, setName] = useState(ingredient?.name ?? "");
+  const [category, setCategory] = useState<IngredientCategory>(ingredient?.category ?? "other");
+  const [unit, setUnit] = useState<IngredientUnit>(ingredient?.unit ?? "kg");
+  const [notes, setNotes] = useState(ingredient?.notes ?? "");
+  const [activeProductId, setActiveProductId] = useState(ingredient?.activeProductId);
+  const [offerings, setOfferings] = useState<Offering[]>([]);
+  const [editingOffer, setEditingOffer] = useState<Offering | "new" | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const supplierName = useMemo(() => new Map(suppliers.map((s) => [s.id, s.name])), [suppliers]);
+
+  const loadOfferings = useCallback(async (ingId: string) => {
+    const list = await fetch(`/api/admin/ingredient-products?ingredientId=${encodeURIComponent(ingId)}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    setOfferings(Array.isArray(list) ? list : []);
+  }, []);
+  useEffect(() => { if (ingredient) loadOfferings(ingredient.id); }, [ingredient, loadOfferings]);
+
+  const saveIdentity = async () => {
+    if (!name.trim()) { setErr("Name is required"); return; }
+    setSaving(true);
+    setErr(null);
+    try {
+      const body = { id: ingredient?.id, name: name.trim(), category, unit, notes: notes.trim() || undefined, activeProductId };
+      const res = await fetch("/api/admin/ingredients", { method: isNew ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) { await onSaved(); onClose(); }
+      else setErr("Save failed");
+    } finally { setSaving(false); }
+  };
+  const deleteIngredient = async () => {
+    if (!ingredient || !window.confirm("Delete this ingredient and its offerings?")) return;
+    setBusy(true);
+    try { const r = await fetch(`/api/admin/ingredients?id=${encodeURIComponent(ingredient.id)}`, { method: "DELETE" }); if (r.ok) { await onSaved(); onClose(); } }
+    finally { setBusy(false); }
+  };
+  const makeActive = async (productId: string) => {
+    if (!ingredient) return;
+    setBusy(true);
+    try {
+      await fetch("/api/admin/ingredient-products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ingredientId: ingredient.id, productId }) });
+      setActiveProductId(productId);
+      await loadOfferings(ingredient.id);
+    } finally { setBusy(false); }
+  };
+  const deleteOffering = async (id: string) => {
+    if (!ingredient || !window.confirm("Delete this offering?")) return;
+    setBusy(true);
+    try { await fetch(`/api/admin/ingredient-products?id=${encodeURIComponent(id)}`, { method: "DELETE" }); await loadOfferings(ingredient.id); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog
+      open onClose={onClose} title={isNew ? "Add ingredient" : ingredient!.name}
+      subtitle="Chain-wide · cost + nutrition come from the active distributor offering"
+      width={560}
+      footer={
+        <>
+          {!isNew && <Button variant="danger" size="sm" loading={busy} onClick={deleteIngredient} style={{ marginRight: "auto" }}><Trash2 className="av3-btn-ico" /> Delete</Button>}
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="sm" loading={saving} onClick={saveIdentity}>Save</Button>
+        </>
+      }
+    >
+      {err && <div style={{ color: "var(--av3-bad)", fontSize: 12, marginBottom: 8 }}>{err}</div>}
+      <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <label className="av3-field" style={{ width: 170 }}><span className="av3-field-label">Category</span><select className="av3-select" value={category} onChange={(e) => setCategory(e.target.value as IngredientCategory)}>{ING_CATEGORIES.map((c) => <option key={c} value={c}>{INGREDIENT_CATEGORY_LABELS[c]}</option>)}</select></label>
+        <label className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Unit</span><select className="av3-select" value={unit} onChange={(e) => setUnit(e.target.value as IngredientUnit)}>{ING_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+      </div>
+      <div className="av3-field" style={{ marginTop: 10 }}><span className="av3-field-label">Notes</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+
+      {!isNew && (
+        <>
+          <div className="av3-subhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>Distributor offerings</span>
+            <Button variant="secondary" size="sm" onClick={() => setEditingOffer("new")}><Plus className="av3-btn-ico" /> Add</Button>
+          </div>
+          {offerings.length === 0 ? (
+            <div className="av3-cell-muted" style={{ fontSize: 11.5 }}>No offerings yet. Add one to set cost + nutrition (it becomes the active source automatically).</div>
+          ) : (
+            offerings.map((o) => {
+              const isActive = o.id === activeProductId;
+              return (
+                <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                  <button type="button" className="av3-iconbtn-sm" title={isActive ? "Active source" : "Make active"} onClick={() => makeActive(o.id)} style={{ color: isActive ? "var(--av3-platinum)" : "var(--av3-subtle)" }}><Star style={{ fill: isActive ? "var(--av3-platinum)" : "none" }} /></button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12.5 }}>{o.displayName || supplierName.get(o.supplierId) || "Offering"}{isActive && <Badge tone="ok">active</Badge>}</div>
+                    <div className="av3-cell-muted" style={{ fontSize: 11 }}>{supplierName.get(o.supplierId) ?? o.supplierId}{o.supplierSku ? ` · ${o.supplierSku}` : ""} · {formatPrice(o.costPerUnit)}/{unit}{o.kcalPerUnit != null ? ` · ${o.kcalPerUnit} kcal` : ""}</div>
+                  </div>
+                  <button type="button" className="av3-btn av3-btn-sm av3-btn-ghost" onClick={() => setEditingOffer(o)}>Edit</button>
+                  <button type="button" className="av3-iconbtn-sm" aria-label="Delete offering" onClick={() => deleteOffering(o.id)}><X /></button>
+                </div>
+              );
+            })
+          )}
+        </>
+      )}
+
+      {editingOffer && ingredient && (
+        <OfferingDialog ingredientId={ingredient.id} unit={unit} suppliers={suppliers} offering={editingOffer === "new" ? null : editingOffer} hasActive={Boolean(activeProductId)}
+          onClose={() => setEditingOffer(null)} onSaved={async () => { setEditingOffer(null); await loadOfferings(ingredient.id); await onSaved(); }} />
+      )}
+    </Dialog>
+  );
+}
+
+/* ── distributor offering editor ───────────────────────────────────────── */
+function OfferingDialog({ ingredientId, unit, suppliers, offering, hasActive, onClose, onSaved }: {
+  ingredientId: string; unit: IngredientUnit; suppliers: Supplier[]; offering: Offering | null; hasActive: boolean; onClose: () => void; onSaved: () => Promise<void>;
+}) {
+  const isNew = offering === null;
+  const [supplierId, setSupplierId] = useState(offering?.supplierId ?? suppliers[0]?.id ?? "");
+  const [displayName, setDisplayName] = useState(offering?.displayName ?? "");
+  const [supplierSku, setSupplierSku] = useState(offering?.supplierSku ?? "");
+  const [cost, setCost] = useState(String((offering?.costPerUnit ?? 0) / 100));
+  const [macros, setMacros] = useState({
+    kcalPerUnit: offering?.kcalPerUnit ?? "", proteinPerUnit: offering?.proteinPerUnit ?? "", carbsPerUnit: offering?.carbsPerUnit ?? "",
+    sugarPerUnit: offering?.sugarPerUnit ?? "", fiberPerUnit: offering?.fiberPerUnit ?? "", fatPerUnit: offering?.fatPerUnit ?? "",
+  });
+  const [makeActive, setMakeActive] = useState(isNew && !hasActive);
+  const [notes, setNotes] = useState(offering?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const setMacro = (k: keyof typeof macros, v: string) => setMacros((m) => ({ ...m, [k]: v }));
+  const save = async () => {
+    if (!supplierId) { setErr("Pick a supplier (add one on the Suppliers page first)"); return; }
+    setSaving(true);
+    setErr(null);
+    try {
+      const body: Record<string, unknown> = {
+        ...(offering ? { id: offering.id } : {}),
+        ingredientId, supplierId,
+        displayName: displayName.trim() || undefined,
+        supplierSku: supplierSku.trim() || undefined,
+        costPerUnit: Math.round((Number(cost) || 0) * 100),
+        notes: notes.trim() || undefined,
+        makeActive,
+      };
+      for (const [k, v] of Object.entries(macros)) body[k] = v === "" ? undefined : Number(v);
+      const res = await fetch("/api/admin/ingredient-products", { method: isNew ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) { await onSaved(); }
+      else setErr("Save failed");
+    } finally { setSaving(false); }
+  };
+
+  const MACRO_LABELS: [keyof typeof macros, string][] = [["kcalPerUnit", `kcal / ${unit}`], ["proteinPerUnit", "Protein"], ["carbsPerUnit", "Carbs"], ["sugarPerUnit", "Sugar"], ["fiberPerUnit", "Fiber"], ["fatPerUnit", "Fat"]];
+
+  return (
+    <Dialog open onClose={onClose} title={isNew ? "Add offering" : "Edit offering"} subtitle={`Cost + nutrition per ${unit}`} width={480}
+      footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} onClick={save}>Save offering</Button></>}>
+      {err && <div style={{ color: "var(--av3-bad)", fontSize: 12, marginBottom: 8 }}>{err}</div>}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <label className="av3-field" style={{ flex: 1, minWidth: 170 }}><span className="av3-field-label">Supplier</span>
+          <select className="av3-select" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+            {suppliers.length === 0 && <option value="">— no suppliers —</option>}
+            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </label>
+        <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Cost / {unit} (zł)</span><input className="av3-input" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} /></label>
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+        <label className="av3-field" style={{ flex: 1, minWidth: 150 }}><span className="av3-field-label">Display name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Bufala 1kg pack" /></label>
+        <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Supplier SKU</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={supplierSku} onChange={(e) => setSupplierSku(e.target.value)} /></label>
+      </div>
+
+      <div className="av3-subhead">Nutrition (per {unit}, optional)</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {MACRO_LABELS.map(([k, label]) => (
+          <label className="av3-field" style={{ width: 92 }} key={k}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" min={0} value={macros[k]} onChange={(e) => setMacro(k, e.target.value)} placeholder="—" /></label>
+        ))}
+      </div>
+
+      <div className="av3-field" style={{ marginTop: 10 }}><span className="av3-field-label">Notes</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 12.5, cursor: "pointer" }}>
+        <input type="checkbox" checked={makeActive} onChange={(e) => setMakeActive(e.target.checked)} /> Make this the active cost + nutrition source
+      </label>
     </Dialog>
   );
 }

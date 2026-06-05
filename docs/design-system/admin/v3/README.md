@@ -158,12 +158,23 @@ refetches every 30s.
   per-site price/cost/availability/SKU — all written via `PUT /api/admin/menu`
   (`items` map), with per-dish **Reset** + **Delete** in the footer. Recipe-
   attached dishes lock the cost field (derives from the recipe, rule #10).
-- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board, **one recipe
-  per dish** (keyed by base slug, rule #10): recipe status, food cost +
-  cost-% (vs avg price). Editor edits the formula (ingredient lines from the
-  shared catalog + qty + waste% + yield) with a live cost estimate; saves once
-  chain-wide via `POST /api/admin/recipes`, deletes via `DELETE`. (Ingredient
-  catalog / distributor offerings / nutrition manager deferred.)
+- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
+  catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
+  parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
+  cost-% / kcal) and **Ingredients** (the catalog). The recipe editor now shows
+  per-portion KPIs (cost / food-cost% / batch cost / kcal), a cost-breakdown bar
+  with legend, live per-portion macros (protein/carbs/sugar/fiber/fat),
+  missing-kcal + no-distributor flags per line, prep time + notes, and saves the
+  formula chain-wide via `POST /api/admin/recipes` (`DELETE` to remove). **Bug
+  fixed:** `wasteFactor` is now stored as the multiplier the store expects
+  (`1 + waste%`) instead of a fraction — the old code under-costed every line.
+  The **Ingredients** tab is a searchable catalog with add/edit/delete
+  (`/api/admin/ingredients`) and a per-ingredient **distributor offerings**
+  manager (`/api/admin/ingredient-products`): add/edit/delete offerings with
+  supplier, SKU, display name, cost + per-unit macros, and a **make-active**
+  star (`PATCH`) that points `activeProductId` at the offering driving recipe
+  cost + nutrition. Suppliers are read for the picker (managed on Suppliers).
+  Per-item dietary disclosures live on the **Menu** editor (rule #10).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
