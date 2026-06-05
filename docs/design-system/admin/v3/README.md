@@ -84,6 +84,37 @@ with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
 `Table` (compact, sticky header, right-aligned numerics). The set grows as
 pages migrate.
 
+## The Dashboard — "Operator Terminal"
+
+The v3 home surface (`v3/DashboardV3.tsx`) is **not** an analytics report — it's
+a live operations cockpit, owner-gated like the v2 `/admin` HQ. Layout (top →
+bottom, then a 2-column split):
+
+- **Revenue → daily-goal hero** — fills against a *real, operator-set* daily
+  goal (`getOpsGoals`/`updateOpsGoals` in `store.ts` → `GET/PUT
+  /api/admin/ops-goals`, owner-only; chain default + per-location override,
+  edited inline). No goal set ⇒ the bar hides and it reads pace-vs-forecast.
+  The "on pace for X by close" projection is real: labour-efficiency
+  `forecastOrders` × live AOV (never a hardcoded number — rule #1).
+- **Live tiles** — Cooking / Ready / Due-late from `/api/admin/kds/fleet`
+  counts; Covers from real orders.
+- **Levers that move the goal** — AOV, items/order, margin, labour ratio, each
+  vs a stated benchmark, with day-over-day deltas where available.
+- **What moves it most** — ranked from real signals (goal gap in zł, late
+  tickets, hottest KDS bottleneck, labour ratio, attach) — never fabricated
+  impact figures.
+- **Kitchen pace + Trucks** — per-truck bottleneck/util + open/closed
+  (`isLocationOpenNow`) + on-line/on-shift + revenue-today, all from the fleet
+  endpoint.
+- **Order flow** — orders/min last 60 min, bucketed from `/api/admin/orders`.
+- **Live feed + "Needs you now"** — the right-hand spine, from
+  `/api/admin/notifications` (+ derived late/low-stock/slot signals).
+
+CSS for these lives in `themes/admin-v3/index.css` §10 (`.av3-goalbar`,
+`.av3-tiles`, `.av3-levers`, `.av3-move`, `.av3-station`, `.av3-truck`,
+`.av3-flow`, `.av3-feedcard`). Scope is the shell-level switcher; all data
+refetches every 30s.
+
 ## What v3 is not
 
 - **Not a re-skin of v2.** No `.v2-*` / `.glass-*` class is reused; v3 cannot
@@ -97,6 +128,8 @@ pages migrate.
 
 - [x] Foundation — tokens, theme mirror, isolation contract
 - [x] Shell — sidebar (collapsible rail) + topbar + scope switcher
-- [x] Dashboard — wired to the live analytics / insights / orders / labour APIs
+- [x] Dashboard — the **Operator Terminal** (live cockpit), owner-gated, wired
+  to analytics / insights / KDS-fleet / labour / orders / notifications +
+  the configurable daily-goal setting (`/api/admin/ops-goals`)
 - [ ] Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

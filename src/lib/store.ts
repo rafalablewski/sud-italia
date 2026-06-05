@@ -3162,6 +3162,51 @@ export async function updateLoyaltySettings(updates: Partial<LoyaltySettings>): 
   });
 }
 
+// --- Ops goals: the configurable daily revenue target ---------------------
+//
+// The Admin v3 "Operator Terminal" dashboard fills its revenue→goal bar
+// against a real, operator-set target (no hardcoded number — CLAUDE.md rule
+// #1). `dailyRevenueGoalGrosze` is the chain-wide default; `byLocation`
+// overrides it per truck. 0 / unset = no goal configured, and the dashboard
+// falls back to a forecast-based pace read instead.
+export interface OpsGoals {
+  /** Chain-wide daily revenue goal in grosze. 0 = unset. */
+  dailyRevenueGoalGrosze: number;
+  /** Per-location daily revenue goal overrides, in grosze. */
+  byLocation: Record<string, number>;
+}
+
+const DEFAULT_OPS_GOALS: OpsGoals = { dailyRevenueGoalGrosze: 0, byLocation: {} };
+
+export async function getOpsGoals(): Promise<OpsGoals> {
+  const saved = await readJSON<Partial<OpsGoals>>("ops-goals.json", DEFAULT_OPS_GOALS);
+  return {
+    dailyRevenueGoalGrosze: Math.max(0, Math.round(saved.dailyRevenueGoalGrosze ?? 0)),
+    byLocation: saved.byLocation ?? {},
+  };
+}
+
+export async function updateOpsGoals(updates: Partial<OpsGoals>): Promise<OpsGoals> {
+  return withLock("ops-goals.json", async () => {
+    const current = await getOpsGoals();
+    const merged: OpsGoals = {
+      dailyRevenueGoalGrosze:
+        updates.dailyRevenueGoalGrosze !== undefined
+          ? Math.max(0, Math.round(updates.dailyRevenueGoalGrosze))
+          : current.dailyRevenueGoalGrosze,
+      byLocation: { ...current.byLocation, ...(updates.byLocation ?? {}) },
+    };
+    await writeJSON("ops-goals.json", merged);
+    return merged;
+  });
+}
+
+/** Effective daily goal (grosze) for a scope. `""` = chain default. */
+export function resolveDailyGoal(goals: OpsGoals, location: string): number {
+  if (location && goals.byLocation[location] > 0) return goals.byLocation[location];
+  return goals.dailyRevenueGoalGrosze || 0;
+}
+
 // --- Concierge: agent-commerce capability exposure -----------------------
 //
 // The Concierge surface (/admin/concierge) exposes one capability layer to AI
