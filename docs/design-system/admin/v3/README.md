@@ -305,6 +305,14 @@ refetches every 30s.
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
 - [x] Users (`/admin-v3/users`, owner-only): account directory + add/edit/delete
   dialog (role / status / site / optional password) over `/api/admin/users`.
+  **Security surface restored to v2 parity (flag #2):** auth-posture KPIs
+  (secured-2FA / no-2FA / passkeys), a per-user **Sign-in** column (posture +
+  passkey-count + MFA tags), security filter chips (secured / no-2FA / passkey),
+  and three management dialogs off the edit dialog — **Credentials** (password +
+  terminal PIN, `…/credentials`), **MFA/TOTP** (begin → enable → disable,
+  `…/mfa`, self-confirm + owner force-disable) and **Passkeys** (WebAuthn enrol
+  via `@simplewebauthn/browser` + remove, `…/webauthn`). Granular permissions
+  stay on the **Permission matrix** page (no duplication).
 - [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
   persisting custom grants (`PUT /api/admin/users`).
