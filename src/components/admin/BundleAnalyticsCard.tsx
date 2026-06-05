@@ -96,11 +96,11 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
   }, [locationSlug, days]);
 
   if (loading) {
-    return <div className="glass-card p-4 text-sm admin-text-secondary">Loading bundle analytics…</div>;
+    return <div className="v2-card p-4 text-sm admin-text-secondary">Loading bundle analytics…</div>;
   }
   if (err || !data) {
     return (
-      <div className="glass-card p-4 text-sm text-[var(--danger)] flex items-center gap-2">
+      <div className="v2-card p-4 text-sm text-[var(--danger)] flex items-center gap-2">
         <AlertCircle className="h-4 w-4" />
         {err ?? "No data"}
       </div>
@@ -119,7 +119,7 @@ export function BundleAnalyticsCard({ locationSlug, days = 30 }: { locationSlug?
     : 0;
 
   return (
-    <div className="glass-card p-4">
+    <div className="v2-card p-4">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles className="h-4 w-4 text-[var(--warning)]" />
         <h3 className="font-heading font-bold text-base admin-text">

@@ -54,8 +54,11 @@ pages must:
 
 1. Be reachable from the **v2 admin shell** (`AdminShell.tsx`) — top
    nav or a section group.
-2. Use the **glass design classes** (`glass-card`, `glass-input`,
-   `glass-btn`, `admin-text`). Don't roll a one-off panel.
+2. Build from the **`v2/ui` primitives** — `PageHeader` + `ViewToolbar` for the
+   command surface, `Card` / `Input` / `Select` / `Button` for content. **Never
+   the legacy `glass-card` / `glass-input` / `glass-btn` classes** (older
+   `--admin-*` token system, being retired — lint-guarded in the page layer).
+   Don't roll a one-off panel.
 3. Register in `/admin/capabilities` (CLAUDE.md rule #9) — same commit.
    Include `name`, `summary`, `href`, `envVars`, `status`.
 4. Have a **mobile variant** (or a graceful read-only state on small

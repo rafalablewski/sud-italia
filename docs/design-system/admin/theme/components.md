@@ -126,8 +126,10 @@ Placed inline in the tags row on a POS product card.
 
 ## Inputs & segmented
 
-- **`.v2-input` / `.glass-input`** — surface-2 background → surface-1 on
-  focus, steel focus ring + 3px soft halo. **8px radius.** Height 36px.
+- **`.v2-input`** (the `Input` primitive) — surface-2 background → surface-1 on
+  focus, steel focus ring + 3px soft halo. **8px radius.** Height 36px. (The
+  legacy `.glass-input` alias on the old `--admin-*` tokens is being retired —
+  Phase 4 cleared it from the Growth island; don't add new usages.)
 - **`.seg`** segmented — 3px-padded track, selected tab gets `--surface-3`
   fill + `--shadow-xs`. Used for stage switches (KDS), period filters
   (CRM), fulfilment channels (POS), MCP/WhatsApp transports (Concierge).
@@ -163,7 +165,10 @@ pill — the lint guard + this doc are the contract.
 
 ## Cards
 
-### General card — `.v2-card` / `.glass-card`
+### General card — `.v2-card` (the `Card` primitive)
+
+> The legacy `.glass-card` alias (old `--admin-*` tokens) is being retired — Phase 4
+> migrated the Growth island onto `.v2-card`. Don't add new `.glass-card` usages.
 
 ```
 background: var(--surface-1)

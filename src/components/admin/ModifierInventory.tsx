@@ -99,7 +99,7 @@ export function ModifierInventory() {
       </div>
 
       {totalItems === 0 && (
-        <div className="glass-card p-6 text-center">
+        <div className="v2-card p-6 text-center">
           <AlertTriangle className="h-6 w-6 text-[var(--warning)] mx-auto mb-2" />
           <p className="admin-text text-sm">
             No items have modifier groups configured.

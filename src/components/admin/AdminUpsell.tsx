@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Save, Layers, Sliders } from "lucide-react";
-import { Button, PageHero } from "./v2/ui";
+import { AlertTriangle, Layers, Sliders } from "lucide-react";
+import { PageHero, SaveDock } from "./v2/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,
@@ -84,7 +84,7 @@ export function AdminUpsell() {
   if (loadError) {
     return (
       <div className="v2-page">
-        <div className="glass-card p-8 text-center max-w-lg mx-auto">
+        <div className="v2-card p-8 text-center max-w-lg mx-auto">
           <AlertTriangle className="h-8 w-8 text-[var(--danger)] mx-auto mb-3" />
           <h2 className="font-heading font-bold text-lg admin-text mb-2">
             Could not load upsell settings
@@ -98,11 +98,6 @@ export function AdminUpsell() {
     );
   }
 
-  const dirtyHint =
-    dirtyLocations.size > 1
-      ? `${dirtyLocations.size} locations with unsaved changes`
-      : null;
-
   return (
     <div className="v2-page">
       <PageHero
@@ -110,17 +105,7 @@ export function AdminUpsell() {
         subtitle={
           <>
             Lift the value of what they&rsquo;re already buying — tiered bundle ladders and gating rules.
-            {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
-        }        actions={
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={saving || !isDirty}
-            aria-label="Save changes"
-            title={saved ? "Saved" : saving ? "Saving…" : "Save changes"}
-            leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          />
         }
         nav={{
           value: tab,
@@ -135,7 +120,7 @@ export function AdminUpsell() {
 
       {tab === "bundles" && (
         <div className="v2-stack-24">
-          <section className="glass-card p-6">
+          <section className="v2-card p-6">
             <header className="mb-4">
               <h2 className="admin-text font-semibold mb-1">Bundle ladders</h2>
               <p className="admin-text-secondary">
@@ -149,7 +134,7 @@ export function AdminUpsell() {
             />
           </section>
 
-          <section className="glass-card p-6">
+          <section className="v2-card p-6">
             <header className="mb-4">
               <h2 className="admin-text font-semibold mb-1">Bundle rules</h2>
               <p className="admin-text-secondary">
@@ -162,7 +147,7 @@ export function AdminUpsell() {
             />
           </section>
 
-          <section className="glass-card p-6">
+          <section className="v2-card p-6">
             <header className="mb-4">
               <h2 className="admin-text font-semibold mb-1">Experiments (A/B)</h2>
               <p className="admin-text-secondary">
@@ -188,10 +173,17 @@ export function AdminUpsell() {
       )}
 
       {tab === "modifiers" && (
-        <div className="glass-card p-6">
+        <div className="v2-card p-6">
           <ModifierInventory />
         </div>
       )}
+
+      <SaveDock
+        dirty={isDirty}
+        count={dirtyLocations.size}
+        status={saving ? "saving" : saved ? "saved" : "idle"}
+        onSave={handleSave}
+      />
     </div>
   );
 }

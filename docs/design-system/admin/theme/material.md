@@ -47,7 +47,7 @@ box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
 This is a 1px hairline of warm light along the top edge — it gives the
 surface a hint of dimensionality without being a gradient. It's a
-**hairline**, not a fill. Use sparingly: on `.glass-card` / `.v2-card` and
+**hairline**, not a fill. Use sparingly: on `.v2-card` and
 the POS product cards.
 
 ## Hairlines

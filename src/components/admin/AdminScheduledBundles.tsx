@@ -106,7 +106,7 @@ export function AdminScheduledBundles() {
       />
 
       {err && (
-        <div className="glass-card p-4 text-sm text-[var(--danger)] flex items-center gap-2 mt-3">
+        <div className="v2-card p-4 text-sm text-[var(--danger)] flex items-center gap-2 mt-3">
           <AlertCircle className="h-4 w-4" />
           {err}
           <button onClick={() => setErr(null)} className="ml-auto text-xs underline">Dismiss</button>
@@ -116,7 +116,7 @@ export function AdminScheduledBundles() {
       {loading ? (
         <div className="v2-page-loading">Loading Scheduled bundles…</div>
       ) : sorted.length === 0 ? (
-        <div className="glass-card p-8 text-center mt-3">
+        <div className="v2-card p-8 text-center mt-3">
           <Calendar className="h-8 w-8 text-[var(--warning)] mx-auto mb-2" />
           <p className="text-sm admin-text">No {statusFilter === "all" ? "" : statusFilter + " "}intents.</p>
           <p className="text-xs admin-text-secondary mt-1">
@@ -124,7 +124,7 @@ export function AdminScheduledBundles() {
           </p>
         </div>
       ) : (
-        <div className="glass-card p-4 mt-3">
+        <div className="v2-card p-4 mt-3">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

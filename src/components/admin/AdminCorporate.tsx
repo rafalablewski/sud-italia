@@ -131,12 +131,12 @@ export function AdminCorporate() {
       {loading && <div className="v2-page-loading">Loading Corporate…</div>}
 
       {error && (
-        <div className="glass-card p-3 mb-4 border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
+        <div className="v2-card p-3 mb-4 border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
           <p className="text-sm text-[var(--danger)]">{error}</p>
         </div>
       )}
 
-      <section className="glass-card p-4 md:p-5 mb-5">
+      <section className="v2-card p-4 md:p-5 mb-5">
         <h2 className="admin-text text-base font-semibold mb-3 flex items-center gap-2">
           <Building2 className="h-4 w-4" /> Active corporate accounts ({corporates.length})
         </h2>
@@ -154,7 +154,7 @@ export function AdminCorporate() {
         )}
       </section>
 
-      <section className="glass-card p-4 md:p-5">
+      <section className="v2-card p-4 md:p-5">
         <h2 className="admin-text text-base font-semibold mb-3 flex items-center gap-2">
           <Plus className="h-4 w-4" /> Promote a wallet to a corporate account
         </h2>
@@ -362,7 +362,7 @@ function CorporateEditor({
     <div className="mt-3 grid gap-3 md:grid-cols-2">
       <Field label="Company name">
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Acme"
@@ -370,7 +370,7 @@ function CorporateEditor({
       </Field>
       <Field label="Public slug · /corporate/…">
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           value={slug}
           onChange={(e) => setSlug(e.target.value.toLowerCase())}
           placeholder="acme"
@@ -378,7 +378,7 @@ function CorporateEditor({
       </Field>
       <Field label="Billing email (monthly invoice)">
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           type="email"
           value={billingEmail}
           onChange={(e) => setBillingEmail(e.target.value)}
@@ -387,7 +387,7 @@ function CorporateEditor({
       </Field>
       <Field label={`Head bonus · ${(headBonusBps / 100).toFixed(0)}% of pool`}>
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           type="range"
           min={0}
           max={5000}
@@ -398,7 +398,7 @@ function CorporateEditor({
       </Field>
       <Field label={`Minimum employees · ${minEmployees} (≥6 enforced)`}>
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           type="number"
           min={6}
           max={500}
@@ -408,7 +408,7 @@ function CorporateEditor({
       </Field>
       <Field label="Pinned location (optional)">
         <select
-          className="glass-input w-full"
+          className="v2-input w-full"
           value={locationSlug}
           onChange={(e) => setLocationSlug(e.target.value)}
         >
@@ -419,7 +419,7 @@ function CorporateEditor({
       </Field>
       <Field label="Auto pre-order day (optional)">
         <select
-          className="glass-input w-full"
+          className="v2-input w-full"
           value={autoPreorderDay}
           onChange={(e) =>
             setAutoPreorderDay(e.target.value === "" ? "" : Number(e.target.value))
@@ -435,7 +435,7 @@ function CorporateEditor({
       </Field>
       <Field label="Auto pre-order time (HH:MM)">
         <input
-          className="glass-input w-full"
+          className="v2-input w-full"
           type="time"
           value={autoPreorderTime}
           onChange={(e) => setAutoPreorderTime(e.target.value)}

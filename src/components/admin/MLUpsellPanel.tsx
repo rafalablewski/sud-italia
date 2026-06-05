@@ -125,7 +125,7 @@ export function MLUpsellPanel({
   };
 
   return (
-    <section className="glass-card p-6">
+    <section className="v2-card p-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="admin-text font-semibold mb-1 flex items-center gap-2">

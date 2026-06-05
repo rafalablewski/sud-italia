@@ -5,7 +5,7 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 3 — Header split` ✅ complete · next: Phase 4 (Growth island)
+**Current phase:** `Phase 4 — Growth island` ✅ complete · next: Phase 5 (Tokens + buttons sweep)
 **Last updated:** 2026-06-05
 **Branch:** `claude/admin-subpages-analysis-1bsjz`
 
@@ -19,7 +19,7 @@
 | 1 | Selection fix (selection-as-raise, no brand flood) | ✅ **complete** | zero brand-on-selection |
 | 2 | Scope — replace LocationFilter + sidebar switcher | ✅ **complete** | `LocationFilter` import count = 0 |
 | 3 | Header split — PageHero → PageHeader + ViewToolbar | ✅ **complete** | `.v2-page-header` usage = 0 |
-| 4 | Growth island → Card/Input/Button + SaveDock | ⬜ not started | `glass-card`/`glass-input` = 0 |
+| 4 | Growth island → Card/Input/Button + SaveDock | ✅ **complete** | `glass-card`/`glass-input` = 0 (family) |
 | 5 | Tokens + buttons sweep | ⬜ not started | `ds-drift` job = 0; lint → error |
 | 6 | Lock — CI blocking, CODEOWNERS, scaffold | ⬜ not started | green build = consistent build |
 
@@ -186,9 +186,48 @@ prose mention in `PageHero.tsx` (no className usage). `tsc` + `npm run build` cl
 count) now sit behind the ⓘ. Acceptable; Phase 4 gives the Growth editors a
 `SaveDock` so the dirty state is surfaced properly.
 
-## ▶ Next up — Phase 4 (Growth island)
-Migrate the legacy `glass-card`/`glass-input` family — Upsell, Cross-sell,
-Scheduled bundles, Corporate, and the shared `AdminSellingShared` — onto `Card` /
-`Input` / `Button`, and adopt `SaveDock` + `useSaveState` for their dirty-state
-saving (they already track dirty per location). Exit gate: `glass-card` /
-`glass-input` warning count → 0 for that family (drives the global ratchet down).
+## Phase 4 — Growth island · done (2026-06-05)
+Retired the legacy `glass-*` (old `--admin-*` token system) from the Growth island
+and gave its editors the `SaveDock`.
+
+**Discovery that shaped the approach:** `.glass-card`/`.glass-input` are **not**
+aliases of `.v2-card`/`.v2-input` — they're the older `--admin-*`-token system. So
+the migration is a real token modernization, not a no-op. Given the volume (~60
+inputs, 7 of them `<select>`) and no visual-QA here, I did a **safe class-swap to
+the canonical v2 classes** (`glass-card`→`v2-card`, `glass-input`→`v2-input`) —
+zero tag-matching risk, visually correct (same classes the `Card`/`Input`
+components emit), clears the `glass-*` lint. Converting these raw `<input>`/
+`<select>` to the `Input`/`Select` *components* (and removing raw elements) is the
+same work as Phase 5's raw-element sweep, so it's folded there.
+
+**Files migrated (glass-* → 0):** AdminUpsell, AdminCrossSell, AdminScheduledBundles,
+AdminCorporate, AdminSellingShared — **plus the island's sub-components** rendered
+by Upsell/Cross-sell: MLUpsellPanel, ModifierInventory, BundleAnalyticsCard.
+
+**SaveDock:** Upsell + Cross-sell dropped the parked icon-only header Save and now
+drive a bottom-centre `SaveDock` from the hook (`dirty=isDirty`,
+`status=saving?…:saved?…:idle`, `count=dirtyLocations.size`, `onSave=handleSave`).
+The subtitle dirty-hint (which had been pushed behind the Phase-3 ⓘ) is replaced by
+the dock's live "N unsaved changes". Also removed the now-unused `activeLocation`
+destructure in Cross-sell.
+
+**Exit gate met:** `grep glass-(card|input)` across the family + sub-components → 0.
+`tsc` + `npm run build` clean. Global `glass-*` ratchet: **73 → 1** (only
+`/admin/capabilities/page.tsx`, a System page — swept in Phase 5).
+
+**Docs (Rule #11):** extend.md ("Add a page" guidance → v2/ui primitives, not
+glass-*), components.md (Inputs + General card legacy notes), material.md (drop the
+`.glass-card` mention), and this tracker.
+
+**Note on `.v2-card` vs legacy `.glass-card`:** v2-card adds `display:flex;
+flex-direction:column; overflow:hidden` (the proven standard across the rest of
+admin). Portaled overlays (Dialog/Popover/Tooltip) are unaffected by `overflow`;
+the island's dropdowns are native `<select>` or portaled, so no clipping risk.
+
+## ▶ Next up — Phase 5 (Tokens + buttons sweep)
+Drive the `ds-drift` ratchet to zero: convert remaining raw `<button>`→`Button`,
+raw `<input>/<select>`→`Input`/`Select` (incl. the Growth island's now-`v2-input`
+raw elements), sweep the ~36 inline hex → tokens, clear the last `glass-card`
+(capabilities), and the two deferred brand-tint shadows (Phase 1 notes). Then flip
+the lint rules from **warn → error** and add the CI `ds-drift` job (Phase 6 lock).
+This is large + mechanical; tackle per-file with a build between batches.
