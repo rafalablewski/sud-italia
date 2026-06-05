@@ -25,15 +25,25 @@ const VIEW_LABEL: Record<ServiceView, string> = { floor: "Floor", slots: "Slots"
 // its own route, so component state would otherwise reset on every switch).
 const LOC_KEY = "sud-core-service-loc";
 
-function isoToday(): string {
+// SSR-safe default: UTC today is deterministic across server + client, so the
+// initial render matches and there's no hydration mismatch. The mount effect
+// then corrects it to the operator's *local* today.
+function isoTodayUtc(): string {
   return new Date().toISOString().slice(0, 10);
+}
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function ServiceFrame({ view }: { view: ServiceView }) {
   const [loc, setLoc] = useState<string>(FALLBACK);
-  const [date, setDate] = useState<string>(isoToday);
+  const [date, setDate] = useState<string>(isoTodayUtc);
 
   useEffect(() => {
+    // Correct to local today (an operator past UTC-midnight would otherwise
+    // default to the wrong day); after mount, so no hydration mismatch.
+    setDate(localToday());
     try {
       const v = localStorage.getItem(LOC_KEY);
       if (v && LOCS.some((l) => l.key === v)) setLoc(v);
