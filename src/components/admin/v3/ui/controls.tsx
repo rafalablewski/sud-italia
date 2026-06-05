@@ -17,13 +17,14 @@ export function Button({
   loading = false,
   className = "",
   disabled,
+  type = "button",
   children,
   ...rest
 }: ButtonProps) {
   const v = variant === "primary" ? "av3-btn-primary" : variant === "ghost" ? "av3-btn-ghost" : variant === "danger" ? "av3-btn-danger" : "";
   const s = size === "sm" ? "av3-btn-sm" : "";
   return (
-    <button className={`av3-btn ${v} ${s} ${className}`.trim()} disabled={disabled || loading} {...rest}>
+    <button type={type} className={`av3-btn ${v} ${s} ${className}`.trim()} disabled={disabled || loading} {...rest}>
       {loading && <span className="av3-spin" aria-hidden style={{ width: 13, height: 13 }} />}
       {children}
     </button>

@@ -41,8 +41,14 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
     .sort((a, b) => b.length - a.length)[0];
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/login";
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch (err) {
+      // Network failure shouldn't trap the operator — still send them out.
+      console.error("Logout request failed:", err);
+    } finally {
+      window.location.href = "/login";
+    }
   };
 
   return (

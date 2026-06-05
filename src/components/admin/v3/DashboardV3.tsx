@@ -154,6 +154,10 @@ export function DashboardV3() {
       setOrders(Array.isArray(ord) ? ord : []);
       setNotifications(Array.isArray(notif) ? notif : []);
       setLaborRatio(labor);
+    } catch (err) {
+      // A network-level rejection (offline, DNS, timeout) would otherwise
+      // bubble as an unhandled rejection — keep the last good data on screen.
+      console.error("Failed to refresh dashboard metrics:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
