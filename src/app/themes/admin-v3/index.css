@@ -791,3 +791,15 @@
 .av3-toggle[data-on="true"] { background: var(--av3-ok-soft); border-color: color-mix(in oklab, var(--av3-ok) 35%, transparent); color: var(--av3-ok); }
 .av3-pricecell { display: inline-flex; align-items: center; gap: 6px; }
 .av3-varies { font-size: 9.5px; }
+
+/* recipe formula editor rows */
+.av3-reciperow { display: grid; grid-template-columns: 1fr 84px 60px 76px 30px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--av3-line); }
+.av3-reciperow:last-child { border-bottom: none; }
+.av3-reciperow .av3-input, .av3-reciperow .av3-select { height: 30px; width: 100%; }
+.av3-reciperow-head { display: grid; grid-template-columns: 1fr 84px 60px 76px 30px; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--av3-subtle); padding-bottom: 4px; }
+.av3-reciperow-cost { font-family: var(--av3-mono); font-size: 12px; color: var(--av3-muted); text-align: right; }
+.av3-iconbtn-sm { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); background: transparent; color: var(--av3-muted); cursor: pointer; }
+.av3-iconbtn-sm:hover { color: var(--av3-bad); border-color: color-mix(in oklab, var(--av3-bad) 30%, transparent); }
+.av3-iconbtn-sm svg { width: 14px; height: 14px; }
+.av3-recipe-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--av3-line-strong); }
+.av3-recipe-summary .v { font-family: var(--av3-mono); font-size: 18px; font-weight: 600; }

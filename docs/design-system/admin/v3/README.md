@@ -149,5 +149,11 @@ refetches every 30s.
   metadata (name/description/category — propagated to every site) + per-site
   price/cost/availability via `PUT /api/admin/menu`. (Modifier editor +
   add/clone/delete deferred.)
-- [ ] Operations (Recipes/HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
+- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board, **one recipe
+  per dish** (keyed by base slug, rule #10): recipe status, food cost +
+  cost-% (vs avg price). Editor edits the formula (ingredient lines from the
+  shared catalog + qty + waste% + yield) with a live cost estimate; saves once
+  chain-wide via `POST /api/admin/recipes`, deletes via `DELETE`. (Ingredient
+  catalog / distributor offerings / nutrition manager deferred.)
+- [ ] Operations (HACCP/Waste/Handover), Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
