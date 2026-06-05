@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Admin v3 — Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ==========================================================================
+   Admin v3 mockups — shared stylesheet for the three dashboard paradigms.
+   Mirrors the live themes/admin-v3 tokens. Static design R&D only.
+   ========================================================================== */
+:root, [data-theme="dark"] {
+  --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+  --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+  --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+  --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+  --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+  --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f;
+  --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+}
+[data-theme="light"] {
+  --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+  --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+  --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73;
+  --av3-brand:#a82940; --av3-platinum:#9c7e4e;
+  --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694;
+  --av3-c1:#a82940; --av3-c2:#9c7e4e; --av3-c3:#3d6694; --av3-c4:#1f8a60; --av3-c5:#b56a3b;
+  --av3-sh-1:0 1px 2px rgba(28,24,21,.06); --av3-sh-2:0 10px 30px -10px rgba(28,24,21,.18);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.mono { font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; }
+a { color:inherit; text-decoration:none; }
+svg { display:block; }
+
+/* mockup ribbon */
+.ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c;
+  background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; letter-spacing:.02em; }
+
+/* shell */
+.shell { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 28px); }
+.side { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; background:var(--av3-s1); border-right:1px solid var(--av3-line); overflow:hidden; }
+.brand { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--av3-line); flex-shrink:0; }
+.brand-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:5px; background:var(--av3-brand); color:#fff; font-family:"Fraunces",serif; font-size:12px; font-weight:600; box-shadow:inset 0 0 0 1px rgba(203,180,138,.5); }
+.brand-name { font-family:"Fraunces",serif; font-size:14px; font-weight:600; line-height:1.1; }
+.brand-sub { font-size:9.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+.side-scroll { flex:1; overflow-y:auto; padding:12px 8px; }
+.group { margin-bottom:12px; }
+.eyebrow { padding:6px 8px 3px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+.nav { position:relative; display:flex; align-items:center; gap:10px; height:30px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12.5px; font-weight:500; }
+.nav svg { width:16px; height:16px; flex-shrink:0; }
+.nav.active { background:var(--av3-s3); color:var(--av3-fg); }
+.nav.active::before { content:""; position:absolute; left:-8px; top:7px; bottom:7px; width:2px; border-radius:0 2px 2px 0; background:var(--av3-platinum); }
+.nav.pending { opacity:.5; }
+.side-foot { padding:8px; border-top:1px solid var(--av3-line); display:flex; flex-direction:column; gap:2px; }
+.foot-btn { display:flex; align-items:center; gap:9px; height:28px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12px; }
+.foot-btn svg { width:14px; height:14px; }
+
+.main { display:flex; flex-direction:column; min-width:0; }
+.topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; height:44px; padding:0 14px; border-bottom:1px solid var(--av3-line);
+  background:color-mix(in oklab,var(--av3-bg) 80%,transparent); backdrop-filter:saturate(150%) blur(10px); }
+.crumbs { display:flex; align-items:center; gap:6px; font-size:12.5px; } .crumbs .cur { font-weight:600; }
+.spacer { flex:1; }
+.tb-right { display:flex; align-items:center; gap:8px; }
+.icon-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--av3-muted); position:relative; cursor:pointer; }
+.icon-btn:hover { background:var(--av3-s2); color:var(--av3-fg); }
+.icon-btn svg { width:15px; height:15px; }
+.bell-badge { position:absolute; top:1px; right:1px; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:var(--av3-brand); color:#fff; font-size:9px; font-weight:700; line-height:14px; text-align:center; }
+.scope { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--av3-line); border-radius:5px; background:var(--av3-s1); color:var(--av3-fg); font-size:12.5px; }
+.scope svg { width:13px; height:13px; color:var(--av3-subtle); }
+/* paradigm switcher */
+.switcher { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; }
+.switcher a { height:24px; padding:0 11px; border-radius:5px; color:var(--av3-muted); font-size:12px; font-weight:500; display:grid; place-items:center; }
+.switcher a.on { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); }
+
+.content { padding:16px; display:flex; flex-direction:column; gap:16px; }
+.live-dot { width:7px; height:7px; border-radius:50%; background:var(--av3-ok); box-shadow:0 0 0 0 color-mix(in oklab,var(--av3-ok) 70%,transparent); animation:pulse 2s infinite; display:inline-block; }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--av3-ok) 60%,transparent)} 70%{box-shadow:0 0 0 6px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+
+/* cards / primitives */
+.card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); }
+.card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid var(--av3-line); }
+.card-title { font-size:13px; font-weight:600; } .card-desc { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+.card-body { padding:16px; }
+.eyebrow-lg { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--av3-subtle); }
+.badge { display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; }
+.badge .bdot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.b-ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:var(--av3-ok)}
+.b-info{background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));color:var(--av3-info)}
+.b-warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:var(--av3-warn)}
+.b-bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:var(--av3-bad)}
+.b-brand{background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg))}
+.btn { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px; border:1px solid var(--av3-line-strong); border-radius:5px; background:var(--av3-s2); color:var(--av3-fg); font-size:12px; font-weight:500; cursor:pointer; }
+.btn svg{width:13px;height:13px} .btn.primary{background:var(--av3-brand);border-color:transparent;color:#fff}
+.delta { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; } .delta svg{width:12px;height:12px}
+.up{color:var(--av3-ok)} .down{color:var(--av3-bad)} .flat{color:var(--av3-subtle)}
+
+/* tables */
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+th { text-align:left; padding:7px 16px; background:var(--av3-s2); color:var(--av3-subtle); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--av3-line); }
+td { padding:8px 16px; border-bottom:1px solid var(--av3-line); } tr:last-child td{border-bottom:none}
+.num{text-align:right;font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums} .th-num{text-align:right} .muted{color:var(--av3-muted)}
+
+/* ===== A · Mission Control ===== */
+.mc-hero { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:14px; }
+.mc-goal { background:linear-gradient(160deg,color-mix(in oklab,var(--av3-brand) 16%,var(--av3-s1)),var(--av3-s1)); border:1px solid var(--av3-line); border-radius:13px; padding:16px; }
+.mc-goal .lab{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--av3-muted)}
+.mc-goal .big{font-family:"JetBrains Mono",monospace;font-size:34px;font-weight:500;letter-spacing:-.02em;margin-top:6px}
+.mc-goal .sub{font-size:12px;color:var(--av3-muted);margin-top:2px}
+.prog { height:9px; border-radius:999px; background:var(--av3-s3); overflow:hidden; margin-top:12px; }
+.prog > i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--av3-brand),var(--av3-platinum)); }
+.mc-tiles { display:flex; flex-direction:column; justify-content:center; gap:10px; }
+.mc-tile { display:flex; align-items:center; gap:12px; padding:11px 14px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; }
+.mc-tile .n{font-family:"JetBrains Mono",monospace;font-size:24px;font-weight:500;min-width:34px;text-align:center}
+.mc-tile .t{font-size:12px;color:var(--av3-muted)} .mc-tile .h{font-size:13px;font-weight:600}
+.mc-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.station { display:grid; grid-template-columns:84px 1fr 44px; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--av3-line); }
+.station:last-child{border-bottom:none} .station .nm{font-size:12.5px;font-weight:500}
+.gauge { height:7px; border-radius:999px; background:var(--av3-s3); overflow:hidden; } .gauge>i{display:block;height:100%;border-radius:999px}
+.truck-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--av3-line); } .truck-row:last-child{border-bottom:none}
+.truck-row .city{font-size:13px;font-weight:600} .truck-row .meta{font-size:11.5px;color:var(--av3-muted)}
+.flow { display:flex; align-items:flex-end; gap:3px; height:48px; }
+.flow > i { flex:1; background:var(--av3-c3); border-radius:2px 2px 0 0; opacity:.85; }
+.needs { display:flex; flex-wrap:wrap; gap:8px; }
+.need { display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:8px; border:1px solid var(--av3-line); background:var(--av3-s2); font-size:12px; }
+.need .d{width:7px;height:7px;border-radius:50%}
+.order-line { display:grid; grid-template-columns:14px 1fr auto auto; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--av3-line); font-size:12.5px; }
+.order-line:last-child{border-bottom:none} .order-line .id{color:var(--av3-muted)} .order-line .amt{font-family:"JetBrains Mono",monospace}
+
+/* ===== B · Pace-to-goal ===== */
+.pg-wrap { display:grid; grid-template-columns:300px 1fr; gap:16px; align-items:start; }
+.pg-ring { display:flex; flex-direction:column; align-items:center; text-align:center; padding:20px; }
+.pg-ring .cap{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--av3-subtle)}
+.pg-ring .proj{margin-top:10px;font-size:12.5px;color:var(--av3-muted)}
+.pg-ring .proj b{color:var(--av3-ok)}
+.lever-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.lever { padding:13px 15px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; }
+.lever .lab{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle)}
+.lever .v{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:500;margin-top:6px}
+.lever .meter{height:5px;border-radius:999px;background:var(--av3-s3);overflow:hidden;margin-top:9px}
+.lever .meter>i{display:block;height:100%;border-radius:999px;background:var(--av3-c4)}
+.lever .tgt{font-size:10.5px;color:var(--av3-subtle);margin-top:5px}
+.move { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--av3-line); } .move:last-child{border-bottom:none}
+.move .ic{display:grid;place-items:center;width:28px;height:28px;border-radius:7px;background:color-mix(in oklab,var(--av3-platinum) 18%,var(--av3-s1));color:var(--av3-platinum);flex-shrink:0}
+.move .txt{flex:1;font-size:12.5px} .move .imp{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--av3-ok);font-weight:600}
+
+/* ===== C · Attention feed ===== */
+.feed-wrap { display:grid; grid-template-columns:1fr 280px; gap:16px; align-items:start; }
+.feed-filters { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; }
+.feed-filters a{height:24px;padding:0 11px;border-radius:5px;color:var(--av3-muted);font-size:12px;font-weight:500;display:grid;place-items:center}
+.feed-filters a.on{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong)}
+.feed { position:relative; padding-left:18px; }
+.feed::before { content:""; position:absolute; left:5px; top:6px; bottom:6px; width:1px; background:var(--av3-line); }
+.fitem { position:relative; display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--av3-line); }
+.fitem:last-child{border-bottom:none}
+.fitem::before { content:""; position:absolute; left:-15px; top:15px; width:9px; height:9px; border-radius:50%; background:var(--av3-subtle); box-shadow:0 0 0 3px var(--av3-bg); }
+.fitem.ok::before{background:var(--av3-ok)} .fitem.warn::before{background:var(--av3-warn)} .fitem.info::before{background:var(--av3-info)} .fitem.bad::before{background:var(--av3-bad)}
+.fitem .ft{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--av3-subtle);width:42px;flex-shrink:0;padding-top:1px}
+.fitem .fb{flex:1;min-width:0} .fitem .fh{font-size:12.5px;font-weight:500} .fitem .fs{font-size:11.5px;color:var(--av3-muted);margin-top:1px}
+.fitem .fa{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--av3-muted)}
+.ctx-tile { display:flex; flex-direction:column; gap:3px; padding:12px 14px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; }
+.ctx-tile .l{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle)}
+.ctx-tile .v{font-family:"JetBrains Mono",monospace;font-size:21px;font-weight:500}
+.ctx-stack { display:flex; flex-direction:column; gap:10px; }
+
+@media (max-width:1100px){ .mc-hero{grid-template-columns:1fr} .mc-grid,.pg-wrap,.feed-wrap{grid-template-columns:1fr} }
+@media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} }
+
+</style>
+</head>
+<body>
+<div class="ribbon">Static design mockup · paradigm A — “Mission Control” · illustrative figures</div>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+    <nav class="side-scroll">
+      <div class="group"><div class="eyebrow">Overview</div>
+        <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Orders</a></div>
+      <div class="group"><div class="eyebrow">Core</div>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>POS</a>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 13a6 6 0 0 1 12 0v8H6z"/></svg>Kitchen Display</a></div>
+      <div class="group"><div class="eyebrow">Finance</div>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Reports</a></div>
+    </nav>
+    <div class="side-foot"><a class="foot-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 17l-5-5 5-5M6 12h12"/></svg>Collapse</a></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <nav class="crumbs"><span class="cur">Dashboard</span></nav>
+      <span class="switcher"><a class="on" href="mission-control.html">Mission Control</a><a href="pace-to-goal.html">Pace-to-goal</a><a href="attention-feed.html">Attention feed</a></span>
+      <div class="spacer"></div>
+      <div class="tb-right">
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" onclick="t()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg><span class="bell-badge">3</span></button>
+      </div>
+    </header>
+    <main class="content">
+      <!-- now header -->
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="live-dot"></span><span class="eyebrow-lg">Live · service in progress</span>
+        <span class="mono" style="color:var(--av3-muted);font-size:12.5px">Thu 5 Jun · 14:32</span>
+      </div>
+
+      <div class="mc-hero">
+        <div class="mc-goal">
+          <div class="lab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>Revenue today · to daily goal</div>
+          <div class="big">31 920 zł</div>
+          <div class="sub">76% of 42 000 zł · on pace for <b style="color:var(--av3-ok)">44 100 zł</b> by close</div>
+          <div class="prog"><i style="width:76%"></i></div>
+        </div>
+        <div class="mc-tiles">
+          <div class="mc-tile"><div class="n" style="color:var(--av3-warn)">7</div><div><div class="h">Cooking</div><div class="t">avg 8m on the line</div></div></div>
+          <div class="mc-tile"><div class="n" style="color:var(--av3-ok)">3</div><div><div class="h">Ready</div><div class="t">awaiting handoff</div></div></div>
+        </div>
+        <div class="mc-tiles">
+          <div class="mc-tile"><div class="n" style="color:var(--av3-bad)">2</div><div><div class="h">Due now</div><div class="t">past promised time</div></div></div>
+          <div class="mc-tile"><div class="n">312</div><div><div class="h">Covers today</div><div class="t">+8% vs last Thu</div></div></div>
+        </div>
+      </div>
+
+      <div class="mc-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Kitchen pace</div><span class="badge b-ok"><span class="bdot"></span>on time</span></div>
+          <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+            <div class="station"><span class="nm">Pizza · oven</span><span class="gauge"><i style="width:82%;background:var(--av3-warn)"></i></span><span class="mono muted" style="font-size:11px">82%</span></div>
+            <div class="station"><span class="nm">Pasta</span><span class="gauge"><i style="width:54%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">54%</span></div>
+            <div class="station"><span class="nm">Antipasti</span><span class="gauge"><i style="width:38%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">38%</span></div>
+            <div class="station"><span class="nm">Dessert</span><span class="gauge"><i style="width:21%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">21%</span></div>
+            <div style="margin-top:8px;font-size:12px;color:var(--av3-muted)">Bottleneck: <b style="color:var(--av3-fg)">pizza oven</b> · next SLA in <b style="color:var(--av3-warn)">6m</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Trucks</div></div>
+          <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+            <div class="truck-row"><span class="live-dot"></span><div style="flex:1"><div class="city">Kraków</div><div class="meta">open · 9 on the line · 17 920 zł today</div></div><span class="badge b-warn">San Marzano low</span></div>
+            <div class="truck-row"><span class="live-dot"></span><div style="flex:1"><div class="city">Warszawa</div><div class="meta">open · 5 on the line · 14 000 zł today</div></div><span class="badge b-ok">all stocked</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mc-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Order flow</div><span class="card-desc">orders / min · last 60 min</span></div>
+          <div class="card-body">
+            <div class="flow">
+              <i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:60%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:95%"></i><i style="height:78%"></i><i style="height:62%"></i><i style="height:70%"></i><i style="height:88%"></i><i style="height:66%"></i><i style="height:50%"></i>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--av3-subtle)" class="mono"><span>13:32</span><span>peak 6/min</span><span>14:32</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Just now</div></div>
+          <div class="card-body" style="padding-top:4px;padding-bottom:4px">
+            <div class="order-line"><span class="bdot" style="background:var(--av3-info)"></span><span>Delivery · Warszawa</span><span class="id">#20871</span><span class="amt">64,80</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-warn)"></span><span>Takeout · Kraków</span><span class="id">#20870</span><span class="amt">41,90</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-ok)"></span><span>Dine-in · Kraków</span><span class="id">#20869</span><span class="amt">28,50</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-ok)"></span><span>Takeout · Warszawa</span><span class="id">#20868</span><span class="amt">52,30</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Needs you now</div><span class="badge b-warn">3 open</span></div>
+        <div class="card-body">
+          <div class="needs">
+            <span class="need"><span class="d" style="background:var(--av3-bad)"></span>2 tickets past promise — <b>expedite</b></span>
+            <span class="need"><span class="d" style="background:var(--av3-warn)"></span>San Marzano DOP below reorder (Kraków) — <b>reorder</b></span>
+            <span class="need"><span class="d" style="background:var(--av3-warn)"></span>18:30 slot · 2 of 12 left — <b>open capacity</b></span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>function t(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light')}</script>
+</body></html>
