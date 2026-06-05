@@ -244,33 +244,34 @@ the island's dropdowns are native `<select>` or portaled, so no clipping risk.
   `scripts/legacy/verify-scalability-fixes.ts` (a `require()` import — not admin UI,
   not touched here).
 
-### NOT done — the raw-element + chart-hex sweep (deliberately deferred)
-This is the large, **visually-affecting** half, and it cannot be done safely in a
-single blind pass (no visual QA here; a bad mass-convert would break forms, charts
-and interactions across the whole admin, and flipping lint to `error` while any
-remain would **fail `next build`**). Current ratchet:
+### Raw elements — now GOVERNED by the ratchet (decision: refine governance)
+The 226 page-layer raw elements (`<button>` 148, `<input>` 50, `<select>` 11, +
+the bare chart-hex) are **grandfathered in `eslint-suppressions.json`** at rule
+level `error`. They're no longer a blind mass-convert risk: **new** drift fails
+`npm run lint`; existing is tracked and burns down opportunistically (convert to a
+primitive, or annotate a *legitimately* custom element with
+`// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`). This is the
+agreed end-state for raw elements — no big-bang conversion needed.
 
-| Pattern | Count | Why it's careful work, not a mechanical swap |
-|---|---|---|
-| raw `<button>` | 148 | Most carry bespoke styling; `<Button>` restyles them — visual change per site |
-| raw `<input>` | 50 | `<Input>` adds a `.v2-input-wrap`; width/flex classes must move to the wrapper |
-| raw `<select>` | 11 | → `<Select>` needs an `options` array + loses/【changes】the chevron |
-| inline hex | 17 | All **chart/heatmap palettes** that *drift from* the DS rule (color.md says charts use the centralized `theme.ts` `chart` palette + single-hue ramps). Fixing them **changes chart colours** → needs QA. Many live in the 17k-line `AdminSimulation`. |
+### Charts — remaining Phase 5 work (decision: centralize into theme.ts + QA)
+The only *substantive* remaining Phase-5 cleanup. The bare chart-hex live in
+`AdminLtvCac` (1), `AdminRecipes` (4, an 8-colour categorical), `AdminCohortReport`
+(6, a green heatmap ramp), `AdminUsers`, and the 17k-line `AdminSimulation`.
+**Approach:**
+- Simple series colours → the semantic CSS vars (`var(--success)` etc.) or
+  `getPalette(mode)` values.
+- The Recipes 8-colour categorical → the `theme.ts` `chart` palette. (Only ~6
+  semantic *CSS* tokens exist, so categorical charts must read `theme.ts` `chart`
+  via `getPalette`, **or** we add `--chart-5..8` CSS tokens mirroring `chart[4..7]`
+  — pick one, document in `color.md` per `extend.md` → "Add a colour token".)
+- Cohort heatmap → a **single-hue** (burgundy/steel) sequential ramp per
+  `color.md` (this changes it from green — **needs visual QA**).
+- After each file: `npx eslint --prune-suppressions` to drop the cleared entries.
+**Do this as a focused, QA'd pass** (charts are visual; verify each re-renders).
 
-**Lint stays at WARN** (the ratchet keeps surfacing these); the **warn → error flip
-is gated on reaching zero** and moves to Phase 6.
-
-### Recommended way to land the rest (needs a decision — see chat)
-1. **Per-file, with visual QA** — convert one file at a time, you eyeball each, I
-   build between. Safest, slowest. OR
-2. **Refine governance** — accept that not every `<button>` is a `<Button>`
-   (interactive cards, toggles, table-row actions are legitimately raw); allow
-   *annotated* raw elements (`// ds-ok: <reason>`) and reserve the primitives for
-   genuine action buttons / form fields. Then the ratchet targets only true drift.
-3. **Charts** — centralize every chart palette into `theme.ts` `chart` (the DS
-   already mandates it) + single-hue ramps; verify each chart re-renders.
-
-## ▶ Next up — Phase 6 (Lock) + finish Phase 5 sweep
-Per the decision above: complete the raw-element + chart-hex sweep to zero, then
-flip lint **warn → error**, add the CI `ds-drift` job, CODEOWNERS on
-`v2/ui`/`themes/admin`/lint config, and the `scaffold admin-page` generator.
+## ▶ Next up — finish charts (above), then Phase 6 (Lock)
+Charts centralization (QA'd). Then Phase 6: add a CI lint gate (the ratchet already
+makes `npm run lint` fail on new drift — wire it into CI), CODEOWNERS on `v2/ui` /
+`themes/admin` / the lint config, and the `scaffold admin-page` generator. Also
+worth a pre-existing-error cleanup: `scripts/legacy/verify-scalability-fixes.ts`
+(`require()` import) so `npm run lint` is fully green for the CI gate.
