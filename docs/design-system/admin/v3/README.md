@@ -144,17 +144,37 @@ refetches every 30s.
   via `PUT /api/admin/stock`, log receive/waste/adjust via
   `POST /api/admin/stock-movements`). Aggregates across trucks when scope = all
 - [x] Menu (`/admin-v3/menu`) — chain-wide product board, **one row per dish**
-  (deduped by `getBaseSlug`, rule #10): price shown as a range + "varies" badge
-  when sites diverge, margin, availability. Edit dialog edits chain-wide
-  metadata (name/description/category — propagated to every site) + per-site
-  price/cost/availability via `PUT /api/admin/menu`. (Modifier editor +
-  add/clone/delete deferred.)
-- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board, **one recipe
-  per dish** (keyed by base slug, rule #10): recipe status, food cost +
-  cost-% (vs avg price). Editor edits the formula (ingredient lines from the
-  shared catalog + qty + waste% + yield) with a live cost estimate; saves once
-  chain-wide via `POST /api/admin/recipes`, deletes via `DELETE`. (Ingredient
-  catalog / distributor offerings / nutrition manager deferred.)
+  (deduped by `getBaseSlug`, rule #10): price range + "varies" badge when sites
+  diverge, margin, availability, plus recipe/custom/hidden/edited/delivery/mods
+  flags. **Full v2 parity (PR #138 follow-up):** multi-select with a sticky bulk
+  toolbar (mark available / 86 / bulk-edit / clone-to-site / reset overrides /
+  delete — via `POST /api/admin/menu/bulk`), a **Show hidden** toggle exposing
+  soft-deleted seed rows, and **Add item** which creates a chain-wide custom SKU
+  on every site (`POST /api/admin/menu/custom`, id = `slug.slice(0,3)-base`). The
+  edit dialog covers chain-wide product metadata (name/description/category/tags/
+  menu-role), service (delivery-only, packaging cost), a **modifier-group editor**
+  (groups + options with price/cost deltas + KDS flag), regulatory disclosures
+  (halal / Nutri-Grade / contains-pork / contains-alcohol / allergens) and
+  per-site price/cost/availability/SKU — all written via `PUT /api/admin/menu`
+  (`items` map), with per-dish **Reset** + **Delete** in the footer. Recipe-
+  attached dishes lock the cost field (derives from the recipe, rule #10).
+- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
+  catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
+  parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
+  cost-% / kcal) and **Ingredients** (the catalog). The recipe editor now shows
+  per-portion KPIs (cost / food-cost% / batch cost / kcal), a cost-breakdown bar
+  with legend, live per-portion macros (protein/carbs/sugar/fiber/fat),
+  missing-kcal + no-distributor flags per line, prep time + notes, and saves the
+  formula chain-wide via `POST /api/admin/recipes` (`DELETE` to remove). **Bug
+  fixed:** `wasteFactor` is now stored as the multiplier the store expects
+  (`1 + waste%`) instead of a fraction — the old code under-costed every line.
+  The **Ingredients** tab is a searchable catalog with add/edit/delete
+  (`/api/admin/ingredients`) and a per-ingredient **distributor offerings**
+  manager (`/api/admin/ingredient-products`): add/edit/delete offerings with
+  supplier, SKU, display name, cost + per-unit macros, and a **make-active**
+  star (`PATCH`) that points `activeProductId` at the offering driving recipe
+  cost + nutrition. Suppliers are read for the picker (managed on Suppliers).
+  Per-item dietary disclosures live on the **Menu** editor (rule #10).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
@@ -199,10 +219,25 @@ refetches every 30s.
   + `/api/admin/truck-routes`
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
   (referral config + reward/challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
-  Cross-sell (`/admin-v3/crosssell`): per-location combo editor (add/edit/toggle/
-  delete) that **round-trips the full location config** so bundles/badges are
-  preserved (`PUT /api/admin/upsell`). Upsell (`/admin-v3/upsell`): bundle-ladder
-  activation toggles (full ladder pricing stays in the classic admin).
+  Cross-sell (`/admin-v3/crosssell`) — **full v2 parity (PR #139 follow-up):**
+  four tabs over the per-location selling config (`PUT /api/admin/upsell`, full
+  config round-tripped so nothing is lost): **Cart pairings** (Coffee/Dessert/
+  Side/Drink item slots), **Combo deals** (add/edit/toggle/delete), **Time-of-day**
+  windows (variant/hours/title/sub/badge/CTA/one-tap-add, add/edit/toggle/delete)
+  and **Menu badges** (Hero / Pizzaiolo's Choice / Chef's Signature / New /
+  Popular / Staff Pick multi-selects, with `menuRole`-intrinsic items shown
+  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`) — **full
+  v2 parity (PR #139 follow-up):** two tabs. **Bundles** restores the full
+  bundle-ladder editor (CRUD with composition slots, fixed/dynamic pricing,
+  anchor/decoy/default flags, loyalty gate, channel, members-only, scarcity
+  date, active-days), the **bundle rules** card (lunch hours + family gating),
+  an **A/B experiment** editor (variants + weights + per-bundle discount
+  overrides + primary metric + control + start/stop + promote-winner) and the
+  **ML ranker** panel (rollout slider → `mlUpsellRolloutPct`, Train-now via
+  `POST /api/admin/ml-upsell`, model status, and the live ML-vs-rules attach/AOV
+  comparison via `/api/admin/ml-upsell/compare`). **Item modifiers** is a
+  read-only cross-location inventory. All config round-trips through
+  `PUT /api/admin/upsell` (saves on change, rule #7).
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
   engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
@@ -242,9 +277,53 @@ refetches every 30s.
   **Part 2 shipped:** Investor Returns — NPV @ 10/15/20%, IRR (bisected),
   payback month + a 24-month cumulative cash-recovery view (`computeReturns` in
   the shared engine).
-  **Next parts (Part 3):** the seasonality/weather-composed 12-month projection
-  (extract `projectMonths` from v2), and the cohort / LTV-CAC / menu-engineering
-  sandboxes (real data via `/api/admin/simulation/{cohorts,dayparts,hourly,
-  menu-engineering}`); then the five-section `MetricExplainer` ⓘ pass (Rule #12).
+  **Part 3a shipped:** the seasonality × weather × inflation-composed 12-month
+  projection. `projectMonths`/`projectTwelveMonths` (plus `monthVolumeMult`,
+  `averageAnnualVolumeMult`, `MONTH_LABELS`, `MONTH_TO_SEASON`,
+  `LABOR_SEASONAL_FLEX`, `DEFAULT_SEASONALITY`) were **extracted from v2 into the
+  shared engine** — money returned in grosze (canonical unit) — and rendered as a
+  grouped revenue/net-profit bar chart with a zero baseline (loss months dip red)
+  plus year revenue/net totals.
+  **Part 3b shipped:** the real-order **Sandboxes** card — a window selector
+  (30/90/180d) over four tabs reading live order history: **Cohort / LTV-CAC**
+  (`/cohorts` — customers, repeat rate, orders/revenue/GP per customer, new/mo,
+  new-vs-returning revenue split), **Dayparts** (`/dayparts` — lunch/dinner/
+  late-night/off-peak orders, share, ticket, revenue, GP, GP-rate), **Hourly
+  throughput** (`/hourly` — 24-bar avg-orders-per-hour chart with amber≥85% /
+  red>100% capacity colouring) and **Menu engineering** (`/menu-engineering` —
+  star/plowhorse/puzzle/dog quadrant counts + per-item GP/unit, true-CM1 and
+  margin-trap / prep-heavy flags). All accept `?days=N`.
+  **Part 3c shipped:** the five-section ⓘ explainer pass (Rule #12). A
+  v3-native `MetricExplainer` + `InfoButton` primitive
+  (`src/components/admin/v3/ui/Explainer.tsx`, exported from `ui`) renders the
+  five required sections in the fixed order/labels — description → INSTITUTIONAL
+  ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY (all five props required, so a
+  half-written explanation won't compile). It is the admin-v3 counterpart to
+  `src/components/admin/Explainers.tsx` (which imports the v2 theme and dies at
+  cutover). `Kpi` gained an optional `info` slot that renders the ⓘ trigger at
+  the end of the label row; the Calculator's six headline KPIs (net profit, net
+  margin, EBITDA, break-even/day, prime cost, payback) each carry a full
+  five-section explainer.
+  **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
+  + `applyAnnualWeather` were extracted into the shared engine (same folding
+  math as v2) and the headline P&L / tornado / returns now compute on the
+  folded scenario (the projection takes the assumptions-folded scenario and
+  applies weather per-month itself). New input cards drive them: **Behaviour
+  assumptions** (6 attach levers + combo conversion + delivery share, each a
+  toggle with inline attach%/price/COGS fields), **Ingredient cost stress** (10
+  per-line cost-delta levers), and **Seasonality & weather** (four quarterly
+  multipliers + a calibrated weather/holiday model). New CSS rows `.av3-leverrow`
+  / `.av3-lever-name` in `themes/admin-v3/index.css` style the toggle+name+fields
+  layout.
+  **Part 3e shipped — Calculator parity complete:** the fleet/franchise model
+  and the channel-economics breakdown (the last v2 sim depth) are now in the
+  shared engine (`computeFleetEconomics`, `computeChannelEconomics`) and the v3
+  Calculator. A **Channel mix & fleet** input card drives the per-channel fee mix
+  (cash / on-site card / Glovo / Wolt) and the multi-unit model (units, HQ
+  overhead, royalty + marketing-fund, DMA cannibalisation, supply-discount +
+  commissary triggers); a **Channel economics** output table shows unblended CM1
+  per channel, and a **Fleet economics** card (shown at >1 unit) gives fleet
+  revenue/EBITDA, avg EBITDA per unit, HQ absorption and a per-unit table. With
+  this the v3 Calculator is at functional parity with the v2 `AdminSimulation`.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

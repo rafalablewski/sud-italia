@@ -10,9 +10,41 @@
  * This module is the canonical engine; the v2 component still carries an inline
  * copy that is removed when v2 is deleted at parity.
  */
-import type { BusinessCostPayrollRole, SimulationScenario } from "@/data/types";
+import type {
+  BusinessCostPayrollRole,
+  SimulationAttachLever,
+  SimulationFleetModel,
+  SimulationScenario,
+  SimulationSeasonality,
+  SimulationWeather,
+} from "@/data/types";
 
 export const WEEKS_PER_MONTH = 4.345;
+
+type Season = "winter" | "spring" | "summer" | "autumn";
+
+/** Fallback seasonality when a scenario hasn't set its own quarterly curve. */
+export const DEFAULT_SEASONALITY: SimulationSeasonality = {
+  winter: 0.7,
+  spring: 1.0,
+  summer: 1.3,
+  autumn: 1.0,
+};
+
+/** Variable-vs-fixed labor split — share of total labor that flexes with
+ *  seasonal volume (the rest stays at full headcount). 0.4 means a 30% volume
+ *  swing translates into a 12% labor swing, the restaurant rule of thumb. */
+export const LABOR_SEASONAL_FLEX = 0.4;
+
+export const MONTH_TO_SEASON: Season[] = [
+  "winter", "winter", "spring", "spring", "spring", "summer",
+  "summer", "summer", "autumn", "autumn", "autumn", "winter",
+];
+
+export const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 export interface Computed {
   monthlyRevenue: number;
@@ -228,4 +260,344 @@ export function computeReturns(monthlyNetProfitGrosze: number, setupGrosze: numb
   let cum = -setupGrosze;
   for (let m = 1; m <= horizonMonths; m++) { cum += monthlyNetProfitGrosze; cumulative.push(cum); }
   return { npv, irrAnnualPct, paybackMonth, cumulative };
+}
+
+/**
+ * Volume multiplier for a single month (0=Jan, 11=Dec). Rain applies
+ * year-round; heatwaves fire only in Jun–Aug; the school-holiday lunch dip
+ * fires only in Jul–Aug. Shared by the headline annual-average view and the
+ * per-month projection so both read weather identically.
+ */
+export function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
+  if (!w || w.enabled === false) return 1;
+  // Nullish fallbacks so a partial/legacy weather object can't leak NaN into
+  // the projection (shares default to 0 = no effect; multipliers to 1).
+  const rainyShare = w.rainyShare ?? 0;
+  let m = rainyShare * (w.rainyDayMultiplier ?? 1) + (1 - rainyShare);
+  // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
+  if (monthIndex >= 5 && monthIndex <= 7) {
+    const heatwaveShare = w.heatwaveShare ?? 0;
+    m *= heatwaveShare * (w.heatwaveMultiplier ?? 1) + (1 - heatwaveShare);
+  }
+  // Polish school holidays — Jul (6) + Aug (7) only.
+  if (monthIndex === 6 || monthIndex === 7) {
+    m *= w.schoolHolidayLunchMultiplier ?? 1;
+  }
+  return m;
+}
+
+/** Average volume multiplier across all 12 months — the composite for the
+ *  headline "single typical month" view. */
+export function averageAnnualVolumeMult(w: SimulationWeather | undefined): number {
+  if (!w || w.enabled === false) return 1;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += monthVolumeMult(i, w);
+  return sum / 12;
+}
+
+/** One row of the monthly projection — all money fields in grosze (canonical
+ *  engine unit, formatted with `formatPrice` at the edge). */
+export interface ProjectionRow {
+  month: string;
+  monthIndex: number;
+  revenue: number;
+  cogs: number;
+  labor: number;
+  fixed: number;
+  payment: number;
+  netProfit: number;
+}
+
+/**
+ * Generalised monthly projection. `monthsCount` is the horizon (12 for the
+ * steady-state chart, 24 for the investor payback view). Weather is composed
+ * per-month so seasonal effects (heatwave only in summer, school dip only in
+ * Jul/Aug) land in the right months; labor flexes with seasonal volume via
+ * `LABOR_SEASONAL_FLEX`; wages + fixed costs inflate at wage CPI and COGS at
+ * ingredient CPI, compounded monthly. `rampMonths` applies a linear volume
+ * ramp in months [0..rampMonths) so a fresh truck doesn't hit 100% in month 1
+ * (institutional reality is ~50-70-85-100% over the first ~4 months) — set to
+ * 0 for the steady-state operational chart.
+ */
+export function projectMonths(
+  s: SimulationScenario,
+  monthsCount: number,
+  startMonth = 0,
+  rampMonths = 0,
+): ProjectionRow[] {
+  const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
+  const w = s.weather;
+  const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
+  const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
+  const baseLaborMonthly = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    0,
+  );
+  // Same marketing-as-CAC reclassification as computeScenario so the
+  // projection lines up with the headline view.
+  const projUseCac = s.marketingAsCac !== false;
+  const projMarketing = s.fixedCosts.marketing ?? 0;
+  const baseFixed = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
+    if (projUseCac && k === "marketing") return sum;
+    return sum + (v ?? 0);
+  }, 0);
+  const projPackagingPerOrder = s.packagingPerOrderGrosze ?? 0;
+  const rows: ProjectionRow[] = [];
+  for (let i = 0; i < monthsCount; i++) {
+    const monthIndex = (startMonth + i) % 12;
+    const season = MONTH_TO_SEASON[monthIndex];
+    // Per-month override beats the quarterly multiplier when set — matters for
+    // outdoor trucks where Jan/Feb/Dec behave nothing like each other.
+    const override = seasonality.monthlyOverrides?.[monthIndex];
+    const seasonMult = typeof override === "number" ? override : seasonality[season];
+    const weatherMult = monthVolumeMult(monthIndex, w);
+    const closedDays = w?.holidayClosedDaysPerMonth ?? 0;
+    const daysOpen = Math.max(0, s.daysOpenPerMonth - closedDays);
+    const rampFactor = rampMonths > 0 && i < rampMonths ? (i + 1) / rampMonths : 1;
+    let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult * rampFactor;
+    if (w && daysOpen > 0) {
+      const baseDaily = s.ordersPerDay * rampFactor;
+      // Nullish fallbacks (days → 0, multipliers → 1) keep a partial weather
+      // object from leaking NaN into the per-month order count.
+      const peakBonus = (w.holidayPeakDaysPerMonth ?? 0) * ((w.holidayPeakMultiplier ?? 1) - 1) * baseDaily;
+      const eventBonus = (w.eventDaysPerMonth ?? 0) * ((w.eventDayMultiplier ?? 1) - 1) * baseDaily;
+      monthDailyOrders += (peakBonus + eventBonus) / daysOpen;
+    }
+    const orders = monthDailyOrders * daysOpen;
+    const wageMult = (1 + wageMonthly) ** i;
+    const cogsMult = (1 + cogsMonthly) ** i;
+    // Labor flex = headline volume flex (ordersPerDay vs anchor) × seasonal
+    // flex (this month's seasonal volume), both on the same laborVariablePct.
+    const variablePct = s.laborVariablePct ?? LABOR_SEASONAL_FLEX;
+    const anchor = s.laborAnchorOrdersPerDay ?? s.ordersPerDay;
+    const volumeFlex = anchor > 0 ? Math.max(0, 1 + variablePct * (s.ordersPerDay / anchor - 1)) : 1;
+    const seasonalFlex = 1 + variablePct * (seasonMult * rampFactor - 1);
+    const laborFlex = volumeFlex * Math.max(0, seasonalFlex);
+    const revenue = Math.round(orders * s.avgTicketGrosze);
+    const cogs = Math.round(revenue * s.cogsPct * cogsMult);
+    const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
+    const fixed = Math.round(baseFixed * wageMult);
+    const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
+    const waste = Math.round(revenue * (s.wastePct ?? 0));
+    const refund = Math.round(revenue * (s.refundPct ?? 0));
+    const loyalty = Math.round(revenue * (s.loyaltyBurnPct ?? 0));
+    const packaging = Math.round(orders * projPackagingPerOrder);
+    // Marketing CAC tracks the FIXED budget whether on (variable bucket) or
+    // off (fixed bucket) — net effect on pre-tax is identical.
+    const marketingCacRow = projUseCac ? projMarketing : 0;
+    // D&A and interest stay flat — set by capital structure, not volume/CPI.
+    const depreciation = s.depreciationMonthlyGrosze ?? 0;
+    const interest = s.interestMonthlyGrosze ?? 0;
+    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty - packaging - marketingCacRow - depreciation - interest;
+    const cit = preTax > 0 ? Math.round(preTax * (s.citPct ?? 0)) : 0;
+    const netProfit = preTax - cit;
+    rows.push({ month: MONTH_LABELS[monthIndex], monthIndex, revenue, cogs, labor, fixed, payment, netProfit });
+  }
+  return rows;
+}
+
+/** Project the scenario across 12 steady-state months (no opening ramp). */
+export function projectTwelveMonths(s: SimulationScenario, startMonth = 0): ProjectionRow[] {
+  return projectMonths(s, 12, startMonth, 0);
+}
+
+/* ── behaviour assumptions + weather folding ───────────────────────────────
+ * Extracted verbatim from the v2 AdminSimulation so v3 folds the same levers
+ * into the headline P&L. `applyAssumptions` rewrites avgTicket/cogsPct/payment
+ * from the attach/combo/delivery/ingredient levers; `applyAnnualWeather`
+ * rewrites ordersPerDay/daysOpen from the annual-average weather curve. Pure.
+ */
+function leverOff(lever: { enabled?: boolean } | undefined): boolean {
+  return !!lever && lever.enabled === false;
+}
+function attachDelta(lever: SimulationAttachLever | undefined): { ticket: number; cogs: number } {
+  if (!lever || lever.enabled === false) return { ticket: 0, cogs: 0 };
+  return { ticket: lever.attachPct * lever.avgPriceGrosze, cogs: lever.attachPct * lever.avgPriceGrosze * lever.cogsPct };
+}
+
+/** Fold the behaviour levers (attach, combo, cheapest-pizza shift, delivery
+ *  share, ingredient stress) into effective avgTicket + cogsPct + blended
+ *  payment rate. Returns a new scenario; ordersPerDay/daysOpen are untouched
+ *  (weather is separate). No-op when `s.assumptions` is unset. */
+export function applyAssumptions(s: SimulationScenario): SimulationScenario {
+  const a = s.assumptions;
+  if (!a) return s;
+  let extraTicket = 0;
+  let extraCogs = 0;
+  let extraProcessorPct = 0;
+  for (const lever of [a.coffeeAttach, a.dessertAttach, a.antipastiAttach, a.aperitivoAttach, a.premiumToppingsAttach, a.pastaPrimoAttach]) {
+    const d = attachDelta(lever);
+    extraTicket += d.ticket;
+    extraCogs += d.cogs;
+  }
+  if (a.comboConversion && !leverOff(a.comboConversion)) {
+    const c = a.comboConversion;
+    extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
+    extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
+  }
+  if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
+    extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
+    extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
+  }
+  if (a.deliveryShare && !leverOff(a.deliveryShare)) {
+    const d = a.deliveryShare;
+    extraTicket += d.pct * d.avgFeeGrosze;
+    extraCogs += d.pct * d.packagingCostGrosze;
+    extraProcessorPct += d.pct * d.extraProcessorPct;
+  }
+  let ingredientMultiplier = 1;
+  if (a.ingredients) {
+    for (const lever of Object.values(a.ingredients)) {
+      if (!lever || lever.enabled === false) continue;
+      ingredientMultiplier += lever.cogsShare * lever.costDeltaPct;
+    }
+  }
+  ingredientMultiplier = Math.max(0, ingredientMultiplier);
+
+  const newTicket = Math.max(0, s.avgTicketGrosze + extraTicket);
+  const baselineCogsValue = s.avgTicketGrosze * s.cogsPct * ingredientMultiplier;
+  const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
+  const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
+
+  // Channel-blended payment rate (cash 0% + on-site card + Glovo/Wolt commission).
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const onSiteCardShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const onSiteCardRate = (s.paymentProcessorPct ?? 0) + extraProcessorPct;
+  const blendedProcessorPct =
+    onSiteCardShare * onSiteCardRate + glovoShare * (s.glovoFeePct ?? 0) + woltShare * (s.woltFeePct ?? 0);
+
+  return { ...s, avgTicketGrosze: newTicket, cogsPct: newCogsPct, paymentProcessorPct: Math.max(0, Math.min(1, blendedProcessorPct)) };
+}
+
+/** Annualised weather effects → ordersPerDay + daysOpen for the headline view
+ *  (the projection applies weather per-month instead). No-op when weather is
+ *  unset or its master toggle is off. */
+export function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
+  const w = s.weather;
+  if (!w || w.enabled === false) return s;
+  const avgMult = averageAnnualVolumeMult(w);
+  const daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
+  let ordersPerDay = s.ordersPerDay * avgMult;
+  if (daysOpen > 0) {
+    const baseDaily = s.ordersPerDay;
+    const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+    const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+    ordersPerDay += (peakBonus + eventBonus) / daysOpen;
+  }
+  return { ...s, ordersPerDay, daysOpenPerMonth: daysOpen };
+}
+
+/* ── fleet / franchise economics ───────────────────────────────────────────
+ * Multi-unit model: DMA cannibalisation, supply + commissary COGS savings,
+ * royalty + marketing-fund, HQ overhead absorption, and a build-out learning
+ * curve. Extracted verbatim from v2. Returns null for a single unit. */
+export interface FleetEconomicsRow {
+  unitIndex: number;
+  revenue: number;
+  cogs: number;
+  labor: number;
+  fixedExHq: number;
+  royalty: number;
+  marketingFund: number;
+  ebitda: number;
+  setupCost: number;
+}
+export interface FleetEconomics {
+  unitCount: number;
+  units: FleetEconomicsRow[];
+  totalRevenue: number;
+  totalEbitda: number;
+  totalSetupCost: number;
+  hqOverhead: number;
+  supplyDiscountActive: boolean;
+  commissaryActive: boolean;
+  avgRevenuePerUnit: number;
+  avgEbitdaPerUnit: number;
+  hqOverheadAbsorption: number;
+}
+
+export function computeFleetEconomics(s: SimulationScenario, baseSetupCost: number): FleetEconomics | null {
+  const f: SimulationFleetModel | undefined = s.fleet;
+  if (!f || f.unitCount <= 1) return null;
+  const units: FleetEconomicsRow[] = [];
+  let effectiveCogsPct = s.cogsPct;
+  const supplyDiscountActive = f.unitCount >= f.supplyDiscountAtUnits && f.supplyDiscountPct > 0;
+  const commissaryActive = f.unitCount >= f.commissaryEnabledAtUnits && f.commissarySavingsPct > 0;
+  if (supplyDiscountActive) effectiveCogsPct *= 1 - f.supplyDiscountPct;
+  if (commissaryActive) effectiveCogsPct *= 1 - f.commissarySavingsPct;
+  effectiveCogsPct = Math.max(0, effectiveCogsPct);
+
+  const baseRevenue = s.ordersPerDay * s.avgTicketGrosze * s.daysOpenPerMonth;
+  const baseLabor = s.labor.reduce((sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze, 0);
+  const useMarketingAsCac = s.marketingAsCac !== false;
+  const baseFixedExHq = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
+    if (useMarketingAsCac && k === "marketing") return sum;
+    return sum + (v ?? 0);
+  }, 0);
+
+  for (let i = 0; i < f.unitCount; i++) {
+    const cannibalRetained = (1 - f.dmaOverlapPct) ** i;
+    const unitRevenue = baseRevenue * cannibalRetained;
+    const cogs = unitRevenue * effectiveCogsPct;
+    const labor = baseLabor;
+    const royalty = unitRevenue * f.royaltyPct;
+    const marketingFund = unitRevenue * f.marketingFundPct;
+    const variableLeakage = unitRevenue * ((s.paymentProcessorPct ?? 0) + (s.wastePct ?? 0) + (s.refundPct ?? 0) + (s.loyaltyBurnPct ?? 0));
+    const packaging = (s.packagingPerOrderGrosze ?? 0) * s.ordersPerDay * s.daysOpenPerMonth * cannibalRetained;
+    const marketingCac = useMarketingAsCac ? (s.fixedCosts.marketing ?? 0) : 0;
+    const ebitda = unitRevenue - cogs - labor - baseFixedExHq - royalty - marketingFund - variableLeakage - packaging - marketingCac;
+    const learning = (1 - f.buildoutLearningPct) ** i;
+    const learnedSetup = Math.max(baseSetupCost * f.buildoutFloorPct, baseSetupCost * learning);
+    units.push({ unitIndex: i + 1, revenue: unitRevenue, cogs, labor, fixedExHq: baseFixedExHq, royalty, marketingFund, ebitda, setupCost: learnedSetup });
+  }
+
+  const totalRevenue = units.reduce((sum, u) => sum + u.revenue, 0);
+  const totalEbitdaPreHq = units.reduce((sum, u) => sum + u.ebitda, 0);
+  const totalSetupCost = units.reduce((sum, u) => sum + u.setupCost, 0);
+  const hqOverhead = f.hqOverheadMonthlyGrosze;
+  const totalEbitda = totalEbitdaPreHq - hqOverhead;
+  return {
+    unitCount: f.unitCount, units, totalRevenue, totalEbitda, totalSetupCost, hqOverhead,
+    supplyDiscountActive, commissaryActive,
+    avgRevenuePerUnit: f.unitCount > 0 ? totalRevenue / f.unitCount : 0,
+    avgEbitdaPerUnit: f.unitCount > 0 ? totalEbitda / f.unitCount : 0,
+    hqOverheadAbsorption: totalRevenue > 0 ? hqOverhead / totalRevenue : 0,
+  };
+}
+
+/* ── per-channel CM1 ───────────────────────────────────────────────────────
+ * Contribution margin per order broken down by cash / on-site card / Glovo /
+ * Wolt — each channel pays a different fee, so the unblended view is what tells
+ * the operator whether delivery is actually profitable. Takes the RAW scenario
+ * (pre-applyAssumptions) so the on-site card rate isn't the blended one. */
+export interface ChannelEconomicsRow {
+  key: "cash" | "onSiteCard" | "glovo" | "wolt";
+  label: string;
+  sharePct: number;
+  feePct: number;
+  cm1PerOrderGrosze: number;
+  cm1PctOfTicket: number;
+  monthlyContributionGrosze: number;
+}
+
+export function computeChannelEconomics(s: SimulationScenario): ChannelEconomicsRow[] {
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const onSiteShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const variableExFee = s.cogsPct + (s.wastePct ?? 0) + (s.refundPct ?? 0) + (s.loyaltyBurnPct ?? 0);
+  const ordersPerMonth = s.ordersPerDay * s.daysOpenPerMonth;
+  const buildRow = (key: ChannelEconomicsRow["key"], label: string, share: number, feePct: number): ChannelEconomicsRow => {
+    const cm1Pct = Math.max(0, 1 - variableExFee - feePct);
+    const cm1PerOrder = s.avgTicketGrosze * cm1Pct;
+    return { key, label, sharePct: share, feePct, cm1PerOrderGrosze: cm1PerOrder, cm1PctOfTicket: cm1Pct, monthlyContributionGrosze: cm1PerOrder * share * ordersPerMonth };
+  };
+  return [
+    buildRow("cash", "Cash", cashShare, 0),
+    buildRow("onSiteCard", "On-site card", onSiteShare, s.paymentProcessorPct ?? 0),
+    buildRow("glovo", "Glovo", glovoShare, s.glovoFeePct ?? 0),
+    buildRow("wolt", "Wolt", woltShare, s.woltFeePct ?? 0),
+  ];
 }

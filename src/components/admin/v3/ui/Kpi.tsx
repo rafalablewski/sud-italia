@@ -15,9 +15,11 @@ interface Props {
   spark?: number[];
   /** Token (without var()) for the sparkline + accent. Defaults to brand. */
   accentVar?: string;
+  /** Optional ⓘ explainer trigger (Rule #12) rendered at the end of the label row. */
+  info?: ReactNode;
 }
 
-export function Kpi({ label, value, icon: Icon, deltaPct, invertDelta = false, spark, accentVar = "--av3-brand" }: Props) {
+export function Kpi({ label, value, icon: Icon, deltaPct, invertDelta = false, spark, accentVar = "--av3-brand", info }: Props) {
   const hasDelta = typeof deltaPct === "number" && Number.isFinite(deltaPct);
   const up = hasDelta && deltaPct! > 0.05;
   const down = hasDelta && deltaPct! < -0.05;
@@ -32,6 +34,7 @@ export function Kpi({ label, value, icon: Icon, deltaPct, invertDelta = false, s
       <div className="av3-kpi-label">
         {Icon && <Icon className="" />}
         {label}
+        {info && <span style={{ marginLeft: "auto" }}>{info}</span>}
       </div>
       <div className="av3-kpi-value">{value}</div>
       <div className="av3-kpi-foot">
