@@ -226,8 +226,18 @@ refetches every 30s.
   windows (variant/hours/title/sub/badge/CTA/one-tap-add, add/edit/toggle/delete)
   and **Menu badges** (Hero / Pizzaiolo's Choice / Chef's Signature / New /
   Popular / Staff Pick multi-selects, with `menuRole`-intrinsic items shown
-  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`):
-  bundle-ladder activation toggles (full ladder editor / A-B / ML still pending).
+  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`) — **full
+  v2 parity (PR #139 follow-up):** two tabs. **Bundles** restores the full
+  bundle-ladder editor (CRUD with composition slots, fixed/dynamic pricing,
+  anchor/decoy/default flags, loyalty gate, channel, members-only, scarcity
+  date, active-days), the **bundle rules** card (lunch hours + family gating),
+  an **A/B experiment** editor (variants + weights + per-bundle discount
+  overrides + primary metric + control + start/stop + promote-winner) and the
+  **ML ranker** panel (rollout slider → `mlUpsellRolloutPct`, Train-now via
+  `POST /api/admin/ml-upsell`, model status, and the live ML-vs-rules attach/AOV
+  comparison via `/api/admin/ml-upsell/compare`). **Item modifiers** is a
+  read-only cross-location inventory. All config round-trips through
+  `PUT /api/admin/upsell` (saves on change, rule #7).
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`). Menu
   engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
