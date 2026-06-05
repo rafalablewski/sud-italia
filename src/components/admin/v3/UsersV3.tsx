@@ -119,7 +119,7 @@ function UserDialog({ user, locations, onClose, onSaved, onDelete }: { user: Use
         <label className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
       </div>
-      <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 10 }}>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Role</span><select className="av3-select" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
         <label className="av3-field"><span className="av3-field-label">Status</span><select className="av3-select" value={status} onChange={(e) => setStatus(e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
         <label className="av3-field"><span className="av3-field-label">Site</span><select className="av3-select" value={locationSlug} onChange={(e) => setLocationSlug(e.target.value)}><option value="">All sites</option>{locations.map((l) => <option key={l.slug} value={l.slug}>{l.city}</option>)}</select></label>
