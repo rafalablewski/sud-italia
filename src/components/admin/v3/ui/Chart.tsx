@@ -41,7 +41,11 @@ export function AreaChart({ data, height = 150, accentVar = "--av3-c4", caption 
   const gid = useId().replace(/[^a-zA-Z0-9]/g, "");
   if (data.length < 2) return <ChartEmpty height={height} />;
   const padX = 10, padT = 12, padB = 8;
-  const min = Math.min(...data), max = Math.max(...data);
+  let min = Math.min(...data);
+  const max = Math.max(...data);
+  // A constant positive series would otherwise flat-line at the very bottom
+  // (indistinguishable from zero) — baseline at 0 so it reads as a high flat line.
+  if (min === max && min > 0) min = 0;
   const span = max - min || 1;
   const x = (i: number) => padX + (i / (data.length - 1)) * (VB_W - 2 * padX);
   const y = (v: number) => height - padB - ((v - min) / span) * (height - padT - padB);

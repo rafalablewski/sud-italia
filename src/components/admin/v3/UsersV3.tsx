@@ -280,7 +280,7 @@ function MfaDialogV3({ user, me, onClose, onChanged }: { user: UserRow; me: Me |
         isSelf || isOwner ? (
           <>
             {isSelf && <label className="av3-field" style={{ marginBottom: 8 }}><span className="av3-field-label">Current 6-digit code (to confirm)</span><input className="av3-input" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" /></label>}
-            <Button variant="danger" size="sm" loading={busy} onClick={disable}>{isOwner && !isSelf ? "Force-disable MFA" : "Disable MFA"}</Button>
+            <Button variant="danger" size="sm" loading={busy} disabled={busy || (isSelf && code.length !== 6)} onClick={disable}>{isOwner && !isSelf ? "Force-disable MFA" : "Disable MFA"}</Button>
           </>
         ) : <div className="av3-cell-muted" style={{ fontSize: 12 }}>Only the holder or an owner can change this.</div>
       ) : isSelf ? (

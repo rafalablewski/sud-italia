@@ -105,7 +105,7 @@ export function SettingsV3() {
   const saveControls = async () => {
     setSavingCtl(true);
     try {
-      const mk = (v: string) => (v.trim() === "" ? undefined : Math.round((Number(v) || 0) * 100));
+      const mk = (v?: string) => (!v || v.trim() === "" ? undefined : Math.round((Number(v) || 0) * 100));
       await put({
         refundControls: { singleMaxGrosze: Math.round((Number(refSingle) || 0) * 100), compDailyCapGrosze: Math.round((Number(refComp) || 0) * 100) },
         deliveryThresholds: { firstTime: mk(th.firstTime), growing: mk(th.growing), regular: mk(th.regular), vip: mk(th.vip) },
