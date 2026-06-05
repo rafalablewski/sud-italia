@@ -232,6 +232,14 @@ refetches every 30s.
 - [x] Settings (`/admin-v3/settings`, owner-only): business details + delivery
   fee / min order + social links (Save), storefront-layout visibility toggles
   and feature flags (toggle = saved) over `PUT /api/admin/settings`.
-- [ ] **Only remaining surface:** Finance · Calculator (AdminSimulation, ~17k LOC).
-  Every other admin page is migrated — at parity, flip `/admin` to v3 and delete v2.
+- [~] Calculator (`/admin-v3/simulation`) — **Part 1 shipped**: the real P&L
+  simulator. The compute engine was **extracted to a shared lib**
+  (`src/lib/simulation-engine.ts`, pure `computeScenario` + `computeTornado`) so
+  v3 runs the exact same math without importing from v2. Live input levers
+  (volume/price, variable costs, labour, fixed costs, investment, capacity) →
+  P&L + KPIs (margin, break-even, prime cost, CM1, capacity, payback,
+  cash-on-cash) + sensitivity tornado, persisted via `PUT /api/admin/simulation`.
+  **Next parts:** 12-month projection, NPV/IRR, and the cohort / LTV-CAC /
+  menu-engineering sandboxes; then the five-section `MetricExplainer` ⓘ pass.
+- Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
