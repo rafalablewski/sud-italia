@@ -108,8 +108,8 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     id: "people",
     label: "People",
     items: [
-      { href: `${P}/staff`, label: "Staff", icon: HardHat, requiredRole: "manager", pending: true },
-      { href: `${P}/schedule`, label: "Schedule", icon: CalendarRange, requiredRole: "manager", pending: true },
+      { href: `${P}/staff`, label: "Staff", icon: HardHat, requiredRole: "manager" },
+      { href: `${P}/schedule`, label: "Schedule", icon: CalendarRange, requiredRole: "manager" },
     ],
   },
   {

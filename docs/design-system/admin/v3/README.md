@@ -168,5 +168,9 @@ refetches every 30s.
   orders with status chips, a create dialog (supplier + ingredient lines +
   expected date, `POST`), and a detail dialog driving the draft→sent→received
   flow (`PUT`, receiving auto-credits stock) + cancel/delete
-- [ ] People, Customers, Finance, Growth, Intelligence, System
+- [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
+  (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
+  active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts grouped by
+  day with add/edit/delete (`/api/admin/shifts`)
+- [ ] Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
