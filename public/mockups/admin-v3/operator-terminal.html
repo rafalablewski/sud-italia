@@ -78,6 +78,13 @@ a { color:inherit; text-decoration:none; } svg { display:block; }
 .tile .l { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); } .tile .l svg{width:13px;height:13px}
 .tile .v { font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:500; line-height:1; }
 .tile .s { font-size:11px; color:var(--av3-muted); }
+/* revenue → daily goal banner (hero) */
+.goal-banner { padding:18px 20px; background:linear-gradient(160deg,color-mix(in oklab,var(--av3-brand) 14%,var(--av3-s1)),var(--av3-s1)); }
+.gb-head { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--av3-muted); } .gb-head svg{width:15px;height:15px}
+.gb-value { font-family:"JetBrains Mono",monospace; font-size:40px; font-weight:500; letter-spacing:-.02em; margin-top:6px; line-height:1; }
+.gb-sub { font-size:13px; color:var(--av3-muted); margin-top:9px; }
+.gb-prog { height:10px; border-radius:999px; background:var(--av3-s3); overflow:hidden; margin-top:13px; } .gb-prog>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--av3-brand),var(--av3-platinum))}
+.tiles4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 
 .body-split { display:grid; grid-template-columns:1fr 340px; gap:16px; align-items:start; }
 .col { display:flex; flex-direction:column; gap:16px; }
@@ -115,7 +122,7 @@ a { color:inherit; text-decoration:none; } svg { display:block; }
 .fitem .fa { font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--av3-muted); }
 
 @media (max-width:1180px){ .hero{grid-template-columns:1fr} .body-split{grid-template-columns:1fr} .feed-card{position:static;max-height:none} }
-@media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} .tiles,.lever-grid,.mini2{grid-template-columns:1fr 1fr} }
+@media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} .tiles,.tiles4,.lever-grid,.mini2{grid-template-columns:1fr 1fr} }
 </style>
 </head>
 <body>
@@ -151,26 +158,19 @@ a { color:inherit; text-decoration:none; } svg { display:block; }
         <span class="mono" style="color:var(--av3-muted);font-size:12.5px">Thu 5 Jun · 14:32</span>
       </div>
 
-      <!-- HERO: pace gauge + live tiles -->
-      <div class="hero">
-        <div class="card gauge-card">
-          <div class="cap">Revenue · pace to close</div>
-          <svg width="180" height="180" viewBox="0 0 200 200" style="margin:8px 0">
-            <circle cx="100" cy="100" r="80" fill="none" stroke="var(--av3-s3)" stroke-width="15"/>
-            <circle cx="100" cy="100" r="80" fill="none" stroke="var(--av3-brand)" stroke-width="15" stroke-linecap="round" stroke-dasharray="502.6" stroke-dashoffset="141" transform="rotate(-90 100 100)"/>
-            <text x="100" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="30" font-weight="500" fill="var(--av3-fg)">31 920</text>
-            <text x="100" y="112" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--av3-muted)">zł today · 72% of day</text>
-          </svg>
-          <div class="proj">On pace for <b style="color:var(--av3-ok)">44 100 zł</b> by close</div>
-          <div style="font-size:11px;color:var(--av3-subtle);margin-top:3px">+7.6% vs a typical Thursday · forecast from trailing weeks</div>
-        </div>
-        <div class="tiles">
+      <!-- HERO: revenue → daily goal + live tiles -->
+      <div class="card goal-banner">
+        <div class="gb-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>Revenue today · to daily goal</div>
+        <div class="gb-value">31 920 zł</div>
+        <div class="gb-sub">76% of <b style="color:var(--av3-fg)">42 000 zł</b> · on pace for <b style="color:var(--av3-ok)">44 100 zł</b> by close</div>
+        <div class="gb-prog"><i style="width:76%"></i></div>
+      </div>
+      <div class="tiles4">
           <div class="tile"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cooking now</div><div class="v" style="color:var(--av3-warn)">7</div><div class="s">avg 8m on the line</div></div>
           <div class="tile"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l5 5L20 7"/></svg>Ready</div><div class="v" style="color:var(--av3-ok)">3</div><div class="s">awaiting handoff</div></div>
           <div class="tile"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Due / late</div><div class="v" style="color:var(--av3-bad)">2</div><div class="s">past promised time</div></div>
           <div class="tile"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 1 0 0-6M21 20a6 6 0 0 0-5-5.9"/></svg>Covers today</div><div class="v">312</div><div class="s">+8% vs last Thu</div></div>
         </div>
-      </div>
 
       <!-- BODY: work column | live feed -->
       <div class="body-split">
