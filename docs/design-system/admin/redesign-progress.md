@@ -5,9 +5,9 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 6 — Lock` ✅ complete · redesign phases 0–6 landed (raw-element burn-down is ongoing, governed by the ratchet)
+**Current phase:** Phases 0–6 landed (merged in #136). **Now: post-merge polish** — command-surface control consistency (#137).
 **Last updated:** 2026-06-05
-**Branch:** `claude/admin-subpages-analysis-1bsjz`
+**Branch:** `claude/admin-control-consistency` (polish; redesign 0–6 was `claude/admin-subpages-analysis-1bsjz`, merged)
 
 ---
 
@@ -299,3 +299,23 @@ brand-glow-shadow + chart-hex all at zero, and a lint ratchet + CI gate + CODEOW
 - One pre-existing, out-of-scope lint error in `scripts/legacy/verify-scalability-
   fixes.ts` (`require()` import) — outside CI's `src/**` lint scope, so it doesn't
   affect the gate. Clean up if/when legacy scripts are revisited.
+
+---
+
+## Post-merge polish log
+
+### 2026-06-05 — Command-surface control consistency (#137)
+Reported visually (Menu / Recipes toolbars): buttons, tablists, tabs and selects
+rendered at **different heights** so the row didn't read as one system.
+
+- **Cause:** underline nav tabs ~38px (10px padding), pill `filter` 34px, `Select`
+  / `Input` ~36px (intrinsic 7px vertical padding), `Button`/`IconButton` 34px.
+- **Fix (CSS only, scoped to `.v2-toolbar` + `.v2-pagehead-actions`):** every
+  command-surface control snaps to **34px height + one baseline**; dropped the
+  intrinsic `Select`/`Input` vertical padding; underline nav tabs stretch
+  full-height so the active 2px rule meets the toolbar's bottom hairline.
+- **Docs (Rule #11):** `theme/components.md` ViewToolbar entry gains the
+  "One control height (34px)" rule.
+- **State:** `npm run build` green; CSS + doc only (no TS → lint ratchet
+  unaffected). Open as #137; **awaiting a visual confirm on the Vercel preview**
+  (no headless browser here to screenshot).
