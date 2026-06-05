@@ -304,5 +304,17 @@ refetches every 30s.
   the end of the label row; the Calculator's six headline KPIs (net profit, net
   margin, EBITDA, break-even/day, prime cost, payback) each carry a full
   five-section explainer.
+  **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
+  + `applyAnnualWeather` were extracted into the shared engine (same folding
+  math as v2) and the headline P&L / tornado / returns now compute on the
+  folded scenario (the projection takes the assumptions-folded scenario and
+  applies weather per-month itself). New input cards drive them: **Behaviour
+  assumptions** (6 attach levers + combo conversion + delivery share, each a
+  toggle with inline attach%/price/COGS fields), **Ingredient cost stress** (10
+  per-line cost-delta levers), and **Seasonality & weather** (four quarterly
+  multipliers + a calibrated weather/holiday model). New CSS rows `.av3-leverrow`
+  / `.av3-lever-name` in `themes/admin-v3/index.css` style the toggle+name+fields
+  layout. **Remaining v2 depth (not yet ported):** the fleet/franchise model and
+  the channel-economics breakdown — the deepest tail of the 17k-LOC v2 sim.
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

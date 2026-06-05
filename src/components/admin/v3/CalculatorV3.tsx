@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { computeReturns, computeScenario, computeTornado, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationLaborLine, SimulationScenario } from "@/data/types";
+import { applyAnnualWeather, applyAssumptions, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -18,6 +18,22 @@ const FIXED_KEYS: { key: string; label: string }[] = [
   { key: "marketing", label: "Marketing" }, { key: "software", label: "Software" }, { key: "professional", label: "Professional" }, { key: "other", label: "Other" },
 ];
 
+type AttachKey = "coffeeAttach" | "dessertAttach" | "antipastiAttach" | "aperitivoAttach" | "premiumToppingsAttach" | "pastaPrimoAttach";
+const ATTACH_DEFAULTS: Record<AttachKey, SimulationAttachLever> = {
+  coffeeAttach: { enabled: true, attachPct: 0.25, avgPriceGrosze: 900, cogsPct: 0.12 },
+  dessertAttach: { enabled: true, attachPct: 0.12, avgPriceGrosze: 1600, cogsPct: 0.28 },
+  antipastiAttach: { enabled: true, attachPct: 0.08, avgPriceGrosze: 2400, cogsPct: 0.32 },
+  aperitivoAttach: { enabled: true, attachPct: 0.10, avgPriceGrosze: 2200, cogsPct: 0.22 },
+  premiumToppingsAttach: { enabled: true, attachPct: 0.15, avgPriceGrosze: 700, cogsPct: 0.30 },
+  pastaPrimoAttach: { enabled: true, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.26 },
+};
+const ATTACH_LABELS: Record<AttachKey, string> = { coffeeAttach: "Coffee", dessertAttach: "Dessert", antipastiAttach: "Antipasti", aperitivoAttach: "Aperitivo", premiumToppingsAttach: "Premium toppings", pastaPrimoAttach: "Pasta primo" };
+type IngKey = "mozzarella" | "tomato" | "flour" | "doughWeight" | "oliveOil" | "curedMeats" | "buffaloMozz" | "eggs" | "ovenFuel" | "packaging";
+const INGREDIENT_SHARES: Record<IngKey, number> = { mozzarella: 0.28, tomato: 0.10, flour: 0.06, doughWeight: 0.06, oliveOil: 0.05, curedMeats: 0.07, buffaloMozz: 0.03, eggs: 0.02, ovenFuel: 0.04, packaging: 0.03 };
+const INGREDIENT_LABELS: Record<IngKey, string> = { mozzarella: "Mozzarella", tomato: "Tomato", flour: "Flour", doughWeight: "Dough weight", oliveOil: "Olive oil", curedMeats: "Cured meats", buffaloMozz: "Buffalo mozz", eggs: "Eggs", ovenFuel: "Oven fuel", packaging: "Packaging" };
+const SEASONS: { key: keyof SimulationSeasonality; label: string }[] = [{ key: "winter", label: "Winter" }, { key: "spring", label: "Spring" }, { key: "summer", label: "Summer" }, { key: "autumn", label: "Autumn" }];
+const DEFAULT_WEATHER: SimulationWeather = { enabled: true, rainyDayMultiplier: 0.75, rainyShare: 0.30, heatwaveMultiplier: 1.40, heatwaveShare: 0.10, holidayClosedDaysPerMonth: 1, holidayPeakDaysPerMonth: 1, holidayPeakMultiplier: 1.60, schoolHolidayLunchMultiplier: 0.85, eventDaysPerMonth: 1, eventDayMultiplier: 1.50 };
+
 // generic field helpers — money in zł, percent in %
 function Z({ label, grosze, onChange, w = 120 }: { label: string; grosze: number; onChange: (g: number) => void; w?: number }) {
   return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step="0.01" value={Math.round(grosze) / 100} onChange={(e) => onChange(Math.round((Number(e.target.value) || 0) * 100))} /></label>;
@@ -27,6 +43,20 @@ function P({ label, frac, onChange, w = 110 }: { label: string; frac: number; on
 }
 function N({ label, value, onChange, w = 110, step = 1 }: { label: string; value: number; onChange: (n: number) => void; w?: number; step?: number }) {
   return <label className="av3-field" style={{ width: w }}><span className="av3-field-label">{label}</span><input className="av3-input" type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value) || 0)} /></label>;
+}
+function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?: SimulationAttachLever; onToggle: (on: boolean) => void; onChange: (patch: Partial<SimulationAttachLever>) => void }) {
+  const on = !!lever && lever.enabled !== false;
+  return (
+    <div className="av3-leverrow">
+      <button type="button" className="av3-toggle" data-on={on} onClick={() => onToggle(!on)}>{on ? "On" : "Off"}</button>
+      <span className="av3-lever-name">{label}</span>
+      {on && lever && <>
+        <P label="Attach %" frac={lever.attachPct} onChange={(f) => onChange({ attachPct: f })} w={84} />
+        <Z label="Price" grosze={lever.avgPriceGrosze} onChange={(g) => onChange({ avgPriceGrosze: g })} w={80} />
+        <P label="COGS %" frac={lever.cogsPct} onChange={(f) => onChange({ cogsPct: f })} w={80} />
+      </>}
+    </div>
+  );
 }
 
 export function CalculatorV3() {
@@ -46,12 +76,20 @@ export function CalculatorV3() {
   const patchLabor = (i: number, over: Partial<SimulationLaborLine>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.map((l, idx) => (idx === i ? { ...l, ...over } : l)) }; });
   const addLabor = () => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: [...s.labor, { id: `labor-${Date.now()}`, role: "waiter" as BusinessCostPayrollRole, headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 3000 }] }; });
   const rmLabor = (i: number) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, labor: s.labor.filter((_, idx) => idx !== i) }; });
+  const patchAssume = (over: Partial<SimulationAssumptions>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, assumptions: { ...(s.assumptions ?? {}), ...over } }; });
+  const patchWeather = (over: Partial<SimulationWeather>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, weather: { ...DEFAULT_WEATHER, ...(s.weather ?? {}), ...over } }; });
+  const patchSeason = (over: Partial<SimulationSeasonality>) => setScn((s) => { if (!s) return s; setDirty(true); return { ...s, seasonality: { ...DEFAULT_SEASONALITY, ...(s.seasonality ?? {}), ...over } }; });
 
-  const c = useMemo(() => (scn ? computeScenario(scn) : null), [scn]);
-  const tornado = useMemo(() => (scn ? computeTornado(scn) : []), [scn]);
+  // Fold the behaviour levers + annual weather into the headline scenario so
+  // the P&L / tornado / returns reflect them (rule #8 — end-to-end). The
+  // projection applies weather per-month itself, so it takes the
+  // assumptions-folded (but not annual-weather) scenario.
+  const folded = useMemo(() => (scn ? applyAnnualWeather(applyAssumptions(scn)) : null), [scn]);
+  const c = useMemo(() => (folded ? computeScenario(folded) : null), [folded]);
+  const tornado = useMemo(() => (folded ? computeTornado(folded) : []), [folded]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
   const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
-  const projection = useMemo(() => (scn ? projectTwelveMonths(scn) : []), [scn]);
+  const projection = useMemo(() => (scn ? projectTwelveMonths(applyAssumptions(scn)) : []), [scn]);
 
   const save = async () => {
     if (!scn) return;
@@ -200,6 +238,73 @@ export function CalculatorV3() {
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
               </>}
             </div></CardBody>
+          </Card>
+
+          {/* behaviour assumptions — attach / combo / delivery levers fold into ticket + COGS */}
+          <Card>
+            <CardHead title="Behaviour assumptions" description="Attach, combo & delivery levers fold into effective ticket + COGS" />
+            <CardBody style={{ paddingTop: 4 }}>
+              {(Object.keys(ATTACH_LABELS) as AttachKey[]).map((k) => (
+                <AttachRow key={k} label={ATTACH_LABELS[k]} lever={scn.assumptions?.[k]} onToggle={(on) => patchAssume({ [k]: { ...(scn.assumptions?.[k] ?? ATTACH_DEFAULTS[k]), enabled: on } } as Partial<SimulationAssumptions>)} onChange={(patchL) => patchAssume({ [k]: { ...(scn.assumptions?.[k] ?? ATTACH_DEFAULTS[k]), ...patchL } } as Partial<SimulationAssumptions>)} />
+              ))}
+              {(() => { const cc = scn.assumptions?.comboConversion; const on = !!cc && cc.enabled !== false; return (
+                <div className="av3-leverrow">
+                  <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ comboConversion: { ...(cc ?? { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
+                  <span className="av3-lever-name">Combo conversion</span>
+                  {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /></>}
+                </div>
+              ); })()}
+              {(() => { const d = scn.assumptions?.deliveryShare; const on = !!d && d.enabled !== false; return (
+                <div className="av3-leverrow">
+                  <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ deliveryShare: { ...(d ?? { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
+                  <span className="av3-lever-name">Delivery share</span>
+                  {on && d && <><P label="%" frac={d.pct} onChange={(f) => patchAssume({ deliveryShare: { ...d, pct: f } })} w={72} /><Z label="Packaging" grosze={d.packagingCostGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, packagingCostGrosze: g } })} w={96} /><Z label="Fee" grosze={d.avgFeeGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, avgFeeGrosze: g } })} w={84} /></>}
+                </div>
+              ); })()}
+            </CardBody>
+          </Card>
+
+          {/* ingredient cost stress — each lever shifts COGS by share × delta */}
+          <Card>
+            <CardHead title="Ingredient cost stress" description="Flex a line's cost — COGS moves by its share × delta" />
+            <CardBody><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; return (
+                <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3, width: 116, border: "1px solid var(--av3-line)", borderRadius: 7, padding: 7 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 11 }}>{INGREDIENT_LABELS[k]}</span><button type="button" className="av3-toggle" data-on={on} style={{ height: 18, padding: "0 7px", fontSize: 10 }} onClick={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: lev?.cogsShare ?? INGREDIENT_SHARES[k], costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })}>{on ? "On" : "Off"}</button></div>
+                  {on && lev && <input className="av3-input" type="number" step="1" value={Math.round((lev.costDeltaPct ?? 0) * 100)} onChange={(e) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: (Number(e.target.value) || 0) / 100 } } })} title="cost delta %" />}
+                </div>
+              ); })}
+            </div></CardBody>
+          </Card>
+
+          {/* seasonality + weather → fold into the headline ordersPerDay/daysOpen */}
+          <Card>
+            <CardHead title="Seasonality & weather" description="Quarterly multipliers + a calibrated weather/holiday model" />
+            <CardBody>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                {SEASONS.map((s) => <P key={s.key} label={s.label} frac={(scn.seasonality ?? DEFAULT_SEASONALITY)[s.key] as number} onChange={(f) => patchSeason({ [s.key]: f } as Partial<SimulationSeasonality>)} w={96} />)}
+              </div>
+              {(() => { const w = scn.weather; const on = !!w && w.enabled !== false; return (
+                <>
+                  <div className="av3-leverrow">
+                    <button type="button" className="av3-toggle" data-on={on} onClick={() => patchWeather({ enabled: !on })}>{on ? "On" : "Off"}</button>
+                    <span className="av3-lever-name">Weather & holiday model</span>
+                  </div>
+                  {on && w && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                    <P label="Rainy share" frac={w.rainyShare} onChange={(f) => patchWeather({ rainyShare: f })} w={92} />
+                    <P label="Rainy mult" frac={w.rainyDayMultiplier} onChange={(f) => patchWeather({ rainyDayMultiplier: f })} w={92} />
+                    <P label="Heat share" frac={w.heatwaveShare} onChange={(f) => patchWeather({ heatwaveShare: f })} w={92} />
+                    <P label="Heat mult" frac={w.heatwaveMultiplier} onChange={(f) => patchWeather({ heatwaveMultiplier: f })} w={92} />
+                    <N label="Closed days/mo" value={w.holidayClosedDaysPerMonth} onChange={(n) => patchWeather({ holidayClosedDaysPerMonth: n })} w={110} step={0.5} />
+                    <N label="Peak days/mo" value={w.holidayPeakDaysPerMonth} onChange={(n) => patchWeather({ holidayPeakDaysPerMonth: n })} w={104} step={0.5} />
+                    <P label="Peak mult" frac={w.holidayPeakMultiplier} onChange={(f) => patchWeather({ holidayPeakMultiplier: f })} w={92} />
+                    <N label="Event days/mo" value={w.eventDaysPerMonth} onChange={(n) => patchWeather({ eventDaysPerMonth: n })} w={108} step={0.5} />
+                    <P label="Event mult" frac={w.eventDayMultiplier} onChange={(f) => patchWeather({ eventDayMultiplier: f })} w={92} />
+                    <P label="School-hol lunch" frac={w.schoolHolidayLunchMultiplier} onChange={(f) => patchWeather({ schoolHolidayLunchMultiplier: f })} w={116} />
+                  </div>}
+                </>
+              ); })()}
+            </CardBody>
           </Card>
         </div>
 

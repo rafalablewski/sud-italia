@@ -12,6 +12,7 @@
  */
 import type {
   BusinessCostPayrollRole,
+  SimulationAttachLever,
   SimulationScenario,
   SimulationSeasonality,
   SimulationWeather,
@@ -397,4 +398,92 @@ export function projectMonths(
 /** Project the scenario across 12 steady-state months (no opening ramp). */
 export function projectTwelveMonths(s: SimulationScenario, startMonth = 0): ProjectionRow[] {
   return projectMonths(s, 12, startMonth, 0);
+}
+
+/* ── behaviour assumptions + weather folding ───────────────────────────────
+ * Extracted verbatim from the v2 AdminSimulation so v3 folds the same levers
+ * into the headline P&L. `applyAssumptions` rewrites avgTicket/cogsPct/payment
+ * from the attach/combo/delivery/ingredient levers; `applyAnnualWeather`
+ * rewrites ordersPerDay/daysOpen from the annual-average weather curve. Pure.
+ */
+function leverOff(lever: { enabled?: boolean } | undefined): boolean {
+  return !!lever && lever.enabled === false;
+}
+function attachDelta(lever: SimulationAttachLever | undefined): { ticket: number; cogs: number } {
+  if (!lever || lever.enabled === false) return { ticket: 0, cogs: 0 };
+  return { ticket: lever.attachPct * lever.avgPriceGrosze, cogs: lever.attachPct * lever.avgPriceGrosze * lever.cogsPct };
+}
+
+/** Fold the behaviour levers (attach, combo, cheapest-pizza shift, delivery
+ *  share, ingredient stress) into effective avgTicket + cogsPct + blended
+ *  payment rate. Returns a new scenario; ordersPerDay/daysOpen are untouched
+ *  (weather is separate). No-op when `s.assumptions` is unset. */
+export function applyAssumptions(s: SimulationScenario): SimulationScenario {
+  const a = s.assumptions;
+  if (!a) return s;
+  let extraTicket = 0;
+  let extraCogs = 0;
+  let extraProcessorPct = 0;
+  for (const lever of [a.coffeeAttach, a.dessertAttach, a.antipastiAttach, a.aperitivoAttach, a.premiumToppingsAttach, a.pastaPrimoAttach]) {
+    const d = attachDelta(lever);
+    extraTicket += d.ticket;
+    extraCogs += d.cogs;
+  }
+  if (a.comboConversion && !leverOff(a.comboConversion)) {
+    const c = a.comboConversion;
+    extraTicket += c.pct * (c.addonGrosze - c.discountGrosze);
+    extraCogs += c.pct * c.addonGrosze * c.addonCogsPct;
+  }
+  if (a.cheapestPizzaShift && !leverOff(a.cheapestPizzaShift)) {
+    extraTicket -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.ticketDeltaGrosze;
+    extraCogs -= a.cheapestPizzaShift.pp * a.cheapestPizzaShift.cogsDeltaGrosze;
+  }
+  if (a.deliveryShare && !leverOff(a.deliveryShare)) {
+    const d = a.deliveryShare;
+    extraTicket += d.pct * d.avgFeeGrosze;
+    extraCogs += d.pct * d.packagingCostGrosze;
+    extraProcessorPct += d.pct * d.extraProcessorPct;
+  }
+  let ingredientMultiplier = 1;
+  if (a.ingredients) {
+    for (const lever of Object.values(a.ingredients)) {
+      if (!lever || lever.enabled === false) continue;
+      ingredientMultiplier += lever.cogsShare * lever.costDeltaPct;
+    }
+  }
+  ingredientMultiplier = Math.max(0, ingredientMultiplier);
+
+  const newTicket = Math.max(0, s.avgTicketGrosze + extraTicket);
+  const baselineCogsValue = s.avgTicketGrosze * s.cogsPct * ingredientMultiplier;
+  const totalCogsValue = Math.max(0, baselineCogsValue + extraCogs);
+  const newCogsPct = newTicket > 0 ? Math.min(1, totalCogsValue / newTicket) : s.cogsPct;
+
+  // Channel-blended payment rate (cash 0% + on-site card + Glovo/Wolt commission).
+  const cashShare = s.cashSharePct ?? 0;
+  const glovoShare = s.glovoSharePct ?? 0;
+  const woltShare = s.woltSharePct ?? 0;
+  const onSiteCardShare = Math.max(0, 1 - cashShare - glovoShare - woltShare);
+  const onSiteCardRate = (s.paymentProcessorPct ?? 0) + extraProcessorPct;
+  const blendedProcessorPct =
+    onSiteCardShare * onSiteCardRate + glovoShare * (s.glovoFeePct ?? 0) + woltShare * (s.woltFeePct ?? 0);
+
+  return { ...s, avgTicketGrosze: newTicket, cogsPct: newCogsPct, paymentProcessorPct: Math.max(0, Math.min(1, blendedProcessorPct)) };
+}
+
+/** Annualised weather effects → ordersPerDay + daysOpen for the headline view
+ *  (the projection applies weather per-month instead). No-op when weather is
+ *  unset or its master toggle is off. */
+export function applyAnnualWeather(s: SimulationScenario): SimulationScenario {
+  const w = s.weather;
+  if (!w || w.enabled === false) return s;
+  const avgMult = averageAnnualVolumeMult(w);
+  const daysOpen = Math.max(0, s.daysOpenPerMonth - w.holidayClosedDaysPerMonth);
+  let ordersPerDay = s.ordersPerDay * avgMult;
+  if (daysOpen > 0) {
+    const baseDaily = s.ordersPerDay;
+    const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+    const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+    ordersPerDay += (peakBonus + eventBonus) / daysOpen;
+  }
+  return { ...s, ordersPerDay, daysOpenPerMonth: daysOpen };
 }
