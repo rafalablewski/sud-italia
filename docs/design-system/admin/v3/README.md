@@ -239,7 +239,12 @@ refetches every 30s.
   (volume/price, variable costs, labour, fixed costs, investment, capacity) →
   P&L + KPIs (margin, break-even, prime cost, CM1, capacity, payback,
   cash-on-cash) + sensitivity tornado, persisted via `PUT /api/admin/simulation`.
-  **Next parts:** 12-month projection, NPV/IRR, and the cohort / LTV-CAC /
-  menu-engineering sandboxes; then the five-section `MetricExplainer` ⓘ pass.
+  **Part 2 shipped:** Investor Returns — NPV @ 10/15/20%, IRR (bisected),
+  payback month + a 24-month cumulative cash-recovery view (`computeReturns` in
+  the shared engine).
+  **Next parts (Part 3):** the seasonality/weather-composed 12-month projection
+  (extract `projectMonths` from v2), and the cohort / LTV-CAC / menu-engineering
+  sandboxes (real data via `/api/admin/simulation/{cohorts,dayparts,hourly,
+  menu-engineering}`); then the five-section `MetricExplainer` ⓘ pass (Rule #12).
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

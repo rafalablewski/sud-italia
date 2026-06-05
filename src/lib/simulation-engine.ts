@@ -185,3 +185,47 @@ export function computeTornado(s: SimulationScenario): TornadoBar[] {
 
   return bars.sort((a, b) => b.totalSwing - a.totalSwing);
 }
+
+export interface Returns {
+  /** NPV (grosze) of `horizonMonths` of steady net profit minus setup, by annual discount rate. */
+  npv: { r10: number; r15: number; r20: number };
+  /** Annualised IRR as a percent, or null when undefined (no setup / negative cash flow). */
+  irrAnnualPct: number | null;
+  /** Month the cumulative cash flow first recovers the setup cost, or null. */
+  paybackMonth: number | null;
+  /** Cumulative cash flow (grosze) per month, m = 1..horizonMonths (starts at −setup). */
+  cumulative: number[];
+}
+
+/**
+ * Investor returns from a steady monthly net-profit stream against the upfront
+ * setup cost. NPV uses a monthly-compounded discount; IRR is bisected on the
+ * annual rate; payback is the month cumulative cash turns positive. Real math
+ * over `computeScenario`'s net profit (no mocked numbers).
+ */
+export function computeReturns(monthlyNetProfitGrosze: number, setupGrosze: number, horizonMonths = 36): Returns {
+  const npvAt = (annual: number) => {
+    const d = Math.pow(1 + annual, 1 / 12);
+    let v = -setupGrosze;
+    for (let m = 1; m <= horizonMonths; m++) v += monthlyNetProfitGrosze / Math.pow(d, m);
+    return Math.round(v);
+  };
+  const npv = { r10: npvAt(0.1), r15: npvAt(0.15), r20: npvAt(0.2) };
+
+  let irrAnnualPct: number | null = null;
+  if (setupGrosze > 0 && monthlyNetProfitGrosze > 0) {
+    let lo = -0.9, hi = 5;
+    if (npvAt(lo) * npvAt(hi) <= 0) {
+      for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (npvAt(mid) > 0) lo = mid; else hi = mid; }
+      irrAnnualPct = ((lo + hi) / 2) * 100;
+    } else if (npvAt(hi) > 0) {
+      irrAnnualPct = hi * 100; // returns exceed the search ceiling
+    }
+  }
+
+  const paybackMonth = setupGrosze > 0 && monthlyNetProfitGrosze > 0 ? Math.ceil(setupGrosze / monthlyNetProfitGrosze) : null;
+  const cumulative: number[] = [];
+  let cum = -setupGrosze;
+  for (let m = 1; m <= horizonMonths; m++) { cum += monthlyNetProfitGrosze; cumulative.push(cum); }
+  return { npv, irrAnnualPct, paybackMonth, cumulative };
+}

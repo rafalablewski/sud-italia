@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { computeScenario, computeTornado } from "@/lib/simulation-engine";
+import { computeReturns, computeScenario, computeTornado } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationLaborLine, SimulationScenario } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, Kpi } from "./ui";
 
@@ -50,6 +50,7 @@ export function CalculatorV3() {
   const c = useMemo(() => (scn ? computeScenario(scn) : null), [scn]);
   const tornado = useMemo(() => (scn ? computeTornado(scn) : []), [scn]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
+  const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
 
   const save = async () => {
     if (!scn) return;
@@ -186,6 +187,31 @@ export function CalculatorV3() {
               </div>
             </CardBody>
           </Card>
+
+          {ret && (scn.setupCostGrosze ?? 0) > 0 && (
+            <Card>
+              <CardHead title="Investor returns" description="24-month horizon on a steady net-profit stream" />
+              <CardBody>
+                <div className="av3-od-grid" style={{ marginBottom: 12 }}>
+                  <div className="av3-od-field"><div className="k">NPV @ 10%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r10 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r10)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 15%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r15 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r15)}</div></div>
+                  <div className="av3-od-field"><div className="k">NPV @ 20%</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.npv.r20 >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.npv.r20)}</div></div>
+                  <div className="av3-od-field"><div className="k">IRR (annual)</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.irrAnnualPct != null ? `${ret.irrAnnualPct.toFixed(0)}%` : "—"}</div></div>
+                  <div className="av3-od-field"><div className="k">Payback</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{ret.paybackMonth != null ? `${ret.paybackMonth} mo` : "—"}</div></div>
+                  <div className="av3-od-field"><div className="k">24-mo cash</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: ret.cumulative[23] >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(ret.cumulative[23])}</div></div>
+                </div>
+                {/* cumulative cash recovery — bars cross from red (below 0) to green */}
+                <div style={{ display: "flex", alignItems: "stretch", gap: 2, height: 48 }}>
+                  {ret.cumulative.map((cv, i) => {
+                    const peak = Math.max(1, ...ret.cumulative.map((x) => Math.abs(x)));
+                    const h = (Math.abs(cv) / peak) * 100;
+                    return <div key={i} title={`Mo ${i + 1}: ${formatPrice(cv)}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}><div style={{ height: `${h / 2}%`, alignSelf: cv >= 0 ? "flex-start" : "flex-end", width: "100%", background: cv >= 0 ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: 2 }} /></div>;
+                  })}
+                </div>
+                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", marginTop: 4, fontFamily: "var(--av3-mono)" }}>cumulative cash · mo 1 → 24</div>
+              </CardBody>
+            </Card>
+          )}
 
           <Card>
             <CardHead title="Sensitivity" description="Net-profit swing if each lever moves (most fragile first)" />
