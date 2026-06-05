@@ -3,8 +3,6 @@
 import { useState } from "react";
 import {
   AlertTriangle,
-  Check,
-  Save,
   Star,
   Coffee,
   IceCream,
@@ -14,7 +12,7 @@ import {
   Tag,
   Sandwich,
 } from "lucide-react";
-import { Button, PageHero } from "./v2/ui";
+import { PageHero, SaveDock } from "./v2/ui";
 import {
   ComboEditor,
   ItemMultiSelect,
@@ -27,8 +25,6 @@ type TabKey = "pairings" | "combos" | "timeOfDay" | "badges";
 
 export function AdminCrossSell() {
   const {
-    activeLocation,
-    setActiveLocation,
     loc,
     config,
     loading,
@@ -53,7 +49,7 @@ export function AdminCrossSell() {
   if (loadError) {
     return (
       <div className="v2-page">
-        <div className="glass-card p-8 text-center max-w-lg mx-auto">
+        <div className="v2-card p-8 text-center max-w-lg mx-auto">
           <AlertTriangle className="h-8 w-8 text-[var(--danger)] mx-auto mb-3" />
           <h2 className="font-heading font-bold text-lg admin-text mb-2">
             Could not load cross-sell settings
@@ -67,11 +63,6 @@ export function AdminCrossSell() {
     );
   }
 
-  const dirtyHint =
-    dirtyLocations.size > 1
-      ? `${dirtyLocations.size} locations with unsaved changes`
-      : null;
-
   return (
     <div className="v2-page">
       <PageHero
@@ -79,19 +70,7 @@ export function AdminCrossSell() {
         subtitle={
           <>
             Suggest complementary items alongside what&rsquo;s in the cart — pairings, combos, and contextual nudges.
-            {dirtyHint && <span className="ml-2 text-[var(--warning)]">· {dirtyHint}</span>}
           </>
-        }
-        location={{ value: activeLocation, onChange: setActiveLocation }}
-        actions={
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={saving || !isDirty}
-            aria-label="Save changes"
-            title={saved ? "Saved" : saving ? "Saving…" : "Save changes"}
-            leadingIcon={saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          />
         }
         nav={{
           value: tab,
@@ -107,7 +86,7 @@ export function AdminCrossSell() {
       />
 
       {tab === "pairings" && (
-        <div className="glass-card p-6 space-y-5">
+        <div className="v2-card p-6 space-y-5">
           <div>
             <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
               <Star className="h-5 w-5 text-[var(--warning)]" />
@@ -156,7 +135,7 @@ export function AdminCrossSell() {
       )}
 
       {tab === "combos" && (
-        <div className="glass-card p-6">
+        <div className="v2-card p-6">
           <ComboEditor
             combos={config.combos}
             menu={loc.menu}
@@ -166,7 +145,7 @@ export function AdminCrossSell() {
       )}
 
       {tab === "timeOfDay" && (
-        <div className="glass-card p-6">
+        <div className="v2-card p-6">
           <TimeWindowsEditor
             windows={config.timeWindows}
             onChange={(timeWindows) => updateConfig({ timeWindows })}
@@ -176,7 +155,7 @@ export function AdminCrossSell() {
 
       {tab === "badges" && (
         <div className="space-y-6">
-          <div className="glass-card p-6">
+          <div className="v2-card p-6">
             <h2 className="font-heading font-bold text-lg admin-text flex items-center gap-2">
               <Tag className="h-5 w-5 text-[var(--warning)]" />
               Menu badges — {loc.name}
@@ -198,7 +177,7 @@ export function AdminCrossSell() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.heroItems ?? []}
@@ -208,7 +187,7 @@ export function AdminCrossSell() {
                 intrinsicHint="Set by menuRole: 'hero' in the menu data file"
               />
             </div>
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.pizzaioloChoiceItems ?? []}
@@ -218,7 +197,7 @@ export function AdminCrossSell() {
                 intrinsicHint="Set by menuRole: 'profit-driver' in the menu data file"
               />
             </div>
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.chefSignatureItems ?? []}
@@ -228,7 +207,7 @@ export function AdminCrossSell() {
                 intrinsicHint="Set by menuRole: 'anchor' in the menu data file"
               />
             </div>
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.newItems ?? []}
@@ -236,7 +215,7 @@ export function AdminCrossSell() {
                 label="New — launch highlight"
               />
             </div>
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.popularItems ?? []}
@@ -244,7 +223,7 @@ export function AdminCrossSell() {
                 label="Most Popular — red trending chip"
               />
             </div>
-            <div className="glass-card p-6">
+            <div className="v2-card p-6">
               <ItemMultiSelect
                 items={loc.menu}
                 selected={config.staffPicks ?? []}
@@ -255,6 +234,13 @@ export function AdminCrossSell() {
           </div>
         </div>
       )}
+
+      <SaveDock
+        dirty={isDirty}
+        count={dirtyLocations.size}
+        status={saving ? "saving" : saved ? "saved" : "idle"}
+        onSave={handleSave}
+      />
     </div>
   );
 }

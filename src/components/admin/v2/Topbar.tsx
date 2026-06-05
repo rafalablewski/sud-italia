@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAdminShell } from "./ShellContext";
+import { useAdminLocation } from "./LocationContext";
+import { ScopeSwitcher } from "./ui";
 import { adminBaseForPath } from "@/lib/admin-base";
 
 interface Props {
@@ -54,6 +56,7 @@ function buildCrumbs(pathname: string): Crumb[] {
 export function Topbar({ onOpenMobileNav }: Props) {
   const pathname = usePathname();
   const crumbs = buildCrumbs(pathname);
+  const { location: scope, setLocation } = useAdminLocation();
   const { openPalette, openNotifications, openHelp, notificationsVersion } = useAdminShell();
   const [unread, setUnread] = useState(0);
   const [isMac, setIsMac] = useState(false);
@@ -105,6 +108,11 @@ export function Topbar({ onOpenMobileNav }: Props) {
             ))}
           </ol>
         </nav>
+        {/* Scope — the one location context selector (replaces the per-page
+            LocationFilter + the old sidebar LocationSwitcher). Always visible so
+            the operator never loses track of whose data they're reading. */}
+        <span className="v2-topbar-scope-sep" aria-hidden />
+        <ScopeSwitcher value={scope} onChange={setLocation} includeAll />
       </div>
 
       <div className="v2-topbar-right">

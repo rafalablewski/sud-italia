@@ -47,7 +47,7 @@ box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
 This is a 1px hairline of warm light along the top edge — it gives the
 surface a hint of dimensionality without being a gradient. It's a
-**hairline**, not a fill. Use sparingly: on `.glass-card` / `.v2-card` and
+**hairline**, not a fill. Use sparingly: on `.v2-card` and
 the POS product cards.
 
 ## Hairlines
@@ -162,6 +162,47 @@ outline-offset: 2px;
 
 On interactive surfaces inside the admin theme, the outline colour is
 sourced from the token so it adapts dark/light. Don't roll your own colour.
+
+## Selection — the neutral raise
+
+**Selection is a neutral raise, never a brand flood.** Any control's
+selected / active state — segmented option, scope row, selected table row, active
+nav — reads as a half-step lift, not a colour fill:
+
+```css
+.is-active {
+  background: var(--surface-3);      /* the lightest surface = raised */
+  border-color: var(--border-strong);
+  color: var(--fg);                  /* full contrast, not muted */
+  box-shadow: var(--shadow-xs);      /* optional, for tracked segments */
+}
+```
+
+Two rules this enforces:
+
+- **Brand is reserved for the one commit action** (the primary button). When
+  "this tab is selected" and "this button commits" use the same burgundy, the
+  operator can't tell state from action. Selection is neutral; brand means *do
+  the thing*. (The single sanctioned brand-as-state exception is the 2px
+  `--brand` underline on an active **underline tab** — a thin accent for
+  structural navigation, not a fill.)
+- **No border drop, no layout shift.** The inactive and active states carry the
+  *same* border box (transparent → `--border-strong`), so selecting never nudges
+  neighbours by a pixel. This killed the legacy `.v2-locpill.is-active` bug
+  (`border-color: transparent` + `--brand-soft` fill) that shifted the row and
+  tinted the whole control.
+
+**Phase 1 (selection fix) repointed every legacy brand-flood active state to this
+rule** — `.v2-locpill.is-active` (the audit's headline offender),
+`.v2-chip.is-selected`, the active pill-tab count badge, and the mobile
+`.v2-m-icon-btn` / `.v2-m-chip` / `.v2-m-list-row` / `.v2-m-bottom-nav-item`
+states (the last also had a forbidden brand glow drop-shadow, now removed). The
+**only** sanctioned brand-as-state that remains is the 2px `--brand` underline on
+an active underline tab. (Out of scope: the `/core` POS surfaces keep their own
+brand-tinted selection for now.)
+
+Live in the redesign primitives: `.v2-seg-opt.is-active`,
+`.v2-scope-opt.is-active` (see [components → Redesign primitives](./components.md#redesign-primitives--the-command-surface)).
 
 ## What "depth" looks like in practice
 

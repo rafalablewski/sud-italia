@@ -33,7 +33,6 @@ import {
   Table,
   Textarea,
   type Column,
-  LocationFilter,
   PageHero,
 } from "./v2/ui";
 
@@ -106,10 +105,8 @@ export function AdminPurchaseOrders() {
 function AdminPurchaseOrdersDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher); "all" → first truck.
+  const pageLoc = globalLoc || FALLBACK_LOC;
 
   const [orders, setOrders] = useState<PORow[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierLite[]>([]);
@@ -287,9 +284,7 @@ function AdminPurchaseOrdersDesktop() {
                   : "New PO"
             }
           />
-        }
-        location={{ value: pageLoc, onChange: setPageLoc }}
-        filter={{
+        }        filter={{
           value: statusFilter,
           onChange: (v) => setStatusFilter(v as StatusFilter),
           ariaLabel: "Status filter",

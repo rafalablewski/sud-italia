@@ -1,0 +1,132 @@
+{
+  "src/components/admin/AdminConcierge.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/components/admin/AdminCorporate.tsx": {
+    "no-restricted-syntax": {
+      "count": 8
+    }
+  },
+  "src/components/admin/AdminCrm.tsx": {
+    "no-restricted-syntax": {
+      "count": 26
+    }
+  },
+  "src/components/admin/AdminCustomerDetail.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/AdminExpansion.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/admin/AdminGrowth.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/admin/AdminKDS.tsx": {
+    "no-restricted-syntax": {
+      "count": 15
+    }
+  },
+  "src/components/admin/AdminKdsFleet.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
+  "src/components/admin/AdminLocationsManager.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/components/admin/AdminLoyalty.tsx": {
+    "no-restricted-syntax": {
+      "count": 17
+    }
+  },
+  "src/components/admin/AdminMenu.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/components/admin/AdminMenuDetail.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/components/admin/AdminPermissions.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/AdminPos.tsx": {
+    "no-restricted-syntax": {
+      "count": 28
+    }
+  },
+  "src/components/admin/AdminRecipes.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
+    }
+  },
+  "src/components/admin/AdminRegulatoryCompliance.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/AdminSchedule.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/admin/AdminScheduledBundles.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/admin/AdminSellingShared.tsx": {
+    "no-restricted-syntax": {
+      "count": 33
+    }
+  },
+  "src/components/admin/AdminSimulation.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
+  "src/components/admin/AdminUsers.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/AdminWhatsApp.tsx": {
+    "no-restricted-syntax": {
+      "count": 13
+    }
+  },
+  "src/components/admin/AuditLog.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/MLUpsellPanel.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/components/admin/MenuEngineeringSandbox.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/components/admin/OpsAgentChat.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  }
+}

@@ -95,9 +95,9 @@ disabled, never deleted, so the audit trail keeps its actor.
 
 The week-grid shift board.
 
-- **Header:** `Schedule` (h1), location switcher (the shared
-  `LocationFilter` pill row), week navigator (← / today / →), role filter
-  chips, `+ New shift` primary.
+- **Header:** `Schedule` (h1), week navigator (← / today / →), role filter
+  chips, `+ New shift` primary. (Site comes from the shell `ScopeSwitcher` in the
+  topbar — no per-page location control, as of redesign Phase 2.)
 - **Body:** the 7-day grid — columns are days, rows are staff (active
   only, sorted by role then name). Each cell holds 0..n shift chips.
 - **Shift chip:** time window (`9:00 – 17:00`), status badge with

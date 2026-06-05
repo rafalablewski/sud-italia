@@ -551,15 +551,16 @@ function RecipesPanel({ viewNav }: { viewNav: ViewNav }) {
  * collide on the same hue. Eight tones — enough for any realistic
  * recipe before "Other" kicks in (we already group <2% slivers).
  */
+// Categorical palette — the canonical chart tokens (mirror theme.ts `chart`).
 const COST_BAR_COLORS = [
-  "var(--brand)",
-  "var(--info)",
-  "var(--success)",
-  "var(--warning)",
-  "#a855f7",
-  "#06b6d4",
-  "#ec4899",
-  "#84cc16",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
 ] as const;
 
 function marginToneOf(margin: number): "success" | "warning" | "danger" {

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
+import { useAdminLocation } from "./v2/LocationContext";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES, BUNDLE_MARGIN_FLOOR } from "@/lib/bundles";
 import { worstBundleMargin } from "@/lib/bundle-margin";
@@ -361,7 +362,11 @@ export function useSellingSettings() {
   // seed catalogue. A slug stays absent until its fetch succeeds, which is
   // the signal to fall back to the seed menu for that location.
   const [liveMenus, setLiveMenus] = useState<Record<string, MenuItem[]>>({});
-  const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].slug);
+  // The location being edited follows the shell scope (topbar ScopeSwitcher) so
+  // there is one location switcher across the whole admin. Selling config is
+  // per-location, so an "all"/unknown scope falls back to the first location.
+  const { location: scope, setLocation: setActiveLocation } = useAdminLocation();
+  const activeLocation = scope && LOCATIONS.some((l) => l.slug === scope) ? scope : LOCATIONS[0].slug;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -581,7 +586,7 @@ export function ItemMultiSelect({
         )}
       </div>
       {adding && (
-        <div className="glass-card p-3 mb-2 max-h-48 overflow-y-auto">
+        <div className="v2-card p-3 mb-2 max-h-48 overflow-y-auto">
           {items
             .filter((m) => !selectedSet.has(m.id) && !intrinsicSet.has(m.id))
             .map((m) => (
@@ -689,7 +694,7 @@ export function ComboEditor({
       </div>
       <div className="space-y-3">
         {combos.map((combo, i) => (
-          <div key={combo.id} className={`glass-card p-4 space-y-3 ${!combo.active ? "opacity-50" : ""}`}>
+          <div key={combo.id} className={`v2-card p-4 space-y-3 ${!combo.active ? "opacity-50" : ""}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Switch
@@ -701,7 +706,7 @@ export function ComboEditor({
                   type="text"
                   value={combo.name}
                   onChange={(e) => updateCombo(i, { name: e.target.value })}
-                  className="glass-input text-sm font-semibold w-40"
+                  className="v2-input text-sm font-semibold w-40"
                 />
               </div>
               <IconButton
@@ -719,7 +724,7 @@ export function ComboEditor({
               value={combo.description}
               onChange={(e) => updateCombo(i, { description: e.target.value })}
               placeholder="Description (e.g. Any main + drink + dessert)"
-              className="glass-input text-sm w-full"
+              className="v2-input text-sm w-full"
             />
 
             <div className="flex flex-wrap items-center gap-3">
@@ -731,7 +736,7 @@ export function ComboEditor({
                   max={50}
                   value={combo.discountPercent}
                   onChange={(e) => updateCombo(i, { discountPercent: Number(e.target.value) })}
-                  className="glass-input text-sm w-20"
+                  className="v2-input text-sm w-20"
                 />
               </div>
               <div>
@@ -742,7 +747,7 @@ export function ComboEditor({
                   max={10}
                   value={combo.minItems}
                   onChange={(e) => updateCombo(i, { minItems: Number(e.target.value) })}
-                  className="glass-input text-sm w-20"
+                  className="v2-input text-sm w-20"
                 />
               </div>
               <div>
@@ -757,7 +762,7 @@ export function ComboEditor({
                           : (e.target.value as "dine-in" | "delivery"),
                     })
                   }
-                  className="glass-input text-sm"
+                  className="v2-input text-sm"
                 >
                   <option value="">Both channels</option>
                   <option value="dine-in">Dine-in only</option>
@@ -875,7 +880,7 @@ function RequiredItemsEditor({
                 className="grid gap-1.5 grid-cols-[1fr_1fr_auto] items-center text-xs"
               >
                 <select
-                  className="glass-input"
+                  className="v2-input"
                   value={matched?.id ?? ""}
                   onChange={(e) => {
                     const picked = menu.find((m) => m.id === e.target.value);
@@ -899,7 +904,7 @@ function RequiredItemsEditor({
                   ))}
                 </select>
                 <input
-                  className="glass-input"
+                  className="v2-input"
                   value={row.label}
                   placeholder="Display label"
                   onChange={(e) => update(i, { label: e.target.value })}
@@ -1025,7 +1030,7 @@ export function TimeWindowsEditor({
           return (
             <div
               key={w.id}
-              className={`glass-card p-4 space-y-3 ${!w.active ? "opacity-50" : ""}`}
+              className={`v2-card p-4 space-y-3 ${!w.active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1050,7 +1055,7 @@ export function TimeWindowsEditor({
                       <select
                         value={w.variant}
                         onChange={(e) => updateWindow(i, { variant: e.target.value })}
-                        className="glass-input text-sm w-32 flex-shrink-0"
+                        className="v2-input text-sm w-32 flex-shrink-0"
                       >
                         {TIME_WINDOW_VARIANTS.map((v) => (
                           <option key={v} value={v}>{v}</option>
@@ -1065,7 +1070,7 @@ export function TimeWindowsEditor({
                           onChange={(e) =>
                             updateWindow(i, { startHour: clampHour(Number(e.target.value)) })
                           }
-                          className="glass-input text-sm w-16"
+                          className="v2-input text-sm w-16"
                         />
                         <span>→</span>
                         <input
@@ -1076,7 +1081,7 @@ export function TimeWindowsEditor({
                           onChange={(e) =>
                             updateWindow(i, { endHour: clampHour(Number(e.target.value), 24) })
                           }
-                          className="glass-input text-sm w-16"
+                          className="v2-input text-sm w-16"
                         />
                       </div>
                     </>
@@ -1116,14 +1121,14 @@ export function TimeWindowsEditor({
                     value={w.title}
                     onChange={(e) => updateWindow(i, { title: e.target.value })}
                     placeholder="Banner title"
-                    className="glass-input text-sm w-full"
+                    className="v2-input text-sm w-full"
                   />
                   <input
                     type="text"
                     value={w.sub}
                     onChange={(e) => updateWindow(i, { sub: e.target.value })}
                     placeholder="Sub-line (the one-sentence why)"
-                    className="glass-input text-sm w-full"
+                    className="v2-input text-sm w-full"
                   />
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1134,7 +1139,7 @@ export function TimeWindowsEditor({
                         value={w.badge}
                         onChange={(e) => updateWindow(i, { badge: e.target.value })}
                         placeholder="−10% / Quick add / Pre-order"
-                        className="glass-input text-sm w-full"
+                        className="v2-input text-sm w-full"
                       />
                     </div>
                     <div>
@@ -1144,7 +1149,7 @@ export function TimeWindowsEditor({
                         value={w.cta}
                         onChange={(e) => updateWindow(i, { cta: e.target.value })}
                         placeholder="Add espresso / How it works"
-                        className="glass-input text-sm w-full"
+                        className="v2-input text-sm w-full"
                       />
                     </div>
                     <div>
@@ -1158,7 +1163,7 @@ export function TimeWindowsEditor({
                           updateWindow(i, { addItemIdSuffix: e.target.value.trim() })
                         }
                         placeholder="e.g. espresso (blank = no add)"
-                        className="glass-input text-sm w-full"
+                        className="v2-input text-sm w-full"
                       />
                     </div>
                   </div>
@@ -1220,7 +1225,7 @@ export function CompositionEditor({
             className="grid gap-1.5 grid-cols-[80px_1fr_60px_auto] items-center text-xs"
           >
             <select
-              className="glass-input"
+              className="v2-input"
               value={slot.kind}
               onChange={(e) =>
                 update(i, {
@@ -1236,7 +1241,7 @@ export function CompositionEditor({
             </select>
             {slot.kind === "category" ? (
               <select
-                className="glass-input"
+                className="v2-input"
                 value={slot.category ?? "drinks"}
                 onChange={(e) => update(i, { category: e.target.value })}
               >
@@ -1248,14 +1253,14 @@ export function CompositionEditor({
               </select>
             ) : (
               <input
-                className="glass-input"
+                className="v2-input"
                 value={slot.itemIdSuffix ?? ""}
                 placeholder="dessert-tiramisu"
                 onChange={(e) => update(i, { itemIdSuffix: e.target.value })}
               />
             )}
             <input
-              className="glass-input"
+              className="v2-input"
               type="number"
               min={1}
               max={10}
@@ -1304,7 +1309,7 @@ export function ExperimentEditor({
   // tune. Avoids requiring JSON literacy to set up the first A/B.
   if (!experiment) {
     return (
-      <div className="glass-card p-4 space-y-3">
+      <div className="v2-card p-4 space-y-3">
         <div>
           <p className="admin-text font-semibold text-sm">No experiment running</p>
           <p className="text-xs admin-text-secondary mt-1">
@@ -1386,11 +1391,11 @@ export function ExperimentEditor({
     update({ status: "stopped", active: false, stoppedAt: new Date().toISOString() });
 
   return (
-    <div className="glass-card p-4 space-y-4">
+    <div className="v2-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <input
-            className="glass-input w-full font-semibold"
+            className="v2-input w-full font-semibold"
             value={experiment.name}
             onChange={(e) => update({ name: e.target.value })}
             placeholder="Experiment name"
@@ -1524,13 +1529,13 @@ function ExperimentVariantRow({
     <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] p-3 space-y-2">
       <div className="grid gap-2 md:grid-cols-[1fr_1fr_100px_auto] items-center">
         <input
-          className="glass-input"
+          className="v2-input"
           value={variant.id}
           onChange={(e) => onChange({ id: e.target.value.replace(/[^a-z0-9_]/g, "").slice(0, 32) })}
           placeholder="variant_id"
         />
         <input
-          className="glass-input"
+          className="v2-input"
           value={variant.label}
           onChange={(e) => onChange({ label: e.target.value })}
           placeholder="Display label"
@@ -1538,7 +1543,7 @@ function ExperimentVariantRow({
         <label className="flex items-center gap-1 text-xs admin-text-secondary">
           Weight
           <input
-            className="glass-input w-16 text-right"
+            className="v2-input w-16 text-right"
             type="number"
             min={0}
             max={100}
@@ -1612,7 +1617,7 @@ function ExperimentVariantRow({
                       setOverride(b.id, Math.max(0, Math.min(50, Number(v) || 0)));
                     }
                   }}
-                  className="glass-input text-right"
+                  className="v2-input text-right"
                 />
                 <input
                   type="number"
@@ -1632,7 +1637,7 @@ function ExperimentVariantRow({
                       });
                     }
                   }}
-                  className="glass-input text-right"
+                  className="v2-input text-right"
                 />
                 <input
                   type="number"
@@ -1652,7 +1657,7 @@ function ExperimentVariantRow({
                       });
                     }
                   }}
-                  className="glass-input text-right"
+                  className="v2-input text-right"
                 />
                 <span className={`text-[10px] ${hasOverride ? "text-[var(--warning)]" : "text-[var(--fg-disabled)]"}`}>
                   {hasOverride ? "override" : "default"}
@@ -1692,7 +1697,7 @@ export function BundleRulesEditor({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="glass-card p-3">
+        <div className="v2-card p-3">
           <p className="admin-text font-semibold text-sm mb-2">Lunch ladder window</p>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -1708,7 +1713,7 @@ export function BundleRulesEditor({
                     lunch: { ...rules.lunch, startHour: clampHour(Number(e.target.value)) },
                   })
                 }
-                className="glass-input w-full"
+                className="v2-input w-full"
               />
             </label>
             <label className="block">
@@ -1724,7 +1729,7 @@ export function BundleRulesEditor({
                     lunch: { ...rules.lunch, endHour: clampHour(Number(e.target.value)) },
                   })
                 }
-                className="glass-input w-full"
+                className="v2-input w-full"
               />
             </label>
           </div>
@@ -1733,7 +1738,7 @@ export function BundleRulesEditor({
           </p>
         </div>
 
-        <div className="glass-card p-3">
+        <div className="v2-card p-3">
           <p className="admin-text font-semibold text-sm mb-2">Family Feast quantity gate</p>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -1749,7 +1754,7 @@ export function BundleRulesEditor({
                     family: { ...rules.family, minMainItems: Math.max(2, Number(e.target.value) || 2) },
                   })
                 }
-                className="glass-input w-full"
+                className="v2-input w-full"
               />
             </label>
             <label className="block">
@@ -1765,7 +1770,7 @@ export function BundleRulesEditor({
                     family: { ...rules.family, hintWithin: Math.max(0, Number(e.target.value) || 0) },
                   })
                 }
-                className="glass-input w-full"
+                className="v2-input w-full"
               />
             </label>
           </div>

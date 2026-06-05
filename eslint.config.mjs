@@ -55,6 +55,66 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // ── Admin redesign — design-system governance (Phase 5+, ERROR + ratchet) ──
+  // Catches control-layer drift the audit found (raw elements bypassing
+  // primitives, legacy glass-* classes, inline hex). Scoped to the admin PAGE
+  // layer (app/admin/** + the top-level Admin*.tsx components) — NOT the v2/
+  // infrastructure, where the primitives themselves and the shell chrome
+  // legitimately render raw <button>/<input>.
+  //
+  // GOVERNANCE MODEL (Phase 5 decision): this is now `error`, with the existing
+  // violations grandfathered in `eslint-suppressions.json` (a bulk-suppressions
+  // ratchet — the count can only shrink, never grow). So NEW drift fails CI while
+  // legacy is tracked and burned down. Two ways to clear a suppression:
+  //   1. Convert to the primitive (`Button` / `Input` / `Select` / `Card`), or
+  //   2. For a *legitimately* custom interactive element (card-as-button, toggle,
+  //      table-row icon action), keep it raw with an inline
+  //      `// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`.
+  // Reserve the primitives for genuine action buttons / form fields. After
+  // editing, run `npx eslint --prune-suppressions` to drop stale entries.
+  // See docs/design-system/admin/redesign-blueprint.md §7 + redesign-progress.md.
+  {
+    files: ["src/app/admin/**/*.tsx", "src/components/admin/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message:
+            "Design system: use <Button> or <IconButton> from @/components/admin/v2/ui instead of a raw <button> (blueprint §3.1).",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='input']",
+          message:
+            "Design system: use <Input> / <Switch> from @/components/admin/v2/ui instead of a raw <input>.",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='select']",
+          message:
+            "Design system: use <Select> from @/components/admin/v2/ui instead of a raw <select>.",
+        },
+        {
+          selector: "Literal[value=/glass-(card|input|btn)/]",
+          message:
+            "Design system: glass-* classes are legacy. Use <Card> / <Input> / <Button> from v2/ui (blueprint §6, Phase 4).",
+        },
+        {
+          selector: "TemplateElement[value.raw=/glass-(card|input|btn)/]",
+          message:
+            "Design system: glass-* classes are legacy. Use <Card> / <Input> / <Button> from v2/ui (blueprint §6, Phase 4).",
+        },
+        {
+          // Whole-value hex literals (3/4/6/8-digit) in JSX string literals AND
+          // template expressions. Anchored so it never flags a `var(--x, #hex)`
+          // fallback (that whole string isn't a bare hex).
+          selector:
+            "Literal[value=/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/], TemplateElement[value.raw=/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]",
+          message:
+            "Design system: inline hex is banned — use a var(--token) colour (blueprint §3.5 / §5).",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

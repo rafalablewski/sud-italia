@@ -58,12 +58,8 @@ function startOfTodayIso(): string {
 export function AdminWaste() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(
-    globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC,
-  );
-  useEffect(() => {
-    if (globalLoc && globalLoc !== "all") setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher); "all" → first truck.
+  const pageLoc = globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC;
 
   const [logs, setLogs] = useState<WasteEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,9 +140,7 @@ export function AdminWaste() {
     <div className="v2-page">
       <PageHero
         title="Waste log"
-        subtitle="Reason-coded record of food binned outside a sale. Rolls up to a daily write-off cost — the number that quietly eats margin."
-        location={{ value: pageLoc, onChange: setPageLoc }}
-      />
+        subtitle="Reason-coded record of food binned outside a sale. Rolls up to a daily write-off cost — the number that quietly eats margin."      />
 
       <section className="v2-kpi-grid">
         <Card padding="compact">

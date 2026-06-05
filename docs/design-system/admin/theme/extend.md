@@ -49,13 +49,26 @@ If you genuinely need a new surface treatment:
 
 ## Add an admin page
 
+**Start from the scaffold — never a blank file:**
+
+```
+npm run scaffold:admin-page -- <slug> "Page Title"
+```
+
+It emits a compliant `page.tsx` (thin server auth wrapper) + `Admin<Name>.tsx`
+(the `PageHeader` + `ViewToolbar` + `Card` command surface) so you can't
+accidentally ship a one-off header or a raw element. Then:
+
 The nav config lives in `src/components/admin/v2/nav.config.ts`. New
 pages must:
 
 1. Be reachable from the **v2 admin shell** (`AdminShell.tsx`) — top
    nav or a section group.
-2. Use the **glass design classes** (`glass-card`, `glass-input`,
-   `glass-btn`, `admin-text`). Don't roll a one-off panel.
+2. Build from the **`v2/ui` primitives** — `PageHeader` + `ViewToolbar` for the
+   command surface, `Card` / `Input` / `Select` / `Button` for content. **Never
+   the legacy `glass-card` / `glass-input` / `glass-btn` classes** (older
+   `--admin-*` token system, being retired — lint-guarded in the page layer).
+   Don't roll a one-off panel.
 3. Register in `/admin/capabilities` (CLAUDE.md rule #9) — same commit.
    Include `name`, `summary`, `href`, `envVars`, `status`.
 4. Have a **mobile variant** (or a graceful read-only state on small
@@ -82,12 +95,12 @@ The page header pattern (use, don't redesign):
 />
 ```
 
-**Filtering by location?** Use `LocationFilter` from `v2/ui` — never
-hand-roll a pill row or an inline `Select`. It renders one look (a pill row)
-on every page and takes no `variant`; just wire `value` / `onChange`. See the
-[Location filter](./components.md#location-filter--one-component-one-look)
-component doc. (The sidebar's app-wide `LocationSwitcher` is a separate
-thing — don't reach for it per-page.)
+**Scoping by location?** Don't render a per-page control. Location is shell-level
+*scope*: read it with `const { location } = useAdminLocation()` (`""` = all sites)
+and filter your data by it; the topbar `ScopeSwitcher` is the single switcher. The
+old per-page `LocationFilter` and sidebar `LocationSwitcher` were removed in the
+redesign (Phase 2) — a per-page location pill is now lint-guarded. See
+[Location → Scope](./components.md#location--scope-one-switcher-shell-level).
 
 ## Add an icon
 
@@ -207,6 +220,46 @@ If a new module ships (e.g. a Reservations console):
 
 The closing "what this module is not" is the most important section.
 A module that doesn't know what it isn't will drift.
+
+## Design-system governance — the lint ratchet
+
+The admin **page layer** (`src/app/admin/**/*.tsx` + the top-level
+`src/components/admin/*.tsx`) is guarded by an ESLint `no-restricted-syntax` rule
+(in `eslint.config.mjs`) at **`error`**. It bans, in that layer:
+
+- raw `<button>` / `<input>` / `<select>` — use `Button` / `IconButton` / `Input` /
+  `Select` from `v2/ui`;
+- the legacy `glass-card` / `glass-input` / `glass-btn` classes — use `Card` /
+  `Input` / `Button` (the `.v2-*` classes / components);
+- inline 6-digit hex literals — use a `var(--token)` (CSS) or the `theme.ts`
+  palette (charts/JS).
+
+**It's a bulk-suppressions ratchet, not a wall.** Existing violations are
+grandfathered in `eslint-suppressions.json` (run `npx eslint --suppress-rule
+no-restricted-syntax` to regenerate the baseline). The count can only **shrink** —
+any *new* violation fails `npm run lint`. To clear a suppression:
+
+1. **Convert** to the primitive (`Button` / `Input` / `Select` / `Card`), or
+2. for a **legitimately custom** interactive element — a card-as-button, an icon
+   toggle, a table-row action with bespoke needs — keep it raw with an inline
+   `// eslint-disable-next-line no-restricted-syntax -- ds-ok: <reason>`. Reserve
+   the primitives for genuine **action buttons** and **form fields**; not every
+   `<button>` is a `<Button>`.
+
+After editing a file, run `npx eslint --prune-suppressions` to drop entries you've
+fixed (keeps the baseline honest). The `v2/` infrastructure and shell chrome are
+out of scope (they legitimately render raw elements). The live burn-down is
+tracked in [`../redesign-progress.md`](../redesign-progress.md).
+
+**Enforcement (the lock):**
+- **CI** runs `npx eslint "src/**/*.{ts,tsx}"` (`.github/workflows/ci.yml`) on every
+  PR — since the rule is `error`, **new drift fails the build**; the suppressions
+  baseline grandfathers the legacy.
+- **CODEOWNERS** (`.github/CODEOWNERS`) routes changes to the primitives
+  (`v2/ui`), the theme (`themes/admin`, `theme.ts`), the lint config +
+  suppressions, and these docs to the **DS owner**. Pages compose primitives; they
+  don't fork them.
+- **Scaffold** (`npm run scaffold:admin-page`) means new pages start compliant.
 
 ## When in doubt
 

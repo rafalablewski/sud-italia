@@ -424,8 +424,8 @@ export function CohortSandbox() {
               data={curves}
               xKey="offset"
               series={[
-                { key: "baseline", label: "Baseline", color: "#7a7a85" },
-                { key: "simulated", label: "Simulated", color: "#28a06d" },
+                { key: "baseline", label: "Baseline", color: "var(--fg-subtle)" },
+                { key: "simulated", label: "Simulated", color: "var(--success)" },
               ]}
               height={240}
               yFormat={(n) => `${n}%`}

@@ -55,12 +55,9 @@ function startOfTodayIso(): string {
 export function AdminHaccp() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(
-    globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC,
-  );
-  useEffect(() => {
-    if (globalLoc && globalLoc !== "all") setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher). Operational pages
+  // can't span trucks, so an "all" scope falls back to the first active location.
+  const pageLoc = globalLoc && globalLoc !== "all" ? globalLoc : FALLBACK_LOC;
 
   const [logs, setLogs] = useState<TempReading[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,9 +128,7 @@ export function AdminHaccp() {
     <div className="v2-page">
       <PageHero
         title="HACCP temperature log"
-        subtitle="Cold- and hot-holding checks per shift. Out-of-range readings are flagged and audit-logged for inspectors and insurers."
-        location={{ value: pageLoc, onChange: setPageLoc }}
-      />
+        subtitle="Cold- and hot-holding checks per shift. Out-of-range readings are flagged and audit-logged for inspectors and insurers."      />
 
       <section className="v2-kpi-grid">
         <Card padding="compact">

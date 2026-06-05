@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "gen:design-system": "tsx scripts/gen-design-system-manifest.ts",
+    "scaffold:admin-page": "tsx scripts/scaffold-admin-page.ts",
     "prebuild": "npm run gen:design-system",
     "build": "next build",
     "start": "next start",

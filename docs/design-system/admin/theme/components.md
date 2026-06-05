@@ -126,8 +126,10 @@ Placed inline in the tags row on a POS product card.
 
 ## Inputs & segmented
 
-- **`.v2-input` / `.glass-input`** — surface-2 background → surface-1 on
-  focus, steel focus ring + 3px soft halo. **8px radius.** Height 36px.
+- **`.v2-input`** (the `Input` primitive) — surface-2 background → surface-1 on
+  focus, steel focus ring + 3px soft halo. **8px radius.** Height 36px. (The
+  legacy `.glass-input` alias on the old `--admin-*` tokens is being retired —
+  Phase 4 cleared it from the Growth island; don't add new usages.)
 - **`.seg`** segmented — 3px-padded track, selected tab gets `--surface-3`
   fill + `--shadow-xs`. Used for stage switches (KDS), period filters
   (CRM), fulfilment channels (POS), MCP/WhatsApp transports (Concierge).
@@ -139,52 +141,34 @@ Placed inline in the tags row on a POS product card.
   border + 26px tab; 8px radius ≈ the button's 7px) so it sits flush beside
   buttons in a page-header toolbar.
 
-## Location filter — one component, one look
+## Location → Scope (one switcher, shell-level)
 
-Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
-`v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
-site**, and it's always the **same shape: a pill row** (`MapPin` + city, active
-pill in `--brand-soft`). It replaced two drifting patterns — the hand-rolled
-`LocationTabs` pills and the inline `v2-field-inline` + `Select` copy-pasted into
-a dozen page headers.
+> **`LocationFilter` and the sidebar `LocationSwitcher` were removed in Phase 2.**
+> Location is operating **context**, not a per-page filter, so there is now **one**
+> control: `ScopeSwitcher` in the **topbar breadcrumb**, backed by the persisted
+> `useAdminLocation()` context. The two old components (the per-page pill row and
+> the sidebar switcher) coexisted and drifted — that coexistence was the bug.
 
-**It scales without changing shape.** The pills live in a horizontal scroller
-(`.v2-locscroll` → `.v2-locscroll-track`): pills never wrap or shrink, and when
-they overflow, the track scrolls with **left/right chevron controls + edge fades**
-(`.v2-locscroll-arrow`, shown only when `is-l` / `is-r`). So a 2-truck shop sees
-two pills (no arrows) and a 15-site network sees a tidy left/right scroll — never
-a wrap, a squeeze, or a different widget. **No per-page `variant`** — a dropdown /
-second mode is exactly how the old drift started.
-
-It is **controlled** (`value` / `onChange`) and derives its option list from
-`getActiveLocations()`, so a page never hand-builds `{ value, label }` arrays.
-Wire it to whatever state the page already holds (page-local `pageLoc`, or the
-sidebar's `useAdminLocation()` context).
+**How a page reads the current site:** consume the shell scope, don't render a
+control.
 
 ```tsx
-// every page — operational views and config editors
-<LocationFilter value={pageLoc} onChange={setPageLoc} />
+const { location: scope } = useAdminLocation();   // "" = all locations
+// operational pages that can't span sites:
+const pageLoc = scope || FALLBACK_LOC;            // "all" → first active location
 ```
 
-Live on: HACCP, Cash, Schedule, Slots, Floor, Inventory, Purchase orders,
-Truck ops, Waste, Handover, Upsell, Cross-sell, Scheduled bundles.
-
-Props worth knowing:
-
-- `includeAll` (+ `allLabel`) — prepend an "all locations" pill (slug `""`).
-  Off by default; operational views that can't span sites leave it off.
-- `icon` — defaults to `MapPin`. **Keep it MapPin** for cross-page
-  consistency; the override exists only for genuinely different contexts.
-
-**Not the same as the sidebar switcher.** `v2/LocationSwitcher.tsx` is the
-**app-wide** location selector in the shell (backed by `useAdminLocation()`,
-persisted to `localStorage`). `LocationFilter` is the **per-page** filter. They
-coexist on purpose: the sidebar sets a global default; a page may still scope
-itself locally. Don't fold one into the other.
+The `ScopeSwitcher` (topbar) writes the scope; every page re-derives + re-fetches
+from it. See [ScopeSwitcher](#redesign-primitives--the-command-surface)
+for how the control scales 1 → N sites. Never reintroduce a per-page location
+pill — the lint guard + this doc are the contract.
 
 ## Cards
 
-### General card — `.v2-card` / `.glass-card`
+### General card — `.v2-card` (the `Card` primitive)
+
+> The legacy `.glass-card` alias (old `--admin-*` tokens) is being retired — Phase 4
+> migrated the Growth island onto `.v2-card`. Don't add new `.glass-card` usages.
 
 ```
 background: var(--surface-1)
@@ -402,8 +386,8 @@ and `.core-suite` scopes, so the one component looks right in either shell.
   work via the global handler in `AdminShell.tsx` off `nav.config`, and the
   full list is in the **`?` shortcuts modal** (`ShortcutsHelp.tsx`). Keep
   `shortcut` in `nav.config`; it feeds the handler + the modal.
-- **Footer:** `LocationSwitcher` + Log out, on every surface (POS/Guest gained
-  these; the old core avatar foot is retired).
+- **Footer:** Log out, on every surface. (The location switcher moved out of the
+  sidebar footer to the topbar `ScopeSwitcher` in Phase 2 — one switcher, shell-level.)
 - **Scrolls with no visible scrollbar** (`.as-scroll`: `overflow-y:auto` +
   `scrollbar-width:none`). KDS is the exception — its own full-screen wall, no
   sidebar.
@@ -469,61 +453,126 @@ language as the KPI tiles. `.v2-kanban-card`s lift on hover
 (`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
 interactive-card behaviour.
 
-## Page hero & section eyebrows
+## Page command surface (`PageHeader` + `ViewToolbar`)
 
-Every admin page is fronted by **one shared hero panel** — a raised
-`--surface-1` card with a **`--platinum`** left rail — so the title, location
-filter, filters and actions live in the **same place on
-every page**:
+> **Redesign Phase 3 retired the platinum-railed hero panel for admin pages.**
+> The command surface is now two slim, panel-less bars — `PageHeader` (identity)
+> + `ViewToolbar` (control) — see
+> [Redesign primitives](#redesign-primitives--the-command-surface) below for the
+> full spec and the preferred call pattern.
 
-- **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
-  `3px --platinum` left rail + `--radius-lg`, `16px 22px` padding. The title
-  (`.v2-page-title`) is serif **`--font-display`** at `--text-2xl` weight 500
-  (don't bold past 500 — typography doctrine).
-- **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
-  fills the panel as **fixed stacked rows** (`.v2-hero` is `flex-column`,
-  `gap:14px`). **Data-driven & enforced:** every control role takes DATA (not
-  JSX) and the hero renders the *one* canonical widget for it, so a page cannot
-  substitute a different widget and the controls can never drift apart. Every
-  row is optional and collapses gracefully; **all controls live inside the panel
-  — nothing floats below.** The rows, top → bottom:
-  1. **`title`** — alone (`.v2-page-title`).
-  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
-     only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
-  3. **`location`** — `.v2-hero-find`. `{value,onChange,includeAll?}` → **always**
-     the pill `LocationFilter` (never a `<Select>`), left-aligned under the title.
-  4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
-     (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
-     **always** `Select`s, rendered beside the pill.
-  5. **`nav`** = `{value,onChange,options}` → **always** an underline `Tabs`
-     (`.v2-hero-tabs`) for section navigation, full width.
-  **No `search` slot** — text search was removed from every admin hero by design
-  (lists keep their `filter` / `dropdowns` / `nav`); re-add per page only if asked.
-  **No stats slot** — headline numbers belong in the KPI grid below, not the
-  hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
-  hand-roll a header, and never pass a raw control where a data prop exists.
-  - **Rows never overflow** (structure rule: *contain → wrap → scroll, never
-    overflow*): every row is `flex-wrap:wrap`; a segmented control caps at
-    `max-width:100%` and scrolls internally. Below `820px` the right-aligned
-    items (`actions`, `location`) drop left as rows stack.
-  - **Choosing the slot by role** (this is what keeps widgets consistent):
-    **filter a list with a few short options → `filter`** (pill — Orders status,
-    Menu category, Customers segment). **A filter with many/long options →
-    `dropdowns`** (Select — Users security, Permissions groups, ingredient
-    categories). **Switch between sub-views/panels → `nav`** (underline — Settings
-    sections, Cross-sell/Upsell tabs, Orders Kanban/Table, AI insights, Growth
-    sections). Pick by *role*, not by what the page happened to use before.
-  - **`actions` are icon-only** (compressed primary + secondary) with an
-    `aria-label` + `title` tooltip for the dropped text, and all render at **one
-    size (md / 34px)** regardless of the `size` prop a page passes — CSS
-    (`.v2-hero .v2-page-actions .v2-btn`) normalises it, since `actions` is the
-    one free-form slot the data API can't type-enforce.
+**`PageHero` is now a compatibility composition.** It no longer renders the
+`.v2-page-header` panel / `.v2-hero` rows; it composes `PageHeader` + `ViewToolbar`
+from its existing data props (`title`→title, `subtitle`→the ⓘ help, `actions`→
+primaryAction, `nav`→underline tabs, `filter`→pill `Tabs` in the toolbar,
+`dropdowns`→`Select`s). So all existing call sites render the new split surface
+unchanged. **New pages call `PageHeader` + `ViewToolbar` directly.**
+
+The slot-by-role guidance still holds (it now maps onto the toolbar): **few short
+mutually-exclusive options → `Segmented`** (direct) / the `filter` pill (via
+PageHero); **many/long options → `Select`** (`dropdowns`); **switch sub-views →
+the underline `nav` tabs**. `actions` are the page's primary action (+ compact
+secondaries); icon-only buttons auto-collapse to a 34px square via the global
+`.v2-btn:not(:has(.v2-btn-label))` rule.
+
+> **Legacy CSS note:** `.v2-page-header` / `.v2-page-title` / `.v2-page-subtitle`
+> are **retained only for the `/core` KDS header** (which still uses them) — admin
+> pages no longer render them. The `.v2-hero*` rules are dead-for-admin legacy,
+> pending a later CSS tidy; don't build on them.
+
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary
   KPIs) / **Operations & risk** (the 4 secondary KPIs) / **Performance** (trend +
   alerts) / **Demand** (top sellers + heatmap) / **Network** (location table).
   KPIs are split into two `.v2-kpi-grid` tiers under their eyebrows for hierarchy.
+
+## Redesign primitives — the command surface
+
+> Shipped in the admin redesign (`../redesign-blueprint.md`,
+> tracked in `../redesign-progress.md`). As of **Phase 3**, `PageHero` itself
+> composes these (so every page already renders the new surface); new pages call
+> `PageHeader` + `ViewToolbar` directly. `LocationFilter` was removed in Phase 2.
+> **Selection language for all of them is selection-as-raise** — see
+> [material → Selection](./material.md#selection--the-neutral-raise).
+
+### Page command surface — `PageHeader` + `ViewToolbar`
+
+The redesign **splits the monolithic `PageHero` panel into two slim, panel-less
+bars** so *identity* and *control* never merge (the cause of three switcher idioms
+stacking in one 120px panel). The heavy platinum-railed `.v2-page-header` is no
+longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars below.
+
+- **`PageHeader`** (`v2/ui/PageHeader.tsx`, `.v2-pagehead`) — **identity only**: a
+  ~52px hairline-based bar (no card, no rail, no shadow). Slots: `title` (serif
+  display, the only h1), optional `info` (a quiet ⓘ → `Popover` of page help —
+  this **replaces the always-on subtitle**; it is page help, *not* a metric ⓘ),
+  `primaryAction` (the one labelled `<Button variant="primary">` — never
+  icon-only), `menu` (secondary actions collapsed under a `⋯` `Popover`, rows are
+  `.v2-menu-item`), and an optional `back` slot for detail pages. **No location,
+  no filters here.**
+- **`ViewToolbar`** (`v2/ui/ViewToolbar.tsx`, `.v2-toolbar`) — **control only**, a
+  44px bar attached to the data: `tabs` (underline `Tabs`, sub-view navigation
+  only) on the left; `children` (the filter / sort / display cluster) on the
+  right. `sticky` pins it under the header on long tables. The toolbar owns the
+  tabs' bottom border so the inner `Tabs` drops its own. Omit entirely when a page
+  has neither navigation nor filters.
+
+```tsx
+<PageHeader title="Orders" info={<>…how to read this…</>}
+            primaryAction={<Button variant="primary">New order</Button>}
+            menu={(close) => <button className="v2-menu-item" onClick={close}>Export CSV</button>} />
+<ViewToolbar
+  tabs={{ value: view, onChange: setView, options: [{value:"kanban",label:"Kanban"},{value:"table",label:"Table"}] }}
+  sticky
+>
+  <Segmented value={status} onChange={setStatus} options={STATUS} ariaLabel="Status" />
+</ViewToolbar>
+```
+
+### `Segmented` — the filter control
+
+`v2/ui/Segmented.tsx` (`.v2-seg`). The canonical **filter** widget for ≤ 4
+mutually-exclusive short options (status, view-mode, period). For 5+ / long
+options use `Select`; for stackable multi-dimensional filtering use filter chips;
+for sub-view navigation use the underline `Tabs`. `role="radiogroup"`, arrow-key
+roving. Active option is **selection-as-raise** (`--surface-3` + `--border-strong`
++ `--shadow-xs` + full `--fg`), never a brand flood — so there's zero layout shift
+between states. (Distinct from the legacy pill `Tabs variant="pill"`, which it
+supersedes for filtering.)
+
+### `ScopeSwitcher` — the one location selector
+
+`v2/ui/ScopeSwitcher.tsx` (`.v2-scope`). Location is operating **context**, not a
+per-page filter, so this **one** control replaced both `LocationFilter` (per-page
+pills) and the sidebar `LocationSwitcher` — both removed in Phase 2. It now lives
+in the **topbar breadcrumb** (`Topbar.tsx`), wired to the persisted
+`useAdminLocation()` context, so a scope change drives every page.
+It **changes shape with scale, never identity**: 1 location → a static label
+(nothing to switch); 2–N → a trigger → searchable `Popover` list (search appears
+past `searchThreshold`, default 7). Selected row is selection-as-raise. Region
+grouping / multi-select aggregate / saved scopes are the documented next step,
+gated on adding region metadata to the locations store.
+
+### `SaveDock` + `useSaveState` — the editor save language
+
+`v2/ui/SaveDock.tsx` (`.v2-savedock`). The **one** save surface for editor pages
+(Menu, Recipes, Growth, Users…): a transient pill-bar pinned bottom-centre that
+exists **only while dirty** (or while a save resolves), portaled to
+`#admin-portal-root` (Rule #4) and floating on `--shadow-md` (elevation = "this is
+transient / above", per [material → elevation](./material.md)). States:
+`dirty → saving → saved (auto-dismiss 1.5s) → idle`, plus a persistent `error`
+with Retry. `useSaveState(saveFn)` drives the saving/saved/error transitions;
+dirtiness stays page-owned. **Settings/toggles never use this** — they autosave
+(Rule #7). Replaces the parked, perpetually-disabled hero Save button.
+
+### `PageLoading` — the one loading state
+
+`v2/ui/PageLoading.tsx`. Wraps the `.v2-page-loading` pill and **guarantees the
+`.v2-page` wrapper** (the mobile-pill trap — see [Loading states](#loading-states--the-v2-page-loading-pill)).
+`<PageLoading name="Orders" />` for a sole render; add `inline` when page chrome
+already renders. Replaces the hand-written `Loading X…` early-returns that drifted
+(bare "Loading…", missing wrappers).
 
 ## Iconography — custom stroke, no emoji in UI
 

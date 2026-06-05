@@ -6,7 +6,6 @@ import { LogOut } from "lucide-react";
 import { useNavSections } from "./useNavSections";
 import { useAdminBase } from "./useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
-import { LocationSwitcher } from "./LocationSwitcher";
 
 interface Props {
   onCloseMobile?: () => void;
@@ -86,7 +85,7 @@ export function Sidebar({ onCloseMobile }: Props) {
       </nav>
 
       <div className="as-foot">
-        <LocationSwitcher />
+        {/* Location moved to the topbar scope switcher (one switcher, shell-level). */}
         <button type="button" onClick={handleLogout} className="as-logout">
           <LogOut className="h-3.5 w-3.5" />
           Log out

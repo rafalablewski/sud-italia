@@ -76,10 +76,8 @@ export function AdminTruck() {
 function AdminTruckDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher); "all" → first truck.
+  const pageLoc = globalLoc || FALLBACK_LOC;
 
   const [tab, setTab] = useState<Tab>("events");
   const [routes, setRoutes] = useState<TruckRoute[]>([]);
@@ -272,9 +270,7 @@ function AdminTruckDesktop() {
     <div className="v2-page">
       <PageHero
         title="Truck operations"
-        subtitle="Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view."
-        location={{ value: pageLoc, onChange: setPageLoc }}
-        nav={{
+        subtitle="Plan routes for the truck, log events, see which stops earn the most. Map placement is optional — fill lat/lng if you want a future map view."        nav={{
           value: tab,
           onChange: (v) => setTab(v as Tab),
           options: [

@@ -124,10 +124,8 @@ export function AdminInventory() {
 function AdminInventoryDesktop() {
   const { location: globalLoc } = useAdminLocation();
   const toast = useToast();
-  const [pageLoc, setPageLoc] = useState<string>(globalLoc || FALLBACK_LOC);
-  useEffect(() => {
-    if (globalLoc) setPageLoc(globalLoc);
-  }, [globalLoc]);
+  // Site comes from the shell scope (topbar ScopeSwitcher); "all" → first truck.
+  const pageLoc = globalLoc || FALLBACK_LOC;
 
   const [stock, setStock] = useState<StockRow[]>([]);
   const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
@@ -358,9 +356,7 @@ function AdminInventoryDesktop() {
     <div className="v2-page">
       <PageHero
         title="Inventory"
-        subtitle="On-hand stock per location · low-stock alerts · receive / waste / consume log."
-        location={{ value: pageLoc, onChange: setPageLoc }}
-        actions={
+        subtitle="On-hand stock per location · low-stock alerts · receive / waste / consume log."        actions={
           <Button
             variant="primary"
             leadingIcon={<Plus className="h-3.5 w-3.5" />}
