@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { computeReturns, computeScenario, computeTornado } from "@/lib/simulation-engine";
+import { computeReturns, computeScenario, computeTornado, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationLaborLine, SimulationScenario } from "@/data/types";
-import { Badge, Button, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Button, Card, CardBody, CardHead, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
 const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
@@ -51,6 +51,7 @@ export function CalculatorV3() {
   const tornado = useMemo(() => (scn ? computeTornado(scn) : []), [scn]);
   const maxSwing = Math.max(1, ...tornado.map((t) => t.totalSwing));
   const ret = useMemo(() => (scn && c ? computeReturns(c.netProfit, scn.setupCostGrosze ?? 0, 24) : null), [scn, c]);
+  const projection = useMemo(() => (scn ? projectTwelveMonths(scn) : []), [scn]);
 
   const save = async () => {
     if (!scn) return;
@@ -230,8 +231,57 @@ export function CalculatorV3() {
         </div>
       </div>
 
+      {/* 12-month projection — seasonality + weather + inflation composed per month */}
+      {projection.length > 0 && (() => {
+        const H = 160;
+        const maxPos = Math.max(1, ...projection.map((r) => Math.max(r.revenue, r.netProfit)));
+        const minNeg = Math.min(0, ...projection.map((r) => r.netProfit));
+        const range = maxPos - minNeg;
+        const zeroTopPct = (maxPos / range) * 100; // zero baseline, measured from the top
+        const zeroBottomPct = 100 - zeroTopPct;
+        const annualRevenue = projection.reduce((sum, r) => sum + r.revenue, 0);
+        const annualNet = projection.reduce((sum, r) => sum + r.netProfit, 0);
+        return (
+          <Card>
+            <CardHead
+              title="12-month projection"
+              description="Seasonality × weather × wage/ingredient inflation composed per month — revenue vs net profit"
+              actions={<div style={{ display: "flex", gap: 14, fontSize: 11.5, fontFamily: "var(--av3-mono)" }}>
+                <span style={{ color: "var(--av3-muted)" }}>Yr revenue <b style={{ color: "var(--av3-fg)" }}>{formatPrice(annualRevenue)}</b></span>
+                <span style={{ color: "var(--av3-muted)" }}>Yr net <b style={{ color: annualNet >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(annualNet)}</b></span>
+              </div>}
+            />
+            <CardBody>
+              <div style={{ position: "relative", height: H, display: "flex", alignItems: "stretch", gap: 5 }}>
+                {/* zero baseline */}
+                <div style={{ position: "absolute", left: 0, right: 0, top: `${zeroTopPct}%`, borderTop: "1px solid var(--av3-line-strong)", pointerEvents: "none" }} />
+                {projection.map((r) => {
+                  const revH = (r.revenue / range) * H;
+                  const npH = (Math.abs(r.netProfit) / range) * H;
+                  const npUp = r.netProfit >= 0;
+                  return (
+                    <div key={r.monthIndex} title={`${r.month} · revenue ${formatPrice(r.revenue)} · net ${formatPrice(r.netProfit)}`} style={{ flex: 1, position: "relative" }}>
+                      <div style={{ position: "absolute", bottom: `${zeroBottomPct}%`, left: "8%", width: "40%", height: revH, background: "var(--av3-c3)", opacity: 0.5, borderRadius: "2px 2px 0 0" }} />
+                      <div style={{ position: "absolute", [npUp ? "bottom" : "top"]: `${npUp ? zeroBottomPct : zeroTopPct}%`, left: "52%", width: "40%", height: npH, background: npUp ? "var(--av3-ok)" : "var(--av3-bad)", borderRadius: npUp ? "2px 2px 0 0" : "0 0 2px 2px" }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                {projection.map((r) => <div key={r.monthIndex} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{r.month}</div>)}
+              </div>
+              <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 11, color: "var(--av3-muted)" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-c3)", opacity: 0.5 }} /> Revenue</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-ok)" }} /> Net profit</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 2, background: "var(--av3-bad)" }} /> Net loss</span>
+              </div>
+            </CardBody>
+          </Card>
+        );
+      })()}
+
       <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>
-        Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). 12-month projection, NPV/IRR and the cohort / LTV-CAC / menu-engineering sandboxes land in the next Calculator parts.
+        Engine: <code>src/lib/simulation-engine.ts</code> (shared, pure). The cohort / LTV-CAC, dayparts, hourly-throughput and menu-engineering sandboxes land in the next Calculator parts.
       </div>
     </>
   );

@@ -242,9 +242,16 @@ refetches every 30s.
   **Part 2 shipped:** Investor Returns — NPV @ 10/15/20%, IRR (bisected),
   payback month + a 24-month cumulative cash-recovery view (`computeReturns` in
   the shared engine).
-  **Next parts (Part 3):** the seasonality/weather-composed 12-month projection
-  (extract `projectMonths` from v2), and the cohort / LTV-CAC / menu-engineering
-  sandboxes (real data via `/api/admin/simulation/{cohorts,dayparts,hourly,
-  menu-engineering}`); then the five-section `MetricExplainer` ⓘ pass (Rule #12).
+  **Part 3a shipped:** the seasonality × weather × inflation-composed 12-month
+  projection. `projectMonths`/`projectTwelveMonths` (plus `monthVolumeMult`,
+  `averageAnnualVolumeMult`, `MONTH_LABELS`, `MONTH_TO_SEASON`,
+  `LABOR_SEASONAL_FLEX`, `DEFAULT_SEASONALITY`) were **extracted from v2 into the
+  shared engine** — money returned in grosze (canonical unit) — and rendered as a
+  grouped revenue/net-profit bar chart with a zero baseline (loss months dip red)
+  plus year revenue/net totals.
+  **Next parts (Part 3):** the cohort / LTV-CAC, dayparts, hourly-throughput and
+  menu-engineering sandboxes (real data via `/api/admin/simulation/{cohorts,
+  dayparts,hourly,menu-engineering}`); then the five-section `MetricExplainer` ⓘ
+  pass (Rule #12).
 - Every other admin page is migrated. At Calculator parity → flip `/admin` to v3, delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

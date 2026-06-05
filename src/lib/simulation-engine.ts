@@ -10,9 +10,39 @@
  * This module is the canonical engine; the v2 component still carries an inline
  * copy that is removed when v2 is deleted at parity.
  */
-import type { BusinessCostPayrollRole, SimulationScenario } from "@/data/types";
+import type {
+  BusinessCostPayrollRole,
+  SimulationScenario,
+  SimulationSeasonality,
+  SimulationWeather,
+} from "@/data/types";
 
 export const WEEKS_PER_MONTH = 4.345;
+
+type Season = "winter" | "spring" | "summer" | "autumn";
+
+/** Fallback seasonality when a scenario hasn't set its own quarterly curve. */
+export const DEFAULT_SEASONALITY: SimulationSeasonality = {
+  winter: 0.7,
+  spring: 1.0,
+  summer: 1.3,
+  autumn: 1.0,
+};
+
+/** Variable-vs-fixed labor split — share of total labor that flexes with
+ *  seasonal volume (the rest stays at full headcount). 0.4 means a 30% volume
+ *  swing translates into a 12% labor swing, the restaurant rule of thumb. */
+export const LABOR_SEASONAL_FLEX = 0.4;
+
+export const MONTH_TO_SEASON: Season[] = [
+  "winter", "winter", "spring", "spring", "spring", "summer",
+  "summer", "summer", "autumn", "autumn", "autumn", "winter",
+];
+
+export const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 export interface Computed {
   monthlyRevenue: number;
@@ -228,4 +258,137 @@ export function computeReturns(monthlyNetProfitGrosze: number, setupGrosze: numb
   let cum = -setupGrosze;
   for (let m = 1; m <= horizonMonths; m++) { cum += monthlyNetProfitGrosze; cumulative.push(cum); }
   return { npv, irrAnnualPct, paybackMonth, cumulative };
+}
+
+/**
+ * Volume multiplier for a single month (0=Jan, 11=Dec). Rain applies
+ * year-round; heatwaves fire only in Jun–Aug; the school-holiday lunch dip
+ * fires only in Jul–Aug. Shared by the headline annual-average view and the
+ * per-month projection so both read weather identically.
+ */
+export function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
+  if (!w || w.enabled === false) return 1;
+  let m = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
+  // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
+  if (monthIndex >= 5 && monthIndex <= 7) {
+    m *= w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
+  }
+  // Polish school holidays — Jul (6) + Aug (7) only.
+  if (monthIndex === 6 || monthIndex === 7) {
+    m *= w.schoolHolidayLunchMultiplier;
+  }
+  return m;
+}
+
+/** Average volume multiplier across all 12 months — the composite for the
+ *  headline "single typical month" view. */
+export function averageAnnualVolumeMult(w: SimulationWeather | undefined): number {
+  if (!w || w.enabled === false) return 1;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += monthVolumeMult(i, w);
+  return sum / 12;
+}
+
+/** One row of the monthly projection — all money fields in grosze (canonical
+ *  engine unit, formatted with `formatPrice` at the edge). */
+export interface ProjectionRow {
+  month: string;
+  monthIndex: number;
+  revenue: number;
+  cogs: number;
+  labor: number;
+  fixed: number;
+  payment: number;
+  netProfit: number;
+}
+
+/**
+ * Generalised monthly projection. `monthsCount` is the horizon (12 for the
+ * steady-state chart, 24 for the investor payback view). Weather is composed
+ * per-month so seasonal effects (heatwave only in summer, school dip only in
+ * Jul/Aug) land in the right months; labor flexes with seasonal volume via
+ * `LABOR_SEASONAL_FLEX`; wages + fixed costs inflate at wage CPI and COGS at
+ * ingredient CPI, compounded monthly. `rampMonths` applies a linear volume
+ * ramp in months [0..rampMonths) so a fresh truck doesn't hit 100% in month 1
+ * (institutional reality is ~50-70-85-100% over the first ~4 months) — set to
+ * 0 for the steady-state operational chart.
+ */
+export function projectMonths(
+  s: SimulationScenario,
+  monthsCount: number,
+  startMonth = 0,
+  rampMonths = 0,
+): ProjectionRow[] {
+  const seasonality = s.seasonality ?? DEFAULT_SEASONALITY;
+  const w = s.weather;
+  const wageMonthly = (1 + (s.wageInflationPct ?? 0)) ** (1 / 12) - 1;
+  const cogsMonthly = (1 + (s.ingredientInflationPct ?? 0)) ** (1 / 12) - 1;
+  const baseLaborMonthly = s.labor.reduce(
+    (sum, l) => sum + l.headcount * l.hoursPerWeek * WEEKS_PER_MONTH * l.hourlyRateGrosze,
+    0,
+  );
+  // Same marketing-as-CAC reclassification as computeScenario so the
+  // projection lines up with the headline view.
+  const projUseCac = s.marketingAsCac !== false;
+  const projMarketing = s.fixedCosts.marketing ?? 0;
+  const baseFixed = Object.entries(s.fixedCosts).reduce((sum: number, [k, v]) => {
+    if (projUseCac && k === "marketing") return sum;
+    return sum + (v ?? 0);
+  }, 0);
+  const projPackagingPerOrder = s.packagingPerOrderGrosze ?? 0;
+  const rows: ProjectionRow[] = [];
+  for (let i = 0; i < monthsCount; i++) {
+    const monthIndex = (startMonth + i) % 12;
+    const season = MONTH_TO_SEASON[monthIndex];
+    // Per-month override beats the quarterly multiplier when set — matters for
+    // outdoor trucks where Jan/Feb/Dec behave nothing like each other.
+    const override = seasonality.monthlyOverrides?.[monthIndex];
+    const seasonMult = typeof override === "number" ? override : seasonality[season];
+    const weatherMult = monthVolumeMult(monthIndex, w);
+    const closedDays = w?.holidayClosedDaysPerMonth ?? 0;
+    const daysOpen = Math.max(0, s.daysOpenPerMonth - closedDays);
+    const rampFactor = rampMonths > 0 && i < rampMonths ? (i + 1) / rampMonths : 1;
+    let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult * rampFactor;
+    if (w && daysOpen > 0) {
+      const baseDaily = s.ordersPerDay * rampFactor;
+      const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
+      const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+      monthDailyOrders += (peakBonus + eventBonus) / daysOpen;
+    }
+    const orders = monthDailyOrders * daysOpen;
+    const wageMult = (1 + wageMonthly) ** i;
+    const cogsMult = (1 + cogsMonthly) ** i;
+    // Labor flex = headline volume flex (ordersPerDay vs anchor) × seasonal
+    // flex (this month's seasonal volume), both on the same laborVariablePct.
+    const variablePct = s.laborVariablePct ?? LABOR_SEASONAL_FLEX;
+    const anchor = s.laborAnchorOrdersPerDay ?? s.ordersPerDay;
+    const volumeFlex = anchor > 0 ? Math.max(0, 1 + variablePct * (s.ordersPerDay / anchor - 1)) : 1;
+    const seasonalFlex = 1 + variablePct * (seasonMult * rampFactor - 1);
+    const laborFlex = volumeFlex * Math.max(0, seasonalFlex);
+    const revenue = Math.round(orders * s.avgTicketGrosze);
+    const cogs = Math.round(revenue * s.cogsPct * cogsMult);
+    const labor = Math.round(baseLaborMonthly * wageMult * laborFlex);
+    const fixed = Math.round(baseFixed * wageMult);
+    const payment = Math.round(revenue * (s.paymentProcessorPct ?? 0));
+    const waste = Math.round(revenue * (s.wastePct ?? 0));
+    const refund = Math.round(revenue * (s.refundPct ?? 0));
+    const loyalty = Math.round(revenue * (s.loyaltyBurnPct ?? 0));
+    const packaging = Math.round(orders * projPackagingPerOrder);
+    // Marketing CAC tracks the FIXED budget whether on (variable bucket) or
+    // off (fixed bucket) — net effect on pre-tax is identical.
+    const marketingCacRow = projUseCac ? projMarketing : 0;
+    // D&A and interest stay flat — set by capital structure, not volume/CPI.
+    const depreciation = s.depreciationMonthlyGrosze ?? 0;
+    const interest = s.interestMonthlyGrosze ?? 0;
+    const preTax = revenue - cogs - labor - fixed - payment - waste - refund - loyalty - packaging - marketingCacRow - depreciation - interest;
+    const cit = preTax > 0 ? Math.round(preTax * (s.citPct ?? 0)) : 0;
+    const netProfit = preTax - cit;
+    rows.push({ month: MONTH_LABELS[monthIndex], monthIndex, revenue, cogs, labor, fixed, payment, netProfit });
+  }
+  return rows;
+}
+
+/** Project the scenario across 12 steady-state months (no opening ramp). */
+export function projectTwelveMonths(s: SimulationScenario, startMonth = 0): ProjectionRow[] {
+  return projectMonths(s, 12, startMonth, 0);
 }
