@@ -82,7 +82,23 @@ same `requiredRole` model via `@/lib/admin-roles`).
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
-to `#admin-portal-root` per rule #4). The set grows as pages migrate.
+to `#admin-portal-root` per rule #4), and the **charts** (`Chart.tsx`:
+`AreaChart` / `BarChart` / `Donut` / `ChartLegend`). The set grows as pages
+migrate.
+
+**Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
+the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2
+Recharts wrappers (`components/admin/v2/charts`) under the isolation contract,
+so these are the equivalents: `AreaChart` (time series, gradient fill +
+last-point dot + caption row), `BarChart` (vertical bars; per-bar value labels
+auto-hide above 12 bars), `Donut` (part-to-whole with optional centre value)
+and `ChartLegend`. Every fill / stroke is a CSS custom property applied via
+`style`, so the charts track the active `[data-admin-theme]` (dark / light)
+with **no JS re-render**; each uses a fixed `viewBox` + `width="100%"` and
+scales uniformly. Inputs are already-converted display units (e.g. zł, not
+grosze). Reach for these instead of CSS bar-tracks whenever a surface needs to
+show a *trend, distribution, or part-to-whole* (a ranking can stay a table /
+`.av3-bar`).
 
 Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
 filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),
@@ -212,7 +228,12 @@ refetches every 30s.
   full five-section `InfoButton`/`MetricExplainer` blocks (restored from v2)
 - [x] Reports (`/admin-v3/reports`) — range presets, revenue/profit/margin/
   orders/AOV/tips KPIs, revenue-by-category bars, tips summary, top items, JPK
-  export (`/api/admin/analytics` + `/reports/tips` + `/reports/jpk`)
+  export (`/api/admin/analytics` + `/reports/tips` + `/reports/jpk`). **Chart
+  parity restored (flag #4):** a **Revenue-trend** `AreaChart`, a **Channel-mix**
+  `Donut` + legend (dine-in/takeout/delivery), and an **Orders/day** `BarChart`
+  — all from the same `dailyStats` + channel counts the analytics payload
+  already returns — plus the **CSV export** (per-day revenue/cost/profit/margin/
+  orders/items/AOV/channels) alongside JPK.
 - [x] Business costs (`/admin-v3/business-costs`) — operating-expense register
   with monthly-recurring / annualised / payroll / one-off KPIs (shared
   `monthlyGrosze`), category chips, add/edit/delete dialog (`/api/admin/business-costs`)
