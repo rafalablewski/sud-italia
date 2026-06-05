@@ -215,5 +215,9 @@ refetches every 30s.
   record + re-seed (`/api/admin/locations`). Insights (`/admin-v3/ai`): AI demand
   forecast bars (`/api/admin/ai/forecast`) + chatbot-FAQ manager
   (`/api/admin/chatbot-faq`).
-- [ ] System, Finance·Calculator (AdminSimulation)
+- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read), SOC 2
+  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
+  Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
+  Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
+- [ ] System remainder (Users, Permissions, Compliance, Regulatory, Settings), Finance·Calculator (AdminSimulation)
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
