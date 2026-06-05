@@ -315,7 +315,7 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
             {lines.map((l, i) => { const c = lineCost(l); if (c <= 0) return null; return <div key={i} title={`${ingById.get(l.ingredientId)?.name ?? ""}: ${formatPrice(Math.round(c))}`} style={{ width: `${(c / batchCost) * 100}%`, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />; })}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10.5, color: "var(--av3-muted)" }}>
-            {lines.filter((l) => lineCost(l) > 0).slice(0, 6).map((l, i) => <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 2, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />{ingById.get(l.ingredientId)?.name} {Math.round((lineCost(l) / batchCost) * 100)}%</span>)}
+            {lines.filter((l) => lineCost(l) > 0).slice(0, 6).map((l) => { const idx = lines.indexOf(l); return <span key={idx} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 2, background: `var(${COST_COLORS[idx % COST_COLORS.length]})` }} />{ingById.get(l.ingredientId)?.name} {Math.round((lineCost(l) / batchCost) * 100)}%</span>; })}
           </div>
         </>
       )}

@@ -321,11 +321,11 @@ function ChipToggle({ on, onClick, children }: { on: boolean; onClick: () => voi
 function ModifierEditor({ groups, onChange }: { groups: ModifierGroup[]; onChange: (g: ModifierGroup[]) => void }) {
   const patchGroup = (i: number, patch: Partial<ModifierGroup>) => onChange(groups.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
   const patchOption = (gi: number, oi: number, patch: Partial<ModifierOption>) =>
-    onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: g.options.map((o, j) => (j === oi ? { ...o, ...patch } : o)) } : g)));
+    onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: (g.options ?? []).map((o, j) => (j === oi ? { ...o, ...patch } : o)) } : g)));
   const addGroup = () => onChange([...groups, { id: uid("grp"), label: "New group", minSelections: 0, maxSelections: 1, options: [{ id: uid("opt"), label: "Option", priceDelta: 0 }] }]);
   const rmGroup = (i: number) => onChange(groups.filter((_, idx) => idx !== i));
-  const addOption = (gi: number) => onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: [...g.options, { id: uid("opt"), label: "Option", priceDelta: 0 }] } : g)));
-  const rmOption = (gi: number, oi: number) => onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: g.options.filter((_, j) => j !== oi) } : g)));
+  const addOption = (gi: number) => onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: [...(g.options ?? []), { id: uid("opt"), label: "Option", priceDelta: 0 }] } : g)));
+  const rmOption = (gi: number, oi: number) => onChange(groups.map((g, idx) => (idx === gi ? { ...g, options: (g.options ?? []).filter((_, j) => j !== oi) } : g)));
 
   return (
     <div>
@@ -339,13 +339,13 @@ function ModifierEditor({ groups, onChange }: { groups: ModifierGroup[]; onChang
             <button type="button" className="av3-iconbtn-sm" aria-label="Remove group" onClick={() => rmGroup(gi)}><X /></button>
           </div>
           <div className="av3-locrow-head" style={{ gridTemplateColumns: "1fr 90px 90px 56px 28px", marginTop: 8 }}><span>Option</span><span>+ Price zł</span><span>+ Cost zł</span><span>KDS</span><span /></div>
-          {g.options.map((o, oi) => (
+          {(g.options ?? []).map((o, oi) => (
             <div key={o.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 56px 28px", gap: 8, alignItems: "center", padding: "3px 0" }}>
               <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={o.label} onChange={(e) => patchOption(gi, oi, { label: e.target.value })} />
               <input className="av3-input" type="number" step="0.01" value={o.priceDelta / 100} onChange={(e) => patchOption(gi, oi, { priceDelta: Math.round((Number(e.target.value) || 0) * 100) })} />
               <input className="av3-input" type="number" step="0.01" value={(o.costDelta ?? 0) / 100} onChange={(e) => patchOption(gi, oi, { costDelta: Math.round((Number(e.target.value) || 0) * 100) })} />
               <button type="button" className="av3-toggle" data-on={o.flagOnKds ?? false} onClick={() => patchOption(gi, oi, { flagOnKds: !o.flagOnKds })}>{o.flagOnKds ? "On" : "Off"}</button>
-              <button type="button" className="av3-iconbtn-sm" aria-label="Remove option" onClick={() => rmOption(gi, oi)} disabled={g.options.length <= 1}><X /></button>
+              <button type="button" className="av3-iconbtn-sm" aria-label="Remove option" onClick={() => rmOption(gi, oi)} disabled={(g.options ?? []).length <= 1}><X /></button>
             </div>
           ))}
           <Button variant="ghost" size="sm" onClick={() => addOption(gi)} style={{ marginTop: 6 }}><Plus className="av3-btn-ico" /> Option</Button>
@@ -385,7 +385,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
 
   const cleanModifiers = (): ModifierGroup[] =>
     modifierGroups
-      .map((g) => ({ ...g, label: g.label.trim(), options: g.options.filter((o) => o.label.trim()).map((o) => ({ ...o, label: o.label.trim() })) }))
+      .map((g) => ({ ...g, label: g.label.trim(), options: (g.options ?? []).filter((o) => o.label?.trim()).map((o) => ({ ...o, label: o.label.trim() })) }))
       .filter((g) => g.label && g.options.length > 0);
 
   const save = async () => {

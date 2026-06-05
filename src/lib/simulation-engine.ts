@@ -268,14 +268,18 @@ export function computeReturns(monthlyNetProfitGrosze: number, setupGrosze: numb
  */
 export function monthVolumeMult(monthIndex: number, w: SimulationWeather | undefined): number {
   if (!w || w.enabled === false) return 1;
-  let m = w.rainyShare * w.rainyDayMultiplier + (1 - w.rainyShare);
+  // Nullish fallbacks so a partial/legacy weather object can't leak NaN into
+  // the projection (shares default to 0 = no effect; multipliers to 1).
+  const rainyShare = w.rainyShare ?? 0;
+  let m = rainyShare * (w.rainyDayMultiplier ?? 1) + (1 - rainyShare);
   // Heatwaves are a summer phenomenon — Jun (5), Jul (6), Aug (7).
   if (monthIndex >= 5 && monthIndex <= 7) {
-    m *= w.heatwaveShare * w.heatwaveMultiplier + (1 - w.heatwaveShare);
+    const heatwaveShare = w.heatwaveShare ?? 0;
+    m *= heatwaveShare * (w.heatwaveMultiplier ?? 1) + (1 - heatwaveShare);
   }
   // Polish school holidays — Jul (6) + Aug (7) only.
   if (monthIndex === 6 || monthIndex === 7) {
-    m *= w.schoolHolidayLunchMultiplier;
+    m *= w.schoolHolidayLunchMultiplier ?? 1;
   }
   return m;
 }
@@ -351,8 +355,10 @@ export function projectMonths(
     let monthDailyOrders = s.ordersPerDay * seasonMult * weatherMult * rampFactor;
     if (w && daysOpen > 0) {
       const baseDaily = s.ordersPerDay * rampFactor;
-      const peakBonus = w.holidayPeakDaysPerMonth * (w.holidayPeakMultiplier - 1) * baseDaily;
-      const eventBonus = w.eventDaysPerMonth * (w.eventDayMultiplier - 1) * baseDaily;
+      // Nullish fallbacks (days → 0, multipliers → 1) keep a partial weather
+      // object from leaking NaN into the per-month order count.
+      const peakBonus = (w.holidayPeakDaysPerMonth ?? 0) * ((w.holidayPeakMultiplier ?? 1) - 1) * baseDaily;
+      const eventBonus = (w.eventDaysPerMonth ?? 0) * ((w.eventDayMultiplier ?? 1) - 1) * baseDaily;
       monthDailyOrders += (peakBonus + eventBonus) / daysOpen;
     }
     const orders = monthDailyOrders * daysOpen;
