@@ -229,5 +229,9 @@ refetches every 30s.
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
   (`PUT /api/admin/regulatory-compliance`).
-- [ ] Settings, Finance·Calculator (AdminSimulation)
+- [x] Settings (`/admin-v3/settings`, owner-only): business details + delivery
+  fee / min order + social links (Save), storefront-layout visibility toggles
+  and feature flags (toggle = saved) over `PUT /api/admin/settings`.
+- [ ] **Only remaining surface:** Finance · Calculator (AdminSimulation, ~17k LOC).
+  Every other admin page is migrated — at parity, flip `/admin` to v3 and delete v2.
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`

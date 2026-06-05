@@ -167,7 +167,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/capabilities`, label: "Capabilities", icon: Layers, requiredRole: "manager" },
       { href: `${P}/currency`, label: "Currency", icon: Coins, requiredRole: "owner" },
       { href: `${P}/languages`, label: "Languages", icon: Languages, requiredRole: "owner" },
-      { href: `${P}/settings`, label: "Settings", icon: Settings, requiredRole: "owner", pending: true },
+      { href: `${P}/settings`, label: "Settings", icon: Settings, requiredRole: "owner" },
     ],
   },
 ];
