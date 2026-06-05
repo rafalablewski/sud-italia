@@ -313,9 +313,16 @@ refetches every 30s.
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
   (`PUT /api/admin/regulatory-compliance`).
-- [x] Settings (`/admin-v3/settings`, owner-only): business details + delivery
-  fee / min order + social links (Save), storefront-layout visibility toggles
-  and feature flags (toggle = saved) over `PUT /api/admin/settings`.
+- [x] Settings (`/admin-v3/settings`, owner-only): five tabs — **General**
+  (business details + delivery fee / min order + social links, Save),
+  **Storefront** (layout visibility toggles + feature flags, toggle = saved),
+  **Security** (restored, flag #5: read-only "how you sign in" panel from
+  `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
+  passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**
+  (restored: read-only three-theme inspector from `design-system.json`) and
+  **Advanced** (restored: seed demo data). The v2 Audit tab is intentionally
+  **not** duplicated — it has its own `/admin-v3/audit-log` page. All over
+  `PUT /api/admin/settings`.
 - [~] Calculator (`/admin-v3/simulation`) — **Part 1 shipped**: the real P&L
   simulator. The compute engine was **extracted to a shared lib**
   (`src/lib/simulation-engine.ts`, pure `computeScenario` + `computeTornado`) so
