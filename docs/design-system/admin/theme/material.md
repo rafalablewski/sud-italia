@@ -202,7 +202,7 @@ an active underline tab. (Out of scope: the `/core` POS surfaces keep their own
 brand-tinted selection for now.)
 
 Live in the redesign primitives: `.v2-seg-opt.is-active`,
-`.v2-scope-opt.is-active` (see [components → Redesign primitives](./components.md#redesign-primitives-phase-0--additive-coexist-with-pagehero)).
+`.v2-scope-opt.is-active` (see [components → Redesign primitives](./components.md#redesign-primitives--the-command-surface)).
 
 ## What "depth" looks like in practice
 

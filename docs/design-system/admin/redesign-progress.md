@@ -5,7 +5,7 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 2 — Scope` ✅ complete · next: Phase 3 (Header split)
+**Current phase:** `Phase 3 — Header split` ✅ complete · next: Phase 4 (Growth island)
 **Last updated:** 2026-06-05
 **Branch:** `claude/admin-subpages-analysis-1bsjz`
 
@@ -18,7 +18,7 @@
 | **0** | Foundations — new primitives + lint (warn) | ✅ **complete** | primitives shipped + documented |
 | 1 | Selection fix (selection-as-raise, no brand flood) | ✅ **complete** | zero brand-on-selection |
 | 2 | Scope — replace LocationFilter + sidebar switcher | ✅ **complete** | `LocationFilter` import count = 0 |
-| 3 | Header split — PageHero → PageHeader + ViewToolbar | ⬜ not started | `.v2-page-header` usage = 0 |
+| 3 | Header split — PageHero → PageHeader + ViewToolbar | ✅ **complete** | `.v2-page-header` usage = 0 |
 | 4 | Growth island → Card/Input/Button + SaveDock | ⬜ not started | `glass-card`/`glass-input` = 0 |
 | 5 | Tokens + buttons sweep | ⬜ not started | `ds-drift` job = 0; lint → error |
 | 6 | Lock — CI blocking, CODEOWNERS, scaffold | ⬜ not started | green build = consistent build |
@@ -152,9 +152,43 @@ localStorage + context → each page's `globalLoc`/`scope` → keyed fetch effec
 re-runs → data re-scopes. Operational pages can't show "all" (fall back to first
 truck); aggregate-capable pages (Users) honour "" = all.
 
-## ▶ Next up — Phase 3 (Header split)
-Migrate pages from the `PageHero` panel to `PageHeader` + `ViewToolbar`, and
-retire `.v2-page-header`. Start with a golden-reference page (e.g. Purchase
-orders / Orders), prove the pattern, then roll across. Exit gate:
-`.v2-page-header` usage = 0. Fold in `SaveDock` for editor pages where it lands
-naturally (full SaveDock adoption is Phase 4 for the Growth island).
+## Phase 3 — Header split · done (2026-06-05)
+**Approach (deliberate, low-risk):** instead of hand-migrating ~40 `PageHero`
+call sites (huge diff, high regression risk, no per-page visual QA possible here),
+I **rewrote `PageHero` itself to compose `PageHeader` + `ViewToolbar`**. Every
+page gets the slim identity/control split with **zero call-site changes**, and the
+`.v2-page-header` panel stops being rendered. New pages should call the two
+primitives directly (documented).
+
+**`PageHero` mapping:** `title`→PageHeader title · `subtitle`→PageHeader `info`
+(ⓘ popover, off the bar) · `actions`→`primaryAction` · `nav`→ViewToolbar underline
+tabs · `filter`→pill `Tabs` in the toolbar (pure relocation — keeps overflow
+scroll, zero behaviour change) · `dropdowns`→`Select`s. Prop signature unchanged,
+so all call sites compile + render the new surface untouched.
+
+**Also fixed:** `AdminCustomerDetail` hand-rolled a raw `.v2-page-header` in its
+loading state → replaced with `<PageLoading name="customer" />`.
+
+**CSS:** the hero panel CSS (`.v2-page-header` / `.v2-page-title` /
+`.v2-page-subtitle`) is **retained** because the `/core` KDS header still
+references it (out of scope — deleting it could break core, which I can't verify
+here). It's dead-for-admin; the comment above it + the components.md note record
+this. The `.v2-hero*` rules are dead-for-admin legacy, flagged for a later tidy.
+
+**Docs (Rule #11):** components.md ("Page command surface" section rewritten,
+"Redesign primitives" heading + intro updated, stale anchors repointed across
+components.md + material.md), the `.v2-page-header` CSS comment, and this tracker.
+
+**Exit gate met:** `grep -rn "v2-page-header" src --include=*.tsx` → only a JSDoc
+prose mention in `PageHero.tsx` (no className usage). `tsc` + `npm run build` clean.
+
+**Known interim trade-off:** subtitles (incl. live hints like Upsell's dirty
+count) now sit behind the ⓘ. Acceptable; Phase 4 gives the Growth editors a
+`SaveDock` so the dirty state is surfaced properly.
+
+## ▶ Next up — Phase 4 (Growth island)
+Migrate the legacy `glass-card`/`glass-input` family — Upsell, Cross-sell,
+Scheduled bundles, Corporate, and the shared `AdminSellingShared` — onto `Card` /
+`Input` / `Button`, and adopt `SaveDock` + `useSaveState` for their dirty-state
+saving (they already track dirty per location). Exit gate: `glass-card` /
+`glass-input` warning count → 0 for that family (drives the global ratchet down).

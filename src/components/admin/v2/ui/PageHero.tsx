@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Select } from "./Select";
+import { PageHeader } from "./PageHeader";
+import { ViewToolbar } from "./ViewToolbar";
 import { Tabs } from "./Tabs";
+import { Select } from "./Select";
 
 interface TabOption {
   value: string;
@@ -14,52 +16,52 @@ interface SelectOption {
 }
 
 interface Props {
-  /** Page title — serif h1, row 1. */
+  /** Page title — serif h1. */
   title: ReactNode;
-  /** One-line description — row 2, left. */
+  /** One-line description. Now surfaced behind the `PageHeader` ⓘ (kept off the bar). */
   subtitle?: ReactNode;
-  /** Icon-only action buttons — row 2, right. The only free-form slot. */
+  /** Action buttons — the page's primary action (+ any compact secondaries). */
   actions?: ReactNode;
-  /** Primary list/status filter — row 4. ALWAYS a pill `Tabs`. Use for short option sets. */
+  /** Primary list/status filter — a pill `Tabs`, rendered in the view toolbar. */
   filter?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
-  /** Secondary filters with many/long options — row 4, after the pill filter.
-   *  ALWAYS rendered as `Select` dropdowns (consistent verbose-filter widget). */
+  /** Verbose secondary filters — `Select` dropdowns in the view toolbar. */
   dropdowns?: { ariaLabel: string; value: string; onChange: (value: string) => void; options: SelectOption[] }[];
-  /** Section navigation — row 5. ALWAYS an underline `Tabs`. */
+  /** Section navigation — an underline `Tabs`, the toolbar's left rail. */
   nav?: { value: string; onChange: (value: string) => void; options: TabOption[]; ariaLabel?: string };
 }
 
 /**
- * The legacy subpage hero — a raised panel (platinum left rail) laid out as
- * fixed stacked rows:
+ * **Compatibility composition (redesign Phase 3).** `PageHero` no longer renders
+ * the heavy platinum-railed `.v2-page-header` panel that merged identity +
+ * control and stacked switcher idioms. It now composes the two slim primitives —
+ * `PageHeader` (identity: title + ⓘ help + actions) and `ViewToolbar` (control:
+ * underline nav + the filter / dropdown cluster) — so all ~40 existing call sites
+ * get the new split surface with no per-page change.
  *
- *   1. title
- *   2. subtitle (left) ⟷ actions (right)
- *   3. filter (pill) + verbose dropdowns
- *   4. nav (underline tabs)
+ * Location is gone (Phase 2 → shell `ScopeSwitcher`). Mappings:
+ *   subtitle → PageHeader `info` (ⓘ popover, off the bar)
+ *   actions  → PageHeader `primaryAction`
+ *   nav      → ViewToolbar underline `Tabs`
+ *   filter   → pill `Tabs` in the toolbar controls (scrolls on overflow)
+ *   dropdowns→ `Select`s in the toolbar controls
  *
- * **Being retired** by the redesign: identity/control split into `PageHeader` +
- * `ViewToolbar` (Phase 3). **Location was removed (Phase 2)** — site context now
- * lives in the shell `ScopeSwitcher`, not in the hero. The primary filter is
- * always a pill `Tabs`, verbose filters are `Select`s, section nav is an
- * underline `Tabs`. See `docs/design-system/admin/theme/components.md`.
+ * **New pages should call `PageHeader` + `ViewToolbar` directly** (and reach for
+ * `Segmented` for ≤4-option filters, `Select` for more). See
+ * `docs/design-system/admin/theme/components.md` → Redesign primitives.
  */
 export function PageHero({ title, subtitle, actions, filter, dropdowns, nav }: Props) {
-  const hasMeta = !!(subtitle || actions);
-  const hasFilters = !!(filter || dropdowns?.length);
+  const hasToolbar = !!(nav || filter || (dropdowns && dropdowns.length));
   return (
-    <header className="v2-page-header v2-hero">
-      <h1 className="v2-page-title">{title}</h1>
-
-      {hasMeta && (
-        <div className="v2-hero-row v2-hero-meta">
-          {subtitle && <p className="v2-page-subtitle">{subtitle}</p>}
-          {actions && <div className="v2-page-actions">{actions}</div>}
-        </div>
-      )}
-
-      {hasFilters && (
-        <div className="v2-hero-filters">
+    <>
+      <PageHeader title={title} info={subtitle} primaryAction={actions} />
+      {hasToolbar && (
+        <ViewToolbar
+          tabs={
+            nav
+              ? { value: nav.value, onChange: nav.onChange, options: nav.options, ariaLabel: nav.ariaLabel }
+              : undefined
+          }
+        >
           {filter && (
             <Tabs
               value={filter.value}
@@ -78,20 +80,8 @@ export function PageHero({ title, subtitle, actions, filter, dropdowns, nav }: P
               options={d.options}
             />
           ))}
-        </div>
+        </ViewToolbar>
       )}
-
-      {nav && (
-        <div className="v2-hero-tabs">
-          <Tabs
-            value={nav.value}
-            onChange={nav.onChange}
-            tabs={nav.options}
-            variant="underline"
-            ariaLabel={nav.ariaLabel ?? "View"}
-          />
-        </div>
-      )}
-    </header>
+    </>
   );
 }

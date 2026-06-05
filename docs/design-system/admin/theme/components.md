@@ -157,7 +157,7 @@ const pageLoc = scope || FALLBACK_LOC;            // "all" → first active loca
 ```
 
 The `ScopeSwitcher` (topbar) writes the scope; every page re-derives + re-fetches
-from it. See [ScopeSwitcher](#redesign-primitives-phase-0--additive-coexist-with-pagehero)
+from it. See [ScopeSwitcher](#redesign-primitives--the-command-surface)
 for how the control scales 1 → N sites. Never reintroduce a per-page location
 pill — the lint guard + this doc are the contract.
 
@@ -448,55 +448,33 @@ language as the KPI tiles. `.v2-kanban-card`s lift on hover
 (`translateY(-1px)` + `--shadow-sm`, reduced-motion-aware), matching the
 interactive-card behaviour.
 
-## Page hero & section eyebrows
+## Page command surface (`PageHeader` + `ViewToolbar`)
 
-Every admin page is fronted by **one shared hero panel** — a raised
-`--surface-1` card with a **`--platinum`** left rail — so the title, location
-filter, filters and actions live in the **same place on
-every page**:
+> **Redesign Phase 3 retired the platinum-railed hero panel for admin pages.**
+> The command surface is now two slim, panel-less bars — `PageHeader` (identity)
+> + `ViewToolbar` (control) — see
+> [Redesign primitives](#redesign-primitives--the-command-surface) below for the
+> full spec and the preferred call pattern.
 
-- **`.v2-page-header`** — the panel shell: `--surface-1` + `1px --border` +
-  `3px --platinum` left rail + `--radius-lg`, `16px 22px` padding. The title
-  (`.v2-page-title`) is serif **`--font-display`** at `--text-2xl` weight 500
-  (don't bold past 500 — typography doctrine).
-- **`PageHero`** (`src/components/admin/v2/ui/PageHero.tsx`, class `.v2-hero`) —
-  fills the panel as **fixed stacked rows** (`.v2-hero` is `flex-column`,
-  `gap:14px`). **Data-driven & enforced:** every control role takes DATA (not
-  JSX) and the hero renders the *one* canonical widget for it, so a page cannot
-  substitute a different widget and the controls can never drift apart. Every
-  row is optional and collapses gracefully; **all controls live inside the panel
-  — nothing floats below.** The rows, top → bottom:
-  1. **`title`** — alone (`.v2-page-title`).
-  2. **`subtitle` (left) ⟷ `actions` (right)** — `.v2-hero-meta`; `actions` is the
-     only free-form (JSX) slot, pushed right via `margin-left:auto`, icon-only.
-     (Location was removed from the hero in Phase 2 — site context now lives in the
-     shell `ScopeSwitcher`, never per-page.)
-  4. **`filter`** = `{value,onChange,options}` → **always** a pill `Tabs`
-     (`.v2-hero-filters`); **`dropdowns[]`** = verbose secondary filters →
-     **always** `Select`s, rendered beside the pill.
-  5. **`nav`** = `{value,onChange,options}` → **always** an underline `Tabs`
-     (`.v2-hero-tabs`) for section navigation, full width.
-  **No `search` slot** — text search was removed from every admin hero by design
-  (lists keep their `filter` / `dropdowns` / `nav`); re-add per page only if asked.
-  **No stats slot** — headline numbers belong in the KPI grid below, not the
-  hero. Golden reference: `AdminPurchaseOrders`. **Use on every page** — never
-  hand-roll a header, and never pass a raw control where a data prop exists.
-  - **Rows never overflow** (structure rule: *contain → wrap → scroll, never
-    overflow*): every row is `flex-wrap:wrap`; a segmented control caps at
-    `max-width:100%` and scrolls internally. Below `820px` the right-aligned
-    items (`actions`, `location`) drop left as rows stack.
-  - **Choosing the slot by role** (this is what keeps widgets consistent):
-    **filter a list with a few short options → `filter`** (pill — Orders status,
-    Menu category, Customers segment). **A filter with many/long options →
-    `dropdowns`** (Select — Users security, Permissions groups, ingredient
-    categories). **Switch between sub-views/panels → `nav`** (underline — Settings
-    sections, Cross-sell/Upsell tabs, Orders Kanban/Table, AI insights, Growth
-    sections). Pick by *role*, not by what the page happened to use before.
-  - **`actions` are icon-only** (compressed primary + secondary) with an
-    `aria-label` + `title` tooltip for the dropped text, and all render at **one
-    size (md / 34px)** regardless of the `size` prop a page passes — CSS
-    (`.v2-hero .v2-page-actions .v2-btn`) normalises it, since `actions` is the
-    one free-form slot the data API can't type-enforce.
+**`PageHero` is now a compatibility composition.** It no longer renders the
+`.v2-page-header` panel / `.v2-hero` rows; it composes `PageHeader` + `ViewToolbar`
+from its existing data props (`title`→title, `subtitle`→the ⓘ help, `actions`→
+primaryAction, `nav`→underline tabs, `filter`→pill `Tabs` in the toolbar,
+`dropdowns`→`Select`s). So all existing call sites render the new split surface
+unchanged. **New pages call `PageHeader` + `ViewToolbar` directly.**
+
+The slot-by-role guidance still holds (it now maps onto the toolbar): **few short
+mutually-exclusive options → `Segmented`** (direct) / the `filter` pill (via
+PageHero); **many/long options → `Select`** (`dropdowns`); **switch sub-views →
+the underline `nav` tabs**. `actions` are the page's primary action (+ compact
+secondaries); icon-only buttons auto-collapse to a 34px square via the global
+`.v2-btn:not(:has(.v2-btn-label))` rule.
+
+> **Legacy CSS note:** `.v2-page-header` / `.v2-page-title` / `.v2-page-subtitle`
+> are **retained only for the `/core` KDS header** (which still uses them) — admin
+> pages no longer render them. The `.v2-hero*` rules are dead-for-admin legacy,
+> pending a later CSS tidy; don't build on them.
+
 - **`.v2-section-eyebrow`** — a 2xs uppercase, `.1em`-tracked `--fg-subtle` label
   trailed by a hairline rule (`::after`, `flex:1`), pulled tight to the group
   below (`margin-bottom:-6px`). It bands the page: **Headline** (the 4 primary
@@ -504,20 +482,21 @@ every page**:
   alerts) / **Demand** (top sellers + heatmap) / **Network** (location table).
   KPIs are split into two `.v2-kpi-grid` tiers under their eyebrows for hierarchy.
 
-## Redesign primitives (Phase 0 — additive, coexist with `PageHero`)
+## Redesign primitives — the command surface
 
 > Shipped in the admin redesign (`../redesign-blueprint.md`,
-> tracked in `../redesign-progress.md`). These are **additive**: pages migrate
-> onto them in Phases 2–4; until then the legacy `PageHero` / `Tabs` pill stay
-> live (`LocationFilter` was removed in Phase 2). **Selection language for all of them is
-> selection-as-raise** — see [material → Selection](./material.md#selection--the-neutral-raise).
+> tracked in `../redesign-progress.md`). As of **Phase 3**, `PageHero` itself
+> composes these (so every page already renders the new surface); new pages call
+> `PageHeader` + `ViewToolbar` directly. `LocationFilter` was removed in Phase 2.
+> **Selection language for all of them is selection-as-raise** — see
+> [material → Selection](./material.md#selection--the-neutral-raise).
 
 ### Page command surface — `PageHeader` + `ViewToolbar`
 
 The redesign **splits the monolithic `PageHero` panel into two slim, panel-less
 bars** so *identity* and *control* never merge (the cause of three switcher idioms
-stacking in one 120px panel). The heavy platinum-railed `.v2-page-header` is
-retired as pages migrate.
+stacking in one 120px panel). The heavy platinum-railed `.v2-page-header` is no
+longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars below.
 
 - **`PageHeader`** (`v2/ui/PageHeader.tsx`, `.v2-pagehead`) — **identity only**: a
   ~52px hairline-based bar (no card, no rail, no shadow). Slots: `title` (serif

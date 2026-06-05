@@ -31,6 +31,7 @@ import {
   EmptyState,
   Input,
   PageHero,
+  PageLoading,
   Table,
   Textarea,
   type Column,
@@ -199,16 +200,7 @@ function AdminCustomerDetailDesktop({ phoneEncoded }: { phoneEncoded: string }) 
   };
 
   if (loading) {
-    return (
-      <div className="v2-page">
-        <header className="v2-page-header">
-          <Link href={withAdminBase(base, "/admin/customers")} className="v2-link-back">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to customers
-          </Link>
-        </header>
-        <div className="v2-page-loading">Loading customer…</div>
-      </div>
-    );
+    return <PageLoading name="customer" />;
   }
 
   if (!data) {

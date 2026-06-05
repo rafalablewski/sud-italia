@@ -1831,10 +1831,12 @@ button.v2-card:active { transform: translateY(0); }
 }
 @media (max-width: 720px) { .v2-page { --page-pad: 14px; gap: 14px; } }
 
-/* Every admin page header is the shared hero panel: a raised surface card with
-   a platinum left rail. The `PageHero` component (`.v2-hero`) stacks it into
-   fixed rows — title / description⟷actions / search⟷location / filters / tabs.
-   One look on all ~38 admin pages. */
+/* LEGACY hero panel — retired for admin pages in redesign Phase 3. `PageHero`
+   now composes the slim `PageHeader` (.v2-pagehead) + `ViewToolbar` (.v2-toolbar)
+   instead of this raised platinum-rail card. These `.v2-page-header` /
+   `.v2-page-title` / `.v2-page-subtitle` rules are KEPT only because the /core
+   KDS header still references them (out of scope). The `.v2-hero*` rules below
+   are dead-for-admin legacy, pending a CSS tidy — don't build on them. */
 .v2-page-header {
   position: relative;
   display: flex;
