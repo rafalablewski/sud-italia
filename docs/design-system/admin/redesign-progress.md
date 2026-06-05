@@ -5,7 +5,7 @@
 > (`../../audits/2026-06-05-admin-subpages-analysis.md`). Update this file in the
 > **same commit** as any redesign work — it is the operator's map of the migration.
 
-**Current phase:** `Phase 0 — Foundations` ✅ complete (primitives + lint shipped)
+**Current phase:** `Phase 1 — Selection fix` ✅ complete · next: Phase 2 (Scope)
 **Last updated:** 2026-06-05
 **Branch:** `claude/admin-subpages-analysis-1bsjz`
 
@@ -16,7 +16,7 @@
 | Phase | Title | Status | Exit gate |
 |---|---|---|---|
 | **0** | Foundations — new primitives + lint (warn) | ✅ **complete** | primitives shipped + documented |
-| 1 | Selection fix (selection-as-raise, no brand flood) | ⬜ not started | zero brand-on-selection |
+| 1 | Selection fix (selection-as-raise, no brand flood) | ✅ **complete** | zero brand-on-selection |
 | 2 | Scope — replace LocationFilter + sidebar switcher | ⬜ not started | `LocationFilter` import count = 0 |
 | 3 | Header split — PageHero → PageHeader + ViewToolbar | ⬜ not started | `.v2-page-header` usage = 0 |
 | 4 | Growth island → Card/Input/Button + SaveDock | ⬜ not started | `glass-card`/`glass-input` = 0 |
@@ -95,10 +95,37 @@ These only go down. Phase 5 flips the rules to `error` once they reach 0.
 - **Phase 0 complete (2026-06-05).** Six primitives + warn-mode lint + docs
   shipped. `tsc` clean, lint 0 errors. Ratchet baseline recorded above.
 
-## ▶ Next up — Phase 1 (Selection fix)
-Repoint every legacy `.is-active` that brand-floods to selection-as-raise. The
-big one is `.v2-locpill.is-active` (the audit's headline offender) — but since
-Phase 2 replaces `LocationFilter` wholesale with `ScopeSwitcher`, Phase 1 can
-focus on any *other* brand-on-selection states (and confirm the underline-tab
-2px brand accent is the only sanctioned brand-as-state). Exit gate: zero
-brand-fill selection states outside the sanctioned underline accent.
+## Phase 1 — Selection fix · done (2026-06-05)
+Repointed every in-scope brand-flood `.is-active` / `.is-selected` to
+selection-as-raise (`--surface-3` + `--border-strong` + full `--fg`), CSS-only in
+`src/app/themes/admin/index.css`:
+
+| Rule | Was | Now |
+|---|---|---|
+| `.v2-locpill.is-active` | brand-soft + border-drop (headline offender) | surface-3 + border-strong |
+| `.v2-chip.is-selected` | brand-soft + brand border | surface-3 + border-strong |
+| `.v2-tabs-pill .v2-tab.is-active .v2-tab-count` | brand-soft/brand | surface-3/fg-muted |
+| `.v2-palette-item.is-active .v2-palette-item-icon` | brand-soft/brand | surface-1/fg |
+| `.v2-m-icon-btn.is-active` | brand-soft/brand | surface-3/fg |
+| `.v2-m-chip.is-active` | brand-soft + brand border/text | surface-3 + border-strong/fg |
+| `.v2-m-list-row.is-selected` | brand-soft | surface-3 |
+| `.v2-m-bottom-nav-item.is-active` | brand color **+ forbidden brand glow drop-shadow** | fg color, glow removed |
+
+**Exit gate met:** the only brand-as-state left is the sanctioned 2px `--brand`
+underline on an active underline tab. Verified via
+`grep "is-active|is-selected" … | grep brand` → only the underline accent + the
+out-of-scope `/core` POS rules remain. `tsc` + build clean.
+
+**Deferred to Phase 5 (material/token sweep — NOT selection states, so out of
+Phase 1 scope, logged so they're not lost):**
+- `.v2-m-btn-primary` carries a brand-tinted `box-shadow` (button-doctrine says no
+  tinted shadows).
+- `.v2-m-notif-row.is-unread .v2-m-notif-dot` has a brand ring glow (status
+  indicator — review whether to keep as intentional unread emphasis).
+
+## ▶ Next up — Phase 2 (Scope)
+Wire `ScopeSwitcher` into the shell (breadcrumb), back it with a persisted
+session scope, and remove the per-page `LocationFilter` + sidebar
+`LocationSwitcher`. Exit gate: `LocationFilter` import count = 0. This is a
+behavioural change (touches the shell + every page that filters by location), so
+it warrants its own phase and careful end-to-end data-flow verification.

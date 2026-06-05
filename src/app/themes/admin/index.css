@@ -762,7 +762,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   color: var(--fg-muted);
   flex-shrink: 0;
 }
-.v2-palette-item.is-active .v2-palette-item-icon { background: var(--brand-soft); color: var(--brand); }
+.v2-palette-item.is-active .v2-palette-item-icon { background: var(--surface-1); color: var(--fg); }
 .v2-palette-item-text {
   flex: 1;
   min-width: 0;
@@ -1582,7 +1582,7 @@ body.kds-immersive .kds-atlas { margin: 0; border: 0; border-radius: 0; height: 
   background: var(--surface-1);
   box-shadow: var(--shadow-xs);
 }
-.v2-tabs-pill .v2-tab.is-active .v2-tab-count { background: var(--brand-soft); color: var(--brand); }
+.v2-tabs-pill .v2-tab.is-active .v2-tab-count { background: var(--surface-3); color: var(--fg-muted); }
 
 /* --- Table --- */
 .v2-table-wrap {
@@ -1966,7 +1966,9 @@ button.v2-card:active { transform: translateY(0); }
   transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
 }
 .v2-locpill:hover { color: var(--fg); background: var(--surface-hover); }
-.v2-locpill.is-active { background: var(--brand-soft); color: var(--brand-text); border-color: transparent; }
+/* selection-as-raise (Phase 1) — was brand-soft + border-drop (the audit's
+   headline offender); LocationFilter is retired wholesale in Phase 2. */
+.v2-locpill.is-active { background: var(--surface-3); color: var(--fg); border-color: var(--border-strong); }
 .v2-hero-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
 /* A segmented control inside the hero never widens the panel — it caps at the
    available width and scrolls internally (contain → wrap → scroll, never overflow). */
@@ -5665,8 +5667,8 @@ button.v2-card:active { transform: translateY(0); }
 }
 .v2-chip:hover { background: var(--surface-3); color: var(--fg); }
 .v2-chip.is-selected {
-  background: var(--brand-soft);
-  border-color: var(--brand);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
   color: var(--fg);
 }
 
@@ -6933,7 +6935,7 @@ select.pub-input {
   -webkit-tap-highlight-color: transparent;
 }
 .v2-m-icon-btn:active { background: var(--surface-hover); color: var(--fg); }
-.v2-m-icon-btn.is-active { background: var(--brand-soft); color: var(--brand); }
+.v2-m-icon-btn.is-active { background: var(--surface-3); color: var(--fg); }
 
 .v2-m-bell { position: relative; }
 .v2-m-bell-badge {
@@ -7008,10 +7010,12 @@ select.pub-input {
   max-width: 100%;
 }
 .v2-m-bottom-nav-item.is-active {
-  color: var(--brand);
+  color: var(--fg);
 }
 .v2-m-bottom-nav-item.is-active .v2-m-bottom-nav-icon {
-  filter: drop-shadow(0 0 8px color-mix(in oklab, var(--brand) 60%, transparent));
+  /* Phase 1: removed forbidden brand glow (material.md "no coloured glow
+     shadows"); active nav reads via full-contrast colour like the desktop sidebar. */
+  filter: none;
 }
 
 .v2-m-bottom-fab {
@@ -7389,9 +7393,9 @@ select.pub-input {
 }
 .v2-m-chip:active { transform: scale(0.96); }
 .v2-m-chip.is-active {
-  background: var(--brand-soft);
-  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
-  color: var(--brand);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--fg);
 }
 .v2-m-chip-count {
   font-size: var(--m-text-2xs);
@@ -8231,7 +8235,7 @@ select.pub-input {
   border-bottom: 2px solid var(--brand-fg);
   transform: rotate(45deg);
 }
-.v2-m-list-row.is-selected { background: var(--brand-soft); }
+.v2-m-list-row.is-selected { background: var(--surface-3); }
 @media (prefers-reduced-motion: reduce) {
   .v2-m-bulkbar { transition: none; }
 }

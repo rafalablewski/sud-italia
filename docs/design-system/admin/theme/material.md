@@ -188,9 +188,18 @@ Two rules this enforces:
   structural navigation, not a fill.)
 - **No border drop, no layout shift.** The inactive and active states carry the
   *same* border box (transparent → `--border-strong`), so selecting never nudges
-  neighbours by a pixel. This kills the legacy `.v2-locpill.is-active` bug
+  neighbours by a pixel. This killed the legacy `.v2-locpill.is-active` bug
   (`border-color: transparent` + `--brand-soft` fill) that shifted the row and
-  tinted the whole control. `ScopeSwitcher` retires that pill.
+  tinted the whole control.
+
+**Phase 1 (selection fix) repointed every legacy brand-flood active state to this
+rule** — `.v2-locpill.is-active` (the audit's headline offender),
+`.v2-chip.is-selected`, the active pill-tab count badge, and the mobile
+`.v2-m-icon-btn` / `.v2-m-chip` / `.v2-m-list-row` / `.v2-m-bottom-nav-item`
+states (the last also had a forbidden brand glow drop-shadow, now removed). The
+**only** sanctioned brand-as-state that remains is the 2px `--brand` underline on
+an active underline tab. (Out of scope: the `/core` POS surfaces keep their own
+brand-tinted selection for now.)
 
 Live in the redesign primitives: `.v2-seg-opt.is-active`,
 `.v2-scope-opt.is-active` (see [components → Redesign primitives](./components.md#redesign-primitives-phase-0--additive-coexist-with-pagehero)).

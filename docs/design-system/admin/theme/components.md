@@ -144,9 +144,16 @@ Placed inline in the tags row on a POS product card.
 Live code: `src/components/admin/v2/ui/LocationFilter.tsx` (exported from the
 `v2/ui` barrel). **This is the only way to let an `/admin/*` page filter by
 site**, and it's always the **same shape: a pill row** (`MapPin` + city, active
-pill in `--brand-soft`). It replaced two drifting patterns — the hand-rolled
-`LocationTabs` pills and the inline `v2-field-inline` + `Select` copy-pasted into
-a dozen page headers.
+pill in **selection-as-raise** — `--surface-3` + `--border-strong`, as of the
+Phase 1 selection fix; it was the audit's headline brand-flood + border-drop bug).
+It replaced two drifting patterns — the hand-rolled `LocationTabs` pills and the
+inline `v2-field-inline` + `Select` copy-pasted into a dozen page headers.
+
+> **Being retired.** `LocationFilter` is superseded by `ScopeSwitcher` (location
+> is shell-level *scope*, not a per-page filter) — see
+> [Redesign primitives](#redesign-primitives-phase-0--additive-coexist-with-pagehero).
+> Phase 2 removes it. Don't add new usages; the Phase 1 selection fix above is
+> only to keep the interim look correct.
 
 **It scales without changing shape.** The pills live in a horizontal scroller
 (`.v2-locscroll` → `.v2-locscroll-track`): pills never wrap or shrink, and when
