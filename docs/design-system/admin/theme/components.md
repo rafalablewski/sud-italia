@@ -512,11 +512,19 @@ longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars be
   `.v2-menu-item`), and an optional `back` slot for detail pages. **No location,
   no filters here.**
 - **`ViewToolbar`** (`v2/ui/ViewToolbar.tsx`, `.v2-toolbar`) — **control only**, a
-  44px bar attached to the data: `tabs` (underline `Tabs`, sub-view navigation
+  ~48px bar attached to the data: `tabs` (underline `Tabs`, sub-view navigation
   only) on the left; `children` (the filter / sort / display cluster) on the
   right. `sticky` pins it under the header on long tables. The toolbar owns the
   tabs' bottom border so the inner `Tabs` drops its own. Omit entirely when a page
   has neither navigation nor filters.
+  - **One control height (34px).** Every control in the toolbar's right cluster
+    **and** the `PageHeader` actions snaps to **34px** — the pill `filter`,
+    `Segmented`, `Select`, `Input`, `Button` (md) and `IconButton` all align to a
+    single height + baseline (CSS: `.v2-toolbar-controls`/`.v2-pagehead-actions`
+    normalise it; intrinsic `Select`/`Input` padding is dropped to hold 34px).
+    Underline nav tabs stretch full-height so the active 2px rule meets the
+    toolbar's bottom hairline. This kills the 34/36/38 height drift between
+    buttons, tabs, selects and the pill — the row must read as one system.
 
 ```tsx
 <PageHeader title="Orders" info={<>…how to read this…</>}

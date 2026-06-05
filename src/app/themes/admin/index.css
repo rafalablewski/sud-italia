@@ -2030,6 +2030,39 @@ button.v2-card:active { transform: translateY(0); }
   padding: 6px 0;
 }
 
+/* ── Command surface — ONE control height (34px), one baseline ────────────────
+   Every control in the ViewToolbar + PageHeader actions snaps to 34px so the row
+   reads as a single system — killing the 34/36/38 drift between underline tabs,
+   the pill filter, Segmented, Select, Input and Buttons. Restraint = the chrome
+   disappears. See docs/design-system/admin/theme/components.md → Page command
+   surface. */
+.v2-toolbar { align-items: stretch; min-height: 48px; }
+.v2-toolbar-nav { display: flex; align-items: stretch; }
+.v2-toolbar-nav .v2-tabs,
+.v2-toolbar-nav .v2-tabs-underline { align-items: stretch; }
+/* Underline nav tabs stretch full-height so the 2px active rule meets the
+   toolbar's bottom hairline (the canonical tab-bar look) instead of floating. */
+.v2-toolbar-nav .v2-tabs-underline .v2-tab { padding-top: 0; padding-bottom: 0; }
+
+.v2-toolbar-controls > .v2-btn,
+.v2-toolbar-controls > .v2-icon-btn,
+.v2-toolbar-controls .v2-tabs-pill,
+.v2-toolbar-controls .v2-seg,
+.v2-toolbar-controls .v2-select-wrap,
+.v2-toolbar-controls .v2-input-wrap,
+.v2-pagehead-actions > .v2-btn,
+.v2-pagehead-actions > .v2-icon-btn {
+  height: 34px;
+  min-height: 34px;
+}
+/* Select / Input sit in a tight inline wrapper that centres their control at
+   34px — drops the intrinsic 7px vertical padding that rendered them ~36px. */
+.v2-toolbar-controls .v2-field { display: inline-flex; min-width: 0; }
+.v2-toolbar-controls .v2-select-wrap,
+.v2-toolbar-controls .v2-input-wrap { display: inline-flex; align-items: center; }
+.v2-toolbar-controls .v2-select,
+.v2-toolbar-controls .v2-input { padding-top: 0; padding-bottom: 0; }
+
 /* --- SaveDock (transient editor save bar) ---------------------------------- */
 .v2-savedock {
   position: fixed;
