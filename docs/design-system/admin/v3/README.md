@@ -189,5 +189,8 @@ refetches every 30s.
 - [x] Business costs (`/admin-v3/business-costs`) — operating-expense register
   with monthly-recurring / annualised / payroll / one-off KPIs (shared
   `monthlyGrosze`), category chips, add/edit/delete dialog (`/api/admin/business-costs`)
+- [x] Cash (`/admin-v3/cash`) — till session lifecycle: open float, record
+  cash-sale/drop/payout entries, expected-drawer KPI, close with counted-cash →
+  live variance, and a closed-session history (`/api/admin/cash` + `?action=drop|close`)
 - [ ] Finance · Calculator (AdminSimulation, dedicated effort), Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
