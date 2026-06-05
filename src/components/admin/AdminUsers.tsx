@@ -205,7 +205,7 @@ function PostureChip({ posture }: { posture: Posture }) {
       ? "var(--success, #34d399)"
       : posture.tone === "warning"
         ? "var(--warning, #f59e0b)"
-        : "#94a3b8";
+        : "var(--fg-subtle)";
   const Icon = posture.risk ? ShieldAlert : ShieldCheck;
   return (
     <span

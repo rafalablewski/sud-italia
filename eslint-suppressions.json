@@ -1,9 +1,4 @@
 {
-  "src/components/admin/AdminCohortReport.tsx": {
-    "no-restricted-syntax": {
-      "count": 6
-    }
-  },
   "src/components/admin/AdminConcierge.tsx": {
     "no-restricted-syntax": {
       "count": 6
@@ -54,11 +49,6 @@
       "count": 17
     }
   },
-  "src/components/admin/AdminLtvCac.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/components/admin/AdminMenu.tsx": {
     "no-restricted-syntax": {
       "count": 10
@@ -81,7 +71,7 @@
   },
   "src/components/admin/AdminRecipes.tsx": {
     "no-restricted-syntax": {
-      "count": 13
+      "count": 9
     }
   },
   "src/components/admin/AdminRegulatoryCompliance.tsx": {
@@ -106,12 +96,12 @@
   },
   "src/components/admin/AdminSimulation.tsx": {
     "no-restricted-syntax": {
-      "count": 10
+      "count": 7
     }
   },
   "src/components/admin/AdminUsers.tsx": {
     "no-restricted-syntax": {
-      "count": 2
+      "count": 1
     }
   },
   "src/components/admin/AdminWhatsApp.tsx": {
@@ -122,11 +112,6 @@
   "src/components/admin/AuditLog.tsx": {
     "no-restricted-syntax": {
       "count": 1
-    }
-  },
-  "src/components/admin/CohortSandbox.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
     }
   },
   "src/components/admin/MLUpsellPanel.tsx": {

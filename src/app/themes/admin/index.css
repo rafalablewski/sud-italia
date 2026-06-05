@@ -65,6 +65,18 @@
   --info-fg: #ffffff;
   --info-soft: rgba(110, 146, 192, 0.16);
 
+  /* Categorical chart palette as CSS tokens — mirrors theme.ts `chart` (the JS
+     source for Recharts). Burgundy-led + harmonized; use var(--chart-N) for
+     categorical series in CSS contexts. See theme/color.md → Data visualisation. */
+  --chart-1: #a62d49;
+  --chart-2: #cbb48a;
+  --chart-3: #6e92c0;
+  --chart-4: #2fa875;
+  --chart-5: #c77f4a;
+  --chart-6: #8e6fb0;
+  --chart-7: #d98aa0;
+  --chart-8: #7fa86b;
+
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.32);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.22);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.28);
@@ -112,6 +124,16 @@
   --info: #3f6493;
   --info-fg: #ffffff;
   --info-soft: rgba(63, 100, 147, 0.10);
+
+  /* Categorical chart palette — mirrors theme.ts `chart` (light). */
+  --chart-1: #97283f;
+  --chart-2: #9c7e4e;
+  --chart-3: #3f6493;
+  --chart-4: #1f855e;
+  --chart-5: #b5683a;
+  --chart-6: #74599a;
+  --chart-7: #bc6a82;
+  --chart-8: #5e8049;
 
   --shadow-xs: 0 1px 2px rgba(40, 28, 24, 0.05);
   --shadow-sm: 0 1px 3px rgba(40, 28, 24, 0.08), 0 1px 2px rgba(40, 28, 24, 0.04);

@@ -432,7 +432,7 @@ export function AdminLtvCac() {
             <LineChart
               data={curve}
               xKey="offset"
-              series={[{ key: "retention", label: "Retention", color: "#28a06d" }]}
+              series={[{ key: "retention", label: "Retention", color: "var(--success)" }]}
               height={220}
               yFormat={(n) => `${n}%`}
               tooltipValue={(n) => `${n}%`}

@@ -42,7 +42,16 @@ interface CohortReport {
   };
 }
 
-const HEAT_COLORS = ["#0a3d1a", "#15613c", "#1f8055", "#28a06d", "#3bcb88", "#7be3ad"];
+// Single-hue (burgundy) sequential ramp per theme/color.md — never a rainbow/green
+// ramp. Steps interpolate brand→surface via color-mix (resolves in CSS).
+const HEAT_COLORS = [
+  "color-mix(in oklab, var(--brand) 16%, var(--surface-1))",
+  "color-mix(in oklab, var(--brand) 32%, var(--surface-1))",
+  "color-mix(in oklab, var(--brand) 48%, var(--surface-1))",
+  "color-mix(in oklab, var(--brand) 64%, var(--surface-1))",
+  "color-mix(in oklab, var(--brand) 80%, var(--surface-1))",
+  "color-mix(in oklab, var(--brand) 96%, var(--surface-1))",
+];
 function heatColor(pct: number): string {
   const idx = Math.min(HEAT_COLORS.length - 1, Math.floor(pct / 20));
   return HEAT_COLORS[idx];

@@ -95,14 +95,24 @@ side.
 
 ## Data visualisation
 
-Categorical palette is burgundy-led and harmonised (see `theme.ts` `chart`):
+Categorical palette is burgundy-led and harmonised. **Two synced sources, never
+inline hex:**
+
+- **JS / Recharts** → `theme.ts` `chart` (via `getPalette(mode).chart`).
+- **CSS contexts** → `--chart-1` … `--chart-8` tokens (admin `index.css`, dark +
+  light), mirroring the same palette. Use `var(--chart-N)` for a categorical
+  series colour (e.g. `AdminRecipes` cost bars).
 
 ```
 #a62d49  #cbb48a  #6e92c0  #2fa875  #c77f4a  #8e6fb0  #d98aa0  #7fa86b
 ```
 
 Sequential ramps interpolate within a **single hue** (burgundy or steel) —
-never rainbow. Gridlines use the hairline alpha; axes use `--fg-subtle`.
+never rainbow, never green. Build them with `color-mix(in oklab, var(--brand) N%,
+var(--surface-1))` across the steps (e.g. `AdminCohortReport`'s retention
+heatmap). Gridlines use the hairline alpha; axes use `--fg-subtle`. **Never inline
+hex in a chart** — it's lint-guarded (the ratchet) and drifts from these two
+sources.
 
 ## Status semantics
 
