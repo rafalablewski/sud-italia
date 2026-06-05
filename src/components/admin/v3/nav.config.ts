@@ -100,8 +100,8 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     label: "Inventory",
     items: [
       { href: `${P}/inventory`, label: "Stock", icon: Boxes, requiredRole: "staff" },
-      { href: `${P}/suppliers`, label: "Suppliers", icon: Building2, requiredRole: "manager", pending: true },
-      { href: `${P}/purchase-orders`, label: "Purchase orders", icon: PackageSearch, requiredRole: "manager", pending: true },
+      { href: `${P}/suppliers`, label: "Suppliers", icon: Building2, requiredRole: "manager" },
+      { href: `${P}/purchase-orders`, label: "Purchase orders", icon: PackageSearch, requiredRole: "manager" },
     ],
   },
   {

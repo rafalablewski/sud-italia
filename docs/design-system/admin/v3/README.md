@@ -162,5 +162,11 @@ refetches every 30s.
 - [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
   week's log (`POST /api/admin/handover`)
-- [ ] Suppliers/POs, People, Customers, Finance, Growth, Intelligence, System
+- [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
+  add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`)
+- [x] Purchase orders (`/admin-v3/purchase-orders`) — per-location restock
+  orders with status chips, a create dialog (supplier + ingredient lines +
+  expected date, `POST`), and a detail dialog driving the draft→sent→received
+  flow (`PUT`, receiving auto-credits stock) + cancel/delete
+- [ ] People, Customers, Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
