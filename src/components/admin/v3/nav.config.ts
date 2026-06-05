@@ -116,9 +116,9 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     id: "customers",
     label: "Customers",
     items: [
-      { href: `${P}/customers`, label: "Customers", icon: Users, requiredRole: "staff", pending: true },
+      { href: `${P}/customers`, label: "Customers", icon: Users, requiredRole: "staff" },
       { href: `${P}/corporate`, label: "Corporate", icon: Building2, requiredRole: "manager", pending: true },
-      { href: `${P}/feedback`, label: "Feedback", icon: MessageSquare, requiredRole: "manager", pending: true },
+      { href: `${P}/feedback`, label: "Feedback", icon: MessageSquare, requiredRole: "manager" },
       { href: `${P}/surveys`, label: "Pulse surveys", icon: Gauge, requiredRole: "manager", pending: true },
     ],
   },

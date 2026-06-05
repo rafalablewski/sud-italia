@@ -172,5 +172,10 @@ refetches every 30s.
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
   active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts grouped by
   day with add/edit/delete (`/api/admin/shifts`)
-- [ ] Customers, Finance, Growth, Intelligence, System
+- [x] Customers (`/admin-v3/customers`) — phone-based directory (search,
+  repeat/CLV KPIs, per-customer detail) derived from real orders
+- [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
+  avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
+  and AI sentiment (`POST /api/admin/feedback/analyze`)
+- [ ] Customers section remainder (Corporate, Pulse surveys), Finance, Growth, Intelligence, System
 - [ ] Parity reached → flip `/admin` to v3, delete v2, register in `/admin/capabilities`
