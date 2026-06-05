@@ -133,7 +133,7 @@ function CorporateDialog({ account, locations, onClose, onSaved }: { account: Co
     >
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Account name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Billing email</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} /></div>
-      <div className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 10 }}>
+      <div className="av3-formrow" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Head bonus %</span><input className="av3-input" type="number" step="0.1" value={bonusPct} onChange={(e) => setBonusPct(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Min employees</span><input className="av3-input" type="number" value={minEmployees} onChange={(e) => setMinEmployees(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Home site</span>

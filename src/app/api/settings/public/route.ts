@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     /** Loyalty programme config — tier ladder + active rewards catalogue.
      *  Customer surfaces (the /rewards page, cart tier banners, the earn
      *  preview) read tier thresholds + multipliers + perks from here so
-     *  the operator's edits in /admin/loyalty land immediately, not at
+     *  the operator's edits in /core/guest/loyalty land immediately, not at
      *  the next deploy. Only `active: true` rewards are shipped.        */
     loyalty: {
       tiers: settings.tiers,

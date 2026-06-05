@@ -16,9 +16,10 @@ handed over cleanly.
 
 > **Slots & Floor are now the Core Service surface.** They were merged and
 > rebuilt on the Core suite theme (CoreShell) as the **Service** surface —
-> book a dine-in slot + assign a table in one step, plus Floor (live room +
-> twin) and Slots (capacity + demand) views. `/admin/slots` and `/admin/floor`
-> `redirect()` into `/core/service?view=…`; their anatomy now lives in
+> Floor (live room + twin) and Slots (capacity + demand), each its own nested
+> route `/core/service/{floor,slots}` (booking moved to the Guest hub at
+> `/core/guest/book`). The old `/admin/slots` and `/admin/floor` stub pages
+> were deleted; their anatomy now lives in
 > [`../../core/modules/service.md`](../../core/modules/service.md), not here.
 
 ## Common rules across the section
@@ -81,9 +82,10 @@ The recipe board — one card per dish (deduped by base slug; CLAUDE rule
 ## Slots & Floor — moved to the Core Service surface
 
 Time-slot capacity, the dining floor (tables + reservations), the live Floor
-Twin, the Demand Exchange yield board, and the unified slot+table booking now
-live on the **Core** theme as the **Service** surface (CoreShell). `/admin/slots`
-and `/admin/floor` redirect into `/core/service?view=slots|floor`. See
+Twin, and the Demand Exchange yield board now live on the **Core** theme as the
+**Service** surface (CoreShell), as nested routes `/core/service/{floor,slots}`
+(the slot+table booking console moved to the Guest hub, `/core/guest/book`). The
+old `/admin/slots` and `/admin/floor` stub pages were deleted. See
 [`../../core/modules/service.md`](../../core/modules/service.md) for the anatomy,
 and [`../../strategy/restaurant-os-blueprint.md`](../../../strategy/restaurant-os-blueprint.md)
 for the Demand Exchange (Module 2) + Floor Twin (Module 3) theses.

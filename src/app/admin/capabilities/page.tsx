@@ -327,12 +327,12 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/core/guest",
           summary:
-            "One surface for the relationship layer (/core/guest) with four views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log) and Concierge (the AI capability layer + EU-14 allergen matrix). CRM, Loyalty, Concierge and WhatsApp are no longer separate sidebar entries; the old /admin/crm, /admin/loyalty, /admin/concierge and /admin/whatsapp routes redirect into the matching view, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
+            "One surface for the relationship layer (/core/guest) with five views — Inbox (live WhatsApp conversations + order context + funnel), Guests (the CRM customer book), Loyalty (the member roster + family wallets + redemption log), Concierge (the AI capability layer + EU-14 allergen matrix) and Book (the slot+table booking console, moved here from Service). CRM, Loyalty, Concierge, WhatsApp and Booking are each their own nested route (/core/guest/{whatsapp,crm,loyalty,concierge,book}); the bare /core/guest redirects to the Inbox, and every view shares the canonical customer record, identity-merge rules and loyalty-points ledger.",
         },
         {
           name: "CRM — Regulars customer book",
           status: "live",
-          href: "/core/guest?view=guests",
+          href: "/core/guest/crm",
           summary:
             "System of record for every customer who leaves data — members and contacts alike. Searchable book split into Agentic (WhatsApp) vs staff-channel customers, with lifecycle / data-facet / channel / period filters, a derived relationship-health gauge (RFM + reliability), AI next-best-action, invite-to-loyalty, manual points, consent toggles (toggle = saved), email collection and notes. A 'Send today' prompt surfaces today's birthdays + first-order anniversaries (GET /api/admin/campaigns/triggers). Each profile carries a GDPR panel — Export (DSAR, Art. 15, GET /api/admin/gdpr/export) and Erase (Art. 17, owner-only, POST /api/admin/gdpr/delete). Wired to live orders + loyalty members + point adjustments via /api/admin/crm.",
           caveats:
@@ -341,14 +341,14 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty — roster, wallets & redemptions",
           status: "live",
-          href: "/core/guest?view=loyalty",
+          href: "/core/guest/loyalty",
           summary:
-            "The fourth Guest-hub view (/core/guest?view=loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+            "The fourth Guest-hub view (/core/guest/loyalty), rebuilt onto the Core suite theme. Members tab: every loyalty member with tier badge (bronze/silver/gold/platinum), point balance, order count, lifetime spend and last-order date, with name/phone search + tier-filter chips + sortable columns, and a per-member manual point adjustment (signed amount + reason → POST /api/admin/members/points). Family wallets tab: each shared pool (up to 6 phones) with member status, dissolvable by an operator (DELETE /api/admin/wallets). Redemptions tab: the burn log (who redeemed what reward, solo or wallet). Reads /api/admin/members, /api/admin/wallets and /api/admin/wallet-redemptions; shares the one points ledger with the rest of the Guest hub. The programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Customer Intelligence — per-guest behavioural graph",
           status: "live",
-          href: "/core/guest?view=loyalty",
+          href: "/core/guest/loyalty",
           summary:
             "Keystone of the Customer Identity Network (docs/strategy/restaurant-os-blueprint.md). Every member row in the Loyalty view has an Intelligence action that opens a per-guest behavioural graph derived live from real orders (no mock data): go-to dishes + category, the temporal signature in Europe/Warsaw time (the 'Friday ~18:30' pattern), visit cadence → predicted next visit + a churn-hazard assessment (low / watch / high / lost, aligned to the 90-day lapse line), conditional attach rules ('adds Tiramisù when party ≥ 4' with lift + support), channel mix, average order value, and a one-line next-order prediction headline. Pure-compute engine src/lib/customer-intelligence.ts (unit-tested, 10 cases) over getOrdersByPhone(); served by GET /api/admin/customer-intelligence?phone= (withAdmin, staff+, chain-wide per guest). Confidence is gated by order count so a thin history never over-claims.",
         },
@@ -363,7 +363,7 @@ export default async function CapabilitiesPage() {
             : has("MAILGUN_API_KEY", "MAILGUN_DOMAIN", "MAILGUN_FROM")
               ? "live"
               : "needs-config",
-          href: "/core/guest?view=loyalty",
+          href: "/core/guest/loyalty",
           envVars: [
             "TWILIO_ACCOUNT_SID",
             "TWILIO_AUTH_TOKEN",
@@ -384,7 +384,7 @@ export default async function CapabilitiesPage() {
           status: has("WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY")
             ? "live"
             : "needs-config",
-          href: "/core/guest?view=concierge",
+          href: "/core/guest/concierge",
           summary:
             "One capability layer exposed to AI assistants over a public read endpoint and to guests over WhatsApp. Operator toggles per-capability exposure (toggle = saved) for get_menu / check_availability / get_allergens / locate_truck (served live from the real menu at /api/agent/<capability>) plus the conversational place_order / create_payment that run through the WhatsApp bot + Stripe checkout. Inspector shows the live JSON + an EU-14 allergen matrix from the real menu.",
           envVars: ["WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN", "ANTHROPIC_API_KEY"],
@@ -483,7 +483,7 @@ export default async function CapabilitiesPage() {
         {
           name: "WhatsApp chat simulator",
           status: "live",
-          href: "/core/guest?view=inbox",
+          href: "/core/guest/whatsapp",
           summary:
             "Demo / training tool with no separate page (mirrors the KDS order simulator): flip whatsappSimulatorEnabled in /admin/settings (owner-only toggle) and the WhatsApp console shows a 'Sandbox' tag plus manual Add 1 / Add 5 / Purge controls on the stats/filter strip. There is NO auto-spawn — the operator adds a controlled batch, then reads/replies to each chat with the normal thread composer. Each spawn (POST /api/admin/whatsapp-simulator, action: spawn, count clamped 1–5) builds a synthetic-but-real conversation ONLY from a real truck menu via getMenuWithOverrides() (no made-up products), at a random funnel stage (browsing / cart / fulfillment+slot / awaiting payment), and writes it through saveSimulatedWaConversation() — a real WaSession (simulated:true) + a real transcript — so the console renders it exactly like a live chat. Sandbox chats use a reserved +48999XXXXXX phone range, carry a '(sim)' customer name and a purple 'sim' badge in the list + 'sandbox' badge in the thread head, and never send a real WhatsApp message (the simulator writes straight to the store, bypassing the Meta provider). Spawned phones are tracked in a whatsapp-sim-phones.json registry so Purge (action: purge) clears every sandbox session + transcript in one shot. Spread across active trucks for variety unless scoped to one location.",
           caveats:
@@ -630,7 +630,7 @@ export default async function CapabilitiesPage() {
             "ANTHROPIC_API_KEY",
             "STRIPE_SECRET_KEY",
           ],
-          href: "/core/guest?view=inbox",
+          href: "/core/guest/whatsapp",
           summary:
             "LLM-driven WhatsApp Business ordering: customer messages the number, Claude walks them through menu → cart → slot → Stripe Checkout link in chat. Signature-verified Meta webhook at /api/whatsapp/webhook. The /admin/whatsapp operator console is a KDS/POS-style command surface (3-pane inbox: live conversation list · chat thread with operator reply + re-open template · context panel showing cart/order/funnel), with a fullscreen kiosk mode. The Inbox/Live/Awaiting-pay/Archived filters drive an operator-side auto-archive: a chat with no new message for `autoArchiveMinutes` (default 5) drops to Archived — console-only, so the customer's 90-min bot session/cart is untouched and a new message restores it to the inbox. The Settings overlay (WhatsAppSettingsDialog) is the advanced config hub, all wired end-to-end via WaSettings: Channel (enable, default location, daily cap), Messages (welcome, opt-out keywords, re-open template), Conversation lifecycle (auto-archive minutes), AI concierge (enable/disable + extra system-prompt instructions appended to the base prompt in lib/whatsapp/turn.ts, plus an away message sent when AI is off), and Auto-replies/scripts (keyword→canned-reply pairs matched in the webhook BEFORE the LLM). Business hours (Europe/Warsaw, per-day open/close + closed days, computed in lib/whatsapp/hours.ts) gate the bot in the webhook — outside hours the away message is sent instead of taking an order, while auto-replies still answer 24/7. Operators can also manually Pin a chat (never auto-archives, stays in the inbox) or Archive it now from the context panel; a new inbound message un-archives automatically. Switches save instantly; text fields save with the button. A Funnel button opens conversion analytics: real stage instrumentation (started → location → cart → fulfillment → slot → pay-link → paid) emitted from the bot pipeline (first-touch in the webhook, stage transitions diffed in lib/whatsapp/turn.ts, paid from the Stripe webhook) into an appendWaFunnelEvent log, aggregated cumulatively per phone (a later stage counts toward earlier ones, so drop-off is monotonic and a missed intermediate event never breaks the funnel) over 7d/30d/all via GET /api/admin/whatsapp/funnel. Simulated chats bypass the live pipeline, so they never pollute the funnel. Abandoned-cart recovery (opt-in, Settings → Abandoned-cart recovery): when a customer builds a cart but doesn't pay, a record is upserted in the turn loop (persisted beyond the 90-min session) and cleared on paid (Stripe webhook) or escalation; the daily cron /api/admin/cron/whatsapp-abandoned-cart (registered in the dispatcher) sends the Meta re-open template once to carts idle ≥ delayHours and under 4 days old, marking each notified so customers are never spammed. Self-skips when disabled or no template is set. Broadcast campaigns (Broadcast button): send an approved Meta template to an opted-in customer segment — audience filters computed live from the customer rollup (all / active 60d / lapsed 90d+ / VIP ≥200 zł & ≥6 orders / new 14d), always excluding smsOptout + phoneless. POST /api/admin/whatsapp/broadcasts snapshots the audience into a campaign (capped 5000); the UI drives batched sends (25/tick) via /broadcasts/[id]/send with a live progress bar, and a daily /api/admin/cron/whatsapp-broadcast-drain backstop finishes any campaign left mid-send. Audit-logged on create. Scripted flows (Settings → Scripted flows): operator-authored deterministic sequences — a customer message containing the trigger word starts the flow (sends step 1) and each reply advances one step until the steps run out. Runs ahead of the LLM in lib/whatsapp/flows.ts (independent of the AI toggle), with per-session state on WaSession.activeFlow; replies are captured in the transcript. Great for feedback or info sequences without burning model calls.",
         },
@@ -654,9 +654,9 @@ export default async function CapabilitiesPage() {
         {
           name: "Three ordering modes (takeout / delivery / dine-in)",
           status: "live",
-          href: "/core/service?view=slots",
+          href: "/core/service/slots",
           summary:
-            "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /admin/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
+            "Cart drawer offers Takeout, Delivery, and Dine-in. Dine-in is reserve-a-table-and-pre-choose-food: the customer sets a party size, picks a time slot (the booking time), and the cart is the food prepared for when they sit down. Party size persists on the order (Order.partySize) and surfaces on the order tracker, KDS ticket, and admin order detail. A mode only shows time slots the operator has opened for it — enable dine-in slots at /core/service/slots by ticking the Dine-in fulfillment type. Reports + the channel-mix pie split orders three ways.",
         },
         {
           name: "Customer order history",
@@ -734,8 +734,8 @@ export default async function CapabilitiesPage() {
         {
           name: "Loyalty points",
           status: "live",
-          href: "/core/guest?view=loyalty",
-          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/core/guest?view=loyalty — /admin/loyalty redirects there); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
+          href: "/core/guest/loyalty",
+          summary: "Order-based + manual adjustments. Tier upgrades trigger push + email. The roster, family wallets, and redemption log live in the Core Guest Engagement hub (/core/guest/loyalty); the programme config itself (tier ladder, rewards catalogue, referral mechanics) is edited at /admin/growth.",
         },
         {
           name: "Referral codes",
@@ -1089,7 +1089,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor — tables + reservations",
           status: "live",
-          href: "/core/service?view=floor",
+          href: "/core/service/floor",
           summary:
             "Per-location floor management at /admin/floor. Tables tab: define physical tables (number, seats, zone, status available/seated/reserved/out-of-service) via /api/admin/floor/tables. Reservations tab: day-by-day bookings (customer, party size, time + duration, assigned table, status) via /api/admin/floor/reservations, with double-booking conflict detection — two active bookings whose windows overlap on the same table return 409 (operator-overridable). The assigned table flows onto dine-in orders (Order.tableId) and the POS table picker. Conflict logic is pure + unit-tested (src/lib/floor.ts + floor.test.ts). Manager+, per-location.",
           caveats:
@@ -1098,7 +1098,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Floor Twin — live room digital twin",
           status: "live",
-          href: "/core/service?view=floor",
+          href: "/core/service/floor",
           summary:
             "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time, spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Turn-time has two sources: MEASURED seat-occupancy (the §4.2 instrumentation — table status transitions are now logged on every save via saveTable → recordFloorEvent → floor-events.json, and seated→cleared pairs give true dwell incl. pre-order wait + bussing; a still-open seated run gives an exact live seat time) and, as a fallback when a table has no transition history, the dine-in order-timeline proxy (createdAt→paidAt). Measured rows are tagged. Phase 2 — the acts: predictive-seating moves (Seat / Clear a table straight from the Twin table or the recommender — POST /api/admin/floor-twin flips the status via saveTable, which logs the transition, closing the loop with the measured-dwell instrumentation) and bottleneck pre-emption (the Twin runs the live KDS pace engine, analyzeTruck, and shows a 'Kitchen filling up / overloaded — pace new seating' banner with the bottleneck station + utilisation when the line can't absorb more covers). Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 7 unit tests, dwell guardrails 5–360m); GET/POST /api/admin/floor-twin?location=, staff+.",
         },
@@ -1266,15 +1266,15 @@ export default async function CapabilitiesPage() {
         {
           name: "Slots",
           status: "live",
-          href: "/core/service?view=slots",
+          href: "/core/service/slots",
           summary: "Atomic increment (no overselling). Auto-close past slots via cron.",
         },
         {
           name: "Demand Exchange — per-slot yield",
           status: "live",
-          href: "/core/service?view=slots",
+          href: "/core/service/slots",
           summary:
-            "Module 2 (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /admin/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Phase 2 — the act, two yield levers: for demand the kitchen can take, one-click 'Apply' resizes capacity (never below what's already booked); for kitchen-capped (protect) slots, where volume can't go up, it sets a MINIMUM SPEND sized from the slot's realized AOV (raise price, not volume). 'Apply all' is the autonomy lever — re-derives the board server-side and applies capacity + min-spend to every changed slot, audit-logged as slots.resize. The minimum is real end-to-end: TimeSlot.minSpendGrosze (additive min_spend_grosze column) is exposed on the public /api/slots (the SlotPicker shows 'min N zł') and ENFORCED server-side at checkout (createOrder returns below_min_spend if the food subtotal is under it). Pure-compute engine src/lib/demand-exchange.ts (9 unit tests); GET/POST /api/admin/demand-exchange?location=&date=, manager+.",
+            "Module 2 (blueprint §3): reframes the booking grid from a static currentOrders/maxOrders counter into yield-managed seat-minute inventory. The Demand view on /core/service/slots forecasts covers per slot from real same-weekday order history, compares against the kitchen's DEMONSTRATED ceiling (busiest realized covers/hour over the last 90 days, not a theoretical max), folds in logged rejected-demand, and prescribes the yield action per slot: raise capacity (demand > advertised), trim/promote (over-provisioned), protect kitchen (demand > throughput ceiling), or hold. It also instruments the signal the static counter throws away: every checkout that hits a full slot logs a demand signal (createOrder → recordDemandSignal → demand-signals.json), so fill-rate becomes a real demand curve (demand > supply). Phase 2 — the act, two yield levers: for demand the kitchen can take, one-click 'Apply' resizes capacity (never below what's already booked); for kitchen-capped (protect) slots, where volume can't go up, it sets a MINIMUM SPEND sized from the slot's realized AOV (raise price, not volume). 'Apply all' is the autonomy lever — re-derives the board server-side and applies capacity + min-spend to every changed slot, audit-logged as slots.resize. The minimum is real end-to-end: TimeSlot.minSpendGrosze (additive min_spend_grosze column) is exposed on the public /api/slots (the SlotPicker shows 'min N zł') and ENFORCED server-side at checkout (createOrder returns below_min_spend if the food subtotal is under it). Pure-compute engine src/lib/demand-exchange.ts (9 unit tests); GET/POST /api/admin/demand-exchange?location=&date=, manager+.",
         },
         {
           name: "Refunds + comp controls (Stripe)",

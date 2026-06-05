@@ -49,22 +49,25 @@ one surface with four views (Inbox / Guests / Loyalty / Concierge).
 
 ## How it's wired (live code)
 
-- **Route:** `src/app/core/guest/page.tsx` is the single hub surface. It
-  reads `?view=` and renders the matching module — `inbox` →
-  `<AdminWhatsApp>`, `guests` → `<AdminCrm>`, `loyalty` →
-  `<AdminLoyalty>`, `concierge` → `<AdminConcierge>` (the concierge
-  server-side data load lives in the hub page). Default view is `inbox`.
+- **Routes:** each view is its own **nested route** under
+  `src/app/core/guest/*` — `whatsapp` → `<AdminWhatsApp>` (Inbox), `crm` →
+  `<AdminCrm>` (Guests), `loyalty` → `<AdminLoyalty>`, `concierge` →
+  `<AdminConcierge>` (the concierge server-side data load lives in
+  `concierge/page.tsx`), and `book` → `<GuestBook>` (the slot+table booking
+  console, moved here from Service). The bare `src/app/core/guest/page.tsx`
+  `redirect()`s to `/core/guest/whatsapp` (the Inbox is the default).
 - **Switcher:** `<GuestViewNav>`
-  (`src/components/core/guest/GuestViewNav.tsx`) renders the
-  Inbox / Guests / Loyalty / Concierge segmented links into the
-  CoreShell topbar `.viewnav` slot. Each module drops it in with its own
-  `current` view, and every module's breadcrumb reads
-  **Guest Engagement** so the four read as one surface.
-- **Redirects:** `/admin/crm`, `/admin/loyalty`, `/admin/concierge`,
-  `/admin/whatsapp` are now thin `redirect()` pages pointing at
-  `/core/guest?view=guests|loyalty|concierge|inbox`. The nav (Core group
-  in `src/components/admin/v2/nav.config.ts`) carries a single
-  **Guest Engagement** entry instead of four.
+  (`src/components/admin/guest/GuestViewNav.tsx`) renders the
+  Inbox / Guests / Loyalty / Concierge / **Book** links (`<Link>` to
+  `/core/guest/{whatsapp,crm,loyalty,concierge,book}`) into the CoreShell
+  topbar `.viewnav` slot. Each module drops it in with its own `current`
+  view, and every module's breadcrumb reads **Guest Engagement** so they
+  read as one surface.
+- **No more redirects:** the old `/admin/crm`, `/admin/loyalty`,
+  `/admin/concierge`, `/admin/whatsapp` stub pages were **deleted** — the
+  nested `/core/guest/*` routes are the only home. The nav (Core group in
+  `src/components/admin/v2/nav.config.ts`) carries a single **Guest
+  Engagement** entry pointing at `/core/guest`.
 - **Responsive:** the mobile shell is retired (`useIsMobile()` is a desktop
   shim), so all three Guest modules render their `.core-suite` layout at
   every width and reflow in CSS — no separate `Mobile*` screens. Phone (<

@@ -241,7 +241,7 @@ refresh via `identify()` after every mutation).
 ## What loyalty is not
 
 - It is **not** the admin loyalty surface. That's the Core Guest hub's
-  Loyalty view, `/core/guest?view=loyalty` (member roster, family
+  Loyalty view, `/core/guest/loyalty` (member roster, family
   wallets, manual adjustments) — see
   [`../../core/modules/loyalty.md`](../../core/modules/loyalty.md).
 - It is **not** account management. There's no account to manage —
