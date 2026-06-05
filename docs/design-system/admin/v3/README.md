@@ -144,11 +144,20 @@ refetches every 30s.
   via `PUT /api/admin/stock`, log receive/waste/adjust via
   `POST /api/admin/stock-movements`). Aggregates across trucks when scope = all
 - [x] Menu (`/admin-v3/menu`) — chain-wide product board, **one row per dish**
-  (deduped by `getBaseSlug`, rule #10): price shown as a range + "varies" badge
-  when sites diverge, margin, availability. Edit dialog edits chain-wide
-  metadata (name/description/category — propagated to every site) + per-site
-  price/cost/availability via `PUT /api/admin/menu`. (Modifier editor +
-  add/clone/delete deferred.)
+  (deduped by `getBaseSlug`, rule #10): price range + "varies" badge when sites
+  diverge, margin, availability, plus recipe/custom/hidden/edited/delivery/mods
+  flags. **Full v2 parity (PR #138 follow-up):** multi-select with a sticky bulk
+  toolbar (mark available / 86 / bulk-edit / clone-to-site / reset overrides /
+  delete — via `POST /api/admin/menu/bulk`), a **Show hidden** toggle exposing
+  soft-deleted seed rows, and **Add item** which creates a chain-wide custom SKU
+  on every site (`POST /api/admin/menu/custom`, id = `slug.slice(0,3)-base`). The
+  edit dialog covers chain-wide product metadata (name/description/category/tags/
+  menu-role), service (delivery-only, packaging cost), a **modifier-group editor**
+  (groups + options with price/cost deltas + KDS flag), regulatory disclosures
+  (halal / Nutri-Grade / contains-pork / contains-alcohol / allergens) and
+  per-site price/cost/availability/SKU — all written via `PUT /api/admin/menu`
+  (`items` map), with per-dish **Reset** + **Delete** in the footer. Recipe-
+  attached dishes lock the cost field (derives from the recipe, rule #10).
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board, **one recipe
   per dish** (keyed by base slug, rule #10): recipe status, food cost +
   cost-% (vs avg price). Editor edits the formula (ingredient lines from the
