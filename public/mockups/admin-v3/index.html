@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Admin v3 — Dashboard paradigms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="_shared.css"/>
+<style>
+  .wrap { max-width:1040px; margin:0 auto; padding:40px 20px 60px; }
+  .hd { font-family:"Fraunces",serif; font-size:30px; font-weight:600; letter-spacing:-.01em; }
+  .lead { color:var(--av3-muted); font-size:14px; margin-top:8px; max-width:680px; }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+  .pick { display:flex; flex-direction:column; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:14px; overflow:hidden; transition:border-color .15s,transform .15s; }
+  .pick:hover { border-color:var(--av3-line-strong); transform:translateY(-2px); }
+  .thumb { height:120px; border-bottom:1px solid var(--av3-line); display:grid; place-items:center; color:var(--av3-subtle); background:radial-gradient(120% 120% at 50% 0,color-mix(in oklab,var(--av3-brand) 14%,var(--av3-s2)),var(--av3-s1)); }
+  .pick .bd { padding:16px; flex:1; display:flex; flex-direction:column; }
+  .pick .tag { font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--av3-platinum); }
+  .pick h3 { font-size:16px; font-weight:600; margin-top:6px; }
+  .pick p { font-size:12.5px; color:var(--av3-muted); margin-top:6px; flex:1; line-height:1.5; }
+  .pick .go { margin-top:14px; }
+  .foot { margin-top:30px; font-size:12.5px; color:var(--av3-subtle); }
+  .foot a { color:var(--av3-muted); text-decoration:underline; }
+  @media (max-width:860px){ .cards{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="ribbon">Static design mockups · choose a v3 dashboard direction · illustrative figures</div>
+<div class="wrap">
+  <div class="hd">Admin v3 — pick a dashboard paradigm</div>
+  <p class="lead">Three genuinely different rethinks of what the dashboard <em>is</em> — not a denser v2. Same v3 visual system (deep canvas, platinum accents, mono numerals), different core experience. Open each, toggle dark/light in the topbar, and tell me which direction to build for real.</p>
+
+  <div class="cards">
+    <a class="pick" href="mission-control.html">
+      <div class="thumb">
+        <svg width="150" height="86" viewBox="0 0 150 86" fill="none"><rect x="6" y="6" width="78" height="40" rx="5" fill="color-mix(in oklab,var(--av3-brand) 22%,var(--av3-s2))"/><rect x="90" y="6" width="24" height="18" rx="4" fill="var(--av3-s3)"/><rect x="120" y="6" width="24" height="18" rx="4" fill="var(--av3-s3)"/><rect x="90" y="28" width="54" height="18" rx="4" fill="var(--av3-s3)"/><rect x="6" y="52" width="68" height="28" rx="5" fill="var(--av3-s3)"/><rect x="80" y="52" width="64" height="28" rx="5" fill="var(--av3-s3)"/></svg>
+      </div>
+      <div class="bd"><span class="tag">A · live</span><h3>Mission Control</h3><p>No period filter. A real-time service wall — revenue-to-goal, live order flow, kitchen pace &amp; SLA, truck status, and a “needs you now” strip. Built for running service right now.</p><span class="btn primary go">Open A →</span></div>
+    </a>
+    <a class="pick" href="pace-to-goal.html">
+      <div class="thumb">
+        <svg width="150" height="86" viewBox="0 0 150 86" fill="none"><circle cx="40" cy="43" r="26" stroke="var(--av3-s3)" stroke-width="8"/><circle cx="40" cy="43" r="26" stroke="var(--av3-brand)" stroke-width="8" stroke-linecap="round" stroke-dasharray="163" stroke-dashoffset="42" transform="rotate(-90 40 43)"/><rect x="82" y="20" width="28" height="20" rx="4" fill="var(--av3-s3)"/><rect x="116" y="20" width="28" height="20" rx="4" fill="var(--av3-s3)"/><rect x="82" y="46" width="62" height="20" rx="4" fill="color-mix(in oklab,var(--av3-platinum) 22%,var(--av3-s2))"/></svg>
+      </div>
+      <div class="bd"><span class="tag">B · target</span><h3>Pace-to-goal cockpit</h3><p>The whole screen orients around the daily target — a big “on pace?” gauge, the levers that move it (AOV, attach, covers, labour), and a ranked “what moves it most” list with projected złoty impact.</p><span class="btn primary go">Open B →</span></div>
+    </a>
+    <a class="pick" href="attention-feed.html">
+      <div class="thumb">
+        <svg width="150" height="86" viewBox="0 0 150 86" fill="none"><circle cx="14" cy="20" r="4" fill="var(--av3-info)"/><circle cx="14" cy="43" r="4" fill="var(--av3-warn)"/><circle cx="14" cy="66" r="4" fill="var(--av3-ok)"/><line x1="14" y1="20" x2="14" y2="66" stroke="var(--av3-line)"/><rect x="26" y="14" width="76" height="12" rx="3" fill="var(--av3-s3)"/><rect x="26" y="37" width="76" height="12" rx="3" fill="var(--av3-s3)"/><rect x="26" y="60" width="76" height="12" rx="3" fill="var(--av3-s3)"/><rect x="112" y="14" width="32" height="58" rx="5" fill="color-mix(in oklab,var(--av3-brand) 16%,var(--av3-s2))"/></svg>
+      </div>
+      <div class="bd"><span class="tag">C · feed</span><h3>Attention feed + rail</h3><p>A live, newest-first timeline of orders, alerts and milestones — each one actionable — is the spine. Metrics sit quietly in a context rail. “What’s happening and what needs me”, not a static report.</p><span class="btn primary go">Open C →</span></div>
+    </a>
+  </div>
+
+  <p class="foot">For contrast, the earlier <a href="dashboard.html">v2-style re-skin</a> is still here — the one that kept v2’s period chips and widget grid. The three above replace it. · <button class="btn" onclick="t()" style="vertical-align:middle">Toggle dark / light</button></p>
+</div>
+<script>function t(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light')}</script>
+</body></html>

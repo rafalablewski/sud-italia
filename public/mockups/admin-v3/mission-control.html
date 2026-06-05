@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Admin v3 — Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="_shared.css"/>
+</head>
+<body>
+<div class="ribbon">Static design mockup · paradigm A — “Mission Control” · illustrative figures</div>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+    <nav class="side-scroll">
+      <div class="group"><div class="eyebrow">Overview</div>
+        <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Orders</a></div>
+      <div class="group"><div class="eyebrow">Core</div>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>POS</a>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 13a6 6 0 0 1 12 0v8H6z"/></svg>Kitchen Display</a></div>
+      <div class="group"><div class="eyebrow">Finance</div>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Reports</a></div>
+    </nav>
+    <div class="side-foot"><a class="foot-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 17l-5-5 5-5M6 12h12"/></svg>Collapse</a></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <nav class="crumbs"><span class="cur">Dashboard</span></nav>
+      <span class="switcher"><a class="on" href="mission-control.html">Mission Control</a><a href="pace-to-goal.html">Pace-to-goal</a><a href="attention-feed.html">Attention feed</a></span>
+      <div class="spacer"></div>
+      <div class="tb-right">
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" onclick="t()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg><span class="bell-badge">3</span></button>
+      </div>
+    </header>
+    <main class="content">
+      <!-- now header -->
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="live-dot"></span><span class="eyebrow-lg">Live · service in progress</span>
+        <span class="mono" style="color:var(--av3-muted);font-size:12.5px">Thu 5 Jun · 14:32</span>
+      </div>
+
+      <div class="mc-hero">
+        <div class="mc-goal">
+          <div class="lab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>Revenue today · to daily goal</div>
+          <div class="big">31 920 zł</div>
+          <div class="sub">76% of 42 000 zł · on pace for <b style="color:var(--av3-ok)">44 100 zł</b> by close</div>
+          <div class="prog"><i style="width:76%"></i></div>
+        </div>
+        <div class="mc-tiles">
+          <div class="mc-tile"><div class="n" style="color:var(--av3-warn)">7</div><div><div class="h">Cooking</div><div class="t">avg 8m on the line</div></div></div>
+          <div class="mc-tile"><div class="n" style="color:var(--av3-ok)">3</div><div><div class="h">Ready</div><div class="t">awaiting handoff</div></div></div>
+        </div>
+        <div class="mc-tiles">
+          <div class="mc-tile"><div class="n" style="color:var(--av3-bad)">2</div><div><div class="h">Due now</div><div class="t">past promised time</div></div></div>
+          <div class="mc-tile"><div class="n">312</div><div><div class="h">Covers today</div><div class="t">+8% vs last Thu</div></div></div>
+        </div>
+      </div>
+
+      <div class="mc-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Kitchen pace</div><span class="badge b-ok"><span class="bdot"></span>on time</span></div>
+          <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+            <div class="station"><span class="nm">Pizza · oven</span><span class="gauge"><i style="width:82%;background:var(--av3-warn)"></i></span><span class="mono muted" style="font-size:11px">82%</span></div>
+            <div class="station"><span class="nm">Pasta</span><span class="gauge"><i style="width:54%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">54%</span></div>
+            <div class="station"><span class="nm">Antipasti</span><span class="gauge"><i style="width:38%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">38%</span></div>
+            <div class="station"><span class="nm">Dessert</span><span class="gauge"><i style="width:21%;background:var(--av3-ok)"></i></span><span class="mono muted" style="font-size:11px">21%</span></div>
+            <div style="margin-top:8px;font-size:12px;color:var(--av3-muted)">Bottleneck: <b style="color:var(--av3-fg)">pizza oven</b> · next SLA in <b style="color:var(--av3-warn)">6m</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Trucks</div></div>
+          <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+            <div class="truck-row"><span class="live-dot"></span><div style="flex:1"><div class="city">Kraków</div><div class="meta">open · 9 on the line · 17 920 zł today</div></div><span class="badge b-warn">San Marzano low</span></div>
+            <div class="truck-row"><span class="live-dot"></span><div style="flex:1"><div class="city">Warszawa</div><div class="meta">open · 5 on the line · 14 000 zł today</div></div><span class="badge b-ok">all stocked</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mc-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Order flow</div><span class="card-desc">orders / min · last 60 min</span></div>
+          <div class="card-body">
+            <div class="flow">
+              <i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:60%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:95%"></i><i style="height:78%"></i><i style="height:62%"></i><i style="height:70%"></i><i style="height:88%"></i><i style="height:66%"></i><i style="height:50%"></i>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--av3-subtle)" class="mono"><span>13:32</span><span>peak 6/min</span><span>14:32</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Just now</div></div>
+          <div class="card-body" style="padding-top:4px;padding-bottom:4px">
+            <div class="order-line"><span class="bdot" style="background:var(--av3-info)"></span><span>Delivery · Warszawa</span><span class="id">#20871</span><span class="amt">64,80</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-warn)"></span><span>Takeout · Kraków</span><span class="id">#20870</span><span class="amt">41,90</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-ok)"></span><span>Dine-in · Kraków</span><span class="id">#20869</span><span class="amt">28,50</span></div>
+            <div class="order-line"><span class="bdot" style="background:var(--av3-ok)"></span><span>Takeout · Warszawa</span><span class="id">#20868</span><span class="amt">52,30</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Needs you now</div><span class="badge b-warn">3 open</span></div>
+        <div class="card-body">
+          <div class="needs">
+            <span class="need"><span class="d" style="background:var(--av3-bad)"></span>2 tickets past promise — <b>expedite</b></span>
+            <span class="need"><span class="d" style="background:var(--av3-warn)"></span>San Marzano DOP below reorder (Kraków) — <b>reorder</b></span>
+            <span class="need"><span class="d" style="background:var(--av3-warn)"></span>18:30 slot · 2 of 12 left — <b>open capacity</b></span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>function t(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light')}</script>
+</body></html>

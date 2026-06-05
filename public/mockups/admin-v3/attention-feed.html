@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Admin v3 — Attention feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="_shared.css"/>
+</head>
+<body>
+<div class="ribbon">Static design mockup · paradigm C — “Attention feed + context rail” · illustrative figures</div>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+    <nav class="side-scroll">
+      <div class="group"><div class="eyebrow">Overview</div>
+        <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Orders</a></div>
+      <div class="group"><div class="eyebrow">Core</div>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>POS</a>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 13a6 6 0 0 1 12 0v8H6z"/></svg>Kitchen Display</a></div>
+      <div class="group"><div class="eyebrow">Finance</div>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Reports</a></div>
+    </nav>
+    <div class="side-foot"><a class="foot-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 17l-5-5 5-5M6 12h12"/></svg>Collapse</a></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <nav class="crumbs"><span class="cur">Dashboard</span></nav>
+      <span class="switcher"><a href="mission-control.html">Mission Control</a><a href="pace-to-goal.html">Pace-to-goal</a><a class="on" href="attention-feed.html">Attention feed</a></span>
+      <div class="spacer"></div>
+      <div class="tb-right">
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" onclick="t()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg><span class="bell-badge">3</span></button>
+      </div>
+    </header>
+    <main class="content">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px"><span class="live-dot"></span><span class="eyebrow-lg">What’s happening · what needs you</span></div>
+        <span class="feed-filters"><a class="on">All</a><a>Orders</a><a>Alerts</a><a>Milestones</a></span>
+      </div>
+
+      <div class="feed-wrap">
+        <!-- feed spine -->
+        <div class="card"><div class="card-body">
+          <div class="feed">
+            <div class="fitem info"><span class="ft">14:31</span><div class="fb"><div class="fh">New order #20871 · delivery</div><div class="fs">Warszawa · A. Kowalski · 4 items</div></div><span class="fa">64,80</span></div>
+            <div class="fitem warn"><span class="ft">14:25</span><div class="fb"><div class="fh">San Marzano DOP below reorder point</div><div class="fs">Kraków · 4 kg left · auto-PO suggested</div></div><button class="btn" style="height:24px">Reorder</button></div>
+            <div class="fitem ok"><span class="ft">14:20</span><div class="fb"><div class="fh">Order #20859 completed on time</div><div class="fs">Warszawa · 11m prep · within promise</div></div><span class="fa">28,50</span></div>
+            <div class="fitem bad"><span class="ft">14:14</span><div class="fb"><div class="fh">Ticket #20862 past promised time</div><div class="fs">Kraków · pizza oven · +4m over</div></div><button class="btn primary" style="height:24px">Expedite</button></div>
+            <div class="fitem warn"><span class="ft">14:02</span><div class="fb"><div class="fh">18:30 dine-in slot almost full</div><div class="fs">Kraków · 2 of 12 spots left</div></div><button class="btn" style="height:24px">Open</button></div>
+            <div class="fitem info"><span class="ft">13:58</span><div class="fb"><div class="fh">Order #20844 paid</div><div class="fs">Kraków · takeout · combo applied −10%</div></div><span class="fa">41,90</span></div>
+            <div class="fitem ok"><span class="ft">13:40</span><div class="fb"><div class="fh">Milestone · 800 orders today (chain)</div><div class="fs">Earliest the chain has hit 800 on a Thursday</div></div></div>
+            <div class="fitem info"><span class="ft">13:31</span><div class="fb"><div class="fh">New order #20830 · dine-in</div><div class="fs">Kraków · table 6 · party of 4</div></div><span class="fa">112,00</span></div>
+          </div>
+        </div></div>
+
+        <!-- context rail -->
+        <div class="ctx-stack">
+          <div class="card" style="padding:14px"><div class="eyebrow-lg" style="margin-bottom:10px">Today so far</div>
+            <div class="ctx-stack">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ctx-tile" style="border:none;padding:0;background:none"><span class="l">Revenue</span><span class="v">31 920 zł</span></span><span class="delta up">↑12.4%</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ctx-tile" style="border:none;padding:0;background:none"><span class="l">Orders</span><span class="v">842</span></span><span class="delta up">↑8.1%</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ctx-tile" style="border:none;padding:0;background:none"><span class="l">Avg order</span><span class="v">38,10 zł</span></span><span class="delta up">↑3.9%</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ctx-tile" style="border:none;padding:0;background:none"><span class="l">Margin</span><span class="v">64,2%</span></span><span class="delta up">↑1.8%</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ctx-tile" style="border:none;padding:0;background:none"><span class="l">Labour</span><span class="v">23,8%</span></span><span class="delta flat">—</span></div>
+            </div>
+          </div>
+          <div class="ctx-tile"><span class="l">Open items needing you</span><span class="v" style="color:var(--av3-warn)">3</span><span style="font-size:11.5px;color:var(--av3-muted)">1 late ticket · 1 low stock · 1 slot</span></div>
+          <div class="ctx-tile"><span class="l">Both trucks</span><span style="display:flex;gap:6px;margin-top:4px"><span class="badge b-ok"><span class="bdot"></span>Kraków open</span><span class="badge b-ok"><span class="bdot"></span>Warszawa open</span></span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>function t(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light')}</script>
+</body></html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Admin v3 — Pace-to-goal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="_shared.css"/>
+</head>
+<body>
+<div class="ribbon">Static design mockup · paradigm B — “Pace-to-goal cockpit” · illustrative figures</div>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+    <nav class="side-scroll">
+      <div class="group"><div class="eyebrow">Overview</div>
+        <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Orders</a></div>
+      <div class="group"><div class="eyebrow">Core</div>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>POS</a>
+        <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 13a6 6 0 0 1 12 0v8H6z"/></svg>Kitchen Display</a></div>
+      <div class="group"><div class="eyebrow">Finance</div>
+        <a class="nav pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Reports</a></div>
+    </nav>
+    <div class="side-foot"><a class="foot-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 17l-5-5 5-5M6 12h12"/></svg>Collapse</a></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <nav class="crumbs"><span class="cur">Dashboard</span></nav>
+      <span class="switcher"><a href="mission-control.html">Mission Control</a><a class="on" href="pace-to-goal.html">Pace-to-goal</a><a href="attention-feed.html">Attention feed</a></span>
+      <div class="spacer"></div>
+      <div class="tb-right">
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" onclick="t()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg><span class="bell-badge">3</span></button>
+      </div>
+    </header>
+    <main class="content">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px"><span class="eyebrow-lg">Are we on pace?</span></div>
+        <span class="switcher"><a class="on">Today</a><a>This week</a><a>This month</a></span>
+      </div>
+
+      <div class="pg-wrap">
+        <div class="card pg-ring">
+          <div class="cap">Daily revenue target</div>
+          <svg width="200" height="200" viewBox="0 0 200 200" style="margin:6px 0">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="var(--av3-s3)" stroke-width="16"/>
+            <circle cx="100" cy="100" r="80" fill="none" stroke="var(--av3-brand)" stroke-width="16" stroke-linecap="round"
+              stroke-dasharray="502.6" stroke-dashoffset="120.6" transform="rotate(-90 100 100)"/>
+            <text x="100" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="34" font-weight="500" fill="var(--av3-fg)">76%</text>
+            <text x="100" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="14" fill="var(--av3-muted)">31 920 / 42 000</text>
+          </svg>
+          <div class="proj">On current pace → <b>44 100 zł</b> by close<br/><span style="color:var(--av3-subtle)">+2 100 over goal · 105%</span></div>
+          <div style="margin-top:14px;width:100%;display:flex;gap:8px">
+            <span class="badge b-ok" style="flex:1;justify-content:center;height:24px">Ahead of pace</span>
+            <span class="badge b-info" style="flex:1;justify-content:center;height:24px">3.1k/hr now</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div class="eyebrow-lg" style="margin-bottom:10px">The levers that move the goal</div>
+            <div class="lever-grid">
+              <div class="lever"><div class="lab">Avg order value <span class="delta up">↑3.9%</span></div><div class="v">38,10 zł</div><div class="meter"><i style="width:84%"></i></div><div class="tgt">target 40,00 zł · 95% there</div></div>
+              <div class="lever"><div class="lab">Attach rate <span class="delta up">↑5pts</span></div><div class="v">41%</div><div class="meter"><i style="width:68%;background:var(--av3-c5)"></i></div><div class="tgt">target 60% · dessert + drink</div></div>
+              <div class="lever"><div class="lab">Covers <span class="delta up">↑8%</span></div><div class="v">312</div><div class="meter"><i style="width:74%;background:var(--av3-c3)"></i></div><div class="tgt">pace for 420 today</div></div>
+              <div class="lever"><div class="lab">Labour ratio <span class="delta flat">stable</span></div><div class="v">23,8%</div><div class="meter"><i style="width:40%;background:var(--av3-c2)"></i></div><div class="tgt">ceiling 28% · healthy</div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">What moves it most</div><div class="card-desc">Ranked by projected impact on today’s goal</div></div></div>
+            <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+              <div class="move"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M5 9l7-7 7 7"/></svg></span><span class="txt">Push <b>dessert attach +4pts</b> via POS prompt at checkout</span><span class="imp">+1 240 zł</span></div>
+              <div class="move"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M12 3v18"/></svg></span><span class="txt">Re-open the <b>18:30 dine-in slot</b> (currently capped)</span><span class="imp">+620 zł</span></div>
+              <div class="move"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="txt">Trim <b>pizza-oven SLA</b> — 2 tickets at risk are stalling covers</span><span class="imp">+380 zł</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>function t(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light')}</script>
+</body></html>
