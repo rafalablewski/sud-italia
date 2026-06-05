@@ -214,7 +214,12 @@ refetches every 30s.
   active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts grouped by
   day with add/edit/delete (`/api/admin/shifts`)
 - [x] Customers (`/admin-v3/customers`) — phone-based directory (search,
-  repeat/CLV KPIs, per-customer detail) derived from real orders
+  repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
+  restored:** a **"Send today"** outreach card (today's birthdays + first-order
+  anniversaries from `/api/admin/campaigns/triggers`, tap-to-call `tel:` links,
+  name opens the detail) above the fold (rule #5), plus the **loyalty-points**
+  column + detail field (`lifetimePoints` = earned + manual, from the customers
+  endpoint).
 - [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
   and AI sentiment (`POST /api/admin/feedback/analyze`). **Charts restored (flag
