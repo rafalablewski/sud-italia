@@ -126,9 +126,9 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
       <div className="av3-subhead">Opening hours</div>
       {hours.map((h, i) => (
         <div key={i} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 100px 100px 30px", gap: 8, padding: "5px 0" }}>
-          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={h.day} onChange={(e) => setHour(i, { day: e.target.value })} placeholder="Mon-Fri" />
-          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.open} onChange={(e) => setHour(i, { open: e.target.value })} />
-          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.close} onChange={(e) => setHour(i, { close: e.target.value })} />
+          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={h.day} onChange={(e) => setHour(i, { day: e.target.value })} placeholder="Mon-Fri" aria-label="Day or day range" title="Day or day range" />
+          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.open} onChange={(e) => setHour(i, { open: e.target.value })} aria-label="Open time" title="Open time" />
+          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.close} onChange={(e) => setHour(i, { close: e.target.value })} aria-label="Close time" title="Close time" />
           <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => setHours((a) => a.filter((_, idx) => idx !== i))}><X /></button>
         </div>
       ))}

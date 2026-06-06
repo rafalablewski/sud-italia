@@ -174,9 +174,9 @@ function RouteDialog({ route, locationSlug, onClose, onSaved }: { route: TruckRo
       <div className="av3-subhead">Stops</div>
       {stops.length === 0 ? <div className="av3-empty-text" style={{ padding: "6px 0", color: "var(--av3-subtle)" }}>No stops yet.</div> : stops.map((s, i) => (
         <div key={i} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px 30px", gap: 8, padding: "5px 0" }}>
-          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={s.name} onChange={(e) => setStop(i, { name: e.target.value })} placeholder="Stop name" />
-          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.startTime ?? ""} onChange={(e) => setStop(i, { startTime: e.target.value })} />
-          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.endTime ?? ""} onChange={(e) => setStop(i, { endTime: e.target.value })} />
+          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={s.name} onChange={(e) => setStop(i, { name: e.target.value })} placeholder="Stop name" aria-label="Stop name" title="Stop name" />
+          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.startTime ?? ""} onChange={(e) => setStop(i, { startTime: e.target.value })} aria-label="Start time" title="Start time" />
+          <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.endTime ?? ""} onChange={(e) => setStop(i, { endTime: e.target.value })} aria-label="End time" title="End time" />
           <button type="button" className="av3-iconbtn-sm" aria-label="Remove stop" onClick={() => removeStop(i)}><X /></button>
         </div>
       ))}

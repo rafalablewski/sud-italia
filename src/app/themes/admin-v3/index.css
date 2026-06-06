@@ -688,7 +688,10 @@
   /* Config / editor rows stack one control per line (label keeps its room);
      the column-label strip is redundant once stacked, so it hides. */
   .av3-cfgrow { grid-template-columns: 1fr !important; gap: 8px; }
+  /* `:not(button)` so a desktop right-aligned numeric/badge cell reads left
+     once stacked, without un-centering the toggle button labels. */
   .av3-cfgrow > * { width: 100%; }
+  .av3-cfgrow > *:not(button) { text-align: left !important; }
   .av3-cfgrow > .av3-iconbtn-sm { width: 36px; justify-self: start; }
   .av3-cfgrow-head { display: none; }
 
@@ -1033,6 +1036,9 @@
    tab against its rounded edge. */
 .av3-dtabs { display: flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .av3-dtabs::-webkit-scrollbar { display: none; }
+/* flex-shrink:0 + nowrap so the tabs keep full text width and scroll rather
+   than squishing on a narrow phone bar (flex:1 still fills equally on desktop). */
+.av3-dtabs .av3-dtab { flex-shrink: 0; white-space: nowrap; }
 .av3-dtab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 10px; border: none; background: transparent; border-radius: var(--av3-r-sm); color: var(--av3-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease); }
 .av3-dtab:hover { color: var(--av3-fg); }
 .av3-dtab.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
