@@ -974,3 +974,26 @@
 .av3-chat-composer { display: flex; gap: var(--av3-gap-2); margin-top: 14px; align-items: flex-end; }
 .av3-chat-input { flex: 1; min-height: 56px; height: auto; padding: 8px 10px; resize: vertical; font-family: var(--av3-ui); }
 @media (max-width: 560px) { .av3-chat-user, .av3-chat-bot, .av3-tool { max-width: 100%; } }
+
+/* ==========================================================================
+   18. Menu & Recipes — board (card) view + shared bits
+   ========================================================================== */
+.av3-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: var(--av3-gap-3); }
+.av3-board-section { display: flex; align-items: center; gap: 9px; margin: 14px 2px 2px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--av3-subtle); }
+.av3-board-section:first-child { margin-top: 0; }
+.av3-board-section::after { content: ""; flex: 1; height: 1px; background: var(--av3-line); }
+.av3-board-section .c { font-family: var(--av3-mono); color: var(--av3-muted); font-size: 10.5px; }
+.av3-dcard { position: relative; display: flex; flex-direction: column; gap: 9px; padding: 13px 14px; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); cursor: pointer; transition: border-color var(--av3-t-fast) var(--av3-ease), background var(--av3-t-fast) var(--av3-ease); }
+.av3-dcard:hover { border-color: var(--av3-line-strong); background: color-mix(in oklab, var(--av3-hover) 60%, var(--av3-s1)); }
+.av3-dcard[data-dim="true"] { opacity: 0.6; }
+.av3-dcard[data-sel="true"] { border-color: color-mix(in oklab, var(--av3-platinum) 55%, var(--av3-line-strong)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--av3-platinum) 40%, transparent), var(--av3-sh-1); }
+.av3-dcard-check { position: absolute; top: 11px; right: 11px; cursor: pointer; }
+.av3-dcard-name { font-size: 13.5px; font-weight: 600; line-height: 1.25; padding-right: 22px; }
+.av3-dcard-desc { font-size: 11.5px; color: var(--av3-muted); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 31px; }
+.av3-dcard-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.av3-dcard-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 9px; border-top: 1px solid var(--av3-line); }
+.av3-dcard-price { font-family: var(--av3-mono); font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+.av3-dcard-sub { font-size: 10.5px; color: var(--av3-subtle); margin-top: 2px; }
+.av3-dcard-cta { font-size: 11.5px; color: var(--av3-platinum); font-weight: 500; }
+.av3-fcbar { height: 5px; border-radius: var(--av3-r-pill); background: var(--av3-s3); overflow: hidden; }
+.av3-fcbar > i { display: block; height: 100%; border-radius: var(--av3-r-pill); }

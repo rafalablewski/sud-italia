@@ -228,6 +228,11 @@ refetches every 30s.
   per-site price/cost/availability/SKU — all written via `PUT /api/admin/menu`
   (`items` map), with per-dish **Reset** + **Delete** in the footer. Recipe-
   attached dishes lock the cost field (derives from the recipe, rule #10).
+  **Visual upgrade:** a **KPI rail** (dishes / avg margin / low-margin / 86’d /
+  no-recipe), a **search** box + **Board⇄Table** view toggle, and a default
+  **Board view** — category-grouped dish cards (status dot, badges, price range,
+  margin badge) with the same multi-select + edit-on-click as the table. CSS §18
+  (`.av3-board`, `.av3-dcard`).
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -245,6 +250,11 @@ refetches every 30s.
   star (`PATCH`) that points `activeProductId` at the offering driving recipe
   cost + nutrition. Suppliers are read for the picker (managed on Suppliers).
   Per-item dietary disclosures live on the **Menu** editor (rule #10).
+  **Visual upgrade:** a **KPI rail** (costed coverage / avg food-cost % / over-
+  target / uncosted / ingredient count), a **search** box + **Board⇄Table**
+  toggle, and a default **Board view** — category-grouped recipe cards with a
+  food-cost health bar + cost/portion + kcal + ingredient count; uncosted dishes
+  render a clear “+ Cost this dish” card. CSS §18 (`.av3-board`, `.av3-fcbar`).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's

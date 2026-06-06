@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlaskConical, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Ban, FlaskConical, LayoutGrid, Percent, Plus, RefreshCw, Rows3, Trash2, TrendingDown, UtensilsCrossed, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { ALLERGEN_LABELS } from "@/data/types";
 import type { Allergen, MenuCategory, MenuRole, ModifierGroup, ModifierOption } from "@/data/types";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type MenuTag = "vegetarian" | "vegan" | "spicy" | "gluten-free";
 type Halal = "halal" | "non-halal" | "uncertified";
@@ -86,6 +86,8 @@ export function MenuV3() {
   const [refreshing, setRefreshing] = useState(false);
   const [cat, setCat] = useState<"all" | MenuCategory>("all");
   const [showHidden, setShowHidden] = useState(false);
+  const [view, setView] = useState<"board" | "table">("board");
+  const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editSlug, setEditSlug] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -155,7 +157,27 @@ export function MenuV3() {
     return c;
   }, [visible]);
 
-  const rows = useMemo(() => (cat === "all" ? visible : visible.filter((u) => u.category === cat)), [visible, cat]);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return visible.filter(
+      (u) =>
+        (cat === "all" || u.category === cat) &&
+        (!needle || u.primary.name.toLowerCase().includes(needle) || u.primary.description.toLowerCase().includes(needle)),
+    );
+  }, [visible, cat, q]);
+
+  // KPI rail — chain-wide menu health (over all visible dishes, not the filter)
+  const kpis = useMemo(() => {
+    const dishMargins = visible.map((u) => u.margins.reduce((s, m) => s + m, 0) / (u.margins.length || 1));
+    const avgMargin = dishMargins.length ? dishMargins.reduce((s, m) => s + m, 0) / dishMargins.length : 0;
+    return {
+      dishes: visible.length,
+      avgMargin,
+      off: visible.filter((u) => u.availableCount === 0).length,
+      lowMargin: dishMargins.filter((m) => m < 50).length,
+      noRecipe: visible.filter((u) => !u.anyRecipe && u.category !== "drinks").length,
+    };
+  }, [visible]);
 
   const totalSites = allLocations.length;
   const editing = editSlug ? unified.find((u) => u.baseSlug === editSlug) ?? null : null;
@@ -262,6 +284,24 @@ export function MenuV3() {
         </div>
       </div>
 
+      <div className="av3-kpi-rail">
+        <Kpi label="Dishes" icon={UtensilsCrossed} value={kpis.dishes.toLocaleString("pl-PL")} accentVar="--av3-c3" />
+        <Kpi label="Avg margin" icon={Percent} value={`${kpis.avgMargin.toFixed(0)}%`} accentVar="--av3-c4" />
+        <Kpi label="Low margin" icon={TrendingDown} value={`${kpis.lowMargin}`} accentVar="--av3-c1" />
+        <Kpi label="86’d (off)" icon={Ban} value={`${kpis.off}`} accentVar="--av3-c5" />
+        <Kpi label="No recipe" icon={FlaskConical} value={`${kpis.noRecipe}`} accentVar="--av3-c2" />
+      </div>
+
+      <div className="av3-toolbar">
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search dishes…" />
+        <span className="av3-toolbar-spacer" />
+        <span className="av3-cell-muted" style={{ fontSize: 12 }}>{rows.length} shown</span>
+        <div className="av3-viewtoggle">
+          <button type="button" className={view === "board" ? "is-active" : ""} onClick={() => setView("board")} aria-label="Board view" title="Board view"><LayoutGrid /></button>
+          <button type="button" className={view === "table" ? "is-active" : ""} onClick={() => setView("table")} aria-label="Table view" title="Table view"><Rows3 /></button>
+        </div>
+      </div>
+
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>
         {CATEGORY_ORDER.filter((c) => counts[c]).map((c) => (
@@ -291,20 +331,88 @@ export function MenuV3() {
 
       {loading && unified.length === 0 ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading the menu…</div>
-      ) : (
+      ) : rows.length === 0 ? (
         <div className="av3-card" style={{ padding: 0 }}>
-          {rows.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">Nothing in this category.</div></div>
-          ) : (
-            <Table columns={cols} rows={rows} rowKey={(u) => u.baseSlug} onRowClick={(u) => setEditSlug(u.baseSlug)} />
-          )}
+          <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">{q ? "No dish matches that search." : "Nothing in this category."}</div></div>
         </div>
+      ) : view === "table" ? (
+        <div className="av3-card" style={{ padding: 0 }}>
+          <Table columns={cols} rows={rows} rowKey={(u) => u.baseSlug} onRowClick={(u) => setEditSlug(u.baseSlug)} />
+        </div>
+      ) : (
+        <MenuBoard rows={rows} totalSites={totalSites} selected={selected} onToggleSel={toggleSel} onOpen={(u) => setEditSlug(u.baseSlug)} />
       )}
 
       {editing && <MenuEditDialog item={editing} onClose={() => setEditSlug(null)} onSaved={fetchAll} />}
       {adding && <AddItemDialog locations={allLocations} onClose={() => setAdding(false)} onSaved={fetchAll} />}
       {bulkEditing && <BulkEditDialog count={selected.size} onClose={() => setBulkEditing(false)} onApply={async (patch) => { setBulkEditing(false); await runBulk({ action: "edit", scope: "current", patch }); }} />}
     </>
+  );
+}
+
+/* ── board (card) view ─────────────────────────────────────────────────── */
+function availability(u: Unified, totalSites: number): { tone: BadgeTone; label: string } {
+  if (u.variants.length < totalSites) return { tone: "info", label: `${u.variants.map((l) => l.city.slice(0, 3)).join("/")} only` };
+  if (u.availableCount === 0) return { tone: "bad", label: "Off" };
+  if (u.availableCount < u.variants.length) return { tone: "warn", label: "Partial" };
+  return { tone: "ok", label: "On" };
+}
+
+function MenuBoard({ rows, totalSites, selected, onToggleSel, onOpen }: {
+  rows: Unified[]; totalSites: number; selected: Set<string>; onToggleSel: (s: string) => void; onOpen: (u: Unified) => void;
+}) {
+  // group by category, preserving the menu order
+  const sections = useMemo(() => {
+    const map = new Map<MenuCategory, Unified[]>();
+    for (const u of rows) { const arr = map.get(u.category) ?? []; arr.push(u); map.set(u.category, arr); }
+    return CATEGORY_ORDER.filter((c) => map.has(c)).map((c) => ({ category: c, items: map.get(c)! }));
+  }, [rows]);
+
+  return (
+    <div>
+      {sections.map((s) => (
+        <div key={s.category}>
+          <div className="av3-board-section">{CATEGORY_LABEL[s.category]}<span className="c">{s.items.length}</span></div>
+          <div className="av3-board">
+            {s.items.map((u) => <DishCard key={u.baseSlug} u={u} totalSites={totalSites} selected={selected.has(u.baseSlug)} onToggleSel={onToggleSel} onOpen={onOpen} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DishCard({ u, totalSites, selected, onToggleSel, onOpen }: {
+  u: Unified; totalSites: number; selected: boolean; onToggleSel: (s: string) => void; onOpen: (u: Unified) => void;
+}) {
+  const min = Math.min(...u.prices), max = Math.max(...u.prices);
+  const avg = u.margins.reduce((s, m) => s + m, 0) / (u.margins.length || 1);
+  const av = availability(u, totalSites);
+  return (
+    <div className="av3-dcard" data-sel={selected} data-dim={u.allHidden} onClick={() => onOpen(u)} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(u); }}>
+      <input type="checkbox" className="av3-dcard-check" checked={selected} onClick={(e) => e.stopPropagation()} onChange={() => onToggleSel(u.baseSlug)} aria-label={`Select ${u.primary.name}`} />
+      <div className="av3-dcard-name">
+        {u.anyRecipe && <span title="has recipe" style={{ color: "var(--av3-platinum)", marginRight: 5 }} aria-hidden>●</span>}
+        {u.primary.name}
+      </div>
+      <div className="av3-dcard-desc">{u.primary.description || "—"}</div>
+      <div className="av3-dcard-badges">
+        <Badge tone={av.tone} dot>{av.label}</Badge>
+        {u.isCustom && <Badge tone="info">custom</Badge>}
+        {u.anyHidden && <Badge tone="bad">hidden</Badge>}
+        {u.anyOverride && !u.isCustom && <Badge tone="neutral">edited</Badge>}
+        {u.primary.deliveryOnly && <Badge tone="neutral">delivery</Badge>}
+        {(u.primary.modifierGroups?.length ?? 0) > 0 && <Badge tone="neutral">{u.primary.modifierGroups!.length} mods</Badge>}
+      </div>
+      <div className="av3-dcard-foot">
+        <div>
+          <div className="av3-dcard-price">{min === max ? formatPrice(min) : `${formatPrice(min)}–${formatPrice(max)}`}</div>
+          <div className="av3-dcard-sub">{min === max ? "all sites" : "varies by site"}</div>
+        </div>
+        <Badge tone={marginTone(avg)}>{avg.toFixed(0)}% margin</Badge>
+      </div>
+    </div>
   );
 }
 

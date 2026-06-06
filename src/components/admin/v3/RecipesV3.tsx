@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlaskConical, Plus, RefreshCw, Star, Trash2, X } from "lucide-react";
+import { AlertTriangle, Boxes, FlaskConical, LayoutGrid, Percent, Plus, RefreshCw, Rows3, Star, Trash2, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { INGREDIENT_CATEGORY_LABELS } from "@/data/types";
 import type { IngredientCategory, IngredientUnit, MenuCategory } from "@/data/types";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface MenuItemData { id: string; name: string; price: number; category: MenuCategory }
 /** Ingredient joined to its active offering (cost + macros are read-only cache). */
@@ -50,6 +50,8 @@ export function RecipesV3() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cat, setCat] = useState<"all" | MenuCategory>("all");
+  const [view, setView] = useState<"board" | "table">("board");
+  const [q, setQ] = useState("");
   const [editSlug, setEditSlug] = useState<string | null>(null);
   const [editIng, setEditIng] = useState<Ingredient | "new" | null>(null);
 
@@ -100,8 +102,22 @@ export function RecipesV3() {
     return c;
   }, [dishes, recipeByBase]);
 
-  const rows = useMemo(() => (cat === "all" ? dishes : dishes.filter((d) => d.category === cat)), [dishes, cat]);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return dishes.filter((d) => (cat === "all" || d.category === cat) && (!needle || d.name.toLowerCase().includes(needle)));
+  }, [dishes, cat, q]);
   const editing = editSlug ? dishes.find((d) => d.baseSlug === editSlug) ?? null : null;
+
+  // KPI rail — costing coverage + health across all dishes
+  const kpis = useMemo(() => {
+    const costedPcts: number[] = [];
+    for (const d of dishes) {
+      const r = recipeByBase.get(d.baseSlug);
+      if (r?.calculatedCost && d.avgPrice) costedPcts.push((r.calculatedCost / d.avgPrice) * 100);
+    }
+    const avgFc = costedPcts.length ? costedPcts.reduce((s, p) => s + p, 0) / costedPcts.length : 0;
+    return { costed: counts.withRecipe, total: counts.all, uncosted: counts.all - counts.withRecipe, avgFc, overTarget: costedPcts.filter((p) => p > 38).length };
+  }, [dishes, recipeByBase, counts]);
 
   const cols: ColumnV3<Dish>[] = [
     { key: "name", header: "Dish", render: (d) => <span style={{ fontWeight: 600 }}>{d.name}</span> },
@@ -145,6 +161,24 @@ export function RecipesV3() {
 
       {tab === "recipes" ? (
         <>
+          <div className="av3-kpi-rail">
+            <Kpi label="Costed" icon={FlaskConical} value={`${kpis.costed}/${kpis.total}`} accentVar="--av3-c3" />
+            <Kpi label="Avg food cost" icon={Percent} value={kpis.avgFc ? `${kpis.avgFc.toFixed(0)}%` : "—"} accentVar="--av3-c4" />
+            <Kpi label="Over target" icon={AlertTriangle} value={`${kpis.overTarget}`} accentVar="--av3-c1" />
+            <Kpi label="Uncosted" icon={AlertTriangle} value={`${kpis.uncosted}`} accentVar="--av3-c5" />
+            <Kpi label="Ingredients" icon={Boxes} value={ingredients.length.toLocaleString("pl-PL")} accentVar="--av3-c2" />
+          </div>
+
+          <div className="av3-toolbar">
+            <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search dishes…" />
+            <span className="av3-toolbar-spacer" />
+            <span className="av3-cell-muted" style={{ fontSize: 12 }}>{rows.length} shown</span>
+            <div className="av3-viewtoggle">
+              <button type="button" className={view === "board" ? "is-active" : ""} onClick={() => setView("board")} aria-label="Board view" title="Board view"><LayoutGrid /></button>
+              <button type="button" className={view === "table" ? "is-active" : ""} onClick={() => setView("table")} aria-label="Table view" title="Table view"><Rows3 /></button>
+            </div>
+          </div>
+
           <div className="av3-filterchips">
             <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>
             {CATEGORY_ORDER.filter((c) => counts[c]).map((c) => (
@@ -153,14 +187,16 @@ export function RecipesV3() {
           </div>
           {loading && dishes.length === 0 ? (
             <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading recipes…</div>
-          ) : (
+          ) : rows.length === 0 ? (
             <div className="av3-card" style={{ padding: 0 }}>
-              {rows.length === 0 ? (
-                <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">Nothing in this category.</div></div>
-              ) : (
-                <Table columns={cols} rows={rows} rowKey={(d) => d.baseSlug} onRowClick={(d) => setEditSlug(d.baseSlug)} />
-              )}
+              <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">{q ? "No dish matches that search." : "Nothing in this category."}</div></div>
             </div>
+          ) : view === "table" ? (
+            <div className="av3-card" style={{ padding: 0 }}>
+              <Table columns={cols} rows={rows} rowKey={(d) => d.baseSlug} onRowClick={(d) => setEditSlug(d.baseSlug)} />
+            </div>
+          ) : (
+            <RecipeBoard rows={rows} recipeByBase={recipeByBase} onOpen={(d) => setEditSlug(d.baseSlug)} />
           )}
         </>
       ) : (
@@ -174,6 +210,69 @@ export function RecipesV3() {
         <IngredientDialog ingredient={editIng === "new" ? null : editIng} suppliers={suppliers} onClose={() => setEditIng(null)} onSaved={fetchAll} />
       )}
     </>
+  );
+}
+
+/* ── board (card) view ─────────────────────────────────────────────────── */
+function fcBarColor(pct: number): string {
+  if (pct <= 30) return "var(--av3-ok)";
+  if (pct <= 38) return "var(--av3-warn)";
+  return "var(--av3-bad)";
+}
+function RecipeBoard({ rows, recipeByBase, onOpen }: {
+  rows: Dish[]; recipeByBase: Map<string, RecipeData>; onOpen: (d: Dish) => void;
+}) {
+  const sections = useMemo(() => {
+    const map = new Map<MenuCategory, Dish[]>();
+    for (const d of rows) { const arr = map.get(d.category) ?? []; arr.push(d); map.set(d.category, arr); }
+    return CATEGORY_ORDER.filter((c) => map.has(c)).map((c) => ({ category: c, items: map.get(c)! }));
+  }, [rows]);
+
+  return (
+    <div>
+      {sections.map((s) => (
+        <div key={s.category}>
+          <div className="av3-board-section">{CATEGORY_LABEL[s.category]}<span className="c">{s.items.length}</span></div>
+          <div className="av3-board">
+            {s.items.map((d) => <RecipeCard key={d.baseSlug} d={d} recipe={recipeByBase.get(d.baseSlug)} onOpen={onOpen} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecipeCard({ d, recipe, onOpen }: { d: Dish; recipe?: RecipeData; onOpen: (d: Dish) => void }) {
+  const costed = Boolean(recipe?.calculatedCost);
+  const pct = costed && d.avgPrice ? (recipe!.calculatedCost! / d.avgPrice) * 100 : 0;
+  const ingN = recipe?.ingredients?.length ?? 0;
+  return (
+    <div className="av3-dcard" data-dim={!costed} onClick={() => onOpen(d)} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(d); }}>
+      <div className="av3-dcard-name">{d.name}</div>
+      <div className="av3-dcard-badges">
+        {costed ? <Badge tone="info"><FlaskConical style={{ width: 11, height: 11 }} />{ingN} ingredient{ingN > 1 ? "s" : ""}</Badge> : <Badge tone="neutral">No recipe</Badge>}
+        {costed && recipe!.calculatedCalories ? <Badge tone="neutral">{recipe!.calculatedCalories} kcal</Badge> : null}
+        {recipe?.prepTimeMinutes ? <Badge tone="neutral">{recipe.prepTimeMinutes} min</Badge> : null}
+      </div>
+      {costed ? (
+        <>
+          <div className="av3-fcbar"><i style={{ width: `${Math.min(100, pct)}%`, background: fcBarColor(pct) }} /></div>
+          <div className="av3-dcard-foot">
+            <div>
+              <div className="av3-dcard-price">{formatPrice(recipe!.calculatedCost!)}</div>
+              <div className="av3-dcard-sub">food cost / portion</div>
+            </div>
+            <Badge tone={foodCostTone(pct)}>{pct.toFixed(0)}%</Badge>
+          </div>
+        </>
+      ) : (
+        <div className="av3-dcard-foot">
+          <span className="av3-dcard-sub">Avg price {formatPrice(d.avgPrice)}</span>
+          <span className="av3-dcard-cta">+ Cost this dish</span>
+        </div>
+      )}
+    </div>
   );
 }
 
