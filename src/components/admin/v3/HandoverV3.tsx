@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCheck } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, Clock, Scale } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -68,6 +68,13 @@ export function HandoverV3() {
   }, [loc]);
   useEffect(() => { load(); }, [load]);
 
+  const stats = useMemo(() => {
+    const issues = logs.filter((h) => !h.tempChecksOk || !h.wasteNoted || !h.equipmentOk).length;
+    const netVar = logs.reduce((s, h) => s + (typeof h.cashVarianceGrosze === "number" ? h.cashVarianceGrosze : 0), 0);
+    const last = logs.length ? [...logs].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0].recordedAt : null;
+    return { week: logs.length, issues, netVar, last };
+  }, [logs]);
+
   const canSubmit = outgoing.trim().length > 0;
 
   const submit = async () => {
@@ -113,6 +120,13 @@ export function HandoverV3() {
           <h1>Shift handover</h1>
           <div className="av3-pagehead-sub">End-of-shift sign-off · {city}{!location ? " (pick a location to switch)" : ""}</div>
         </div>
+      </div>
+
+      <div className="av3-kpi-rail">
+        <Kpi label="This week" icon={ClipboardCheck} value={`${stats.week}`} accentVar="--av3-c3" />
+        <Kpi label="Issues flagged" icon={AlertTriangle} value={`${stats.issues}`} accentVar="--av3-c1" />
+        <Kpi label="Net cash variance" icon={Scale} value={`${stats.netVar >= 0 ? "+" : ""}${formatPrice(stats.netVar)}`} accentVar="--av3-c2" />
+        <Kpi label="Last sign-off" icon={Clock} value={stats.last ? fmtWhen(stats.last) : "—"} accentVar="--av3-c4" />
       </div>
 
       <Card>

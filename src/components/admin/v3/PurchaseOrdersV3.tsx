@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PackageSearch, Plus, X } from "lucide-react";
+import { ClipboardList, PackageCheck, PackageSearch, Plus, Truck, Wallet, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type POStatus = "draft" | "sent" | "received" | "cancelled";
 interface POLine { ingredientId: string; quantity: number; unitCost: number; name?: string; unit?: string; lineTotal?: number }
@@ -61,6 +61,16 @@ export function PurchaseOrdersV3() {
   const rows = useMemo(() => (filter === "all" ? orders : orders.filter((o) => o.status === filter)), [orders, filter]);
   const detail = detailId ? orders.find((o) => o.id === detailId) ?? null : null;
 
+  const stats = useMemo(() => {
+    const open = orders.filter((o) => o.status === "draft" || o.status === "sent");
+    return {
+      open: open.length,
+      onOrder: open.reduce((s, o) => s + o.totalCents, 0),
+      awaiting: orders.filter((o) => o.status === "sent").length,
+      received: orders.filter((o) => o.status === "received").length,
+    };
+  }, [orders]);
+
   const advance = async (id: string, status: POStatus) => {
     setBusy(id);
     try {
@@ -100,6 +110,13 @@ export function PurchaseOrdersV3() {
         <div className="av3-pagehead-actions">
           <Button variant="primary" size="sm" onClick={() => setCreating(true)} disabled={suppliers.length === 0}><Plus className="av3-btn-ico" /> New PO</Button>
         </div>
+      </div>
+
+      <div className="av3-kpi-rail">
+        <Kpi label="Open POs" icon={ClipboardList} value={`${stats.open}`} accentVar="--av3-c3" />
+        <Kpi label="On order" icon={Wallet} value={formatPrice(stats.onOrder)} accentVar="--av3-c2" />
+        <Kpi label="Awaiting delivery" icon={Truck} value={`${stats.awaiting}`} accentVar="--av3-c5" />
+        <Kpi label="Received" icon={PackageCheck} value={`${stats.received}`} accentVar="--av3-c4" />
       </div>
 
       <div className="av3-filterchips">

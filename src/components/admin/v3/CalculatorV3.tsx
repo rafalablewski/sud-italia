@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
+import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -60,6 +60,80 @@ function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?
   );
 }
 
+// Modeling assumption (declared, like DEFAULT_SEASONALITY in the engine): a
+// Neapolitan-truck service day is a lunch + (bigger) dinner double-peak. Returns
+// per-hour weights summing to 1 across `n` service hours.
+function demandWeights(n: number): number[] {
+  if (n <= 1) return [1];
+  const w: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1);
+    const lunch = Math.exp(-Math.pow((x - 0.28) / 0.12, 2));
+    const dinner = Math.exp(-Math.pow((x - 0.8) / 0.14, 2));
+    w.push(0.22 + lunch + 1.3 * dinner);
+  }
+  const sum = w.reduce((a, b) => a + b, 0);
+  return w.map((v) => v / sum);
+}
+
+// Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
+// Applying one loads a full input set (volume / days / ticket / COGS + the six
+// attach % values, preserving each lever's enabled state). Operator edits to a
+// scenario persist as scenario.menuScenarioOverrides[id], overlaid on the baked
+// preset, so the same saved overrides round-trip between v2 and v3.
+interface MenuScenarioPreset {
+  id: string; name: string; emoji: string; description: string;
+  ordersPerDay: number; daysOpenPerMonth: number; avgTicketGrosze: number; cogsPct: number;
+  attach: { coffee: number; dessert: number; antipasti: number; aperitivo: number; premiumToppings: number; pastaPrimo: number };
+}
+const MENU_SCENARIOS: MenuScenarioPreset[] = [
+  { id: "takeaway", name: "Takeaway classic", emoji: "🍕", description: "Quick pizza orders, minimal sides. High volume, low ticket — grab + go.", ordersPerDay: 100, daysOpenPerMonth: 28, avgTicketGrosze: 4500, cogsPct: 0.30, attach: { coffee: 0.15, dessert: 0.05, antipasti: 0.03, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0 } },
+  { id: "balanced", name: "Balanced (default)", emoji: "🍝", description: "Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.", ordersPerDay: 70, daysOpenPerMonth: 28, avgTicketGrosze: 6500, cogsPct: 0.30, attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 } },
+  { id: "premium", name: "Premium / Specialty", emoji: "✨", description: "High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket.", ordersPerDay: 55, daysOpenPerMonth: 26, avgTicketGrosze: 8800, cogsPct: 0.32, attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 } },
+  { id: "family", name: "Family / Group", emoji: "👨‍👩‍👧", description: "Multi-pizza orders for groups. Big tickets, fewer orders — weekend / event.", ordersPerDay: 30, daysOpenPerMonth: 26, avgTicketGrosze: 15500, cogsPct: 0.28, attach: { coffee: 0.10, dessert: 0.25, antipasti: 0.20, aperitivo: 0.05, premiumToppings: 0.15, pastaPrimo: 0.15 } },
+  { id: "aperitivo", name: "Aperitivo / Dinner", emoji: "🍷", description: "Drinks-led evening service. Best margin — requires alcohol licence.", ordersPerDay: 45, daysOpenPerMonth: 28, avgTicketGrosze: 8200, cogsPct: 0.26, attach: { coffee: 0.20, dessert: 0.20, antipasti: 0.25, aperitivo: 0.45, premiumToppings: 0.20, pastaPrimo: 0.20 } },
+];
+const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 60, daysOpenPerMonth: 28, avgTicketGrosze: 6000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
+const MENU_SCENARIOS_ALL = [...MENU_SCENARIOS, CUSTOM_PRESET];
+const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_ALL.map((s) => [s.id, s]));
+const ATTACH_OF: Record<keyof MenuScenarioPreset["attach"], AttachKey> = { coffee: "coffeeAttach", dessert: "dessertAttach", antipasti: "antipastiAttach", aperitivo: "aperitivoAttach", premiumToppings: "premiumToppingsAttach", pastaPrimo: "pastaPrimoAttach" };
+// Overlay the operator's saved override (if any) on top of the baked preset.
+function resolveScenarioPreset(id: string, overrides?: Record<string, SimulationMenuScenarioOverride>): MenuScenarioPreset {
+  const base = MENU_SCENARIO_BY_ID.get(id) ?? CUSTOM_PRESET;
+  const ovr = overrides?.[id];
+  return ovr ? { ...base, ordersPerDay: ovr.ordersPerDay, daysOpenPerMonth: ovr.daysOpenPerMonth, avgTicketGrosze: ovr.avgTicketGrosze, cogsPct: ovr.cogsPct, attach: ovr.attach } : base;
+}
+
+// compact zł for dense heatmap cells (grosze → "7.2k" / "320")
+function kZl(g: number): string {
+  const z = g / 100;
+  return Math.abs(z) >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
+}
+interface HeatData { cells: number[][]; colHeaders: string[]; rowHeaders: string[]; centerRow: number; centerCol: number }
+function Heatmap({ data }: { data: HeatData }) {
+  const maxAbs = Math.max(1, ...data.cells.flat().map((v) => Math.abs(v)));
+  const ncol = data.colHeaders.length;
+  return (
+    <div className="av3-heat-wrap">
+      <div className="av3-heat" style={{ gridTemplateColumns: `66px repeat(${ncol}, 1fr)` }}>
+        <div className="av3-heat-corner" />
+        {data.colHeaders.map((h, i) => <div key={i} className="av3-heat-h">{h}</div>)}
+        {data.cells.map((row, ri) => (
+          <Fragment key={ri}>
+            <div className="av3-heat-rh">{data.rowHeaders[ri]}</div>
+            {row.map((v, ci) => {
+              const pct = Math.round((Math.abs(v) / maxAbs) * 56) + 8;
+              const bg = `color-mix(in oklab, var(${v >= 0 ? "--av3-ok" : "--av3-bad"}) ${pct}%, var(--av3-s1))`;
+              const center = ri === data.centerRow && ci === data.centerCol;
+              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={formatPrice(v)}>{kZl(v)}</div>;
+            })}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CalculatorV3() {
   const [scn, setScn] = useState<SimulationScenario | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +171,142 @@ export function CalculatorV3() {
   const channels = useMemo(() => (scn ? computeChannelEconomics(scn) : []), [scn]);
   const fleet = useMemo(() => (scn ? computeFleetEconomics(scn, scn.setupCostGrosze ?? 0) : null), [scn]);
 
+  // ── what-if heatmaps: recompute net profit over a grid (real engine) ──────
+  const MULTS = useMemo(() => [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3], []);
+  const ordersTicketHeat = useMemo(() => {
+    if (!folded) return null;
+    // rows = avg ticket (high→low so profit rises up the grid), cols = orders/day
+    const rowMults = [...MULTS].reverse();
+    const cells = rowMults.map((rm) => MULTS.map((cm) =>
+      computeScenario({ ...folded, ordersPerDay: folded.ordersPerDay * cm, avgTicketGrosze: Math.round(folded.avgTicketGrosze * rm) }).netProfit));
+    return {
+      cells,
+      colHeaders: MULTS.map((m) => (folded.ordersPerDay * m).toFixed(0)),
+      rowHeaders: rowMults.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      centerCol: MULTS.indexOf(1), centerRow: rowMults.indexOf(1),
+    };
+  }, [folded, MULTS]);
+  const foodTicketHeat = useMemo(() => {
+    if (!folded) return null;
+    // rows = COGS % (low→high so profit falls going down), cols = avg ticket
+    const cogsRows = [-0.06, -0.04, -0.02, 0, 0.02, 0.04, 0.06];
+    const cells = cogsRows.map((d) => MULTS.map((cm) =>
+      computeScenario({ ...folded, cogsPct: Math.max(0, folded.cogsPct + d), avgTicketGrosze: Math.round(folded.avgTicketGrosze * cm) }).netProfit));
+    return {
+      cells,
+      colHeaders: MULTS.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      rowHeaders: cogsRows.map((d) => `${((folded.cogsPct + d) * 100).toFixed(0)}%`),
+      centerCol: MULTS.indexOf(1), centerRow: cogsRows.indexOf(0),
+    };
+  }, [folded, MULTS]);
+
+  // ── scenario archetypes: conservative / base / optimistic (real engine) ───
+  const archetypes = useMemo(() => {
+    if (!folded) return [];
+    const defs: { name: string; o: number; t: number; cogs: number; base?: boolean }[] = [
+      { name: "Conservative", o: 0.8, t: 0.95, cogs: 0.03 },
+      { name: "Base", o: 1, t: 1, cogs: 0, base: true },
+      { name: "Optimistic", o: 1.2, t: 1.08, cogs: -0.02 },
+    ];
+    return defs.map((d) => {
+      const r = computeScenario({ ...folded, ordersPerDay: folded.ordersPerDay * d.o, avgTicketGrosze: Math.round(folded.avgTicketGrosze * d.t), cogsPct: Math.max(0, folded.cogsPct + d.cogs) });
+      return { name: d.name, base: !!d.base, net: r.netProfit, margin: r.margin, ebitda: r.ebitda, payback: r.paybackMonths, breakEven: r.breakEvenOrdersPerDay };
+    });
+  }, [folded]);
+
+  // ── seed inputs from the last 30 days of real orders ──────────────────────
+  const [seeding, setSeeding] = useState(false);
+  const seedFromActuals = async () => {
+    setSeeding(true);
+    try {
+      const to = new Date().toISOString().slice(0, 10);
+      const from = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+      const a = await fetch(`/api/admin/analytics?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (a && scn) {
+        const days = scn.daysOpenPerMonth || 26;
+        const ordersPerDay = a.totalOrders > 0 ? +(a.totalOrders / 30 * (30 / days) ).toFixed(1) : scn.ordersPerDay;
+        const avgTicketGrosze = a.avgOrderValue > 0 ? Math.round(a.avgOrderValue) : scn.avgTicketGrosze;
+        const cogsPct = typeof a.profitMargin === "number" ? Math.min(0.6, Math.max(0.1, 1 - a.profitMargin / 100)) : scn.cogsPct;
+        patch({ ordersPerDay: Math.max(1, Math.round(ordersPerDay)), avgTicketGrosze, cogsPct });
+      }
+    } finally { setSeeding(false); }
+  };
+
+  // apply a named scenario → load its full input set (attach % only; enabled
+  // state preserved, matching v2) and mark it active
+  const applyMenuScenario = (p: MenuScenarioPreset) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const a: SimulationAssumptions = { ...(s.assumptions ?? {}) };
+    (Object.keys(p.attach) as (keyof MenuScenarioPreset["attach"])[]).forEach((k) => {
+      const ak = ATTACH_OF[k];
+      a[ak] = { ...(s.assumptions?.[ak] ?? ATTACH_DEFAULTS[ak]), attachPct: p.attach[k] };
+    });
+    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct: p.cogsPct, assumptions: a };
+  });
+  // capture the current live inputs into this scenario's override
+  const saveScenarioOverride = (id: string) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const att = s.assumptions ?? {};
+    const override: SimulationMenuScenarioOverride = {
+      ordersPerDay: s.ordersPerDay, daysOpenPerMonth: s.daysOpenPerMonth, avgTicketGrosze: s.avgTicketGrosze, cogsPct: s.cogsPct,
+      attach: {
+        coffee: att.coffeeAttach?.attachPct ?? 0, dessert: att.dessertAttach?.attachPct ?? 0, antipasti: att.antipastiAttach?.attachPct ?? 0,
+        aperitivo: att.aperitivoAttach?.attachPct ?? 0, premiumToppings: att.premiumToppingsAttach?.attachPct ?? 0, pastaPrimo: att.pastaPrimoAttach?.attachPct ?? 0,
+      },
+    };
+    return { ...s, menuScenario: id, menuScenarioOverrides: { ...(s.menuScenarioOverrides ?? {}), [id]: override } };
+  });
+  // drop a scenario's override (revert to the baked preset)
+  const resetScenarioOverride = (id: string) => setScn((s) => {
+    if (!s || !s.menuScenarioOverrides) return s; setDirty(true);
+    const next = { ...s.menuScenarioOverrides }; delete next[id];
+    return { ...s, menuScenarioOverrides: Object.keys(next).length ? next : undefined };
+  });
+
+  // ── oven curve & peak saturation (modelled from kitchenCapacity) ──────────
+  const oven = useMemo(() => {
+    if (!folded) return null;
+    const cap = folded.kitchenCapacity;
+    const hours = Math.max(1, Math.round(cap?.openHoursPerDay ?? 10));
+    const perHourCap = cap?.pizzasPerHour ?? 0;
+    const weights = demandWeights(hours);
+    const hourly = weights.map((w) => folded.ordersPerDay * w);
+    const peak = Math.max(...hourly);
+    const startHour = 11;
+    const excessPerDay = hourly.reduce((s, h) => s + Math.max(0, h - perHourCap), 0);
+    const balkShare = 0.5; // half of orders that can't be served at peak walk
+    const lostPerMonth = Math.round(excessPerDay * balkShare * folded.daysOpenPerMonth);
+    const peakExcess = Math.max(0, peak - perHourCap);
+    const waitMin = perHourCap > 0 ? Math.round((peakExcess / perHourCap) * 60) : 0;
+    return {
+      hours, perHourCap, startHour,
+      bars: hourly.map((h, i) => ({ hour: startHour + i, orders: h, over: Math.max(0, h - perHourCap) })),
+      peak, peakUtil: perHourCap > 0 ? peak / perHourCap : 0, waitMin, lostPerMonth,
+    };
+  }, [folded]);
+
+  // ── shift plan by daypart (modelled from the same demand curve) ───────────
+  const shiftPlan = useMemo(() => {
+    if (!oven || !folded) return null;
+    const dayparts = [
+      { key: "Lunch", lo: 0, hi: 0.45 },
+      { key: "Afternoon", lo: 0.45, hi: 0.62 },
+      { key: "Dinner", lo: 0.62, hi: 1.01 },
+    ];
+    const n = oven.bars.length;
+    const scheduledPizzaioli = folded.labor.filter((l) => l.role === "pizzaiolo").reduce((s, l) => s + l.headcount, 0);
+    const rows = dayparts.map((d) => {
+      const slice = oven.bars.filter((_, i) => { const x = i / (n - 1 || 1); return x >= d.lo && x < d.hi; });
+      const orders = slice.reduce((s, b) => s + b.orders, 0);
+      const hrs = slice.length || 1;
+      const ordersPerHour = orders / hrs;
+      const heads = Math.max(1, Math.ceil(ordersPerHour / (oven.perHourCap || 1)));
+      const range = slice.length ? `${slice[0].hour}:00–${slice[slice.length - 1].hour + 1}:00` : "—";
+      return { key: d.key, range, orders: Math.round(orders), ordersPerHour, heads };
+    });
+    return { rows, scheduledPizzaioli };
+  }, [oven, folded]);
+
   const save = async () => {
     if (!scn) return;
     setSaving(true);
@@ -129,6 +339,7 @@ export function CalculatorV3() {
           <div className="av3-pagehead-sub">P&amp;L simulator · live levers → real economics (shared engine)</div>
         </div>
         <div className="av3-pagehead-actions">
+          <Button variant="ghost" size="sm" loading={seeding} onClick={seedFromActuals} title="Seed orders/day, ticket & COGS from the last 30 days of real orders">Seed from last 30 days</Button>
           <Button variant="ghost" size="sm" onClick={load}>Reset</Button>
           <Button variant="primary" size="sm" loading={saving} disabled={!dirty} onClick={save}>Save scenario</Button>
         </div>
@@ -184,6 +395,14 @@ export function CalculatorV3() {
             tips="Two ways to shorten it: spend less up front (lease vs buy equipment, phase the fit-out) or net more per month (every lever that lifts net profit shortens payback proportionally). A 10% net-profit improvement turns a 24-month payback into ~21.8 months."
             methodology="paybackMonths = setupCostGrosze ÷ monthlyNetProfit, shown only when setup cost > 0 and net profit > 0. The Investor Returns card adds the discounted view (NPV at 10/15/20% + bisected IRR). computeScenario() + computeReturns()." />
         } />
+        <Kpi label="Margin of safety" value={`${(c.marginOfSafetyPct * 100).toFixed(0)}%`} accentVar={c.marginOfSafetyPct >= 0.25 ? "--av3-c4" : c.marginOfSafetyPct >= 0.1 ? "--av3-c5" : "--av3-c1"} info={
+          <InfoButton title="Margin of safety"
+            description="How far revenue can fall before the truck hits break-even — your cushion against a bad month."
+            institutional="The risk buffer investors stress-test. Rule of thumb: a healthy unit runs 25–40% above break-even; below ~15% the model is fragile (one rainy fortnight tips it into a loss) and shouldn't be financed without a plan to widen it. Read it alongside break-even/day — a low margin of safety with break-even near capacity is the danger zone."
+            plain="If you do 48 000 zł and break-even is 36 000 zł, your margin of safety is (48 000 − 36 000) ÷ 48 000 = 25% — revenue could drop a quarter before you stop making money. At 8% you're one slow week from red."
+            tips="Widen it the same way you lower break-even: lift contribution per order (ticket, COGS) or trim fixed/labour drag. Converting a fixed cost to a variable one mechanically raises the cushion. Use the orders × ticket heatmap below to see how much room each lever buys."
+            methodology="marginOfSafetyPct = (monthlyRevenue − breakEvenRevenue) ÷ monthlyRevenue, where breakEvenRevenue = breakEvenOrdersPerMonth × avgTicket. computeScenario(), src/lib/simulation-engine.ts." />
+        } />
       </div>
 
       <div className="av3-grid-2-1">
@@ -195,6 +414,8 @@ export function CalculatorV3() {
               <N label="Orders / day" value={scn.ordersPerDay} onChange={(n) => patch({ ordersPerDay: n })} />
               <Z label="Avg ticket (zł)" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
               <N label="Days open / mo" value={scn.daysOpenPerMonth} onChange={(n) => patch({ daysOpenPerMonth: n })} />
+              <P label="Wage infl. %/yr" frac={scn.wageInflationPct ?? 0} onChange={(f) => patch({ wageInflationPct: f })} w={120} />
+              <P label="Ingred. infl. %/yr" frac={scn.ingredientInflationPct ?? 0} onChange={(f) => patch({ ingredientInflationPct: f })} w={132} />
             </div></CardBody>
           </Card>
 
@@ -223,6 +444,10 @@ export function CalculatorV3() {
                   <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
                 </div>
               ))}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
+                <P label="Labour flex %" frac={scn.laborVariablePct ?? 0} onChange={(f) => patch({ laborVariablePct: f })} w={110} />
+                <N label="Anchor orders/day" value={scn.laborAnchorOrdersPerDay ?? scn.ordersPerDay} onChange={(n) => patch({ laborAnchorOrdersPerDay: n })} w={140} />
+              </div>
             </CardBody>
           </Card>
 
@@ -230,6 +455,7 @@ export function CalculatorV3() {
             <CardHead title="Fixed costs (monthly)" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {FIXED_KEYS.map((f) => <Z key={f.key} label={f.label} grosze={(scn.fixedCosts as Record<string, number>)[f.key] ?? 0} onChange={(g) => patchFixed(f.key, g)} w={110} />)}
+              <div className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Marketing = CAC</span><button type="button" className="av3-toggle" data-on={!!scn.marketingAsCac} onClick={() => patch({ marketingAsCac: !scn.marketingAsCac })}>{scn.marketingAsCac ? "Yes" : "No"}</button></div>
             </div></CardBody>
           </Card>
 
@@ -242,7 +468,12 @@ export function CalculatorV3() {
               {scn.kitchenCapacity && <>
                 <N label="Pizzas/hr" value={scn.kitchenCapacity.pizzasPerHour} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, pizzasPerHour: n } })} w={100} />
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
+                <N label="Open hrs/day" value={scn.kitchenCapacity.openHoursPerDay} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, openHoursPerDay: n } })} w={104} step={0.5} />
+                <N label="Oven / cycle" value={scn.kitchenCapacity.ovenPizzasPerCycle ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenPizzasPerCycle: n } })} w={96} />
+                <N label="Cycle (s)" value={scn.kitchenCapacity.ovenCycleSeconds ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenCycleSeconds: n } })} w={92} />
+                <P label="Oven eff. %" frac={scn.kitchenCapacity.ovenEfficiencyPct ?? 0} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenEfficiencyPct: f } })} w={100} />
               </>}
+              <N label="Prep complexity ×" value={scn.prepComplexityMultiplier ?? 1} onChange={(n) => patch({ prepComplexityMultiplier: n })} w={130} step={0.05} />
             </div></CardBody>
           </Card>
 
@@ -257,7 +488,7 @@ export function CalculatorV3() {
                 <div className="av3-leverrow">
                   <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ comboConversion: { ...(cc ?? { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
                   <span className="av3-lever-name">Combo conversion</span>
-                  {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /></>}
+                  {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /><P label="Add-on COGS %" frac={cc.addonCogsPct} onChange={(f) => patchAssume({ comboConversion: { ...cc, addonCogsPct: f } })} w={112} /></>}
                 </div>
               ); })()}
               {(() => { const d = scn.assumptions?.deliveryShare; const on = !!d && d.enabled !== false; return (
@@ -265,6 +496,13 @@ export function CalculatorV3() {
                   <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ deliveryShare: { ...(d ?? { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
                   <span className="av3-lever-name">Delivery share</span>
                   {on && d && <><P label="%" frac={d.pct} onChange={(f) => patchAssume({ deliveryShare: { ...d, pct: f } })} w={72} /><Z label="Packaging" grosze={d.packagingCostGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, packagingCostGrosze: g } })} w={96} /><Z label="Fee" grosze={d.avgFeeGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, avgFeeGrosze: g } })} w={84} /></>}
+                </div>
+              ); })()}
+              {(() => { const cp = scn.assumptions?.cheapestPizzaShift; const on = !!cp && cp.enabled !== false; return (
+                <div className="av3-leverrow">
+                  <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ cheapestPizzaShift: { ...(cp ?? { pp: 10, ticketDeltaGrosze: 80, cogsDeltaGrosze: 30 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
+                  <span className="av3-lever-name">Cheapest-pizza shift</span>
+                  {on && cp && <><N label="Shift pp" value={cp.pp} onChange={(n) => patchAssume({ cheapestPizzaShift: { ...cp, pp: n } })} w={84} /><Z label="Ticket Δ/pp" grosze={cp.ticketDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, ticketDeltaGrosze: g } })} w={106} /><Z label="COGS Δ/pp" grosze={cp.cogsDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, cogsDeltaGrosze: g } })} w={106} /></>}
                 </div>
               ); })()}
             </CardBody>
@@ -287,8 +525,17 @@ export function CalculatorV3() {
           <Card>
             <CardHead title="Seasonality & weather" description="Quarterly multipliers + a calibrated weather/holiday model" />
             <CardBody>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 {SEASONS.map((s) => <P key={s.key} label={s.label} frac={(scn.seasonality ?? DEFAULT_SEASONALITY)[s.key] as number} onChange={(f) => patchSeason({ [s.key]: f } as Partial<SimulationSeasonality>)} w={96} />)}
+              </div>
+              <div className="av3-field-label" style={{ marginBottom: 6 }}>Per-month overrides (×, blank = use season)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 8 }}>
+                {MONTH_LABELS.map((m, i) => { const ov = scn.seasonality?.monthlyOverrides?.[i]; return (
+                  <label key={m} className="av3-field"><span className="av3-field-label">{m}</span>
+                    <input className="av3-input" type="number" step="0.01" value={ov ?? ""} placeholder="—"
+                      onChange={(e) => { const arr = [...(scn.seasonality?.monthlyOverrides ?? Array(12).fill(undefined))]; arr[i] = e.target.value === "" ? undefined : Number(e.target.value); patchSeason({ monthlyOverrides: arr }); }} />
+                  </label>
+                ); })}
               </div>
               {(() => { const w = scn.weather; const on = !!w && w.enabled !== false; return (
                 <>
@@ -336,6 +583,8 @@ export function CalculatorV3() {
                   <P label="Supply disc. %" frac={scn.fleet.supplyDiscountPct} onChange={(f) => patchFleet({ supplyDiscountPct: f })} w={110} />
                   <N label="Commissary @units" value={scn.fleet.commissaryEnabledAtUnits} onChange={(n) => patchFleet({ commissaryEnabledAtUnits: Math.round(n) })} w={130} />
                   <P label="Commissary save %" frac={scn.fleet.commissarySavingsPct} onChange={(f) => patchFleet({ commissarySavingsPct: f })} w={128} />
+                  <P label="Build-out learning %" frac={scn.fleet.buildoutLearningPct} onChange={(f) => patchFleet({ buildoutLearningPct: f })} w={136} />
+                  <P label="Build-out floor %" frac={scn.fleet.buildoutFloorPct} onChange={(f) => patchFleet({ buildoutFloorPct: f })} w={120} />
                 </>}
               </div>
             </CardBody>
@@ -357,7 +606,14 @@ export function CalculatorV3() {
           </Card>
 
           <Card>
-            <CardHead title="Unit economics" />
+            <CardHead title="Unit economics" actions={
+              <InfoButton title="Unit economics"
+                description="The per-order and capacity vital signs — how much each order contributes and how hard the truck is working."
+                institutional="This is where investors test whether a unit scales. True CM1/order (contribution after ALL variable costs incl. payment fees, waste, loyalty, packaging) must be solidly positive — it's the cash each incremental order generates. Healthy QSR true-CM% sits 55–70%; food cost ≤30% and labour ≤25% keep prime cost in range. Capacity used should run 60–85% at peak: below 50% the asset is under-worked, above 90% you're turning guests away and need a second unit, not more marketing."
+                plain="At 38 zł avg ticket, if food + fees + waste + packaging eat 13 zł, the order's true CM1 is ~25 zł (66%). Do 80 orders a day and that's ~2 000 zł of daily contribution toward fixed costs and profit. If capacity used reads 92%, you're effectively sold out at peak — the next złoty of growth comes from a second truck or a faster line, not discounts."
+                tips="Lift true CM1 by raising ticket (attach) and trimming the variable block (distributor offerings, portioning, lower-fee channels). Pull food% and labour% down toward benchmark before chasing volume. If capacity used is low, fix demand (hours, marketing, slots); if it's pinned near 100%, invest in throughput (oven/prep) or a second unit."
+                methodology="trueCm1PerOrder = avgTicket − (COGS + fees + waste + refunds + loyalty + packaging) per order; trueCM% = that ÷ avgTicket. foodCost% / labour% are those lines ÷ revenue. capacityUtilization = forecast orders ÷ (kitchen pizzas-per-hour × open hours). cash-on-cash = annual net profit ÷ setup cost. All from computeScenario(), src/lib/simulation-engine.ts." />
+            } />
             <CardBody>
               <div className="av3-od-grid">
                 <div className="av3-od-field"><div className="k">True CM1 / order</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(c.trueCm1PerOrderGrosze)}</div></div>
@@ -499,6 +755,177 @@ export function CalculatorV3() {
           </Card>
         );
       })()}
+
+      {/* scenario comparison — conservative / base / optimistic (real engine) */}
+      {archetypes.length > 0 && (
+        <Card>
+          <CardHead title="Scenario comparison" description="Conservative · base · optimistic — same model, scaled volume / ticket / COGS" actions={
+            <InfoButton title="Scenario comparison"
+              description="The live scenario re-run under a pessimistic and an optimistic set of assumptions, side by side."
+              institutional="Investors never underwrite a single point estimate — they want the band. The institutional test: the business must survive the conservative case (net profit ≥ 0, payback still rational) and the optimistic case must not be the only path to viability. A model that only works in the optimistic column is a red flag."
+              plain="Base nets 7 200 zł/mo. Knock volume −20%, ticket −5% and add 3pp of food cost and you're at the Conservative column — if that's still green you can weather a soft quarter. The Optimistic column shows the upside if attach and footfall both land."
+              tips="If Conservative dips negative, widen the margin of safety before scaling: lift contribution per order or cut fixed drag. Use the heatmaps below to find which single lever moves the band most."
+              methodology="Each column re-runs computeScenario() on the folded scenario with ordersPerDay, avgTicket and cogsPct scaled — Conservative ×0.8 / ×0.95 / +3pp, Optimistic ×1.2 / ×1.08 / −2pp. src/lib/simulation-engine.ts." />
+          } />
+          <CardBody>
+            <div className="av3-scn">
+              {archetypes.map((a) => (
+                <div key={a.name} className="av3-scn-card" data-base={a.base}>
+                  <div className="av3-scn-name">{a.name}{a.base && <Badge tone="brand">live</Badge>}</div>
+                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
+                  <div className="av3-scn-line"><span>Net margin</span><span className="v">{(a.margin * 100).toFixed(1)}%</span></div>
+                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{formatPrice(a.ebitda)}</span></div>
+                  <div className="av3-scn-line"><span>Break-even / day</span><span className="v">{Math.ceil(a.breakEven)}</span></div>
+                  <div className="av3-scn-line"><span>Payback</span><span className="v">{a.payback != null ? `${a.payback.toFixed(1)} mo` : "—"}</span></div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 8 }}>Conservative: −20% orders · −5% ticket · +3pp COGS. Optimistic: +20% orders · +8% ticket · −2pp COGS.</div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* what-if heatmaps — net profit recomputed across a 7×7 grid */}
+      {ordersTicketHeat && foodTicketHeat && (
+        <div className="av3-grid-2">
+          <Card>
+            <CardHead title="Net profit — orders/day × ticket" actions={
+              <InfoButton title="Net profit heatmap — orders/day × ticket"
+                description="Net profit per month at every combination of daily order volume and average ticket, ±30% around today."
+                institutional="A two-variable sensitivity map — far richer than the one-at-a-time tornado. It shows the profit 'cliff' (where green turns red) so you can see whether you're comfortably inside the safe zone or one bad assumption from a loss. The diagonal matters: volume and ticket are partly substitutes, and the map shows the trade-off rate."
+                plain="The centre cell (outlined) is today. Slide right and orders rise; slide up and ticket rises — watch the colour deepen green. If the cells just left/below you are already red, you're sitting on the edge and should widen the cushion."
+                tips="Find the cheapest path to a target profit: sometimes +1 zł on ticket (one row up) beats chasing 20% more orders (three columns right). Pair with the attach levers — they're the realistic way to move ticket."
+                methodology="Each cell = computeScenario({ …folded, ordersPerDay×colMult, avgTicket×rowMult }).netProfit over mults 0.7–1.3. Colour intensity scales to the grid's max |net profit|. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody><div className="av3-heat-axis" style={{ marginBottom: 6 }}>↑ avg ticket · → orders/day · cell = net profit / mo</div><Heatmap data={ordersTicketHeat} /></CardBody>
+          </Card>
+          <Card>
+            <CardHead title="Net profit — food cost × ticket" actions={
+              <InfoButton title="Net profit heatmap — food cost × ticket"
+                description="Net profit per month across a band of food-cost % (rows) and average ticket (columns)."
+                institutional="COGS and price are the two fastest margin levers, and this map shows how they fight each other. The institutional read: a unit whose viability needs sub-28% food cost is exposed to commodity swings; one that stays green even at +6pp COGS is resilient. It quantifies exactly how much ticket must rise to absorb an ingredient shock."
+                plain="Going down a row adds ~2pp of food cost (a dairy price spike); going right adds ticket. If a cheese rally pushes you down two rows into amber, the map tells you how many złoty of ticket (columns right) claw the profit back."
+                tips="Defend the COGS axis with the Recipes ingredient catalog (switch distributor offerings, tighten portions) before resorting to price rises that dent volume. Premium-topping attach lifts ticket without a blanket price increase."
+                methodology="Each cell = computeScenario({ …folded, cogsPct + Δ, avgTicket×colMult }).netProfit over COGS Δ −6…+6pp and ticket mults 0.7–1.3. Colour scales to the grid's max |net profit|. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody><div className="av3-heat-axis" style={{ marginBottom: 6 }}>↓ food cost % · → avg ticket · cell = net profit / mo</div><Heatmap data={foodTicketHeat} /></CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* menu scenarios — named archetypes; apply loads a full input set, edits persist as overrides */}
+      <Card>
+        <CardHead title="Menu scenarios" description="Named menu shapes — apply loads volume · days · ticket · COGS · attach in one click" actions={
+          <InfoButton title="Menu scenarios"
+            description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo + Custom). Applying one loads a whole input set; your edits save back onto the scenario."
+            institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume, ticket and COGS together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs and capacity to see which clears the return gate."
+            plain="Tap 'Premium' and the model jumps to 55 orders/day at an 88 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Tweak a few fields, hit Save, and that becomes your saved Premium case; Reset reverts it to the baked archetype."
+            tips="Start from the closest archetype, fine-tune in the cards above, then Save to keep it. Use Scenario comparison to band each concept and the heatmaps to test how sensitive it is. 'Custom' is the blank slot for a concept that doesn't match an archetype."
+            methodology="Applying writes ordersPerDay/days/ticket/COGS + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Save captures the live inputs into menuScenarioOverrides[id], overlaid on the baked preset by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
+        } />
+        <CardBody>
+          <div className="av3-cols-3" style={{ gap: 10 }}>
+            {MENU_SCENARIOS_ALL.map((base) => {
+              const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
+              const active = scn.menuScenario === base.id;
+              const edited = !!scn.menuScenarioOverrides?.[base.id];
+              return (
+                <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 16 }}>{p.emoji}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
+                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
+                  </div>
+                  <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
+                  <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {(p.cogsPct * 100).toFixed(0)}% COGS</div>
+                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
+                    <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
+                    <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
+                    {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardBody>
+      </Card>
+
+      {oven && shiftPlan && (
+        <div className="av3-grid-2">
+          {/* oven curve & peak saturation */}
+          <Card>
+            <CardHead title="Oven curve & peak saturation" actions={
+              <InfoButton title="Oven curve & peak saturation"
+                description="Hourly order demand across the service day versus the line's sustainable pizzas-per-hour ceiling."
+                institutional="Daily-average capacity is a vanity number — the binding constraint is the peak hour. If demand spikes above the oven/pizzaiolo ceiling at dinner, orders queue, tickets blow out and guests walk, no matter how slack the average looks. Institutional read: peak utilisation should sit ≤90%; sustained red means you're leaving revenue on the table and need a second oven, a faster line, or demand-shifting (slots/pre-order)."
+                plain="The truck might average 8 orders/hr but slam 22 in the 19:00 hour against a 16/hr line — those 6 extra orders queue ~22 min and about half walk. The bars above the dashed ceiling are the orders you physically can't make in time."
+                tips="Three fixes: raise the ceiling (second oven, prep-ahead dough, an extra pair of hands at peak — see the shift plan), or flatten demand (timed slots, pre-order, a happy-hour to pull the lunch shoulder), or cap delivery during the dinner rush. Each red hour is direct lost contribution."
+                methodology="Hourly orders = ordersPerDay × a documented double-peak demand shape over kitchenCapacity.openHoursPerDay; ceiling = kitchenCapacity.pizzasPerHour. Peak wait ≈ (peakExcess ÷ ceiling) × 60 min; lost/mo = Σ over-ceiling × 50% balk × daysOpen. Modelling layer in CalculatorV3 over the scenario inputs." />
+            } />
+            <CardBody>
+              {(() => {
+                const H = 120; const scale = Math.max(oven.peak, oven.perHourCap) * 1.1 || 1;
+                const capPct = (oven.perHourCap / scale) * 100;
+                return (
+                  <>
+                    <div className="av3-kpi-rail" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 12 }}>
+                      <Kpi label="Peak / hr" value={`${oven.peak.toFixed(0)}`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : "--av3-c4"} />
+                      <Kpi label="Line / hr" value={`${oven.perHourCap.toFixed(0)}`} accentVar="--av3-c3" />
+                      <Kpi label="Peak util" value={`${(oven.peakUtil * 100).toFixed(0)}%`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : oven.peakUtil > 0.9 ? "--av3-c5" : "--av3-c4"} />
+                    </div>
+                    <div style={{ position: "relative", height: H, display: "flex", alignItems: "flex-end", gap: 4 }}>
+                      <div style={{ position: "absolute", left: 0, right: 0, bottom: `${capPct}%`, borderTop: "1px dashed var(--av3-line-strong)", pointerEvents: "none" }} />
+                      {oven.bars.map((b) => {
+                        const okH = (Math.min(b.orders, oven.perHourCap) / scale) * H;
+                        const overH = (b.over / scale) * H;
+                        return (
+                          <div key={b.hour} title={`${b.hour}:00 · ${b.orders.toFixed(0)} orders${b.over > 0 ? ` · ${b.over.toFixed(0)} over` : ""}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                            {overH > 0 && <div style={{ height: overH, background: "var(--av3-bad)", borderRadius: "2px 2px 0 0" }} />}
+                            <div style={{ height: okH, background: "var(--av3-c3)", opacity: 0.85, borderRadius: overH > 0 ? 0 : "2px 2px 0 0" }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                      {oven.bars.map((b) => <div key={b.hour} style={{ flex: 1, textAlign: "center", fontSize: 9.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{b.hour}</div>)}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: oven.lostPerMonth > 0 ? "var(--av3-warn)" : "var(--av3-muted)", marginTop: 8 }}>
+                      {oven.lostPerMonth > 0 ? `~${oven.waitMin} min peak wait · ~${oven.lostPerMonth.toLocaleString("pl-PL")} orders/mo lost to the queue` : "Line keeps up with peak demand — no queue loss."} <span style={{ color: "var(--av3-subtle)" }}>· dashed line = {oven.perHourCap.toFixed(0)}/hr ceiling</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </CardBody>
+          </Card>
+
+          {/* shift plan by daypart */}
+          <Card>
+            <CardHead title="Shift plan — labour by daypart" actions={
+              <InfoButton title="Shift plan — labour by daypart"
+                description="Forecast orders per daypart and the line headcount needed to serve them within the oven ceiling."
+                institutional="Labour is the second-biggest controllable cost, and flat all-day staffing is where it leaks. Matching heads to the demand curve — light at the lunch shoulder, doubled at the dinner peak — is how good operators hold labour % in range without blowing service. The gate: scheduled peak heads must cover the dinner daypart's orders/hr, or the oven curve goes red."
+                plain="Dinner does 22 orders/hr against a 16/hr line, so you need 2 pizzaioli on at 18:00–21:00; lunch at 9/hr needs only 1. Staffing 2 all day burns wage on the dead afternoon; staffing 1 all day loses the dinner rush."
+                tips="Schedule to the 'rec. heads' column: add the second pair of hands only for the dinner block, cross-train so a waiter can plate at peak, and start prep before the lunch ramp. If recommended > scheduled at dinner, that's your queue loss in the oven curve."
+                methodology="Orders/daypart = Σ of the modelled hourly demand within the daypart window; rec. heads = ⌈(orders/hr) ÷ kitchenCapacity.pizzasPerHour⌉ (min 1). Scheduled pizzaioli = Σ headcount of pizzaiolo labour lines. Modelling layer over the scenario." />
+            } />
+            <CardBody>
+              <div className="av3-reciperow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
+              {shiftPlan.rows.map((r) => (
+                <div key={r.key} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, alignItems: "center", padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.key}</span>
+                  <span className="av3-cell-muted" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5 }}>{r.range}</span>
+                  <span style={{ textAlign: "right", fontFamily: "var(--av3-mono)", fontSize: 12 }}>{r.orders}<span className="av3-cell-muted" style={{ fontSize: 10 }}> · {r.ordersPerHour.toFixed(0)}/h</span></span>
+                  <span style={{ textAlign: "right" }}><Badge tone={r.heads > shiftPlan.scheduledPizzaioli ? "bad" : "ok"}>{r.heads}</Badge></span>
+                </div>
+              ))}
+              <div style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 8 }}>
+                Scheduled pizzaioli: <b style={{ color: "var(--av3-fg)" }}>{shiftPlan.scheduledPizzaioli}</b>
+                {shiftPlan.rows.some((r) => r.heads > shiftPlan.scheduledPizzaioli) ? <span style={{ color: "var(--av3-warn)" }}> · peak daypart needs more heads than scheduled</span> : <span style={{ color: "var(--av3-ok)" }}> · covers every daypart</span>}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      )}
 
       {/* real-data sandboxes — independent of the hypothetical scenario above */}
       <SimSandboxes />

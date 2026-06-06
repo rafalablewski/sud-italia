@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Recipe — tabbed editor mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+      --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13); --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+      --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+      --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f; --av3-c6:#9b6dd0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; flex-direction:column; }
+    .mono { font-family:"JetBrains Mono",monospace; }
+    .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
+    .scrim { flex:1; background:rgba(0,0,0,.55); display:grid; place-items:start center; padding:40px 16px; }
+    .dialog { width:620px; max-width:100%; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); display:flex; flex-direction:column; max-height:calc(100vh - 100px); }
+    .dhead { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; border-bottom:1px solid var(--av3-line); }
+    .dtitle { font-size:15px; font-weight:600; } .dsub { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+    .badge { display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; } .b-brand { background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1)); color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg)); }
+    .dbody { padding:16px; overflow-y:auto; } .dfoot { display:flex; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--av3-line); }
+    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:6px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; }
+    .btn-primary { background:var(--av3-brand); border-color:var(--av3-brand); color:#fff; } .btn-ghost { background:transparent; border-color:transparent; color:var(--av3-muted); } .btn-danger { background:transparent; border-color:color-mix(in oklab,var(--av3-bad) 40%,transparent); color:var(--av3-bad); }
+    .recap { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--av3-line); border:1px solid var(--av3-line); border-radius:8px; overflow:hidden; margin-bottom:14px; }
+    .recap-cell { background:var(--av3-s1); padding:9px 11px; } .recap-k { font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); } .recap-v { font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:600; margin-top:2px; }
+    .dtabs { display:flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; margin-bottom:14px; }
+    .dtab { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px; border:none; background:transparent; border-radius:6px; color:var(--av3-muted); font:inherit; font-size:12px; font-weight:500; cursor:pointer; }
+    .dtab.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); } .dtab-count { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--av3-subtle); }
+    .dtab[data-flag="true"]::after { content:""; width:5px; height:5px; border-radius:50%; background:var(--av3-warn); }
+    .field { display:flex; flex-direction:column; gap:4px; } .field-label { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); }
+    .input, .select { height:30px; padding:0 10px; background:var(--av3-s2); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font:inherit; font-size:12.5px; width:100%; }
+    .affix { position:relative; display:block; } .affix > .input { padding-right:30px; } .affix::after { content:attr(data-suffix); position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:10.5px; color:var(--av3-subtle); font-family:"JetBrains Mono",monospace; }
+    .rhead, .rrow { display:grid; grid-template-columns:1fr 92px 72px 70px 28px; gap:8px; align-items:center; }
+    .rhead { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--av3-subtle); padding:0 0 6px; } .rhead span:nth-child(4){text-align:right} .rrow { padding:3px 0; }
+    .rcost { text-align:right; font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--av3-muted); }
+    .iconbtn { display:grid; place-items:center; width:28px; height:28px; border:1px solid var(--av3-line); border-radius:6px; background:transparent; color:var(--av3-muted); cursor:pointer; } .iconbtn svg { width:14px; height:14px; }
+    .subhead { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--av3-subtle); margin:16px 0 8px; }
+    .cbar { display:flex; height:12px; border-radius:6px; overflow:hidden; margin-bottom:6px; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; font-size:10.5px; color:var(--av3-muted); } .legend span { display:inline-flex; align-items:center; gap:4px; } .sw { width:8px; height:8px; border-radius:2px; }
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · the upgraded <strong style="margin:0 4px">Recipe edit dialog</strong> — sticky per-portion recap + tabbed (Ingredients / Nutrition / Notes), unit + % affixes on inputs</div>
+  <div class="scrim">
+    <div class="dialog">
+      <div class="dhead"><div><div class="dtitle">Tartufata Reale</div><div class="dsub">Chain-wide recipe · applies to all 2 sites</div></div><span class="badge b-brand">● formula</span></div>
+      <div class="dbody">
+        <div class="recap">
+          <div class="recap-cell"><div class="recap-k">Cost / portion</div><div class="recap-v">18,40 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">Food cost %</div><div class="recap-v" style="color:var(--av3-bad)">41%</div></div>
+          <div class="recap-cell"><div class="recap-k">Batch cost</div><div class="recap-v">18,40 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">kcal / portion</div><div class="recap-v">910</div></div>
+        </div>
+        <div class="dtabs">
+          <button class="dtab active">Ingredients<span class="dtab-count">5</span></button>
+          <button class="dtab" data-flag="true">Nutrition</button>
+          <button class="dtab" data-flag="true">Notes</button>
+        </div>
+        <div class="row" style="display:flex;gap:10px;margin-bottom:12px">
+          <label class="field" style="width:120px"><span class="field-label">Yield (portions)</span><input class="input" value="1" /></label>
+          <label class="field" style="width:120px"><span class="field-label">Prep</span><span class="affix" data-suffix="min"><input class="input" value="14" /></span></label>
+        </div>
+        <div class="rhead"><span>Ingredient</span><span>Qty</span><span>Waste%</span><span>Cost</span><span></span></div>
+        <div class="rrow"><select class="select"><option>Truffle cream</option></select><span class="affix" data-suffix="kg"><input class="input" value="0.04" /></span><span class="affix" data-suffix="%"><input class="input" value="5" /></span><span class="rcost">7,60 zł</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="rrow"><select class="select"><option>Fior di latte</option></select><span class="affix" data-suffix="kg"><input class="input" value="0.12" /></span><span class="affix" data-suffix="%"><input class="input" value="2" /></span><span class="rcost">4,10 zł</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="rrow"><select class="select"><option>Porcini</option></select><span class="affix" data-suffix="kg"><input class="input" value="0.05" /></span><span class="affix" data-suffix="%"><input class="input" value="8" /></span><span class="rcost">3,90 zł</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="rrow"><select class="select"><option>Parmigiano 36mo</option></select><span class="affix" data-suffix="kg"><input class="input" value="0.03" /></span><span class="affix" data-suffix="%"><input class="input" value="3" /></span><span class="rcost">2,00 zł</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="rrow"><select class="select"><option>Pizza dough ball</option></select><span class="affix" data-suffix="pc"><input class="input" value="1" /></span><span class="affix" data-suffix="%"><input class="input" value="0" /></span><span class="rcost">0,80 zł</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div style="margin-top:10px"><button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Add ingredient</button></div>
+        <div class="subhead">Cost breakdown</div>
+        <div class="cbar"><i style="width:41%;background:var(--av3-c1)"></i><i style="width:22%;background:var(--av3-c2)"></i><i style="width:21%;background:var(--av3-c3)"></i><i style="width:11%;background:var(--av3-c4)"></i><i style="width:5%;background:var(--av3-c5)"></i></div>
+        <div class="legend"><span><i class="sw" style="background:var(--av3-c1)"></i>Truffle cream 41%</span><span><i class="sw" style="background:var(--av3-c2)"></i>Fior di latte 22%</span><span><i class="sw" style="background:var(--av3-c3)"></i>Porcini 21%</span><span><i class="sw" style="background:var(--av3-c4)"></i>Parmigiano 11%</span><span><i class="sw" style="background:var(--av3-c5)"></i>Dough 5%</span></div>
+      </div>
+      <div class="dfoot"><button class="btn btn-danger" style="margin-right:auto">Delete recipe</button><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Save recipe</button></div>
+    </div>
+  </div>
+</body>
+</html>

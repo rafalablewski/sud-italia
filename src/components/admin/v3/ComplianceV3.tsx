@@ -20,6 +20,7 @@ export function ComplianceV3() {
   const [items, setItems] = useState<ComplianceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState<ComplianceItem | "new" | null>(null);
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/compliance").then((r) => (r.ok ? r.json() : [])).catch(() => []);
@@ -35,7 +36,12 @@ export function ComplianceV3() {
     for (const c of items) { const d = daysTo(c.expiresAt); if (d < 0) expired++; else if (d <= 7) urgent++; else if (d <= 30) soon++; }
     return { expired, urgent, soon };
   }, [items]);
-  const rows = useMemo(() => [...items].sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()), [items]);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return [...items]
+      .filter((c) => !needle || c.title.toLowerCase().includes(needle) || (COMPLIANCE_KIND_LABELS[c.kind] ?? c.kind).toLowerCase().includes(needle) || (all.find((l) => l.slug === c.locationSlug)?.city ?? c.locationSlug).toLowerCase().includes(needle))
+      .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+  }, [items, q, all]);
 
   const cols: ColumnV3<ComplianceItem>[] = [
     { key: "title", header: "Item", render: (c) => <span style={{ fontWeight: 600 }}>{c.title}</span> },
@@ -61,12 +67,18 @@ export function ComplianceV3() {
         <Kpi label="Due ≤ 30 days" icon={CalendarCheck2} value={`${counts.soon}`} accentVar="--av3-c5" />
       </div>
 
+      <div className="av3-toolbar">
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item, type or site…" />
+        <span className="av3-toolbar-spacer" />
+        <span className="av3-cell-muted" style={{ fontSize: 12 }}>{rows.length} shown</span>
+      </div>
+
       {loading ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading compliance…</div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">Nothing tracked</div><div className="av3-empty-text">Add licenses, inspections and insurance with expiry dates.</div></div>
+            <div className="av3-empty"><div className="av3-empty-title">{items.length === 0 ? "Nothing tracked" : "No matches"}</div><div className="av3-empty-text">{items.length === 0 ? "Add licenses, inspections and insurance with expiry dates." : "No item matches that search."}</div></div>
           ) : (
             <Table columns={cols} rows={rows} rowKey={(c) => c.id} onRowClick={(c) => setEdit(c)} />
           )}

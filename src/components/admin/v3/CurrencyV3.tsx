@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Coins } from "lucide-react";
-import { Badge, Card, CardBody, CardHead } from "./ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Banknote, CheckCircle2, Coins, Percent } from "lucide-react";
+import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
 
 type Currency = "PLN" | "USD" | "SGD" | "EUR";
 const ALL: Currency[] = ["PLN", "USD", "SGD", "EUR"];
@@ -42,6 +42,9 @@ export function CurrencyV3() {
   };
   const setDefault = (c: Currency) => { setDef(c); persist({ def: c }); };
 
+  const enabledCount = useMemo(() => ALL.filter((c) => enabled[c]).length, [enabled]);
+  const ratesSet = useMemo(() => ALL.filter((c) => c !== "PLN" && enabled[c] && Number(rates[c]) > 0).length, [enabled, rates]);
+
   if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading currency…</div>;
 
   return (
@@ -51,6 +54,12 @@ export function CurrencyV3() {
           <h1>Currency</h1>
           <div className="av3-pagehead-sub">Display currencies &amp; FX rates (operator surfaces stay in PLN) · changes save instantly</div>
         </div>
+      </div>
+      <div className="av3-kpi-rail">
+        <Kpi label="Default" icon={Coins} value={def} accentVar="--av3-c2" />
+        <Kpi label="Enabled" icon={CheckCircle2} value={`${enabledCount}/${ALL.length}`} accentVar="--av3-c4" />
+        <Kpi label="FX rates set" icon={Percent} value={`${ratesSet}`} accentVar="--av3-c3" />
+        <Kpi label="Charges in" icon={Banknote} value="PLN" accentVar="--av3-c1" />
       </div>
       <Card>
         <CardHead title="Currencies" description="Toggle which currencies guests can display, set the rate vs PLN" actions={<Badge tone="brand"><Coins style={{ width: 11, height: 11 }} /> default {def}</Badge>} />

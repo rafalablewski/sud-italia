@@ -39,6 +39,7 @@ export function FeedbackV3() {
   const [list, setList] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | Status>("all");
+  const [q, setQ] = useState("");
   const [detail, setDetail] = useState<FeedbackEntry | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -78,9 +79,10 @@ export function FeedbackV3() {
   const sentimentTotal = sentimentMix.reduce((s, d) => s + d.value, 0);
 
   const rows = useMemo(() => {
-    const r = filter === "all" ? list : list.filter((f) => f.status === filter);
+    const needle = q.trim().toLowerCase();
+    const r = list.filter((f) => (filter === "all" || f.status === filter) && (!needle || (f.customerName ?? "").toLowerCase().includes(needle) || (f.comment ?? "").toLowerCase().includes(needle)));
     return [...r].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
-  }, [list, filter]);
+  }, [list, filter, q]);
 
   const setStatus = async (id: string, status: Status) => {
     setBusy(id);
@@ -150,12 +152,16 @@ export function FeedbackV3() {
         </div>
       )}
 
-      <div className="av3-filterchips">
-        {chips.map((f) => (
-          <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
-            {f === "all" ? "All" : STATUS_LABEL[f]}<span className="av3-fchip-count">{counts[f] ?? 0}</span>
-          </button>
-        ))}
+      <div className="av3-toolbar">
+        <div className="av3-filterchips">
+          {chips.map((f) => (
+            <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
+              {f === "all" ? "All" : STATUS_LABEL[f]}<span className="av3-fchip-count">{counts[f] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+        <span className="av3-toolbar-spacer" />
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 220, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search guest or comment…" />
       </div>
 
       {loading && list.length === 0 ? (

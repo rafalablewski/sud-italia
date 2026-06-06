@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Building2, Plus } from "lucide-react";
-import { Badge, Button, Dialog, Table, type ColumnV3 } from "./ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Building2, Clock, Contact, Plus, Zap } from "lucide-react";
+import { Badge, Button, Dialog, Kpi, Table, type ColumnV3 } from "./ui";
 
 interface Supplier {
   id: string;
@@ -19,6 +19,7 @@ export function SuppliersV3() {
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState<Supplier | null>(null);
   const [adding, setAdding] = useState(false);
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/suppliers").then((r) => (r.ok ? r.json() : [])).catch(() => []);
@@ -27,11 +28,28 @@ export function SuppliersV3() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return needle
+      ? suppliers.filter((s) => [s.name, s.contactName, s.email, s.phone].some((v) => v?.toLowerCase().includes(needle)))
+      : suppliers;
+  }, [suppliers, q]);
+
+  const stats = useMemo(() => {
+    const leads = suppliers.map((s) => s.leadTimeDays).filter((n): n is number => typeof n === "number");
+    return {
+      total: suppliers.length,
+      avgLead: leads.length ? Math.round(leads.reduce((a, b) => a + b, 0) / leads.length) : null,
+      fastest: leads.length ? Math.min(...leads) : null,
+      withContact: suppliers.filter((s) => s.email || s.phone || s.contactName).length,
+    };
+  }, [suppliers]);
+
   const cols: ColumnV3<Supplier>[] = [
-    { key: "name", header: "Supplier", render: (s) => <span style={{ fontWeight: 600 }}>{s.name}</span> },
-    { key: "contact", header: "Contact", render: (s) => <span className="av3-cell-muted">{s.contactName || s.email || s.phone || "—"}</span> },
-    { key: "phone", header: "Phone", render: (s) => <span className="av3-cell-muted">{s.phone || "—"}</span> },
-    { key: "lead", header: "Lead time", num: true, render: (s) => (s.leadTimeDays != null ? `${s.leadTimeDays}d` : "—") },
+    { key: "name", header: "Supplier", render: (s) => <div><div style={{ fontWeight: 600 }}>{s.name}</div>{s.contactName && <div className="av3-cell-muted" style={{ fontSize: 11 }}>{s.contactName}</div>}</div> },
+    { key: "email", header: "Email", render: (s) => <span className="av3-cell-muted">{s.email || "—"}</span> },
+    { key: "phone", header: "Phone", render: (s) => <span className="av3-cell-muted" style={{ fontFamily: s.phone ? "var(--av3-mono)" : undefined }}>{s.phone || "—"}</span> },
+    { key: "lead", header: "Lead time", num: true, render: (s) => (s.leadTimeDays != null ? <Badge tone={s.leadTimeDays <= 2 ? "ok" : s.leadTimeDays <= 5 ? "warn" : "neutral"}>{s.leadTimeDays}d</Badge> : <span className="av3-cell-muted">—</span>) },
   ];
 
   return (
@@ -46,14 +64,27 @@ export function SuppliersV3() {
         </div>
       </div>
 
+      <div className="av3-kpi-rail">
+        <Kpi label="Suppliers" icon={Building2} value={`${stats.total}`} accentVar="--av3-c3" />
+        <Kpi label="Avg lead time" icon={Clock} value={stats.avgLead != null ? `${stats.avgLead}d` : "—"} accentVar="--av3-c2" />
+        <Kpi label="Fastest" icon={Zap} value={stats.fastest != null ? `${stats.fastest}d` : "—"} accentVar="--av3-c4" />
+        <Kpi label="With contact" icon={Contact} value={`${stats.withContact}/${stats.total}`} accentVar="--av3-c5" />
+      </div>
+
+      <div className="av3-toolbar">
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier, contact, email…" />
+        <span className="av3-toolbar-spacer" />
+        <span className="av3-cell-muted" style={{ fontSize: 12 }}>{rows.length} shown</span>
+      </div>
+
       {loading && suppliers.length === 0 ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading suppliers…</div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
-          {suppliers.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No suppliers yet</div><div className="av3-empty-text">Add your first distributor to raise purchase orders against it.</div></div>
+          {rows.length === 0 ? (
+            <div className="av3-empty"><div className="av3-empty-title">{suppliers.length === 0 ? "No suppliers yet" : "No matches"}</div><div className="av3-empty-text">{suppliers.length === 0 ? "Add your first distributor to raise purchase orders against it." : "No supplier matches that search."}</div></div>
           ) : (
-            <Table columns={cols} rows={suppliers} rowKey={(s) => s.id} onRowClick={(s) => setEdit(s)} />
+            <Table columns={cols} rows={rows} rowKey={(s) => s.id} onRowClick={(s) => setEdit(s)} />
           )}
         </div>
       )}

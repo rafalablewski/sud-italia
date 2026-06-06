@@ -30,6 +30,8 @@ import {
   Map,
   MapPin,
   Brain,
+  Bell,
+  Bot,
   ShieldCheck,
   Grid3x3,
   History,
@@ -72,6 +74,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
     items: [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
       { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
+      { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
     ],
   },
   {
@@ -151,6 +154,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/locations/manage`, label: "Manage locations", icon: MapPin, requiredRole: "owner" },
       { href: `${P}/menu-engineering`, label: "Menu engineering", icon: UtensilsCrossed, requiredRole: "manager" },
       { href: `${P}/ai`, label: "Insights", icon: Brain, requiredRole: "manager" },
+      { href: `${P}/ai/agent`, label: "Ops Agent", icon: Bot, requiredRole: "manager" },
       { href: `${P}/expansion`, label: "Expansion", icon: Map, requiredRole: "owner" },
     ],
   },

@@ -178,7 +178,29 @@ refetches every 30s.
 - [x] Shell — sidebar (collapsible rail) + topbar + scope switcher
 - [x] Dashboard — the **Operator Terminal** (live cockpit), owner-gated, wired
   to analytics / insights / KDS-fleet / labour / orders / notifications +
-  the configurable daily-goal setting (`/api/admin/ops-goals`)
+  the configurable daily-goal setting (`/api/admin/ops-goals`). **Executive
+  overview restored (matches `public/mockups/admin-v3/dashboard.html`):** below
+  the cockpit, a period-scoped (Today/7d/30d/90d) analytics block — a 7-KPI rail
+  (revenue, orders, avg order, profit margin, gross profit, cancellations,
+  labour ratio, each with vs-prior-period delta + sparkline), a **revenue-trend**
+  `AreaChart`, a **top-sellers** bar list (`.av3-bars`) and the **Location
+  network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
+  from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
+  (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
+- [x] Ops Agent (`/admin-v3/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
+  (`AgentV3`). Claude with role-gated read+write tools over
+  `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,
+  **human-in-the-loop tool approval** (mutating tools render a pending card with
+  a Confirm & execute button; re-sends the turn with the approved tool id),
+  executed/error tool cards with expandable input/output, recent-conversation
+  list, session-cost readout, and the API-key-not-configured empty state. CSS
+  §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
+- [x] Alerts (`/admin-v3/alerts`) — the v3 home for the v2 `MobileAlerts` action
+  queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
+  chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/
+  Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
+  and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
+  §14 (`.av3-alert-*`). Nav: Overview section.
 - [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
@@ -206,6 +228,14 @@ refetches every 30s.
   per-site price/cost/availability/SKU — all written via `PUT /api/admin/menu`
   (`items` map), with per-dish **Reset** + **Delete** in the footer. Recipe-
   attached dishes lock the cost field (derives from the recipe, rule #10).
+  **Visual upgrade:** a **KPI rail** (dishes / avg margin / low-margin / 86’d /
+  no-recipe), a **search** box + **Board⇄Table** view toggle, and a default
+  **Board view** — category-grouped dish cards (status dot, badges, price range,
+  margin badge) with the same multi-select + edit-on-click as the table. CSS §18
+  (`.av3-board`, `.av3-dcard`). **Editor upgrade:** the edit dialog is now
+  **tabbed** (Product / Pricing / Modifiers / Disclosures, with counts on the
+  last two) under a live **price·margin recap**, instead of one long scroll;
+  money inputs carry a `zł` affix. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -223,30 +253,57 @@ refetches every 30s.
   star (`PATCH`) that points `activeProductId` at the offering driving recipe
   cost + nutrition. Suppliers are read for the picker (managed on Suppliers).
   Per-item dietary disclosures live on the **Menu** editor (rule #10).
+  **Visual upgrade:** a **KPI rail** (costed coverage / avg food-cost % / over-
+  target / uncosted / ingredient count), a **search** box + **Board⇄Table**
+  toggle, and a default **Board view** — category-grouped recipe cards with a
+  food-cost health bar + cost/portion + kcal + ingredient count; uncosted dishes
+  render a clear “+ Cost this dish” card. CSS §18 (`.av3-board`, `.av3-fcbar`).
+  **Editor upgrade:** the recipe editor now keeps a **sticky per-portion recap**
+  (cost / food-cost % / batch / kcal) above a **tabbed** body (Ingredients /
+  Nutrition / Notes — Nutrition & Notes flag with a dot when relevant); ingredient
+  rows gained unit + `%` affixes. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
   entries + write-off cost KPI (`POST /api/admin/waste`)
 - [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
-  week's log (`POST /api/admin/handover`)
+  week's log (`POST /api/admin/handover`). **Visual upgrade:** a **KPI rail**
+  (this-week count / issues flagged / net cash variance / last sign-off) above
+  the sign-off form.
 - [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
-  add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`)
+  add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`). **Visual
+  upgrade:** a **KPI rail** (suppliers / avg lead / fastest lead / with-contact)
+  + a **search** box; the table splits email/phone columns and colour-codes the
+  lead-time badge.
 - [x] Purchase orders (`/admin-v3/purchase-orders`) — per-location restock
   orders with status chips, a create dialog (supplier + ingredient lines +
   expected date, `POST`), and a detail dialog driving the draft→sent→received
-  flow (`PUT`, receiving auto-credits stock) + cancel/delete
+  flow (`PUT`, receiving auto-credits stock) + cancel/delete. **Visual upgrade:**
+  a **KPI rail** (open POs / on-order value / awaiting delivery / received).
 - [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts grouped by
-  day with add/edit/delete (`/api/admin/shifts`)
+  active KPIs, **search** (name / role / email). Schedule (`/admin-v3/schedule`): this week's shifts with
+  add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
+  (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
+  days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
+  columns (horizontal-scroll on narrow, today highlighted) of role-coloured shift
+  cards (time, name, role + status badge, hover-delete), per-column add. The shift
+  dialog gained the missing **Notes** field. CSS §20 (`.av3-week`, `.av3-shiftcard`).
 - [x] Customers (`/admin-v3/customers`) — phone-based directory (search,
   repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
   restored:** a **"Send today"** outreach card (today's birthdays + first-order
   anniversaries from `/api/admin/campaigns/triggers`, tap-to-call `tel:` links,
   name opens the detail) above the fold (rule #5), plus the **loyalty-points**
   column + detail field (`lifetimePoints` = earned + manual, from the customers
-  endpoint).
+  endpoint). **Detail dialog brought to v2 `AdminCustomerDetail` parity:** a
+  760px dialog over `/api/admin/customers/[phone]` with points breakdown
+  (earned/manual/redeemed/spendable), an inline **profile editor** (DOB/email →
+  `PUT /api/admin/members/profile`), **order history**, **point-adjustment
+  history**, **redemption history**, **notes** (add/delete via
+  `/api/admin/customer-notes`) and **GDPR controls** — Art. 15 export
+  (`/api/admin/gdpr/export`) + Art. 17 erasure (`POST /api/admin/gdpr/delete`,
+  confirm-gated). CSS §16 (`.av3-detail-*`).
 - [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
   and AI sentiment (`POST /api/admin/feedback/analyze`). **Charts restored (flag
@@ -326,10 +383,21 @@ refetches every 30s.
   `/api/admin/stock`, suggested qty + est cost), **Staffing** (peak-hour
   headcount from `/api/admin/insights`), and the **Chatbot FAQ** manager
   (`/api/admin/chatbot-faq`).
-- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read), SOC 2
-  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
+- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read +
+  **field-level diff restored**: a row click opens a detail dialog with a
+  v3-native `DiffRenderer` — added/removed/changed keys, before↔after blocks,
+  pretty-JSON nested shapes — over the API's `before`/`after` snapshots; CSS
+  §15 `.av3-diff-*`), SOC 2
+  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection,
+  **status filter chips** All/Met/Partial/Gap above the category groups),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
+  **Visual upgrade:** Currency + Languages each gained a summary **KPI rail**
+  (Currency: default / enabled / FX-rates-set / charges-in-PLN; Languages:
+  default / enabled / translations-live) above their toggle editors. **Search
+  added** to the two densest list surfaces that lacked it — **Inventory** stock
+  (by ingredient/category, in a toolbar beside the status chips) and **Feedback**
+  (by guest name / comment text, beside the status chips).
 - [x] Users (`/admin-v3/users`, owner-only): account directory + add/edit/delete
   dialog (role / status / site / optional password) over `/api/admin/users`.
   **Security surface restored to v2 parity (flag #2):** auth-posture KPIs
@@ -342,15 +410,21 @@ refetches every 30s.
   stay on the **Permission matrix** page (no duplication).
 - [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
-  persisting custom grants (`PUT /api/admin/users`).
+  persisting custom grants (`PUT /api/admin/users`). **Visual upgrade:** a **KPI
+  rail** (capabilities / roles / user accounts / custom grants) and a
+  **By-user ⇄ By-role** view toggle — the restored **By-role cross-tab**
+  (`ROLE_DEFAULT_PERMISSIONS`, owner = all) is a read-only capability×role matrix
+  grouped by permission group. CSS §21 (`.av3-matrix`).
 - [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/
   insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
+  **Search** added (by item / type / site).
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
   (`PUT /api/admin/regulatory-compliance`). **Toggle = saved (rule #7)** — the
   zone select + disclosure toggles persist on change (no Save button); same
   consistency fix applied to Currency + Languages (enable/default persist
-  immediately; FX rates save on blur).
+  immediately; FX rates save on blur). **Visual upgrade:** a summary **KPI rail**
+  (sites / default pack / zones in use / disclosures active).
 - [x] Settings (`/admin-v3/settings`, owner-only): five tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles + feature flags, toggle = saved),
@@ -397,7 +471,48 @@ refetches every 30s.
   cutover). `Kpi` gained an optional `info` slot that renders the ⓘ trigger at
   the end of the label row; the Calculator's six headline KPIs (net profit, net
   margin, EBITDA, break-even/day, prime cost, payback) each carry a full
-  five-section explainer.
+  five-section explainer. **Follow-up:** the **Unit economics** card header now
+  also carries a five-section ⓘ (true CM1/order, CM%, food/labour %, capacity,
+  cash-on-cash), extending Rule #12 coverage past the headline rail.
+  **Part 3f shipped — v2 what-if depth ported:** a **Margin-of-safety** headline
+  KPI (`marginOfSafetyPct`, with explainer); **Seed from last 30 days** (pulls
+  orders/day · ticket · COGS from `/api/admin/analytics` into the input levers);
+  a **Scenario comparison** card (conservative / base / optimistic re-run through
+  `computeScenario` — net profit, margin, EBITDA, break-even/day, payback); and
+  two **net-profit heatmaps** (orders/day × ticket, and food-cost × ticket) —
+  7×7 grids recomputed cell-by-cell through the engine, colour-scaled, centre
+  cell = today. CSS §22 (`.av3-heat`, `.av3-scn`). Each new metric/heatmap carries
+  a five-section ⓘ (Rule #12).
+  **Part 3g shipped — operational + menu depth (v2 parity complete):**
+  **Menu strategy presets** (Balanced / Premium / Value one-tap attach-lever
+  mixes, folded into ticket/COGS via `applyAssumptions`); an **Oven curve & peak
+  saturation** card (hourly demand vs the `kitchenCapacity.pizzasPerHour` ceiling
+  over a documented double-peak shape — peak/hr, line/hr, peak-util KPIs, queue
+  wait + orders-lost/mo, over-ceiling bars in red); and a **Shift plan — labour
+  by daypart** table (forecast orders + recommended line heads per daypart vs
+  scheduled pizzaioli). All five-section-ⓘ'd. The v3 Calculator is now at
+  **functional parity with the v2 AdminSimulation** (the demand-shape + queue
+  model are declared modelling layers, like the engine's seasonality defaults).
+  **Part 3h shipped — field-for-field input parity:** a model-level audit of
+  `SimulationScenario` found 15 engine-backed variables v2 exposed but v3 didn't,
+  now all wired into their existing cards: wage + ingredient inflation (Volume &
+  price); labour flex % + anchor orders/day (Labour); Marketing = CAC toggle
+  (Fixed costs); open hrs/day + oven physics (pizzas/cycle, cycle-s, efficiency)
+  + prep-complexity × (Investment & capacity); combo add-on-COGS % + the
+  cheapest-pizza-shift lever (Behaviour); 12 per-month seasonality overrides
+  (Seasonality); build-out learning % + floor % (Fleet). Every scenario field
+  the engine reads is now editable.
+  **Part 3i shipped — menu-scenario system (full v2 parity, nothing left):** the
+  named-scenario model is ported — a **Menu scenarios** card with the five baked
+  archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) + **Custom**,
+  each resolving its `menuScenarioOverrides[id]` over the baked preset. **Apply**
+  loads the full input set (orders/day · days · ticket · COGS + the six attach %,
+  preserving enabled-state) and sets `menuScenario=id`; **Save current** captures
+  the live inputs into the override; **Reset** drops it. The same overrides
+  round-trip with v2 via `PUT /api/admin/simulation`. With this the v3 Calculator
+  is at **field-for-field AND feature-for-feature parity** with the 17k-line v2
+  `AdminSimulation` — every variable, lever, what-if, operational view and named
+  scenario.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

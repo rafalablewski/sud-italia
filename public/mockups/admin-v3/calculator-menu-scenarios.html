@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Calculator — Menu scenarios (mockup)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root,[data-theme="dark"]{--av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;--av3-hover:#2c2c33;--av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);--av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#6e6862;--av3-brand:#c2384f;--av3-platinum:#cbb48a;--av3-ok:#34b27b;--av3-warn:#e0a93f;--av3-bad:#e8554f;--av3-sh-1:0 1px 2px rgba(0,0,0,.4);}
+    [data-theme="light"]{--av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;--av3-hover:#e9e4da;--av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);--av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#857c73;--av3-brand:#a82940;--av3-platinum:#9c7e4e;--av3-ok:#1f8a60;--av3-warn:#b5781d;--av3-bad:#cc3a35;--av3-sh-1:0 1px 2px rgba(28,24,21,.06);}
+    *{box-sizing:border-box;margin:0;padding:0;} body{background:var(--av3-bg);color:var(--av3-fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;} .mono{font-family:"JetBrains Mono",monospace;}
+    .ribbon{display:flex;align-items:center;gap:8px;justify-content:center;padding:6px;font-size:11.5px;color:#0a0a0c;background:linear-gradient(90deg,var(--av3-platinum),#e0c79a);font-weight:600;}
+    .wrap{max-width:1000px;margin:0 auto;padding:18px;}
+    .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);overflow:hidden;}
+    .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--av3-line);} .card-title{font-size:13px;font-weight:600;} .card-desc{font-size:11.5px;color:var(--av3-muted);margin-top:1px;} .card-body{padding:14px;} .info{width:14px;height:14px;border-radius:50%;border:1px solid var(--av3-line-strong);color:var(--av3-subtle);font-size:9px;display:grid;place-items:center;}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;} @media (max-width:760px){.grid{grid-template-columns:1fr 1fr}} @media (max-width:520px){.grid{grid-template-columns:1fr}}
+    .scn{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;} .scn[data-active="true"]{border-color:color-mix(in oklab,var(--av3-platinum) 45%,var(--av3-line-strong));}
+    .h{display:flex;align-items:center;gap:7px;} .h .em{font-size:16px;} .h .nm{font-size:12.5px;font-weight:600;} .h .bd{margin-left:auto;display:flex;gap:4px;}
+    .desc{font-size:11px;color:var(--av3-muted);line-height:1.35;min-height:30px;} .stat{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--av3-muted);}
+    .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;} .btn{height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);font-size:12px;font-weight:500;cursor:pointer;} .btn-primary{background:var(--av3-brand);border-color:var(--av3-brand);color:#fff;} .btn-ghost{background:transparent;border-color:transparent;color:var(--av3-muted);}
+    .badge{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:600;} .b-brand{background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg));} .b-warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:var(--av3-warn);}
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · the ported <strong style="margin:0 4px">Menu scenarios</strong> card on /admin-v3/simulation — Apply loads a full input set; Save/Reset persist per-scenario overrides</div>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Menu scenarios</div><div class="card-desc">Named menu shapes — apply loads volume · days · ticket · COGS · attach in one click</div></div><span class="info">i</span></div>
+      <div class="card-body">
+        <div class="grid">
+          <div class="scn"><div class="h"><span class="em">🍕</span><span class="nm">Takeaway classic</span><span class="bd"></span></div><div class="desc">Quick pizza orders, minimal sides. High volume, low ticket — grab + go.</div><div class="stat">100/day · 45,00 zł · 30% COGS</div><div class="acts"><button class="btn">Apply</button><button class="btn btn-ghost">Save current</button></div></div>
+          <div class="scn" data-active="true"><div class="h"><span class="em">🍝</span><span class="nm">Balanced (default)</span><span class="bd"><span class="badge b-brand">active</span></span></div><div class="desc">Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.</div><div class="stat">70/day · 65,00 zł · 30% COGS</div><div class="acts"><button class="btn btn-primary">Apply</button><button class="btn btn-ghost">Save current</button></div></div>
+          <div class="scn"><div class="h"><span class="em">✨</span><span class="nm">Premium / Specialty</span><span class="bd"><span class="badge b-warn">edited</span></span></div><div class="desc">High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket.</div><div class="stat">52/day · 92,00 zł · 33% COGS</div><div class="acts"><button class="btn">Apply</button><button class="btn btn-ghost">Save current</button><button class="btn btn-ghost">Reset</button></div></div>
+          <div class="scn"><div class="h"><span class="em">👨‍👩‍👧</span><span class="nm">Family / Group</span><span class="bd"></span></div><div class="desc">Multi-pizza orders for groups. Big tickets, fewer orders — weekend / event.</div><div class="stat">30/day · 155,00 zł · 28% COGS</div><div class="acts"><button class="btn">Apply</button><button class="btn btn-ghost">Save current</button></div></div>
+          <div class="scn"><div class="h"><span class="em">🍷</span><span class="nm">Aperitivo / Dinner</span><span class="bd"></span></div><div class="desc">Drinks-led evening service. Best margin — requires alcohol licence.</div><div class="stat">45/day · 82,00 zł · 26% COGS</div><div class="acts"><button class="btn">Apply</button><button class="btn btn-ghost">Save current</button></div></div>
+          <div class="scn"><div class="h"><span class="em">✏️</span><span class="nm">Custom</span><span class="bd"></span></div><div class="desc">Build your own — apply, tweak any field, then Save to persist it here.</div><div class="stat">60/day · 60,00 zł · 30% COGS</div><div class="acts"><button class="btn">Apply</button><button class="btn btn-ghost">Save current</button></div></div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11.5px;color:var(--av3-subtle);margin-top:12px">Apply sets ordersPerDay · daysOpen · avgTicket · COGS + the six attach % (enabled-state preserved) and marks the scenario active. Save current writes the live inputs into menuScenarioOverrides[id] (→ "edited" badge); Reset drops it. Round-trips with v2 via PUT /api/admin/simulation.</p>
+  </div>
+</body>
+</html>

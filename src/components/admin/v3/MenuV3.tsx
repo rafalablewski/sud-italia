@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlaskConical, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Ban, FlaskConical, LayoutGrid, Percent, Plus, RefreshCw, Rows3, Trash2, TrendingDown, UtensilsCrossed, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { ALLERGEN_LABELS } from "@/data/types";
 import type { Allergen, MenuCategory, MenuRole, ModifierGroup, ModifierOption } from "@/data/types";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type MenuTag = "vegetarian" | "vegan" | "spicy" | "gluten-free";
 type Halal = "halal" | "non-halal" | "uncertified";
@@ -86,6 +86,8 @@ export function MenuV3() {
   const [refreshing, setRefreshing] = useState(false);
   const [cat, setCat] = useState<"all" | MenuCategory>("all");
   const [showHidden, setShowHidden] = useState(false);
+  const [view, setView] = useState<"board" | "table">("board");
+  const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editSlug, setEditSlug] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -155,7 +157,27 @@ export function MenuV3() {
     return c;
   }, [visible]);
 
-  const rows = useMemo(() => (cat === "all" ? visible : visible.filter((u) => u.category === cat)), [visible, cat]);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return visible.filter(
+      (u) =>
+        (cat === "all" || u.category === cat) &&
+        (!needle || u.primary.name.toLowerCase().includes(needle) || (u.primary.description || "").toLowerCase().includes(needle)),
+    );
+  }, [visible, cat, q]);
+
+  // KPI rail — chain-wide menu health (over all visible dishes, not the filter)
+  const kpis = useMemo(() => {
+    const dishMargins = visible.map((u) => u.margins.reduce((s, m) => s + m, 0) / (u.margins.length || 1));
+    const avgMargin = dishMargins.length ? dishMargins.reduce((s, m) => s + m, 0) / dishMargins.length : 0;
+    return {
+      dishes: visible.length,
+      avgMargin,
+      off: visible.filter((u) => u.availableCount === 0).length,
+      lowMargin: dishMargins.filter((m) => m < 50).length,
+      noRecipe: visible.filter((u) => !u.anyRecipe && u.category !== "drinks").length,
+    };
+  }, [visible]);
 
   const totalSites = allLocations.length;
   const editing = editSlug ? unified.find((u) => u.baseSlug === editSlug) ?? null : null;
@@ -262,6 +284,24 @@ export function MenuV3() {
         </div>
       </div>
 
+      <div className="av3-kpi-rail">
+        <Kpi label="Dishes" icon={UtensilsCrossed} value={kpis.dishes.toLocaleString("pl-PL")} accentVar="--av3-c3" />
+        <Kpi label="Avg margin" icon={Percent} value={`${kpis.avgMargin.toFixed(0)}%`} accentVar="--av3-c4" />
+        <Kpi label="Low margin" icon={TrendingDown} value={`${kpis.lowMargin}`} accentVar="--av3-c1" />
+        <Kpi label="86’d (off)" icon={Ban} value={`${kpis.off}`} accentVar="--av3-c5" />
+        <Kpi label="No recipe" icon={FlaskConical} value={`${kpis.noRecipe}`} accentVar="--av3-c2" />
+      </div>
+
+      <div className="av3-toolbar">
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 240, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search dishes…" />
+        <span className="av3-toolbar-spacer" />
+        <span className="av3-cell-muted" style={{ fontSize: 12 }}>{rows.length} shown</span>
+        <div className="av3-viewtoggle">
+          <button type="button" className={view === "board" ? "is-active" : ""} onClick={() => setView("board")} aria-label="Board view" title="Board view"><LayoutGrid /></button>
+          <button type="button" className={view === "table" ? "is-active" : ""} onClick={() => setView("table")} aria-label="Table view" title="Table view"><Rows3 /></button>
+        </div>
+      </div>
+
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${cat === "all" ? "is-active" : ""}`} onClick={() => setCat("all")}>All<span className="av3-fchip-count">{counts.all ?? 0}</span></button>
         {CATEGORY_ORDER.filter((c) => counts[c]).map((c) => (
@@ -291,20 +331,88 @@ export function MenuV3() {
 
       {loading && unified.length === 0 ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading the menu…</div>
-      ) : (
+      ) : rows.length === 0 ? (
         <div className="av3-card" style={{ padding: 0 }}>
-          {rows.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">Nothing in this category.</div></div>
-          ) : (
-            <Table columns={cols} rows={rows} rowKey={(u) => u.baseSlug} onRowClick={(u) => setEditSlug(u.baseSlug)} />
-          )}
+          <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">{q ? "No dish matches that search." : "Nothing in this category."}</div></div>
         </div>
+      ) : view === "table" ? (
+        <div className="av3-card" style={{ padding: 0 }}>
+          <Table columns={cols} rows={rows} rowKey={(u) => u.baseSlug} onRowClick={(u) => setEditSlug(u.baseSlug)} />
+        </div>
+      ) : (
+        <MenuBoard rows={rows} totalSites={totalSites} selected={selected} onToggleSel={toggleSel} onOpen={(u) => setEditSlug(u.baseSlug)} />
       )}
 
       {editing && <MenuEditDialog item={editing} onClose={() => setEditSlug(null)} onSaved={fetchAll} />}
       {adding && <AddItemDialog locations={allLocations} onClose={() => setAdding(false)} onSaved={fetchAll} />}
       {bulkEditing && <BulkEditDialog count={selected.size} onClose={() => setBulkEditing(false)} onApply={async (patch) => { setBulkEditing(false); await runBulk({ action: "edit", scope: "current", patch }); }} />}
     </>
+  );
+}
+
+/* ── board (card) view ─────────────────────────────────────────────────── */
+function availability(u: Unified, totalSites: number): { tone: BadgeTone; label: string } {
+  if (u.variants.length < totalSites) return { tone: "info", label: `${u.variants.map((l) => l.city.slice(0, 3)).join("/")} only` };
+  if (u.availableCount === 0) return { tone: "bad", label: "Off" };
+  if (u.availableCount < u.variants.length) return { tone: "warn", label: "Partial" };
+  return { tone: "ok", label: "On" };
+}
+
+function MenuBoard({ rows, totalSites, selected, onToggleSel, onOpen }: {
+  rows: Unified[]; totalSites: number; selected: Set<string>; onToggleSel: (s: string) => void; onOpen: (u: Unified) => void;
+}) {
+  // group by category, preserving the menu order
+  const sections = useMemo(() => {
+    const map = new Map<MenuCategory, Unified[]>();
+    for (const u of rows) { const arr = map.get(u.category) ?? []; arr.push(u); map.set(u.category, arr); }
+    return CATEGORY_ORDER.filter((c) => map.has(c)).map((c) => ({ category: c, items: map.get(c)! }));
+  }, [rows]);
+
+  return (
+    <div>
+      {sections.map((s) => (
+        <div key={s.category}>
+          <div className="av3-board-section">{CATEGORY_LABEL[s.category]}<span className="c">{s.items.length}</span></div>
+          <div className="av3-board">
+            {s.items.map((u) => <DishCard key={u.baseSlug} u={u} totalSites={totalSites} selected={selected.has(u.baseSlug)} onToggleSel={onToggleSel} onOpen={onOpen} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DishCard({ u, totalSites, selected, onToggleSel, onOpen }: {
+  u: Unified; totalSites: number; selected: boolean; onToggleSel: (s: string) => void; onOpen: (u: Unified) => void;
+}) {
+  const min = Math.min(...u.prices), max = Math.max(...u.prices);
+  const avg = u.margins.reduce((s, m) => s + m, 0) / (u.margins.length || 1);
+  const av = availability(u, totalSites);
+  return (
+    <div className="av3-dcard" data-sel={selected} data-dim={u.allHidden} onClick={() => onOpen(u)} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(u); }}>
+      <input type="checkbox" className="av3-dcard-check" checked={selected} onClick={(e) => e.stopPropagation()} onChange={() => onToggleSel(u.baseSlug)} aria-label={`Select ${u.primary.name}`} />
+      <div className="av3-dcard-name">
+        {u.anyRecipe && <span title="has recipe" style={{ color: "var(--av3-platinum)", marginRight: 5 }} aria-hidden>●</span>}
+        {u.primary.name}
+      </div>
+      <div className="av3-dcard-desc">{u.primary.description || "—"}</div>
+      <div className="av3-dcard-badges">
+        <Badge tone={av.tone} dot>{av.label}</Badge>
+        {u.isCustom && <Badge tone="info">custom</Badge>}
+        {u.anyHidden && <Badge tone="bad">hidden</Badge>}
+        {u.anyOverride && !u.isCustom && <Badge tone="neutral">edited</Badge>}
+        {u.primary.deliveryOnly && <Badge tone="neutral">delivery</Badge>}
+        {(u.primary.modifierGroups?.length ?? 0) > 0 && <Badge tone="neutral">{u.primary.modifierGroups!.length} mods</Badge>}
+      </div>
+      <div className="av3-dcard-foot">
+        <div>
+          <div className="av3-dcard-price">{min === max ? formatPrice(min) : `${formatPrice(min)}–${formatPrice(max)}`}</div>
+          <div className="av3-dcard-sub">{min === max ? "all sites" : "varies by site"}</div>
+        </div>
+        <Badge tone={marginTone(avg)}>{avg.toFixed(0)}% margin</Badge>
+      </div>
+    </div>
   );
 }
 
@@ -377,6 +485,18 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
   );
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<"product" | "pricing" | "modifiers" | "disclosures">("product");
+
+  // live price/margin recap from the per-site draft (editing aid, always visible)
+  const recap = useMemo(() => {
+    const prices = perLoc.map((r) => (Number(r.price) || 0) * 100).filter((n) => n > 0);
+    const margins = perLoc.map((r) => marginPct((Number(r.price) || 0) * 100, (Number(r.cost) || 0) * 100));
+    const min = prices.length ? Math.min(...prices) : 0;
+    const max = prices.length ? Math.max(...prices) : 0;
+    const avgM = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : 0;
+    return { min, max, avgM };
+  }, [perLoc]);
+  const discCount = allergens.length + (halalStatus ? 1 : 0) + (nutriGrade ? 1 : 0) + (containsPork ? 1 : 0) + (containsAlcohol ? 1 : 0);
 
   const toggleTag = (t: MenuTag) => setTags((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   const toggleAllergen = (a: Allergen) => setAllergens((arr) => (arr.includes(a) ? arr.filter((x) => x !== a) : [...arr, a]));
@@ -451,51 +571,79 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
         </>
       }
     >
-      <div className="av3-subhead" style={{ marginTop: 0 }}>Product (applies to every site — rule #10)</div>
-      <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
-      <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Category</span><select className="av3-select" value={category} onChange={(e) => setCategory(e.target.value as MenuCategory)}>{CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</select></label>
-        <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Menu role</span><select className="av3-select" value={menuRole} onChange={(e) => setMenuRole(e.target.value as MenuRole | "")}><option value="">— none —</option>{MENU_ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}</select></label>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Dietary tags</span>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{MENU_TAGS.map((t) => <ChipToggle key={t.key} on={tags.includes(t.key)} onClick={() => toggleTag(t.key)}>{t.label}</ChipToggle>)}</div>
+      {/* live recap — price range + avg margin from the per-site draft */}
+      <div className="av3-recap" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+        <div className="av3-recap-cell"><div className="av3-recap-k">Price</div><div className="av3-recap-v">{recap.min === recap.max ? formatPrice(recap.min) : `${formatPrice(recap.min)}–${formatPrice(recap.max)}`}</div></div>
+        <div className="av3-recap-cell"><div className="av3-recap-k">Avg margin</div><div className="av3-recap-v" style={{ color: `var(--av3-${marginTone(recap.avgM) === "ok" ? "ok" : marginTone(recap.avgM) === "warn" ? "warn" : "bad"})` }}>{recap.avgM.toFixed(0)}%</div></div>
+        <div className="av3-recap-cell"><div className="av3-recap-k">Sites</div><div className="av3-recap-v">{item.variants.length}</div></div>
       </div>
 
-      <div className="av3-subhead">Service &amp; channel</div>
-      <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
-        <label className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Packaging cost (zł)</span><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></label>
-        <div className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Delivery-only</span><button type="button" className="av3-toggle" data-on={deliveryOnly} onClick={() => setDeliveryOnly((v) => !v)}>{deliveryOnly ? "On" : "Off"}</button></div>
+      <div className="av3-dtabs">
+        <button type="button" className={`av3-dtab ${tab === "product" ? "is-active" : ""}`} onClick={() => setTab("product")}>Product</button>
+        <button type="button" className={`av3-dtab ${tab === "pricing" ? "is-active" : ""}`} onClick={() => setTab("pricing")}>Pricing</button>
+        <button type="button" className={`av3-dtab ${tab === "modifiers" ? "is-active" : ""}`} onClick={() => setTab("modifiers")}>Modifiers{modifierGroups.length > 0 && <span className="av3-dtab-count">{modifierGroups.length}</span>}</button>
+        <button type="button" className={`av3-dtab ${tab === "disclosures" ? "is-active" : ""}`} onClick={() => setTab("disclosures")}>Disclosures{discCount > 0 && <span className="av3-dtab-count">{discCount}</span>}</button>
       </div>
 
-      <div className="av3-subhead">Modifiers (chain-wide)</div>
-      <ModifierEditor groups={modifierGroups} onChange={setModifierGroups} />
-
-      <div className="av3-subhead">Disclosures (chain-wide)</div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-        <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
-        <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-        <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains pork</span><button type="button" className="av3-toggle" data-on={containsPork} onClick={() => setContainsPork((v) => !v)}>{containsPork ? "Yes" : "No"}</button></div>
-        <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains alcohol</span><button type="button" className="av3-toggle" data-on={containsAlcohol} onClick={() => setContainsAlcohol((v) => !v)}>{containsAlcohol ? "Yes" : "No"}</button></div>
-      </div>
-      <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Allergens</span>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
-
-      <div className="av3-subhead">Per-site pricing &amp; availability</div>
-      <div className="av3-locrow-head" style={{ gridTemplateColumns: "1.1fr 84px 84px 1fr 52px" }}><span>Site</span><span>Price zł</span><span>Cost zł</span><span>SKU</span><span>Live</span></div>
-      {perLoc.map((r) => {
-        const m = marginPct((Number(r.price) || 0) * 100, (Number(r.cost) || 0) * 100);
-        return (
-          <div className="av3-locrow" key={r.slug} style={{ gridTemplateColumns: "1.1fr 84px 84px 1fr 52px" }}>
-            <span className="av3-locrow-city">{r.city}<span style={{ color: marginTone(m) === "bad" ? "var(--av3-bad)" : "var(--av3-subtle)", fontSize: 11, marginLeft: 6 }}>{m.toFixed(0)}%</span></span>
-            <input className="av3-input" type="number" step="0.01" value={r.price} onChange={(e) => setRow(r.slug, { price: e.target.value })} />
-            <input className="av3-input" type="number" step="0.01" value={r.cost} disabled={r.hasRecipe} title={r.hasRecipe ? "Cost derives from the recipe" : undefined} onChange={(e) => setRow(r.slug, { cost: e.target.value })} />
-            <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} placeholder="—" value={r.sku} onChange={(e) => setRow(r.slug, { sku: e.target.value })} />
-            <button type="button" className="av3-toggle" data-on={r.available} onClick={() => setRow(r.slug, { available: !r.available })}>{r.available ? "On" : "Off"}</button>
+      {tab === "product" && (
+        <>
+          <div className="av3-edhint" style={{ marginBottom: 12 }}>These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
+          <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Category</span><select className="av3-select" value={category} onChange={(e) => setCategory(e.target.value as MenuCategory)}>{CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</select></label>
+            <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Menu role</span><select className="av3-select" value={menuRole} onChange={(e) => setMenuRole(e.target.value as MenuRole | "")}><option value="">— none —</option>{MENU_ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}</select></label>
           </div>
-        );
-      })}
+          <div style={{ marginTop: 10 }}>
+            <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Dietary tags</span>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{MENU_TAGS.map((t) => <ChipToggle key={t.key} on={tags.includes(t.key)} onClick={() => toggleTag(t.key)}>{t.label}</ChipToggle>)}</div>
+          </div>
+        </>
+      )}
+
+      {tab === "pricing" && (
+        <>
+          <div className="av3-subhead" style={{ marginTop: 0 }}>Per-site pricing &amp; availability</div>
+          <div className="av3-locrow-head" style={{ gridTemplateColumns: "1.1fr 92px 92px 1fr 52px" }}><span>Site</span><span>Price</span><span>Cost</span><span>SKU</span><span>Live</span></div>
+          {perLoc.map((r) => {
+            const m = marginPct((Number(r.price) || 0) * 100, (Number(r.cost) || 0) * 100);
+            return (
+              <div className="av3-locrow" key={r.slug} style={{ gridTemplateColumns: "1.1fr 92px 92px 1fr 52px" }}>
+                <span className="av3-locrow-city">{r.city}<span style={{ color: marginTone(m) === "bad" ? "var(--av3-bad)" : marginTone(m) === "warn" ? "var(--av3-warn)" : "var(--av3-ok)", fontSize: 11, marginLeft: 6 }}>{m.toFixed(0)}%</span></span>
+                <span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={r.price} onChange={(e) => setRow(r.slug, { price: e.target.value })} /></span>
+                <span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={r.cost} disabled={r.hasRecipe} title={r.hasRecipe ? "Cost derives from the recipe" : undefined} onChange={(e) => setRow(r.slug, { cost: e.target.value })} /></span>
+                <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} placeholder="—" value={r.sku} onChange={(e) => setRow(r.slug, { sku: e.target.value })} />
+                <button type="button" className="av3-toggle" data-on={r.available} onClick={() => setRow(r.slug, { available: !r.available })}>{r.available ? "On" : "Off"}</button>
+              </div>
+            );
+          })}
+          <div className="av3-subhead">Service &amp; channel</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
+            <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Packaging cost</span><span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></span></label>
+            <div className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Delivery-only</span><button type="button" className="av3-toggle" data-on={deliveryOnly} onClick={() => setDeliveryOnly((v) => !v)}>{deliveryOnly ? "On" : "Off"}</button></div>
+          </div>
+        </>
+      )}
+
+      {tab === "modifiers" && (
+        <>
+          <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Structure is chain-wide; price/cost deltas apply on top of the base.</div>
+          <ModifierEditor groups={modifierGroups} onChange={setModifierGroups} />
+        </>
+      )}
+
+      {tab === "disclosures" && (
+        <>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+            <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
+            <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains pork</span><button type="button" className="av3-toggle" data-on={containsPork} onClick={() => setContainsPork((v) => !v)}>{containsPork ? "Yes" : "No"}</button></div>
+            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains alcohol</span><button type="button" className="av3-toggle" data-on={containsAlcohol} onClick={() => setContainsAlcohol((v) => !v)}>{containsAlcohol ? "Yes" : "No"}</button></div>
+          </div>
+          <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Allergens</span>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
+        </>
+      )}
     </Dialog>
   );
 }

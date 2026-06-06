@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Recipes (upgraded board) — mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root, [data-theme="dark"] {
+      --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+      --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+      --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+      --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6; --av3-sh-1:0 1px 2px rgba(0,0,0,.4);
+    }
+    [data-theme="light"] {
+      --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+      --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+      --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#857c73; --av3-brand:#a82940; --av3-platinum:#9c7e4e; --av3-ok:#1f8a60; --av3-warn:#b5781d; --av3-bad:#cc3a35; --av3-info:#3d6694; --av3-sh-1:0 1px 2px rgba(28,24,21,.06);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    .mono { font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; }
+    .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
+    .shell { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 28px); }
+    .side { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; background:var(--av3-s1); border-right:1px solid var(--av3-line); overflow:hidden; }
+    .brand { display:flex; align-items:center; gap:12px; height:44px; padding:0 12px; border-bottom:1px solid var(--av3-line); flex-shrink:0; }
+    .brand-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:5px; background:var(--av3-brand); color:#fff; font-family:"Fraunces",serif; font-size:12px; font-weight:600; box-shadow:inset 0 0 0 1px rgba(203,180,138,.5); }
+    .brand-name { font-family:"Fraunces",serif; font-size:14px; font-weight:600; line-height:1.1; } .brand-sub { font-size:9.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .side-scroll { flex:1; overflow-y:auto; padding:12px 8px; } .group { margin-bottom:12px; } .eyebrow { padding:6px 8px 3px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.13em; color:var(--av3-subtle); }
+    .nav { position:relative; display:flex; align-items:center; gap:10px; height:30px; padding:0 9px; border-radius:5px; color:var(--av3-muted); font-size:12.5px; font-weight:500; } .nav svg { width:16px; height:16px; flex-shrink:0; }
+    .nav.active { background:var(--av3-s3); color:var(--av3-fg); } .nav.active::before { content:""; position:absolute; left:-8px; top:7px; bottom:7px; width:2px; border-radius:0 2px 2px 0; background:var(--av3-platinum); }
+    .main { display:flex; flex-direction:column; min-width:0; }
+    .topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:12px; height:44px; padding:0 14px; border-bottom:1px solid var(--av3-line); background:color-mix(in oklab,var(--av3-bg) 80%,transparent); backdrop-filter:saturate(150%) blur(10px); }
+    .crumbs { font-size:12.5px; } .crumbs .sep { color:var(--av3-subtle); margin:0 6px; } .crumbs .cur { font-weight:600; } .crumbs a { color:var(--av3-muted); } .spacer { flex:1; }
+    .icon-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--av3-muted); cursor:pointer; } .icon-btn:hover { background:var(--av3-s2); color:var(--av3-fg); } .icon-btn svg { width:15px; height:15px; }
+    .scope { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border:1px solid var(--av3-line); border-radius:5px; background:var(--av3-s1); color:var(--av3-fg); font-size:12.5px; } .scope svg { width:13px; height:13px; color:var(--av3-subtle); }
+    .content { padding:16px; display:flex; flex-direction:column; gap:14px; }
+    .pagehead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; } .pagehead h1 { font-family:"Fraunces",serif; font-size:21px; font-weight:600; } .sub { font-size:12.5px; color:var(--av3-muted); margin-top:2px; }
+    .kpi-rail { display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:12px; }
+    .kpi { display:flex; flex-direction:column; gap:6px; padding:12px 16px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:11px; box-shadow:var(--av3-sh-1); }
+    .kpi-label { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); } .kpi-label svg { width:13px; height:13px; }
+    .kpi-value { font-family:"JetBrains Mono",monospace; font-size:23px; font-weight:500; line-height:1.05; }
+    .toolbar { display:flex; align-items:center; gap:12px; }
+    .input { height:32px; padding:0 10px; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font:inherit; font-size:12.5px; width:240px; }
+    .spc { flex:1; } .count { font-size:12px; color:var(--av3-muted); }
+    .viewtoggle { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:6px; }
+    .viewtoggle button { display:grid; place-items:center; width:28px; height:26px; border:none; background:transparent; border-radius:4px; color:var(--av3-muted); cursor:pointer; } .viewtoggle button.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); } .viewtoggle svg { width:15px; height:15px; }
+    .chips { display:inline-flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; flex-wrap:wrap; }
+    .chip { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:5px; color:var(--av3-muted); font-size:12px; font-weight:500; cursor:pointer; } .chip.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); } .chip .c { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--av3-subtle); }
+    .tabs { margin-bottom:2px; }
+    .section { display:flex; align-items:center; gap:9px; margin:14px 2px 2px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); } .section::after { content:""; flex:1; height:1px; background:var(--av3-line); } .section .c { font-family:"JetBrains Mono",monospace; color:var(--av3-muted); }
+    .board { display:grid; grid-template-columns:repeat(auto-fill,minmax(244px,1fr)); gap:12px; }
+    .dcard { display:flex; flex-direction:column; gap:9px; padding:13px 14px; background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:13px; box-shadow:var(--av3-sh-1); cursor:pointer; } .dcard:hover { border-color:var(--av3-line-strong); background:color-mix(in oklab,var(--av3-hover) 60%,var(--av3-s1)); } .dcard[data-dim="true"] { opacity:.6; }
+    .dname { font-size:13.5px; font-weight:600; line-height:1.25; }
+    .badges { display:flex; flex-wrap:wrap; gap:4px; }
+    .badge { display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; } .badge svg { width:11px; height:11px; }
+    .b-ok { background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1)); color:var(--av3-ok); } .b-warn { background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1)); color:var(--av3-warn); } .b-bad { background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1)); color:var(--av3-bad); } .b-info { background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); color:var(--av3-info); } .b-neu { background:var(--av3-s3); color:var(--av3-muted); }
+    .fcbar { height:5px; border-radius:999px; background:var(--av3-s3); overflow:hidden; } .fcbar > i { display:block; height:100%; border-radius:999px; }
+    .foot { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; margin-top:auto; padding-top:9px; border-top:1px solid var(--av3-line); }
+    .price { font-family:"JetBrains Mono",monospace; font-size:15.5px; font-weight:600; } .fsub { font-size:10.5px; color:var(--av3-subtle); margin-top:2px; } .cta { font-size:11.5px; color:var(--av3-platinum); font-weight:500; }
+    @media (max-width:980px){ .shell{grid-template-columns:1fr} .side{display:none} }
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · upgraded <strong style="margin:0 4px">/admin-v3/recipes</strong> — KPI rail + search + board with food-cost health bars; uncosted dishes get a clear cost-this-dish card</div>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group"><div class="eyebrow">Overview</div><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a></div>
+        <div class="group"><div class="eyebrow">Operations</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v18M19 3v18M5 8h14"/></svg>Menu</a>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>Recipes</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar"><nav class="crumbs"><a>Operations</a><span class="sep">/</span><span class="cur">Recipes</span></nav><div class="spacer"></div>
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>All locations</span>
+        <button class="icon-btn" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button>
+      </header>
+      <main class="content">
+        <div class="pagehead"><div><h1>Recipes</h1><div class="sub">Chain-wide formulas + ingredient catalog · one recipe per dish, shared everywhere</div></div></div>
+
+        <div class="chips tabs"><span class="chip active">Recipes<span class="c">42</span></span><span class="chip">Ingredients<span class="c">86</span></span></div>
+
+        <div class="kpi-rail">
+          <div class="kpi"><div class="kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>Costed</div><div class="kpi-value">28/42</div></div>
+          <div class="kpi"><div class="kpi-label">Avg food cost</div><div class="kpi-value" style="color:var(--av3-ok)">31%</div></div>
+          <div class="kpi"><div class="kpi-label">Over target</div><div class="kpi-value" style="color:var(--av3-bad)">5</div></div>
+          <div class="kpi"><div class="kpi-label">Uncosted</div><div class="kpi-value" style="color:var(--av3-warn)">14</div></div>
+          <div class="kpi"><div class="kpi-label">Ingredients</div><div class="kpi-value">86</div></div>
+        </div>
+
+        <div class="toolbar">
+          <input class="input" placeholder="Search dishes…" />
+          <span class="spc"></span><span class="count">42 shown</span>
+          <div class="viewtoggle"><button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button><button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button></div>
+        </div>
+        <div class="chips"><span class="chip active">All<span class="c">42</span></span><span class="chip">Pizza<span class="c">14</span></span><span class="chip">Pasta<span class="c">8</span></span><span class="chip">Antipasti<span class="c">6</span></span><span class="chip">Desserts<span class="c">5</span></span></div>
+
+        <div class="section">Pizza<span class="c">14</span></div>
+        <div class="board">
+          <div class="dcard"><div class="dname">Pizza Margherita</div><div class="badges"><span class="badge b-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>6 ingredients</span><span class="badge b-neu">680 kcal</span><span class="badge b-neu">9 min</span></div><div class="fcbar"><i style="width:28%;background:var(--av3-ok)"></i></div><div class="foot"><div><div class="price">8,90 zł</div><div class="fsub">food cost / portion</div></div><span class="badge b-ok">28%</span></div></div>
+          <div class="dcard"><div class="dname">Tartufata Reale</div><div class="badges"><span class="badge b-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>9 ingredients</span><span class="badge b-neu">910 kcal</span></div><div class="fcbar"><i style="width:41%;background:var(--av3-bad)"></i></div><div class="foot"><div><div class="price">18,40 zł</div><div class="fsub">food cost / portion</div></div><span class="badge b-bad">41%</span></div></div>
+          <div class="dcard"><div class="dname">Pizza Diavola</div><div class="badges"><span class="badge b-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>7 ingredients</span><span class="badge b-neu">820 kcal</span></div><div class="fcbar"><i style="width:34%;background:var(--av3-warn)"></i></div><div class="foot"><div><div class="price">12,90 zł</div><div class="fsub">food cost / portion</div></div><span class="badge b-warn">34%</span></div></div>
+          <div class="dcard" data-dim="true"><div class="dname">Bufalina</div><div class="badges"><span class="badge b-neu">No recipe</span></div><div class="foot"><span class="fsub">Avg price 42,00 zł</span><span class="cta">+ Cost this dish</span></div></div>
+          <div class="dcard" data-dim="true"><div class="dname">Capricciosa</div><div class="badges"><span class="badge b-neu">No recipe</span></div><div class="foot"><span class="fsub">Avg price 36,00 zł</span><span class="cta">+ Cost this dish</span></div></div>
+        </div>
+
+        <div class="section">Desserts<span class="c">5</span></div>
+        <div class="board">
+          <div class="dcard"><div class="dname">Tiramisù</div><div class="badges"><span class="badge b-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/></svg>5 ingredients</span><span class="badge b-neu">420 kcal</span></div><div class="fcbar"><i style="width:24%;background:var(--av3-ok)"></i></div><div class="foot"><div><div class="price">4,60 zł</div><div class="fsub">food cost / portion</div></div><span class="badge b-ok">24%</span></div></div>
+          <div class="dcard" data-dim="true"><div class="dname">Cannoli Siciliani</div><div class="badges"><span class="badge b-neu">No recipe</span></div><div class="foot"><span class="fsub">Avg price 17,00 zł</span><span class="cta">+ Cost this dish</span></div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
+</body>
+</html>
