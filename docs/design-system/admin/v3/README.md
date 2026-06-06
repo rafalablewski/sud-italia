@@ -277,8 +277,13 @@ refetches every 30s.
   flow (`PUT`, receiving auto-credits stock) + cancel/delete
 - [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts grouped by
-  day with add/edit/delete (`/api/admin/shifts`)
+  active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts with
+  add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
+  (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
+  days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
+  columns (horizontal-scroll on narrow, today highlighted) of role-coloured shift
+  cards (time, name, role + status badge, hover-delete), per-column add. The shift
+  dialog gained the missing **Notes** field. CSS §20 (`.av3-week`, `.av3-shiftcard`).
 - [x] Customers (`/admin-v3/customers`) — phone-based directory (search,
   repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
   restored:** a **"Send today"** outreach card (today's birthdays + first-order
