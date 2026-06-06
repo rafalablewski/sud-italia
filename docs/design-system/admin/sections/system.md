@@ -400,7 +400,7 @@ zone-specific disclosure fields. Live code:
 
 ## Audit log — `/admin/audit-log`
 
-The append-only write trail.
+The privileged-action write trail (append-only except for owner purges — see below).
 
 - **Header:** `Audit log` (h1), date range, actor filter, action filter,
   free-text search.

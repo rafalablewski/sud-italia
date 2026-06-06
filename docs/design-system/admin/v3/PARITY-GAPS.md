@@ -40,7 +40,10 @@ false positives or intentional v3 density decisions** and were dropped:
 - [x] **3. Audit-log diff view** — row click opens a v3 detail `Dialog` with a
   native `DiffRenderer` (added/removed/changed keys, before↔after blocks,
   pretty-JSON for nested shapes) over the API's `before`/`after`. CSS §15,
-  mockup `admin-v3/audit-diff.html`. **DONE.**
+  mockup `admin-v3/audit-diff.html`. **DONE.** Owner-only purge added at v2
+  parity: checkbox columns + a Delete selected/filtered/all toolbar behind a
+  confirm `Dialog`, over `DELETE /api/admin/audit-log` (gated on
+  `/api/admin/me`).
 - [x] **4. Customer detail depth** — `CustomersV3`'s row now opens a rich detail
   `Dialog` (760px) with: points breakdown (earned/manual/redeemed/spendable),
   profile editor (DOB/email → `PUT /api/admin/members/profile`), order history,
