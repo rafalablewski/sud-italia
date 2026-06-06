@@ -93,6 +93,18 @@ Four breakpoints, narrowing in:
 
 A `@media (pointer: coarse)` floor gives a touchscreen real hit areas at any width.
 
+**Grid/flex tracks must be allowed to shrink.** The layout grids (`.av3-col`,
+`.av3-grid-2`, `.av3-grid-2-1`, `.av3-cols-*`, `.av3-mini2`, `.av3-bodysplit`)
+carry `min-width: 0` on their items in §9. Without it a grid/flex child keeps its
+default `min-width: auto` and refuses to shrink below its content's intrinsic
+size, so one wide descendant (a chart, a dense number row, a long unbreakable
+string) holds its column wider than the phone — and since iOS Safari *expands the
+layout viewport* to absorb horizontal overflow, that one column defeats **every**
+breakpoint below at once (the whole page shrinks/clips, not just that element).
+The `min-width: 0` lets the tracks collapse to device width and leaves real
+overflow to the inner scroll-wrappers (`.av3-table-wrap`, `.av3-heat-wrap`). When
+you add a new layout grid, give its items `min-width: 0` too.
+
 **Responsive helpers (use these, not an inline `grid-template-columns`).** An
 inline grid style beats the media-query override and silently defeats stacking —
 so reach for a class:

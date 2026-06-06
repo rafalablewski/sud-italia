@@ -608,6 +608,19 @@
   letter-spacing: 0.06em; color: var(--av3-subtle);
 }
 
+/* Grid/flex children default to `min-width:auto`, which refuses to shrink below
+   their content's intrinsic min size. One wide descendant (a chart, a dense
+   number row, an unbreakable string) then holds its whole column wider than a
+   phone — and because iOS Safari *expands the layout viewport* to fit any
+   horizontal overflow, that single column silently defeats every breakpoint
+   below (the page shrinks, stacks fail, the edge clips). Letting the layout
+   tracks shrink to 0 keeps the page at device width and hands overflow back to
+   the inner scroll-wrappers (`.av3-table-wrap`, `.av3-heat-wrap`) that own it. */
+.av3-col,
+.av3-grid-2 > *, .av3-grid-2-1 > *,
+.av3-cols-2 > *, .av3-cols-3 > *, .av3-cols-4 > *,
+.av3-mini2 > *, .av3-bodysplit > * { min-width: 0; }
+
 .av3-side-toggle-mobile { display: none; }
 @media (max-width: 900px) {
   .av3-shell { grid-template-columns: 1fr; }
