@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Menu item editor — redesigned tabs</title>
+<!--
+  Standalone preview of the redesigned MenuV3 item editor (MenuEditDialog).
+  All .av3-* CSS is copied verbatim from src/app/themes/admin-v3/index.css, so
+  the layout matches production. Click the tabs (Product / Pricing / Modifiers /
+  Disclosures), the per-site modifier toggle, and the dark/light switch.
+
+  Fixes shown:
+   1. Service & channel — no more label/toggle overlap (.av3-togglerow)
+   2. Disclosures — aligned grid instead of ragged flex-wrap (.av3-formgrid)
+   3. Slug surfaced (read-only) in Product
+   4. Modifiers editable per-site with "Copy → all sites"
+-->
+<style>
+  :root {
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,0.07); --av3-line-strong:rgba(255,255,255,0.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-brand-soft:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1)); --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-ok-soft:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));
+    --av3-warn-soft:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));
+    --av3-bad-soft:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));
+    --av3-brand-soft2:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,0.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,0.55);
+    --av3-ease:cubic-bezier(0.4,0,0.2,1); --av3-t-fast:110ms; --av3-t-base:170ms;
+    --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif; --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  [data-theme="light"]{
+    --av3-bg:#f7f5f1; --av3-s1:#ffffff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+    --av3-line:rgba(28,24,21,0.09); --av3-line-strong:rgba(28,24,21,0.16);
+    --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#756d65;
+    --av3-brand:#a82940; --av3-platinum:#9c7e4e;
+    --av3-ok:#15744d; --av3-warn:#8a590c; --av3-bad:#cc3a35; --av3-info:#3d6694;
+    --av3-sh-1:0 1px 2px rgba(28,24,21,0.06); --av3-sh-2:0 10px 30px -10px rgba(28,24,21,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--av3-bg);color:var(--av3-fg);font-family:var(--av3-ui);}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 60px;}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;}
+  .bar h2{font-family:var(--av3-display);margin:0;font-size:16px;font-weight:600;}
+  .bar small{color:var(--av3-subtle);font-size:12px;}
+  .theme-btn{border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);border-radius:var(--av3-r-sm);padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer;}
+
+  /* ===== verbatim from index.css ===== */
+  .av3-dialog{position:relative;width:100%;background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2);overflow:hidden;}
+  .av3-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--av3-line);}
+  .av3-dialog-title{font-size:15px;font-weight:600;}
+  .av3-dialog-sub{font-size:12px;color:var(--av3-muted);margin-top:2px;}
+  .av3-dialog-body{padding:16px;}
+  .av3-dialog-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--av3-line);background:var(--av3-s2);flex-wrap:wrap;}
+
+  .av3-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-sm);background:var(--av3-s2);color:var(--av3-fg);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap;}
+  .av3-btn-sm{height:26px;padding:0 9px;font-size:12px;}
+  .av3-btn-primary{background:var(--av3-brand);border-color:transparent;color:#fff;}
+  .av3-btn-ghost{background:transparent;border-color:transparent;color:var(--av3-muted);}
+  .av3-btn-danger{background:transparent;border-color:var(--av3-line-strong);color:var(--av3-bad);}
+  .av3-btn-ico{width:14px;height:14px;}
+  .av3-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  .av3-badge{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:var(--av3-r-pill);font-size:10.5px;font-weight:600;border:1px solid transparent;}
+  .av3-badge-neutral{background:var(--av3-s3);color:var(--av3-muted);}
+  .av3-badge-brand{background:var(--av3-brand-soft);color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg));}
+
+  .av3-recap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--av3-line);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden;margin-bottom:14px;}
+  .av3-recap-cell{background:var(--av3-s1);padding:9px 11px;}
+  .av3-recap-k{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle);}
+  .av3-recap-v{font-family:var(--av3-mono);font-size:17px;font-weight:600;margin-top:2px;line-height:1;}
+
+  .av3-dtabs{display:flex;gap:2px;padding:2px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);margin-bottom:14px;}
+  .av3-dtab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border:none;background:transparent;border-radius:var(--av3-r-sm);color:var(--av3-muted);font:inherit;font-size:12px;font-weight:500;cursor:pointer;}
+  .av3-dtab:hover{color:var(--av3-fg);}
+  .av3-dtab.is-active{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong);}
+  .av3-dtab-count{font-family:var(--av3-mono);font-size:10px;color:var(--av3-subtle);}
+  .av3-dtab.is-active .av3-dtab-count{color:var(--av3-muted);}
+
+  .av3-edhint{font-size:11.5px;color:var(--av3-muted);background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-sm);padding:8px 10px;}
+  .av3-subhead{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--av3-subtle);margin:16px 0 8px;}
+
+  .av3-field{display:flex;flex-direction:column;gap:4px;}
+  .av3-field-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle);}
+  .av3-formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;}
+  @media (max-width:560px){.av3-formgrid{grid-template-columns:1fr;}}
+  .av3-togglerow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;padding:4px 12px;border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-sm);background:var(--av3-s1);}
+  .av3-togglerow-label{font-size:12.5px;font-weight:500;color:var(--av3-fg);}
+  .av3-togglerow:has(.av3-switch[aria-checked="true"]){border-color:color-mix(in oklab,var(--av3-ok) 35%,var(--av3-line-strong));}
+
+  .av3-input,.av3-select{height:32px;padding:0 10px;border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-sm);background:var(--av3-s1);color:var(--av3-fg);font:inherit;font-size:13px;width:100%;}
+  .av3-input{font-family:var(--av3-mono);font-variant-numeric:tabular-nums;}
+  .av3-input:disabled,.av3-select:disabled{opacity:.55;cursor:not-allowed;}
+  .av3-select{appearance:none;cursor:pointer;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%23a6a099'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%204.5%206%208%209.5%204.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
+  .av3-affix{position:relative;display:block;}
+  .av3-affix>.av3-input{padding-right:28px;}
+  .av3-affix::after{content:attr(data-suffix);position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:10.5px;color:var(--av3-subtle);pointer-events:none;font-family:var(--av3-mono);}
+
+  .av3-locrow-head{display:grid;gap:8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle);padding-bottom:4px;}
+  .av3-locrow{display:grid;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--av3-line);}
+  .av3-locrow .av3-input{height:30px;width:100%;}
+  .av3-locrow-city{font-size:13px;font-weight:500;}
+
+  .av3-switch{display:inline-flex;align-items:center;gap:8px;padding:0;border:none;background:none;color:var(--av3-muted);font:inherit;font-size:12px;font-weight:500;cursor:pointer;}
+  .av3-switch-track{position:relative;flex-shrink:0;width:38px;height:22px;border-radius:var(--av3-r-pill);background:var(--av3-s3);border:1px solid var(--av3-line-strong);transition:background var(--av3-t-fast) var(--av3-ease);}
+  .av3-switch-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--av3-subtle);transition:transform var(--av3-t-base) var(--av3-ease),background var(--av3-t-fast) var(--av3-ease);}
+  .av3-switch[aria-checked="true"]{color:var(--av3-fg);}
+  .av3-switch[aria-checked="true"] .av3-switch-track{background:var(--av3-ok-soft);border-color:color-mix(in oklab,var(--av3-ok) 45%,transparent);}
+  .av3-switch[aria-checked="true"] .av3-switch-thumb{transform:translateX(16px);background:var(--av3-ok);}
+
+  .av3-viewtoggle{display:inline-flex;gap:2px;padding:2px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-sm);}
+  .av3-viewtoggle button{display:grid;place-items:center;width:28px;height:26px;border:none;background:transparent;border-radius:4px;color:var(--av3-muted);cursor:pointer;}
+  .av3-viewtoggle button.is-active{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong);}
+  .av3-viewtoggle.is-text button{width:auto;height:28px;padding:0 12px;gap:6px;grid-auto-flow:column;font:inherit;font-size:12.5px;font-weight:500;white-space:nowrap;}
+
+  .av3-iconbtn-sm{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--av3-line);border-radius:var(--av3-r-sm);background:transparent;color:var(--av3-muted);cursor:pointer;}
+  .av3-iconbtn-sm svg{width:14px;height:14px;}
+
+  .chip{cursor:pointer;border:1px solid var(--av3-line-strong);background:transparent;color:var(--av3-muted);}
+  .chip.on{border-color:var(--av3-platinum);background:color-mix(in oklab,var(--av3-platinum) 18%,var(--av3-s1));color:var(--av3-fg);}
+  .panel{display:none;}
+  .panel.show{display:block;}
+</style>
+</head>
+<body data-theme="dark">
+<div class="wrap">
+  <div class="bar">
+    <div><h2>Menu item editor — redesigned</h2><small>Margherita · click tabs, toggles, sites</small></div>
+    <button class="theme-btn" id="themeBtn" type="button">Switch to light</button>
+  </div>
+
+  <div class="av3-dialog">
+    <div class="av3-dialog-head">
+      <div><div class="av3-dialog-title">Margherita</div><div class="av3-dialog-sub">Chain-wide product · 2 sites</div></div>
+      <span class="av3-badge av3-badge-brand">⚗ recipe</span>
+    </div>
+    <div class="av3-dialog-body">
+      <div class="av3-recap">
+        <div class="av3-recap-cell"><div class="av3-recap-k">Price</div><div class="av3-recap-v">27,90 zł–29,90 zł</div></div>
+        <div class="av3-recap-cell"><div class="av3-recap-k">Avg margin</div><div class="av3-recap-v" style="color:var(--av3-ok)">65%</div></div>
+        <div class="av3-recap-cell"><div class="av3-recap-k">Sites</div><div class="av3-recap-v">2</div></div>
+      </div>
+
+      <div class="av3-dtabs" id="tabs">
+        <button class="av3-dtab is-active" data-tab="product">Product</button>
+        <button class="av3-dtab" data-tab="pricing">Pricing</button>
+        <button class="av3-dtab" data-tab="modifiers">Modifiers<span class="av3-dtab-count">2</span></button>
+        <button class="av3-dtab" data-tab="disclosures">Disclosures<span class="av3-dtab-count">2</span></button>
+      </div>
+
+      <!-- PRODUCT -->
+      <div class="panel show" data-panel="product">
+        <div class="av3-edhint" style="margin-bottom:12px">These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
+        <div class="av3-formgrid" style="margin-bottom:10px">
+          <div class="av3-field"><span class="av3-field-label">Name</span><input class="av3-input" style="font-family:var(--av3-ui)" value="Margherita"></div>
+          <label class="av3-field"><span class="av3-field-label">Slug (chain key)</span><input class="av3-input" value="pizza-margherita" readonly disabled title="The chain-wide product key — recipes and orders reference it, so it isn't renamed here."></label>
+        </div>
+        <div class="av3-field" style="margin-bottom:10px"><span class="av3-field-label">Description</span><input class="av3-input" style="font-family:var(--av3-ui)" value="San Marzano, fior di latte, basil"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label class="av3-field" style="width:160px"><span class="av3-field-label">Category</span><select class="av3-select"><option>Pizza</option></select></label>
+          <label class="av3-field" style="width:160px"><span class="av3-field-label">Menu role</span><select class="av3-select"><option>Hero</option></select></label>
+        </div>
+        <div style="margin-top:10px">
+          <span class="av3-field-label" style="display:block;margin-bottom:6px">Dietary tags</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="av3-badge chip on">Vegetarian</span><span class="av3-badge chip">Vegan</span><span class="av3-badge chip">Spicy</span><span class="av3-badge chip">Gluten-free</span></div>
+        </div>
+      </div>
+
+      <!-- PRICING -->
+      <div class="panel" data-panel="pricing">
+        <div class="av3-subhead" style="margin-top:0">Per-site pricing &amp; availability</div>
+        <div class="av3-locrow-head" style="grid-template-columns:1.1fr 92px 92px 1fr 52px"><span>Site</span><span>Price</span><span>Cost</span><span>SKU</span><span>Live</span></div>
+        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px">
+          <span class="av3-locrow-city">Kraków<span style="color:var(--av3-ok);font-size:11px;margin-left:6px">66%</span></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="27.90"></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="9.50" disabled title="Cost derives from the recipe"></span>
+          <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-KRK">
+          <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
+        </div>
+        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px;border-bottom:none">
+          <span class="av3-locrow-city">Warszawa<span style="color:var(--av3-ok);font-size:11px;margin-left:6px">64%</span></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="29.90"></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="10.20" disabled></span>
+          <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-WAW">
+          <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
+        </div>
+        <div class="av3-subhead">Service &amp; channel</div>
+        <div class="av3-formgrid">
+          <label class="av3-field"><span class="av3-field-label">Packaging cost</span><span class="av3-affix" data-suffix="zł"><input class="av3-input" value="1.50"></span></label>
+          <div class="av3-togglerow"><span class="av3-togglerow-label">Delivery-only</span><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button></div>
+        </div>
+      </div>
+
+      <!-- MODIFIERS -->
+      <div class="panel" data-panel="modifiers">
+        <div class="av3-edhint" style="margin-bottom:12px">Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn’t. Use <b>Copy to all sites</b> to push one site’s setup everywhere.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <div class="av3-viewtoggle is-text" role="tablist" aria-label="Modifier site" id="modsites">
+            <button class="is-active" data-site="krk" type="button">Kraków<span class="av3-dtab-count">2</span></button>
+            <button data-site="waw" type="button">Warszawa<span class="av3-dtab-count">1</span></button>
+          </div>
+          <span style="flex:1"></span>
+          <button class="av3-btn av3-btn-ghost av3-btn-sm" type="button">Copy <span id="copysite">Kraków</span> → all sites</button>
+        </div>
+        <div id="modbody"></div>
+      </div>
+
+      <!-- DISCLOSURES -->
+      <div class="panel" data-panel="disclosures">
+        <div class="av3-formgrid" style="margin-bottom:10px">
+          <label class="av3-field"><span class="av3-field-label">Halal status</span><select class="av3-select"><option>— none —</option></select></label>
+          <label class="av3-field"><span class="av3-field-label">Nutri-Grade</span><select class="av3-select"><option>— none —</option></select></label>
+          <div class="av3-togglerow"><span class="av3-togglerow-label">Contains pork</span><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button></div>
+          <div class="av3-togglerow"><span class="av3-togglerow-label">Contains alcohol</span><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button></div>
+        </div>
+        <span class="av3-field-label" style="display:block;margin-bottom:6px">Allergens</span>
+        <div id="allergens" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+    <div class="av3-dialog-foot">
+      <button class="av3-btn av3-btn-ghost av3-btn-sm">Reset</button>
+      <button class="av3-btn av3-btn-danger av3-btn-sm">Delete</button>
+      <span style="flex:1"></span>
+      <button class="av3-btn av3-btn-ghost av3-btn-sm">Cancel</button>
+      <button class="av3-btn av3-btn-primary av3-btn-sm">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // theme
+  const tb=document.getElementById("themeBtn");
+  tb.onclick=()=>{const l=document.body.getAttribute("data-theme")==="light";document.body.setAttribute("data-theme",l?"dark":"light");tb.textContent=l?"Switch to light":"Switch to dark";};
+  // tabs
+  document.querySelectorAll("#tabs .av3-dtab").forEach(t=>t.onclick=()=>{
+    document.querySelectorAll("#tabs .av3-dtab").forEach(x=>x.classList.remove("is-active"));
+    t.classList.add("is-active");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("show",p.dataset.panel===t.dataset.tab));
+  });
+  // switches
+  document.addEventListener("click",e=>{const s=e.target.closest("[data-toggle]");if(s)s.setAttribute("aria-checked",s.getAttribute("aria-checked")!=="true");});
+  // allergens
+  const ALL=[["🌾","Gluten",1],["🥛","Dairy",1],["🥚","Eggs",0],["🐟","Fish",0],["🦐","Shellfish",0],["🥜","Tree Nuts",0],["🥜","Peanuts",0],["🫘","Soy",0],["🥬","Celery",0],["🟡","Mustard",0],["⚪","Sesame",0],["🍷","Sulfites",0],["🌱","Lupin",0],["🦑","Molluscs",0]];
+  document.getElementById("allergens").innerHTML=ALL.map(([e,l,on])=>`<span class="av3-badge chip${on?" on":""}">${e} ${l}</span>`).join("");
+  document.querySelectorAll("#allergens .chip,.panel[data-panel='product'] .chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));
+  // per-site modifier groups
+  const MODS={
+    krk:[{l:"Size",o:["Standard +0,00 zł","Large +6,00 zł"]},{l:"Extra toppings",o:["Buffalo mozzarella +5,00 zł","Nduja +6,00 zł"]}],
+    waw:[{l:"Size",o:["Standard +0,00 zł","Large +7,00 zł"]}]
+  };
+  const body=document.getElementById("modbody");
+  function renderMods(site){
+    body.innerHTML=MODS[site].map(g=>`
+      <div style="border:1px solid var(--av3-line);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+          <label class="av3-field" style="flex:1;min-width:140px"><span class="av3-field-label">Group label</span><input class="av3-input" style="font-family:var(--av3-ui)" value="${g.l}"></label>
+          <label class="av3-field" style="width:72px"><span class="av3-field-label">Min</span><input class="av3-input" value="0"></label>
+          <label class="av3-field" style="width:72px"><span class="av3-field-label">Max</span><input class="av3-input" value="1"></label>
+          <button class="av3-iconbtn-sm" aria-label="Remove group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+        ${g.o.map(o=>`<div class="av3-locrow" style="grid-template-columns:1fr 90px 56px 28px;padding:3px 0;border-bottom:none"><input class="av3-input" style="font-family:var(--av3-ui)" value="${o.split(" +")[0]}"><input class="av3-input" value="${(o.split("+")[1]||"0").replace(' zł','')}"><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button><button class="av3-iconbtn-sm" aria-label="Remove option"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`).join("")}
+        <button class="av3-btn av3-btn-ghost av3-btn-sm" style="margin-top:6px">+ Option</button>
+      </div>`).join("")+`<button class="av3-btn av3-btn-sm">+ Add modifier group</button>`;
+  }
+  renderMods("krk");
+  document.querySelectorAll("#modsites button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#modsites button").forEach(x=>x.classList.remove("is-active"));
+    b.classList.add("is-active");
+    document.getElementById("copysite").textContent=b.textContent.replace(/\d+$/,"");
+    renderMods(b.dataset.site);
+  });
+</script>
+</body>
+</html>
