@@ -65,7 +65,7 @@ export function CurrencyV3() {
         <CardHead title="Currencies" description="Toggle which currencies guests can display, set the rate vs PLN" actions={<Badge tone="brand"><Coins style={{ width: 11, height: 11 }} /> default {def}</Badge>} />
         <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
           {ALL.map((c) => (
-            <div key={c} style={{ display: "grid", gridTemplateColumns: "1fr 140px 90px 90px", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
+            <div key={c} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 140px 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{META[c].label}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{c} · {META[c].symbol}</div></div>
               <label className="av3-field"><span className="av3-field-label">Rate / PLN</span><input className="av3-input" type="number" step="any" value={rates[c]} disabled={c === "PLN"} onChange={(e) => setRates((r) => ({ ...r, [c]: e.target.value }))} onBlur={() => persist({ rates })} /></label>
               <button type="button" className="av3-toggle" data-on={enabled[c]} disabled={c === "PLN"} onClick={() => toggleEnabled(c)} style={{ height: 32 }}>{enabled[c] ? "On" : "Off"}</button>

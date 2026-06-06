@@ -173,7 +173,7 @@ function RouteDialog({ route, locationSlug, onClose, onSaved }: { route: TruckRo
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
       <div className="av3-subhead">Stops</div>
       {stops.length === 0 ? <div className="av3-empty-text" style={{ padding: "6px 0", color: "var(--av3-subtle)" }}>No stops yet.</div> : stops.map((s, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 30px", gap: 8, alignItems: "center", padding: "5px 0" }}>
+        <div key={i} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px 30px", gap: 8, padding: "5px 0" }}>
           <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={s.name} onChange={(e) => setStop(i, { name: e.target.value })} placeholder="Stop name" />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.startTime ?? ""} onChange={(e) => setStop(i, { startTime: e.target.value })} />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.endTime ?? ""} onChange={(e) => setStop(i, { endTime: e.target.value })} />

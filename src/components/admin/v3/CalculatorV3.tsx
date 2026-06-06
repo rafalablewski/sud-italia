@@ -529,7 +529,7 @@ export function CalculatorV3() {
                 {SEASONS.map((s) => <P key={s.key} label={s.label} frac={(scn.seasonality ?? DEFAULT_SEASONALITY)[s.key] as number} onChange={(f) => patchSeason({ [s.key]: f } as Partial<SimulationSeasonality>)} w={96} />)}
               </div>
               <div className="av3-field-label" style={{ marginBottom: 6 }}>Per-month overrides (×, blank = use season)</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 6, marginBottom: 8 }}>
                 {MONTH_LABELS.map((m, i) => { const ov = scn.seasonality?.monthlyOverrides?.[i]; return (
                   <label key={m} className="av3-field"><span className="av3-field-label">{m}</span>
                     <input className="av3-input" type="number" step="0.01" value={ov ?? ""} placeholder="—"
@@ -868,7 +868,7 @@ export function CalculatorV3() {
                 const capPct = (oven.perHourCap / scale) * 100;
                 return (
                   <>
-                    <div className="av3-kpi-rail" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 12 }}>
+                    <div className="av3-kpi-rail" style={{ marginBottom: 12 }}>
                       <Kpi label="Peak / hr" value={`${oven.peak.toFixed(0)}`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : "--av3-c4"} />
                       <Kpi label="Line / hr" value={`${oven.perHourCap.toFixed(0)}`} accentVar="--av3-c3" />
                       <Kpi label="Peak util" value={`${(oven.peakUtil * 100).toFixed(0)}%`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : oven.peakUtil > 0.9 ? "--av3-c5" : "--av3-c4"} />
@@ -909,9 +909,9 @@ export function CalculatorV3() {
                 methodology="Orders/daypart = Σ of the modelled hourly demand within the daypart window; rec. heads = ⌈(orders/hr) ÷ kitchenCapacity.pizzasPerHour⌉ (min 1). Scheduled pizzaioli = Σ headcount of pizzaiolo labour lines. Modelling layer over the scenario." />
             } />
             <CardBody>
-              <div className="av3-reciperow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
+              <div className="av3-cfgrow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
               {shiftPlan.rows.map((r) => (
-                <div key={r.key} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, alignItems: "center", padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                <div key={r.key} className="av3-cfgrow" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.key}</span>
                   <span className="av3-cell-muted" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5 }}>{r.range}</span>
                   <span style={{ textAlign: "right", fontFamily: "var(--av3-mono)", fontSize: 12 }}>{r.orders}<span className="av3-cell-muted" style={{ fontSize: 10 }}> · {r.ordersPerHour.toFixed(0)}/h</span></span>

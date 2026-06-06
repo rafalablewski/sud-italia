@@ -125,7 +125,7 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
       </div>
       <div className="av3-subhead">Opening hours</div>
       {hours.map((h, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 30px", gap: 8, alignItems: "center", padding: "5px 0" }}>
+        <div key={i} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 100px 100px 30px", gap: 8, padding: "5px 0" }}>
           <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={h.day} onChange={(e) => setHour(i, { day: e.target.value })} placeholder="Mon-Fri" />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.open} onChange={(e) => setHour(i, { open: e.target.value })} />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={h.close} onChange={(e) => setHour(i, { close: e.target.value })} />

@@ -59,7 +59,7 @@ export function LanguagesV3() {
         <CardHead title="Locales" actions={<Badge tone="brand"><LangIcon style={{ width: 11, height: 11 }} /> default {LABEL[def]}</Badge>} />
         <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
           {ALL.map((l) => (
-            <div key={l} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
+            <div key={l} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{LABEL[l]}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{l}</div></div>
               <button type="button" className="av3-toggle" data-on={enabled[l]} onClick={() => toggleEnabled(l)} style={{ height: 32 }}>{enabled[l] ? "On" : "Off"}</button>
               <button type="button" className="av3-toggle" data-on={def === l} disabled={!enabled[l]} onClick={() => setDefault(l)} style={{ height: 32 }}>{def === l ? "Default" : "Set"}</button>

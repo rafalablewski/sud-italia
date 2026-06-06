@@ -448,7 +448,7 @@ function ModifierEditor({ groups, onChange }: { groups: ModifierGroup[]; onChang
           </div>
           <div className="av3-locrow-head" style={{ gridTemplateColumns: "1fr 90px 90px 56px 28px", marginTop: 8 }}><span>Option</span><span>+ Price zł</span><span>+ Cost zł</span><span>KDS</span><span /></div>
           {(g.options ?? []).map((o, oi) => (
-            <div key={o.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 56px 28px", gap: 8, alignItems: "center", padding: "3px 0" }}>
+            <div key={o.id} className="av3-locrow" style={{ gridTemplateColumns: "1fr 90px 90px 56px 28px", padding: "3px 0", borderBottom: "none" }}>
               <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={o.label} onChange={(e) => patchOption(gi, oi, { label: e.target.value })} />
               <input className="av3-input" type="number" step="0.01" value={o.priceDelta / 100} onChange={(e) => patchOption(gi, oi, { priceDelta: Math.round((Number(e.target.value) || 0) * 100) })} />
               <input className="av3-input" type="number" step="0.01" value={(o.costDelta ?? 0) / 100} onChange={(e) => patchOption(gi, oi, { costDelta: Math.round((Number(e.target.value) || 0) * 100) })} />

@@ -592,6 +592,22 @@
 .av3-formrow.av3-formrow-4 { grid-template-columns: repeat(4, 1fr); }
 .av3-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+/* Config / editor rows — an inline-grid row of `label + a few fixed controls`
+   that lives on a *page* (not inside a dialog, so it can't lean on the dialog
+   body's computed `overflow-x:auto`). Set the desktop `grid-template-columns`
+   inline at the call site; on a phone (≤560) the row stacks to one column so
+   the label keeps room instead of crushing to a few pixels. `-head` is the
+   matching column-label strip — it hides on a phone where each stacked row is
+   self-labelling. A trailing icon button stays compact, not stretched.
+   (Dense editor rows *inside a dialog* use `.av3-locrow`/`.av3-reciperow`,
+   which scroll horizontally instead — see §6/§18.) */
+.av3-cfgrow { display: grid; align-items: center; gap: 10px; }
+.av3-cfgrow-head {
+  display: grid; gap: 10px; padding-bottom: 4px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--av3-subtle);
+}
+
 .av3-side-toggle-mobile { display: none; }
 @media (max-width: 900px) {
   .av3-shell { grid-template-columns: 1fr; }
@@ -668,6 +684,13 @@
   .av3-scope select { height: 36px; max-width: 138px; }
 
   .av3-cols-2, .av3-cols-3, .av3-cols-4 { grid-template-columns: 1fr; }
+
+  /* Config / editor rows stack one control per line (label keeps its room);
+     the column-label strip is redundant once stacked, so it hides. */
+  .av3-cfgrow { grid-template-columns: 1fr !important; gap: 8px; }
+  .av3-cfgrow > * { width: 100%; }
+  .av3-cfgrow > .av3-iconbtn-sm { width: 36px; justify-self: start; }
+  .av3-cfgrow-head { display: none; }
 
   /* Dialogs go near-full-bleed; the footer buttons stack full-width. */
   .av3-dialog-root { padding: 10px; }
@@ -797,6 +820,9 @@
    ========================================================================== */
 .av3-toolbar { display: flex; align-items: center; gap: var(--av3-gap-3); flex-wrap: wrap; }
 .av3-toolbar-spacer { flex: 1; }
+/* A toolbar search box carries a fixed px width for desktop comfort; cap it so
+   it can never push past a narrow phone's toolbar line (it flex-shrinks to fit). */
+.av3-toolbar .av3-input, .av3-toolbar .av3-select { max-width: 100%; }
 .av3-filterchips { display: inline-flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); flex-wrap: wrap; }
 .av3-fchip {
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
