@@ -46,6 +46,46 @@ export function Badge({ tone = "neutral", dot = false, children }: { tone?: Badg
 }
 
 /* -------------------------------------------------------------------------- */
+/* Switch — the one on/off control. role="switch", slides on toggle.          */
+/* -------------------------------------------------------------------------- */
+interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Optional text rendered beside the slider — clicking it also toggles. */
+  label?: ReactNode;
+  size?: "sm" | "md";
+}
+
+/**
+ * The single enable/disable control for v3. A real sliding switch with
+ * `role="switch"` + `aria-checked` — restyle `.av3-switch` once and every
+ * toggle in the admin follows. Persist on `onChange` (Rule #7). Remaining
+ * button attributes (`aria-label`, `id`, `title`, …) forward to the element,
+ * so a switch labelled by sibling text can still expose an accessible name.
+ */
+export function Switch({ checked, onChange, label, disabled = false, size = "md", className = "", onClick, ...rest }: SwitchProps) {
+  return (
+    <button
+      {...rest}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={(e) => {
+        onClick?.(e);
+        if (!disabled) onChange(!checked);
+      }}
+      className={`av3-switch ${size === "sm" ? "av3-switch-sm" : ""} ${className}`.trim()}
+    >
+      <span className="av3-switch-track" aria-hidden>
+        <span className="av3-switch-thumb" />
+      </span>
+      {label != null && <span className="av3-switch-label">{label}</span>}
+    </button>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* ChipRow — segmented selector (e.g. dashboard period)                       */
 /* -------------------------------------------------------------------------- */
 export function ChipRow<T extends string>({

@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { monthlyGrosze } from "@/lib/business-costs-math";
 import type { BusinessCost, BusinessCostCategory, BusinessCostFrequency, BusinessCostPayrollRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Switch, Table } from "./ui";
 
 const CATEGORY_LABEL: Record<BusinessCostCategory, string> = {
   payroll: "Payroll", rent: "Rent & lease", utilities: "Utilities", insurance: "Insurance", fuel: "Fuel",
@@ -99,7 +99,7 @@ export function BusinessCostsV3() {
       </div>
 
       {loading && costs.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading costs…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (
@@ -186,7 +186,7 @@ function CostDialog({ cost, locations, onClose, onSaved }: { cost: BusinessCost 
         </label>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <button type="button" className="av3-toggle" data-on={taxDeductible} onClick={() => setTaxDeductible((v) => !v)} style={{ padding: "0 12px" }}>Tax-deductible {taxDeductible ? "✓" : "✕"}</button>
+        <Switch checked={taxDeductible} label="Tax-deductible" onChange={setTaxDeductible} />
         <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", flex: 1 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
       </div>
     </Dialog>

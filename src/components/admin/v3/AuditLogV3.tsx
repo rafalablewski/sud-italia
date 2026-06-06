@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Minus, Plus, RefreshCw } from "lucide-react";
-import { Badge, Button, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, SkeletonRows, Table } from "./ui";
 
 interface Entry {
   id: string;
@@ -85,7 +85,7 @@ export function AuditLogV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading audit log…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { INGREDIENT_CATEGORY_LABELS } from "@/data/types";
 import type { IngredientCategory, IngredientUnit, MenuCategory } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonPage, SkeletonRows, Table } from "./ui";
 
 interface MenuItemData { id: string; name: string; price: number; category: MenuCategory }
 /** Ingredient joined to its active offering (cost + macros are read-only cache). */
@@ -186,7 +186,7 @@ export function RecipesV3() {
             ))}
           </div>
           {loading && dishes.length === 0 ? (
-            <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading recipes…</div>
+            <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
           ) : rows.length === 0 ? (
             <div className="av3-card" style={{ padding: 0 }}>
               <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">{q ? "No dish matches that search." : "Nothing in this category."}</div></div>
@@ -468,7 +468,7 @@ function IngredientsPanel({ ingredients, suppliers, loading, onEdit }: {
     { key: "kcal", header: "kcal / unit", num: true, render: (i) => i.kcalPerUnit != null ? <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{i.kcalPerUnit}</span> : <span className="av3-cell-muted">—</span> },
   ];
 
-  if (loading && ingredients.length === 0) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading ingredients…</div>;
+  if (loading && ingredients.length === 0) return <SkeletonPage />;
   return (
     <>
       <div className="av3-field" style={{ maxWidth: 280 }}><span className="av3-field-label">Search</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ingredient or supplier…" /></div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, SkeletonRows, Table } from "./ui";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 interface Intent {
@@ -87,7 +87,7 @@ export function ScheduledBundlesV3() {
       </div>
 
       {loading && list.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading scheduled bundles…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

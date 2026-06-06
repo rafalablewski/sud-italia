@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Crown, Gift, Pencil, Plus, Rocket, Sparkles, Target, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, SkeletonPage, Switch } from "./ui";
 
 interface Reward { id: string; name: string; pointsCost: number; description?: string; active: boolean }
 interface Challenge { id: string; title: string; description?: string; target: number; rewardPoints: number; active: boolean }
@@ -111,7 +111,7 @@ export function GrowthV3() {
     } finally { setSavingRef(false); }
   };
 
-  if (loading && !s) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading growth settings…</div>;
+  if (loading && !s) return <SkeletonPage />;
 
   const rewards = s?.rewards ?? [];
   const challenges = s?.challenges ?? [];
@@ -134,7 +134,7 @@ export function GrowthV3() {
       </div>
 
       <Card>
-        <CardHead title="Referral program" description="Reward both sides of a referral" actions={<button type="button" className="av3-toggle" data-on={s?.referral?.active ?? false} onClick={() => put({ referral: { referrerPoints: s?.referral?.referrerPoints ?? 0, refereeDiscountGrosze: s?.referral?.refereeDiscountGrosze ?? 0, active: !(s?.referral?.active ?? false) } })} style={{ padding: "0 12px" }}>{s?.referral?.active ? "On" : "Off"}</button>} />
+        <CardHead title="Referral program" description="Reward both sides of a referral" actions={<Switch aria-label="Referral program" checked={s?.referral?.active ?? false} onChange={() => put({ referral: { referrerPoints: s?.referral?.referrerPoints ?? 0, refereeDiscountGrosze: s?.referral?.refereeDiscountGrosze ?? 0, active: !(s?.referral?.active ?? false) } })} />} />
         <CardBody>
           <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
             <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Referrer points</span><input className="av3-input" type="number" value={refDraft.points} onChange={(e) => setRefDraft((d) => ({ ...d, points: e.target.value }))} /></label>
@@ -178,7 +178,7 @@ export function GrowthV3() {
             {rewards.length === 0 ? <div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No rewards configured.</div> : rewards.map((r) => (
               <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)" }}>
                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{r.pointsCost} pts</div></div>
-                <button type="button" className="av3-toggle" data-on={r.active} onClick={() => toggleReward(r.id)} style={{ padding: "0 12px" }}>{r.active ? "Live" : "Off"}</button>
+                <Switch checked={r.active} label={r.active ? "Live" : "Off"} onChange={() => toggleReward(r.id)} />
               </div>
             ))}
           </CardBody>
@@ -189,7 +189,7 @@ export function GrowthV3() {
             {challenges.length === 0 ? <div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No challenges configured.</div> : challenges.map((c) => (
               <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)" }}>
                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500 }}>{c.title}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{c.target} → {c.rewardPoints} pts</div></div>
-                <button type="button" className="av3-toggle" data-on={c.active} onClick={() => toggleChallenge(c.id)} style={{ padding: "0 12px" }}>{c.active ? "Live" : "Off"}</button>
+                <Switch checked={c.active} label={c.active ? "Live" : "Off"} onChange={() => toggleChallenge(c.id)} />
               </div>
             ))}
           </CardBody>
@@ -202,7 +202,7 @@ export function GrowthV3() {
           {seasonal.length === 0 ? <div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No seasonal items.</div> : seasonal.map((i) => (
             <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500 }}>{i.name}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{i.category ?? "—"}{i.price ? ` · ${formatPrice(i.price)}` : ""}{i.locationSlug ? ` · ${i.locationSlug}` : ""}</div></div>
-              <button type="button" className="av3-toggle" data-on={i.active} onClick={() => toggleSeasonal(i.id)} style={{ padding: "0 12px" }}>{i.active ? "Live" : "Off"}</button>
+              <Switch checked={i.active} label={i.active ? "Live" : "Off"} onChange={() => toggleSeasonal(i.id)} />
             </div>
           ))}
         </CardBody>
@@ -234,7 +234,7 @@ export function GrowthV3() {
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{w.label || meta.label}</div>
                     <div className="av3-cell-muted" style={{ fontSize: 11 }}>{meta.label} · {locLabel}</div>
                   </div>
-                  <button type="button" className="av3-toggle" data-on={w.active} onClick={() => toggleWidget(w.id)} style={{ padding: "0 12px" }}>{w.active ? "On" : "Off"}</button>
+                  <Switch aria-label={w.label || meta.label} checked={w.active} onChange={() => toggleWidget(w.id)} />
                   <button type="button" className="av3-iconbtn-sm" aria-label="Edit widget" onClick={() => setWidgetEdit(w)}><Pencil /></button>
                   <button type="button" className="av3-iconbtn-sm" aria-label="Delete widget" onClick={() => deleteWidget(w.id)}><Trash2 /></button>
                 </div>
@@ -338,10 +338,10 @@ function WidgetDialogV3({
         </div>
         <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Pick one or more cities; clear all to broadcast everywhere.</span>
       </div>
-      <label className="av3-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <button type="button" className="av3-toggle" data-on={active} onClick={() => setActive((v) => !v)} style={{ padding: "0 12px" }}>{active ? "Active" : "Off"}</button>
+      <div className="av3-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Switch aria-label="Show this widget" checked={active} onChange={setActive} />
         <span className="av3-field-label" style={{ textTransform: "none" }}>Show this widget</span>
-      </label>
+      </div>
     </Dialog>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, CheckCircle2, Coins, Percent } from "lucide-react";
-import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
 type Currency = "PLN" | "USD" | "SGD" | "EUR";
 const ALL: Currency[] = ["PLN", "USD", "SGD", "EUR"];
@@ -45,7 +45,7 @@ export function CurrencyV3() {
   const enabledCount = useMemo(() => ALL.filter((c) => enabled[c]).length, [enabled]);
   const ratesSet = useMemo(() => ALL.filter((c) => c !== "PLN" && enabled[c] && Number(rates[c]) > 0).length, [enabled, rates]);
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading currency…</div>;
+  if (loading) return <SkeletonPage />;
 
   return (
     <>
@@ -68,7 +68,7 @@ export function CurrencyV3() {
             <div key={c} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 140px 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{META[c].label}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{c} · {META[c].symbol}</div></div>
               <label className="av3-field"><span className="av3-field-label">Rate / PLN</span><input className="av3-input" type="number" step="any" value={rates[c]} disabled={c === "PLN"} onChange={(e) => setRates((r) => ({ ...r, [c]: e.target.value }))} onBlur={() => persist({ rates })} /></label>
-              <button type="button" className="av3-toggle" data-on={enabled[c]} disabled={c === "PLN"} onClick={() => toggleEnabled(c)} style={{ height: 32 }}>{enabled[c] ? "On" : "Off"}</button>
+              <Switch aria-label={`Enable ${META[c].label}`} checked={enabled[c]} disabled={c === "PLN"} onChange={() => toggleEnabled(c)} />
               <button type="button" className="av3-toggle" data-on={def === c} disabled={!enabled[c]} onClick={() => setDefault(c)} style={{ height: 32 }}>{def === c ? "Default" : "Set"}</button>
             </div>
           ))}

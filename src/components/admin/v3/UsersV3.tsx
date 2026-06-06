@@ -5,7 +5,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { Fingerprint, KeyRound, Lock, Plus, ShieldCheck, Smartphone, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { AdminRole } from "@/lib/admin-roles";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface WebauthnKey { id: string; name?: string; createdAt: string }
 interface UserRow {
@@ -124,7 +124,7 @@ export function UsersV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading users…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

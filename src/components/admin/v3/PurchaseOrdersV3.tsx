@@ -5,7 +5,7 @@ import { ClipboardList, PackageCheck, PackageSearch, Plus, Truck, Wallet, X } fr
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 type POStatus = "draft" | "sent" | "received" | "cancelled";
 interface POLine { ingredientId: string; quantity: number; unitCost: number; name?: string; unit?: string; lineTotal?: number }
@@ -128,7 +128,7 @@ export function PurchaseOrdersV3() {
       </div>
 
       {loading && orders.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading purchase orders…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

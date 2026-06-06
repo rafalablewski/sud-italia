@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Bell, CheckCircle2, ChevronRight, Sparkles } from "lucide-react";
-import { Button } from "./ui";
+import { Button, SkeletonRows } from "./ui";
 
 interface NotificationItem {
   id: string;
@@ -151,7 +151,7 @@ export function AlertsV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading alerts…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : filtered.length === 0 ? (
         <div className="av3-card" style={{ padding: 0 }}>
           <div className="av3-empty"><Bell aria-hidden /><div className="av3-empty-title">All clear</div><div className="av3-empty-text">No alerts in this filter.</div></div>

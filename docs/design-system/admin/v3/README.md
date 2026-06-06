@@ -89,7 +89,7 @@ Four breakpoints, narrowing in:
 | ≤1180px | Two-column page splits (`.av3-bodysplit`) collapse to one column. |
 | ≤900px  | The sidebar becomes an **off-canvas drawer** — `AdminShellV3` toggles `data-mobile-open`, `TopbarV3` grows the hamburger (`.av3-side-toggle-mobile`), a scrim covers the content, and the drawer **ignores the desktop rail-collapsed state** so a phone user who left the sidebar collapsed still gets full labels. The breadcrumb keeps only its last segment. |
 | ≤720px  | Content gutter tightens; `.av3-grid-2` / `.av3-grid-2-1` / `.av3-formrow` / `.av3-formrow-4` / `.av3-od-grid` stack one-per-row; dense editor rows (`.av3-locrow`, `.av3-reciperow`) get a `min-width` so header + rows scroll together inside the dialog body rather than crushing. |
-| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width), and **page-level config/editor rows (`.av3-cfgrow`) stack one control per line** so a `label + fixed controls` row never crushes its label to a few pixels (the `.av3-cfgrow-head` column-label strip hides). |
+| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-switch`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width), and **page-level config/editor rows (`.av3-cfgrow`) stack one control per line** so a `label + fixed controls` row never crushes its label to a few pixels (the `.av3-cfgrow-head` column-label strip hides). |
 
 A `@media (pointer: coarse)` floor gives a touchscreen real hit areas at any width.
 
@@ -130,12 +130,92 @@ so reach for a class:
 
 ## Primitives (so far)
 
-`v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Kpi` (the dense metric tile
+`v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Switch` (the **one** on/off
+control — see below), `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
+`Skeleton` / `SkeletonKpiRail` / `SkeletonRows` / `SkeletonKanban` /
+`SkeletonPage` (shimmer loading stand-ins — see Loading & empty states below),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
 to `#admin-portal-root` per rule #4), and the **charts** (`Chart.tsx`:
 `AreaChart` / `BarChart` / `Donut` / `ChartLegend`). The set grows as pages
 migrate.
+
+**Switch (`v3/ui/controls.tsx` → `.av3-switch`).** THE enable/disable control
+for v3 — a real sliding toggle with `role="switch"` + `aria-checked`, not a
+text button. One definition, restyle `.av3-switch` once and every toggle
+follows (same contract as v2's `.v2-switch`). Props: `checked` + `onChange`
+(persist on change per rule #7), optional `label` (text beside the slider —
+clicking it also toggles), `disabled`, `size` (`"sm"` for dense rows like the
+Calculator ingredient-stress cards), and `onClick` (runs before `onChange`,
+e.g. `e.stopPropagation()` inside a table row). Reach for this for any
+boolean; never hand-roll a `<button className="av3-toggle">{x ? "On" : "Off"}</button>`.
+`.av3-toggle` survives only for the **non-boolean** "Set / Default" action in
+Languages & Currency (it picks one option, it doesn't flip a boolean).
+
+**Form controls (CSS-only — section 14 of `themes/admin-v3/index.css`).** The
+plain controls are styled by class/element, no wrapper component needed:
+- `.av3-input` / `.av3-select` — 32px fields. On `:hover` the hairline lifts to
+  `--av3-muted`; on `:focus` the border goes brand + a 3px `--av3-brand-soft`
+  ring. `.av3-select` is `appearance: none`, so it **paints its own chevron**
+  (a muted inline-SVG background, theme-flipped via the `[data-admin-theme="light"]`
+  override) — don't remove the chevron when restyling, an `appearance:none`
+  select with no arrow reads as a bare box.
+- **Checkboxes** — every `.av3-root input[type="checkbox"]` is fully restyled
+  (`appearance: none`): a 16px box that fills `--av3-brand` with a white
+  inline-SVG check when `:checked`. No class needed — style by element so a
+  bare `<input type="checkbox">` looks right anywhere. Reserved for genuine
+  multi-select; booleans use `Switch`. Radios keep their native shape with
+  `accent-color: --av3-brand`.
+- **Focus rings** — keyboard `:focus-visible` on every interactive control
+  (`.av3-btn`, `.av3-icon-btn`, `.av3-iconbtn-sm`, `.av3-chip`, `.av3-fchip`,
+  `.av3-switch`, checkboxes) is a `2px solid --av3-brand` outline with offset;
+  text fields use the soft ring instead. Match this when adding a new control.
+
+**Surfaces — elevation & motion (section 5/6/13 + `.av3-dcard` of the CSS).**
+The container surfaces share one elevation language: a resting `--av3-sh-1`,
+lifting to `--av3-sh-2` on hover.
+- **KPI tile (`.av3-kpi`)** — carries a per-tile accent: the `Kpi` component
+  sets `--av3-kpi-accent` from its `accentVar`, which paints a 3px leading
+  rail (`::before`) and tints the label icon. Hover lifts the shadow and
+  tints the border toward the accent. Pass `accentVar` to give a rail of
+  KPIs distinct identities (e.g. the chart palette `--av3-c1…c8`).
+- **Table (`.av3-table`)** — the sticky `thead` sits on a `--av3-line-strong`
+  hairline **plus** a faint drop shadow so body rows read as scrolling under
+  it; row hover (`--av3-s2`) is transitioned, not instant. Clickable rows get
+  `cursor: pointer` from the `Table` component's `onRowClick`.
+- **Dialog (`.av3-dialog`)** — opens with a fade+scale entry (`av3-dialog-in`)
+  over a fading, blurred scrim (`av3-scrim-in`), both guarded by
+  `prefers-reduced-motion`. Keep new overlays on these keyframes rather than
+  inventing per-dialog animation.
+- **Board card (`.av3-dcard`)** — same hover shadow-lift; selection ring uses
+  `--av3-platinum`.
+- **Kanban (`.av3-kcol` / `.av3-ocard`)** — the lane header (`.av3-kcol-head`)
+  is sticky **and opaque** (`--av3-s2` + drop shadow) so cards scroll under it
+  cleanly; order cards carry the resting→hover shadow-lift and a focus ring.
+
+**Navigation & shell.** The active nav item (`.av3-nav-item.is-active`) is
+distinguished from hover three ways: a faint `--av3-platinum`-tinted fill, a
+`--av3-platinum` leading rail (`::before`), and a `--av3-platinum` icon +
+600 weight — hover alone only changes the background, so active always reads
+as "you are here". The topbar's scope `<select>` and every shell control share
+the same `2px --av3-brand` `:focus-visible` ring as the form controls.
+
+**Loading & empty states.**
+- **Skeletons** (`v3/ui/Skeleton.tsx` → `.av3-skeleton`) — shimmer placeholders
+  guarded by `prefers-reduced-motion`. Prefer over a bare `.av3-loading`
+  spinner whenever the content has a known shape: `SkeletonKpiRail` mirrors a
+  `.av3-kpi-rail`, `SkeletonRows` mirrors a list/table body, and bare
+  `Skeleton` takes `width`/`height`/`radius` for anything else, and
+  `SkeletonPage` is the whole-page stand-in (title strip + optional KPI rail +
+  card of rows) for `if (loading) return …` branches. Mark the region
+  `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
+  pages** — every `.av3-loading` spinner was replaced (full-page returns →
+  `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
+  where the generic shape misled: Orders uses `SkeletonKanban` (view-aware) and
+  Cash leads with a `SkeletonKpiRail` since its loaded view does.
+- **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
+  round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
+  (text caps at ~300px for readability).
 
 **Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
 the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2
@@ -150,6 +230,34 @@ scales uniformly. Inputs are already-converted display units (e.g. zł, not
 grosze). Reach for these instead of CSS bar-tracks whenever a surface needs to
 show a *trend, distribution, or part-to-whole* (a ranking can stay a table /
 `.av3-bar`).
+
+**Chart interactivity (the `.av3-chart*` CSS).** `AreaChart` tracks the pointer
+and shows a follow tooltip (`.av3-chart-tip`) with a dashed guide line + value
+dot at the nearest point — pass `labels` (per-point x label) and `format`
+(value formatter, also used for the new y-axis max/min labels) to make it
+meaningful (see ReportsV3 for the reference call). `BarChart` dims sibling bars
+on hover so the hovered one reads as focused (`.av3-barchart:hover .av3-bar`)
+and every bar carries a native `<title>`; it also draws a baseline axis + y-max
+label. `Donut` segments get the same hover-focus + a `<title>` of
+`label: value (pct%)`. The `<title>` tooltips are the accessible, zero-JS
+fallback; keep them when adding new series.
+
+**Accessibility (CSS §"A11y").** Baked-in guarantees: (1) the text tokens clear
+**WCAG AA (4.5:1)** for small text on `s1`/`s2`/`bg` in both themes — `--av3-subtle`
+is tuned to that floor (don't darken-light / lighten-dark past it), and light
+`--av3-ok`/`--av3-warn` are darkened to pass (the brighter chart greens/ambers
+stay on the separate `--av3-c*` tokens). Status **badges** put the status colour
+on its `-soft` tint; all pass except `bad`, whose badge text is mixed toward
+`--av3-fg` (`.av3-badge-bad`) to clear AA on that tint — reuse that fg-mix if a
+new badge fails on its soft bg. Segmented view toggles are `role="tablist"` +
+`role="tab"` (so `aria-selected` is valid — never put `aria-selected` on a bare
+`<button>`). (2) a
+low-specificity `:where(a, button):focus-visible` safety net guarantees every
+interactive element has a visible `--av3-brand` focus ring even if its own rule
+is missing one (the tuned per-control rings still win); (3) a global
+`prefers-reduced-motion` guard neutralises all `.av3-*` animation/transition
+(shimmer, dialog/scrim entry, hover lifts, the spinner). New surfaces inherit
+all three for free as long as they live under `.av3-root`.
 
 Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
 filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),

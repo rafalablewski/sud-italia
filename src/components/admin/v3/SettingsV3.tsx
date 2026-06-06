@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
-import { Badge, Button, Card, CardBody, CardHead } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, SkeletonPage, Switch } from "./ui";
 
 interface Layout {
   showCurrencySwitcher: boolean; showLanguageSwitcher: boolean; showBundlesShowcase: boolean; showLoyaltySection: boolean;
@@ -120,7 +120,7 @@ export function SettingsV3() {
   const layout: Layout = { showCurrencySwitcher: true, showLanguageSwitcher: true, showBundlesShowcase: true, showLoyaltySection: true, showSeasonalSpecials: true, showCartUpsell: true, showDeliveryProgress: true, showPushOptIn: true, showFeedbackSurvey: true, showNpsSurvey: true, showPostOrderUpsell: true, showChatWidget: true, showLiveTicker: true, ...(s.layout ?? {}) };
   const toggleLayout = (k: keyof Layout) => put({ layout: { ...layout, [k]: !layout[k] } });
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading settings…</div>;
+  if (loading) return <SkeletonPage />;
 
   const tabs: { id: Tab; label: string; icon: typeof Truck }[] = [
     { id: "general", label: "General", icon: Truck },
@@ -174,7 +174,7 @@ export function SettingsV3() {
               {LAYOUT_KEYS.map((k) => (
                 <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{k.label}</span>
-                  <button type="button" className="av3-toggle" data-on={layout[k.key]} onClick={() => toggleLayout(k.key)} style={{ padding: "0 12px" }}>{layout[k.key] ? "On" : "Off"}</button>
+                  <Switch aria-label={k.label} checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
                 </div>
               ))}
             </CardBody>
@@ -185,7 +185,7 @@ export function SettingsV3() {
               {FLAG_KEYS.map((f) => (
                 <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{f.label}</span>
-                  <button type="button" className="av3-toggle" data-on={!!s[f.key]} onClick={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} style={{ padding: "0 12px" }}>{s[f.key] ? "On" : "Off"}</button>
+                  <Switch aria-label={f.label} checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
                 </div>
               ))}
             </CardBody>

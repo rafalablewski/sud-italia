@@ -5,7 +5,7 @@ import { AlertTriangle, Boxes, Brain, ChefHat, MessageSquare, Plus, RefreshCw, U
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface ForecastDay { date: string; predictedOrders: number; lower?: number; upper?: number }
 interface Forecast { source?: string; days?: ForecastDay[]; reasoning?: string; generatedAt?: string }
@@ -151,7 +151,7 @@ export function InsightsV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading insights…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "forecast" ? (
         <Card>
           <CardHead title="Demand forecast" description="Predicted orders per day" actions={<Badge tone={forecast?.source === "claude" ? "brand" : "neutral"}>{forecast?.source === "claude" ? "Claude" : "moving-avg"}</Badge>} />

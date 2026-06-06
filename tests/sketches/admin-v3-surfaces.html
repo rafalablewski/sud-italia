@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin v3 — heavy surfaces preview</title>
+<!--
+  Standalone preview of the v3 admin "heavy" surfaces after the styling pass:
+  KPI tiles (now with a per-tile accent rail + accent-coloured icon and a
+  shadow-lift on hover), the data Table (stronger sticky header + drop shadow,
+  smooth row hover), and the Dialog (fade + scale entry animation, firmer
+  scrim) — in both dark and light admin themes.
+
+  Tokens + rules below are copied from src/app/themes/admin-v3/index.css.
+  Draft/verification artifact — not shipped. See /tests/README.md.
+-->
+<style>
+  .av3-root{
+    --av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;--av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#6e6862;
+    --av3-brand:#c2384f;--av3-ok:#34b27b;--av3-bad:#e8554f;
+    --av3-ok-soft:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));
+    --av3-c1:#c2384f;--av3-c2:#cbb48a;--av3-c3:#5f9bd6;--av3-c4:#34b27b;
+    --av3-r-sm:5px;--av3-r-md:8px;--av3-r-lg:11px;--av3-r-pill:999px;
+    --av3-gap-2:8px;--av3-gap-3:12px;--av3-gap-4:16px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4);--av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-ease:cubic-bezier(.4,0,.2,1);--av3-t-fast:110ms;--av3-t-base:170ms;
+    --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+    background:var(--av3-bg);color:var(--av3-fg);font-family:Inter,system-ui,sans-serif;
+    padding:20px;border-radius:12px;position:relative;overflow:hidden;min-height:560px;
+  }
+  [data-admin-theme="light"] .av3-root{
+    --av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;--av3-hover:#e9e4da;
+    --av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);
+    --av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#857c73;--av3-brand:#a82940;
+    --av3-ok:#15744d;--av3-bad:#cc3a35;--av3-c2:#9c7e4e;--av3-c3:#3d6694;--av3-c4:#1f8a60;
+  }
+  [data-admin-theme="light"] .av3-table thead th{box-shadow:0 2px 6px -4px rgba(0,0,0,.15);}
+
+  /* KPI */
+  .av3-kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--av3-gap-3);margin-bottom:20px;}
+  .av3-kpi{position:relative;display:flex;flex-direction:column;gap:6px;padding:var(--av3-gap-3) var(--av3-gap-4);
+    background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);
+    overflow:hidden;transition:border-color var(--av3-t-fast) var(--av3-ease),box-shadow var(--av3-t-fast) var(--av3-ease);}
+  .av3-kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--av3-kpi-accent,var(--av3-brand));opacity:.55;}
+  .av3-kpi:hover{border-color:color-mix(in oklab,var(--av3-kpi-accent,var(--av3-line-strong)) 32%,var(--av3-line-strong));box-shadow:var(--av3-sh-2);}
+  .av3-kpi-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle);}
+  .av3-kpi-label svg{width:13px;height:13px;color:var(--av3-kpi-accent,var(--av3-subtle));}
+  .av3-kpi-value{font-family:var(--av3-mono);font-size:23px;font-weight:500;letter-spacing:-.01em;line-height:1.05;}
+  .av3-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;}
+  .av3-delta-up{color:var(--av3-ok);}.av3-delta-down{color:var(--av3-bad);}.av3-delta-flat{color:var(--av3-subtle);}
+
+  /* Table */
+  .av3-card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);overflow:hidden;}
+  .av3-card-head{display:flex;align-items:center;justify-content:space-between;padding:var(--av3-gap-3) var(--av3-gap-4);border-bottom:1px solid var(--av3-line);}
+  .av3-card-title{font-size:13px;font-weight:600;}
+  .av3-table-wrap{width:100%;overflow:auto;max-height:230px;}
+  .av3-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .av3-table thead th{position:sticky;top:0;z-index:1;text-align:left;padding:8px 12px;background:var(--av3-s2);color:var(--av3-subtle);
+    font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    border-bottom:1px solid var(--av3-line-strong);box-shadow:0 2px 6px -4px rgba(0,0,0,.5);white-space:nowrap;}
+  .av3-table tbody td{padding:8px 12px;border-bottom:1px solid var(--av3-line);color:var(--av3-fg);transition:background var(--av3-t-fast) var(--av3-ease);}
+  .av3-table tbody tr:last-child td{border-bottom:none;}
+  .av3-table tbody tr:hover td{background:var(--av3-s2);}
+  .av3-num{text-align:right;font-family:var(--av3-mono);font-variant-numeric:tabular-nums;}
+  .av3-th-num{text-align:right;}
+  .av3-cell-muted{color:var(--av3-muted);}
+
+  /* Dialog (rendered inline, animation replays on the "Replay" button) */
+  .av3-dialog-root{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:20px;}
+  .av3-dialog-scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);animation:av3-scrim-in var(--av3-t-base) var(--av3-ease);}
+  .av3-dialog{position:relative;width:100%;max-width:380px;display:flex;flex-direction:column;background:var(--av3-s1);
+    border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2);overflow:hidden;
+    animation:av3-dialog-in var(--av3-t-base) var(--av3-ease);}
+  @keyframes av3-scrim-in{from{opacity:0;}to{opacity:1;}}
+  @keyframes av3-dialog-in{from{opacity:0;transform:translateY(8px) scale(.985);}to{opacity:1;transform:none;}}
+  .av3-dialog-head{padding:14px 16px;border-bottom:1px solid var(--av3-line);}
+  .av3-dialog-title{font-size:15px;font-weight:600;}
+  .av3-dialog-sub{font-size:12px;color:var(--av3-muted);margin-top:2px;}
+  .av3-dialog-body{padding:16px;font-size:13px;color:var(--av3-muted);line-height:1.5;}
+  .av3-dialog-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--av3-line);background:var(--av3-s2);}
+  .av3-btn{display:inline-flex;align-items:center;height:30px;padding:0 12px;border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-sm);background:var(--av3-s2);color:var(--av3-fg);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;}
+  .av3-btn-primary{background:var(--av3-brand);border-color:transparent;color:#fff;}
+
+  /* page chrome */
+  body{margin:0;background:#3a3a40;padding:24px;font-family:Inter,system-ui,sans-serif;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1180px;margin:0 auto;}
+  h1{color:#fff;font-size:15px;font-weight:600;max-width:1180px;margin:0 auto 8px;}
+  p.note{color:#bdbcc2;font-size:12px;max-width:1180px;margin:0 auto 16px;}
+  .bar{max-width:1180px;margin:0 auto 14px;}
+  .bar button{background:#52525b;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;}
+</style>
+</head>
+<body>
+<h1>Admin v3 — heavy surfaces (dark ⟷ light)</h1>
+<p class="note">Hover the KPI tiles and table rows for the lift/affordance. The dialog plays its entry animation on load — use Replay to see it again.</p>
+<div class="bar"><button onclick="replay()">↻ Replay dialog animation</button></div>
+<div class="cols">
+  <div data-admin-theme="dark"><div class="av3-root"></div></div>
+  <div data-admin-theme="light"><div class="av3-root"></div></div>
+</div>
+
+<script>
+  const ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>';
+  const kpi = (label, val, accent, delta, dir) => `
+    <div class="av3-kpi" style="--av3-kpi-accent:var(${accent})">
+      <div class="av3-kpi-label">${ico}${label}</div>
+      <div class="av3-kpi-value">${val}</div>
+      <div class="av3-delta av3-delta-${dir}">${delta}</div>
+    </div>`;
+  const rows = [
+    ["#1042","Margherita ×2","Kraków","Ready","84.00"],
+    ["#1041","Diavola + Cola","Warszawa","In prep","57.00"],
+    ["#1040","Capricciosa","Kraków","New","39.00"],
+    ["#1039","Quattro Formaggi","Warszawa","Ready","45.00"],
+    ["#1038","Marinara ×3","Kraków","Done","72.00"],
+  ];
+  const panel = `
+    <div class="av3-kpi-rail">
+      ${kpi("Revenue","zł 12.4k","--av3-c1","+8.2%","up")}
+      ${kpi("Orders","318","--av3-c3","+3.1%","up")}
+      ${kpi("Avg ticket","zł 39","--av3-c2","−1.4%","down")}
+      ${kpi("Margin","61%","--av3-c4","+0.6%","up")}
+    </div>
+    <div class="av3-card">
+      <div class="av3-card-head"><span class="av3-card-title">Recent orders</span></div>
+      <div class="av3-table-wrap"><table class="av3-table">
+        <thead><tr><th>Order</th><th>Items</th><th>Site</th><th>Status</th><th class="av3-th-num">Total</th></tr></thead>
+        <tbody>${rows.concat(rows).map(r=>`<tr>
+          <td>${r[0]}</td><td>${r[1]}</td><td class="av3-cell-muted">${r[2]}</td><td>${r[3]}</td><td class="av3-num">${r[4]}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>
+    </div>
+    <div class="av3-dialog-root">
+      <div class="av3-dialog-scrim"></div>
+      <div class="av3-dialog">
+        <div class="av3-dialog-head"><div class="av3-dialog-title">Refund order #1042</div><div class="av3-dialog-sub">Margherita ×2 · Kraków</div></div>
+        <div class="av3-dialog-body">Choose a full or partial refund. Stripe reversal is issued immediately; manager comps are noted but not charged back.</div>
+        <div class="av3-dialog-foot"><button class="av3-btn">Cancel</button><button class="av3-btn av3-btn-primary">Refund zł 84.00</button></div>
+      </div>
+    </div>`;
+  function render(){ document.querySelectorAll(".av3-root").forEach(el=>el.innerHTML=panel); }
+  function replay(){ render(); }
+  render();
+</script>
+</body>
+</html>

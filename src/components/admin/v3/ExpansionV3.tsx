@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { ExpansionChecklist, ExpansionChecklistItem } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 const DEFAULT_ITEMS: Omit<ExpansionChecklistItem, "id" | "done">[] = [
   { label: "Register local business entity", category: "legal" },
@@ -84,7 +84,7 @@ export function ExpansionV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading expansion…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           <Table columns={cols} rows={rows} rowKey={(r) => r.slug} onRowClick={(r) => setSelected(r.slug)} />

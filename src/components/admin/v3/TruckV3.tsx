@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { TruckEvent, TruckEventStatus, TruckRoute, TruckStop } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 const STATUS_LABEL: Record<TruckEventStatus, string> = { scheduled: "Scheduled", live: "Live", done: "Done", cancelled: "Cancelled" };
 const STATUS_TONE: Record<TruckEventStatus, BadgeTone> = { scheduled: "warn", live: "info", done: "ok", cancelled: "neutral" };
@@ -83,7 +83,7 @@ export function TruckV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading truck ops…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "events" ? (
         <div className="av3-card" style={{ padding: 0 }}>
           {events.length === 0 ? (

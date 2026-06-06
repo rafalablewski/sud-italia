@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { Sparkline } from "./Sparkline";
 
 interface Props {
@@ -30,7 +30,7 @@ export function Kpi({ label, value, icon: Icon, deltaPct, invertDelta = false, s
   const DeltaIcon = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
 
   return (
-    <div className="av3-kpi">
+    <div className="av3-kpi" style={{ "--av3-kpi-accent": `var(${accentVar})` } as CSSProperties}>
       <div className="av3-kpi-label">
         {Icon && <Icon className="" />}
         {label}

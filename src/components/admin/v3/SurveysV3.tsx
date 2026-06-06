@@ -9,7 +9,7 @@ import {
   type SurveyDefinition,
   type SurveyResponse,
 } from "@/lib/surveys";
-import { Badge, InfoButton, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, type ColumnV3, InfoButton, Kpi, SkeletonRows, Switch, Table } from "./ui";
 
 function pulseTone(score: number): BadgeTone {
   if (score >= 50) return "ok";
@@ -55,9 +55,7 @@ export function SurveysV3() {
     { key: "trigger", header: "Fires", render: (s) => <Badge tone="neutral">{SURVEY_TRIGGER_LABEL[s.trigger] ?? s.trigger}</Badge> },
     { key: "resp", header: "Responses", num: true, render: (s) => `${responses.filter((r) => r.surveyId === s.id).length}` },
     { key: "active", header: "", render: (s) => (
-      <button type="button" className="av3-toggle" data-on={s.active} disabled={busy === s.id} onClick={(e) => { e.stopPropagation(); toggle(s); }} style={{ padding: "0 12px" }}>
-        {s.active ? "Active" : "Paused"}
-      </button>
+      <Switch checked={s.active} disabled={busy === s.id} label={s.active ? "Active" : "Paused"} onClick={(e) => e.stopPropagation()} onChange={() => toggle(s)} />
     ) },
   ];
 
@@ -116,7 +114,7 @@ export function SurveysV3() {
       </div>
 
       {loading && surveys.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading surveys…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "catalogue" ? (
         <div className="av3-card" style={{ padding: 0 }}>
           {surveys.length === 0 ? (

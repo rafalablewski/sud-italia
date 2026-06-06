@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarCheck2, Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { COMPLIANCE_KINDS, COMPLIANCE_KIND_LABELS, type ComplianceItem, type ComplianceKind } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 function daysTo(iso: string) { return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000); }
 function statusOf(iso: string): { tone: BadgeTone; label: string } {
@@ -74,7 +74,7 @@ export function ComplianceV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading compliance…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

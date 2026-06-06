@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles, Star } from "lucide-react";
-import { BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, Dialog, Donut, Kpi, Table, type BadgeTone, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
+import { Badge, type BadgeTone, BarChart, type BarDatum, Button, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Dialog, Donut, type DonutDatum, Kpi, SkeletonRows, Table } from "./ui";
 
 type Status = "new" | "reviewed" | "responded";
 interface FeedbackEntry {
@@ -165,7 +165,7 @@ export function FeedbackV3() {
       </div>
 
       {loading && list.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading feedback…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

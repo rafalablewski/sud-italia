@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cake, Coins, Download, PartyPopper, Plus, Repeat, ShieldAlert, Trash2, Users, Wallet } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface CustomerSummary {
   phone: string;
@@ -132,7 +132,7 @@ export function CustomersV3() {
       </div>
 
       {loading && list.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading customers…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (
@@ -246,7 +246,7 @@ function CustomerDetailDialog({ phone, onClose, onChanged }: { phone: string; on
       }
     >
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading customer…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : !data ? (
         <div className="av3-empty"><div className="av3-empty-title">Couldn’t load customer</div><div className="av3-empty-text">The detail request failed — close and try again.</div></div>
       ) : (

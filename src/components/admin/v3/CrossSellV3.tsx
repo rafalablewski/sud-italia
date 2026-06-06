@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { MenuCategory, MenuRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, SkeletonRows, Switch, Table } from "./ui";
 
 interface Combo {
   id: string;
@@ -93,7 +93,7 @@ export function CrossSellV3() {
     { key: "disc", header: "Discount", num: true, render: (c) => `${c.discountPercent}%` },
     { key: "min", header: "Min items", num: true, render: (c) => `${c.minItems}` },
     { key: "ch", header: "Channel", render: (c) => <span className="av3-cell-muted">{c.channel ?? "both"}</span> },
-    { key: "act", header: "", render: (c) => <button type="button" className="av3-toggle" data-on={c.active} disabled={saving} onClick={(e) => { e.stopPropagation(); toggleCombo(c.id); }} style={{ padding: "0 12px" }}>{c.active ? "Live" : "Off"}</button> },
+    { key: "act", header: "", render: (c) => <Switch checked={c.active} disabled={saving} label={c.active ? "Live" : "Off"} onClick={(e) => e.stopPropagation()} onChange={() => toggleCombo(c.id)} /> },
   ];
 
   return (
@@ -114,7 +114,7 @@ export function CrossSellV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading cross-sell…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "pairings" ? (
         <div className="av3-card" style={{ padding: 16 }}>
           <div className="av3-subhead" style={{ marginTop: 0 }}>Complete your meal — four fixed cart slots</div>
@@ -144,7 +144,7 @@ export function CrossSellV3() {
                 { key: "title", header: "Window", render: (w: TimeWindow) => <div><div style={{ fontWeight: 600 }}>{w.title || w.variant}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{w.sub}</div></div> },
                 { key: "time", header: "Hours", render: (w: TimeWindow) => <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{String(w.startHour).padStart(2, "0")}:00–{String(w.endHour).padStart(2, "0")}:00</span> },
                 { key: "badge", header: "Badge", render: (w: TimeWindow) => <span className="av3-cell-muted">{w.badge || "—"}</span> },
-                { key: "act", header: "", render: (w: TimeWindow) => <button type="button" className="av3-toggle" data-on={w.active} disabled={saving} onClick={(e) => { e.stopPropagation(); upsertWindow({ ...w, active: !w.active }); }} style={{ padding: "0 12px" }}>{w.active ? "Live" : "Off"}</button> },
+                { key: "act", header: "", render: (w: TimeWindow) => <Switch checked={w.active} disabled={saving} label={w.active ? "Live" : "Off"} onClick={(e) => e.stopPropagation()} onChange={() => upsertWindow({ ...w, active: !w.active })} /> },
               ]}
               rows={windows} rowKey={(w) => w.id} onRowClick={(w) => setEditWin(w)}
             />
@@ -260,7 +260,7 @@ function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo 
         <label className="av3-field"><span className="av3-field-label">Discount %</span><input className="av3-input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Min items</span><input className="av3-input" type="number" value={minItems} onChange={(e) => setMinItems(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Channel</span><select className="av3-select" value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">Both</option><option value="dine-in">Dine-in</option><option value="delivery">Delivery</option></select></label>
-        <label className="av3-field"><span className="av3-field-label">Live</span><button type="button" className="av3-toggle" data-on={active} onClick={() => setActive((v) => !v)} style={{ height: 32 }}>{active ? "On" : "Off"}</button></label>
+        <div className="av3-field"><span className="av3-field-label">Live</span><Switch aria-label="Live" checked={active} onChange={setActive} /></div>
       </div>
     </Dialog>
   );
@@ -291,7 +291,7 @@ function WindowDialog({ win, city, onClose, onSave, onDelete }: { win: TimeWindo
         <label className="av3-field"><span className="av3-field-label">Variant (skin)</span><select className="av3-select" value={variant} onChange={(e) => setVariant(e.target.value)}>{TIME_VARIANTS.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
         <label className="av3-field"><span className="av3-field-label">Start hr</span><input className="av3-input" type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">End hr</span><input className="av3-input" type="number" min={0} max={23} value={endHour} onChange={(e) => setEndHour(e.target.value)} /></label>
-        <label className="av3-field"><span className="av3-field-label">Live</span><button type="button" className="av3-toggle" data-on={active} onClick={() => setActive((v) => !v)} style={{ height: 32 }}>{active ? "On" : "Off"}</button></label>
+        <div className="av3-field"><span className="av3-field-label">Live</span><Switch aria-label="Live" checked={active} onChange={setActive} /></div>
       </div>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Title</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Buongiorno — start with an espresso" /></div>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Subtitle</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={sub} onChange={(e) => setSub(e.target.value)} /></div>

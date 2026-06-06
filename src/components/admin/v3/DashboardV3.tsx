@@ -22,7 +22,7 @@ import {
 import { formatPrice } from "@/lib/utils";
 import { isLocationOpenNow } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, Kpi, Table, type ColumnV3 } from "./ui";
+import { AreaChart, Badge, Button, Card, CardBody, CardHead, ChipRow, type ColumnV3, Kpi, SkeletonPage, Table } from "./ui";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function zl(grosze: number): string {
@@ -368,9 +368,7 @@ export function DashboardV3() {
 
   if (loading && !summary) {
     return (
-      <div className="av3-loading">
-        <span className="av3-spin" aria-hidden /> Loading the floor…
-      </div>
+      <SkeletonPage kpis={4} />
     );
   }
 

@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { StockMovementType } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, SkeletonRows, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface StockRow {
   id: string;
@@ -167,8 +167,8 @@ export function InventoryV3() {
         </div>
         <div className="av3-pagehead-actions">
           <div className="av3-viewtoggle" role="tablist" aria-label="View">
-            <button type="button" className={view === "stock" ? "is-active" : ""} aria-selected={view === "stock"} onClick={() => setView("stock")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Stock</button>
-            <button type="button" className={view === "movements" ? "is-active" : ""} aria-selected={view === "movements"} onClick={() => setView("movements")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Movements</button>
+            <button type="button" role="tab" className={view === "stock" ? "is-active" : ""} aria-selected={view === "stock"} onClick={() => setView("stock")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Stock</button>
+            <button type="button" role="tab" className={view === "movements" ? "is-active" : ""} aria-selected={view === "movements"} onClick={() => setView("movements")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Movements</button>
           </div>
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); fetchAll(); }}>
             <RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} />
@@ -198,7 +198,7 @@ export function InventoryV3() {
       )}
 
       {loading && stock.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading stock…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : view === "stock" ? (
         <div className="av3-card" style={{ padding: 0 }}>
           {filteredStock.length === 0 ? (
