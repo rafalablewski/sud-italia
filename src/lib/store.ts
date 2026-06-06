@@ -7526,6 +7526,57 @@ export async function getAuditLog(filters?: {
 }
 
 /**
+ * Delete audit-log entries — backs the owner-only purge in /admin/audit-log.
+ * Either wipes the whole trail (`{ all: true }`) or removes a specific set of
+ * ids (`{ ids }`), which covers the UI's "delete all / filtered / selected"
+ * actions (filtered + selected both resolve to a concrete id list on the
+ * client). Mirrors the dual store: when a DB is configured the normalized
+ * audit_log table is authoritative for the returned count, otherwise the
+ * kv_store copy is. Returns the number of entries removed.
+ */
+export async function deleteAuditLog(
+  selector: { all: true } | { ids: string[] },
+): Promise<number> {
+  const ids = "ids" in selector ? Array.from(new Set(selector.ids)) : null;
+  if (ids && ids.length === 0) return 0;
+
+  let kvDeleted = 0;
+  await withLock("audit-log.json", async () => {
+    const list = await readJSON<AuditLogEntry[]>("audit-log.json", []);
+    if (ids) {
+      const idSet = new Set(ids);
+      const next = list.filter((e) => !idSet.has(e.id));
+      kvDeleted = list.length - next.length;
+      await writeJSON("audit-log.json", next);
+    } else {
+      kvDeleted = list.length;
+      await writeJSON("audit-log.json", []);
+    }
+  });
+
+  const db = getDb();
+  if (db) {
+    try {
+      await ensureAuditLogTable();
+      const rows = ids
+        ? await db
+            .delete(auditLogTable)
+            .where(inArray(auditLogTable.id, ids))
+            .returning({ id: auditLogTable.id })
+        : await db.delete(auditLogTable).returning({ id: auditLogTable.id });
+      return rows.length;
+    } catch (err) {
+      logger.warn(
+        "deleteAuditLog DB delete failed; kv_store copy was cleared",
+        { layer: "store.audit_log" },
+        err,
+      );
+    }
+  }
+  return kvDeleted;
+}
+
+/**
  * Start-of-today (Warsaw local midnight) as a UTC ISO string. Used to scope
  * the per-shift comp cap to "today". Correct within a DST period; the once-a-year
  * DST-change day can be off by an hour, which is immaterial for a daily reset.

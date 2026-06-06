@@ -407,7 +407,17 @@ The append-only write trail.
 - **Table:** when, actor (email + role), action (slug), entity
   (customer / order / staff / setting / etc.), entity ID, before
   snippet, after snippet, IP, optional reason.
-- **No edit, no delete** — the audit log is append-only by design.
+- **No edit. Owner-only delete.** The trail is append-only for everyone
+  except owners. Owners get a delete toolbar above the list (managers who
+  can only read it never see the controls) with a per-row select checkbox +
+  "select all shown", and three actions, each behind a destructive
+  `ConfirmDialog`: **Delete selected** (the checked rows), **Delete
+  filtered** (every row under the current action filter — disabled while the
+  filter is "All"), and **Delete all** (the whole trail, including rows not
+  loaded on screen). All three call `DELETE /api/admin/audit-log` (owner
+  role gate) with `{ ids: [...] }` or `{ all: true }`; the purge itself is
+  written back as a new `audit.purge` entry recording the actor, scope, and
+  count, so the trail still shows it happened.
 - **Export** as JSON or CSV for legal / accountant requests; the export
   itself is also logged.
 

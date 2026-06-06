@@ -132,7 +132,7 @@ export default async function CapabilitiesPage() {
           name: "Audit log",
           status: has("DATABASE_URL") ? "live" : "needs-config",
           href: "/admin/audit-log",
-          summary: "Every write tagged with actor + entity. Full retention, no trim.",
+          summary: "Every write tagged with actor + entity. Full retention, no trim. Managers+ read it; owners can purge it from the page — delete selected rows, the current action filter, or the whole trail (DELETE /api/admin/audit-log, owner-only), with the purge itself logged as audit.purge.",
         },
         {
           name: "Users & RBAC management",
