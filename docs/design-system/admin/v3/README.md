@@ -493,6 +493,18 @@ refetches every 30s.
   scheduled pizzaioli). All five-section-ⓘ'd. The v3 Calculator is now at
   **functional parity with the v2 AdminSimulation** (the demand-shape + queue
   model are declared modelling layers, like the engine's seasonality defaults).
+  **Part 3h shipped — field-for-field input parity:** a model-level audit of
+  `SimulationScenario` found 15 engine-backed variables v2 exposed but v3 didn't,
+  now all wired into their existing cards: wage + ingredient inflation (Volume &
+  price); labour flex % + anchor orders/day (Labour); Marketing = CAC toggle
+  (Fixed costs); open hrs/day + oven physics (pizzas/cycle, cycle-s, efficiency)
+  + prep-complexity × (Investment & capacity); combo add-on-COGS % + the
+  cheapest-pizza-shift lever (Behaviour); 12 per-month seasonality overrides
+  (Seasonality); build-out learning % + floor % (Fleet). Every scenario field
+  the engine reads is now editable. **Remaining v2-only:** the `menuScenario` /
+  `menuScenarioOverrides` named-scenario system (a v2-UI input-swap the engine
+  doesn't compute) — superseded in v3 by Menu strategy presets + Scenario
+  comparison; not ported.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

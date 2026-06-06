@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
+import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
@@ -381,6 +381,8 @@ export function CalculatorV3() {
               <N label="Orders / day" value={scn.ordersPerDay} onChange={(n) => patch({ ordersPerDay: n })} />
               <Z label="Avg ticket (zł)" grosze={scn.avgTicketGrosze} onChange={(g) => patch({ avgTicketGrosze: g })} />
               <N label="Days open / mo" value={scn.daysOpenPerMonth} onChange={(n) => patch({ daysOpenPerMonth: n })} />
+              <P label="Wage infl. %/yr" frac={scn.wageInflationPct ?? 0} onChange={(f) => patch({ wageInflationPct: f })} w={120} />
+              <P label="Ingred. infl. %/yr" frac={scn.ingredientInflationPct ?? 0} onChange={(f) => patch({ ingredientInflationPct: f })} w={132} />
             </div></CardBody>
           </Card>
 
@@ -409,6 +411,10 @@ export function CalculatorV3() {
                   <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => rmLabor(i)}><X /></button>
                 </div>
               ))}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--av3-line)" }}>
+                <P label="Labour flex %" frac={scn.laborVariablePct ?? 0} onChange={(f) => patch({ laborVariablePct: f })} w={110} />
+                <N label="Anchor orders/day" value={scn.laborAnchorOrdersPerDay ?? scn.ordersPerDay} onChange={(n) => patch({ laborAnchorOrdersPerDay: n })} w={140} />
+              </div>
             </CardBody>
           </Card>
 
@@ -416,6 +422,7 @@ export function CalculatorV3() {
             <CardHead title="Fixed costs (monthly)" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {FIXED_KEYS.map((f) => <Z key={f.key} label={f.label} grosze={(scn.fixedCosts as Record<string, number>)[f.key] ?? 0} onChange={(g) => patchFixed(f.key, g)} w={110} />)}
+              <div className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Marketing = CAC</span><button type="button" className="av3-toggle" data-on={!!scn.marketingAsCac} onClick={() => patch({ marketingAsCac: !scn.marketingAsCac })}>{scn.marketingAsCac ? "Yes" : "No"}</button></div>
             </div></CardBody>
           </Card>
 
@@ -428,7 +435,12 @@ export function CalculatorV3() {
               {scn.kitchenCapacity && <>
                 <N label="Pizzas/hr" value={scn.kitchenCapacity.pizzasPerHour} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, pizzasPerHour: n } })} w={100} />
                 <P label="Peak-hr share" frac={scn.kitchenCapacity.peakHourSharePct} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, peakHourSharePct: f } })} w={110} />
+                <N label="Open hrs/day" value={scn.kitchenCapacity.openHoursPerDay} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, openHoursPerDay: n } })} w={104} step={0.5} />
+                <N label="Oven / cycle" value={scn.kitchenCapacity.ovenPizzasPerCycle ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenPizzasPerCycle: n } })} w={96} />
+                <N label="Cycle (s)" value={scn.kitchenCapacity.ovenCycleSeconds ?? 0} onChange={(n) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenCycleSeconds: n } })} w={92} />
+                <P label="Oven eff. %" frac={scn.kitchenCapacity.ovenEfficiencyPct ?? 0} onChange={(f) => patch({ kitchenCapacity: { ...scn.kitchenCapacity!, ovenEfficiencyPct: f } })} w={100} />
               </>}
+              <N label="Prep complexity ×" value={scn.prepComplexityMultiplier ?? 1} onChange={(n) => patch({ prepComplexityMultiplier: n })} w={130} step={0.05} />
             </div></CardBody>
           </Card>
 
@@ -443,7 +455,7 @@ export function CalculatorV3() {
                 <div className="av3-leverrow">
                   <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ comboConversion: { ...(cc ?? { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
                   <span className="av3-lever-name">Combo conversion</span>
-                  {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /></>}
+                  {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /><P label="Add-on COGS %" frac={cc.addonCogsPct} onChange={(f) => patchAssume({ comboConversion: { ...cc, addonCogsPct: f } })} w={112} /></>}
                 </div>
               ); })()}
               {(() => { const d = scn.assumptions?.deliveryShare; const on = !!d && d.enabled !== false; return (
@@ -451,6 +463,13 @@ export function CalculatorV3() {
                   <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ deliveryShare: { ...(d ?? { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
                   <span className="av3-lever-name">Delivery share</span>
                   {on && d && <><P label="%" frac={d.pct} onChange={(f) => patchAssume({ deliveryShare: { ...d, pct: f } })} w={72} /><Z label="Packaging" grosze={d.packagingCostGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, packagingCostGrosze: g } })} w={96} /><Z label="Fee" grosze={d.avgFeeGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, avgFeeGrosze: g } })} w={84} /></>}
+                </div>
+              ); })()}
+              {(() => { const cp = scn.assumptions?.cheapestPizzaShift; const on = !!cp && cp.enabled !== false; return (
+                <div className="av3-leverrow">
+                  <button type="button" className="av3-toggle" data-on={on} onClick={() => patchAssume({ cheapestPizzaShift: { ...(cp ?? { pp: 10, ticketDeltaGrosze: 80, cogsDeltaGrosze: 30 }), enabled: !on } })}>{on ? "On" : "Off"}</button>
+                  <span className="av3-lever-name">Cheapest-pizza shift</span>
+                  {on && cp && <><N label="Shift pp" value={cp.pp} onChange={(n) => patchAssume({ cheapestPizzaShift: { ...cp, pp: n } })} w={84} /><Z label="Ticket Δ/pp" grosze={cp.ticketDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, ticketDeltaGrosze: g } })} w={106} /><Z label="COGS Δ/pp" grosze={cp.cogsDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, cogsDeltaGrosze: g } })} w={106} /></>}
                 </div>
               ); })()}
             </CardBody>
@@ -473,8 +492,17 @@ export function CalculatorV3() {
           <Card>
             <CardHead title="Seasonality & weather" description="Quarterly multipliers + a calibrated weather/holiday model" />
             <CardBody>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 {SEASONS.map((s) => <P key={s.key} label={s.label} frac={(scn.seasonality ?? DEFAULT_SEASONALITY)[s.key] as number} onChange={(f) => patchSeason({ [s.key]: f } as Partial<SimulationSeasonality>)} w={96} />)}
+              </div>
+              <div className="av3-field-label" style={{ marginBottom: 6 }}>Per-month overrides (×, blank = use season)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 8 }}>
+                {MONTH_LABELS.map((m, i) => { const ov = scn.seasonality?.monthlyOverrides?.[i]; return (
+                  <label key={m} className="av3-field"><span className="av3-field-label">{m}</span>
+                    <input className="av3-input" type="number" step="0.01" value={ov ?? ""} placeholder="—"
+                      onChange={(e) => { const arr = [...(scn.seasonality?.monthlyOverrides ?? Array(12).fill(undefined))]; arr[i] = e.target.value === "" ? undefined : Number(e.target.value); patchSeason({ monthlyOverrides: arr }); }} />
+                  </label>
+                ); })}
               </div>
               {(() => { const w = scn.weather; const on = !!w && w.enabled !== false; return (
                 <>
@@ -522,6 +550,8 @@ export function CalculatorV3() {
                   <P label="Supply disc. %" frac={scn.fleet.supplyDiscountPct} onChange={(f) => patchFleet({ supplyDiscountPct: f })} w={110} />
                   <N label="Commissary @units" value={scn.fleet.commissaryEnabledAtUnits} onChange={(n) => patchFleet({ commissaryEnabledAtUnits: Math.round(n) })} w={130} />
                   <P label="Commissary save %" frac={scn.fleet.commissarySavingsPct} onChange={(f) => patchFleet({ commissarySavingsPct: f })} w={128} />
+                  <P label="Build-out learning %" frac={scn.fleet.buildoutLearningPct} onChange={(f) => patchFleet({ buildoutLearningPct: f })} w={136} />
+                  <P label="Build-out floor %" frac={scn.fleet.buildoutFloorPct} onChange={(f) => patchFleet({ buildoutFloorPct: f })} w={120} />
                 </>}
               </div>
             </CardBody>
