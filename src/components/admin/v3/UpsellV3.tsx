@@ -414,7 +414,7 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
       <div className="av3-subhead">Composition</div>
       <div className="av3-reciperow-head" style={{ gridTemplateColumns: "110px 1fr 70px 28px" }}><span>Kind</span><span>Category / item suffix</span><span>Qty</span><span /></div>
       {composition.map((s, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 1fr 70px 28px", gap: 8, alignItems: "center", padding: "3px 0" }}>
+        <div key={i} className="av3-reciperow" style={{ gridTemplateColumns: "110px 1fr 70px 28px", padding: "3px 0", borderBottom: "none" }}>
           <select className="av3-select" value={s.kind} onChange={(e) => setSlot(i, { kind: e.target.value as "category" | "item" })}><option value="category">Category</option><option value="item">Item</option></select>
           {s.kind === "category" ? (
             <select className="av3-select" value={s.category ?? "pizza"} onChange={(e) => setSlot(i, { category: e.target.value })}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>
