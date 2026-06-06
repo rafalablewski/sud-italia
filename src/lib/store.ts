@@ -7558,13 +7558,21 @@ export async function deleteAuditLog(
   if (db) {
     try {
       await ensureAuditLogTable();
-      const rows = ids
-        ? await db
-            .delete(auditLogTable)
-            .where(inArray(auditLogTable.id, ids))
-            .returning({ id: auditLogTable.id })
-        : await db.delete(auditLogTable).returning({ id: auditLogTable.id });
-      return rows.length;
+      if (ids) {
+        const rows = await db
+          .delete(auditLogTable)
+          .where(inArray(auditLogTable.id, ids))
+          .returning({ id: auditLogTable.id });
+        return rows.length;
+      }
+      // Full purge: count first, then delete without .returning(). The
+      // audit_log table has unlimited retention, so materializing every
+      // deleted id just to count them risks a memory spike / OOM.
+      const countRows = await db
+        .select({ c: drizzleSql<number>`count(*)` })
+        .from(auditLogTable);
+      await db.delete(auditLogTable);
+      return Number(countRows[0]?.c ?? 0);
     } catch (err) {
       logger.warn(
         "deleteAuditLog DB delete failed; kv_store copy was cleared",

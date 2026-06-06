@@ -27,7 +27,10 @@ export const DELETE = withAdmin(
   async (req, _ctx, { user }) => {
     let body: { all?: unknown; ids?: unknown } = {};
     try {
-      body = await req.json();
+      const parsed = await req.json();
+      // A literal JSON `null` (or a non-object) parses fine but would throw on
+      // property access below — keep the empty default so we fall through to 400.
+      if (parsed && typeof parsed === "object") body = parsed;
     } catch {
       // Empty / invalid body falls through to the 400 below.
     }
