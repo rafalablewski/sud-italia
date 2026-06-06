@@ -113,6 +113,14 @@ so reach for a class:
   (3/4-up → 2-up at ≤720 → 1-up at ≤560). Set `gap` inline at the call site.
 - `.av3-formrow` (3-up) / `.av3-formrow-4` (4-up) — dialog form scaffolds that
   stack at ≤720. Don't override their `grid-template-columns` inline.
+- `.av3-formgrid` — 2-up dialog field grid that **bottom-aligns** (`align-items:
+  end`) so a label-above-input field lines up with a single-row toggle; collapses
+  to 1-up at ≤560.
+- `.av3-togglerow` (+ `.av3-togglerow-label`) — a label-left / `Switch`-right
+  bordered row, height-matched to inputs/selects. Use this for a labelled boolean
+  inside a form **instead of** stacking an `.av3-field-label` above a bare
+  `.av3-switch` (which wraps the uppercase label and collides at narrow widths).
+  Greens its border via `:has()` when the switch is on.
 - `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
   keep its width (wide tables already wrap in `.av3-table-wrap`).
 - `.av3-dtabs` — the tabbed-dialog editor bar (Menu / Recipes) keeps its `flex:1`
@@ -370,6 +378,13 @@ refetches every 30s.
   **tabbed** (Product / Pricing / Modifiers / Disclosures, with counts on the
   last two) under a live **price·margin recap**, instead of one long scroll;
   money inputs carry a `zł` affix. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
+  **Product** shows the read-only **slug** (chain key — recipes/orders reference
+  it, so it's surfaced not renamed here). **Modifiers are per-site:** the tab
+  carries a site sub-toggle (`.av3-viewtoggle.is-text`, per-site count badge) plus
+  a **Copy <site> → all sites** action; each variant persists its own
+  `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
+  still write to every site (rule #10). Selects + booleans in Pricing/Disclosures
+  use `.av3-formgrid` + `.av3-togglerow` so they align instead of wrapping.
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
