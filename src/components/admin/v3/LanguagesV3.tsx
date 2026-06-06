@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Globe, Languages as LangIcon } from "lucide-react";
-import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
 
 type Locale = "pl" | "en" | "de" | "en-SG";
 const ALL: Locale[] = ["pl", "en", "de", "en-SG"];
@@ -61,7 +61,7 @@ export function LanguagesV3() {
           {ALL.map((l) => (
             <div key={l} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{LABEL[l]}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{l}</div></div>
-              <button type="button" className="av3-toggle" data-on={enabled[l]} onClick={() => toggleEnabled(l)} style={{ height: 32 }}>{enabled[l] ? "On" : "Off"}</button>
+              <Switch checked={enabled[l]} onChange={() => toggleEnabled(l)} />
               <button type="button" className="av3-toggle" data-on={def === l} disabled={!enabled[l]} onClick={() => setDefault(l)} style={{ height: 32 }}>{def === l ? "Default" : "Set"}</button>
             </div>
           ))}

@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { ALLERGEN_LABELS } from "@/data/types";
 import type { Allergen, MenuCategory, MenuRole, ModifierGroup, ModifierOption } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type MenuTag = "vegetarian" | "vegan" | "spicy" | "gluten-free";
 type Halal = "halal" | "non-halal" | "uncertified";
@@ -452,7 +452,7 @@ function ModifierEditor({ groups, onChange }: { groups: ModifierGroup[]; onChang
               <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={o.label} onChange={(e) => patchOption(gi, oi, { label: e.target.value })} />
               <input className="av3-input" type="number" step="0.01" value={o.priceDelta / 100} onChange={(e) => patchOption(gi, oi, { priceDelta: Math.round((Number(e.target.value) || 0) * 100) })} />
               <input className="av3-input" type="number" step="0.01" value={(o.costDelta ?? 0) / 100} onChange={(e) => patchOption(gi, oi, { costDelta: Math.round((Number(e.target.value) || 0) * 100) })} />
-              <button type="button" className="av3-toggle" data-on={o.flagOnKds ?? false} onClick={() => patchOption(gi, oi, { flagOnKds: !o.flagOnKds })}>{o.flagOnKds ? "On" : "Off"}</button>
+              <Switch checked={o.flagOnKds ?? false} onChange={() => patchOption(gi, oi, { flagOnKds: !o.flagOnKds })} />
               <button type="button" className="av3-iconbtn-sm" aria-label="Remove option" onClick={() => rmOption(gi, oi)} disabled={(g.options ?? []).length <= 1}><X /></button>
             </div>
           ))}
@@ -613,14 +613,14 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
                 <span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={r.price} onChange={(e) => setRow(r.slug, { price: e.target.value })} /></span>
                 <span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={r.cost} disabled={r.hasRecipe} title={r.hasRecipe ? "Cost derives from the recipe" : undefined} onChange={(e) => setRow(r.slug, { cost: e.target.value })} /></span>
                 <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} placeholder="—" value={r.sku} onChange={(e) => setRow(r.slug, { sku: e.target.value })} />
-                <button type="button" className="av3-toggle" data-on={r.available} onClick={() => setRow(r.slug, { available: !r.available })}>{r.available ? "On" : "Off"}</button>
+                <Switch checked={r.available} onChange={() => setRow(r.slug, { available: !r.available })} />
               </div>
             );
           })}
           <div className="av3-subhead">Service &amp; channel</div>
           <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
             <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Packaging cost</span><span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></span></label>
-            <div className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Delivery-only</span><button type="button" className="av3-toggle" data-on={deliveryOnly} onClick={() => setDeliveryOnly((v) => !v)}>{deliveryOnly ? "On" : "Off"}</button></div>
+            <div className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Delivery-only</span><Switch checked={deliveryOnly} onChange={setDeliveryOnly} /></div>
           </div>
         </>
       )}
@@ -637,8 +637,8 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
             <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
             <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains pork</span><button type="button" className="av3-toggle" data-on={containsPork} onClick={() => setContainsPork((v) => !v)}>{containsPork ? "Yes" : "No"}</button></div>
-            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains alcohol</span><button type="button" className="av3-toggle" data-on={containsAlcohol} onClick={() => setContainsAlcohol((v) => !v)}>{containsAlcohol ? "Yes" : "No"}</button></div>
+            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains pork</span><Switch checked={containsPork} onChange={setContainsPork} /></div>
+            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains alcohol</span><Switch checked={containsAlcohol} onChange={setContainsAlcohol} /></div>
           </div>
           <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Allergens</span>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
@@ -682,7 +682,7 @@ function BulkEditDialog({ count, onClose, onApply }: { count: number; onClose: (
       {row("cost", <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Cost (zł)</span><input className="av3-input" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} disabled={!fields.cost} /></label>)}
       {row("category", <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Category</span><select className="av3-select" value={category} onChange={(e) => setCategory(e.target.value as MenuCategory)} disabled={!fields.category}>{CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</select></label>)}
       {row("packagingCost", <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Packaging (zł)</span><input className="av3-input" type="number" step="0.01" value={packagingCost} onChange={(e) => setPackagingCost(e.target.value)} disabled={!fields.packagingCost} /></label>)}
-      {row("deliveryOnly", <div className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Delivery-only</span><button type="button" className="av3-toggle" data-on={deliveryOnly} onClick={() => setDeliveryOnly((v) => !v)} disabled={!fields.deliveryOnly}>{deliveryOnly ? "On" : "Off"}</button></div>)}
+      {row("deliveryOnly", <div className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Delivery-only</span><Switch checked={deliveryOnly} disabled={!fields.deliveryOnly} onChange={setDeliveryOnly} /></div>)}
     </Dialog>
   );
 }

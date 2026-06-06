@@ -693,6 +693,7 @@
   .av3-fchip { height: 34px; }
   .av3-chip { height: 32px; }
   .av3-toggle { height: 36px; }
+  .av3-switch { min-height: 36px; }
   .av3-iconbtn-sm { width: 36px; height: 36px; }
   .av3-scope select { height: 36px; max-width: 138px; }
 
@@ -719,6 +720,7 @@
   /* A touchscreen at any width still earns real hit areas. */
   .av3-nav-item { min-height: 40px; }
   .av3-fchip { min-height: 34px; }
+  .av3-switch { min-height: 36px; }
 }
 
 /* ==========================================================================
@@ -925,6 +927,21 @@
 .av3-locrow .av3-input { height: 30px; width: 100%; }
 .av3-toggle { height: 30px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm); background: var(--av3-s2); color: var(--av3-muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
 .av3-toggle[data-on="true"] { background: var(--av3-ok-soft); border-color: color-mix(in oklab, var(--av3-ok) 35%, transparent); color: var(--av3-ok); }
+
+/* On/off switch — THE boolean control (role="switch"). One definition, every
+   enable/disable toggle follows. The slider track + thumb are decorative; the
+   optional label sits beside it and clicking either toggles. */
+.av3-switch { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: none; background: none; color: var(--av3-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+.av3-switch-track { position: relative; flex-shrink: 0; width: 38px; height: 22px; border-radius: var(--av3-r-pill); background: var(--av3-s3); border: 1px solid var(--av3-line-strong); transition: background var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease); }
+.av3-switch-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--av3-subtle); transition: transform var(--av3-t-base) var(--av3-ease), background var(--av3-t-fast) var(--av3-ease); }
+.av3-switch[aria-checked="true"] { color: var(--av3-fg); }
+.av3-switch[aria-checked="true"] .av3-switch-track { background: var(--av3-ok-soft); border-color: color-mix(in oklab, var(--av3-ok) 45%, transparent); }
+.av3-switch[aria-checked="true"] .av3-switch-thumb { transform: translateX(16px); background: var(--av3-ok); }
+.av3-switch:disabled { opacity: 0.45; cursor: not-allowed; }
+.av3-switch:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; border-radius: var(--av3-r-sm); }
+.av3-switch-sm .av3-switch-track { width: 32px; height: 18px; }
+.av3-switch-sm .av3-switch-thumb { width: 13px; height: 13px; }
+.av3-switch-sm[aria-checked="true"] .av3-switch-thumb { transform: translateX(13px); }
 .av3-pricecell { display: inline-flex; align-items: center; gap: 6px; }
 .av3-varies { font-size: 9.5px; }
 

@@ -1,5 +1,5 @@
 export { Card, CardHead, CardBody } from "./Card";
-export { Button, Badge, ChipRow, type BadgeTone } from "./controls";
+export { Button, Badge, Switch, ChipRow, type BadgeTone } from "./controls";
 export { Dialog } from "./Dialog";
 export { MetricExplainer, InfoButton, type ExplainerProps } from "./Explainer";
 export { Kpi } from "./Kpi";

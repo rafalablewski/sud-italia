@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MapPin, Plus, X } from "lucide-react";
 import type { Location } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, Switch, Table, type ColumnV3 } from "./ui";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -120,8 +120,8 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
       <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Lat</span><input className="av3-input" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Lng</span><input className="av3-input" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
-        <label className="av3-field"><span className="av3-field-label">Active</span><button type="button" className="av3-toggle" data-on={isActive} onClick={() => setIsActive((v) => !v)}>{isActive ? "Yes" : "No"}</button></label>
-        <label className="av3-field"><span className="av3-field-label">Alcohol</span><button type="button" className="av3-toggle" data-on={servesAlcohol} onClick={() => setServesAlcohol((v) => !v)}>{servesAlcohol ? "Yes" : "No"}</button></label>
+        <div className="av3-field"><span className="av3-field-label">Active</span><Switch checked={isActive} onChange={setIsActive} /></div>
+        <div className="av3-field"><span className="av3-field-label">Alcohol</span><Switch checked={servesAlcohol} onChange={setServesAlcohol} /></div>
       </div>
       <div className="av3-subhead">Opening hours</div>
       {hours.map((h, i) => (

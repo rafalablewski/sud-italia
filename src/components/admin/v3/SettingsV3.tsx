@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
-import { Badge, Button, Card, CardBody, CardHead } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Switch } from "./ui";
 
 interface Layout {
   showCurrencySwitcher: boolean; showLanguageSwitcher: boolean; showBundlesShowcase: boolean; showLoyaltySection: boolean;
@@ -174,7 +174,7 @@ export function SettingsV3() {
               {LAYOUT_KEYS.map((k) => (
                 <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{k.label}</span>
-                  <button type="button" className="av3-toggle" data-on={layout[k.key]} onClick={() => toggleLayout(k.key)} style={{ padding: "0 12px" }}>{layout[k.key] ? "On" : "Off"}</button>
+                  <Switch checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
                 </div>
               ))}
             </CardBody>
@@ -185,7 +185,7 @@ export function SettingsV3() {
               {FLAG_KEYS.map((f) => (
                 <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{f.label}</span>
-                  <button type="button" className="av3-toggle" data-on={!!s[f.key]} onClick={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} style={{ padding: "0 12px" }}>{s[f.key] ? "On" : "Off"}</button>
+                  <Switch checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
                 </div>
               ))}
             </CardBody>

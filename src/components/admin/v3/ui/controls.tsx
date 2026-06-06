@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
 
 /* -------------------------------------------------------------------------- */
 /* Button — two primaries, three secondaries (per the admin theme doctrine).  */
@@ -42,6 +42,49 @@ export function Badge({ tone = "neutral", dot = false, children }: { tone?: Badg
       {dot && <span className="av3-badge-dot" aria-hidden />}
       {children}
     </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Switch — the one on/off control. role="switch", slides on toggle.          */
+/* -------------------------------------------------------------------------- */
+interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Optional text rendered beside the slider — clicking it also toggles. */
+  label?: ReactNode;
+  disabled?: boolean;
+  size?: "sm" | "md";
+  className?: string;
+  title?: string;
+  /** Runs before onChange — e.g. `e.stopPropagation()` inside a table row. */
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
+}
+
+/**
+ * The single enable/disable control for v3. A real sliding switch with
+ * `role="switch"` + `aria-checked` — restyle `.av3-switch` once and every
+ * toggle in the admin follows. Persist on `onChange` (Rule #7).
+ */
+export function Switch({ checked, onChange, label, disabled = false, size = "md", className = "", title, onClick }: SwitchProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      title={title}
+      onClick={(e) => {
+        onClick?.(e);
+        if (!disabled) onChange(!checked);
+      }}
+      className={`av3-switch ${size === "sm" ? "av3-switch-sm" : ""} ${className}`.trim()}
+    >
+      <span className="av3-switch-track" aria-hidden>
+        <span className="av3-switch-thumb" />
+      </span>
+      {label != null && <span className="av3-switch-label">{label}</span>}
+    </button>
   );
 }
 

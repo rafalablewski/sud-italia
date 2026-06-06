@@ -5,7 +5,7 @@ import { AlertTriangle, ClipboardCheck, Clock, Scale } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface Handover {
   id: string;
@@ -142,9 +142,9 @@ export function HandoverV3() {
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
             <span className="av3-field-label">Checks:</span>
-            <button type="button" className="av3-toggle" data-on={tempOk} onClick={() => setTempOk((v) => !v)} style={{ padding: "0 12px" }}>Temps {tempOk ? "OK" : "✕"}</button>
-            <button type="button" className="av3-toggle" data-on={wasteNoted} onClick={() => setWasteNoted((v) => !v)} style={{ padding: "0 12px" }}>Waste logged {wasteNoted ? "OK" : "✕"}</button>
-            <button type="button" className="av3-toggle" data-on={equipOk} onClick={() => setEquipOk((v) => !v)} style={{ padding: "0 12px" }}>Equipment {equipOk ? "OK" : "✕"}</button>
+            <Switch checked={tempOk} label="Temps" onChange={setTempOk} />
+            <Switch checked={wasteNoted} label="Waste logged" onChange={setWasteNoted} />
+            <Switch checked={equipOk} label="Equipment" onChange={setEquipOk} />
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "end" }}>
             <label className="av3-field" style={{ flex: 1 }}><span className="av3-field-label">Comment (optional)</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="anything the next manager should know" /></label>

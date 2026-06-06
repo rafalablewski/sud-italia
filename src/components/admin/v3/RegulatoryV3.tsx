@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckSquare, Globe, MapPin, ShieldCheck } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
 
 type Zone = "EU" | "NYC" | "SG";
 const ZONES: Zone[] = ["EU", "NYC", "SG"];
@@ -90,9 +90,9 @@ export function RegulatoryV3() {
             <CardBody>
               <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
                 <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Pack</span><select className="av3-select" value={lc.zone} onChange={(e) => setLoc(l.slug, { zone: e.target.value as Zone })}>{ZONES.map((z) => <option key={z} value={z}>{z}</option>)}</select></label>
-                <button type="button" className="av3-toggle" data-on={!!lc.calorieDisclosureRequired} onClick={() => setLoc(l.slug, { calorieDisclosureRequired: !lc.calorieDisclosureRequired })} style={{ height: 32, padding: "0 12px" }}>Calorie disclosure {lc.calorieDisclosureRequired ? "✓" : "✕"}</button>
-                <button type="button" className="av3-toggle" data-on={!!lc.nutriGradeRequired} onClick={() => setLoc(l.slug, { nutriGradeRequired: !lc.nutriGradeRequired })} style={{ height: 32, padding: "0 12px" }}>Nutri-Grade {lc.nutriGradeRequired ? "✓" : "✕"}</button>
-                <button type="button" className="av3-toggle" data-on={!!lc.gstRegistered} onClick={() => setLoc(l.slug, { gstRegistered: !lc.gstRegistered })} style={{ height: 32, padding: "0 12px" }}>GST registered {lc.gstRegistered ? "✓" : "✕"}</button>
+                <Switch checked={!!lc.calorieDisclosureRequired} label="Calorie disclosure" onChange={() => setLoc(l.slug, { calorieDisclosureRequired: !lc.calorieDisclosureRequired })} />
+                <Switch checked={!!lc.nutriGradeRequired} label="Nutri-Grade" onChange={() => setLoc(l.slug, { nutriGradeRequired: !lc.nutriGradeRequired })} />
+                <Switch checked={!!lc.gstRegistered} label="GST registered" onChange={() => setLoc(l.slug, { gstRegistered: !lc.gstRegistered })} />
               </div>
             </CardBody>
           </Card>

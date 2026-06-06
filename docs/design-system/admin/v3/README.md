@@ -89,7 +89,7 @@ Four breakpoints, narrowing in:
 | ≤1180px | Two-column page splits (`.av3-bodysplit`) collapse to one column. |
 | ≤900px  | The sidebar becomes an **off-canvas drawer** — `AdminShellV3` toggles `data-mobile-open`, `TopbarV3` grows the hamburger (`.av3-side-toggle-mobile`), a scrim covers the content, and the drawer **ignores the desktop rail-collapsed state** so a phone user who left the sidebar collapsed still gets full labels. The breadcrumb keeps only its last segment. |
 | ≤720px  | Content gutter tightens; `.av3-grid-2` / `.av3-grid-2-1` / `.av3-formrow` / `.av3-formrow-4` / `.av3-od-grid` stack one-per-row; dense editor rows (`.av3-locrow`, `.av3-reciperow`) get a `min-width` so header + rows scroll together inside the dialog body rather than crushing. |
-| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width), and **page-level config/editor rows (`.av3-cfgrow`) stack one control per line** so a `label + fixed controls` row never crushes its label to a few pixels (the `.av3-cfgrow-head` column-label strip hides). |
+| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-switch`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width), and **page-level config/editor rows (`.av3-cfgrow`) stack one control per line** so a `label + fixed controls` row never crushes its label to a few pixels (the `.av3-cfgrow-head` column-label strip hides). |
 
 A `@media (pointer: coarse)` floor gives a touchscreen real hit areas at any width.
 
@@ -130,12 +130,25 @@ so reach for a class:
 
 ## Primitives (so far)
 
-`v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Kpi` (the dense metric tile
+`v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Switch` (the **one** on/off
+control — see below), `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
 to `#admin-portal-root` per rule #4), and the **charts** (`Chart.tsx`:
 `AreaChart` / `BarChart` / `Donut` / `ChartLegend`). The set grows as pages
 migrate.
+
+**Switch (`v3/ui/controls.tsx` → `.av3-switch`).** THE enable/disable control
+for v3 — a real sliding toggle with `role="switch"` + `aria-checked`, not a
+text button. One definition, restyle `.av3-switch` once and every toggle
+follows (same contract as v2's `.v2-switch`). Props: `checked` + `onChange`
+(persist on change per rule #7), optional `label` (text beside the slider —
+clicking it also toggles), `disabled`, `size` (`"sm"` for dense rows like the
+Calculator ingredient-stress cards), and `onClick` (runs before `onChange`,
+e.g. `e.stopPropagation()` inside a table row). Reach for this for any
+boolean; never hand-roll a `<button className="av3-toggle">{x ? "On" : "Off"}</button>`.
+`.av3-toggle` survives only for the **non-boolean** "Set / Default" action in
+Languages & Currency (it picks one option, it doesn't flip a boolean).
 
 **Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
 the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2

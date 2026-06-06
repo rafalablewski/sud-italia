@@ -43,7 +43,7 @@ touch*. Read that section before adding more (Rule #11).
   inline `1fr 1fr 1fr(1fr)` form grids were converted to these classes so they
   actually stack (an inline `grid-template-columns` defeats the media override).
 - ✅ **Tap targets** — `.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`,
-  `.av3-toggle`, `.av3-iconbtn-sm`, `.av3-scope select` hit the 44px floor at
+  `.av3-toggle`, `.av3-switch`, `.av3-iconbtn-sm`, `.av3-scope select` hit the 44px floor at
   ≤560 + a `@media (pointer: coarse)` floor.
 
 ### Still to do (refinements)

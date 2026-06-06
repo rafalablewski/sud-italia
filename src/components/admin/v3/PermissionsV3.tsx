@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Grid3x3, Minus, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { ALL_PERMISSION_KEYS, PERMISSION_GROUPS, ROLE_DEFAULT_PERMISSIONS } from "@/lib/permissions";
 import type { AdminRole } from "@/lib/admin-roles";
-import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
 
 interface UserRow { id: string; name: string; email?: string; role: AdminRole; status?: string; locationSlug?: string; notes?: string; permissions?: string[] }
 
@@ -112,7 +112,7 @@ export function PermissionsV3() {
                           <div style={{ fontSize: 12.5, fontWeight: 500 }}>{p.label}</div>
                           <div className="av3-cell-muted" style={{ fontSize: 11 }}>{p.description}</div>
                         </div>
-                        <button type="button" className="av3-toggle" data-on={on} disabled={isOwner || busy === p.key} onClick={() => toggle(p.key)} style={{ padding: "0 12px", flexShrink: 0 }}>{on ? "Granted" : "—"}</button>
+                        <Switch checked={on} disabled={isOwner || busy === p.key} label={on ? "Granted" : "—"} onChange={() => toggle(p.key)} />
                       </div>
                     );
                   })}
