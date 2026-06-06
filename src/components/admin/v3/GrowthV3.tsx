@@ -134,7 +134,7 @@ export function GrowthV3() {
       </div>
 
       <Card>
-        <CardHead title="Referral program" description="Reward both sides of a referral" actions={<Switch checked={s?.referral?.active ?? false} onChange={() => put({ referral: { referrerPoints: s?.referral?.referrerPoints ?? 0, refereeDiscountGrosze: s?.referral?.refereeDiscountGrosze ?? 0, active: !(s?.referral?.active ?? false) } })} />} />
+        <CardHead title="Referral program" description="Reward both sides of a referral" actions={<Switch aria-label="Referral program" checked={s?.referral?.active ?? false} onChange={() => put({ referral: { referrerPoints: s?.referral?.referrerPoints ?? 0, refereeDiscountGrosze: s?.referral?.refereeDiscountGrosze ?? 0, active: !(s?.referral?.active ?? false) } })} />} />
         <CardBody>
           <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
             <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Referrer points</span><input className="av3-input" type="number" value={refDraft.points} onChange={(e) => setRefDraft((d) => ({ ...d, points: e.target.value }))} /></label>
@@ -234,7 +234,7 @@ export function GrowthV3() {
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{w.label || meta.label}</div>
                     <div className="av3-cell-muted" style={{ fontSize: 11 }}>{meta.label} · {locLabel}</div>
                   </div>
-                  <Switch checked={w.active} onChange={() => toggleWidget(w.id)} />
+                  <Switch aria-label={w.label || meta.label} checked={w.active} onChange={() => toggleWidget(w.id)} />
                   <button type="button" className="av3-iconbtn-sm" aria-label="Edit widget" onClick={() => setWidgetEdit(w)}><Pencil /></button>
                   <button type="button" className="av3-iconbtn-sm" aria-label="Delete widget" onClick={() => deleteWidget(w.id)}><Trash2 /></button>
                 </div>
@@ -339,7 +339,7 @@ function WidgetDialogV3({
         <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Pick one or more cities; clear all to broadcast everywhere.</span>
       </div>
       <div className="av3-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Switch checked={active} onChange={setActive} />
+        <Switch aria-label="Show this widget" checked={active} onChange={setActive} />
         <span className="av3-field-label" style={{ textTransform: "none" }}>Show this widget</span>
       </div>
     </Dialog>

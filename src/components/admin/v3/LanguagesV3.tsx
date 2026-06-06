@@ -61,7 +61,7 @@ export function LanguagesV3() {
           {ALL.map((l) => (
             <div key={l} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{LABEL[l]}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{l}</div></div>
-              <Switch checked={enabled[l]} onChange={() => toggleEnabled(l)} />
+              <Switch aria-label={`Enable ${LABEL[l]}`} checked={enabled[l]} onChange={() => toggleEnabled(l)} />
               <button type="button" className="av3-toggle" data-on={def === l} disabled={!enabled[l]} onClick={() => setDefault(l)} style={{ height: 32 }}>{def === l ? "Default" : "Set"}</button>
             </div>
           ))}

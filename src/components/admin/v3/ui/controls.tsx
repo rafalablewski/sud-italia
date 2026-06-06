@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 /* -------------------------------------------------------------------------- */
 /* Button — two primaries, three secondaries (per the admin theme doctrine).  */
@@ -48,32 +48,29 @@ export function Badge({ tone = "neutral", dot = false, children }: { tone?: Badg
 /* -------------------------------------------------------------------------- */
 /* Switch — the one on/off control. role="switch", slides on toggle.          */
 /* -------------------------------------------------------------------------- */
-interface SwitchProps {
+interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
   checked: boolean;
   onChange: (checked: boolean) => void;
   /** Optional text rendered beside the slider — clicking it also toggles. */
   label?: ReactNode;
-  disabled?: boolean;
   size?: "sm" | "md";
-  className?: string;
-  title?: string;
-  /** Runs before onChange — e.g. `e.stopPropagation()` inside a table row. */
-  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
 }
 
 /**
  * The single enable/disable control for v3. A real sliding switch with
  * `role="switch"` + `aria-checked` — restyle `.av3-switch` once and every
- * toggle in the admin follows. Persist on `onChange` (Rule #7).
+ * toggle in the admin follows. Persist on `onChange` (Rule #7). Remaining
+ * button attributes (`aria-label`, `id`, `title`, …) forward to the element,
+ * so a switch labelled by sibling text can still expose an accessible name.
  */
-export function Switch({ checked, onChange, label, disabled = false, size = "md", className = "", title, onClick }: SwitchProps) {
+export function Switch({ checked, onChange, label, disabled = false, size = "md", className = "", onClick, ...rest }: SwitchProps) {
   return (
     <button
+      {...rest}
       type="button"
       role="switch"
       aria-checked={checked}
       disabled={disabled}
-      title={title}
       onClick={(e) => {
         onClick?.(e);
         if (!disabled) onChange(!checked);

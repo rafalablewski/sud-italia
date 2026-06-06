@@ -49,7 +49,7 @@ function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?
   const on = !!lever && lever.enabled !== false;
   return (
     <div className="av3-leverrow">
-      <Switch checked={on} onChange={onToggle} />
+      <Switch aria-label={label} checked={on} onChange={onToggle} />
       <span className="av3-lever-name">{label}</span>
       {on && lever && <>
         <P label="Attach %" frac={lever.attachPct} onChange={(f) => onChange({ attachPct: f })} w={84} />
@@ -455,7 +455,7 @@ export function CalculatorV3() {
             <CardHead title="Fixed costs (monthly)" />
             <CardBody><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {FIXED_KEYS.map((f) => <Z key={f.key} label={f.label} grosze={(scn.fixedCosts as Record<string, number>)[f.key] ?? 0} onChange={(g) => patchFixed(f.key, g)} w={110} />)}
-              <div className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Marketing = CAC</span><Switch checked={!!scn.marketingAsCac} onChange={() => patch({ marketingAsCac: !scn.marketingAsCac })} /></div>
+              <div className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Marketing = CAC</span><Switch aria-label="Marketing = CAC" checked={!!scn.marketingAsCac} onChange={() => patch({ marketingAsCac: !scn.marketingAsCac })} /></div>
             </div></CardBody>
           </Card>
 
@@ -486,21 +486,21 @@ export function CalculatorV3() {
               ))}
               {(() => { const cc = scn.assumptions?.comboConversion; const on = !!cc && cc.enabled !== false; return (
                 <div className="av3-leverrow">
-                  <Switch checked={on} onChange={() => patchAssume({ comboConversion: { ...(cc ?? { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 }), enabled: !on } })} />
+                  <Switch aria-label="Combo conversion" checked={on} onChange={() => patchAssume({ comboConversion: { ...(cc ?? { pct: 0.20, addonGrosze: 2500, discountGrosze: 600, addonCogsPct: 0.25 }), enabled: !on } })} />
                   <span className="av3-lever-name">Combo conversion</span>
                   {on && cc && <><P label="%" frac={cc.pct} onChange={(f) => patchAssume({ comboConversion: { ...cc, pct: f } })} w={72} /><Z label="Add-on" grosze={cc.addonGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, addonGrosze: g } })} w={84} /><Z label="Disc." grosze={cc.discountGrosze} onChange={(g) => patchAssume({ comboConversion: { ...cc, discountGrosze: g } })} w={84} /><P label="Add-on COGS %" frac={cc.addonCogsPct} onChange={(f) => patchAssume({ comboConversion: { ...cc, addonCogsPct: f } })} w={112} /></>}
                 </div>
               ); })()}
               {(() => { const d = scn.assumptions?.deliveryShare; const on = !!d && d.enabled !== false; return (
                 <div className="av3-leverrow">
-                  <Switch checked={on} onChange={() => patchAssume({ deliveryShare: { ...(d ?? { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 }), enabled: !on } })} />
+                  <Switch aria-label="Delivery share" checked={on} onChange={() => patchAssume({ deliveryShare: { ...(d ?? { pct: 0.25, packagingCostGrosze: 250, extraProcessorPct: 0, avgFeeGrosze: 800 }), enabled: !on } })} />
                   <span className="av3-lever-name">Delivery share</span>
                   {on && d && <><P label="%" frac={d.pct} onChange={(f) => patchAssume({ deliveryShare: { ...d, pct: f } })} w={72} /><Z label="Packaging" grosze={d.packagingCostGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, packagingCostGrosze: g } })} w={96} /><Z label="Fee" grosze={d.avgFeeGrosze} onChange={(g) => patchAssume({ deliveryShare: { ...d, avgFeeGrosze: g } })} w={84} /></>}
                 </div>
               ); })()}
               {(() => { const cp = scn.assumptions?.cheapestPizzaShift; const on = !!cp && cp.enabled !== false; return (
                 <div className="av3-leverrow">
-                  <Switch checked={on} onChange={() => patchAssume({ cheapestPizzaShift: { ...(cp ?? { pp: 10, ticketDeltaGrosze: 80, cogsDeltaGrosze: 30 }), enabled: !on } })} />
+                  <Switch aria-label="Cheapest-pizza shift" checked={on} onChange={() => patchAssume({ cheapestPizzaShift: { ...(cp ?? { pp: 10, ticketDeltaGrosze: 80, cogsDeltaGrosze: 30 }), enabled: !on } })} />
                   <span className="av3-lever-name">Cheapest-pizza shift</span>
                   {on && cp && <><N label="Shift pp" value={cp.pp} onChange={(n) => patchAssume({ cheapestPizzaShift: { ...cp, pp: n } })} w={84} /><Z label="Ticket Δ/pp" grosze={cp.ticketDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, ticketDeltaGrosze: g } })} w={106} /><Z label="COGS Δ/pp" grosze={cp.cogsDeltaGrosze} onChange={(g) => patchAssume({ cheapestPizzaShift: { ...cp, cogsDeltaGrosze: g } })} w={106} /></>}
                 </div>
@@ -514,7 +514,7 @@ export function CalculatorV3() {
             <CardBody><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {(Object.keys(INGREDIENT_LABELS) as IngKey[]).map((k) => { const lev = scn.assumptions?.ingredients?.[k]; const on = !!lev && lev.enabled !== false; return (
                 <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3, width: 116, border: "1px solid var(--av3-line)", borderRadius: 7, padding: 7 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 11 }}>{INGREDIENT_LABELS[k]}</span><Switch size="sm" checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: lev?.cogsShare ?? INGREDIENT_SHARES[k], costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} /></div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 11 }}>{INGREDIENT_LABELS[k]}</span><Switch aria-label={INGREDIENT_LABELS[k]} size="sm" checked={on} onChange={() => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { cogsShare: lev?.cogsShare ?? INGREDIENT_SHARES[k], costDeltaPct: lev?.costDeltaPct ?? 0, enabled: !on } } })} /></div>
                   {on && lev && <input className="av3-input" type="number" step="1" value={Math.round((lev.costDeltaPct ?? 0) * 100)} onChange={(e) => patchAssume({ ingredients: { ...(scn.assumptions?.ingredients ?? {}), [k]: { ...lev, costDeltaPct: (Number(e.target.value) || 0) / 100 } } })} title="cost delta %" />}
                 </div>
               ); })}
@@ -540,7 +540,7 @@ export function CalculatorV3() {
               {(() => { const w = scn.weather; const on = !!w && w.enabled !== false; return (
                 <>
                   <div className="av3-leverrow">
-                    <Switch checked={on} onChange={() => patchWeather({ enabled: !on })} />
+                    <Switch aria-label="Weather & holiday model" checked={on} onChange={() => patchWeather({ enabled: !on })} />
                     <span className="av3-lever-name">Weather & holiday model</span>
                   </div>
                   {on && w && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>

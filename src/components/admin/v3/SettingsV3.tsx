@@ -174,7 +174,7 @@ export function SettingsV3() {
               {LAYOUT_KEYS.map((k) => (
                 <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{k.label}</span>
-                  <Switch checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
+                  <Switch aria-label={k.label} checked={layout[k.key]} onChange={() => toggleLayout(k.key)} />
                 </div>
               ))}
             </CardBody>
@@ -185,7 +185,7 @@ export function SettingsV3() {
               {FLAG_KEYS.map((f) => (
                 <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
                   <span style={{ flex: 1, fontSize: 12.5 }}>{f.label}</span>
-                  <Switch checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
+                  <Switch aria-label={f.label} checked={!!s[f.key]} onChange={() => put({ [f.key]: !s[f.key] } as Partial<Settings>)} />
                 </div>
               ))}
             </CardBody>

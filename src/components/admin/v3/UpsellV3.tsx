@@ -432,7 +432,7 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
         <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Loyalty gate</span><select className="av3-select" value={requiredTier} onChange={(e) => setRequiredTier(e.target.value)}><option value="">None</option><option value="gold">Gold</option><option value="platinum">Platinum</option></select></label>
         <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Channel</span><select className="av3-select" value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">Both</option><option value="dine-in">Dine-in</option><option value="delivery">Delivery</option></select></label>
         <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Limited until</span><input className="av3-input" type="date" value={limitedUntil} onChange={(e) => setLimitedUntil(e.target.value)} /></label>
-        <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Members-only</span><Switch checked={membersOnly} onChange={setMembersOnly} /></div>
+        <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Members-only</span><Switch aria-label="Members-only" checked={membersOnly} onChange={setMembersOnly} /></div>
       </div>
       <span className="av3-field-label" style={{ display: "block", marginBottom: 4 }}>Active days (none = all week)</span>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>

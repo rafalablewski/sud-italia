@@ -120,8 +120,8 @@ function LocationDialog({ location, onClose, onSaved }: { location: Location | n
       <div className="av3-formrow av3-formrow-4" style={{ marginBottom: 10 }}>
         <label className="av3-field"><span className="av3-field-label">Lat</span><input className="av3-input" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Lng</span><input className="av3-input" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
-        <div className="av3-field"><span className="av3-field-label">Active</span><Switch checked={isActive} onChange={setIsActive} /></div>
-        <div className="av3-field"><span className="av3-field-label">Alcohol</span><Switch checked={servesAlcohol} onChange={setServesAlcohol} /></div>
+        <div className="av3-field"><span className="av3-field-label">Active</span><Switch aria-label="Active" checked={isActive} onChange={setIsActive} /></div>
+        <div className="av3-field"><span className="av3-field-label">Alcohol</span><Switch aria-label="Alcohol" checked={servesAlcohol} onChange={setServesAlcohol} /></div>
       </div>
       <div className="av3-subhead">Opening hours</div>
       {hours.map((h, i) => (

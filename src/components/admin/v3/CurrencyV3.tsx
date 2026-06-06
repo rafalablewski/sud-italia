@@ -68,7 +68,7 @@ export function CurrencyV3() {
             <div key={c} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 140px 90px 90px", padding: "9px 0", borderBottom: "1px solid var(--av3-line)" }}>
               <div><div style={{ fontSize: 13, fontWeight: 600 }}>{META[c].label}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{c} · {META[c].symbol}</div></div>
               <label className="av3-field"><span className="av3-field-label">Rate / PLN</span><input className="av3-input" type="number" step="any" value={rates[c]} disabled={c === "PLN"} onChange={(e) => setRates((r) => ({ ...r, [c]: e.target.value }))} onBlur={() => persist({ rates })} /></label>
-              <Switch checked={enabled[c]} disabled={c === "PLN"} onChange={() => toggleEnabled(c)} />
+              <Switch aria-label={`Enable ${META[c].label}`} checked={enabled[c]} disabled={c === "PLN"} onChange={() => toggleEnabled(c)} />
               <button type="button" className="av3-toggle" data-on={def === c} disabled={!enabled[c]} onClick={() => setDefault(c)} style={{ height: 32 }}>{def === c ? "Default" : "Set"}</button>
             </div>
           ))}

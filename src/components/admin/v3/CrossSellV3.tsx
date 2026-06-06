@@ -260,7 +260,7 @@ function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo 
         <label className="av3-field"><span className="av3-field-label">Discount %</span><input className="av3-input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Min items</span><input className="av3-input" type="number" value={minItems} onChange={(e) => setMinItems(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">Channel</span><select className="av3-select" value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">Both</option><option value="dine-in">Dine-in</option><option value="delivery">Delivery</option></select></label>
-        <div className="av3-field"><span className="av3-field-label">Live</span><Switch checked={active} onChange={setActive} /></div>
+        <div className="av3-field"><span className="av3-field-label">Live</span><Switch aria-label="Live" checked={active} onChange={setActive} /></div>
       </div>
     </Dialog>
   );
@@ -291,7 +291,7 @@ function WindowDialog({ win, city, onClose, onSave, onDelete }: { win: TimeWindo
         <label className="av3-field"><span className="av3-field-label">Variant (skin)</span><select className="av3-select" value={variant} onChange={(e) => setVariant(e.target.value)}>{TIME_VARIANTS.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
         <label className="av3-field"><span className="av3-field-label">Start hr</span><input className="av3-input" type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(e.target.value)} /></label>
         <label className="av3-field"><span className="av3-field-label">End hr</span><input className="av3-input" type="number" min={0} max={23} value={endHour} onChange={(e) => setEndHour(e.target.value)} /></label>
-        <div className="av3-field"><span className="av3-field-label">Live</span><Switch checked={active} onChange={setActive} /></div>
+        <div className="av3-field"><span className="av3-field-label">Live</span><Switch aria-label="Live" checked={active} onChange={setActive} /></div>
       </div>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Title</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Buongiorno — start with an espresso" /></div>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Subtitle</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={sub} onChange={(e) => setSub(e.target.value)} /></div>
