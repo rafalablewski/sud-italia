@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Permission matrix — view toggle options</title>
+<!--
+  Standalone comparison of view-toggle treatments for the Permission matrix
+  page head (src/components/admin/v3/PermissionsV3.tsx).
+
+  Option A is the CURRENT production look (text crammed into the 28px icon box).
+  Options B–D are candidate fixes. Base CSS / tokens copied verbatim from
+  src/app/themes/admin-v3/index.css; the new toggle variants are additive.
+  Switch dark/light with the button top-right.
+-->
+<style>
+  :root {
+    --av3-bg: #0a0a0c; --av3-s1: #141417; --av3-s2: #1b1b1f; --av3-s3: #24242a;
+    --av3-hover: #2c2c33;
+    --av3-line: rgba(255,255,255,0.07); --av3-line-strong: rgba(255,255,255,0.13);
+    --av3-fg: #f4f3f1; --av3-muted: #a6a099; --av3-subtle: #8a837b;
+    --av3-brand: #c2384f; --av3-platinum: #cbb48a;
+    --av3-ok: #34b27b; --av3-warn: #e0a93f; --av3-bad: #e8554f; --av3-info: #5f9bd6;
+    --av3-c2: #cbb48a; --av3-c3: #5f9bd6; --av3-c4: #34b27b; --av3-c5: #d3884f;
+    --av3-r-sm: 5px; --av3-r-md: 8px; --av3-r-lg: 11px; --av3-r-pill: 999px;
+    --av3-gap-2: 8px; --av3-gap-3: 12px; --av3-gap-4: 16px; --av3-gap-5: 24px;
+    --av3-sh-1: 0 1px 2px rgba(0,0,0,0.4); --av3-sh-2: 0 8px 28px -8px rgba(0,0,0,0.55);
+    --av3-ease: cubic-bezier(0.4,0,0.2,1); --av3-t-fast: 110ms;
+    --av3-ui: "Inter", system-ui, sans-serif;
+    --av3-display: "Fraunces", Georgia, serif;
+    --av3-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  [data-theme="light"] {
+    --av3-bg: #f7f5f1; --av3-s1: #ffffff; --av3-s2: #f6f3ee; --av3-s3: #efebe3;
+    --av3-hover: #e9e4da;
+    --av3-line: rgba(28,24,21,0.09); --av3-line-strong: rgba(28,24,21,0.16);
+    --av3-fg: #1a1714; --av3-muted: #57504a; --av3-subtle: #756d65;
+    --av3-brand: #a82940; --av3-platinum: #9c7e4e;
+    --av3-ok: #15744d; --av3-warn: #8a590c; --av3-bad: #cc3a35; --av3-info: #3d6694;
+    --av3-c2: #9c7e4e; --av3-c3: #3d6694; --av3-c4: #1f8a60; --av3-c5: #b56a3b;
+    --av3-sh-1: 0 1px 2px rgba(28,24,21,0.06); --av3-sh-2: 0 10px 30px -10px rgba(28,24,21,0.18);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--av3-bg); color: var(--av3-fg); font-family: var(--av3-ui); }
+  .canvas { max-width: 1020px; margin: 0 auto; padding: 28px 24px 64px; display: flex; flex-direction: column; gap: var(--av3-gap-5); }
+  .preview-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .preview-bar h2 { font-family: var(--av3-display); margin: 0; font-size: 16px; font-weight: 600; }
+  .preview-bar small { color: var(--av3-subtle); font-size: 12px; }
+  .theme-btn { border: 1px solid var(--av3-line-strong); background: var(--av3-s2); color: var(--av3-fg); border-radius: var(--av3-r-sm); padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+
+  .opt { background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .opt-head { display: flex; align-items: baseline; gap: 10px; }
+  .opt-tag { font-family: var(--av3-mono); font-size: 11px; font-weight: 600; color: var(--av3-platinum); border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-pill); padding: 2px 9px; }
+  .opt-name { font-size: 14px; font-weight: 600; }
+  .opt-desc { font-size: 12px; color: var(--av3-muted); }
+  .opt-rec { color: var(--av3-ok); border-color: color-mix(in oklab, var(--av3-ok) 45%, transparent); }
+  .stage { display: flex; align-items: center; gap: 16px; padding: 8px 0; flex-wrap: wrap; }
+  .stage .av3-pagehead-sub { font-size: 12px; }
+
+  /* ===== base, verbatim from index.css ===== */
+  .av3-pagehead h1 { margin: 0; font-family: var(--av3-display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .av3-pagehead-sub { margin-top: 2px; font-size: 12.5px; color: var(--av3-muted); }
+
+  .av3-viewtoggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); }
+  .av3-viewtoggle button { display: grid; place-items: center; width: 28px; height: 26px; border: none; background: transparent; border-radius: 4px; color: var(--av3-muted); cursor: pointer; }
+  .av3-viewtoggle button.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
+  .av3-viewtoggle svg { width: 15px; height: 15px; }
+
+  /* ===== Option C/D — text-capable segmented toggle (the proposed addition) =====
+     A modifier on the same .av3-viewtoggle so it inherits the shell, but lets
+     buttons size to their content with real padding. */
+  .av3-viewtoggle.is-text button { width: auto; height: 28px; padding: 0 12px; gap: 6px; grid-auto-flow: column; font: inherit; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+  .av3-viewtoggle.is-text svg { width: 14px; height: 14px; }
+
+  .note { font-size: 12px; color: var(--av3-subtle); line-height: 1.55; border-left: 2px solid var(--av3-brand); padding-left: 12px; }
+  .note b { color: var(--av3-fg); }
+  code { font-family: var(--av3-mono); font-size: 11.5px; background: var(--av3-s2); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body data-theme="dark">
+  <!-- lucide icon defs -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="i-grid"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></g>
+      <g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>
+    </defs>
+  </svg>
+
+  <div class="canvas">
+    <div class="preview-bar">
+      <div>
+        <h2>Permission matrix — toggle options</h2>
+        <small>By role · By user — pick a treatment</small>
+      </div>
+      <button class="theme-btn" id="themeBtn" type="button">Switch to light</button>
+    </div>
+
+    <!-- A: current -->
+    <div class="opt">
+      <div class="opt-head"><span class="opt-tag">A · current</span><span class="opt-name">Text in the icon box</span></div>
+      <div class="opt-desc">What ships today. The 28px icon-sized button squeezes the words, so "By&nbsp;role / By&nbsp;user" wrap to two characters per line.</div>
+      <div class="stage">
+        <div class="av3-pagehead"><h1>Permission matrix</h1><div class="av3-pagehead-sub">Action-level RBAC</div></div>
+        <div class="av3-viewtoggle">
+          <button type="button" class="is-active">By role</button>
+          <button type="button">By user</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: icon only -->
+    <div class="opt">
+      <div class="opt-head"><span class="opt-tag">B</span><span class="opt-name">Icon-only (matches OrdersV3 etc.)</span></div>
+      <div class="opt-desc">Exactly the existing v3 convention — single icons, tooltip + aria-label carry the meaning. Most compact, but "role vs user" isn't obvious at a glance.</div>
+      <div class="stage">
+        <div class="av3-pagehead"><h1>Permission matrix</h1><div class="av3-pagehead-sub">Action-level RBAC</div></div>
+        <div class="av3-viewtoggle">
+          <button type="button" class="is-active" title="By role" aria-label="By role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-grid"/></svg></button>
+          <button type="button" title="By user" aria-label="By user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- C: icon + text segmented (recommended) -->
+    <div class="opt">
+      <div class="opt-head"><span class="opt-tag opt-rec">C · recommended</span><span class="opt-name">Icon + label segmented</span></div>
+      <div class="opt-desc">Same toggle shell, but buttons size to their content (<code>.is-text</code> modifier). Icon for instant recognition, word for zero ambiguity. Reads cleanly and still feels like the v3 toggle.</div>
+      <div class="stage">
+        <div class="av3-pagehead"><h1>Permission matrix</h1><div class="av3-pagehead-sub">Action-level RBAC</div></div>
+        <div class="av3-viewtoggle is-text">
+          <button type="button" class="is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-grid"/></svg>By role</button>
+          <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg>By user</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- D: text-only segmented -->
+    <div class="opt">
+      <div class="opt-head"><span class="opt-tag">D</span><span class="opt-name">Text-only segmented</span></div>
+      <div class="opt-desc">Same <code>.is-text</code> modifier without icons — closest to the legacy AdminPermissions "By role / By user" tabs. Cleanest typographically; loses the icon cue.</div>
+      <div class="stage">
+        <div class="av3-pagehead"><h1>Permission matrix</h1><div class="av3-pagehead-sub">Action-level RBAC</div></div>
+        <div class="av3-viewtoggle is-text">
+          <button type="button" class="is-active">By role</button>
+          <button type="button">By user</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">
+      <b>My pick: C.</b> It keeps the v3 toggle shell (so it stays consistent with the rest of admin),
+      fixes the cramping with a small additive <code>.av3-viewtoggle.is-text</code> modifier, and the
+      <code>Grid3x3</code> + <code>Users</code> icons are already imported in <code>PermissionsV3.tsx</code>.
+      Tell me which one you want and I'll wire it into the component (+ the design-system doc per Rule&nbsp;#11).
+    </p>
+  </div>
+
+  <script>
+    const btn = document.getElementById("themeBtn");
+    btn.addEventListener("click", () => {
+      const light = document.body.getAttribute("data-theme") === "light";
+      document.body.setAttribute("data-theme", light ? "dark" : "light");
+      btn.textContent = light ? "Switch to light" : "Switch to dark";
+    });
+    document.querySelectorAll(".av3-viewtoggle").forEach((tg) => {
+      tg.querySelectorAll("button").forEach((b) => {
+        b.addEventListener("click", () => {
+          tg.querySelectorAll("button").forEach((x) => x.classList.remove("is-active"));
+          b.classList.add("is-active");
+        });
+      });
+    });
+  </script>
+</body>
+</html>

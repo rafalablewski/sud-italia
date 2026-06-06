@@ -16,7 +16,7 @@ export function PermissionsV3() {
   const [loading, setLoading] = useState(true);
   const [selId, setSelId] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [view, setView] = useState<"user" | "role">("user");
+  const [view, setView] = useState<"user" | "role">("role");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users").then((r) => (r.ok ? r.json() : [])).catch(() => []);
@@ -67,9 +67,9 @@ export function PermissionsV3() {
           <div className="av3-pagehead-sub">Action-level RBAC · capability grants per role &amp; per user</div>
         </div>
         <div className="av3-pagehead-actions">
-          <div className="av3-viewtoggle">
-            <button type="button" className={view === "user" ? "is-active" : ""} onClick={() => setView("user")} title="By user">By user</button>
-            <button type="button" className={view === "role" ? "is-active" : ""} onClick={() => setView("role")} title="By role">By role</button>
+          <div className="av3-viewtoggle is-text" role="tablist" aria-label="Matrix view">
+            <button type="button" role="tab" aria-selected={view === "role"} className={view === "role" ? "is-active" : ""} onClick={() => setView("role")} title="By role"><Grid3x3 />By role</button>
+            <button type="button" role="tab" aria-selected={view === "user"} className={view === "user" ? "is-active" : ""} onClick={() => setView("user")} title="By user"><Users />By user</button>
           </div>
           {view === "user" && (
             <span className="av3-scope">

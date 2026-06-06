@@ -113,6 +113,19 @@ so reach for a class:
   (3/4-up → 2-up at ≤720 → 1-up at ≤560). Set `gap` inline at the call site.
 - `.av3-formrow` (3-up) / `.av3-formrow-4` (4-up) — dialog form scaffolds that
   stack at ≤720. Don't override their `grid-template-columns` inline.
+- `.av3-formgrid` — 2-up dialog field grid that **bottom-aligns** (`align-items:
+  end`) so a label-above-input field lines up with a single-row toggle; collapses
+  to 1-up at ≤560.
+- `.av3-togglerow` (+ `.av3-togglerow-label`) — a label-left / `Switch`-right
+  bordered row, height-matched to inputs/selects. Use this for a labelled boolean
+  inside a form **instead of** stacking an `.av3-field-label` above a bare
+  `.av3-switch` (which wraps the uppercase label and collides at narrow widths).
+  Greens its border via `:has()` when the switch is on.
+- `.av3-clonebar` (+ `-head` / `-targets` / `-count`) — fan a per-site config out
+  to any chosen subset of sites (e.g. the Menu editor's per-site modifiers).
+  Source = the site in view; a head row holds the label + a **filter** input
+  (shown past ~8 sites) + **All/None** + selected count + Clone, over a capped,
+  scrollable well of `ChipToggle` targets — so 2 sites or 25 both fit.
 - `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
   keep its width (wide tables already wrap in `.av3-table-wrap`).
 - `.av3-dtabs` — the tabbed-dialog editor bar (Menu / Recipes) keeps its `flex:1`
@@ -260,7 +273,9 @@ is missing one (the tuned per-control rings still win); (3) a global
 all three for free as long as they live under `.av3-root`.
 
 Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
-filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),
+filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`;
+add `.is-text` to the toggle when buttons carry an icon+label instead of a bare
+icon — e.g. the Permission matrix "By role / By user"),
 the Kanban board (`.av3-kanban` / `.av3-kcol` / `.av3-ocard`), and the dialog
 (`.av3-dialog-*`).
 
@@ -368,6 +383,17 @@ refetches every 30s.
   **tabbed** (Product / Pricing / Modifiers / Disclosures, with counts on the
   last two) under a live **price·margin recap**, instead of one long scroll;
   money inputs carry a `zł` affix. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
+  **Product** shows the read-only **slug** (chain key — recipes/orders reference
+  it, so it's surfaced not renamed here). **Modifiers are per-site:** the tab
+  picks the site being edited — a `.av3-viewtoggle.is-text` toggle for a handful
+  of sites, a `<select>` once past ~8 (so the picker never overflows). A **clone
+  bar** (`.av3-clonebar`) fans the viewed site's modifiers out to any chosen
+  subset of other sites — filter + All/None + a capped scrollable target well, so
+  it works whether there are 2 sites or 25. Not just "all", so Katowice→Gdańsk and
+  Warszawa→Kraków are independent one-click clones. Each variant persists its own
+  `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
+  still write to every site (rule #10). Selects + booleans in Pricing/Disclosures
+  use `.av3-formgrid` + `.av3-togglerow` so they align instead of wrapping.
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -544,7 +570,8 @@ refetches every 30s.
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
   persisting custom grants (`PUT /api/admin/users`). **Visual upgrade:** a **KPI
   rail** (capabilities / roles / user accounts / custom grants) and a
-  **By-user ⇄ By-role** view toggle — the restored **By-role cross-tab**
+  **By-role ⇄ By-user** icon+label view toggle (`.av3-viewtoggle.is-text`,
+  `Grid3x3` / `Users`; defaults to **By-role**) — the **By-role cross-tab**
   (`ROLE_DEFAULT_PERMISSIONS`, owner = all) is a read-only capability×role matrix
   grouped by permission group. CSS §21 (`.av3-matrix`).
 - [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/

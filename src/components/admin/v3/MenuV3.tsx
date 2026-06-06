@@ -474,15 +474,19 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
   const [menuRole, setMenuRole] = useState<MenuRole | "">(p.menuRole ?? "");
   const [deliveryOnly, setDeliveryOnly] = useState(Boolean(p.deliveryOnly));
   const [packaging, setPackaging] = useState(String((p.packagingCost ?? 0) / 100));
-  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>(p.modifierGroups ?? []);
   const [allergens, setAllergens] = useState<Allergen[]>(p.allergens ?? []);
   const [halalStatus, setHalalStatus] = useState<Halal | "">(p.halalStatus ?? "");
   const [nutriGrade, setNutriGrade] = useState<Nutri | "">(p.nutriGrade ?? "");
   const [containsPork, setContainsPork] = useState(Boolean(p.containsPork));
   const [containsAlcohol, setContainsAlcohol] = useState(Boolean(p.containsAlcohol));
+  // Modifiers are per-site (a Kraków truck may offer an add-on Warszawa can't),
+  // so each variant carries its own groups — edited one site at a time below.
   const [perLoc, setPerLoc] = useState(
-    item.variants.map((v) => ({ slug: v.slug, city: v.city, id: v.item.id, price: String(v.item.price / 100), cost: String(v.item.cost / 100), available: v.item.available, sku: v.item.sku ?? "", hasRecipe: Boolean(v.item._hasRecipe) })),
+    item.variants.map((v) => ({ slug: v.slug, city: v.city, id: v.item.id, price: String(v.item.price / 100), cost: String(v.item.cost / 100), available: v.item.available, sku: v.item.sku ?? "", hasRecipe: Boolean(v.item._hasRecipe), modifierGroups: v.item.modifierGroups ?? [] })),
   );
+  const [modLoc, setModLoc] = useState(item.variants[0]?.slug ?? "");
+  const [copyTargets, setCopyTargets] = useState<Set<string>>(new Set());
+  const [copyFilter, setCopyFilter] = useState("");
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"product" | "pricing" | "modifiers" | "disclosures">("product");
@@ -497,28 +501,35 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
     return { min, max, avgM };
   }, [perLoc]);
   const discCount = allergens.length + (halalStatus ? 1 : 0) + (nutriGrade ? 1 : 0) + (containsPork ? 1 : 0) + (containsAlcohol ? 1 : 0);
+  const modCount = Math.max(0, ...perLoc.map((r) => r.modifierGroups.length));
 
   const toggleTag = (t: MenuTag) => setTags((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   const toggleAllergen = (a: Allergen) => setAllergens((arr) => (arr.includes(a) ? arr.filter((x) => x !== a) : [...arr, a]));
   const setRow = (slug: string, patch: Partial<{ price: string; cost: string; available: boolean; sku: string }>) =>
     setPerLoc((arr) => arr.map((r) => (r.slug === slug ? { ...r, ...patch } : r)));
+  const setRowMods = (slug: string, groups: ModifierGroup[]) =>
+    setPerLoc((arr) => arr.map((r) => (r.slug === slug ? { ...r, modifierGroups: groups } : r)));
+  // Clone one site's modifiers into any chosen set of other sites.
+  const copyModsTo = (fromSlug: string, targets: Set<string>) => {
+    const src = perLoc.find((r) => r.slug === fromSlug)?.modifierGroups ?? [];
+    setPerLoc((arr) => arr.map((r) => (targets.has(r.slug) && r.slug !== fromSlug ? { ...r, modifierGroups: structuredClone(src) } : r)));
+  };
 
-  const cleanModifiers = (): ModifierGroup[] =>
-    modifierGroups
+  const cleanModifiers = (groups: ModifierGroup[]): ModifierGroup[] =>
+    groups
       .map((g) => ({ ...g, label: g.label.trim(), options: (g.options ?? []).filter((o) => o.label?.trim()).map((o) => ({ ...o, label: o.label.trim() })) }))
       .filter((g) => g.label && g.options.length > 0);
 
   const save = async () => {
     setSaving(true);
     try {
-      const mods = cleanModifiers();
+      // Chain-wide product facts (rule #10) — identical across every site.
       const meta = {
         name, description, category,
         tags,
         menuRole: (menuRole || null) as MenuRole | null,
         deliveryOnly,
         packagingCost: Math.round((Number(packaging) || 0) * 100),
-        modifierGroups: mods,
         allergens,
         halalStatus: (halalStatus || null) as Halal | null,
         nutriGrade: (nutriGrade || null) as Nutri | null,
@@ -534,6 +545,8 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
           ...(r.hasRecipe ? {} : { cost: Math.round((Number(r.cost) || 0) * 100) }),
           available: r.available,
           sku: r.sku.trim() || null,
+          // modifiers are per-site
+          modifierGroups: cleanModifiers(r.modifierGroups),
         };
       }
       const res = await fetch("/api/admin/menu", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
@@ -581,14 +594,17 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
       <div className="av3-dtabs">
         <button type="button" className={`av3-dtab ${tab === "product" ? "is-active" : ""}`} onClick={() => setTab("product")}>Product</button>
         <button type="button" className={`av3-dtab ${tab === "pricing" ? "is-active" : ""}`} onClick={() => setTab("pricing")}>Pricing</button>
-        <button type="button" className={`av3-dtab ${tab === "modifiers" ? "is-active" : ""}`} onClick={() => setTab("modifiers")}>Modifiers{modifierGroups.length > 0 && <span className="av3-dtab-count">{modifierGroups.length}</span>}</button>
+        <button type="button" className={`av3-dtab ${tab === "modifiers" ? "is-active" : ""}`} onClick={() => setTab("modifiers")}>Modifiers{modCount > 0 && <span className="av3-dtab-count">{modCount}</span>}</button>
         <button type="button" className={`av3-dtab ${tab === "disclosures" ? "is-active" : ""}`} onClick={() => setTab("disclosures")}>Disclosures{discCount > 0 && <span className="av3-dtab-count">{discCount}</span>}</button>
       </div>
 
       {tab === "product" && (
         <>
           <div className="av3-edhint" style={{ marginBottom: 12 }}>These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
-          <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="av3-formgrid" style={{ marginBottom: 10 }}>
+            <label className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
+            <label className="av3-field"><span className="av3-field-label">Slug (chain key)</span><input className="av3-input" value={item.baseSlug} readOnly disabled title="The chain-wide product key — recipes and orders reference it, so it isn't renamed here." /></label>
+          </div>
           <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <label className="av3-field" style={{ width: 160 }}><span className="av3-field-label">Category</span><select className="av3-select" value={category} onChange={(e) => setCategory(e.target.value as MenuCategory)}>{CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</select></label>
@@ -618,27 +634,75 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
             );
           })}
           <div className="av3-subhead">Service &amp; channel</div>
-          <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
-            <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Packaging cost</span><span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></span></label>
-            <div className="av3-field" style={{ width: 140 }}><span className="av3-field-label">Delivery-only</span><Switch aria-label="Delivery-only" checked={deliveryOnly} onChange={setDeliveryOnly} /></div>
+          <div className="av3-formgrid">
+            <label className="av3-field"><span className="av3-field-label">Packaging cost</span><span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></span></label>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Delivery-only</span><Switch aria-label="Delivery-only" checked={deliveryOnly} onChange={setDeliveryOnly} /></label>
           </div>
         </>
       )}
 
-      {tab === "modifiers" && (
-        <>
-          <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Structure is chain-wide; price/cost deltas apply on top of the base.</div>
-          <ModifierEditor groups={modifierGroups} onChange={setModifierGroups} />
-        </>
-      )}
+      {tab === "modifiers" && (() => {
+        const active = perLoc.find((r) => r.slug === modLoc) ?? perLoc[0];
+        const others = perLoc.filter((r) => r.slug !== active?.slug);
+        const targets = new Set([...copyTargets].filter((s) => s !== active?.slug));
+        const switchSite = (slug: string) => { setModLoc(slug); setCopyTargets(new Set()); setCopyFilter(""); };
+        // Past a handful of sites a button toggle overflows and a chip wall is
+        // unscannable — switch to a dropdown editor + a filterable target well.
+        const manySites = perLoc.length > 8;
+        const q = copyFilter.trim().toLowerCase();
+        const shownTargets = q ? others.filter((r) => r.city.toLowerCase().includes(q)) : others;
+        return (
+          <>
+            <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn&rsquo;t. Price/cost deltas apply on top of the base. Pick a site to edit, then clone its setup into any other sites below.</div>
+            {perLoc.length > 1 && (
+              <>
+                {manySites ? (
+                  <label className="av3-field" style={{ marginBottom: 10, maxWidth: 280 }}>
+                    <span className="av3-field-label">Editing site</span>
+                    <select className="av3-select" value={active?.slug} onChange={(e) => switchSite(e.target.value)}>
+                      {perLoc.map((r) => <option key={r.slug} value={r.slug}>{r.city}{r.modifierGroups.length > 0 ? ` (${r.modifierGroups.length})` : ""}</option>)}
+                    </select>
+                  </label>
+                ) : (
+                  <div className="av3-viewtoggle is-text" role="tablist" aria-label="Edit modifiers for site" style={{ marginBottom: 10 }}>
+                    {perLoc.map((r) => (
+                      <button key={r.slug} type="button" role="tab" aria-selected={r.slug === active?.slug} className={r.slug === active?.slug ? "is-active" : ""} onClick={() => switchSite(r.slug)}>
+                        {r.city}{r.modifierGroups.length > 0 && <span className="av3-dtab-count">{r.modifierGroups.length}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="av3-clonebar">
+                  <div className="av3-clonebar-head">
+                    <span className="av3-field-label" style={{ whiteSpace: "nowrap" }}>Clone {active?.city} into</span>
+                    {others.length > 8 && <input className="av3-input" placeholder="Filter sites…" value={copyFilter} onChange={(e) => setCopyFilter(e.target.value)} />}
+                    <Button variant="ghost" size="sm" onClick={() => setCopyTargets((s) => { const n = new Set(s); shownTargets.forEach((r) => n.add(r.slug)); return n; })}>All{q ? " shown" : ""}</Button>
+                    <Button variant="ghost" size="sm" disabled={targets.size === 0} onClick={() => setCopyTargets(new Set())}>None</Button>
+                    <span style={{ flex: 1 }} />
+                    <span className="av3-clonebar-count">{targets.size} selected</span>
+                    <Button variant="secondary" size="sm" disabled={targets.size === 0 || (active?.modifierGroups.length ?? 0) === 0} onClick={() => { if (active) copyModsTo(active.slug, targets); setCopyTargets(new Set()); }}>Clone → {targets.size || ""} site{targets.size === 1 ? "" : "s"}</Button>
+                  </div>
+                  <div className="av3-clonebar-targets">
+                    {shownTargets.map((r) => (
+                      <ChipToggle key={r.slug} on={targets.has(r.slug)} onClick={() => setCopyTargets((s) => { const n = new Set(s); if (n.has(r.slug)) n.delete(r.slug); else n.add(r.slug); return n; })}>{r.city}</ChipToggle>
+                    ))}
+                    {shownTargets.length === 0 && <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>No sites match &ldquo;{copyFilter}&rdquo;.</span>}
+                  </div>
+                </div>
+              </>
+            )}
+            {active && <ModifierEditor groups={active.modifierGroups} onChange={(g) => setRowMods(active.slug, g)} />}
+          </>
+        );
+      })()}
 
       {tab === "disclosures" && (
         <>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-            <label className="av3-field" style={{ width: 150 }}><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
-            <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains pork</span><Switch aria-label="Contains pork" checked={containsPork} onChange={setContainsPork} /></div>
-            <div className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Contains alcohol</span><Switch aria-label="Contains alcohol" checked={containsAlcohol} onChange={setContainsAlcohol} /></div>
+          <div className="av3-formgrid" style={{ marginBottom: 10 }}>
+            <label className="av3-field"><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
+            <label className="av3-field"><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Contains pork</span><Switch aria-label="Contains pork" checked={containsPork} onChange={setContainsPork} /></label>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Contains alcohol</span><Switch aria-label="Contains alcohol" checked={containsAlcohol} onChange={setContainsAlcohol} /></label>
           </div>
           <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Allergens</span>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
@@ -729,7 +793,7 @@ function AddItemDialog({ locations, onClose, onSaved }: { locations: { slug: str
     <Dialog open onClose={onClose} title="Add menu item" subtitle={`Created on all ${locations.length} site${locations.length > 1 ? "s" : ""} · chain-wide`} width={480}
       footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} onClick={save}>Create</Button></>}>
       {err && <div style={{ color: "var(--av3-bad)", fontSize: 12, marginBottom: 8 }}>{err}</div>}
-      <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
       {baseId && <div className="av3-cell-muted" style={{ fontSize: 11, marginBottom: 10 }}>id: {locations.map((l) => `${l.slug.slice(0, 3)}-${baseId}`).join(", ")}</div>}
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

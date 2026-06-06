@@ -935,6 +935,11 @@
 .av3-viewtoggle button { display: grid; place-items: center; width: 28px; height: 26px; border: none; background: transparent; border-radius: 4px; color: var(--av3-muted); cursor: pointer; }
 .av3-viewtoggle button.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
 .av3-viewtoggle svg { width: 15px; height: 15px; }
+/* `.is-text` variant: buttons size to an icon+label instead of a square icon
+   box, so toggles whose meaning isn't self-evident from an icon alone (By role
+   / By user) read cleanly. */
+.av3-viewtoggle.is-text button { width: auto; height: 28px; padding: 0 12px; gap: 6px; grid-auto-flow: column; font: inherit; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.av3-viewtoggle.is-text svg { width: 14px; height: 14px; }
 
 /* ==========================================================================
    12. Kanban board
@@ -989,6 +994,25 @@
    ========================================================================== */
 .av3-field { display: flex; flex-direction: column; gap: 4px; }
 .av3-field-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
+/* Two-up field grid for dialog forms; bottom-aligns so a label-above-input
+   field lines up with a single-row toggle. Collapses to one column on phones. */
+.av3-formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+@media (max-width: 560px) { .av3-formgrid { grid-template-columns: 1fr; } }
+/* Toggle row — label + slider on ONE line in a bordered box, height-matched to
+   inputs/selects so toggles align with them. Replaces the old "tiny uppercase
+   label stacked above a bare slider" which wrapped and collided at narrow
+   widths (the Disclosures chaos + Service&channel overlap). */
+.av3-togglerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; padding: 4px 12px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm); background: var(--av3-s1); }
+.av3-togglerow-label { font-size: 12.5px; font-weight: 500; color: var(--av3-fg); }
+.av3-togglerow:has(.av3-switch[aria-checked="true"]) { border-color: color-mix(in oklab, var(--av3-ok) 35%, var(--av3-line-strong)); }
+/* Clone bar — fan a per-site config (e.g. modifiers) out to any chosen subset
+   of other sites. Head row holds the label + filter + All/None + Clone; the
+   target chips sit in a capped, scrollable well so 2 sites or 25 both fit. */
+.av3-clonebar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 10px; border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); background: var(--av3-s2); }
+.av3-clonebar-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.av3-clonebar-head .av3-input { height: 28px; width: auto; flex: 1; min-width: 120px; max-width: 220px; font-family: var(--av3-ui); }
+.av3-clonebar-targets { display: flex; gap: 6px; flex-wrap: wrap; max-height: 128px; overflow-y: auto; padding: 2px; }
+.av3-clonebar-count { font-size: 11px; color: var(--av3-subtle); font-variant-numeric: tabular-nums; }
 .av3-input, .av3-select {
   height: 32px; padding: 0 10px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm);
   background: var(--av3-s1); color: var(--av3-fg); font: inherit; font-size: 13px;
