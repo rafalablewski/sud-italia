@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Permission matrix — view toggle preview</title>
+<!--
+  Standalone preview of the Permission matrix page head + view toggle
+  (src/components/admin/v3/PermissionsV3.tsx), with the "By role / By user"
+  buttons in their CURRENT swapped order (By role first, default active).
+
+  CSS below is copied verbatim from src/app/themes/admin-v3/index.css for the
+  classes involved, so what you see matches production. Toggle the theme with
+  the button at the top-right to compare dark vs. light.
+-->
+<style>
+  /* ---- tokens (dark) — from index.css :root ---- */
+  :root {
+    --av3-bg: #0a0a0c; --av3-s1: #141417; --av3-s2: #1b1b1f; --av3-s3: #24242a;
+    --av3-hover: #2c2c33;
+    --av3-line: rgba(255,255,255,0.07); --av3-line-strong: rgba(255,255,255,0.13);
+    --av3-fg: #f4f3f1; --av3-muted: #a6a099; --av3-subtle: #8a837b;
+    --av3-brand: #c2384f; --av3-platinum: #cbb48a;
+    --av3-ok: #34b27b; --av3-warn: #e0a93f; --av3-bad: #e8554f; --av3-info: #5f9bd6;
+    --av3-c2: #cbb48a; --av3-c3: #5f9bd6; --av3-c4: #34b27b; --av3-c5: #d3884f;
+    --av3-r-sm: 5px; --av3-r-md: 8px; --av3-r-lg: 11px; --av3-r-pill: 999px;
+    --av3-gap-1: 4px; --av3-gap-2: 8px; --av3-gap-3: 12px; --av3-gap-4: 16px; --av3-gap-5: 24px;
+    --av3-sh-1: 0 1px 2px rgba(0,0,0,0.4); --av3-sh-2: 0 8px 28px -8px rgba(0,0,0,0.55);
+    --av3-ease: cubic-bezier(0.4,0,0.2,1); --av3-t-fast: 110ms;
+    --av3-ui: "Inter", system-ui, sans-serif;
+    --av3-display: "Fraunces", Georgia, serif;
+    --av3-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  /* ---- tokens (light) — from index.css [data-theme="light"] ---- */
+  [data-theme="light"] {
+    --av3-bg: #f7f5f1; --av3-s1: #ffffff; --av3-s2: #f6f3ee; --av3-s3: #efebe3;
+    --av3-hover: #e9e4da;
+    --av3-line: rgba(28,24,21,0.09); --av3-line-strong: rgba(28,24,21,0.16);
+    --av3-fg: #1a1714; --av3-muted: #57504a; --av3-subtle: #756d65;
+    --av3-brand: #a82940; --av3-platinum: #9c7e4e;
+    --av3-ok: #15744d; --av3-warn: #8a590c; --av3-bad: #cc3a35; --av3-info: #3d6694;
+    --av3-c2: #9c7e4e; --av3-c3: #3d6694; --av3-c4: #1f8a60; --av3-c5: #b56a3b;
+    --av3-sh-1: 0 1px 2px rgba(28,24,21,0.06); --av3-sh-2: 0 10px 30px -10px rgba(28,24,21,0.18);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--av3-bg); color: var(--av3-fg); font-family: var(--av3-ui); }
+  .canvas { max-width: 1080px; margin: 0 auto; padding: 28px 24px 60px; display: flex; flex-direction: column; gap: var(--av3-gap-5); }
+  .preview-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .preview-bar h2 { font-family: var(--av3-display); margin: 0; font-size: 15px; font-weight: 600; }
+  .preview-bar small { color: var(--av3-subtle); font-size: 12px; }
+  .theme-btn { border: 1px solid var(--av3-line-strong); background: var(--av3-s2); color: var(--av3-fg); border-radius: var(--av3-r-sm); padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+
+  /* ===== copied verbatim from index.css ===== */
+  .av3-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--av3-gap-4); }
+  .av3-pagehead h1 { margin: 0; font-family: var(--av3-display); font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .av3-pagehead-sub { margin-top: 2px; font-size: 12.5px; color: var(--av3-muted); }
+  .av3-pagehead-actions { display: flex; align-items: center; gap: var(--av3-gap-2); }
+
+  .av3-viewtoggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); }
+  .av3-viewtoggle button { display: grid; place-items: center; width: 28px; height: 26px; border: none; background: transparent; border-radius: 4px; color: var(--av3-muted); cursor: pointer; }
+  .av3-viewtoggle button.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
+  .av3-viewtoggle svg { width: 15px; height: 15px; }
+
+  .av3-scope { position: relative; display: inline-flex; align-items: center; }
+  .av3-scope select { appearance: none; height: 30px; padding: 0 26px 0 10px; border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); background: var(--av3-s1); color: var(--av3-fg); font: inherit; font-size: 12.5px; }
+
+  .av3-kpi-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: var(--av3-gap-3); }
+  .av3-kpi { position: relative; display: flex; flex-direction: column; gap: 6px; padding: var(--av3-gap-3) var(--av3-gap-4); background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); overflow: hidden; }
+  .av3-kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--av3-kpi-accent, var(--av3-brand)); opacity: 0.55; }
+  .av3-kpi-label { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--av3-subtle); }
+  .av3-kpi-label svg { width: 13px; height: 13px; color: var(--av3-kpi-accent, var(--av3-subtle)); }
+  .av3-kpi-value { font-family: var(--av3-mono); font-size: 23px; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+
+  .av3-callout { display: flex; align-items: flex-start; gap: var(--av3-gap-3); padding: var(--av3-gap-3) var(--av3-gap-4); border-radius: var(--av3-r-md); border: 1px solid var(--av3-line); background: var(--av3-s2); }
+
+  .note { font-size: 12px; color: var(--av3-subtle); line-height: 1.5; border-left: 2px solid var(--av3-brand); padding-left: 12px; }
+  .note b { color: var(--av3-fg); }
+</style>
+</head>
+<body data-theme="dark">
+  <div class="canvas">
+    <div class="preview-bar">
+      <div>
+        <h2>Permission matrix — view toggle</h2>
+        <small>PermissionsV3.tsx page head, current order: By role · By user</small>
+      </div>
+      <button class="theme-btn" id="themeBtn" type="button">Switch to light</button>
+    </div>
+
+    <!-- page head, mirrors PermissionsV3 lines 64-82 -->
+    <div class="av3-pagehead">
+      <div>
+        <h1>Permission matrix</h1>
+        <div class="av3-pagehead-sub">Action-level RBAC · capability grants per role &amp; per user</div>
+      </div>
+      <div class="av3-pagehead-actions">
+        <div class="av3-viewtoggle">
+          <button type="button" class="is-active" title="By role" data-view="role">By role</button>
+          <button type="button" title="By user" data-view="user">By user</button>
+        </div>
+        <span class="av3-scope" id="scope" hidden>
+          <select aria-label="User">
+            <option>Agata Ablewska · Manager</option>
+            <option>Marco Rossi · Owner</option>
+            <option>Jan Kowalski · Staff</option>
+          </select>
+        </span>
+      </div>
+    </div>
+
+    <!-- KPI rail, mirrors PermissionsV3 lines 84-89 -->
+    <div class="av3-kpi-rail">
+      <div class="av3-kpi" style="--av3-kpi-accent: var(--av3-c3)"><div class="av3-kpi-label">Capabilities</div><div class="av3-kpi-value">38</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent: var(--av3-c2)"><div class="av3-kpi-label">Roles</div><div class="av3-kpi-value">5</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent: var(--av3-c4)"><div class="av3-kpi-label">User accounts</div><div class="av3-kpi-value">12</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent: var(--av3-c5)"><div class="av3-kpi-label">Custom grants</div><div class="av3-kpi-value">3</div></div>
+    </div>
+
+    <div class="av3-callout">
+      <span style="font-size:12.5px">Baseline capabilities each <b>role</b> receives by default. Owners are always all-access; per-user overrides live on the <b>By user</b> tab.</span>
+    </div>
+
+    <p class="note">
+      <b>Note on the cramped labels:</b> <code>.av3-viewtoggle button</code> is sized
+      <b>28×26px</b> with <code>place-items:center</code> — it was built for single
+      <b>icons</b>, but this page feeds it the text "By role" / "By user", so the words
+      wrap into a 2-letter box (the "By / By", "role / user" you saw). Swapping the order
+      doesn't change that. If you want the labels to read cleanly, the toggle buttons need
+      auto width + horizontal padding (e.g. <code>width:auto; padding:0 10px; white-space:nowrap</code>)
+      or the page should use icons like the other v3 toggles. Say the word and I'll wire that up.
+    </p>
+  </div>
+
+  <script>
+    const btn = document.getElementById("themeBtn");
+    btn.addEventListener("click", () => {
+      const light = document.body.getAttribute("data-theme") === "light";
+      document.body.setAttribute("data-theme", light ? "dark" : "light");
+      btn.textContent = light ? "Switch to light" : "Switch to dark";
+    });
+    // live toggle so the preview behaves like the real component
+    const scope = document.getElementById("scope");
+    document.querySelectorAll(".av3-viewtoggle button").forEach((b) => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".av3-viewtoggle button").forEach((x) => x.classList.remove("is-active"));
+        b.classList.add("is-active");
+        scope.hidden = b.dataset.view !== "user";
+      });
+    });
+  </script>
+</body>
+</html>
