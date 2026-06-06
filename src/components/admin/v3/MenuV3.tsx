@@ -602,7 +602,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
         <>
           <div className="av3-edhint" style={{ marginBottom: 12 }}>These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
           <div className="av3-formgrid" style={{ marginBottom: 10 }}>
-            <div className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <label className="av3-field"><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
             <label className="av3-field"><span className="av3-field-label">Slug (chain key)</span><input className="av3-input" value={item.baseSlug} readOnly disabled title="The chain-wide product key — recipes and orders reference it, so it isn't renamed here." /></label>
           </div>
           <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
@@ -636,7 +636,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
           <div className="av3-subhead">Service &amp; channel</div>
           <div className="av3-formgrid">
             <label className="av3-field"><span className="av3-field-label">Packaging cost</span><span className="av3-affix" data-suffix="zł"><input className="av3-input" type="number" step="0.01" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></span></label>
-            <div className="av3-togglerow"><span className="av3-togglerow-label">Delivery-only</span><Switch aria-label="Delivery-only" checked={deliveryOnly} onChange={setDeliveryOnly} /></div>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Delivery-only</span><Switch aria-label="Delivery-only" checked={deliveryOnly} onChange={setDeliveryOnly} /></label>
           </div>
         </>
       )}
@@ -701,8 +701,8 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
           <div className="av3-formgrid" style={{ marginBottom: 10 }}>
             <label className="av3-field"><span className="av3-field-label">Halal status</span><select className="av3-select" value={halalStatus} onChange={(e) => setHalalStatus(e.target.value as Halal | "")}><option value="">— none —</option>{HALAL_OPTIONS.map((h) => <option key={h} value={h}>{h}</option>)}</select></label>
             <label className="av3-field"><span className="av3-field-label">Nutri-Grade</span><select className="av3-select" value={nutriGrade} onChange={(e) => setNutriGrade(e.target.value as Nutri | "")}><option value="">— none —</option>{NUTRI_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-            <div className="av3-togglerow"><span className="av3-togglerow-label">Contains pork</span><Switch aria-label="Contains pork" checked={containsPork} onChange={setContainsPork} /></div>
-            <div className="av3-togglerow"><span className="av3-togglerow-label">Contains alcohol</span><Switch aria-label="Contains alcohol" checked={containsAlcohol} onChange={setContainsAlcohol} /></div>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Contains pork</span><Switch aria-label="Contains pork" checked={containsPork} onChange={setContainsPork} /></label>
+            <label className="av3-togglerow"><span className="av3-togglerow-label">Contains alcohol</span><Switch aria-label="Contains alcohol" checked={containsAlcohol} onChange={setContainsAlcohol} /></label>
           </div>
           <span className="av3-field-label" style={{ display: "block", marginBottom: 6 }}>Allergens</span>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
@@ -793,7 +793,7 @@ function AddItemDialog({ locations, onClose, onSaved }: { locations: { slug: str
     <Dialog open onClose={onClose} title="Add menu item" subtitle={`Created on all ${locations.length} site${locations.length > 1 ? "s" : ""} · chain-wide`} width={480}
       footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} onClick={save}>Create</Button></>}>
       {err && <div style={{ color: "var(--av3-bad)", fontSize: 12, marginBottom: 8 }}>{err}</div>}
-      <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
       {baseId && <div className="av3-cell-muted" style={{ fontSize: 11, marginBottom: 10 }}>id: {locations.map((l) => `${l.slug.slice(0, 3)}-${baseId}`).join(", ")}</div>}
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
