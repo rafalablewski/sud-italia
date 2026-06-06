@@ -482,8 +482,17 @@ refetches every 30s.
   two **net-profit heatmaps** (orders/day × ticket, and food-cost × ticket) —
   7×7 grids recomputed cell-by-cell through the engine, colour-scaled, centre
   cell = today. CSS §22 (`.av3-heat`, `.av3-scn`). Each new metric/heatmap carries
-  a five-section ⓘ (Rule #12). Still optional/not-ported from v2: the modelled
-  oven-curve / prep-queue, shift-plan-by-daypart, and menu-scenario presets.
+  a five-section ⓘ (Rule #12).
+  **Part 3g shipped — operational + menu depth (v2 parity complete):**
+  **Menu strategy presets** (Balanced / Premium / Value one-tap attach-lever
+  mixes, folded into ticket/COGS via `applyAssumptions`); an **Oven curve & peak
+  saturation** card (hourly demand vs the `kitchenCapacity.pizzasPerHour` ceiling
+  over a documented double-peak shape — peak/hr, line/hr, peak-util KPIs, queue
+  wait + orders-lost/mo, over-ceiling bars in red); and a **Shift plan — labour
+  by daypart** table (forecast orders + recommended line heads per daypart vs
+  scheduled pizzaioli). All five-section-ⓘ'd. The v3 Calculator is now at
+  **functional parity with the v2 AdminSimulation** (the demand-shape + queue
+  model are declared modelling layers, like the engine's seasonality defaults).
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

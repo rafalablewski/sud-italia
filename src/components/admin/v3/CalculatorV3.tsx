@@ -60,6 +60,46 @@ function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?
   );
 }
 
+// Modeling assumption (declared, like DEFAULT_SEASONALITY in the engine): a
+// Neapolitan-truck service day is a lunch + (bigger) dinner double-peak. Returns
+// per-hour weights summing to 1 across `n` service hours.
+function demandWeights(n: number): number[] {
+  if (n <= 1) return [1];
+  const w: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1);
+    const lunch = Math.exp(-Math.pow((x - 0.28) / 0.12, 2));
+    const dinner = Math.exp(-Math.pow((x - 0.8) / 0.14, 2));
+    w.push(0.22 + lunch + 1.3 * dinner);
+  }
+  const sum = w.reduce((a, b) => a + b, 0);
+  return w.map((v) => v / sum);
+}
+
+// Menu strategy presets — set the attach-lever mix only (idempotent); the engine
+// folds them into ticket/COGS via applyAssumptions, so net effect is real.
+type PresetKey = "balanced" | "premium" | "value";
+const MENU_PRESETS: Record<PresetKey, Partial<Record<AttachKey, SimulationAttachLever>>> = {
+  balanced: ATTACH_DEFAULTS,
+  premium: {
+    coffeeAttach: { enabled: true, attachPct: 0.35, avgPriceGrosze: 1100, cogsPct: 0.12 },
+    dessertAttach: { enabled: true, attachPct: 0.22, avgPriceGrosze: 2200, cogsPct: 0.30 },
+    antipastiAttach: { enabled: true, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.34 },
+    aperitivoAttach: { enabled: true, attachPct: 0.20, avgPriceGrosze: 2800, cogsPct: 0.22 },
+    premiumToppingsAttach: { enabled: true, attachPct: 0.30, avgPriceGrosze: 1100, cogsPct: 0.32 },
+    pastaPrimoAttach: { enabled: true, attachPct: 0.24, avgPriceGrosze: 3800, cogsPct: 0.27 },
+  },
+  value: {
+    coffeeAttach: { enabled: true, attachPct: 0.30, avgPriceGrosze: 700, cogsPct: 0.14 },
+    dessertAttach: { enabled: true, attachPct: 0.08, avgPriceGrosze: 1200, cogsPct: 0.26 },
+    antipastiAttach: { enabled: false, attachPct: 0.04, avgPriceGrosze: 1800, cogsPct: 0.32 },
+    aperitivoAttach: { enabled: false, attachPct: 0.05, avgPriceGrosze: 1600, cogsPct: 0.22 },
+    premiumToppingsAttach: { enabled: true, attachPct: 0.08, avgPriceGrosze: 500, cogsPct: 0.28 },
+    pastaPrimoAttach: { enabled: true, attachPct: 0.12, avgPriceGrosze: 2400, cogsPct: 0.25 },
+  },
+};
+const PRESET_LABEL: Record<PresetKey, string> = { balanced: "Balanced", premium: "Premium", value: "Value" };
+
 // compact zł for dense heatmap cells (grosze → "7.2k" / "320")
 function kZl(g: number): string {
   const z = g / 100;
@@ -187,6 +227,52 @@ export function CalculatorV3() {
       }
     } finally { setSeeding(false); }
   };
+
+  const applyMenuPreset = (k: PresetKey) => patchAssume(MENU_PRESETS[k] as Partial<SimulationAssumptions>);
+
+  // ── oven curve & peak saturation (modelled from kitchenCapacity) ──────────
+  const oven = useMemo(() => {
+    if (!folded) return null;
+    const cap = folded.kitchenCapacity;
+    const hours = Math.max(1, Math.round(cap?.openHoursPerDay ?? 10));
+    const perHourCap = cap?.pizzasPerHour ?? 0;
+    const weights = demandWeights(hours);
+    const hourly = weights.map((w) => folded.ordersPerDay * w);
+    const peak = Math.max(...hourly);
+    const startHour = 11;
+    const excessPerDay = hourly.reduce((s, h) => s + Math.max(0, h - perHourCap), 0);
+    const balkShare = 0.5; // half of orders that can't be served at peak walk
+    const lostPerMonth = Math.round(excessPerDay * balkShare * folded.daysOpenPerMonth);
+    const peakExcess = Math.max(0, peak - perHourCap);
+    const waitMin = perHourCap > 0 ? Math.round((peakExcess / perHourCap) * 60) : 0;
+    return {
+      hours, perHourCap, startHour,
+      bars: hourly.map((h, i) => ({ hour: startHour + i, orders: h, over: Math.max(0, h - perHourCap) })),
+      peak, peakUtil: perHourCap > 0 ? peak / perHourCap : 0, waitMin, lostPerMonth,
+    };
+  }, [folded]);
+
+  // ── shift plan by daypart (modelled from the same demand curve) ───────────
+  const shiftPlan = useMemo(() => {
+    if (!oven || !folded) return null;
+    const dayparts = [
+      { key: "Lunch", lo: 0, hi: 0.45 },
+      { key: "Afternoon", lo: 0.45, hi: 0.62 },
+      { key: "Dinner", lo: 0.62, hi: 1.01 },
+    ];
+    const n = oven.bars.length;
+    const scheduledPizzaioli = folded.labor.filter((l) => l.role === "pizzaiolo").reduce((s, l) => s + l.headcount, 0);
+    const rows = dayparts.map((d) => {
+      const slice = oven.bars.filter((_, i) => { const x = i / (n - 1 || 1); return x >= d.lo && x < d.hi; });
+      const orders = slice.reduce((s, b) => s + b.orders, 0);
+      const hrs = slice.length || 1;
+      const ordersPerHour = orders / hrs;
+      const heads = Math.max(1, Math.ceil(ordersPerHour / (oven.perHourCap || 1)));
+      const range = slice.length ? `${slice[0].hour}:00–${slice[slice.length - 1].hour + 1}:00` : "—";
+      return { key: d.key, range, orders: Math.round(orders), ordersPerHour, heads };
+    });
+    return { rows, scheduledPizzaioli };
+  }, [oven, folded]);
 
   const save = async () => {
     if (!scn) return;
@@ -660,6 +746,103 @@ export function CalculatorV3() {
                 methodology="Each cell = computeScenario({ …folded, cogsPct + Δ, avgTicket×colMult }).netProfit over COGS Δ −6…+6pp and ticket mults 0.7–1.3. Colour scales to the grid's max |net profit|. src/lib/simulation-engine.ts." />
             } />
             <CardBody><div className="av3-heat-axis" style={{ marginBottom: 6 }}>↓ food cost % · → avg ticket · cell = net profit / mo</div><Heatmap data={foodTicketHeat} /></CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* menu strategy presets — one-click attach-lever mixes (real, via engine) */}
+      <Card>
+        <CardHead title="Menu strategy presets" description="Load a coherent attach-lever mix — folds into ticket & COGS through the engine" actions={
+          <InfoButton title="Menu strategy presets"
+            description="One-click menu archetypes that set the whole attach-lever mix (coffee, dessert, antipasti, aperitivo, premium toppings, pasta) at once."
+            institutional="Menu strategy is the highest-leverage lever on a food unit's economics — it moves both ticket and COGS simultaneously. Presets let you compare strategic postures (premium vs value) without hand-tuning six levers, then read the impact straight off the P&L, scenario band and heatmaps. The institutional question each answers: does this menu posture clear the margin gate at our realistic volume?"
+            plain="Tap 'Premium' and the model assumes more guests add a 22 zł dessert and a 28 zł aperitivo — ticket and gross profit rise, but so does food cost. 'Value' leans on cheap coffee attach and drops the pricey add-ons — lower ticket, leaner COGS, built for footfall. Watch the headline KPIs and Scenario card recompute instantly."
+            tips="Start from the preset closest to your concept, then fine-tune the individual attach levers in 'Behaviour assumptions'. Pair with the orders × ticket heatmap to see whether the posture needs volume or price to clear target profit."
+            methodology="Each preset writes the six attach levers into scenario.assumptions; applyAssumptions() then folds them into effective avg ticket and COGS before computeScenario(). Idempotent — re-tapping restores the same mix. src/lib/simulation-engine.ts." />
+        } />
+        <CardBody>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(Object.keys(MENU_PRESETS) as PresetKey[]).map((k) => (
+              <Button key={k} variant="secondary" size="sm" onClick={() => applyMenuPreset(k)}>{PRESET_LABEL[k]}</Button>
+            ))}
+            <span style={{ fontSize: 11.5, color: "var(--av3-subtle)", alignSelf: "center" }}>Premium = richer add-ons (higher ticket + COGS) · Value = cheap-attach, lean COGS · Balanced = defaults.</span>
+          </div>
+        </CardBody>
+      </Card>
+
+      {oven && shiftPlan && (
+        <div className="av3-grid-2">
+          {/* oven curve & peak saturation */}
+          <Card>
+            <CardHead title="Oven curve & peak saturation" actions={
+              <InfoButton title="Oven curve & peak saturation"
+                description="Hourly order demand across the service day versus the line's sustainable pizzas-per-hour ceiling."
+                institutional="Daily-average capacity is a vanity number — the binding constraint is the peak hour. If demand spikes above the oven/pizzaiolo ceiling at dinner, orders queue, tickets blow out and guests walk, no matter how slack the average looks. Institutional read: peak utilisation should sit ≤90%; sustained red means you're leaving revenue on the table and need a second oven, a faster line, or demand-shifting (slots/pre-order)."
+                plain="The truck might average 8 orders/hr but slam 22 in the 19:00 hour against a 16/hr line — those 6 extra orders queue ~22 min and about half walk. The bars above the dashed ceiling are the orders you physically can't make in time."
+                tips="Three fixes: raise the ceiling (second oven, prep-ahead dough, an extra pair of hands at peak — see the shift plan), or flatten demand (timed slots, pre-order, a happy-hour to pull the lunch shoulder), or cap delivery during the dinner rush. Each red hour is direct lost contribution."
+                methodology="Hourly orders = ordersPerDay × a documented double-peak demand shape over kitchenCapacity.openHoursPerDay; ceiling = kitchenCapacity.pizzasPerHour. Peak wait ≈ (peakExcess ÷ ceiling) × 60 min; lost/mo = Σ over-ceiling × 50% balk × daysOpen. Modelling layer in CalculatorV3 over the scenario inputs." />
+            } />
+            <CardBody>
+              {(() => {
+                const H = 120; const scale = Math.max(oven.peak, oven.perHourCap) * 1.1 || 1;
+                const capPct = (oven.perHourCap / scale) * 100;
+                return (
+                  <>
+                    <div className="av3-kpi-rail" style={{ gridTemplateColumns: "repeat(3,1fr)", marginBottom: 12 }}>
+                      <Kpi label="Peak / hr" value={`${oven.peak.toFixed(0)}`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : "--av3-c4"} />
+                      <Kpi label="Line / hr" value={`${oven.perHourCap.toFixed(0)}`} accentVar="--av3-c3" />
+                      <Kpi label="Peak util" value={`${(oven.peakUtil * 100).toFixed(0)}%`} accentVar={oven.peakUtil > 1 ? "--av3-c1" : oven.peakUtil > 0.9 ? "--av3-c5" : "--av3-c4"} />
+                    </div>
+                    <div style={{ position: "relative", height: H, display: "flex", alignItems: "flex-end", gap: 4 }}>
+                      <div style={{ position: "absolute", left: 0, right: 0, bottom: `${capPct}%`, borderTop: "1px dashed var(--av3-line-strong)", pointerEvents: "none" }} />
+                      {oven.bars.map((b) => {
+                        const okH = (Math.min(b.orders, oven.perHourCap) / scale) * H;
+                        const overH = (b.over / scale) * H;
+                        return (
+                          <div key={b.hour} title={`${b.hour}:00 · ${b.orders.toFixed(0)} orders${b.over > 0 ? ` · ${b.over.toFixed(0)} over` : ""}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                            {overH > 0 && <div style={{ height: overH, background: "var(--av3-bad)", borderRadius: "2px 2px 0 0" }} />}
+                            <div style={{ height: okH, background: "var(--av3-c3)", opacity: 0.85, borderRadius: overH > 0 ? 0 : "2px 2px 0 0" }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                      {oven.bars.map((b) => <div key={b.hour} style={{ flex: 1, textAlign: "center", fontSize: 9.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{b.hour}</div>)}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: oven.lostPerMonth > 0 ? "var(--av3-warn)" : "var(--av3-muted)", marginTop: 8 }}>
+                      {oven.lostPerMonth > 0 ? `~${oven.waitMin} min peak wait · ~${oven.lostPerMonth.toLocaleString("pl-PL")} orders/mo lost to the queue` : "Line keeps up with peak demand — no queue loss."} <span style={{ color: "var(--av3-subtle)" }}>· dashed line = {oven.perHourCap.toFixed(0)}/hr ceiling</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </CardBody>
+          </Card>
+
+          {/* shift plan by daypart */}
+          <Card>
+            <CardHead title="Shift plan — labour by daypart" actions={
+              <InfoButton title="Shift plan — labour by daypart"
+                description="Forecast orders per daypart and the line headcount needed to serve them within the oven ceiling."
+                institutional="Labour is the second-biggest controllable cost, and flat all-day staffing is where it leaks. Matching heads to the demand curve — light at the lunch shoulder, doubled at the dinner peak — is how good operators hold labour % in range without blowing service. The gate: scheduled peak heads must cover the dinner daypart's orders/hr, or the oven curve goes red."
+                plain="Dinner does 22 orders/hr against a 16/hr line, so you need 2 pizzaioli on at 18:00–21:00; lunch at 9/hr needs only 1. Staffing 2 all day burns wage on the dead afternoon; staffing 1 all day loses the dinner rush."
+                tips="Schedule to the 'rec. heads' column: add the second pair of hands only for the dinner block, cross-train so a waiter can plate at peak, and start prep before the lunch ramp. If recommended > scheduled at dinner, that's your queue loss in the oven curve."
+                methodology="Orders/daypart = Σ of the modelled hourly demand within the daypart window; rec. heads = ⌈(orders/hr) ÷ kitchenCapacity.pizzasPerHour⌉ (min 1). Scheduled pizzaioli = Σ headcount of pizzaiolo labour lines. Modelling layer over the scenario." />
+            } />
+            <CardBody>
+              <div className="av3-reciperow-head" style={{ gridTemplateColumns: "1.2fr 1.2fr 70px 64px" }}><span>Daypart</span><span>Hours</span><span style={{ textAlign: "right" }}>Orders</span><span style={{ textAlign: "right" }}>Heads</span></div>
+              {shiftPlan.rows.map((r) => (
+                <div key={r.key} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 70px 64px", gap: 8, alignItems: "center", padding: "7px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.key}</span>
+                  <span className="av3-cell-muted" style={{ fontFamily: "var(--av3-mono)", fontSize: 11.5 }}>{r.range}</span>
+                  <span style={{ textAlign: "right", fontFamily: "var(--av3-mono)", fontSize: 12 }}>{r.orders}<span className="av3-cell-muted" style={{ fontSize: 10 }}> · {r.ordersPerHour.toFixed(0)}/h</span></span>
+                  <span style={{ textAlign: "right" }}><Badge tone={r.heads > shiftPlan.scheduledPizzaioli ? "bad" : "ok"}>{r.heads}</Badge></span>
+                </div>
+              ))}
+              <div style={{ fontSize: 11.5, color: "var(--av3-muted)", marginTop: 8 }}>
+                Scheduled pizzaioli: <b style={{ color: "var(--av3-fg)" }}>{shiftPlan.scheduledPizzaioli}</b>
+                {shiftPlan.rows.some((r) => r.heads > shiftPlan.scheduledPizzaioli) ? <span style={{ color: "var(--av3-warn)" }}> · peak daypart needs more heads than scheduled</span> : <span style={{ color: "var(--av3-ok)" }}> · covers every daypart</span>}
+              </div>
+            </CardBody>
           </Card>
         </div>
       )}

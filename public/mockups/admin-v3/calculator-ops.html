@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Calculator — oven curve / shift plan / menu presets (mockup)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root,[data-theme="dark"]{--av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;--av3-hover:#2c2c33;--av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);--av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#6e6862;--av3-brand:#c2384f;--av3-platinum:#cbb48a;--av3-ok:#34b27b;--av3-warn:#e0a93f;--av3-bad:#e8554f;--av3-info:#5f9bd6;--av3-c3:#5f9bd6;--av3-c4:#34b27b;--av3-sh-1:0 1px 2px rgba(0,0,0,.4);}
+    [data-theme="light"]{--av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;--av3-hover:#e9e4da;--av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);--av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#857c73;--av3-brand:#a82940;--av3-platinum:#9c7e4e;--av3-ok:#1f8a60;--av3-warn:#b5781d;--av3-bad:#cc3a35;--av3-info:#3d6694;--av3-c3:#3d6694;--av3-c4:#1f8a60;--av3-sh-1:0 1px 2px rgba(28,24,21,.06);}
+    *{box-sizing:border-box;margin:0;padding:0;} body{background:var(--av3-bg);color:var(--av3-fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;} .mono{font-family:"JetBrains Mono",monospace;}
+    .ribbon{display:flex;align-items:center;gap:8px;justify-content:center;padding:6px;font-size:11.5px;color:#0a0a0c;background:linear-gradient(90deg,var(--av3-platinum),#e0c79a);font-weight:600;}
+    .wrap{max-width:1080px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:14px;}
+    h1{font-family:"Fraunces",serif;font-size:21px;font-weight:600;} .sub{font-size:12.5px;color:var(--av3-muted);margin-top:2px;} .note{font-size:12px;color:var(--av3-muted);border-left:2px solid var(--av3-platinum);padding-left:10px;}
+    .btn{display:inline-flex;align-items:center;height:30px;padding:0 12px;border:1px solid var(--av3-line-strong);border-radius:6px;background:var(--av3-s2);color:var(--av3-fg);font-size:12.5px;font-weight:500;cursor:pointer;}
+    .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);overflow:hidden;} .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--av3-line);} .card-title{font-size:13px;font-weight:600;} .card-desc{font-size:11.5px;color:var(--av3-muted);margin-top:1px;} .card-body{padding:16px;} .info{width:14px;height:14px;border-radius:50%;border:1px solid var(--av3-line-strong);color:var(--av3-subtle);font-size:9px;display:grid;place-items:center;}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;} @media (max-width:820px){.grid-2{grid-template-columns:1fr}}
+    .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;} .k{padding:10px 12px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:9px;} .kl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle);} .kv{font-family:"JetBrains Mono",monospace;font-size:19px;font-weight:600;margin-top:3px;}
+    .chart{position:relative;height:120px;display:flex;align-items:flex-end;gap:4px;} .ceil{position:absolute;left:0;right:0;border-top:1px dashed var(--av3-line-strong);} .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;} .lbls{display:flex;gap:4px;margin-top:4px;} .lbls span{flex:1;text-align:center;font-size:9.5px;color:var(--av3-subtle);font-family:"JetBrains Mono",monospace;}
+    .rhead,.row{display:grid;grid-template-columns:1.2fr 1.2fr 70px 64px;gap:8px;align-items:center;} .rhead{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle);padding-bottom:6px;} .rhead span:nth-child(3),.rhead span:nth-child(4){text-align:right;} .row{padding:7px 0;border-bottom:1px solid var(--av3-line);} .row:last-child{border-bottom:none;}
+    .badge{display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:600;} .b-ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:var(--av3-ok);} .b-bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:var(--av3-bad);}
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · final <strong style="margin:0 4px">/admin-v3/simulation</strong> parity bits — Menu presets · Oven curve &amp; peak saturation · Shift plan by daypart</div>
+  <div class="wrap">
+    <div><h1>Calculator</h1><div class="sub">P&amp;L simulator · live levers → real economics (shared engine)</div></div>
+    <div class="note">These three close the last v2 gaps. The oven curve &amp; shift plan are modelled from <strong>kitchenCapacity</strong> (pizzas/hr, open hours) + a declared double-peak demand shape; menu presets drive the attach levers through the engine.</div>
+
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Menu strategy presets</div><div class="card-desc">Load a coherent attach-lever mix — folds into ticket &amp; COGS through the engine</div></div><span class="info">i</span></div>
+      <div class="card-body"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn">Balanced</button><button class="btn">Premium</button><button class="btn">Value</button><span style="font-size:11.5px;color:var(--av3-subtle)">Premium = richer add-ons (higher ticket + COGS) · Value = cheap-attach, lean COGS · Balanced = defaults.</span></div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Oven curve &amp; peak saturation</div><span class="info">i</span></div>
+        <div class="card-body">
+          <div class="mini">
+            <div class="k"><div class="kl">Peak / hr</div><div class="kv" style="color:var(--av3-bad)">22</div></div>
+            <div class="k"><div class="kl">Line / hr</div><div class="kv">16</div></div>
+            <div class="k"><div class="kl">Peak util</div><div class="kv" style="color:var(--av3-bad)">138%</div></div>
+          </div>
+          <div class="chart" id="oven"></div>
+          <div class="lbls" id="ovenL"></div>
+          <div style="font-size:11.5px;color:var(--av3-warn);margin-top:8px">~22 min peak wait · ~190 orders/mo lost to the queue <span style="color:var(--av3-subtle)">· dashed line = 16/hr ceiling</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Shift plan — labour by daypart</div><span class="info">i</span></div>
+        <div class="card-body">
+          <div class="rhead"><span>Daypart</span><span>Hours</span><span>Orders</span><span>Heads</span></div>
+          <div class="row"><span style="font-weight:500">Lunch</span><span class="mono" style="font-size:11.5px;color:var(--av3-muted)">11:00–16:00</span><span style="text-align:right" class="mono">96 · 12/h</span><span style="text-align:right"><span class="badge b-ok">1</span></span></div>
+          <div class="row"><span style="font-weight:500">Afternoon</span><span class="mono" style="font-size:11.5px;color:var(--av3-muted)">16:00–18:00</span><span style="text-align:right" class="mono">28 · 7/h</span><span style="text-align:right"><span class="badge b-ok">1</span></span></div>
+          <div class="row"><span style="font-weight:500">Dinner</span><span class="mono" style="font-size:11.5px;color:var(--av3-muted)">18:00–21:00</span><span style="text-align:right" class="mono">116 · 20/h</span><span style="text-align:right"><span class="badge b-bad">2</span></span></div>
+          <div style="font-size:11.5px;color:var(--av3-muted);margin-top:8px">Scheduled pizzaioli: <b style="color:var(--av3-fg)">1</b> <span style="color:var(--av3-warn)">· peak daypart needs more heads than scheduled</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    var orders=[9,13,18,15,11,7,8,14,20,22,17]; var start=11; var cap=16; var scale=Math.max(Math.max.apply(null,orders),cap)*1.1;
+    var oven=document.getElementById('oven'), ovenL=document.getElementById('ovenL'), H=120;
+    var ceil=document.createElement('div'); ceil.className='ceil'; ceil.style.bottom=(cap/scale*100)+'%'; oven.appendChild(ceil);
+    orders.forEach(function(o,i){var col=document.createElement('div');col.className='col';col.title=(start+i)+':00 · '+o+' orders';
+      var over=Math.max(0,o-cap); if(over>0){var r=document.createElement('div');r.style.height=(over/scale*H)+'px';r.style.background='var(--av3-bad)';r.style.borderRadius='2px 2px 0 0';col.appendChild(r);}
+      var g=document.createElement('div');g.style.height=(Math.min(o,cap)/scale*H)+'px';g.style.background='var(--av3-c3)';g.style.opacity='.85';g.style.borderRadius=over>0?'0':'2px 2px 0 0';col.appendChild(g);oven.appendChild(col);
+      var l=document.createElement('span');l.textContent=(start+i);ovenL.appendChild(l);});
+  </script>
+</body>
+</html>
