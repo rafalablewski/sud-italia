@@ -268,13 +268,19 @@ refetches every 30s.
   entries + write-off cost KPI (`POST /api/admin/waste`)
 - [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
-  week's log (`POST /api/admin/handover`)
+  week's log (`POST /api/admin/handover`). **Visual upgrade:** a **KPI rail**
+  (this-week count / issues flagged / net cash variance / last sign-off) above
+  the sign-off form.
 - [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
-  add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`)
+  add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`). **Visual
+  upgrade:** a **KPI rail** (suppliers / avg lead / fastest lead / with-contact)
+  + a **search** box; the table splits email/phone columns and colour-codes the
+  lead-time badge.
 - [x] Purchase orders (`/admin-v3/purchase-orders`) — per-location restock
   orders with status chips, a create dialog (supplier + ingredient lines +
   expected date, `POST`), and a detail dialog driving the draft→sent→received
-  flow (`PUT`, receiving auto-credits stock) + cancel/delete
+  flow (`PUT`, receiving auto-credits stock) + cancel/delete. **Visual upgrade:**
+  a **KPI rail** (open POs / on-order value / awaiting delivery / received).
 - [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
   active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts with

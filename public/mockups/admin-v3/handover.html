@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Shift handover — mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root,[data-theme="dark"]{--av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;--av3-hover:#2c2c33;--av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);--av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#6e6862;--av3-brand:#c2384f;--av3-platinum:#cbb48a;--av3-ok:#34b27b;--av3-warn:#e0a93f;--av3-bad:#e8554f;--av3-info:#5f9bd6;--av3-sh-1:0 1px 2px rgba(0,0,0,.4);}
+    [data-theme="light"]{--av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;--av3-hover:#e9e4da;--av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);--av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#857c73;--av3-brand:#a82940;--av3-platinum:#9c7e4e;--av3-ok:#1f8a60;--av3-warn:#b5781d;--av3-bad:#cc3a35;--av3-info:#3d6694;--av3-sh-1:0 1px 2px rgba(28,24,21,.06);}
+    *{box-sizing:border-box;margin:0;padding:0;} body{background:var(--av3-bg);color:var(--av3-fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;} .mono{font-family:"JetBrains Mono",monospace;}
+    .ribbon{display:flex;align-items:center;gap:8px;justify-content:center;padding:6px;font-size:11.5px;color:#0a0a0c;background:linear-gradient(90deg,var(--av3-platinum),#e0c79a);font-weight:600;}
+    .shell{display:grid;grid-template-columns:232px 1fr;min-height:calc(100vh - 28px);}
+    .side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--av3-s1);border-right:1px solid var(--av3-line);overflow:hidden;}
+    .brand{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-bottom:1px solid var(--av3-line);} .brand-mark{display:grid;place-items:center;width:26px;height:26px;border-radius:5px;background:var(--av3-brand);color:#fff;font-family:"Fraunces",serif;font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(203,180,138,.5);} .brand-name{font-family:"Fraunces",serif;font-size:14px;font-weight:600;} .brand-sub{font-size:9.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--av3-subtle);}
+    .side-scroll{flex:1;overflow-y:auto;padding:12px 8px;} .eyebrow{padding:6px 8px 3px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.13em;color:var(--av3-subtle);} .group{margin-bottom:12px;}
+    .nav{position:relative;display:flex;align-items:center;gap:10px;height:30px;padding:0 9px;border-radius:5px;color:var(--av3-muted);font-size:12.5px;font-weight:500;} .nav svg{width:16px;height:16px;} .nav.active{background:var(--av3-s3);color:var(--av3-fg);} .nav.active::before{content:"";position:absolute;left:-8px;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--av3-platinum);}
+    .main{display:flex;flex-direction:column;min-width:0;} .topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-bottom:1px solid var(--av3-line);background:color-mix(in oklab,var(--av3-bg) 80%,transparent);backdrop-filter:saturate(150%) blur(10px);}
+    .crumbs{font-size:12.5px;} .crumbs .sep{color:var(--av3-subtle);margin:0 6px;} .crumbs .cur{font-weight:600;} .crumbs a{color:var(--av3-muted);} .spacer{flex:1;}
+    .icon-btn{display:grid;place-items:center;width:30px;height:30px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--av3-muted);cursor:pointer;} .icon-btn svg{width:15px;height:15px;} .scope{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--av3-line);border-radius:5px;background:var(--av3-s1);font-size:12.5px;} .scope svg{width:13px;height:13px;color:var(--av3-subtle);}
+    .content{padding:16px;display:flex;flex-direction:column;gap:14px;} .pagehead h1{font-family:"Fraunces",serif;font-size:21px;font-weight:600;} .sub{font-size:12.5px;color:var(--av3-muted);margin-top:2px;}
+    .kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;} .kpi{display:flex;flex-direction:column;gap:6px;padding:12px 16px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);} .kpi-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle);} .kpi-value{font-family:"JetBrains Mono",monospace;font-size:23px;font-weight:500;}
+    .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);overflow:hidden;} .card-head{padding:12px 16px;border-bottom:1px solid var(--av3-line);font-size:13px;font-weight:600;} .card-body{padding:16px;}
+    .formrow{display:grid;grid-template-columns:150px 130px 1fr 1fr;gap:10px;margin-bottom:12px;} .field-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle);display:block;margin-bottom:4px;} .input,.select{width:100%;height:32px;padding:0 10px;background:var(--av3-s2);border:1px solid var(--av3-line-strong);border-radius:6px;color:var(--av3-fg);font:inherit;font-size:12.5px;}
+    .toggle{height:30px;padding:0 12px;border:1px solid var(--av3-line-strong);border-radius:6px;background:var(--av3-s2);color:var(--av3-muted);font-size:11px;font-weight:600;cursor:pointer;} .toggle.on{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));border-color:color-mix(in oklab,var(--av3-ok) 35%,transparent);color:var(--av3-ok);}
+    .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--av3-brand);background:var(--av3-brand);color:#fff;font-size:12.5px;font-weight:500;cursor:pointer;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;} th{text-align:left;padding:7px 14px;background:var(--av3-s2);color:var(--av3-subtle);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--av3-line);} td{padding:8px 14px;border-bottom:1px solid var(--av3-line);} tr:last-child td{border-bottom:none;} .num{text-align:right;} .th-num{text-align:right;} .cell-muted{color:var(--av3-muted);}
+    .badge{display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:600;} .b-ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:var(--av3-ok);} .b-warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:var(--av3-warn);} .b-bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:var(--av3-bad);} .b-info{background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));color:var(--av3-info);}
+    @media (max-width:980px){.shell{grid-template-columns:1fr}.side{display:none}.formrow{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · upgraded <strong style="margin:0 4px">/admin-v3/handover</strong> — KPI rail (week count · issues flagged · net cash variance · last sign-off) above the form + log</div>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group"><div class="eyebrow">Overview</div><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a></div>
+        <div class="group"><div class="eyebrow">Operations</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v18M19 3v18M5 8h14"/></svg>Menu</a>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Shift handover</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar"><nav class="crumbs"><a>Operations</a><span class="sep">/</span><span class="cur">Shift handover</span></nav><div class="spacer"></div>
+        <span class="scope"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Kraków</span>
+        <button class="icon-btn" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button>
+      </header>
+      <main class="content">
+        <div><h1>Shift handover</h1><div class="sub">End-of-shift sign-off · Kraków</div></div>
+        <div class="kpi-rail">
+          <div class="kpi"><div class="kpi-label">This week</div><div class="kpi-value">9</div></div>
+          <div class="kpi"><div class="kpi-label">Issues flagged</div><div class="kpi-value" style="color:var(--av3-bad)">2</div></div>
+          <div class="kpi"><div class="kpi-label">Net cash variance</div><div class="kpi-value" style="color:var(--av3-warn)">−12,40 zł</div></div>
+          <div class="kpi"><div class="kpi-label">Last sign-off</div><div class="kpi-value" style="font-size:18px">pt 23:14</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Sign off a shift</div>
+          <div class="card-body">
+            <div class="formrow">
+              <div><label class="field-label">Shift</label><select class="select"><option>Closing</option></select></div>
+              <div><label class="field-label">Cash counted (zł)</label><input class="input" placeholder="opt." /></div>
+              <div><label class="field-label">Outgoing manager</label><input class="input" placeholder="name" /></div>
+              <div><label class="field-label">Incoming (optional)</label><input class="input" placeholder="name" /></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+              <span class="field-label" style="margin:0">Checks:</span>
+              <button class="toggle on">Temps OK</button><button class="toggle on">Waste logged OK</button><button class="toggle on">Equipment OK</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:end"><div style="flex:1"><label class="field-label">Comment (optional)</label><input class="input" placeholder="anything the next manager should know" /></div><button class="btn">Record handover</button></div>
+          </div>
+        </div>
+        <div class="card"><table>
+          <thead><tr><th>When</th><th>Shift</th><th>Outgoing</th><th>Checks</th><th class="th-num">Cash variance</th></tr></thead>
+          <tbody>
+            <tr><td class="cell-muted">pt 23:14</td><td><span class="badge b-info">Closing</span></td><td>Marco R.</td><td><span class="badge b-ok">Temp</span> <span class="badge b-ok">Equip</span></td><td class="num"><span class="badge b-ok">+1,20 zł</span></td></tr>
+            <tr><td class="cell-muted">czw 23:02</td><td><span class="badge b-info">Closing</span></td><td>Giulia P.</td><td><span class="badge b-ok">Temp</span> <span class="badge b-bad">Equip</span></td><td class="num"><span class="badge b-warn">−9,60 zł</span></td></tr>
+            <tr><td class="cell-muted">czw 15:30</td><td><span class="badge b-info">Mid-shift</span></td><td>Anna K.</td><td><span class="badge b-ok">Temp</span> <span class="badge b-ok">Equip</span></td><td class="num cell-muted">—</td></tr>
+          </tbody>
+        </table></div>
+      </main>
+    </div>
+  </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
+</body>
+</html>
