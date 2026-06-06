@@ -245,8 +245,10 @@ function CustomerDetailDialog({ phone, onClose, onChanged }: { phone: string; on
         </div>
       }
     >
-      {loading || !data ? (
+      {loading ? (
         <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading customer…</div>
+      ) : !data ? (
+        <div className="av3-empty"><div className="av3-empty-title">Couldn’t load customer</div><div className="av3-empty-text">The detail request failed — close and try again.</div></div>
       ) : (
         <>
           {/* summary + points breakdown */}

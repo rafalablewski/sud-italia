@@ -162,7 +162,7 @@ export function MenuV3() {
     return visible.filter(
       (u) =>
         (cat === "all" || u.category === cat) &&
-        (!needle || u.primary.name.toLowerCase().includes(needle) || u.primary.description.toLowerCase().includes(needle)),
+        (!needle || u.primary.name.toLowerCase().includes(needle) || (u.primary.description || "").toLowerCase().includes(needle)),
     );
   }, [visible, cat, q]);
 

@@ -47,21 +47,27 @@ export function AgentV3({ gatewayConfigured }: { gatewayConfigured: boolean }) {
   const sendMessage = useCallback(async (message: string, approvedToolUseIds: string[] = []) => {
     if (!activeId) { setError("Start a conversation first."); return; }
     setSending(true); setError(null);
-    const res = await fetch(`/api/admin/ai-agent/conversations/${activeId}/turn`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, approvedToolUseIds }),
-    });
-    if (!res.ok) {
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(json.error ?? `Request failed (${res.status})`); setSending(false); return;
+    try {
+      const res = await fetch(`/api/admin/ai-agent/conversations/${activeId}/turn`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, approvedToolUseIds }),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(json.error ?? `Request failed (${res.status})`); return;
+      }
+      const json = (await res.json()) as { events: ChatEvent[] };
+      const pending: PendingToolUse[] = json.events
+        .filter((e) => e.type === "tool_use" && e.toolUse && !e.toolUse.executed && e.toolUse.preview)
+        .map((e) => ({ id: e.toolUse!.id, name: e.toolUse!.name, input: e.toolUse!.input, preview: e.toolUse!.preview! }));
+      const cost = json.events.find((e) => typeof e.totalCostGrosze === "number")?.totalCostGrosze;
+      if (typeof cost === "number") setCostGrosze((c) => c + cost);
+      setTurns((prev) => [...prev, { id: `turn-${Date.now().toString(36)}`, userText: message, events: json.events, pending }]);
+      setDraft("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setSending(false);
     }
-    const json = (await res.json()) as { events: ChatEvent[] };
-    const pending: PendingToolUse[] = json.events
-      .filter((e) => e.type === "tool_use" && e.toolUse && !e.toolUse.executed && e.toolUse.preview)
-      .map((e) => ({ id: e.toolUse!.id, name: e.toolUse!.name, input: e.toolUse!.input, preview: e.toolUse!.preview! }));
-    const cost = json.events.find((e) => typeof e.totalCostGrosze === "number")?.totalCostGrosze;
-    if (typeof cost === "number") setCostGrosze((c) => c + cost);
-    setTurns((prev) => [...prev, { id: `turn-${Date.now().toString(36)}`, userText: message, events: json.events, pending }]);
-    setDraft(""); setSending(false);
   }, [activeId]);
 
   const approveTool = useCallback(async (turnId: string, toolUseId: string) => {
