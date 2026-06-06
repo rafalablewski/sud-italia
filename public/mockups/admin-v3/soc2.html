@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · SOC 2 controls — mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root,[data-theme="dark"]{--av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;--av3-hover:#2c2c33;--av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);--av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#6e6862;--av3-brand:#c2384f;--av3-platinum:#cbb48a;--av3-ok:#34b27b;--av3-warn:#e0a93f;--av3-bad:#e8554f;--av3-info:#5f9bd6;--av3-sh-1:0 1px 2px rgba(0,0,0,.4);}
+    [data-theme="light"]{--av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;--av3-hover:#e9e4da;--av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);--av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#857c73;--av3-brand:#a82940;--av3-platinum:#9c7e4e;--av3-ok:#1f8a60;--av3-warn:#b5781d;--av3-bad:#cc3a35;--av3-info:#3d6694;--av3-sh-1:0 1px 2px rgba(28,24,21,.06);}
+    *{box-sizing:border-box;margin:0;padding:0;} body{background:var(--av3-bg);color:var(--av3-fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+    .ribbon{display:flex;align-items:center;gap:8px;justify-content:center;padding:6px;font-size:11.5px;color:#0a0a0c;background:linear-gradient(90deg,var(--av3-platinum),#e0c79a);font-weight:600;}
+    .shell{display:grid;grid-template-columns:232px 1fr;min-height:calc(100vh - 28px);}
+    .side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--av3-s1);border-right:1px solid var(--av3-line);overflow:hidden;}
+    .brand{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-bottom:1px solid var(--av3-line);} .brand-mark{display:grid;place-items:center;width:26px;height:26px;border-radius:5px;background:var(--av3-brand);color:#fff;font-family:"Fraunces",serif;font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(203,180,138,.5);} .brand-name{font-family:"Fraunces",serif;font-size:14px;font-weight:600;} .brand-sub{font-size:9.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--av3-subtle);}
+    .side-scroll{flex:1;overflow-y:auto;padding:12px 8px;} .eyebrow{padding:6px 8px 3px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.13em;color:var(--av3-subtle);} .group{margin-bottom:12px;}
+    .nav{position:relative;display:flex;align-items:center;gap:10px;height:30px;padding:0 9px;border-radius:5px;color:var(--av3-muted);font-size:12.5px;font-weight:500;} .nav svg{width:16px;height:16px;} .nav.active{background:var(--av3-s3);color:var(--av3-fg);} .nav.active::before{content:"";position:absolute;left:-8px;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--av3-platinum);}
+    .main{display:flex;flex-direction:column;min-width:0;} .topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-bottom:1px solid var(--av3-line);background:color-mix(in oklab,var(--av3-bg) 80%,transparent);backdrop-filter:saturate(150%) blur(10px);}
+    .crumbs{font-size:12.5px;} .crumbs .sep{color:var(--av3-subtle);margin:0 6px;} .crumbs .cur{font-weight:600;} .crumbs a{color:var(--av3-muted);} .spacer{flex:1;} .icon-btn{display:grid;place-items:center;width:30px;height:30px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--av3-muted);cursor:pointer;} .icon-btn svg{width:15px;height:15px;}
+    .content{padding:16px;display:flex;flex-direction:column;gap:14px;} .pagehead h1{font-family:"Fraunces",serif;font-size:21px;font-weight:600;} .sub{font-size:12.5px;color:var(--av3-muted);margin-top:2px;}
+    .kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;} .kpi{display:flex;flex-direction:column;gap:6px;padding:12px 16px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);} .kpi-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle);} .kpi-value{font-family:"JetBrains Mono",monospace;font-size:23px;font-weight:500;}
+    .chips{display:inline-flex;gap:2px;padding:2px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:8px;} .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:5px;color:var(--av3-muted);font-size:12px;font-weight:500;cursor:pointer;} .chip.active{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong);} .chip .c{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--av3-subtle);}
+    .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:11px;box-shadow:var(--av3-sh-1);overflow:hidden;} .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--av3-line);} .card-title{font-size:13px;font-weight:600;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;} th{text-align:left;padding:7px 16px;background:var(--av3-s2);color:var(--av3-subtle);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--av3-line);} td{padding:8px 16px;border-bottom:1px solid var(--av3-line);} tr:last-child td{border-bottom:none;} .cell-muted{color:var(--av3-muted);}
+    .badge{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:600;} .badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor;} .b-ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:var(--av3-ok);} .b-warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:var(--av3-warn);} .b-bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:var(--av3-bad);} .b-neu{background:var(--av3-s3);color:var(--av3-muted);}
+    @media (max-width:980px){.shell{grid-template-columns:1fr}.side{display:none}}
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · <strong style="margin:0 4px">/admin-v3/soc2</strong> — added status filter chips (All / Met / Partial / Gap) above the category-grouped controls</div>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">SI</span><span><span class="brand-name">Sud Italia</span><br><span class="brand-sub">Operations · v3</span></span></div>
+      <nav class="side-scroll">
+        <div class="group"><div class="eyebrow">Overview</div><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a></div>
+        <div class="group"><div class="eyebrow">System</div>
+          <a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Regulatory disclosures</a>
+          <a class="nav active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>SOC 2 controls</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main">
+      <header class="topbar"><nav class="crumbs"><a>System</a><span class="sep">/</span><span class="cur">SOC 2 controls</span></nav><div class="spacer"></div><button class="icon-btn" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></button></header>
+      <main class="content">
+        <div><h1>SOC 2 controls</h1><div class="sub">Live posture vs Trust Services Criteria — introspected, not a checklist</div></div>
+        <div class="kpi-rail">
+          <div class="kpi"><div class="kpi-label">Readiness</div><div class="kpi-value" style="color:var(--av3-ok)">86%</div></div>
+          <div class="kpi"><div class="kpi-label">Met</div><div class="kpi-value">24</div></div>
+          <div class="kpi"><div class="kpi-label">Partial</div><div class="kpi-value" style="color:var(--av3-warn)">3</div></div>
+          <div class="kpi"><div class="kpi-label">Gaps</div><div class="kpi-value" style="color:var(--av3-bad)">1</div></div>
+        </div>
+        <div class="chips"><span class="chip active">All<span class="c">28</span></span><span class="chip">Met<span class="c">24</span></span><span class="chip">Partial<span class="c">3</span></span><span class="chip">Gap<span class="c">1</span></span></div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Security</div><span class="badge b-neu">9/11 met</span></div>
+          <table>
+            <thead><tr><th>Control</th><th>Evidence</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:500">Admin sessions expire + re-auth</td><td class="cell-muted">Cookie TTL 12h, isAuthenticated() on every route</td><td><span class="badge b-ok"><span class="dot"></span>Met</span></td></tr>
+              <tr><td style="font-weight:500">MFA available for privileged users</td><td class="cell-muted">TOTP + WebAuthn enrol on Users · not yet enforced</td><td><span class="badge b-warn"><span class="dot"></span>Partial</span></td></tr>
+              <tr><td style="font-weight:500">Audit trail on mutations</td><td class="cell-muted">Append-only audit-log with before/after diff</td><td><span class="badge b-ok"><span class="dot"></span>Met</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Availability</div><span class="badge b-neu">7/8 met</span></div>
+          <table>
+            <thead><tr><th>Control</th><th>Evidence</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:500">Automated DB backups</td><td class="cell-muted">Neon PITR · 7-day window · restore not yet drilled</td><td><span class="badge b-bad"><span class="dot"></span>Gap</span></td></tr>
+              <tr><td style="font-weight:500">Serverless auto-scale</td><td class="cell-muted">Vercel functions · no fixed capacity ceiling</td><td><span class="badge b-ok"><span class="dot"></span>Met</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>document.getElementById('themeBtn').addEventListener('click',function(){var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');});</script>
+</body>
+</html>

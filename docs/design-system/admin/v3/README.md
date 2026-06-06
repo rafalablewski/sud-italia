@@ -283,7 +283,7 @@ refetches every 30s.
   a **KPI rail** (open POs / on-order value / awaiting delivery / received).
 - [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs. Schedule (`/admin-v3/schedule`): this week's shifts with
+  active KPIs, **search** (name / role / email). Schedule (`/admin-v3/schedule`): this week's shifts with
   add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
   (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
   days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
@@ -388,7 +388,8 @@ refetches every 30s.
   v3-native `DiffRenderer` — added/removed/changed keys, before↔after blocks,
   pretty-JSON nested shapes — over the API's `before`/`after` snapshots; CSS
   §15 `.av3-diff-*`), SOC 2
-  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
+  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection,
+  **status filter chips** All/Met/Partial/Gap above the category groups),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
   **Visual upgrade:** Currency + Languages each gained a summary **KPI rail**
@@ -416,12 +417,14 @@ refetches every 30s.
   grouped by permission group. CSS §21 (`.av3-matrix`).
 - [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/
   insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
+  **Search** added (by item / type / site).
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
   (`PUT /api/admin/regulatory-compliance`). **Toggle = saved (rule #7)** — the
   zone select + disclosure toggles persist on change (no Save button); same
   consistency fix applied to Currency + Languages (enable/default persist
-  immediately; FX rates save on blur).
+  immediately; FX rates save on blur). **Visual upgrade:** a summary **KPI rail**
+  (sites / default pack / zones in use / disclosures active).
 - [x] Settings (`/admin-v3/settings`, owner-only): five tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles + feature flags, toggle = saved),
@@ -468,7 +471,9 @@ refetches every 30s.
   cutover). `Kpi` gained an optional `info` slot that renders the ⓘ trigger at
   the end of the label row; the Calculator's six headline KPIs (net profit, net
   margin, EBITDA, break-even/day, prime cost, payback) each carry a full
-  five-section explainer.
+  five-section explainer. **Follow-up:** the **Unit economics** card header now
+  also carries a five-section ⓘ (true CM1/order, CM%, food/labour %, capacity,
+  cash-on-cash), extending Rule #12 coverage past the headline rail.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

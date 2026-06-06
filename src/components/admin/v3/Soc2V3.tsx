@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge, Card, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 type Status = "met" | "partial" | "gap";
@@ -12,12 +12,15 @@ const LABEL: Record<Status, string> = { met: "Met", partial: "Partial", gap: "Ga
 
 export function Soc2V3({ register }: { register: Register }) {
   const { controls, summary } = register;
+  const [filter, setFilter] = useState<"all" | Status>("all");
   const byCat = useMemo(() => {
     const order = ["Security", "Confidentiality", "Availability", "Processing Integrity"];
     const groups = new Map<string, Control[]>();
-    for (const c of controls) { const a = groups.get(c.category) ?? []; a.push(c); groups.set(c.category, a); }
+    for (const c of controls) { if (filter !== "all" && c.status !== filter) continue; const a = groups.get(c.category) ?? []; a.push(c); groups.set(c.category, a); }
     return [...groups.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-  }, [controls]);
+  }, [controls, filter]);
+  const chips: ("all" | Status)[] = ["all", "met", "partial", "gap"];
+  const chipCount = (f: "all" | Status) => (f === "all" ? controls.length : controls.filter((c) => c.status === f).length);
 
   const cols: ColumnV3<Control>[] = [
     { key: "crit", header: "Control", render: (c) => <span style={{ fontWeight: 500 }}>{c.criterion}</span> },
@@ -41,7 +44,17 @@ export function Soc2V3({ register }: { register: Register }) {
         <Kpi label="Gaps" value={`${summary.gap}`} accentVar="--av3-c1" />
       </div>
 
-      {byCat.map(([cat, list]) => (
+      <div className="av3-filterchips">
+        {chips.map((f) => (
+          <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)} style={{ textTransform: "capitalize" }}>
+            {f === "all" ? "All" : LABEL[f]}<span className="av3-fchip-count">{chipCount(f)}</span>
+          </button>
+        ))}
+      </div>
+
+      {byCat.length === 0 ? (
+        <div className="av3-card" style={{ padding: 0 }}><div className="av3-empty"><div className="av3-empty-title">Nothing here</div><div className="av3-empty-text">No controls in this status.</div></div></div>
+      ) : byCat.map(([cat, list]) => (
         <Card key={cat} style={{ padding: 0 }}>
           <div className="av3-card-head"><div className="av3-card-title">{cat}</div><Badge tone="neutral">{list.filter((c) => c.status === "met").length}/{list.length} met</Badge></div>
           <Table columns={cols} rows={list} rowKey={(c) => c.id} />

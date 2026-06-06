@@ -27,6 +27,7 @@ export function StaffV3() {
   const [punches, setPunches] = useState<Punch[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StaffStatus>("active");
+  const [q, setQ] = useState("");
   const [edit, setEdit] = useState<StaffMember | null>(null);
   const [adding, setAdding] = useState(false);
   const [punchBusy, setPunchBusy] = useState<string | null>(null);
@@ -51,7 +52,10 @@ export function StaffV3() {
     return set;
   }, [punches]);
 
-  const rows = useMemo(() => list.filter((s) => s.status === filter), [list, filter]);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter((s) => s.status === filter && (!needle || s.name.toLowerCase().includes(needle) || (STAFF_ROLE_LABEL[s.role] ?? s.role).toLowerCase().includes(needle) || (s.email ?? "").toLowerCase().includes(needle)));
+  }, [list, filter, q]);
   const counts = { active: list.filter((s) => s.status === "active").length, inactive: list.filter((s) => s.status === "inactive").length };
 
   const punch = async (m: StaffMember) => {
@@ -99,9 +103,13 @@ export function StaffV3() {
         <Kpi label="On shift now" icon={Users} value={`${onShift.size}`} accentVar="--av3-c4" />
       </div>
 
-      <div className="av3-filterchips">
-        <button type="button" className={`av3-fchip ${filter === "active" ? "is-active" : ""}`} onClick={() => setFilter("active")}>Active<span className="av3-fchip-count">{counts.active}</span></button>
-        <button type="button" className={`av3-fchip ${filter === "inactive" ? "is-active" : ""}`} onClick={() => setFilter("inactive")}>Inactive<span className="av3-fchip-count">{counts.inactive}</span></button>
+      <div className="av3-toolbar">
+        <div className="av3-filterchips">
+          <button type="button" className={`av3-fchip ${filter === "active" ? "is-active" : ""}`} onClick={() => setFilter("active")}>Active<span className="av3-fchip-count">{counts.active}</span></button>
+          <button type="button" className={`av3-fchip ${filter === "inactive" ? "is-active" : ""}`} onClick={() => setFilter("inactive")}>Inactive<span className="av3-fchip-count">{counts.inactive}</span></button>
+        </div>
+        <span className="av3-toolbar-spacer" />
+        <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 220, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, role, email…" />
       </div>
 
       {loading && list.length === 0 ? (

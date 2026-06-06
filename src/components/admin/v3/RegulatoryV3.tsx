@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { CheckSquare, Globe, MapPin, ShieldCheck } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHead } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
 
 type Zone = "EU" | "NYC" | "SG";
 const ZONES: Zone[] = ["EU", "NYC", "SG"];
@@ -43,6 +43,18 @@ export function RegulatoryV3() {
   };
   const setDefaultZone = (z: Zone) => { const next = { ...cfg, defaultZone: z }; setCfg(next); persist(next); };
 
+  const stats = useMemo(() => {
+    const zones = new Set<Zone>([cfg.defaultZone]);
+    let disclosures = 0;
+    for (const l of all) {
+      const lc = locFor(l.slug);
+      zones.add(lc.zone);
+      disclosures += (lc.calorieDisclosureRequired ? 1 : 0) + (lc.nutriGradeRequired ? 1 : 0) + (lc.gstRegistered ? 1 : 0);
+    }
+    return { sites: all.length, zones: zones.size, disclosures };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg, all]);
+
   if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading regulatory disclosures…</div>;
 
   return (
@@ -52,6 +64,13 @@ export function RegulatoryV3() {
           <h1>Regulatory disclosures</h1>
           <div className="av3-pagehead-sub">Tag each site with its regulatory pack (EU / NYC / SG) · changes save instantly</div>
         </div>
+      </div>
+
+      <div className="av3-kpi-rail">
+        <Kpi label="Sites" icon={MapPin} value={`${stats.sites}`} accentVar="--av3-c3" />
+        <Kpi label="Default pack" icon={ShieldCheck} value={cfg.defaultZone} accentVar="--av3-c2" />
+        <Kpi label="Zones in use" icon={Globe} value={`${stats.zones}`} accentVar="--av3-c4" />
+        <Kpi label="Disclosures active" icon={CheckSquare} value={`${stats.disclosures}`} accentVar="--av3-c5" />
       </div>
 
       <Card>
