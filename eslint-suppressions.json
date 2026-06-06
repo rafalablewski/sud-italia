@@ -109,11 +109,6 @@
       "count": 13
     }
   },
-  "src/components/admin/AuditLog.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/components/admin/MLUpsellPanel.tsx": {
     "no-restricted-syntax": {
       "count": 2

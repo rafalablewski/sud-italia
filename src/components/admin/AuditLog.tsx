@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, Minus, Plus, RefreshCw } from "lucide-react";
+import { History, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useToast } from "./v2/ui/Toast";
 
 import {
@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardBody,
+  ConfirmDialog,
   EmptyState,
   PageHero,
 } from "./v2/ui";
@@ -62,6 +63,11 @@ function AuditLogDesktop() {
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Deleting the trail is owner-only (the API enforces it; we gate the UI so
+  // managers who can read the log never see controls they can't use).
+  const [isOwner, setIsOwner] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmMode, setConfirmMode] = useState<"all" | "filtered" | "selected" | null>(null);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -81,6 +87,24 @@ function AuditLogDesktop() {
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/me");
+        if (res.ok && alive) {
+          const me = await res.json();
+          setIsOwner(me?.role === "owner");
+        }
+      } catch {
+        // Non-owner / unauthenticated — leave the delete controls hidden.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const counts = useMemo(() => {
     const c: Record<ActionFilter, number> = {
@@ -111,6 +135,80 @@ function AuditLogDesktop() {
       else next.add(id);
       return next;
     });
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // How many of the currently-visible rows are selected — drives the
+  // select-all checkbox's checked/indeterminate state.
+  const visibleSelectedCount = useMemo(
+    () => filtered.reduce((n, e) => n + (selected.has(e.id) ? 1 : 0), 0),
+    [filtered, selected],
+  );
+
+  const toggleSelectAllVisible = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allVisibleSelected = filtered.length > 0 && filtered.every((e) => next.has(e.id));
+      if (allVisibleSelected) {
+        for (const e of filtered) next.delete(e.id);
+      } else {
+        for (const e of filtered) next.add(e.id);
+      }
+      return next;
+    });
+  };
+
+  // Resolve the confirm dialog's mode into the request payload + copy.
+  const confirmCount =
+    confirmMode === "selected"
+      ? selected.size
+      : confirmMode === "filtered"
+        ? filtered.length
+        : entries.length;
+
+  const runDelete = async (): Promise<boolean> => {
+    if (!confirmMode) return false;
+    const payload =
+      confirmMode === "all"
+        ? { all: true }
+        : {
+            ids:
+              confirmMode === "selected"
+                ? Array.from(selected)
+                : filtered.map((e) => e.id),
+          };
+    try {
+      const res = await fetch("/api/admin/audit-log", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        toast.error(
+          res.status === 403
+            ? "Only owners can delete audit entries"
+            : "Could not delete entries",
+        );
+        return false;
+      }
+      const data = await res.json().catch(() => ({ deleted: 0 }));
+      const n = Number(data?.deleted ?? 0);
+      toast.success(`Deleted ${n} ${n === 1 ? "entry" : "entries"}`);
+      setSelected(new Set());
+      await fetchEntries();
+      return true;
+    } catch {
+      toast.error("Could not delete entries");
+      return false;
+    }
   };
 
   return (
@@ -146,6 +244,63 @@ function AuditLogDesktop() {
         }}
       />
 
+      {isOwner && !loading && entries.length > 0 && (
+        <Card>
+          <CardBody>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.8125rem" }}>
+                {/* eslint-disable-next-line no-restricted-syntax -- ds-ok: tri-state multi-select checkbox; v2/ui has no Checkbox primitive (Switch is a toggle) */}
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && visibleSelectedCount === filtered.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < filtered.length;
+                  }}
+                  onChange={toggleSelectAllVisible}
+                  style={{ cursor: "pointer" }}
+                />
+                Select all shown
+              </label>
+              <span className="v2-muted" style={{ fontSize: "0.8125rem" }}>
+                {selected.size} selected
+              </span>
+              <div style={{ flex: 1 }} />
+              <Button
+                variant="secondary"
+                size="sm"
+                leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={() => setConfirmMode("selected")}
+                disabled={selected.size === 0}
+              >
+                {`Delete selected${selected.size > 0 ? ` (${selected.size})` : ""}`}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={() => setConfirmMode("filtered")}
+                disabled={filtered.length === 0 || actionFilter === "all"}
+                title={
+                  actionFilter === "all"
+                    ? "Pick an action filter first, or use Delete all"
+                    : undefined
+                }
+              >
+                {`Delete filtered${actionFilter !== "all" ? ` (${filtered.length})` : ""}`}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                leadingIcon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={() => setConfirmMode("all")}
+              >
+                Delete all
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       {loading ? (
         <div className="v2-page-loading">Loading Audit log…</div>
       ) : filtered.length === 0 ? (
@@ -177,6 +332,18 @@ function AuditLogDesktop() {
                       padding: "0.75rem 1rem",
                     }}
                   >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+                    {isOwner && (
+                      // eslint-disable-next-line no-restricted-syntax -- ds-ok: per-row multi-select checkbox; v2/ui has no Checkbox primitive (Switch is a toggle)
+                      <input
+                        type="checkbox"
+                        checked={selected.has(e.id)}
+                        onChange={() => toggleSelected(e.id)}
+                        aria-label="Select audit entry"
+                        style={{ marginTop: "0.25rem", flexShrink: 0, cursor: "pointer" }}
+                      />
+                    )}
+                    {/* eslint-disable-next-line no-restricted-syntax -- ds-ok: expandable diff row (card-as-button), not an action button */}
                     <button
                       type="button"
                       onClick={() => hasDiff && toggleExpanded(e.id)}
@@ -187,7 +354,8 @@ function AuditLogDesktop() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         gap: "0.75rem",
-                        width: "100%",
+                        flex: 1,
+                        minWidth: 0,
                         background: "transparent",
                         border: 0,
                         padding: 0,
@@ -217,6 +385,7 @@ function AuditLogDesktop() {
                         </span>
                       )}
                     </button>
+                    </div>
                     {isOpen && hasDiff && <DiffRenderer before={e.before} after={e.after} />}
                   </li>
                 );
@@ -225,6 +394,30 @@ function AuditLogDesktop() {
           </CardBody>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmMode !== null}
+        onClose={() => setConfirmMode(null)}
+        onConfirm={runDelete}
+        destructive
+        confirmLabel={
+          confirmMode === "all"
+            ? "Delete everything"
+            : `Delete ${confirmCount} ${confirmCount === 1 ? "entry" : "entries"}`
+        }
+        title={
+          confirmMode === "all"
+            ? "Delete the entire audit trail?"
+            : confirmMode === "filtered"
+              ? `Delete ${confirmCount} filtered ${confirmCount === 1 ? "entry" : "entries"}?`
+              : `Delete ${confirmCount} selected ${confirmCount === 1 ? "entry" : "entries"}?`
+        }
+        description={
+          confirmMode === "all"
+            ? "This permanently removes every audit-log entry, including any not shown here. This cannot be undone. The deletion itself will be recorded as a new entry."
+            : "This permanently removes the chosen entries. This cannot be undone. The deletion itself will be recorded as a new entry."
+        }
+      />
     </div>
   );
 }
