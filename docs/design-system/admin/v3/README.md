@@ -232,7 +232,10 @@ refetches every 30s.
   no-recipe), a **search** box + **Board⇄Table** view toggle, and a default
   **Board view** — category-grouped dish cards (status dot, badges, price range,
   margin badge) with the same multi-select + edit-on-click as the table. CSS §18
-  (`.av3-board`, `.av3-dcard`).
+  (`.av3-board`, `.av3-dcard`). **Editor upgrade:** the edit dialog is now
+  **tabbed** (Product / Pricing / Modifiers / Disclosures, with counts on the
+  last two) under a live **price·margin recap**, instead of one long scroll;
+  money inputs carry a `zł` affix. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -255,6 +258,10 @@ refetches every 30s.
   toggle, and a default **Board view** — category-grouped recipe cards with a
   food-cost health bar + cost/portion + kcal + ingredient count; uncosted dishes
   render a clear “+ Cost this dish” card. CSS §18 (`.av3-board`, `.av3-fcbar`).
+  **Editor upgrade:** the recipe editor now keeps a **sticky per-portion recap**
+  (cost / food-cost % / batch / kcal) above a **tabbed** body (Ingredients /
+  Nutrition / Notes — Nutrition & Notes flag with a dot when relevant); ingredient
+  rows gained unit + `%` affixes. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's

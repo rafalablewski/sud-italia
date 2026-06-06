@@ -997,3 +997,30 @@
 .av3-dcard-cta { font-size: 11.5px; color: var(--av3-platinum); font-weight: 500; }
 .av3-fcbar { height: 5px; border-radius: var(--av3-r-pill); background: var(--av3-s3); overflow: hidden; }
 .av3-fcbar > i { display: block; height: 100%; border-radius: var(--av3-r-pill); }
+
+/* ==========================================================================
+   19. Dialog editors — in-dialog tabs, money affix, polished rows
+   ========================================================================== */
+.av3-dtabs { display: flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); margin-bottom: 14px; }
+.av3-dtab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 10px; border: none; background: transparent; border-radius: var(--av3-r-sm); color: var(--av3-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease); }
+.av3-dtab:hover { color: var(--av3-fg); }
+.av3-dtab.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
+.av3-dtab-count { font-family: var(--av3-mono); font-size: 10px; color: var(--av3-subtle); }
+.av3-dtab.is-active .av3-dtab-count { color: var(--av3-muted); }
+.av3-dtab[data-flag="true"]::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--av3-warn); }
+
+/* money input with a zł (or unit) suffix */
+.av3-affix { position: relative; display: block; }
+.av3-affix > .av3-input { padding-right: 28px; }
+.av3-affix::after { content: attr(data-suffix); position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10.5px; color: var(--av3-subtle); pointer-events: none; font-family: var(--av3-mono); }
+
+/* inline editor hint strip */
+.av3-edhint { font-size: 11.5px; color: var(--av3-muted); background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); padding: 8px 10px; }
+.av3-edhint[data-tone="warn"] { color: var(--av3-warn); background: var(--av3-warn-soft); border-color: color-mix(in oklab, var(--av3-warn) 30%, transparent); }
+
+/* recipe editor — sticky KPI summary at the top of the body */
+.av3-recap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--av3-line); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); overflow: hidden; margin-bottom: 14px; }
+.av3-recap-cell { background: var(--av3-s1); padding: 9px 11px; }
+.av3-recap-k { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
+.av3-recap-v { font-family: var(--av3-mono); font-size: 17px; font-weight: 600; margin-top: 2px; line-height: 1; }
+@media (max-width: 720px) { .av3-recap { grid-template-columns: 1fr 1fr; } .av3-dtab { font-size: 11.5px; } }

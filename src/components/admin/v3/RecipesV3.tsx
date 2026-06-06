@@ -295,6 +295,7 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
   const [notes, setNotes] = useState(recipe?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [tab, setTab] = useState<"build" | "nutrition" | "notes">("build");
 
   const setLine = (i: number, patch: Partial<DraftLine>) => setLines((arr) => arr.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   const addLine = () => setLines((arr) => [...arr, { ingredientId: sortedIngredients[0]?.id ?? "", quantity: "", wastePct: "0" }]);
@@ -361,75 +362,87 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
         </>
       }
     >
-      {/* per-portion KPIs */}
-      <div className="av3-od-grid" style={{ marginBottom: 12 }}>
-        <div className="av3-od-field"><div className="k">Cost / portion</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(estCost))}</div></div>
-        <div className="av3-od-field"><div className="k">Food cost %</div><div className="v"><Badge tone={foodCostTone(fcPct)}>{fcPct.toFixed(0)}%</Badge></div></div>
-        <div className="av3-od-field"><div className="k">Batch cost</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{formatPrice(Math.round(batchCost))}</div></div>
-        <div className="av3-od-field"><div className="k">kcal / portion</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro("kcalPerUnit") || "—"}</div></div>
+      {/* sticky per-portion recap — always visible while editing */}
+      <div className="av3-recap">
+        <div className="av3-recap-cell"><div className="av3-recap-k">Cost / portion</div><div className="av3-recap-v">{formatPrice(Math.round(estCost))}</div></div>
+        <div className="av3-recap-cell"><div className="av3-recap-k">Food cost %</div><div className="av3-recap-v" style={{ color: `var(--av3-${foodCostTone(fcPct) === "ok" ? "ok" : foodCostTone(fcPct) === "warn" ? "warn" : foodCostTone(fcPct) === "bad" ? "bad" : "fg"})` }}>{fcPct > 0 ? `${fcPct.toFixed(0)}%` : "—"}</div></div>
+        <div className="av3-recap-cell"><div className="av3-recap-k">Batch cost</div><div className="av3-recap-v">{formatPrice(Math.round(batchCost))}</div></div>
+        <div className="av3-recap-cell"><div className="av3-recap-k">kcal / portion</div><div className="av3-recap-v">{macro("kcalPerUnit") || "—"}</div></div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-        <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Yield (portions)</span><input className="av3-input" type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(e.target.value)} /></label>
-        <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Prep (min)</span><input className="av3-input" type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(e.target.value)} placeholder="—" /></label>
+      <div className="av3-dtabs">
+        <button type="button" className={`av3-dtab ${tab === "build" ? "is-active" : ""}`} onClick={() => setTab("build")}>Ingredients{lines.length > 0 && <span className="av3-dtab-count">{lines.length}</span>}</button>
+        <button type="button" className={`av3-dtab ${tab === "nutrition" ? "is-active" : ""}`} data-flag={missingKcal.length > 0} onClick={() => setTab("nutrition")}>Nutrition</button>
+        <button type="button" className={`av3-dtab ${tab === "notes" ? "is-active" : ""}`} data-flag={notes.trim().length > 0} onClick={() => setTab("notes")}>Notes</button>
       </div>
 
-      <div className="av3-subhead">Ingredients</div>
-      {ingredients.length === 0 && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginBottom: 6 }}>No ingredients in the catalog yet — add some on the Ingredients tab first.</div>}
-      {lines.length === 0 ? (
-        <div className="av3-empty-text" style={{ padding: "8px 0", color: "var(--av3-subtle)" }}>No ingredients yet — add the first line.</div>
-      ) : (
+      {tab === "build" && (
         <>
-          <div className="av3-reciperow-head"><span>Ingredient</span><span>Qty</span><span>Waste%</span><span style={{ textAlign: "right" }}>Cost</span><span /></div>
-          {lines.map((l, i) => {
-            const ing = ingById.get(l.ingredientId);
-            const noKcal = ing && typeof ing.kcalPerUnit !== "number";
-            const noOffering = ing && !ing.activeProductId;
-            return (
-              <div className="av3-reciperow" key={i}>
-                <div style={{ minWidth: 0 }}>
-                  <select className="av3-select" value={l.ingredientId} onChange={(e) => setLine(i, { ingredientId: e.target.value })}>
-                    {sortedIngredients.map((ig) => <option key={ig.id} value={ig.id}>{ig.name}</option>)}
-                  </select>
-                  {(noKcal || noOffering) && <div style={{ fontSize: 10, color: "var(--av3-warn)", marginTop: 2 }}>{noOffering ? "no distributor linked" : "missing kcal"}</div>}
-                </div>
-                <input className="av3-input" type="number" step="0.001" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} placeholder={ing?.unit ?? ""} />
-                <input className="av3-input" type="number" value={l.wastePct} onChange={(e) => setLine(i, { wastePct: e.target.value })} />
-                <span className="av3-reciperow-cost">{formatPrice(Math.round(lineCost(l)))}</span>
-                <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => removeLine(i)}><X /></button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Yield (portions)</span><input className="av3-input" type="number" min={1} value={yieldPortions} onChange={(e) => setYieldPortions(e.target.value)} /></label>
+            <label className="av3-field" style={{ width: 120 }}><span className="av3-field-label">Prep</span><span className="av3-affix" data-suffix="min"><input className="av3-input" type="number" min={0} value={prepTime} onChange={(e) => setPrepTime(e.target.value)} placeholder="—" /></span></label>
+          </div>
+
+          {ingredients.length === 0 && <div className="av3-edhint" data-tone="warn" style={{ marginBottom: 8 }}>No ingredients in the catalog yet — add some on the Ingredients tab first.</div>}
+          {lines.length === 0 ? (
+            <div className="av3-empty-text" style={{ padding: "8px 0", color: "var(--av3-subtle)" }}>No ingredients yet — add the first line.</div>
+          ) : (
+            <>
+              <div className="av3-reciperow-head"><span>Ingredient</span><span>Qty</span><span>Waste%</span><span style={{ textAlign: "right" }}>Cost</span><span /></div>
+              {lines.map((l, i) => {
+                const ing = ingById.get(l.ingredientId);
+                const noKcal = ing && typeof ing.kcalPerUnit !== "number";
+                const noOffering = ing && !ing.activeProductId;
+                return (
+                  <div className="av3-reciperow" key={i}>
+                    <div style={{ minWidth: 0 }}>
+                      <select className="av3-select" value={l.ingredientId} onChange={(e) => setLine(i, { ingredientId: e.target.value })}>
+                        {sortedIngredients.map((ig) => <option key={ig.id} value={ig.id}>{ig.name}</option>)}
+                      </select>
+                      {(noKcal || noOffering) && <div style={{ fontSize: 10, color: "var(--av3-warn)", marginTop: 2 }}>{noOffering ? "no distributor linked" : "missing kcal"}</div>}
+                    </div>
+                    <span className="av3-affix" data-suffix={ing?.unit ?? ""}><input className="av3-input" type="number" step="0.001" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} placeholder={ing?.unit ?? ""} /></span>
+                    <span className="av3-affix" data-suffix="%"><input className="av3-input" type="number" value={l.wastePct} onChange={(e) => setLine(i, { wastePct: e.target.value })} /></span>
+                    <span className="av3-reciperow-cost">{formatPrice(Math.round(lineCost(l)))}</span>
+                    <button type="button" className="av3-iconbtn-sm" aria-label="Remove" onClick={() => removeLine(i)}><X /></button>
+                  </div>
+                );
+              })}
+            </>
+          )}
+          <div style={{ marginTop: 10 }}>
+            <Button variant="secondary" size="sm" onClick={addLine} disabled={sortedIngredients.length === 0}><Plus className="av3-btn-ico" /> Add ingredient</Button>
+          </div>
+
+          {batchCost > 0 && (
+            <>
+              <div className="av3-subhead">Cost breakdown</div>
+              <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 6 }}>
+                {lines.map((l, i) => { const c = lineCost(l); if (c <= 0) return null; return <div key={i} title={`${ingById.get(l.ingredientId)?.name ?? ""}: ${formatPrice(Math.round(c))}`} style={{ width: `${(c / batchCost) * 100}%`, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />; })}
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10.5, color: "var(--av3-muted)" }}>
+                {lines.filter((l) => lineCost(l) > 0).slice(0, 6).map((l) => { const idx = lines.indexOf(l); return <span key={idx} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 2, background: `var(${COST_COLORS[idx % COST_COLORS.length]})` }} />{ingById.get(l.ingredientId)?.name} {Math.round((lineCost(l) / batchCost) * 100)}%</span>; })}
+              </div>
+            </>
+          )}
         </>
       )}
-      <div style={{ marginTop: 10 }}>
-        <Button variant="secondary" size="sm" onClick={addLine} disabled={sortedIngredients.length === 0}><Plus className="av3-btn-ico" /> Add ingredient</Button>
-      </div>
 
-      {/* cost breakdown bar */}
-      {batchCost > 0 && (
+      {tab === "nutrition" && (
         <>
-          <div className="av3-subhead">Cost breakdown</div>
-          <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 6 }}>
-            {lines.map((l, i) => { const c = lineCost(l); if (c <= 0) return null; return <div key={i} title={`${ingById.get(l.ingredientId)?.name ?? ""}: ${formatPrice(Math.round(c))}`} style={{ width: `${(c / batchCost) * 100}%`, background: `var(${COST_COLORS[i % COST_COLORS.length]})` }} />; })}
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10.5, color: "var(--av3-muted)" }}>
-            {lines.filter((l) => lineCost(l) > 0).slice(0, 6).map((l) => { const idx = lines.indexOf(l); return <span key={idx} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 2, background: `var(${COST_COLORS[idx % COST_COLORS.length]})` }} />{ingById.get(l.ingredientId)?.name} {Math.round((lineCost(l) / batchCost) * 100)}%</span>; })}
+          {missingKcal.length > 0 && <div className="av3-edhint" data-tone="warn" style={{ marginBottom: 10 }}>{missingKcal.length} ingredient{missingKcal.length > 1 ? "s" : ""} missing kcal — totals understated until set on the offering.</div>}
+          <div className="av3-od-grid">
+            <div className="av3-od-field"><div className="k">kcal / portion</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro("kcalPerUnit") || "—"}</div></div>
+            {([["Protein", "proteinPerUnit"], ["Carbs", "carbsPerUnit"], ["Sugar", "sugarPerUnit"], ["Fiber", "fiberPerUnit"], ["Fat", "fatPerUnit"]] as [string, keyof Ingredient][]).map(([label, key]) => (
+              <div className="av3-od-field" key={key}><div className="k">{label}</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro(key)} g</div></div>
+            ))}
           </div>
         </>
       )}
 
-      {/* macro grid */}
-      <div className="av3-subhead">Per-portion nutrition</div>
-      {missingKcal.length > 0 && <div style={{ fontSize: 10.5, color: "var(--av3-warn)", marginBottom: 6 }}>{missingKcal.length} ingredient{missingKcal.length > 1 ? "s" : ""} missing kcal — totals understated until set on the offering.</div>}
-      <div className="av3-od-grid">
-        {([["Protein", "proteinPerUnit"], ["Carbs", "carbsPerUnit"], ["Sugar", "sugarPerUnit"], ["Fiber", "fiberPerUnit"], ["Fat", "fatPerUnit"]] as [string, keyof Ingredient][]).map(([label, key]) => (
-          <div className="av3-od-field" key={key}><div className="k">{label}</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macro(key)} g</div></div>
-        ))}
-      </div>
-
-      <div className="av3-subhead">Notes (KDS / prep)</div>
-      <textarea className="av3-input" style={{ fontFamily: "var(--av3-ui)", minHeight: 54, resize: "vertical" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Method, plating, station notes…" />
+      {tab === "notes" && (
+        <textarea className="av3-input" style={{ fontFamily: "var(--av3-ui)", minHeight: 120, resize: "vertical" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Method, plating, station notes for the KDS…" />
+      )}
     </Dialog>
   );
 }

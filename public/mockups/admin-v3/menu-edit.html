@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin v3 · Menu — tabbed editor mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+      --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13); --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#6e6862;
+      --av3-brand:#c2384f; --av3-platinum:#cbb48a; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--av3-bg); color:var(--av3-fg); font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; flex-direction:column; }
+    .mono { font-family:"JetBrains Mono",monospace; }
+    .ribbon { display:flex; align-items:center; gap:8px; justify-content:center; padding:6px; font-size:11.5px; color:#0a0a0c; background:linear-gradient(90deg,var(--av3-platinum),#e0c79a); font-weight:600; }
+    .scrim { flex:1; background:rgba(0,0,0,.55); display:grid; place-items:start center; padding:40px 16px; }
+    .dialog { width:640px; max-width:100%; background:var(--av3-s1); border:1px solid var(--av3-line-strong); border-radius:13px; box-shadow:0 18px 50px rgba(0,0,0,.5); display:flex; flex-direction:column; max-height:calc(100vh - 100px); }
+    .dhead { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; border-bottom:1px solid var(--av3-line); }
+    .dtitle { font-size:15px; font-weight:600; } .dsub { font-size:11.5px; color:var(--av3-muted); margin-top:1px; }
+    .badge { display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:600; } .b-brand { background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1)); color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg)); }
+    .dbody { padding:16px; overflow-y:auto; } .dfoot { display:flex; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--av3-line); }
+    .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--av3-line-strong); border-radius:6px; background:var(--av3-s2); color:var(--av3-fg); font-size:12.5px; font-weight:500; cursor:pointer; }
+    .btn-primary { background:var(--av3-brand); border-color:var(--av3-brand); color:#fff; } .btn-ghost { background:transparent; border-color:transparent; color:var(--av3-muted); } .btn-danger { background:transparent; border-color:color-mix(in oklab,var(--av3-bad) 40%,transparent); color:var(--av3-bad); }
+    /* recap */
+    .recap { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--av3-line); border:1px solid var(--av3-line); border-radius:8px; overflow:hidden; margin-bottom:14px; }
+    .recap-cell { background:var(--av3-s1); padding:9px 11px; } .recap-k { font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); } .recap-v { font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:600; margin-top:2px; }
+    /* tabs */
+    .dtabs { display:flex; gap:2px; padding:2px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:8px; margin-bottom:14px; }
+    .dtab { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px; border:none; background:transparent; border-radius:6px; color:var(--av3-muted); font:inherit; font-size:12px; font-weight:500; cursor:pointer; }
+    .dtab.active { background:var(--av3-s3); color:var(--av3-fg); box-shadow:inset 0 0 0 1px var(--av3-line-strong); } .dtab-count { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--av3-subtle); }
+    .edhint { font-size:11.5px; color:var(--av3-muted); background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
+    .field { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; } .field-label { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle); }
+    .input, .select { height:32px; padding:0 10px; background:var(--av3-s2); border:1px solid var(--av3-line-strong); border-radius:6px; color:var(--av3-fg); font:inherit; font-size:12.5px; width:100%; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .chip { display:inline-flex; align-items:center; height:21px; padding:0 9px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--av3-line-strong); background:transparent; color:var(--av3-muted); cursor:pointer; }
+    .chip.on { border-color:var(--av3-platinum); background:color-mix(in oklab,var(--av3-platinum) 18%,var(--av3-s1)); color:var(--av3-fg); }
+  </style>
+</head>
+<body>
+  <div class="ribbon">Static design mockup · the upgraded <strong style="margin:0 4px">Menu edit dialog</strong> — tabbed (Product / Pricing / Modifiers / Disclosures) with a live price·margin recap</div>
+  <div class="scrim">
+    <div class="dialog">
+      <div class="dhead"><div><div class="dtitle">Tartufata Reale</div><div class="dsub">Chain-wide product · 2 sites</div></div><span class="badge b-brand">● recipe</span></div>
+      <div class="dbody">
+        <div class="recap">
+          <div class="recap-cell"><div class="recap-k">Price</div><div class="recap-v">44,00–48,00 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">Avg margin</div><div class="recap-v" style="color:var(--av3-warn)">58%</div></div>
+          <div class="recap-cell"><div class="recap-k">Sites</div><div class="recap-v">2</div></div>
+        </div>
+        <div class="dtabs">
+          <button class="dtab active">Product</button>
+          <button class="dtab">Pricing</button>
+          <button class="dtab">Modifiers<span class="dtab-count">2</span></button>
+          <button class="dtab">Disclosures<span class="dtab-count">4</span></button>
+        </div>
+        <div class="edhint">These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
+        <div class="field"><span class="field-label">Name</span><input class="input" value="Tartufata Reale" /></div>
+        <div class="field"><span class="field-label">Description</span><input class="input" value="Truffle cream, mozzarella, porcini, 36-month parmigiano." /></div>
+        <div class="row">
+          <label class="field" style="width:160px"><span class="field-label">Category</span><select class="select"><option>Pizza</option></select></label>
+          <label class="field" style="width:160px"><span class="field-label">Menu role</span><select class="select"><option>Profit driver</option></select></label>
+        </div>
+        <div><span class="field-label" style="display:block;margin-bottom:6px">Dietary tags</span>
+          <div class="row"><span class="chip on">Vegetarian</span><span class="chip">Vegan</span><span class="chip">Spicy</span><span class="chip">Gluten-free</span></div>
+        </div>
+      </div>
+      <div class="dfoot"><button class="btn btn-ghost">Reset</button><button class="btn btn-danger">Delete</button><span style="flex:1"></span><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Save</button></div>
+    </div>
+  </div>
+</body>
+</html>
