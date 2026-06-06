@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Languages as LangIcon } from "lucide-react";
-import { Badge, Card, CardBody, CardHead } from "./ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Globe, Languages as LangIcon } from "lucide-react";
+import { Badge, Card, CardBody, CardHead, Kpi } from "./ui";
 
 type Locale = "pl" | "en" | "de" | "en-SG";
 const ALL: Locale[] = ["pl", "en", "de", "en-SG"];
@@ -38,6 +38,8 @@ export function LanguagesV3() {
   };
   const setDefault = (l: Locale) => { setDef(l); persist(enabled, l); };
 
+  const enabledCount = useMemo(() => ALL.filter((l) => enabled[l]).length, [enabled]);
+
   if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading languages…</div>;
 
   return (
@@ -47,6 +49,11 @@ export function LanguagesV3() {
           <h1>Languages</h1>
           <div className="av3-pagehead-sub">Storefront locales offered to guests · changes save instantly</div>
         </div>
+      </div>
+      <div className="av3-kpi-rail">
+        <Kpi label="Default" icon={LangIcon} value={def.toUpperCase()} accentVar="--av3-c2" />
+        <Kpi label="Enabled" icon={CheckCircle2} value={`${enabledCount}/${ALL.length}`} accentVar="--av3-c4" />
+        <Kpi label="Translations" icon={Globe} value="Live" accentVar="--av3-c3" />
       </div>
       <Card>
         <CardHead title="Locales" actions={<Badge tone="brand"><LangIcon style={{ width: 11, height: 11 }} /> default {LABEL[def]}</Badge>} />

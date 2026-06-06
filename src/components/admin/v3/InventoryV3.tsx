@@ -75,6 +75,7 @@ export function InventoryV3() {
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<"stock" | "movements">("stock");
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [q, setQ] = useState("");
   const [edit, setEdit] = useState<StockRow | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -122,12 +123,13 @@ export function InventoryV3() {
   }, [movements, stock]);
 
   const filteredStock = useMemo(() => {
-    const rows = filter === "all" ? stock : stock.filter((r) => classify(r) === filter);
+    const needle = q.trim().toLowerCase();
+    const rows = stock.filter((r) => (filter === "all" || classify(r) === filter) && (!needle || r.name.toLowerCase().includes(needle) || (r.category ?? "").toLowerCase().includes(needle)));
     return [...rows].sort((a, b) => {
       const order = { out: 0, low: 1, ok: 2 } as const;
       return order[classify(a)] - order[classify(b)] || a.name.localeCompare(b.name);
     });
-  }, [stock, filter]);
+  }, [stock, filter, q]);
 
   const sortedMovements = useMemo(
     () => [...movements].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 60),
@@ -182,12 +184,16 @@ export function InventoryV3() {
       </div>
 
       {view === "stock" && (
-        <div className="av3-filterchips">
-          {filterChips.map((f) => (
-            <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
-              {filterLabel[f]}<span className="av3-fchip-count">{counts[f]}</span>
-            </button>
-          ))}
+        <div className="av3-toolbar">
+          <div className="av3-filterchips">
+            {filterChips.map((f) => (
+              <button key={f} type="button" className={`av3-fchip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
+                {filterLabel[f]}<span className="av3-fchip-count">{counts[f]}</span>
+              </button>
+            ))}
+          </div>
+          <span className="av3-toolbar-spacer" />
+          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)", width: 220, height: 32 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search ingredient…" />
         </div>
       )}
 

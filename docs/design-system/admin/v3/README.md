@@ -391,6 +391,12 @@ refetches every 30s.
   (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
   Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
+  **Visual upgrade:** Currency + Languages each gained a summary **KPI rail**
+  (Currency: default / enabled / FX-rates-set / charges-in-PLN; Languages:
+  default / enabled / translations-live) above their toggle editors. **Search
+  added** to the two densest list surfaces that lacked it — **Inventory** stock
+  (by ingredient/category, in a toolbar beside the status chips) and **Feedback**
+  (by guest name / comment text, beside the status chips).
 - [x] Users (`/admin-v3/users`, owner-only): account directory + add/edit/delete
   dialog (role / status / site / optional password) over `/api/admin/users`.
   **Security surface restored to v2 parity (flag #2):** auth-posture KPIs
