@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, ClipboardList, Coins, Download, Percent, PiggyBank, Receipt } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { AreaChart, BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, ChipRow, Donut, Kpi, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
+import { AreaChart, BarChart, Badge, Button, Card, CardBody, CardHead, ChartLegend, ChipRow, Donut, Kpi, Skeleton, SkeletonKpiRail, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
 
 type Preset = "7d" | "30d" | "90d";
 const PRESET_DAYS: Record<Preset, number> = { "7d": 7, "30d": 30, "90d": 90 };
@@ -131,7 +131,10 @@ export function ReportsV3() {
       </div>
 
       {loading && !summary ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading reports…</div>
+        <>
+          <SkeletonKpiRail count={6} />
+          <Card><CardBody><Skeleton height={150} radius={8} /></CardBody></Card>
+        </>
       ) : (
         <>
           <div className="av3-kpi-rail">

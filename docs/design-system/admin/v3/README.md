@@ -133,6 +133,8 @@ so reach for a class:
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Switch` (the **one** on/off
 control — see below), `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
+`Skeleton` / `SkeletonKpiRail` / `SkeletonRows` (shimmer loading stand-ins —
+see Loading & empty states below),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
 to `#admin-portal-root` per rule #4), and the **charts** (`Chart.tsx`:
 `AreaChart` / `BarChart` / `Donut` / `ChartLegend`). The set grows as pages
@@ -187,6 +189,29 @@ lifting to `--av3-sh-2` on hover.
   inventing per-dialog animation.
 - **Board card (`.av3-dcard`)** — same hover shadow-lift; selection ring uses
   `--av3-platinum`.
+- **Kanban (`.av3-kcol` / `.av3-ocard`)** — the lane header (`.av3-kcol-head`)
+  is sticky **and opaque** (`--av3-s2` + drop shadow) so cards scroll under it
+  cleanly; order cards carry the resting→hover shadow-lift and a focus ring.
+
+**Navigation & shell.** The active nav item (`.av3-nav-item.is-active`) is
+distinguished from hover three ways: a faint `--av3-platinum`-tinted fill, a
+`--av3-platinum` leading rail (`::before`), and a `--av3-platinum` icon +
+600 weight — hover alone only changes the background, so active always reads
+as "you are here". The topbar's scope `<select>` and every shell control share
+the same `2px --av3-brand` `:focus-visible` ring as the form controls.
+
+**Loading & empty states.**
+- **Skeletons** (`v3/ui/Skeleton.tsx` → `.av3-skeleton`) — shimmer placeholders
+  guarded by `prefers-reduced-motion`. Prefer over a bare `.av3-loading`
+  spinner whenever the content has a known shape: `SkeletonKpiRail` mirrors a
+  `.av3-kpi-rail`, `SkeletonRows` mirrors a list/table body, and bare
+  `Skeleton` takes `width`/`height`/`radius` for anything else. Mark the
+  region `aria-busy`; the shimmer blocks are `aria-hidden`. Wired into Reports
+  and Inventory as the reference pattern — other pages can adopt it in place
+  of their spinner.
+- **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
+  round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
+  (text caps at ~300px for readability).
 
 **Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
 the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2

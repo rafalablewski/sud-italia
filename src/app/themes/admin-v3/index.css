@@ -192,20 +192,22 @@
 }
 .av3-nav-item:hover { background: var(--av3-s3); color: var(--av3-fg); }
 .av3-nav-item.is-active {
-  background: var(--av3-s3);
+  background: color-mix(in oklab, var(--av3-platinum) 9%, var(--av3-s3));
   color: var(--av3-fg);
+  font-weight: 600;
 }
+.av3-nav-item.is-active .av3-nav-ico { color: var(--av3-platinum); }
 .av3-nav-item.is-active::before {
   content: "";
   position: absolute;
   left: -8px;
-  top: 7px;
-  bottom: 7px;
-  width: 2px;
+  top: 6px;
+  bottom: 6px;
+  width: 2.5px;
   border-radius: 0 2px 2px 0;
   background: var(--av3-platinum);
 }
-.av3-nav-ico { width: 16px; height: 16px; flex-shrink: 0; }
+.av3-nav-ico { width: 16px; height: 16px; flex-shrink: 0; transition: color var(--av3-t-fast) var(--av3-ease); }
 .av3-shell[data-collapsed="true"] .av3-nav-item { justify-content: center; padding: 0; }
 .av3-shell[data-collapsed="true"] .av3-nav-label { display: none; }
 
@@ -313,6 +315,7 @@
   cursor: pointer;
 }
 .av3-scope select:hover { border-color: var(--av3-line-strong); }
+.av3-scope select:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-scope-chev { position: absolute; right: 8px; width: 13px; height: 13px; color: var(--av3-subtle); pointer-events: none; }
 
 .av3-content {
@@ -561,10 +564,11 @@
 .av3-alert-sub { font-size: 11px; color: var(--av3-muted); }
 .av3-alert-time { font-size: 10.5px; color: var(--av3-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.av3-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 16px; text-align: center; color: var(--av3-muted); }
-.av3-empty svg { width: 22px; height: 22px; color: var(--av3-subtle); }
+.av3-empty { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 32px 16px; text-align: center; color: var(--av3-muted); }
+/* lift a leading icon into a tinted chip so empty states feel intentional */
+.av3-empty > svg { box-sizing: border-box; width: 42px; height: 42px; padding: 10px; margin-bottom: 2px; color: var(--av3-muted); background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: 50%; }
 .av3-empty-title { font-size: 13px; font-weight: 600; color: var(--av3-fg); }
-.av3-empty-text { font-size: 12px; }
+.av3-empty-text { font-size: 12px; max-width: 300px; line-height: 1.45; }
 
 /* --------------------------------------------------------------------------
    8. Layout helpers
@@ -588,6 +592,18 @@
 .av3-spin { width: 16px; height: 16px; border: 2px solid var(--av3-line-strong); border-top-color: var(--av3-brand); border-radius: 50%; animation: av3-spin 0.7s linear infinite; }
 @keyframes av3-spin { to { transform: rotate(360deg); } }
 .av3-loading { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 40px; color: var(--av3-muted); font-size: 13px; }
+
+/* skeleton — shimmer placeholders that mirror the real layout while data
+   loads (KPI rails, table rows). Prefer over a bare spinner for content that
+   has a known shape. Guarded by prefers-reduced-motion. */
+.av3-skeleton { position: relative; overflow: hidden; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); }
+.av3-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--av3-fg) 8%, transparent), transparent); animation: av3-shimmer 1.3s var(--av3-ease) infinite; }
+@keyframes av3-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .av3-skeleton::after { animation: none; } }
+.av3-skel-line { height: 11px; border-radius: var(--av3-r-pill); }
+.av3-skel-kpi { height: 92px; border-radius: var(--av3-r-lg); }
+.av3-skel-row { height: 38px; }
+.av3-skel-rows { display: flex; flex-direction: column; gap: 8px; }
 
 /* theme toggle */
 .av3-theme-track { width: 30px; height: 30px; }
@@ -885,12 +901,14 @@
    ========================================================================== */
 .av3-kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(232px, 1fr); gap: var(--av3-gap-3); overflow-x: auto; padding-bottom: 4px; }
 .av3-kcol { display: flex; flex-direction: column; min-width: 0; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); }
-.av3-kcol-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--av3-line); position: sticky; top: 0; }
+/* opaque + faint drop so cards read as scrolling under the lane header */
+.av3-kcol-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--av3-line-strong); position: sticky; top: 0; z-index: 1; background: var(--av3-s2); border-radius: var(--av3-r-lg) var(--av3-r-lg) 0 0; box-shadow: 0 2px 6px -4px rgba(0, 0, 0, 0.5); }
 .av3-kcol-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-muted); }
 .av3-kcol-count { font-family: var(--av3-mono); font-size: 11px; color: var(--av3-subtle); }
 .av3-kcol-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; min-height: 60px; max-height: calc(100vh - 230px); overflow-y: auto; }
-.av3-ocard { text-align: left; width: 100%; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); padding: 10px 11px; cursor: pointer; transition: border-color var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease); }
-.av3-ocard:hover { border-color: var(--av3-line-strong); transform: translateY(-1px); }
+.av3-ocard { text-align: left; width: 100%; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); padding: 10px 11px; cursor: pointer; box-shadow: var(--av3-sh-1); transition: border-color var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease), box-shadow var(--av3-t-fast) var(--av3-ease); }
+.av3-ocard:hover { border-color: var(--av3-line-strong); transform: translateY(-1px); box-shadow: var(--av3-sh-2); }
+.av3-ocard:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-ocard-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .av3-ocard-id { font-family: var(--av3-mono); font-size: 11px; color: var(--av3-subtle); }
 .av3-ocard-amt { font-family: var(--av3-mono); font-size: 13px; font-weight: 500; }

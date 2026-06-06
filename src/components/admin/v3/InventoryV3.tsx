@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { StockMovementType } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, Button, Dialog, Kpi, SkeletonRows, Table, type BadgeTone, type ColumnV3 } from "./ui";
 
 interface StockRow {
   id: string;
@@ -198,7 +198,7 @@ export function InventoryV3() {
       )}
 
       {loading && stock.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading stock…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : view === "stock" ? (
         <div className="av3-card" style={{ padding: 0 }}>
           {filteredStock.length === 0 ? (
