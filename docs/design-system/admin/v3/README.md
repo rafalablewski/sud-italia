@@ -133,8 +133,8 @@ so reach for a class:
 `v3/ui` — `Card`, `Button`, `Badge`, `Chip`, `Switch` (the **one** on/off
 control — see below), `Kpi` (the dense metric tile
 with inline sparkline + delta), `Sparkline` (dependency-free inline SVG),
-`Skeleton` / `SkeletonKpiRail` / `SkeletonRows` (shimmer loading stand-ins —
-see Loading & empty states below),
+`Skeleton` / `SkeletonKpiRail` / `SkeletonRows` / `SkeletonKanban` /
+`SkeletonPage` (shimmer loading stand-ins — see Loading & empty states below),
 `Table` (compact, sticky header, right-aligned numerics), `Dialog` (portaled
 to `#admin-portal-root` per rule #4), and the **charts** (`Chart.tsx`:
 `AreaChart` / `BarChart` / `Donut` / `ChartLegend`). The set grows as pages
@@ -210,7 +210,9 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   card of rows) for `if (loading) return …` branches. Mark the region
   `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
   pages** — every `.av3-loading` spinner was replaced (full-page returns →
-  `SkeletonPage`, in-tree content → a card of `SkeletonRows`).
+  `SkeletonPage`, in-tree content → a card of `SkeletonRows`). Per-page tuning
+  where the generic shape misled: Orders uses `SkeletonKanban` (view-aware) and
+  Cash leads with a `SkeletonKpiRail` since its loaded view does.
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
   (text caps at ~300px for readability).
@@ -240,9 +242,16 @@ label. `Donut` segments get the same hover-focus + a `<title>` of
 `label: value (pct%)`. The `<title>` tooltips are the accessible, zero-JS
 fallback; keep them when adding new series.
 
-**Accessibility (CSS §"A11y").** Three baked-in guarantees: (1) `--av3-subtle`
-is tuned to clear **WCAG AA (4.5:1)** for small text on `s1`/`s2`/`bg` in both
-themes — don't darken (light) / lighten (dark) it past that floor; (2) a
+**Accessibility (CSS §"A11y").** Baked-in guarantees: (1) the text tokens clear
+**WCAG AA (4.5:1)** for small text on `s1`/`s2`/`bg` in both themes — `--av3-subtle`
+is tuned to that floor (don't darken-light / lighten-dark past it), and light
+`--av3-ok`/`--av3-warn` are darkened to pass (the brighter chart greens/ambers
+stay on the separate `--av3-c*` tokens). Status **badges** put the status colour
+on its `-soft` tint; all pass except `bad`, whose badge text is mixed toward
+`--av3-fg` (`.av3-badge-bad`) to clear AA on that tint — reuse that fg-mix if a
+new badge fails on its soft bg. Segmented view toggles are `role="tablist"` +
+`role="tab"` (so `aria-selected` is valid — never put `aria-selected` on a bare
+`<button>`). (2) a
 low-specificity `:where(a, button):focus-visible` safety net guarantees every
 interactive element has a visible `--av3-brand` focus ring even if its own rule
 is missing one (the tuned per-control rings still win); (3) a global

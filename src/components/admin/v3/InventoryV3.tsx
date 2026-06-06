@@ -167,8 +167,8 @@ export function InventoryV3() {
         </div>
         <div className="av3-pagehead-actions">
           <div className="av3-viewtoggle" role="tablist" aria-label="View">
-            <button type="button" className={view === "stock" ? "is-active" : ""} aria-selected={view === "stock"} onClick={() => setView("stock")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Stock</button>
-            <button type="button" className={view === "movements" ? "is-active" : ""} aria-selected={view === "movements"} onClick={() => setView("movements")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Movements</button>
+            <button type="button" role="tab" className={view === "stock" ? "is-active" : ""} aria-selected={view === "stock"} onClick={() => setView("stock")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Stock</button>
+            <button type="button" role="tab" className={view === "movements" ? "is-active" : ""} aria-selected={view === "movements"} onClick={() => setView("movements")} style={{ width: "auto", padding: "0 10px", fontSize: 12 }}>Movements</button>
           </div>
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); fetchAll(); }}>
             <RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} />

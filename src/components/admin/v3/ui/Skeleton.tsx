@@ -51,6 +51,24 @@ export function SkeletonRows({ rows = 6 }: { rows?: number }) {
   );
 }
 
+/** A loading stand-in for the Kanban board — N lanes, each with shimmer cards. */
+export function SkeletonKanban({ columns = 4, cards = 3 }: { columns?: number; cards?: number }) {
+  return (
+    <div className="av3-kanban" aria-busy="true">
+      {Array.from({ length: columns }, (_, c) => (
+        <div className="av3-kcol" key={c}>
+          <div className="av3-kcol-head"><Skeleton width={80} height={11} radius={999} /></div>
+          <div className="av3-kcol-body">
+            {Array.from({ length: cards }, (_, i) => (
+              <Skeleton key={i} height={64} radius={8} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Whole-page loading stand-in for the `if (loading) return …` branches: a
  * title strip, an optional KPI rail, and a card of rows. Neutral enough to

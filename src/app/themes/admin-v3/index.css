@@ -88,8 +88,10 @@
   --av3-subtle: #756d65;
   --av3-brand: #a82940;
   --av3-platinum: #9c7e4e;
-  --av3-ok: #1f8a60;
-  --av3-warn: #b5781d;
+  /* ok/warn darkened to clear WCAG AA (4.5:1) as small text on s1/s2 + their
+     soft badge bg; chart greens stay on the brighter --av3-c* tokens. */
+  --av3-ok: #15744d;
+  --av3-warn: #8a590c;
   --av3-bad: #cc3a35;
   --av3-info: #3d6694;
   --av3-c1: #a82940; --av3-c2: #9c7e4e; --av3-c3: #3d6694; --av3-c4: #1f8a60;
@@ -413,7 +415,9 @@
 .av3-badge-neutral { background: var(--av3-s3); color: var(--av3-muted); }
 .av3-badge-ok { background: var(--av3-ok-soft); color: var(--av3-ok); }
 .av3-badge-warn { background: var(--av3-warn-soft); color: var(--av3-warn); }
-.av3-badge-bad { background: var(--av3-bad-soft); color: var(--av3-bad); }
+/* bad mixed toward fg so the text clears AA on the soft bg (raw --av3-bad
+   passes on s1 but not on bad-soft); matches the brand badge's fg-mix. */
+.av3-badge-bad { background: var(--av3-bad-soft); color: color-mix(in oklab, var(--av3-bad) 80%, var(--av3-fg)); }
 .av3-badge-info { background: var(--av3-info-soft); color: var(--av3-info); }
 .av3-badge-brand { background: var(--av3-brand-soft); color: color-mix(in oklab, var(--av3-brand) 70%, var(--av3-fg)); }
 
