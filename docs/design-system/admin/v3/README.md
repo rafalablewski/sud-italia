@@ -89,9 +89,21 @@ Four breakpoints, narrowing in:
 | ≤1180px | Two-column page splits (`.av3-bodysplit`) collapse to one column. |
 | ≤900px  | The sidebar becomes an **off-canvas drawer** — `AdminShellV3` toggles `data-mobile-open`, `TopbarV3` grows the hamburger (`.av3-side-toggle-mobile`), a scrim covers the content, and the drawer **ignores the desktop rail-collapsed state** so a phone user who left the sidebar collapsed still gets full labels. The breadcrumb keeps only its last segment. |
 | ≤720px  | Content gutter tightens; `.av3-grid-2` / `.av3-grid-2-1` / `.av3-formrow` / `.av3-formrow-4` / `.av3-od-grid` stack one-per-row; dense editor rows (`.av3-locrow`, `.av3-reciperow`) get a `min-width` so header + rows scroll together inside the dialog body rather than crushing. |
-| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, and dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width). |
+| ≤560px  | Phone: tap targets hit the 44px floor (`.av3-icon-btn`, `.av3-nav-item`, `.av3-fchip`, `.av3-toggle`, `.av3-iconbtn-sm`), KPI tiles/levers go one-up, dialogs go near-full-bleed (`.av3-dialog-root` padding shrinks, footer buttons stack full-width), and **page-level config/editor rows (`.av3-cfgrow`) stack one control per line** so a `label + fixed controls` row never crushes its label to a few pixels (the `.av3-cfgrow-head` column-label strip hides). |
 
 A `@media (pointer: coarse)` floor gives a touchscreen real hit areas at any width.
+
+**Grid/flex tracks must be allowed to shrink.** The layout grids (`.av3-col`,
+`.av3-grid-2`, `.av3-grid-2-1`, `.av3-cols-*`, `.av3-mini2`, `.av3-bodysplit`)
+carry `min-width: 0` on their items in §9. Without it a grid/flex child keeps its
+default `min-width: auto` and refuses to shrink below its content's intrinsic
+size, so one wide descendant (a chart, a dense number row, a long unbreakable
+string) holds its column wider than the phone — and since iOS Safari *expands the
+layout viewport* to absorb horizontal overflow, that one column defeats **every**
+breakpoint below at once (the whole page shrinks/clips, not just that element).
+The `min-width: 0` lets the tracks collapse to device width and leaves real
+overflow to the inner scroll-wrappers (`.av3-table-wrap`, `.av3-heat-wrap`). When
+you add a new layout grid, give its items `min-width: 0` too.
 
 **Responsive helpers (use these, not an inline `grid-template-columns`).** An
 inline grid style beats the media-query override and silently defeats stacking —
@@ -103,6 +115,18 @@ so reach for a class:
   stack at ≤720. Don't override their `grid-template-columns` inline.
 - `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
   keep its width (wide tables already wrap in `.av3-table-wrap`).
+- `.av3-dtabs` — the tabbed-dialog editor bar (Menu / Recipes) keeps its `flex:1`
+  equal-width tabs when they fit, but **scrolls horizontally** (momentum, hidden
+  scrollbar) once the labels + counts can't — so the last tab never clips against
+  the pill's rounded edge in a near-full-bleed phone dialog.
+- `.av3-cfgrow` / `.av3-cfgrow-head` — a **page-level** inline-grid editor/config
+  row (`label + a few fixed controls`, e.g. Currency/Languages rate rows, the
+  location hours editor, truck-route stops, the Calculator shift-plan table).
+  Set its desktop `grid-template-columns` inline; at ≤560 it stacks one control
+  per line and the `-head` column-label strip hides. Use this — **not**
+  `.av3-locrow`/`.av3-reciperow`, which `min-width`-scroll and only work inside a
+  dialog body (where `overflow-x` computes to `auto`); on a bare page that scroll
+  would overflow the whole layout instead.
 
 ## Primitives (so far)
 

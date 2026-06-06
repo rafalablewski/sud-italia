@@ -185,7 +185,7 @@ function BadgesTab({ menu, cfg, onChange }: { menu: MenuItemLite[]; cfg: Locatio
     { key: "staffPicks", label: "Staff Pick — editorial nudge" },
   ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 14 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 300px),1fr))", gap: 14 }}>
       {groups.map((g) => (
         <MultiSelectCard
           key={String(g.key)}
