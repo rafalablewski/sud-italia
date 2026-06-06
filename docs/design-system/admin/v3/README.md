@@ -403,7 +403,11 @@ refetches every 30s.
   stay on the **Permission matrix** page (no duplication).
 - [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
-  persisting custom grants (`PUT /api/admin/users`).
+  persisting custom grants (`PUT /api/admin/users`). **Visual upgrade:** a **KPI
+  rail** (capabilities / roles / user accounts / custom grants) and a
+  **By-user ⇄ By-role** view toggle — the restored **By-role cross-tab**
+  (`ROLE_DEFAULT_PERMISSIONS`, owner = all) is a read-only capability×role matrix
+  grouped by permission group. CSS §21 (`.av3-matrix`).
 - [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/
   insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
 - [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):

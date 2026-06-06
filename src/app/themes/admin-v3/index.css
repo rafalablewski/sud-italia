@@ -1052,3 +1052,19 @@
 .av3-shift-del svg { width: 12px; height: 12px; }
 .av3-weekcol-empty { font-size: 11px; color: var(--av3-subtle); text-align: center; padding: 12px 4px; }
 @media (pointer: coarse) { .av3-shiftcard { min-height: 44px; } .av3-shift-del { opacity: 1; } }
+
+/* ==========================================================================
+   21. Permission matrix — by-role cross-tab
+   ========================================================================== */
+.av3-matrix-wrap { overflow-x: auto; }
+.av3-matrix { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+.av3-matrix th, .av3-matrix td { padding: 7px 12px; border-bottom: 1px solid var(--av3-line); }
+.av3-matrix thead th { position: sticky; top: 0; z-index: 1; background: var(--av3-s2); color: var(--av3-subtle); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; white-space: nowrap; }
+.av3-matrix thead th:first-child { text-align: left; }
+.av3-matrix td.av3-mx-cap { white-space: nowrap; }
+.av3-matrix td.av3-mx-cap small { display: block; color: var(--av3-subtle); font-size: 10.5px; font-weight: 400; }
+.av3-matrix td.av3-mx-cell { text-align: center; }
+.av3-matrix tr.av3-mx-group td { background: color-mix(in oklab, var(--av3-s2) 60%, var(--av3-s1)); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
+.av3-mx-yes { color: var(--av3-ok); } .av3-mx-yes svg { width: 14px; height: 14px; }
+.av3-mx-no { color: var(--av3-subtle); opacity: 0.5; } .av3-mx-no svg { width: 12px; height: 12px; }
+.av3-matrix th.av3-mx-owner, .av3-matrix td.av3-mx-owner { background: color-mix(in oklab, var(--av3-platinum) 8%, transparent); }
