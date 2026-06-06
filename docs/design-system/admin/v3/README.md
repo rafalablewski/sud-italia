@@ -103,6 +103,10 @@ so reach for a class:
   stack at ≤720. Don't override their `grid-template-columns` inline.
 - `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
   keep its width (wide tables already wrap in `.av3-table-wrap`).
+- `.av3-dtabs` — the tabbed-dialog editor bar (Menu / Recipes) keeps its `flex:1`
+  equal-width tabs when they fit, but **scrolls horizontally** (momentum, hidden
+  scrollbar) once the labels + counts can't — so the last tab never clips against
+  the pill's rounded edge in a near-full-bleed phone dialog.
 - `.av3-cfgrow` / `.av3-cfgrow-head` — a **page-level** inline-grid editor/config
   row (`label + a few fixed controls`, e.g. Currency/Languages rate rows, the
   location hours editor, truck-route stops, the Calculator shift-plan table).

@@ -1027,7 +1027,12 @@
 /* ==========================================================================
    19. Dialog editors — in-dialog tabs, money affix, polished rows
    ========================================================================== */
-.av3-dtabs { display: flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); margin-bottom: 14px; }
+/* `flex:1` tabs share the bar full-width when they fit (desktop); when the
+   labels + counts can't (a near-full-bleed dialog on a phone), the bar scrolls
+   horizontally (momentum, no visible scrollbar) instead of clipping the last
+   tab against its rounded edge. */
+.av3-dtabs { display: flex; gap: 2px; padding: 2px; background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.av3-dtabs::-webkit-scrollbar { display: none; }
 .av3-dtab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 10px; border: none; background: transparent; border-radius: var(--av3-r-sm); color: var(--av3-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease); }
 .av3-dtab:hover { color: var(--av3-fg); }
 .av3-dtab.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
