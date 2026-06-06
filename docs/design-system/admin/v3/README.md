@@ -260,7 +260,9 @@ is missing one (the tuned per-control rings still win); (3) a global
 all three for free as long as they live under `.av3-root`.
 
 Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
-filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),
+filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`;
+add `.is-text` to the toggle when buttons carry an icon+label instead of a bare
+icon — e.g. the Permission matrix "By role / By user"),
 the Kanban board (`.av3-kanban` / `.av3-kcol` / `.av3-ocard`), and the dialog
 (`.av3-dialog-*`).
 
@@ -544,7 +546,8 @@ refetches every 30s.
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
   persisting custom grants (`PUT /api/admin/users`). **Visual upgrade:** a **KPI
   rail** (capabilities / roles / user accounts / custom grants) and a
-  **By-user ⇄ By-role** view toggle — the restored **By-role cross-tab**
+  **By-role ⇄ By-user** icon+label view toggle (`.av3-viewtoggle.is-text`,
+  `Grid3x3` / `Users`; defaults to **By-role**) — the **By-role cross-tab**
   (`ROLE_DEFAULT_PERMISSIONS`, owner = all) is a read-only capability×role matrix
   grouped by permission group. CSS §21 (`.av3-matrix`).
 - [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/

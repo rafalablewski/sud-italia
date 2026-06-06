@@ -935,6 +935,11 @@
 .av3-viewtoggle button { display: grid; place-items: center; width: 28px; height: 26px; border: none; background: transparent; border-radius: 4px; color: var(--av3-muted); cursor: pointer; }
 .av3-viewtoggle button.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
 .av3-viewtoggle svg { width: 15px; height: 15px; }
+/* `.is-text` variant: buttons size to an icon+label instead of a square icon
+   box, so toggles whose meaning isn't self-evident from an icon alone (By role
+   / By user) read cleanly. */
+.av3-viewtoggle.is-text button { width: auto; height: 28px; padding: 0 12px; gap: 6px; grid-auto-flow: column; font: inherit; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.av3-viewtoggle.is-text svg { width: 14px; height: 14px; }
 
 /* ==========================================================================
    12. Kanban board
