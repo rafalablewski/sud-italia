@@ -545,7 +545,12 @@ refetches every 30s.
   **field-level diff restored**: a row click opens a detail dialog with a
   v3-native `DiffRenderer` — added/removed/changed keys, before↔after blocks,
   pretty-JSON nested shapes — over the API's `before`/`after` snapshots; CSS
-  §15 `.av3-diff-*`), SOC 2
+  §15 `.av3-diff-*`. **Owner-only purge** (gated on `/api/admin/me`
+  `role === "owner"`): per-row + select-all checkbox columns and a toolbar
+  with Delete selected / Delete filtered (current chip, disabled on "all") /
+  Delete all, each behind a destructive confirm `Dialog`; calls
+  `DELETE /api/admin/audit-log` with `{ ids }` or `{ all: true }`, then the
+  purge is itself logged as `audit.purge`), SOC 2
   (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection,
   **status filter chips** All/Met/Partial/Gap above the category groups),
   Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,

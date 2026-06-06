@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Minus, Plus, RefreshCw } from "lucide-react";
+import { Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, SkeletonRows, Table } from "./ui";
 
 interface Entry {
@@ -40,6 +40,13 @@ export function AuditLogV3() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [detail, setDetail] = useState<Entry | null>(null);
+  // Purging the trail is owner-only (the API enforces it; we gate the UI so
+  // managers who can read the log never see controls they can't use).
+  const [isOwner, setIsOwner] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmMode, setConfirmMode] = useState<"all" | "filtered" | "selected" | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/audit-log?limit=500").then((r) => (r.ok ? r.json() : [])).catch(() => []);
@@ -47,6 +54,15 @@ export function AuditLogV3() {
     setLoading(false); setRefreshing(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive) setIsOwner(j?.role === "owner"); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: entries.length };
@@ -56,7 +72,70 @@ export function AuditLogV3() {
   const rows = useMemo(() => (filter === "all" ? entries : entries.filter((e) => group(e.action) === filter)), [entries, filter]);
   const chips: Filter[] = ["all", "orders", "menu", "feedback", "settings", "loyalty", "staff", "other"];
 
+  const visibleSelectedCount = useMemo(() => rows.reduce((n, e) => n + (selected.has(e.id) ? 1 : 0), 0), [rows, selected]);
+  const toggleSelected = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAllVisible = () => setSelected((prev) => {
+    const next = new Set(prev);
+    const allSelected = rows.length > 0 && rows.every((e) => next.has(e.id));
+    for (const e of rows) { if (allSelected) next.delete(e.id); else next.add(e.id); }
+    return next;
+  });
+
+  const confirmCount = confirmMode === "selected" ? selected.size : confirmMode === "filtered" ? rows.length : entries.length;
+  const runDelete = async () => {
+    if (!confirmMode) return;
+    const payload = confirmMode === "all"
+      ? { all: true }
+      : { ids: confirmMode === "selected" ? Array.from(selected) : rows.map((e) => e.id) };
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/audit-log", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        setError(res.status === 403 ? "Only owners can delete audit entries." : "Could not delete entries.");
+        return;
+      }
+      setSelected(new Set());
+      setConfirmMode(null);
+      await load();
+    } catch {
+      setError("Could not delete entries.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const cols: ColumnV3<Entry>[] = [
+    ...(isOwner ? [{
+      key: "sel",
+      header: (
+        <input
+          type="checkbox"
+          checked={rows.length > 0 && visibleSelectedCount === rows.length}
+          ref={(el) => { if (el) el.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < rows.length; }}
+          onChange={toggleSelectAllVisible}
+          onClick={(ev) => ev.stopPropagation()}
+          aria-label="Select all shown"
+        />
+      ),
+      render: (e: Entry) => (
+        <input
+          type="checkbox"
+          checked={selected.has(e.id)}
+          onChange={() => toggleSelected(e.id)}
+          onClick={(ev) => ev.stopPropagation()}
+          aria-label="Select audit entry"
+        />
+      ),
+    } as ColumnV3<Entry>] : []),
     { key: "t", header: "When", render: (e) => <span className="av3-cell-muted">{fmt(e.occurredAt)}</span> },
     { key: "actor", header: "Actor", render: (e) => <span style={{ fontWeight: 500 }}>{e.actor}</span> },
     { key: "action", header: "Action", render: (e) => <Badge tone={tone(e.action)}>{e.action}</Badge> },
@@ -69,7 +148,7 @@ export function AuditLogV3() {
       <div className="av3-pagehead">
         <div>
           <h1>Audit log</h1>
-          <div className="av3-pagehead-sub">Every privileged action · append-only · last 500 · open a row for the field-by-field diff</div>
+          <div className="av3-pagehead-sub">Every privileged action · last 500 · open a row for the field-by-field diff{isOwner ? " · owners can purge" : ""}</div>
         </div>
         <div className="av3-pagehead-actions">
           <Button variant="ghost" size="sm" onClick={() => { setRefreshing(true); load(); }}><RefreshCw className="av3-btn-ico" style={refreshing ? { animation: "av3-spin .7s linear infinite" } : undefined} /> Refresh</Button>
@@ -83,6 +162,22 @@ export function AuditLogV3() {
           </button>
         ))}
       </div>
+
+      {isOwner && !loading && entries.length > 0 && (
+        <div className="av3-card" style={{ padding: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span className="av3-cell-muted" style={{ fontSize: 13 }}>{selected.size} selected</span>
+          <div style={{ flex: 1 }} />
+          <Button variant="secondary" size="sm" disabled={selected.size === 0} onClick={() => { setError(null); setConfirmMode("selected"); }}>
+            <Trash2 className="av3-btn-ico" /> Delete selected{selected.size > 0 ? ` (${selected.size})` : ""}
+          </Button>
+          <Button variant="secondary" size="sm" disabled={rows.length === 0 || filter === "all"} onClick={() => { setError(null); setConfirmMode("filtered"); }} title={filter === "all" ? "Pick a filter first, or use Delete all" : undefined}>
+            <Trash2 className="av3-btn-ico" /> Delete filtered{filter !== "all" ? ` (${rows.length})` : ""}
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => { setError(null); setConfirmMode("all"); }}>
+            <Trash2 className="av3-btn-ico" /> Delete all
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
@@ -116,6 +211,30 @@ export function AuditLogV3() {
             {hasDiff(detail) ? <DiffRenderer before={detail.before} after={detail.after} /> : <div className="av3-diff-empty">No snapshot recorded for this action (metadata only).</div>}
           </>
         )}
+      </Dialog>
+
+      <Dialog
+        open={confirmMode !== null}
+        onClose={() => { if (!deleting) { setConfirmMode(null); setError(null); } }}
+        title={confirmMode === "all"
+          ? "Delete the entire audit trail?"
+          : `Delete ${confirmCount} ${confirmCount === 1 ? "entry" : "entries"}?`}
+        width={460}
+        footer={
+          <>
+            <Button variant="ghost" size="sm" disabled={deleting} onClick={() => { setConfirmMode(null); setError(null); }}>Cancel</Button>
+            <Button variant="danger" size="sm" loading={deleting} onClick={runDelete}>
+              {confirmMode === "all" ? "Delete everything" : `Delete ${confirmCount}`}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0 }}>
+          {confirmMode === "all"
+            ? "This permanently removes every audit-log entry, including any not shown here. This cannot be undone. The deletion itself will be recorded as a new entry."
+            : "This permanently removes the chosen entries. This cannot be undone. The deletion itself will be recorded as a new entry."}
+        </p>
+        {error && <p style={{ marginTop: 8, marginBottom: 0, color: "var(--av3-bad)" }}>{error}</p>}
       </Dialog>
     </>
   );
