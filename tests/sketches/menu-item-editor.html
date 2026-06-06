@@ -134,14 +134,14 @@
 
   <div class="av3-dialog">
     <div class="av3-dialog-head">
-      <div><div class="av3-dialog-title">Margherita</div><div class="av3-dialog-sub">Chain-wide product · 2 sites</div></div>
+      <div><div class="av3-dialog-title">Margherita</div><div class="av3-dialog-sub">Chain-wide product · 4 sites</div></div>
       <span class="av3-badge av3-badge-brand">⚗ recipe</span>
     </div>
     <div class="av3-dialog-body">
       <div class="av3-recap">
         <div class="av3-recap-cell"><div class="av3-recap-k">Price</div><div class="av3-recap-v">27,90 zł–29,90 zł</div></div>
         <div class="av3-recap-cell"><div class="av3-recap-k">Avg margin</div><div class="av3-recap-v" style="color:var(--av3-ok)">65%</div></div>
-        <div class="av3-recap-cell"><div class="av3-recap-k">Sites</div><div class="av3-recap-v">2</div></div>
+        <div class="av3-recap-cell"><div class="av3-recap-k">Sites</div><div class="av3-recap-v">4</div></div>
       </div>
 
       <div class="av3-dtabs" id="tabs">
@@ -180,11 +180,25 @@
           <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-KRK">
           <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
         </div>
-        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px;border-bottom:none">
+        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px">
           <span class="av3-locrow-city">Warszawa<span style="color:var(--av3-ok);font-size:11px;margin-left:6px">64%</span></span>
           <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="29.90"></span>
           <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="10.20" disabled></span>
           <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-WAW">
+          <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
+        </div>
+        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px">
+          <span class="av3-locrow-city">Gdańsk<span style="color:var(--av3-warn);font-size:11px;margin-left:6px">58%</span></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="28.50"></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="11.90" disabled></span>
+          <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-GDA">
+          <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
+        </div>
+        <div class="av3-locrow" style="grid-template-columns:1.1fr 92px 92px 1fr 52px;border-bottom:none">
+          <span class="av3-locrow-city">Katowice<span style="color:var(--av3-ok);font-size:11px;margin-left:6px">66%</span></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="27.90"></span>
+          <span class="av3-affix" data-suffix="zł"><input class="av3-input" value="9.50" disabled></span>
+          <input class="av3-input" style="font-family:var(--av3-ui)" value="MGH-KAT">
           <button class="av3-switch" aria-checked="true" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button>
         </div>
         <div class="av3-subhead">Service &amp; channel</div>
@@ -196,14 +210,12 @@
 
       <!-- MODIFIERS -->
       <div class="panel" data-panel="modifiers">
-        <div class="av3-edhint" style="margin-bottom:12px">Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn’t. Use <b>Copy to all sites</b> to push one site’s setup everywhere.</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <div class="av3-viewtoggle is-text" role="tablist" aria-label="Modifier site" id="modsites">
-            <button class="is-active" data-site="krk" type="button">Kraków<span class="av3-dtab-count">2</span></button>
-            <button data-site="waw" type="button">Warszawa<span class="av3-dtab-count">1</span></button>
-          </div>
-          <span style="flex:1"></span>
-          <button class="av3-btn av3-btn-ghost av3-btn-sm" type="button">Copy <span id="copysite">Kraków</span> → all sites</button>
+        <div class="av3-edhint" style="margin-bottom:12px">Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn’t. Pick a site to edit, then clone its setup into any other sites below.</div>
+        <div class="av3-viewtoggle is-text" role="tablist" aria-label="Edit modifiers for site" id="modsites" style="margin-bottom:10px"></div>
+        <div class="av3-clonebar" id="clonebar">
+          <span class="av3-field-label" style="white-space:nowrap">Clone <span id="clonesrc">Kraków</span> into</span>
+          <div id="clonetargets" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+          <button class="av3-btn av3-btn-sm" id="clonebtn" type="button" disabled>Clone → sites</button>
         </div>
         <div id="modbody"></div>
       </div>
@@ -246,14 +258,34 @@
   const ALL=[["🌾","Gluten",1],["🥛","Dairy",1],["🥚","Eggs",0],["🐟","Fish",0],["🦐","Shellfish",0],["🥜","Tree Nuts",0],["🥜","Peanuts",0],["🫘","Soy",0],["🥬","Celery",0],["🟡","Mustard",0],["⚪","Sesame",0],["🍷","Sulfites",0],["🌱","Lupin",0],["🦑","Molluscs",0]];
   document.getElementById("allergens").innerHTML=ALL.map(([e,l,on])=>`<span class="av3-badge chip${on?" on":""}">${e} ${l}</span>`).join("");
   document.querySelectorAll("#allergens .chip,.panel[data-panel='product'] .chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));
-  // per-site modifier groups
+  // ===== per-site modifiers — 4 sites, arbitrary source→target cloning =====
+  const SITES=[["krk","Kraków"],["waw","Warszawa"],["gda","Gdańsk"],["kat","Katowice"]];
   const MODS={
-    krk:[{l:"Size",o:["Standard +0,00 zł","Large +6,00 zł"]},{l:"Extra toppings",o:["Buffalo mozzarella +5,00 zł","Nduja +6,00 zł"]}],
-    waw:[{l:"Size",o:["Standard +0,00 zł","Large +7,00 zł"]}]
+    krk:[{l:"Size",o:["Standard|0","Large|6"]},{l:"Extra toppings",o:["Buffalo mozzarella|5","Nduja|6"]}],
+    waw:[{l:"Size",o:["Standard|0","Large|7"]}],
+    gda:[{l:"Crust",o:["Classic|0","Sourdough|4"]}],
+    kat:[{l:"Size",o:["Standard|0","Large|6"]},{l:"Crust",o:["Classic|0","Gluten-free|8"]},{l:"Extra toppings",o:["Burrata|7"]}]
   };
+  let activeSite="krk";
+  const targets=new Set();
   const body=document.getElementById("modbody");
-  function renderMods(site){
-    body.innerHTML=MODS[site].map(g=>`
+  const toggleEl=document.getElementById("modsites");
+  const tgtEl=document.getElementById("clonetargets");
+  const btn=document.getElementById("clonebtn");
+
+  function renderSiteToggle(){
+    toggleEl.innerHTML=SITES.map(([s,c])=>`<button type="button" class="${s===activeSite?"is-active":""}" data-site="${s}">${c}${MODS[s].length?`<span class="av3-dtab-count">${MODS[s].length}</span>`:""}</button>`).join("");
+    toggleEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{activeSite=b.dataset.site;targets.clear();renderAll();});
+  }
+  function renderCloneBar(){
+    document.getElementById("clonesrc").textContent=SITES.find(([s])=>s===activeSite)[1];
+    tgtEl.innerHTML=SITES.filter(([s])=>s!==activeSite).map(([s,c])=>`<span class="av3-badge chip${targets.has(s)?" on":""}" data-tgt="${s}">${c}</span>`).join("");
+    tgtEl.querySelectorAll("[data-tgt]").forEach(c=>c.onclick=()=>{const s=c.dataset.tgt;targets.has(s)?targets.delete(s):targets.add(s);renderCloneBar();});
+    btn.disabled=targets.size===0;
+    btn.textContent=`Clone → ${targets.size||""} site${targets.size===1?"":"s"}`;
+  }
+  function renderMods(){
+    body.innerHTML=MODS[activeSite].map(g=>`
       <div style="border:1px solid var(--av3-line);border-radius:8px;padding:10px;margin-bottom:8px">
         <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
           <label class="av3-field" style="flex:1;min-width:140px"><span class="av3-field-label">Group label</span><input class="av3-input" style="font-family:var(--av3-ui)" value="${g.l}"></label>
@@ -261,17 +293,13 @@
           <label class="av3-field" style="width:72px"><span class="av3-field-label">Max</span><input class="av3-input" value="1"></label>
           <button class="av3-iconbtn-sm" aria-label="Remove group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
-        ${g.o.map(o=>`<div class="av3-locrow" style="grid-template-columns:1fr 90px 56px 28px;padding:3px 0;border-bottom:none"><input class="av3-input" style="font-family:var(--av3-ui)" value="${o.split(" +")[0]}"><input class="av3-input" value="${(o.split("+")[1]||"0").replace(' zł','')}"><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button><button class="av3-iconbtn-sm" aria-label="Remove option"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`).join("")}
+        ${g.o.map(o=>`<div class="av3-locrow" style="grid-template-columns:1fr 90px 56px 28px;padding:3px 0;border-bottom:none"><input class="av3-input" style="font-family:var(--av3-ui)" value="${o.split("|")[0]}"><input class="av3-input" value="${o.split("|")[1]||"0"}"><button class="av3-switch" aria-checked="false" type="button" data-toggle><span class="av3-switch-track"><span class="av3-switch-thumb"></span></span></button><button class="av3-iconbtn-sm" aria-label="Remove option"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`).join("")}
         <button class="av3-btn av3-btn-ghost av3-btn-sm" style="margin-top:6px">+ Option</button>
       </div>`).join("")+`<button class="av3-btn av3-btn-sm">+ Add modifier group</button>`;
   }
-  renderMods("krk");
-  document.querySelectorAll("#modsites button").forEach(b=>b.onclick=()=>{
-    document.querySelectorAll("#modsites button").forEach(x=>x.classList.remove("is-active"));
-    b.classList.add("is-active");
-    document.getElementById("copysite").textContent=b.textContent.replace(/\d+$/,"");
-    renderMods(b.dataset.site);
-  });
+  function renderAll(){renderSiteToggle();renderCloneBar();renderMods();}
+  btn.onclick=()=>{const src=structuredClone(MODS[activeSite]);targets.forEach(s=>MODS[s]=structuredClone(src));targets.clear();renderAll();};
+  renderAll();
 </script>
 </body>
 </html>

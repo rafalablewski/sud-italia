@@ -121,6 +121,10 @@ so reach for a class:
   inside a form **instead of** stacking an `.av3-field-label` above a bare
   `.av3-switch` (which wraps the uppercase label and collides at narrow widths).
   Greens its border via `:has()` when the switch is on.
+- `.av3-clonebar` — a bordered "clone <source> into [target chips] [button]" row
+  for fanning a per-site config out to any chosen subset of sites (e.g. the Menu
+  editor's per-site modifiers). Source = the site in view; targets are
+  `ChipToggle`s for the other sites.
 - `.av3-scroll-x` — momentum horizontal-scroll wrapper for anything that must
   keep its width (wide tables already wrap in `.av3-table-wrap`).
 - `.av3-dtabs` — the tabbed-dialog editor bar (Menu / Recipes) keeps its `flex:1`
@@ -380,9 +384,11 @@ refetches every 30s.
   money inputs carry a `zł` affix. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
   **Product** shows the read-only **slug** (chain key — recipes/orders reference
   it, so it's surfaced not renamed here). **Modifiers are per-site:** the tab
-  carries a site sub-toggle (`.av3-viewtoggle.is-text`, per-site count badge) plus
-  a **Copy <site> → all sites** action; each variant persists its own
-  `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
+  carries a site sub-toggle (`.av3-viewtoggle.is-text`, per-site count badge) to
+  pick the site being edited, plus a **clone bar** (`.av3-clonebar`) that fans the
+  viewed site's modifiers out to any chosen subset of other sites (target chips +
+  count button) — not just "all", so Katowice→Gdańsk and Warszawa→Kraków are
+  independent one-click clones. Each variant persists its own `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
   still write to every site (rule #10). Selects + booleans in Pricing/Disclosures
   use `.av3-formgrid` + `.av3-togglerow` so they align instead of wrapping.
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient

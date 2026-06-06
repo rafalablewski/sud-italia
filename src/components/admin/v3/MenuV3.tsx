@@ -485,6 +485,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
     item.variants.map((v) => ({ slug: v.slug, city: v.city, id: v.item.id, price: String(v.item.price / 100), cost: String(v.item.cost / 100), available: v.item.available, sku: v.item.sku ?? "", hasRecipe: Boolean(v.item._hasRecipe), modifierGroups: v.item.modifierGroups ?? [] })),
   );
   const [modLoc, setModLoc] = useState(item.variants[0]?.slug ?? "");
+  const [copyTargets, setCopyTargets] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"product" | "pricing" | "modifiers" | "disclosures">("product");
@@ -507,9 +508,10 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
     setPerLoc((arr) => arr.map((r) => (r.slug === slug ? { ...r, ...patch } : r)));
   const setRowMods = (slug: string, groups: ModifierGroup[]) =>
     setPerLoc((arr) => arr.map((r) => (r.slug === slug ? { ...r, modifierGroups: groups } : r)));
-  const copyModsToAll = (slug: string) => {
-    const src = perLoc.find((r) => r.slug === slug)?.modifierGroups ?? [];
-    setPerLoc((arr) => arr.map((r) => ({ ...r, modifierGroups: structuredClone(src) })));
+  // Clone one site's modifiers into any chosen set of other sites.
+  const copyModsTo = (fromSlug: string, targets: Set<string>) => {
+    const src = perLoc.find((r) => r.slug === fromSlug)?.modifierGroups ?? [];
+    setPerLoc((arr) => arr.map((r) => (targets.has(r.slug) && r.slug !== fromSlug ? { ...r, modifierGroups: structuredClone(src) } : r)));
   };
 
   const cleanModifiers = (groups: ModifierGroup[]): ModifierGroup[] =>
@@ -640,21 +642,30 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
 
       {tab === "modifiers" && (() => {
         const active = perLoc.find((r) => r.slug === modLoc) ?? perLoc[0];
+        const others = perLoc.filter((r) => r.slug !== active?.slug);
+        const targets = new Set([...copyTargets].filter((s) => s !== active?.slug));
         return (
           <>
-            <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn&rsquo;t. Price/cost deltas apply on top of the base. Use <b>Copy to all sites</b> to push one site&rsquo;s setup everywhere.</div>
+            <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn&rsquo;t. Price/cost deltas apply on top of the base. Pick a site to edit, then clone its setup into any other sites below.</div>
             {perLoc.length > 1 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                <div className="av3-viewtoggle is-text" role="tablist" aria-label="Modifier site">
+              <>
+                <div className="av3-viewtoggle is-text" role="tablist" aria-label="Edit modifiers for site" style={{ marginBottom: 10 }}>
                   {perLoc.map((r) => (
-                    <button key={r.slug} type="button" role="tab" aria-selected={r.slug === active?.slug} className={r.slug === active?.slug ? "is-active" : ""} onClick={() => setModLoc(r.slug)}>
+                    <button key={r.slug} type="button" role="tab" aria-selected={r.slug === active?.slug} className={r.slug === active?.slug ? "is-active" : ""} onClick={() => { setModLoc(r.slug); setCopyTargets(new Set()); }}>
                       {r.city}{r.modifierGroups.length > 0 && <span className="av3-dtab-count">{r.modifierGroups.length}</span>}
                     </button>
                   ))}
                 </div>
-                <span style={{ flex: 1 }} />
-                <Button variant="ghost" size="sm" disabled={(active?.modifierGroups.length ?? 0) === 0} onClick={() => active && copyModsToAll(active.slug)}>Copy {active?.city} → all sites</Button>
-              </div>
+                <div className="av3-clonebar">
+                  <span className="av3-field-label" style={{ whiteSpace: "nowrap" }}>Clone {active?.city} into</span>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
+                    {others.map((r) => (
+                      <ChipToggle key={r.slug} on={targets.has(r.slug)} onClick={() => setCopyTargets((s) => { const n = new Set(s); if (n.has(r.slug)) n.delete(r.slug); else n.add(r.slug); return n; })}>{r.city}</ChipToggle>
+                    ))}
+                  </div>
+                  <Button variant="secondary" size="sm" disabled={targets.size === 0 || (active?.modifierGroups.length ?? 0) === 0} onClick={() => { if (active) copyModsTo(active.slug, targets); setCopyTargets(new Set()); }}>Clone → {targets.size || ""} site{targets.size === 1 ? "" : "s"}</Button>
+                </div>
+              </>
             )}
             {active && <ModifierEditor groups={active.modifierGroups} onChange={(g) => setRowMods(active.slug, g)} />}
           </>
