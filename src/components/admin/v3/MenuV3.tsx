@@ -486,6 +486,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
   );
   const [modLoc, setModLoc] = useState(item.variants[0]?.slug ?? "");
   const [copyTargets, setCopyTargets] = useState<Set<string>>(new Set());
+  const [copyFilter, setCopyFilter] = useState("");
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"product" | "pricing" | "modifiers" | "disclosures">("product");
@@ -644,26 +645,49 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
         const active = perLoc.find((r) => r.slug === modLoc) ?? perLoc[0];
         const others = perLoc.filter((r) => r.slug !== active?.slug);
         const targets = new Set([...copyTargets].filter((s) => s !== active?.slug));
+        const switchSite = (slug: string) => { setModLoc(slug); setCopyTargets(new Set()); setCopyFilter(""); };
+        // Past a handful of sites a button toggle overflows and a chip wall is
+        // unscannable — switch to a dropdown editor + a filterable target well.
+        const manySites = perLoc.length > 8;
+        const q = copyFilter.trim().toLowerCase();
+        const shownTargets = q ? others.filter((r) => r.city.toLowerCase().includes(q)) : others;
         return (
           <>
             <div className="av3-edhint" style={{ marginBottom: 12 }}>Size upgrades, extra toppings, crust types… Modifiers are <b>per-site</b> — a site may offer an add-on another doesn&rsquo;t. Price/cost deltas apply on top of the base. Pick a site to edit, then clone its setup into any other sites below.</div>
             {perLoc.length > 1 && (
               <>
-                <div className="av3-viewtoggle is-text" role="tablist" aria-label="Edit modifiers for site" style={{ marginBottom: 10 }}>
-                  {perLoc.map((r) => (
-                    <button key={r.slug} type="button" role="tab" aria-selected={r.slug === active?.slug} className={r.slug === active?.slug ? "is-active" : ""} onClick={() => { setModLoc(r.slug); setCopyTargets(new Set()); }}>
-                      {r.city}{r.modifierGroups.length > 0 && <span className="av3-dtab-count">{r.modifierGroups.length}</span>}
-                    </button>
-                  ))}
-                </div>
-                <div className="av3-clonebar">
-                  <span className="av3-field-label" style={{ whiteSpace: "nowrap" }}>Clone {active?.city} into</span>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
-                    {others.map((r) => (
-                      <ChipToggle key={r.slug} on={targets.has(r.slug)} onClick={() => setCopyTargets((s) => { const n = new Set(s); if (n.has(r.slug)) n.delete(r.slug); else n.add(r.slug); return n; })}>{r.city}</ChipToggle>
+                {manySites ? (
+                  <label className="av3-field" style={{ marginBottom: 10, maxWidth: 280 }}>
+                    <span className="av3-field-label">Editing site</span>
+                    <select className="av3-select" value={active?.slug} onChange={(e) => switchSite(e.target.value)}>
+                      {perLoc.map((r) => <option key={r.slug} value={r.slug}>{r.city}{r.modifierGroups.length > 0 ? ` (${r.modifierGroups.length})` : ""}</option>)}
+                    </select>
+                  </label>
+                ) : (
+                  <div className="av3-viewtoggle is-text" role="tablist" aria-label="Edit modifiers for site" style={{ marginBottom: 10 }}>
+                    {perLoc.map((r) => (
+                      <button key={r.slug} type="button" role="tab" aria-selected={r.slug === active?.slug} className={r.slug === active?.slug ? "is-active" : ""} onClick={() => switchSite(r.slug)}>
+                        {r.city}{r.modifierGroups.length > 0 && <span className="av3-dtab-count">{r.modifierGroups.length}</span>}
+                      </button>
                     ))}
                   </div>
-                  <Button variant="secondary" size="sm" disabled={targets.size === 0 || (active?.modifierGroups.length ?? 0) === 0} onClick={() => { if (active) copyModsTo(active.slug, targets); setCopyTargets(new Set()); }}>Clone → {targets.size || ""} site{targets.size === 1 ? "" : "s"}</Button>
+                )}
+                <div className="av3-clonebar">
+                  <div className="av3-clonebar-head">
+                    <span className="av3-field-label" style={{ whiteSpace: "nowrap" }}>Clone {active?.city} into</span>
+                    {others.length > 8 && <input className="av3-input" placeholder="Filter sites…" value={copyFilter} onChange={(e) => setCopyFilter(e.target.value)} />}
+                    <Button variant="ghost" size="sm" onClick={() => setCopyTargets((s) => { const n = new Set(s); shownTargets.forEach((r) => n.add(r.slug)); return n; })}>All{q ? " shown" : ""}</Button>
+                    <Button variant="ghost" size="sm" disabled={targets.size === 0} onClick={() => setCopyTargets(new Set())}>None</Button>
+                    <span style={{ flex: 1 }} />
+                    <span className="av3-clonebar-count">{targets.size} selected</span>
+                    <Button variant="secondary" size="sm" disabled={targets.size === 0 || (active?.modifierGroups.length ?? 0) === 0} onClick={() => { if (active) copyModsTo(active.slug, targets); setCopyTargets(new Set()); }}>Clone → {targets.size || ""} site{targets.size === 1 ? "" : "s"}</Button>
+                  </div>
+                  <div className="av3-clonebar-targets">
+                    {shownTargets.map((r) => (
+                      <ChipToggle key={r.slug} on={targets.has(r.slug)} onClick={() => setCopyTargets((s) => { const n = new Set(s); if (n.has(r.slug)) n.delete(r.slug); else n.add(r.slug); return n; })}>{r.city}</ChipToggle>
+                    ))}
+                    {shownTargets.length === 0 && <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>No sites match &ldquo;{copyFilter}&rdquo;.</span>}
+                  </div>
                 </div>
               </>
             )}
