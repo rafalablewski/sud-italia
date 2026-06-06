@@ -150,6 +150,25 @@ boolean; never hand-roll a `<button className="av3-toggle">{x ? "On" : "Off"}</b
 `.av3-toggle` survives only for the **non-boolean** "Set / Default" action in
 Languages & Currency (it picks one option, it doesn't flip a boolean).
 
+**Form controls (CSS-only — section 14 of `themes/admin-v3/index.css`).** The
+plain controls are styled by class/element, no wrapper component needed:
+- `.av3-input` / `.av3-select` — 32px fields. On `:hover` the hairline lifts to
+  `--av3-muted`; on `:focus` the border goes brand + a 3px `--av3-brand-soft`
+  ring. `.av3-select` is `appearance: none`, so it **paints its own chevron**
+  (a muted inline-SVG background, theme-flipped via the `[data-admin-theme="light"]`
+  override) — don't remove the chevron when restyling, an `appearance:none`
+  select with no arrow reads as a bare box.
+- **Checkboxes** — every `.av3-root input[type="checkbox"]` is fully restyled
+  (`appearance: none`): a 16px box that fills `--av3-brand` with a white
+  inline-SVG check when `:checked`. No class needed — style by element so a
+  bare `<input type="checkbox">` looks right anywhere. Reserved for genuine
+  multi-select; booleans use `Switch`. Radios keep their native shape with
+  `accent-color: --av3-brand`.
+- **Focus rings** — keyboard `:focus-visible` on every interactive control
+  (`.av3-btn`, `.av3-icon-btn`, `.av3-iconbtn-sm`, `.av3-chip`, `.av3-fchip`,
+  `.av3-switch`, checkboxes) is a `2px solid --av3-brand` outline with offset;
+  text fields use the soft ring instead. Match this when adding a new control.
+
 **Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
 the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2
 Recharts wrappers (`components/admin/v2/charts`) under the isolation contract,

@@ -276,6 +276,7 @@
   transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease);
 }
 .av3-icon-btn:hover { background: var(--av3-s2); color: var(--av3-fg); }
+.av3-icon-btn:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-bell-badge {
   position: absolute;
   top: 1px;
@@ -375,6 +376,7 @@
 }
 .av3-btn:hover { background: var(--av3-s3); }
 .av3-btn:active { transform: translateY(0.5px); }
+.av3-btn:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
 .av3-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .av3-btn-sm { height: 26px; padding: 0 9px; font-size: 12px; }
 .av3-btn-primary {
@@ -426,6 +428,7 @@
   transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease);
 }
 .av3-chip:hover { color: var(--av3-fg); }
+.av3-chip:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-chip.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
 
 /* --------------------------------------------------------------------------
@@ -849,6 +852,7 @@
   transition: background var(--av3-t-fast) var(--av3-ease), color var(--av3-t-fast) var(--av3-ease);
 }
 .av3-fchip:hover { color: var(--av3-fg); }
+.av3-fchip:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-fchip.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
 .av3-fchip-count { font-family: var(--av3-mono); font-size: 10.5px; color: var(--av3-subtle); font-variant-numeric: tabular-nums; }
 .av3-fchip.is-active .av3-fchip-count { color: var(--av3-muted); }
@@ -908,10 +912,43 @@
 .av3-input, .av3-select {
   height: 32px; padding: 0 10px; border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm);
   background: var(--av3-s1); color: var(--av3-fg); font: inherit; font-size: 13px;
+  transition: border-color var(--av3-t-fast) var(--av3-ease), box-shadow var(--av3-t-fast) var(--av3-ease);
 }
 .av3-input { font-family: var(--av3-mono); font-variant-numeric: tabular-nums; }
-.av3-input:focus, .av3-select:focus { outline: none; border-color: var(--av3-brand); }
-.av3-select { appearance: none; cursor: pointer; }
+.av3-input::placeholder { color: var(--av3-subtle); }
+.av3-input:hover:not(:disabled), .av3-select:hover:not(:disabled) { border-color: var(--av3-muted); }
+.av3-input:focus, .av3-select:focus { outline: none; border-color: var(--av3-brand); box-shadow: 0 0 0 3px var(--av3-brand-soft); }
+.av3-input:disabled, .av3-select:disabled { opacity: 0.55; cursor: not-allowed; }
+/* `appearance: none` strips the native dropdown arrow, so we paint our own
+   chevron (muted, theme-flipped) — without it the select reads as a bare box. */
+.av3-select {
+  appearance: none; cursor: pointer; padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%23a6a099'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%204.5%206%208%209.5%204.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 12px;
+}
+[data-admin-theme="light"] .av3-select {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%2357504a'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%204.5%206%208%209.5%204.5'/%3E%3C/svg%3E");
+}
+
+/* Checkbox — the native control is unstyled and reads foreign in this theme,
+   so restyle every v3 checkbox: a dense box that fills brand with a white
+   check. Radios keep their shape but pick up the brand accent. */
+.av3-root input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  flex-shrink: 0; width: 16px; height: 16px; margin: 0;
+  border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm);
+  background: var(--av3-s1); cursor: pointer;
+  transition: background var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease), box-shadow var(--av3-t-fast) var(--av3-ease);
+}
+.av3-root input[type="checkbox"]:hover:not(:disabled) { border-color: var(--av3-muted); }
+.av3-root input[type="checkbox"]:checked {
+  background-color: var(--av3-brand); border-color: var(--av3-brand);
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%206.5%205%209%209.5%203.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center; background-size: 11px;
+}
+.av3-root input[type="checkbox"]:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+.av3-root input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-root input[type="radio"] { accent-color: var(--av3-brand); cursor: pointer; }
 .av3-formrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .av3-subhead { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--av3-subtle); margin: 16px 0 8px; }
 
@@ -953,6 +990,7 @@
 .av3-reciperow-cost { font-family: var(--av3-mono); font-size: 12px; color: var(--av3-muted); text-align: right; }
 .av3-iconbtn-sm { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--av3-line); border-radius: var(--av3-r-sm); background: transparent; color: var(--av3-muted); cursor: pointer; }
 .av3-iconbtn-sm:hover { color: var(--av3-bad); border-color: color-mix(in oklab, var(--av3-bad) 30%, transparent); }
+.av3-iconbtn-sm:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-iconbtn-sm svg { width: 14px; height: 14px; }
 .av3-recipe-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--av3-line-strong); }
 .av3-recipe-summary .v { font-family: var(--av3-mono); font-size: 18px; font-weight: 600; }
