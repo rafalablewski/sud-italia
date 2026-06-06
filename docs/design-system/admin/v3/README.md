@@ -169,6 +169,25 @@ plain controls are styled by class/element, no wrapper component needed:
   `.av3-switch`, checkboxes) is a `2px solid --av3-brand` outline with offset;
   text fields use the soft ring instead. Match this when adding a new control.
 
+**Surfaces — elevation & motion (section 5/6/13 + `.av3-dcard` of the CSS).**
+The container surfaces share one elevation language: a resting `--av3-sh-1`,
+lifting to `--av3-sh-2` on hover.
+- **KPI tile (`.av3-kpi`)** — carries a per-tile accent: the `Kpi` component
+  sets `--av3-kpi-accent` from its `accentVar`, which paints a 3px leading
+  rail (`::before`) and tints the label icon. Hover lifts the shadow and
+  tints the border toward the accent. Pass `accentVar` to give a rail of
+  KPIs distinct identities (e.g. the chart palette `--av3-c1…c8`).
+- **Table (`.av3-table`)** — the sticky `thead` sits on a `--av3-line-strong`
+  hairline **plus** a faint drop shadow so body rows read as scrolling under
+  it; row hover (`--av3-s2`) is transitioned, not instant. Clickable rows get
+  `cursor: pointer` from the `Table` component's `onRowClick`.
+- **Dialog (`.av3-dialog`)** — opens with a fade+scale entry (`av3-dialog-in`)
+  over a fading, blurred scrim (`av3-scrim-in`), both guarded by
+  `prefers-reduced-motion`. Keep new overlays on these keyframes rather than
+  inventing per-dialog animation.
+- **Board card (`.av3-dcard`)** — same hover shadow-lift; selection ring uses
+  `--av3-platinum`.
+
 **Charts (`v3/ui/Chart.tsx`).** v3-native, dependency-free inline-SVG charts —
 the same technique as `Sparkline`, scaled up. v3 **cannot** import the v2
 Recharts wrappers (`components/admin/v2/charts`) under the isolation contract,
