@@ -205,10 +205,12 @@ the same `2px --av3-brand` `:focus-visible` ring as the form controls.
   guarded by `prefers-reduced-motion`. Prefer over a bare `.av3-loading`
   spinner whenever the content has a known shape: `SkeletonKpiRail` mirrors a
   `.av3-kpi-rail`, `SkeletonRows` mirrors a list/table body, and bare
-  `Skeleton` takes `width`/`height`/`radius` for anything else. Mark the
-  region `aria-busy`; the shimmer blocks are `aria-hidden`. Wired into Reports
-  and Inventory as the reference pattern — other pages can adopt it in place
-  of their spinner.
+  `Skeleton` takes `width`/`height`/`radius` for anything else, and
+  `SkeletonPage` is the whole-page stand-in (title strip + optional KPI rail +
+  card of rows) for `if (loading) return …` branches. Mark the region
+  `aria-busy`; the shimmer blocks are `aria-hidden`. **Rolled out across all v3
+  pages** — every `.av3-loading` spinner was replaced (full-page returns →
+  `SkeletonPage`, in-tree content → a card of `SkeletonRows`).
 - **Empty state (`.av3-empty`)** — a leading `<svg>` is lifted into a tinted
   round chip (`--av3-s2` + hairline); keep the `…-title` + `…-text` pair
   (text caps at ~300px for readability).
@@ -226,6 +228,27 @@ scales uniformly. Inputs are already-converted display units (e.g. zł, not
 grosze). Reach for these instead of CSS bar-tracks whenever a surface needs to
 show a *trend, distribution, or part-to-whole* (a ranking can stay a table /
 `.av3-bar`).
+
+**Chart interactivity (the `.av3-chart*` CSS).** `AreaChart` tracks the pointer
+and shows a follow tooltip (`.av3-chart-tip`) with a dashed guide line + value
+dot at the nearest point — pass `labels` (per-point x label) and `format`
+(value formatter, also used for the new y-axis max/min labels) to make it
+meaningful (see ReportsV3 for the reference call). `BarChart` dims sibling bars
+on hover so the hovered one reads as focused (`.av3-barchart:hover .av3-bar`)
+and every bar carries a native `<title>`; it also draws a baseline axis + y-max
+label. `Donut` segments get the same hover-focus + a `<title>` of
+`label: value (pct%)`. The `<title>` tooltips are the accessible, zero-JS
+fallback; keep them when adding new series.
+
+**Accessibility (CSS §"A11y").** Three baked-in guarantees: (1) `--av3-subtle`
+is tuned to clear **WCAG AA (4.5:1)** for small text on `s1`/`s2`/`bg` in both
+themes — don't darken (light) / lighten (dark) it past that floor; (2) a
+low-specificity `:where(a, button):focus-visible` safety net guarantees every
+interactive element has a visible `--av3-brand` focus ring even if its own rule
+is missing one (the tuned per-control rings still win); (3) a global
+`prefers-reduced-motion` guard neutralises all `.av3-*` animation/transition
+(shimmer, dialog/scrim entry, hover lifts, the spinner). New surfaces inherit
+all three for free as long as they live under `.av3-root`.
 
 Shared list-page chrome lives in `themes/admin-v3/index.css` §11–13: the
 filter-chips-with-counts + view toggle (`.av3-filterchips` / `.av3-viewtoggle`),

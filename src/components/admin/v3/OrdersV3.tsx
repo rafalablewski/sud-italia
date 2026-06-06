@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, ChipRow, Dialog, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, ChipRow, type ColumnV3, Dialog, SkeletonRows, Table } from "./ui";
 
 const PIPELINE: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
 const KANBAN_COLUMNS: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "completed"];
@@ -182,7 +182,7 @@ export function OrdersV3() {
       )}
 
       {loading && orders.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Connecting to the order stream…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : orders.length === 0 ? (
         <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No orders yet</div><div className="av3-empty-text">New orders stream in here the moment they’re placed.</div></div></div>
       ) : view === "kanban" ? (

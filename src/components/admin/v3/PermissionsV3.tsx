@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Grid3x3, Minus, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { ALL_PERMISSION_KEYS, PERMISSION_GROUPS, ROLE_DEFAULT_PERMISSIONS } from "@/lib/permissions";
 import type { AdminRole } from "@/lib/admin-roles";
-import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
 interface UserRow { id: string; name: string; email?: string; role: AdminRole; status?: string; locationSlug?: string; notes?: string; permissions?: string[] }
 
@@ -57,7 +57,7 @@ export function PermissionsV3() {
     } finally { setBusy(null); }
   };
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading permissions…</div>;
+  if (loading) return <SkeletonPage />;
 
   return (
     <>

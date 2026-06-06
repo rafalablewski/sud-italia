@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin v3 — chart interactivity</title>
+<!--
+  Standalone preview of the v3 chart polish:
+  - AreaChart: hover anywhere for a follow tooltip + dashed guide; y-axis max/min labels
+  - BarChart: hover dims sibling bars to focus one; baseline axis + y-max label; native <title>
+  - Donut: hover-focus segments; native <title> with label/value/pct
+  Tokens + rules mirror src/app/themes/admin-v3/index.css + ui/Chart.tsx.
+  Draft/verification artifact — not shipped. See /tests/README.md.
+-->
+<style>
+  .av3-root{
+    --av3-bg:#0a0a0c;--av3-s1:#141417;--av3-s2:#1b1b1f;--av3-s3:#24242a;
+    --av3-line:rgba(255,255,255,.07);--av3-line-strong:rgba(255,255,255,.13);--av3-grid:rgba(255,255,255,.06);
+    --av3-fg:#f4f3f1;--av3-muted:#a6a099;--av3-subtle:#8a837b;
+    --av3-c1:#c2384f;--av3-c2:#cbb48a;--av3-c3:#5f9bd6;--av3-c4:#34b27b;--av3-c5:#d3884f;
+    --av3-r-sm:5px;--av3-r-lg:11px;--av3-sh-1:0 1px 2px rgba(0,0,0,.4);--av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-ease:cubic-bezier(.4,0,.2,1);--av3-t-fast:110ms;--av3-mono:"JetBrains Mono",ui-monospace,monospace;
+    background:var(--av3-bg);color:var(--av3-fg);font-family:Inter,system-ui,sans-serif;padding:18px;border-radius:12px;
+  }
+  [data-admin-theme="light"] .av3-root{
+    --av3-bg:#f7f5f1;--av3-s1:#fff;--av3-s2:#f6f3ee;--av3-s3:#efebe3;
+    --av3-line:rgba(28,24,21,.09);--av3-line-strong:rgba(28,24,21,.16);--av3-grid:rgba(28,24,21,.08);
+    --av3-fg:#1a1714;--av3-muted:#57504a;--av3-subtle:#756d65;
+    --av3-c1:#a82940;--av3-c2:#9c7e4e;--av3-c3:#3d6694;--av3-c4:#1f8a60;--av3-c5:#b56a3b;
+  }
+  .av3-card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);margin-bottom:14px;}
+  .av3-card-head{padding:10px 14px;border-bottom:1px solid var(--av3-line);font-size:13px;font-weight:600;}
+  .av3-card-body{padding:14px;}
+  .av3-chart{position:relative;}
+  .av3-chart-tip{position:absolute;z-index:2;pointer-events:none;transform:translate(-50%,calc(-100% - 9px));
+    background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-sm);box-shadow:var(--av3-sh-2);padding:4px 8px;white-space:nowrap;text-align:center;}
+  .av3-chart-tip-v{font-family:var(--av3-mono);font-weight:600;font-size:12px;color:var(--av3-fg);}
+  .av3-chart-tip-l{font-size:10px;color:var(--av3-subtle);margin-top:1px;}
+  .av3-axis-label{fill:var(--av3-subtle);font-family:var(--av3-mono);}
+  .av3-bar{transition:opacity var(--av3-t-fast) var(--av3-ease);}
+  .av3-barchart:hover .av3-bar{opacity:.45;}
+  .av3-barchart .av3-bar:hover{opacity:1;}
+  .av3-donut-seg{transition:opacity var(--av3-t-fast) var(--av3-ease);cursor:pointer;}
+  .av3-donut:hover .av3-donut-seg{opacity:.4;}
+  .av3-donut .av3-donut-seg:hover{opacity:1;}
+  body{margin:0;background:#3a3a40;padding:24px;font-family:Inter,system-ui,sans-serif;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1180px;margin:0 auto;}
+  h1{color:#fff;font-size:15px;font-weight:600;max-width:1180px;margin:0 auto 6px;}
+  p.note{color:#bdbcc2;font-size:12px;max-width:1180px;margin:0 auto 16px;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11.5px;color:var(--av3-muted);}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;}
+</style>
+</head>
+<body>
+<h1>Admin v3 — chart interactivity (dark ⟷ light)</h1>
+<p class="note">Move the pointer across the area chart for the follow tooltip; hover the bars and donut segments to focus one.</p>
+<div class="cols">
+  <div data-admin-theme="dark"><div class="av3-root"></div></div>
+  <div data-admin-theme="light"><div class="av3-root"></div></div>
+</div>
+
+<script>
+  const VB=520;
+  const days=Array.from({length:14},(_,i)=>`06-${String(i+1).padStart(2,"0")}`);
+  const rev=[820,910,760,1150,1320,980,1410,1290,1180,1505,1620,1390,1720,1610];
+  const zl=n=>"zł"+n.toLocaleString("pl-PL");
+
+  function area(root){
+    const H=170,padX=10,padT=12,padB=8;const min=Math.min(...rev),max=Math.max(...rev),span=max-min||1;
+    const x=i=>padX+(i/(rev.length-1))*(VB-2*padX);
+    const y=v=>H-padB-((v-min)/span)*(H-padT-padB);
+    let line="";rev.forEach((v,i)=>line+=`${i?"L":"M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `);
+    const arr=`${line}L${x(rev.length-1).toFixed(1)} ${H-padB} L${x(0).toFixed(1)} ${H-padB} Z`;
+    const grid=[0,1,2,3].map(g=>{const gy=padT+(g/3)*(H-padT-padB);return `<line x1="${padX}" y1="${gy}" x2="${VB-padX}" y2="${gy}" stroke="var(--av3-grid)"/>`;}).join("");
+    const wrap=document.createElement("div");wrap.className="av3-chart";
+    wrap.innerHTML=`<svg viewBox="0 0 ${VB} ${H}" width="100%" style="height:auto;display:block;cursor:crosshair">
+      <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--av3-c1)" stop-opacity=".26"/><stop offset="100%" stop-color="var(--av3-c1)" stop-opacity="0"/></linearGradient></defs>
+      ${grid}
+      <text x="${padX}" y="${padT-3}" class="av3-axis-label" font-size="9.5">${zl(max)}</text>
+      <text x="${padX}" y="${H-padB-2}" class="av3-axis-label" font-size="9.5">${zl(min)}</text>
+      <path d="${arr}" fill="url(#ag)"/>
+      <path d="${line}" fill="none" stroke="var(--av3-c1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line class="guide" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="var(--av3-line-strong)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>
+      <circle class="dot" r="3.4" fill="var(--av3-c1)" stroke="var(--av3-s1)" stroke-width="2" cx="${x(rev.length-1)}" cy="${y(rev[rev.length-1])}"/>
+    </svg>
+    <div class="av3-chart-tip" style="display:none"><div class="av3-chart-tip-v"></div><div class="av3-chart-tip-l"></div></div>`;
+    const svg=wrap.querySelector("svg"),guide=wrap.querySelector(".guide"),dot=wrap.querySelector(".dot"),tip=wrap.querySelector(".av3-chart-tip");
+    svg.addEventListener("mousemove",e=>{const r=svg.getBoundingClientRect();const rx=((e.clientX-r.left)/r.width)*VB;
+      let i=Math.round(((rx-padX)/(VB-2*padX))*(rev.length-1));i=Math.max(0,Math.min(rev.length-1,i));
+      guide.style.display="";guide.setAttribute("x1",x(i));guide.setAttribute("x2",x(i));
+      dot.setAttribute("cx",x(i));dot.setAttribute("cy",y(rev[i]));
+      tip.style.display="";tip.style.left=(x(i)/VB*100)+"%";tip.style.top=(y(rev[i])/H*100)+"%";
+      tip.querySelector(".av3-chart-tip-v").textContent=zl(rev[i]);tip.querySelector(".av3-chart-tip-l").textContent=days[i];});
+    svg.addEventListener("mouseleave",()=>{guide.style.display="none";tip.style.display="none";dot.setAttribute("cx",x(rev.length-1));dot.setAttribute("cy",y(rev[rev.length-1]));});
+    return wrap;
+  }
+  function bars(){
+    const H=150,padX=12,padT=14,padB=24,data=[31,42,28,55,48,61,37],labels=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const max=Math.max(...data),n=data.length,slot=(VB-2*padX)/n,bw=Math.min(slot*.6,34);
+    let s=`<svg viewBox="0 0 ${VB} ${H}" width="100%" style="height:auto;display:block" class="av3-barchart">
+      <text x="${padX}" y="${padT-3}" class="av3-axis-label" font-size="9.5">${max}</text>
+      <line x1="${padX}" y1="${H-padB}" x2="${VB-padX}" y2="${H-padB}" stroke="var(--av3-line)"/>`;
+    data.forEach((v,i)=>{const bh=(v/max)*(H-padT-padB),bx=padX+i*slot+(slot-bw)/2,by=H-padB-bh;
+      s+=`<g class="av3-bar"><title>${labels[i]}: ${v}</title><rect x="${bx}" y="${by}" width="${bw}" height="${Math.max(0,bh)}" rx="3" fill="var(--av3-c3)"/>
+        <text x="${bx+bw/2}" y="${by-5}" text-anchor="middle" fill="var(--av3-fg)" font-family="var(--av3-mono)" font-size="10">${v}</text>
+        <text x="${bx+bw/2}" y="${H-9}" text-anchor="middle" fill="var(--av3-muted)" font-size="10">${labels[i]}</text></g>`;});
+    s+="</svg>";const d=document.createElement("div");d.innerHTML=s;return d;
+  }
+  function donut(){
+    const size=150,cx=75,cy=75,r=size*.34,sw=size*.12,C=2*Math.PI*r;
+    const data=[{l:"Dine-in",v:62,c:"--av3-c1"},{l:"Delivery",v:28,c:"--av3-c3"},{l:"Pickup",v:10,c:"--av3-c4"}];
+    const tot=data.reduce((s,d)=>s+d.v,0);let off=0;
+    let s=`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="av3-donut"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--av3-s3)" stroke-width="${sw}"/>`;
+    data.forEach(d=>{const len=(d.v/tot)*C;s+=`<circle class="av3-donut-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(${d.c})" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"><title>${d.l}: ${d.v} (${Math.round(d.v/tot*100)}%)</title></circle>`;off+=len;});
+    s+=`<text x="${cx}" y="${cy-1}" text-anchor="middle" fill="var(--av3-fg)" font-family="var(--av3-mono)" font-weight="500" font-size="${size*.15}">${tot}</text>
+        <text x="${cx}" y="${cy+size*.11}" text-anchor="middle" fill="var(--av3-subtle)" font-size="${size*.058}">ORDERS</text></svg>`;
+    const wrap=document.createElement("div");wrap.style.display="flex";wrap.style.alignItems="center";wrap.style.gap="16px";
+    wrap.innerHTML=s+`<div class="legend" style="flex-direction:column">${data.map(d=>`<span><i style="background:var(${d.c})"></i>${d.l} · ${d.v}</span>`).join("")}</div>`;
+    return wrap;
+  }
+  document.querySelectorAll(".av3-root").forEach(root=>{
+    const mk=(title,node)=>{const c=document.createElement("div");c.className="av3-card";c.innerHTML=`<div class="av3-card-head">${title}</div>`;const b=document.createElement("div");b.className="av3-card-body";b.appendChild(node);c.appendChild(b);return c;};
+    root.appendChild(mk("Revenue trend — hover for tooltip",area(root)));
+    root.appendChild(mk("Orders by day — hover to focus a bar",bars()));
+    root.appendChild(mk("Channel mix — hover a segment",donut()));
+  });
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import type { MenuCategory, MenuRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Switch, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, SkeletonRows, Switch, Table } from "./ui";
 
 interface Combo {
   id: string;
@@ -114,7 +114,7 @@ export function CrossSellV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading cross-sell…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "pairings" ? (
         <div className="av3-card" style={{ padding: 16 }}>
           <div className="av3-subhead" style={{ marginTop: 0 }}>Complete your meal — four fixed cart slots</div>

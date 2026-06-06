@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import type { StaffMember, StaffRole, StaffStatus } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface Punch { id: string; staffId: string; type: "clock-in" | "clock-out"; at?: string; occurredAt?: string; createdAt?: string }
 
@@ -113,7 +113,7 @@ export function StaffV3() {
       </div>
 
       {loading && list.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading staff…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

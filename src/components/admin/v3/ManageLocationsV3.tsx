@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MapPin, Plus, X } from "lucide-react";
 import type { Location } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Switch, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Switch, Table } from "./ui";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -50,7 +50,7 @@ export function ManageLocationsV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading locations…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {list.length === 0 ? (

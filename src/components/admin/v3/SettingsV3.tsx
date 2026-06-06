@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, History, KeyRound, LayoutGrid, Palette, ShieldCheck, Smartphone, Sprout, Truck } from "lucide-react";
 import designSystem from "@/generated/design-system.json";
-import { Badge, Button, Card, CardBody, CardHead, Switch } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, SkeletonPage, Switch } from "./ui";
 
 interface Layout {
   showCurrencySwitcher: boolean; showLanguageSwitcher: boolean; showBundlesShowcase: boolean; showLoyaltySection: boolean;
@@ -120,7 +120,7 @@ export function SettingsV3() {
   const layout: Layout = { showCurrencySwitcher: true, showLanguageSwitcher: true, showBundlesShowcase: true, showLoyaltySection: true, showSeasonalSpecials: true, showCartUpsell: true, showDeliveryProgress: true, showPushOptIn: true, showFeedbackSurvey: true, showNpsSurvey: true, showPostOrderUpsell: true, showChatWidget: true, showLiveTicker: true, ...(s.layout ?? {}) };
   const toggleLayout = (k: keyof Layout) => put({ layout: { ...layout, [k]: !layout[k] } });
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading settings…</div>;
+  if (loading) return <SkeletonPage />;
 
   const tabs: { id: Tab; label: string; icon: typeof Truck }[] = [
     { id: "general", label: "General", icon: Truck },

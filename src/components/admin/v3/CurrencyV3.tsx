@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, CheckCircle2, Coins, Percent } from "lucide-react";
-import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
 type Currency = "PLN" | "USD" | "SGD" | "EUR";
 const ALL: Currency[] = ["PLN", "USD", "SGD", "EUR"];
@@ -45,7 +45,7 @@ export function CurrencyV3() {
   const enabledCount = useMemo(() => ALL.filter((c) => enabled[c]).length, [enabled]);
   const ratesSet = useMemo(() => ALL.filter((c) => c !== "PLN" && enabled[c] && Number(rates[c]) > 0).length, [enabled, rates]);
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading currency…</div>;
+  if (loading) return <SkeletonPage />;
 
   return (
     <>

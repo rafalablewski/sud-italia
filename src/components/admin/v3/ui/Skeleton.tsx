@@ -50,3 +50,20 @@ export function SkeletonRows({ rows = 6 }: { rows?: number }) {
     </div>
   );
 }
+
+/**
+ * Whole-page loading stand-in for the `if (loading) return …` branches: a
+ * title strip, an optional KPI rail, and a card of rows. Neutral enough to
+ * stand in for most admin pages without a jarring jump when data arrives.
+ */
+export function SkeletonPage({ kpis = 0, rows = 6 }: { kpis?: number; rows?: number }) {
+  return (
+    <div aria-busy="true" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Skeleton width={180} height={24} radius={6} />
+      {kpis > 0 && <SkeletonKpiRail count={kpis} />}
+      <div className="av3-card" style={{ padding: 12 }}>
+        <SkeletonRows rows={rows} />
+      </div>
+    </div>
+  );
+}

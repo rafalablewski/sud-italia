@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Globe, Languages as LangIcon } from "lucide-react";
-import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
 type Locale = "pl" | "en" | "de" | "en-SG";
 const ALL: Locale[] = ["pl", "en", "de", "en-SG"];
@@ -40,7 +40,7 @@ export function LanguagesV3() {
 
   const enabledCount = useMemo(() => ALL.filter((l) => enabled[l]).length, [enabled]);
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading languages…</div>;
+  if (loading) return <SkeletonPage />;
 
   return (
     <>

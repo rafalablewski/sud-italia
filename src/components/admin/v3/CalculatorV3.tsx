@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
 import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
-import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, Switch } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonPage, SkeletonRows, Switch } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
 const ROLE_LABEL: Record<BusinessCostPayrollRole, string> = {
@@ -313,7 +313,7 @@ export function CalculatorV3() {
     try { const r = await fetch("/api/admin/simulation", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scn) }); if (r.ok) setDirty(false); } finally { setSaving(false); }
   };
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading the model…</div>;
+  if (loading) return <SkeletonPage />;
   if (!scn || !c) return <div className="av3-card"><div className="av3-empty"><div className="av3-empty-title">No scenario</div><div className="av3-empty-text">The simulation scenario could not be loaded.</div></div></div>;
 
   const pnl: { label: string; v: number; sign?: 1 | -1; strong?: boolean }[] = [
@@ -998,7 +998,7 @@ function SimSandboxes() {
         </div>
 
         {loading ? (
-          <div className="av3-loading"><span className="av3-spin" aria-hidden /> Crunching real orders…</div>
+          <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
         ) : tab === "cohorts" ? (
           !cohort || cohort.totalCustomers === 0 ? <div className="av3-empty"><div className="av3-empty-text">No phone-identified orders in this window.</div></div> : (
             <>

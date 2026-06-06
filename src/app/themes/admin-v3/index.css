@@ -24,7 +24,8 @@
   /* text */
   --av3-fg: #f4f3f1;
   --av3-muted: #a6a099;
-  --av3-subtle: #6e6862;
+  /* subtle: lightened to clear WCAG AA (4.5:1) for small text on s1/s2/bg */
+  --av3-subtle: #8a837b;
   /* brand + accent */
   --av3-brand: #c2384f;
   --av3-brand-soft: color-mix(in oklab, var(--av3-brand) 18%, var(--av3-s1));
@@ -83,7 +84,8 @@
   --av3-line-strong: rgba(28, 24, 21, 0.16);
   --av3-fg: #1a1714;
   --av3-muted: #57504a;
-  --av3-subtle: #857c73;
+  /* subtle: darkened to clear WCAG AA (4.5:1) for small text on s1/s2/bg */
+  --av3-subtle: #756d65;
   --av3-brand: #a82940;
   --av3-platinum: #9c7e4e;
   --av3-ok: #1f8a60;
@@ -494,6 +496,24 @@
 .av3-delta-flat { color: var(--av3-subtle); }
 .av3-kpi-spark { margin-left: auto; }
 
+/* Charts — interactive bits (tooltip + hover focus + axis labels) */
+.av3-chart { position: relative; }
+.av3-chart-tip {
+  position: absolute; z-index: 2; pointer-events: none; transform: translate(-50%, calc(-100% - 9px));
+  background: var(--av3-s1); border: 1px solid var(--av3-line-strong); border-radius: var(--av3-r-sm);
+  box-shadow: var(--av3-sh-2); padding: 4px 8px; white-space: nowrap; text-align: center;
+}
+.av3-chart-tip-v { font-family: var(--av3-mono); font-weight: 600; font-size: 12px; color: var(--av3-fg); }
+.av3-chart-tip-l { font-size: 10px; color: var(--av3-subtle); margin-top: 1px; }
+.av3-axis-label { fill: var(--av3-subtle); font-family: var(--av3-mono); }
+/* dim sibling bars/segments so the hovered one reads as focused */
+.av3-bar { transition: opacity var(--av3-t-fast) var(--av3-ease); }
+.av3-barchart:hover .av3-bar { opacity: 0.45; }
+.av3-barchart .av3-bar:hover { opacity: 1; }
+.av3-donut-seg { transition: opacity var(--av3-t-fast) var(--av3-ease); cursor: pointer; }
+.av3-donut:hover .av3-donut-seg { opacity: 0.4; }
+.av3-donut .av3-donut-seg:hover { opacity: 1; }
+
 /* Sparkline */
 .av3-spark { display: block; overflow: visible; }
 .av3-spark-line { fill: none; stroke-width: 1.5; }
@@ -604,6 +624,22 @@
 .av3-skel-kpi { height: 92px; border-radius: var(--av3-r-lg); }
 .av3-skel-row { height: 38px; }
 .av3-skel-rows { display: flex; flex-direction: column; gap: 8px; }
+
+/* --------------------------------------------------------------------------
+   A11y — keyboard focus safety net + reduced-motion
+   `:where()` keeps this at low specificity so the tuned per-control rings
+   above still win; this only catches anything that would otherwise have no
+   visible focus indicator (nav links, collapse/logout, breadcrumbs, toggles).
+   -------------------------------------------------------------------------- */
+.av3-root :where(a, button):focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .av3-root *, .av3-root *::before, .av3-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* theme toggle */
 .av3-theme-track { width: 30px; height: 30px; }

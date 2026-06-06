@@ -153,6 +153,8 @@ export function ReportsV3() {
                 data={revenueTrend}
                 height={170}
                 accentVar="--av3-c1"
+                labels={(summary?.dailyStats ?? []).map((d) => d.date.slice(5))}
+                format={(n) => formatPrice(n * 100)}
                 caption={[range.from, `today · ${formatPrice(lastRevenue)}`]}
               />
             </CardBody>

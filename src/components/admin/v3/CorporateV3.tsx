@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Users } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Button, Dialog, Kpi, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface CorporatePayload {
   slug: string;
@@ -71,7 +71,7 @@ export function CorporateV3() {
       </div>
 
       {loading && accounts.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading corporate accounts…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {accounts.length === 0 ? (

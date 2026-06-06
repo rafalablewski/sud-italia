@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Kpi, type BadgeTone } from "./ui";
+import { Badge, type BadgeTone, Button, Dialog, Kpi, SkeletonRows } from "./ui";
 
 function roleColor(role: StaffRole): string {
   const t = roleToneOf(role);
@@ -110,7 +110,7 @@ export function ScheduleV3() {
       </div>
 
       {loading && shifts.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading schedule…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : view === "week" ? (
         <div className="av3-week-wrap">
           <div className="av3-week">

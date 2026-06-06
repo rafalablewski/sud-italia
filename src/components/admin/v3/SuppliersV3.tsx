@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Clock, Contact, Plus, Zap } from "lucide-react";
-import { Badge, Button, Dialog, Kpi, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
 
 interface Supplier {
   id: string;
@@ -78,7 +78,7 @@ export function SuppliersV3() {
       </div>
 
       {loading && suppliers.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading suppliers…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Banknote, MapPin, Percent } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { BarChart, Card, CardBody, CardHead, ChartLegend, Donut, Kpi, Table, type BarDatum, type ColumnV3, type DonutDatum } from "./ui";
+import { BarChart, type BarDatum, Card, CardBody, CardHead, ChartLegend, type ColumnV3, Donut, type DonutDatum, Kpi, SkeletonRows, Table } from "./ui";
 
 const SITE_PALETTE = ["--av3-c1", "--av3-c3", "--av3-c4", "--av3-c2", "--av3-c5", "--av3-c6"];
 
@@ -95,7 +95,7 @@ export function MultiLocationV3() {
       )}
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading location comparison…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {sorted.length === 0 ? (

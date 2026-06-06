@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug } from "@/lib/utils";
 import { ALLERGEN_LABELS } from "@/data/types";
 import type { Allergen, MenuCategory, MenuRole, ModifierGroup, ModifierOption } from "@/data/types";
-import { Badge, Button, Dialog, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Switch, Table } from "./ui";
 
 type MenuTag = "vegetarian" | "vegan" | "spicy" | "gluten-free";
 type Halal = "halal" | "non-halal" | "uncertified";
@@ -330,7 +330,7 @@ export function MenuV3() {
       {err && <div className="av3-card" style={{ padding: "8px 12px", color: "var(--av3-bad)", fontSize: 12.5, display: "flex", gap: 8 }}><span style={{ flex: 1 }}>{err}</span><button type="button" className="av3-iconbtn-sm" onClick={() => setErr(null)} aria-label="Dismiss"><X /></button></div>}
 
       {loading && unified.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading the menu…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : rows.length === 0 ? (
         <div className="av3-card" style={{ padding: 0 }}>
           <div className="av3-empty"><div className="av3-empty-title">No dishes</div><div className="av3-empty-text">{q ? "No dish matches that search." : "Nothing in this category."}</div></div>

@@ -9,7 +9,7 @@ import {
   type SurveyDefinition,
   type SurveyResponse,
 } from "@/lib/surveys";
-import { Badge, InfoButton, Kpi, Switch, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, type ColumnV3, InfoButton, Kpi, SkeletonRows, Switch, Table } from "./ui";
 
 function pulseTone(score: number): BadgeTone {
   if (score >= 50) return "ok";
@@ -114,7 +114,7 @@ export function SurveysV3() {
       </div>
 
       {loading && surveys.length === 0 ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading surveys…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "catalogue" ? (
         <div className="av3-card" style={{ padding: 0 }}>
           {surveys.length === 0 ? (

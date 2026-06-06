@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckSquare, Globe, MapPin, ShieldCheck } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHead, Kpi, Switch } from "./ui";
+import { Badge, Card, CardBody, CardHead, Kpi, SkeletonPage, Switch } from "./ui";
 
 type Zone = "EU" | "NYC" | "SG";
 const ZONES: Zone[] = ["EU", "NYC", "SG"];
@@ -55,7 +55,7 @@ export function RegulatoryV3() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg, all]);
 
-  if (loading) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading regulatory disclosures…</div>;
+  if (loading) return <SkeletonPage />;
 
   return (
     <>

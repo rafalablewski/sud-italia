@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Crown, Gift, Pencil, Plus, Rocket, Sparkles, Target, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, Switch } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, SkeletonPage, Switch } from "./ui";
 
 interface Reward { id: string; name: string; pointsCost: number; description?: string; active: boolean }
 interface Challenge { id: string; title: string; description?: string; target: number; rewardPoints: number; active: boolean }
@@ -111,7 +111,7 @@ export function GrowthV3() {
     } finally { setSavingRef(false); }
   };
 
-  if (loading && !s) return <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading growth settings…</div>;
+  if (loading && !s) return <SkeletonPage />;
 
   const rewards = s?.rewards ?? [];
   const challenges = s?.challenges ?? [];

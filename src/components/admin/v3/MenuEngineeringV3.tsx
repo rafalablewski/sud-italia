@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SimulationMenuEngineeringLine } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, ChipRow, InfoButton, Kpi, Table, type BadgeTone, type ColumnV3 } from "./ui";
+import { Badge, type BadgeTone, ChipRow, type ColumnV3, InfoButton, Kpi, SkeletonRows, Table } from "./ui";
 
 type Quadrant = SimulationMenuEngineeringLine["quadrant"];
 const QUAD: Record<Quadrant, { label: string; tone: BadgeTone; verdict: string }> = {
@@ -137,7 +137,7 @@ export function MenuEngineeringV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Analysing the menu…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {rows.length === 0 ? (

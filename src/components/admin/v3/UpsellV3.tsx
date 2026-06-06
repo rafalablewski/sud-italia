@@ -6,7 +6,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Dialog, Switch, Table, type ColumnV3 } from "./ui";
+import { Badge, Button, type ColumnV3, Dialog, SkeletonRows, Switch, Table } from "./ui";
 
 /* ── shapes (mirror src/components/admin/AdminSellingShared) ────────────── */
 interface BundleSlot { kind: "category" | "item"; category?: string; itemIdSuffix?: string; quantity: number }
@@ -124,7 +124,7 @@ export function UpsellV3() {
       </div>
 
       {loading ? (
-        <div className="av3-loading"><span className="av3-spin" aria-hidden /> Loading upsell…</div>
+        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "modifiers" ? (
         <ModifierInventory menusByLoc={menusByLoc} locations={all} />
       ) : (
