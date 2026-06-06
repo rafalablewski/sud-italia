@@ -501,10 +501,18 @@ refetches every 30s.
   + prep-complexity × (Investment & capacity); combo add-on-COGS % + the
   cheapest-pizza-shift lever (Behaviour); 12 per-month seasonality overrides
   (Seasonality); build-out learning % + floor % (Fleet). Every scenario field
-  the engine reads is now editable. **Remaining v2-only:** the `menuScenario` /
-  `menuScenarioOverrides` named-scenario system (a v2-UI input-swap the engine
-  doesn't compute) — superseded in v3 by Menu strategy presets + Scenario
-  comparison; not ported.
+  the engine reads is now editable.
+  **Part 3i shipped — menu-scenario system (full v2 parity, nothing left):** the
+  named-scenario model is ported — a **Menu scenarios** card with the five baked
+  archetypes (Takeaway / Balanced / Premium / Family / Aperitivo) + **Custom**,
+  each resolving its `menuScenarioOverrides[id]` over the baked preset. **Apply**
+  loads the full input set (orders/day · days · ticket · COGS + the six attach %,
+  preserving enabled-state) and sets `menuScenario=id`; **Save current** captures
+  the live inputs into the override; **Reset** drops it. The same overrides
+  round-trip with v2 via `PUT /api/admin/simulation`. With this the v3 Calculator
+  is at **field-for-field AND feature-for-feature parity** with the 17k-line v2
+  `AdminSimulation` — every variable, lever, what-if, operational view and named
+  scenario.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the

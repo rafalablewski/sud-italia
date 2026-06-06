@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, MONTH_LABELS, projectTwelveMonths } from "@/lib/simulation-engine";
-import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
+import type { BusinessCostPayrollRole, SimulationAssumptions, SimulationAttachLever, SimulationFleetModel, SimulationLaborLine, SimulationMenuScenarioOverride, SimulationScenario, SimulationSeasonality, SimulationWeather } from "@/data/types";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, Kpi } from "./ui";
 
 const PAYROLL_ROLES: BusinessCostPayrollRole[] = ["pizzaiolo", "chef", "sous-chef", "kitchen-porter", "waiter", "barista", "driver", "manager", "cleaner", "other"];
@@ -76,29 +76,33 @@ function demandWeights(n: number): number[] {
   return w.map((v) => v / sum);
 }
 
-// Menu strategy presets — set the attach-lever mix only (idempotent); the engine
-// folds them into ticket/COGS via applyAssumptions, so net effect is real.
-type PresetKey = "balanced" | "premium" | "value";
-const MENU_PRESETS: Record<PresetKey, Partial<Record<AttachKey, SimulationAttachLever>>> = {
-  balanced: ATTACH_DEFAULTS,
-  premium: {
-    coffeeAttach: { enabled: true, attachPct: 0.35, avgPriceGrosze: 1100, cogsPct: 0.12 },
-    dessertAttach: { enabled: true, attachPct: 0.22, avgPriceGrosze: 2200, cogsPct: 0.30 },
-    antipastiAttach: { enabled: true, attachPct: 0.18, avgPriceGrosze: 3200, cogsPct: 0.34 },
-    aperitivoAttach: { enabled: true, attachPct: 0.20, avgPriceGrosze: 2800, cogsPct: 0.22 },
-    premiumToppingsAttach: { enabled: true, attachPct: 0.30, avgPriceGrosze: 1100, cogsPct: 0.32 },
-    pastaPrimoAttach: { enabled: true, attachPct: 0.24, avgPriceGrosze: 3800, cogsPct: 0.27 },
-  },
-  value: {
-    coffeeAttach: { enabled: true, attachPct: 0.30, avgPriceGrosze: 700, cogsPct: 0.14 },
-    dessertAttach: { enabled: true, attachPct: 0.08, avgPriceGrosze: 1200, cogsPct: 0.26 },
-    antipastiAttach: { enabled: false, attachPct: 0.04, avgPriceGrosze: 1800, cogsPct: 0.32 },
-    aperitivoAttach: { enabled: false, attachPct: 0.05, avgPriceGrosze: 1600, cogsPct: 0.22 },
-    premiumToppingsAttach: { enabled: true, attachPct: 0.08, avgPriceGrosze: 500, cogsPct: 0.28 },
-    pastaPrimoAttach: { enabled: true, attachPct: 0.12, avgPriceGrosze: 2400, cogsPct: 0.25 },
-  },
-};
-const PRESET_LABEL: Record<PresetKey, string> = { balanced: "Balanced", premium: "Premium", value: "Value" };
+// Menu scenarios — named archetypes (mirrors the v2 MENU_SCENARIOS model).
+// Applying one loads a full input set (volume / days / ticket / COGS + the six
+// attach % values, preserving each lever's enabled state). Operator edits to a
+// scenario persist as scenario.menuScenarioOverrides[id], overlaid on the baked
+// preset, so the same saved overrides round-trip between v2 and v3.
+interface MenuScenarioPreset {
+  id: string; name: string; emoji: string; description: string;
+  ordersPerDay: number; daysOpenPerMonth: number; avgTicketGrosze: number; cogsPct: number;
+  attach: { coffee: number; dessert: number; antipasti: number; aperitivo: number; premiumToppings: number; pastaPrimo: number };
+}
+const MENU_SCENARIOS: MenuScenarioPreset[] = [
+  { id: "takeaway", name: "Takeaway classic", emoji: "🍕", description: "Quick pizza orders, minimal sides. High volume, low ticket — grab + go.", ordersPerDay: 100, daysOpenPerMonth: 28, avgTicketGrosze: 4500, cogsPct: 0.30, attach: { coffee: 0.15, dessert: 0.05, antipasti: 0.03, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0 } },
+  { id: "balanced", name: "Balanced (default)", emoji: "🍝", description: "Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.", ordersPerDay: 70, daysOpenPerMonth: 28, avgTicketGrosze: 6500, cogsPct: 0.30, attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 } },
+  { id: "premium", name: "Premium / Specialty", emoji: "✨", description: "High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket.", ordersPerDay: 55, daysOpenPerMonth: 26, avgTicketGrosze: 8800, cogsPct: 0.32, attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 } },
+  { id: "family", name: "Family / Group", emoji: "👨‍👩‍👧", description: "Multi-pizza orders for groups. Big tickets, fewer orders — weekend / event.", ordersPerDay: 30, daysOpenPerMonth: 26, avgTicketGrosze: 15500, cogsPct: 0.28, attach: { coffee: 0.10, dessert: 0.25, antipasti: 0.20, aperitivo: 0.05, premiumToppings: 0.15, pastaPrimo: 0.15 } },
+  { id: "aperitivo", name: "Aperitivo / Dinner", emoji: "🍷", description: "Drinks-led evening service. Best margin — requires alcohol licence.", ordersPerDay: 45, daysOpenPerMonth: 28, avgTicketGrosze: 8200, cogsPct: 0.26, attach: { coffee: 0.20, dessert: 0.20, antipasti: 0.25, aperitivo: 0.45, premiumToppings: 0.20, pastaPrimo: 0.20 } },
+];
+const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 60, daysOpenPerMonth: 28, avgTicketGrosze: 6000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
+const MENU_SCENARIOS_ALL = [...MENU_SCENARIOS, CUSTOM_PRESET];
+const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_ALL.map((s) => [s.id, s]));
+const ATTACH_OF: Record<keyof MenuScenarioPreset["attach"], AttachKey> = { coffee: "coffeeAttach", dessert: "dessertAttach", antipasti: "antipastiAttach", aperitivo: "aperitivoAttach", premiumToppings: "premiumToppingsAttach", pastaPrimo: "pastaPrimoAttach" };
+// Overlay the operator's saved override (if any) on top of the baked preset.
+function resolveScenarioPreset(id: string, overrides?: Record<string, SimulationMenuScenarioOverride>): MenuScenarioPreset {
+  const base = MENU_SCENARIO_BY_ID.get(id) ?? CUSTOM_PRESET;
+  const ovr = overrides?.[id];
+  return ovr ? { ...base, ordersPerDay: ovr.ordersPerDay, daysOpenPerMonth: ovr.daysOpenPerMonth, avgTicketGrosze: ovr.avgTicketGrosze, cogsPct: ovr.cogsPct, attach: ovr.attach } : base;
+}
 
 // compact zł for dense heatmap cells (grosze → "7.2k" / "320")
 function kZl(g: number): string {
@@ -228,7 +232,36 @@ export function CalculatorV3() {
     } finally { setSeeding(false); }
   };
 
-  const applyMenuPreset = (k: PresetKey) => patchAssume(MENU_PRESETS[k] as Partial<SimulationAssumptions>);
+  // apply a named scenario → load its full input set (attach % only; enabled
+  // state preserved, matching v2) and mark it active
+  const applyMenuScenario = (p: MenuScenarioPreset) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const a: SimulationAssumptions = { ...(s.assumptions ?? {}) };
+    (Object.keys(p.attach) as (keyof MenuScenarioPreset["attach"])[]).forEach((k) => {
+      const ak = ATTACH_OF[k];
+      a[ak] = { ...(s.assumptions?.[ak] ?? ATTACH_DEFAULTS[ak]), attachPct: p.attach[k] };
+    });
+    return { ...s, menuScenario: p.id, ordersPerDay: p.ordersPerDay, daysOpenPerMonth: p.daysOpenPerMonth, avgTicketGrosze: p.avgTicketGrosze, cogsPct: p.cogsPct, assumptions: a };
+  });
+  // capture the current live inputs into this scenario's override
+  const saveScenarioOverride = (id: string) => setScn((s) => {
+    if (!s) return s; setDirty(true);
+    const att = s.assumptions ?? {};
+    const override: SimulationMenuScenarioOverride = {
+      ordersPerDay: s.ordersPerDay, daysOpenPerMonth: s.daysOpenPerMonth, avgTicketGrosze: s.avgTicketGrosze, cogsPct: s.cogsPct,
+      attach: {
+        coffee: att.coffeeAttach?.attachPct ?? 0, dessert: att.dessertAttach?.attachPct ?? 0, antipasti: att.antipastiAttach?.attachPct ?? 0,
+        aperitivo: att.aperitivoAttach?.attachPct ?? 0, premiumToppings: att.premiumToppingsAttach?.attachPct ?? 0, pastaPrimo: att.pastaPrimoAttach?.attachPct ?? 0,
+      },
+    };
+    return { ...s, menuScenario: id, menuScenarioOverrides: { ...(s.menuScenarioOverrides ?? {}), [id]: override } };
+  });
+  // drop a scenario's override (revert to the baked preset)
+  const resetScenarioOverride = (id: string) => setScn((s) => {
+    if (!s || !s.menuScenarioOverrides) return s; setDirty(true);
+    const next = { ...s.menuScenarioOverrides }; delete next[id];
+    return { ...s, menuScenarioOverrides: Object.keys(next).length ? next : undefined };
+  });
 
   // ── oven curve & peak saturation (modelled from kitchenCapacity) ──────────
   const oven = useMemo(() => {
@@ -780,22 +813,39 @@ export function CalculatorV3() {
         </div>
       )}
 
-      {/* menu strategy presets — one-click attach-lever mixes (real, via engine) */}
+      {/* menu scenarios — named archetypes; apply loads a full input set, edits persist as overrides */}
       <Card>
-        <CardHead title="Menu strategy presets" description="Load a coherent attach-lever mix — folds into ticket & COGS through the engine" actions={
-          <InfoButton title="Menu strategy presets"
-            description="One-click menu archetypes that set the whole attach-lever mix (coffee, dessert, antipasti, aperitivo, premium toppings, pasta) at once."
-            institutional="Menu strategy is the highest-leverage lever on a food unit's economics — it moves both ticket and COGS simultaneously. Presets let you compare strategic postures (premium vs value) without hand-tuning six levers, then read the impact straight off the P&L, scenario band and heatmaps. The institutional question each answers: does this menu posture clear the margin gate at our realistic volume?"
-            plain="Tap 'Premium' and the model assumes more guests add a 22 zł dessert and a 28 zł aperitivo — ticket and gross profit rise, but so does food cost. 'Value' leans on cheap coffee attach and drops the pricey add-ons — lower ticket, leaner COGS, built for footfall. Watch the headline KPIs and Scenario card recompute instantly."
-            tips="Start from the preset closest to your concept, then fine-tune the individual attach levers in 'Behaviour assumptions'. Pair with the orders × ticket heatmap to see whether the posture needs volume or price to clear target profit."
-            methodology="Each preset writes the six attach levers into scenario.assumptions; applyAssumptions() then folds them into effective avg ticket and COGS before computeScenario(). Idempotent — re-tapping restores the same mix. src/lib/simulation-engine.ts." />
+        <CardHead title="Menu scenarios" description="Named menu shapes — apply loads volume · days · ticket · COGS · attach in one click" actions={
+          <InfoButton title="Menu scenarios"
+            description="Pre-built menu archetypes (Takeaway, Balanced, Premium, Family, Aperitivo + Custom). Applying one loads a whole input set; your edits save back onto the scenario."
+            institutional="Menu shape is the highest-leverage strategic choice a food unit makes — it sets volume, ticket and COGS together. Named scenarios let you keep several coherent business cases on file (a high-volume takeaway vs a margin-rich aperitivo concept) and switch the entire model between them in one click, instead of hand-editing a dozen fields. The institutional use: underwrite each concept against the same fixed costs and capacity to see which clears the return gate."
+            plain="Tap 'Premium' and the model jumps to 55 orders/day at an 88 zł ticket with richer attach — the whole P&L, projection and heatmaps recompute. Tweak a few fields, hit Save, and that becomes your saved Premium case; Reset reverts it to the baked archetype."
+            tips="Start from the closest archetype, fine-tune in the cards above, then Save to keep it. Use Scenario comparison to band each concept and the heatmaps to test how sensitive it is. 'Custom' is the blank slot for a concept that doesn't match an archetype."
+            methodology="Applying writes ordersPerDay/days/ticket/COGS + the six attach % onto the scenario and sets menuScenario=id (attach enabled-state preserved). Save captures the live inputs into menuScenarioOverrides[id], overlaid on the baked preset by resolveScenarioPreset; Reset deletes that key. Round-trips via PUT /api/admin/simulation." />
         } />
         <CardBody>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(Object.keys(MENU_PRESETS) as PresetKey[]).map((k) => (
-              <Button key={k} variant="secondary" size="sm" onClick={() => applyMenuPreset(k)}>{PRESET_LABEL[k]}</Button>
-            ))}
-            <span style={{ fontSize: 11.5, color: "var(--av3-subtle)", alignSelf: "center" }}>Premium = richer add-ons (higher ticket + COGS) · Value = cheap-attach, lean COGS · Balanced = defaults.</span>
+          <div className="av3-cols-3" style={{ gap: 10 }}>
+            {MENU_SCENARIOS_ALL.map((base) => {
+              const p = resolveScenarioPreset(base.id, scn.menuScenarioOverrides);
+              const active = scn.menuScenario === base.id;
+              const edited = !!scn.menuScenarioOverrides?.[base.id];
+              return (
+                <div key={base.id} className="av3-scn-card" data-base={active} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 16 }}>{p.emoji}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.name}</span>
+                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>{edited && <Badge tone="warn">edited</Badge>}{active && <Badge tone="brand">active</Badge>}</span>
+                  </div>
+                  <div className="av3-cell-muted" style={{ fontSize: 11, lineHeight: 1.35, minHeight: 30 }}>{p.description}</div>
+                  <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 11, color: "var(--av3-muted)" }}>{p.ordersPerDay}/day · {formatPrice(p.avgTicketGrosze)} · {(p.cogsPct * 100).toFixed(0)}% COGS</div>
+                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 6, flexWrap: "wrap" }}>
+                    <Button variant={active ? "primary" : "secondary"} size="sm" onClick={() => applyMenuScenario(p)}>Apply</Button>
+                    <Button variant="ghost" size="sm" onClick={() => saveScenarioOverride(base.id)} title="Save current inputs into this scenario">Save current</Button>
+                    {edited && <Button variant="ghost" size="sm" onClick={() => resetScenarioOverride(base.id)} title="Revert to the baked archetype">Reset</Button>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardBody>
       </Card>
