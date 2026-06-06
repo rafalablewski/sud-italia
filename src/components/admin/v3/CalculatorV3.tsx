@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { applyAnnualWeather, applyAssumptions, computeChannelEconomics, computeFleetEconomics, computeReturns, computeScenario, computeTornado, DEFAULT_SEASONALITY, projectTwelveMonths } from "@/lib/simulation-engine";
@@ -60,6 +60,36 @@ function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?
   );
 }
 
+// compact zł for dense heatmap cells (grosze → "7.2k" / "320")
+function kZl(g: number): string {
+  const z = g / 100;
+  return Math.abs(z) >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
+}
+interface HeatData { cells: number[][]; colHeaders: string[]; rowHeaders: string[]; centerRow: number; centerCol: number }
+function Heatmap({ data }: { data: HeatData }) {
+  const maxAbs = Math.max(1, ...data.cells.flat().map((v) => Math.abs(v)));
+  const ncol = data.colHeaders.length;
+  return (
+    <div className="av3-heat-wrap">
+      <div className="av3-heat" style={{ gridTemplateColumns: `66px repeat(${ncol}, 1fr)` }}>
+        <div className="av3-heat-corner" />
+        {data.colHeaders.map((h, i) => <div key={i} className="av3-heat-h">{h}</div>)}
+        {data.cells.map((row, ri) => (
+          <Fragment key={ri}>
+            <div className="av3-heat-rh">{data.rowHeaders[ri]}</div>
+            {row.map((v, ci) => {
+              const pct = Math.round((Math.abs(v) / maxAbs) * 56) + 8;
+              const bg = `color-mix(in oklab, var(${v >= 0 ? "--av3-ok" : "--av3-bad"}) ${pct}%, var(--av3-s1))`;
+              const center = ri === data.centerRow && ci === data.centerCol;
+              return <div key={ci} className={`av3-heat-cell ${center ? "is-center" : ""}`} style={{ background: bg }} title={formatPrice(v)}>{kZl(v)}</div>;
+            })}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CalculatorV3() {
   const [scn, setScn] = useState<SimulationScenario | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +127,67 @@ export function CalculatorV3() {
   const channels = useMemo(() => (scn ? computeChannelEconomics(scn) : []), [scn]);
   const fleet = useMemo(() => (scn ? computeFleetEconomics(scn, scn.setupCostGrosze ?? 0) : null), [scn]);
 
+  // ── what-if heatmaps: recompute net profit over a grid (real engine) ──────
+  const MULTS = useMemo(() => [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3], []);
+  const ordersTicketHeat = useMemo(() => {
+    if (!folded) return null;
+    // rows = avg ticket (high→low so profit rises up the grid), cols = orders/day
+    const rowMults = [...MULTS].reverse();
+    const cells = rowMults.map((rm) => MULTS.map((cm) =>
+      computeScenario({ ...folded, ordersPerDay: folded.ordersPerDay * cm, avgTicketGrosze: Math.round(folded.avgTicketGrosze * rm) }).netProfit));
+    return {
+      cells,
+      colHeaders: MULTS.map((m) => (folded.ordersPerDay * m).toFixed(0)),
+      rowHeaders: rowMults.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      centerCol: MULTS.indexOf(1), centerRow: rowMults.indexOf(1),
+    };
+  }, [folded, MULTS]);
+  const foodTicketHeat = useMemo(() => {
+    if (!folded) return null;
+    // rows = COGS % (low→high so profit falls going down), cols = avg ticket
+    const cogsRows = [-0.06, -0.04, -0.02, 0, 0.02, 0.04, 0.06];
+    const cells = cogsRows.map((d) => MULTS.map((cm) =>
+      computeScenario({ ...folded, cogsPct: Math.max(0, folded.cogsPct + d), avgTicketGrosze: Math.round(folded.avgTicketGrosze * cm) }).netProfit));
+    return {
+      cells,
+      colHeaders: MULTS.map((m) => formatPrice(Math.round(folded.avgTicketGrosze * m))),
+      rowHeaders: cogsRows.map((d) => `${((folded.cogsPct + d) * 100).toFixed(0)}%`),
+      centerCol: MULTS.indexOf(1), centerRow: cogsRows.indexOf(0),
+    };
+  }, [folded, MULTS]);
+
+  // ── scenario archetypes: conservative / base / optimistic (real engine) ───
+  const archetypes = useMemo(() => {
+    if (!folded) return [];
+    const defs: { name: string; o: number; t: number; cogs: number; base?: boolean }[] = [
+      { name: "Conservative", o: 0.8, t: 0.95, cogs: 0.03 },
+      { name: "Base", o: 1, t: 1, cogs: 0, base: true },
+      { name: "Optimistic", o: 1.2, t: 1.08, cogs: -0.02 },
+    ];
+    return defs.map((d) => {
+      const r = computeScenario({ ...folded, ordersPerDay: folded.ordersPerDay * d.o, avgTicketGrosze: Math.round(folded.avgTicketGrosze * d.t), cogsPct: Math.max(0, folded.cogsPct + d.cogs) });
+      return { name: d.name, base: !!d.base, net: r.netProfit, margin: r.margin, ebitda: r.ebitda, payback: r.paybackMonths, breakEven: r.breakEvenOrdersPerDay };
+    });
+  }, [folded]);
+
+  // ── seed inputs from the last 30 days of real orders ──────────────────────
+  const [seeding, setSeeding] = useState(false);
+  const seedFromActuals = async () => {
+    setSeeding(true);
+    try {
+      const to = new Date().toISOString().slice(0, 10);
+      const from = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+      const a = await fetch(`/api/admin/analytics?from=${from}&to=${to}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (a && scn) {
+        const days = scn.daysOpenPerMonth || 26;
+        const ordersPerDay = a.totalOrders > 0 ? +(a.totalOrders / 30 * (30 / days) ).toFixed(1) : scn.ordersPerDay;
+        const avgTicketGrosze = a.avgOrderValue > 0 ? Math.round(a.avgOrderValue) : scn.avgTicketGrosze;
+        const cogsPct = typeof a.profitMargin === "number" ? Math.min(0.6, Math.max(0.1, 1 - a.profitMargin / 100)) : scn.cogsPct;
+        patch({ ordersPerDay: Math.max(1, Math.round(ordersPerDay)), avgTicketGrosze, cogsPct });
+      }
+    } finally { setSeeding(false); }
+  };
+
   const save = async () => {
     if (!scn) return;
     setSaving(true);
@@ -129,6 +220,7 @@ export function CalculatorV3() {
           <div className="av3-pagehead-sub">P&amp;L simulator · live levers → real economics (shared engine)</div>
         </div>
         <div className="av3-pagehead-actions">
+          <Button variant="ghost" size="sm" loading={seeding} onClick={seedFromActuals} title="Seed orders/day, ticket & COGS from the last 30 days of real orders">Seed from last 30 days</Button>
           <Button variant="ghost" size="sm" onClick={load}>Reset</Button>
           <Button variant="primary" size="sm" loading={saving} disabled={!dirty} onClick={save}>Save scenario</Button>
         </div>
@@ -183,6 +275,14 @@ export function CalculatorV3() {
             plain="If the truck cost 240 000 zł to build and fit out, and it nets 10 000 zł/month, you recover the cash in 24 months — two years before the project is truly 'in the black' on the original cheque."
             tips="Two ways to shorten it: spend less up front (lease vs buy equipment, phase the fit-out) or net more per month (every lever that lifts net profit shortens payback proportionally). A 10% net-profit improvement turns a 24-month payback into ~21.8 months."
             methodology="paybackMonths = setupCostGrosze ÷ monthlyNetProfit, shown only when setup cost > 0 and net profit > 0. The Investor Returns card adds the discounted view (NPV at 10/15/20% + bisected IRR). computeScenario() + computeReturns()." />
+        } />
+        <Kpi label="Margin of safety" value={`${(c.marginOfSafetyPct * 100).toFixed(0)}%`} accentVar={c.marginOfSafetyPct >= 0.25 ? "--av3-c4" : c.marginOfSafetyPct >= 0.1 ? "--av3-c5" : "--av3-c1"} info={
+          <InfoButton title="Margin of safety"
+            description="How far revenue can fall before the truck hits break-even — your cushion against a bad month."
+            institutional="The risk buffer investors stress-test. Rule of thumb: a healthy unit runs 25–40% above break-even; below ~15% the model is fragile (one rainy fortnight tips it into a loss) and shouldn't be financed without a plan to widen it. Read it alongside break-even/day — a low margin of safety with break-even near capacity is the danger zone."
+            plain="If you do 48 000 zł and break-even is 36 000 zł, your margin of safety is (48 000 − 36 000) ÷ 48 000 = 25% — revenue could drop a quarter before you stop making money. At 8% you're one slow week from red."
+            tips="Widen it the same way you lower break-even: lift contribution per order (ticket, COGS) or trim fixed/labour drag. Converting a fixed cost to a variable one mechanically raises the cushion. Use the orders × ticket heatmap below to see how much room each lever buys."
+            methodology="marginOfSafetyPct = (monthlyRevenue − breakEvenRevenue) ÷ monthlyRevenue, where breakEvenRevenue = breakEvenOrdersPerMonth × avgTicket. computeScenario(), src/lib/simulation-engine.ts." />
         } />
       </div>
 
@@ -506,6 +606,63 @@ export function CalculatorV3() {
           </Card>
         );
       })()}
+
+      {/* scenario comparison — conservative / base / optimistic (real engine) */}
+      {archetypes.length > 0 && (
+        <Card>
+          <CardHead title="Scenario comparison" description="Conservative · base · optimistic — same model, scaled volume / ticket / COGS" actions={
+            <InfoButton title="Scenario comparison"
+              description="The live scenario re-run under a pessimistic and an optimistic set of assumptions, side by side."
+              institutional="Investors never underwrite a single point estimate — they want the band. The institutional test: the business must survive the conservative case (net profit ≥ 0, payback still rational) and the optimistic case must not be the only path to viability. A model that only works in the optimistic column is a red flag."
+              plain="Base nets 7 200 zł/mo. Knock volume −20%, ticket −5% and add 3pp of food cost and you're at the Conservative column — if that's still green you can weather a soft quarter. The Optimistic column shows the upside if attach and footfall both land."
+              tips="If Conservative dips negative, widen the margin of safety before scaling: lift contribution per order or cut fixed drag. Use the heatmaps below to find which single lever moves the band most."
+              methodology="Each column re-runs computeScenario() on the folded scenario with ordersPerDay, avgTicket and cogsPct scaled — Conservative ×0.8 / ×0.95 / +3pp, Optimistic ×1.2 / ×1.08 / −2pp. src/lib/simulation-engine.ts." />
+          } />
+          <CardBody>
+            <div className="av3-scn">
+              {archetypes.map((a) => (
+                <div key={a.name} className="av3-scn-card" data-base={a.base}>
+                  <div className="av3-scn-name">{a.name}{a.base && <Badge tone="brand">live</Badge>}</div>
+                  <div className="av3-scn-net" style={{ color: a.net >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{formatPrice(a.net)}<span style={{ fontSize: 11, color: "var(--av3-subtle)", fontWeight: 400 }}> /mo</span></div>
+                  <div className="av3-scn-line"><span>Net margin</span><span className="v">{(a.margin * 100).toFixed(1)}%</span></div>
+                  <div className="av3-scn-line"><span>EBITDA</span><span className="v">{formatPrice(a.ebitda)}</span></div>
+                  <div className="av3-scn-line"><span>Break-even / day</span><span className="v">{Math.ceil(a.breakEven)}</span></div>
+                  <div className="av3-scn-line"><span>Payback</span><span className="v">{a.payback != null ? `${a.payback.toFixed(1)} mo` : "—"}</span></div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 8 }}>Conservative: −20% orders · −5% ticket · +3pp COGS. Optimistic: +20% orders · +8% ticket · −2pp COGS.</div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* what-if heatmaps — net profit recomputed across a 7×7 grid */}
+      {ordersTicketHeat && foodTicketHeat && (
+        <div className="av3-grid-2">
+          <Card>
+            <CardHead title="Net profit — orders/day × ticket" actions={
+              <InfoButton title="Net profit heatmap — orders/day × ticket"
+                description="Net profit per month at every combination of daily order volume and average ticket, ±30% around today."
+                institutional="A two-variable sensitivity map — far richer than the one-at-a-time tornado. It shows the profit 'cliff' (where green turns red) so you can see whether you're comfortably inside the safe zone or one bad assumption from a loss. The diagonal matters: volume and ticket are partly substitutes, and the map shows the trade-off rate."
+                plain="The centre cell (outlined) is today. Slide right and orders rise; slide up and ticket rises — watch the colour deepen green. If the cells just left/below you are already red, you're sitting on the edge and should widen the cushion."
+                tips="Find the cheapest path to a target profit: sometimes +1 zł on ticket (one row up) beats chasing 20% more orders (three columns right). Pair with the attach levers — they're the realistic way to move ticket."
+                methodology="Each cell = computeScenario({ …folded, ordersPerDay×colMult, avgTicket×rowMult }).netProfit over mults 0.7–1.3. Colour intensity scales to the grid's max |net profit|. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody><div className="av3-heat-axis" style={{ marginBottom: 6 }}>↑ avg ticket · → orders/day · cell = net profit / mo</div><Heatmap data={ordersTicketHeat} /></CardBody>
+          </Card>
+          <Card>
+            <CardHead title="Net profit — food cost × ticket" actions={
+              <InfoButton title="Net profit heatmap — food cost × ticket"
+                description="Net profit per month across a band of food-cost % (rows) and average ticket (columns)."
+                institutional="COGS and price are the two fastest margin levers, and this map shows how they fight each other. The institutional read: a unit whose viability needs sub-28% food cost is exposed to commodity swings; one that stays green even at +6pp COGS is resilient. It quantifies exactly how much ticket must rise to absorb an ingredient shock."
+                plain="Going down a row adds ~2pp of food cost (a dairy price spike); going right adds ticket. If a cheese rally pushes you down two rows into amber, the map tells you how many złoty of ticket (columns right) claw the profit back."
+                tips="Defend the COGS axis with the Recipes ingredient catalog (switch distributor offerings, tighten portions) before resorting to price rises that dent volume. Premium-topping attach lifts ticket without a blanket price increase."
+                methodology="Each cell = computeScenario({ …folded, cogsPct + Δ, avgTicket×colMult }).netProfit over COGS Δ −6…+6pp and ticket mults 0.7–1.3. Colour scales to the grid's max |net profit|. src/lib/simulation-engine.ts." />
+            } />
+            <CardBody><div className="av3-heat-axis" style={{ marginBottom: 6 }}>↓ food cost % · → avg ticket · cell = net profit / mo</div><Heatmap data={foodTicketHeat} /></CardBody>
+          </Card>
+        </div>
+      )}
 
       {/* real-data sandboxes — independent of the hypothetical scenario above */}
       <SimSandboxes />

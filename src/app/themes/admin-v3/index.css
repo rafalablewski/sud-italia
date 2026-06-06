@@ -1068,3 +1068,24 @@
 .av3-mx-yes { color: var(--av3-ok); } .av3-mx-yes svg { width: 14px; height: 14px; }
 .av3-mx-no { color: var(--av3-subtle); opacity: 0.5; } .av3-mx-no svg { width: 12px; height: 12px; }
 .av3-matrix th.av3-mx-owner, .av3-matrix td.av3-mx-owner { background: color-mix(in oklab, var(--av3-platinum) 8%, transparent); }
+
+/* ==========================================================================
+   22. Calculator — profit heatmaps + scenario comparison
+   ========================================================================== */
+.av3-heat-wrap { overflow-x: auto; }
+.av3-heat { display: grid; gap: 2px; min-width: 420px; }
+.av3-heat-corner { font-size: 9.5px; color: var(--av3-subtle); display: flex; align-items: flex-end; justify-content: flex-end; padding: 0 6px 4px 0; text-align: right; }
+.av3-heat-h { font-size: 10px; color: var(--av3-subtle); text-align: center; font-family: var(--av3-mono); padding: 3px 0; }
+.av3-heat-rh { font-size: 10px; color: var(--av3-subtle); display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-family: var(--av3-mono); white-space: nowrap; }
+.av3-heat-cell { padding: 7px 4px; text-align: center; font-family: var(--av3-mono); font-size: 10.5px; border-radius: 3px; color: var(--av3-fg); font-variant-numeric: tabular-nums; }
+.av3-heat-cell.is-center { outline: 1.5px solid var(--av3-platinum); outline-offset: -1px; font-weight: 700; }
+.av3-heat-axis { font-size: 10px; color: var(--av3-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
+.av3-scn { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--av3-gap-3); }
+.av3-scn-card { padding: 12px 14px; background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1); }
+.av3-scn-card[data-base="true"] { border-color: color-mix(in oklab, var(--av3-platinum) 45%, var(--av3-line-strong)); }
+.av3-scn-name { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); }
+.av3-scn-net { font-family: var(--av3-mono); font-size: 20px; font-weight: 600; margin-top: 5px; }
+.av3-scn-line { display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; padding: 4px 0; border-top: 1px solid var(--av3-line); margin-top: 6px; }
+.av3-scn-line:first-of-type { border-top: none; margin-top: 8px; }
+.av3-scn-line .v { font-family: var(--av3-mono); color: var(--av3-muted); }
+@media (max-width: 720px) { .av3-scn { grid-template-columns: 1fr; } }

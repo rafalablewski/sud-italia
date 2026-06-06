@@ -474,6 +474,16 @@ refetches every 30s.
   five-section explainer. **Follow-up:** the **Unit economics** card header now
   also carries a five-section ⓘ (true CM1/order, CM%, food/labour %, capacity,
   cash-on-cash), extending Rule #12 coverage past the headline rail.
+  **Part 3f shipped — v2 what-if depth ported:** a **Margin-of-safety** headline
+  KPI (`marginOfSafetyPct`, with explainer); **Seed from last 30 days** (pulls
+  orders/day · ticket · COGS from `/api/admin/analytics` into the input levers);
+  a **Scenario comparison** card (conservative / base / optimistic re-run through
+  `computeScenario` — net profit, margin, EBITDA, break-even/day, payback); and
+  two **net-profit heatmaps** (orders/day × ticket, and food-cost × ticket) —
+  7×7 grids recomputed cell-by-cell through the engine, colour-scaled, centre
+  cell = today. CSS §22 (`.av3-heat`, `.av3-scn`). Each new metric/heatmap carries
+  a five-section ⓘ (Rule #12). Still optional/not-ported from v2: the modelled
+  oven-curve / prep-queue, shift-plan-by-daypart, and menu-scenario presets.
   **Part 3d shipped:** the behaviour & environment levers. `applyAssumptions`
   + `applyAnnualWeather` were extracted into the shared engine (same folding
   math as v2) and the headline P&L / tornado / returns now compute on the
