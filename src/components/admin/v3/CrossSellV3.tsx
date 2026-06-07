@@ -101,7 +101,13 @@ export function CrossSellV3() {
   const windows = (usingDefaultWindows ? DEFAULT_WINDOWS : cfg.timeWindows) as TimeWindow[];
 
   // Combo KPI rail — real values computed from the live config + clock.
-  const nowHour = useMemo(() => new Date().getHours(), []);
+  // Tick the hour every minute so "windows live now" / live-now badges stay
+  // accurate if the page is left open across an hour boundary.
+  const [nowHour, setNowHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    const t = setInterval(() => setNowHour(new Date().getHours()), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const comboKpis = useMemo(() => {
     const active = combos.filter((c) => c.active);
     const avgDiscount = active.length ? active.reduce((s, c) => s + c.discountPercent, 0) / active.length : 0;

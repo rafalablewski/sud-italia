@@ -519,10 +519,20 @@ refetches every 30s.
 - [x] Growth (partial) — Scheduled bundles (`/admin-v3/scheduled-bundles`):
   standing-pre-order status board (approve/pause/resume/cancel via
   `PATCH /api/admin/scheduled-bundles/:id`), rows sorted by weekday → ready-time
-  so the list mirrors the operator's fulfilment order (v2 parity). Truck ops (`/admin-v3/truck`):
-  events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
-  + `/api/admin/truck-routes`, plus the **KPI rail** (events / revenue / expected
-  guests / live-upcoming) restored.
+  so the list mirrors the operator's fulfilment order (v2 parity). **Workbench
+  upgrade:** a reactive **KPI rail** (pending-approval · active · weekly units ·
+  paused, computed real from the live list, rule #1) with five-section ⓘ
+  explainers on the two levers (pending approval · standing weekly units), and a
+  **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
+  the full standing-cart line items + the status actions, so the operator can
+  see *what's in* a recurring order, not just its item count. Truck ops
+  (`/admin-v3/truck`): events + routes CRUD (incl. route-stops editor) over
+  `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
+  (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
+  five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table
+  view toggle** for events with a default **Board** of event cards (status dot,
+  date, revenue, expected guests; upcoming-first sort) that open the editor on
+  click.
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
   (referral config + challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
   **Restored to v2 parity (flag #5):** the **Loyalty tiers** editor
