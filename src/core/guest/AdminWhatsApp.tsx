@@ -820,6 +820,20 @@ function AdminWhatsAppDesktop() {
         </div>
       </div>
 
+      <div className="filters wa-filters">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            className={`fchip${filter === f.value ? " on" : ""}`}
+            aria-pressed={filter === f.value}
+            onClick={() => setFilter(f.value)}
+          >
+            {f.label} <span className="n">{f.count}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="guest">
         <section className="convs">
           <div className="convs-h">
@@ -834,19 +848,6 @@ function AdminWhatsAppDesktop() {
                 aria-label="Search conversations"
               />
             </div>
-          </div>
-          <div className="conv-tabs">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                className={`conv-tab${filter === f.value ? " on" : ""}`}
-                aria-pressed={filter === f.value}
-                onClick={() => setFilter(f.value)}
-              >
-                {f.label} <span className="n">{f.count}</span>
-              </button>
-            ))}
           </div>
           <div className="conv-list">
             {loading ? (
