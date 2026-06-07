@@ -955,6 +955,14 @@ export function AdminPos({
         </>
       }
     >
+      <div className="intro intro-slim">
+        <h1>POS · Order — the ticket is the order</h1>
+        <p>
+          Multi-tab open checks with live combo &amp; cross-sell, capacity-true pace steering, dine-in
+          coursing (fire course-by-course to the kitchen), table + covers, and a single Charge CTA.
+          Everything persists the moment you touch it — no save button.
+        </p>
+      </div>
       <div className="pos-shell">
         <div className="tabrail">
           <div className="tabrail-head">

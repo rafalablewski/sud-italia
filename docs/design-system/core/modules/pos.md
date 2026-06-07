@@ -22,6 +22,10 @@ surface.
 
 ## Layout — two-pane, iPad-first
 
+A slim `.intro.intro-slim` banner (the mockup pane header) opens the
+surface above the till — same banner family as the rest of Core, tightened
+so the full-bleed `.pos-shell` keeps its vertical room.
+
 ```
 +----------------------------------------------------------+
 |  brand · POS·KDS·Guest·Service nav · location · ⛶  (head) |

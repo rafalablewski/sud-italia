@@ -871,6 +871,11 @@
 /* Surfaces that drop the intro straight into the body (no scroll wrapper)
    still want it aligned to the 18px gutter. */
 .core-suite .core-body > .intro { margin: 14px 18px 0; }
+/* Slim variant for full-bleed operational tools (POS/KDS) where the till
+   needs the vertical room — same banner, tighter type. */
+.core-suite .intro-slim { padding: 9px 14px; }
+.core-suite .intro-slim h1 { font-size: 15px; }
+.core-suite .intro-slim p { font-size: 11.5px; margin-top: 2px; }
 /* Loyalty › shared-balances cards (mockup "Family wallets — shared balances")
    — a quick-glance pool summary that sits under the Members table. */
 .core-suite .loy-balances-h { padding: 16px 18px 0; }
@@ -996,6 +1001,7 @@
    SERVICE — merged Floor + Slots booking console (CoreShell)
    ============================================================ */
 .core-suite .svc { flex: 1; min-height: 0; overflow-y: auto; }
+.core-suite .svc > .intro { margin: 16px 18px 4px; }
 .core-suite .svc-date { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-muted); }
 .core-suite .svc-date .input { height: 30px; padding: 0 8px; }
 .core-suite .svc-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 18px; align-items: start; }
