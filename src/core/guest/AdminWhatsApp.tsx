@@ -783,6 +783,15 @@ function AdminWhatsAppDesktop() {
         </>
       }
     >
+      <div className="intro">
+        <h1>Guest · Inbox — the WhatsApp till</h1>
+        <p>
+          Two-way WhatsApp Business: the bot answers menu / availability / allergen questions and
+          issues Stripe payment links; staff take over any thread. KPIs track chat → paid conversion.
+          Quick replies + a payment-link button live in the composer.
+        </p>
+      </div>
+
       <div className="kpis">
         <div className="stat">
           <div className="l">Orders · 7d</div>
