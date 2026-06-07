@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
+import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 
@@ -579,7 +580,8 @@ export function AdminCrm() {
     <CoreShell
       eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="guests" counts={{ guests: data.length }} />}
-      right={
+      right={<GuestHeaderActions />}
+      subRight={
         <>
           <button type="button" className="btn ghost icon" onClick={() => void load()} title="Refresh">
             <RefreshCw className={loading ? "crm-spin" : ""} />

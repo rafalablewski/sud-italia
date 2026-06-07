@@ -5,6 +5,7 @@ import { CalendarDays } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "./GuestViewNav";
+import { GuestHeaderActions } from "./GuestHeaderActions";
 import { BookView } from "@/core/service/BookView";
 
 /**
@@ -59,7 +60,8 @@ export function GuestBook() {
     <CoreShell
       eyebrow="Guest Engagement · Book"
       viewnav={<GuestViewNav current="book" />}
-      right={
+      right={<GuestHeaderActions />}
+      subRight={
         <>
           <div className="seg">
             {LOCS.map((l) => (

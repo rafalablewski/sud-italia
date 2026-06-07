@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
+import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
 import { useToast } from "@/ui/Toast";
 
 type CapId =
@@ -144,7 +145,8 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
     <CoreShell
       eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="concierge" />}
-      right={
+      right={<GuestHeaderActions />}
+      subRight={
         <>
           <div className="seg">
             <button type="button" className={view === "mcp" ? "on" : ""} onClick={() => setView("mcp")}>
