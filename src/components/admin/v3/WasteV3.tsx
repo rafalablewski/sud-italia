@@ -65,7 +65,7 @@ export function WasteV3() {
 
   const qtyNum = parseFloat(quantity);
   const canSubmit = item.trim().length > 0 && Number.isFinite(qtyNum) && qtyNum > 0;
-  const draftCostGrosze = costStr.trim() === "" ? null : Math.max(0, Math.round(parseFloat(costStr) * 100));
+  const draftCostGrosze = costStr.trim() === "" || Number.isNaN(parseFloat(costStr)) ? null : Math.max(0, Math.round(parseFloat(costStr) * 100));
 
   const record = async () => {
     if (!canSubmit) return;

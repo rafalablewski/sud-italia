@@ -303,7 +303,11 @@ function comboExample(c: { categories: string[]; discountPercent: number; minIte
   if (priced.length === 0) return null;
   let picks: MenuItemLite[] = [];
   if (c.requiredItems && c.requiredItems.length > 0) {
-    picks = c.requiredItems.map((r) => priced.find((m) => deriveSuffix(m.id) === r.suffix)).filter((m): m is MenuItemLite => Boolean(m));
+    // Only show a worked example when every required item resolves on this
+    // menu — a partial match would price a misleading subset as "the combo".
+    const matched = c.requiredItems.map((r) => priced.find((m) => deriveSuffix(m.id) === r.suffix));
+    if (matched.some((m) => !m)) return null;
+    picks = matched as MenuItemLite[];
   }
   if (picks.length === 0) {
     // cheapest item per listed category, then top up to minItems with the cheapest overall.

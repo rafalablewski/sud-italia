@@ -27,7 +27,7 @@ const itemLabel = (id: string) => {
   const s = id.replace(/^[^-]+-/, "").replace(/-/g, " ").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : id;
 };
-const unitsOf = (i: Intent) => i.cartSnapshot.reduce((s, c) => s + c.quantity, 0);
+const unitsOf = (i: Intent) => (i.cartSnapshot ?? []).reduce((s, c) => s + c.quantity, 0);
 
 export function ScheduledBundlesV3() {
   const { location } = useAdminLocationV3();
@@ -158,10 +158,10 @@ export function ScheduledBundlesV3() {
           </div>
           <div className="av3-field-label" style={{ marginBottom: 6 }}>Standing cart</div>
           <div style={{ border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-md)", overflow: "hidden" }}>
-            {detail.cartSnapshot.length === 0 ? (
+            {!detail.cartSnapshot || detail.cartSnapshot.length === 0 ? (
               <div className="av3-cell-muted" style={{ fontSize: 12, padding: "10px 12px" }}>No items recorded on this order.</div>
             ) : detail.cartSnapshot.map((c, idx) => (
-              <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "8px 12px", fontSize: 12.5, borderBottom: idx === detail.cartSnapshot.length - 1 ? "none" : "1px solid var(--av3-line)" }}>
+              <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "8px 12px", fontSize: 12.5, borderBottom: idx === detail.cartSnapshot!.length - 1 ? "none" : "1px solid var(--av3-line)" }}>
                 <span>{itemLabel(c.menuItemId)}</span>
                 <span className="mono" style={{ fontFamily: "var(--av3-mono)", color: "var(--av3-platinum)" }}>×{c.quantity}</span>
               </div>
