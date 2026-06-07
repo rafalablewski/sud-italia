@@ -3,6 +3,7 @@ import { withAdmin } from "@/lib/api-middleware";
 import { getConversation } from "@/lib/ai/conversations";
 import { runAgentTurn } from "@/lib/ai/agent";
 import { getCurrentLocationScope } from "@/lib/admin-auth";
+import { isBoardroomPersonaId } from "@/lib/ai/boardroom/personas";
 
 /**
  * Ops agent turn (m4_8). One round of user message → loop →
@@ -26,6 +27,8 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
     const body = (await req.json().catch(() => ({}))) as {
       message?: string;
       approvedToolUseIds?: string[];
+      /** Optional Boardroom persona (ceo/coo/cfo/cmo) — selects the agent voice + tools. */
+      personaId?: string;
     };
     const message = (body.message ?? "").trim();
     if (!message) {
@@ -44,6 +47,7 @@ export const POST = withAdmin<{ params: Promise<{ id: string }> }>(
         locationScope,
       },
       approvedToolUseIds: body.approvedToolUseIds,
+      personaId: isBoardroomPersonaId(body.personaId) ? body.personaId : undefined,
     });
 
     return NextResponse.json({ events });

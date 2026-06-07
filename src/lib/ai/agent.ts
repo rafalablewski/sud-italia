@@ -5,6 +5,7 @@ import { appendMessage, getMessages, getDailyAiSpendGrosze } from "./conversatio
 import { estimateCallCostGrosze, getDailyBudgetGrosze } from "./cost";
 import "./tools/index";
 import type { AdminRole } from "@/lib/admin-auth";
+import { getPersona, type BoardroomPersonaId } from "./boardroom/personas";
 import { logger } from "@/lib/logger";
 
 /**
@@ -46,6 +47,13 @@ export interface AgentTurnInput {
    * runs in dry-run preview mode.
    */
   approvedToolUseIds?: string[];
+  /**
+   * Optional Boardroom persona (CEO/COO/CFO/CMO). When set, the loop
+   * swaps in that persona's system prompt and narrows the tool set to
+   * the persona's allowlist ∩ the role gate. Unset = the default
+   * Sud Italia ops agent (unchanged behaviour).
+   */
+  personaId?: BoardroomPersonaId;
 }
 
 export interface AgentTurnEvent {
@@ -110,14 +118,26 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
   const approved = new Set(input.approvedToolUseIds ?? []);
   let totalCost = 0;
 
+  // Persona selection: a Boardroom persona swaps the system prompt and
+  // narrows the tools to its allowlist; absent persona = the default ops
+  // agent. Tools are always intersected with the role-gated set so a
+  // persona can never widen a session's permissions.
+  const persona = getPersona(input.personaId);
+  const systemPrompt = persona?.system ?? SYSTEM_PROMPT;
+  const feature = persona ? `boardroom-${persona.id}` : "ops-agent";
+  const roleTools = toolsForApi(input.actor.role);
+  const tools = persona
+    ? roleTools.filter((t) => persona.toolNames.includes(t.name))
+    : roleTools;
+
   for (let hop = 0; hop < MAX_HOPS; hop += 1) {
     let response;
     try {
       response = await callGateway({
-        feature: "ops-agent",
-        system: SYSTEM_PROMPT,
+        feature,
+        system: systemPrompt,
         messages,
-        tools: toolsForApi(input.actor.role),
+        tools,
         maxTokens: 4096,
       });
     } catch (err) {

@@ -342,6 +342,21 @@ refetches every 30s.
   executed/error tool cards with expandable input/output, recent-conversation
   list, session-cost readout, and the API-key-not-configured empty state. CSS
   §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
+- [x] Boardroom (`/admin-v3/boardroom`) — the AI C-suite team (`BoardroomV3`,
+  with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Four persona
+  agents (CEO/COO/CFO/CMO) over the live store. **Tabs** (`.av3-filterchips`):
+  Overview (traffic-light KPI rail via `Kpi` with a status `Badge` dot +
+  five-section `InfoButton`, agent-status cards, quick-action meeting buttons, and
+  a "what needs attention" flag list), one panel per persona (the persona's owned
+  KPIs + a `ChatPanel`), and Meetings. **Chat** reuses the Ops Agent endpoints
+  (`/api/admin/ai-agent/*`) with a `personaId` body field that selects the agent
+  voice + tool allowlist; same human-in-the-loop tool-approval card flow and CSS
+  (§17 `.av3-chat-*`, `.av3-tool-*`). **Meetings** call `/api/admin/ai/boardroom/
+  meeting` (run daily/weekly) + `…/overview` (KPIs): a real round-robin transcript
+  (avatar rows) + a decisions list whose "Action via {agent}" buttons seed the
+  owning persona's composer for an operator-approved, audit-logged action.
+  Degrades to live-KPIs-only when `ANTHROPIC_API_KEY` is unset. Nav: Intelligence
+  section (icon `Crown`).
 - [x] Alerts (`/admin-v3/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/
