@@ -2,8 +2,8 @@ import "../themes/admin/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import { AdminShell } from "@/components/admin/v2/AdminShell";
-import { AdminCurrencyGuard } from "@/components/admin/AdminCurrencyGuard";
-import { themeBootScript } from "@/components/admin/v2/theme";
+import { AdminCurrencyGuard } from "@/shared/AdminCurrencyGuard";
+import { themeBootScript } from "@/shared/theme";
 
 // Admin fonts — owned by the Admin theme. Independent next/font calls
 // from the Homepage layout so a weight / subset change here can't move

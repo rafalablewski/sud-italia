@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useAdminBase } from "./v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
 import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "@/ui";

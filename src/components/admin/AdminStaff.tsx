@@ -27,7 +27,7 @@ import {
   staffRoleToAdminRole,
 } from "@/lib/staff-roles";
 import { PIN_MAX_LENGTH, PIN_MIN_LENGTH } from "@/lib/password";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 import {
   Badge,

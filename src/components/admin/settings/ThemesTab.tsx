@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Badge, Card, CardBody, CardHeader, Tabs } from "@/ui";
 import { core as coreTokens } from "@/app/themes/core/theme";
 import { homepage as homepageTokens } from "@/app/themes/homepage/theme";
-import { palette as adminPalette } from "@/components/admin/v2/theme";
+import { palette as adminPalette } from "@/shared/theme";
 import designSystem from "@/generated/design-system.json";
 
 /**

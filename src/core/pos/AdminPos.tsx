@@ -37,7 +37,7 @@ import {
   defaultCourseForCategory,
 } from "@/lib/pos-coursing";
 import type { CartItem, PosCourse } from "@/data/types";
-import { useAdminLocation } from "@/components/admin/v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "@/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).

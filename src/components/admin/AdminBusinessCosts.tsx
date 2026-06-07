@@ -25,7 +25,7 @@ import type {
   BusinessCostStatus,
 } from "@/data/types";
 import { FREQUENCY_TO_MONTHS, monthlyGrosze } from "@/lib/business-costs-math";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 import {
   Badge,

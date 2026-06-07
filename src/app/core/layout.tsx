@@ -3,8 +3,8 @@ import "../themes/core/index.css";
 import "../themes/core/suite.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
-import { AdminCurrencyGuard } from "@/components/admin/AdminCurrencyGuard";
-import { themeBootScript } from "@/components/admin/v2/theme";
+import { AdminCurrencyGuard } from "@/shared/AdminCurrencyGuard";
+import { themeBootScript } from "@/shared/theme";
 import { CoreProviders } from "./CoreProviders";
 
 // The Core suite (POS, KDS, Guest Engagement, Service) is the operational,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useAdminBase } from "./v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle, ExternalLink } from "lucide-react";
 import { MetricExplainer, PageExplainer } from "./Explainers";

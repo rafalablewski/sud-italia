@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAdminBase } from "../v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import {
   AlertTriangle,

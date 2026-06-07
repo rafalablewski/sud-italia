@@ -15,7 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
-import { useAdminLocation } from "@/components/admin/v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import { CoreShell } from "@/core/shell/CoreShell";

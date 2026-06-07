@@ -6,8 +6,8 @@ import { Bell, HelpCircle, Menu, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { ThemeToggle } from "./ThemeToggle";
-import { useAdminShell } from "./ShellContext";
-import { useAdminLocation } from "./LocationContext";
+import { useAdminShell } from "@/shared/ShellContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { ScopeSwitcher } from "@/ui";
 import { adminBaseForPath } from "@/lib/admin-base";
 

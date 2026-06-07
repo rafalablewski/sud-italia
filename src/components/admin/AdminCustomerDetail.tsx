@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/ui/Toast";
-import { useAdminBase } from "./v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAdminBase } from "./v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 
 import {
   Badge,

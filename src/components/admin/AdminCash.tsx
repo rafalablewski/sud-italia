@@ -12,7 +12,7 @@ import {
   Trash2,
   Unlock,
 } from "lucide-react";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

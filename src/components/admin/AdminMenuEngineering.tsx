@@ -11,7 +11,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { MetricExplainer } from "./Explainers";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import {
   Badge,
   Card,

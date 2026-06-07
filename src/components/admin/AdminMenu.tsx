@@ -19,7 +19,7 @@ import {
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

@@ -5,7 +5,7 @@ import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

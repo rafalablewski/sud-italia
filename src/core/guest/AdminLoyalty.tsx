@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAdminBase } from "@/components/admin/v2/useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {

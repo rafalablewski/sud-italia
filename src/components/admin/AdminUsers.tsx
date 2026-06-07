@@ -6,7 +6,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import type { AdminRole, AdminUser, AdminUserStatus } from "@/data/types";
 import { userLocationSlugs } from "@/lib/user-locations";
 import { landingPathForRole } from "@/lib/staff-roles";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 
 /** A passkey / security key as listed by the API (no public key, no counter). */
 type WebauthnKey = { id: string; name?: string; createdAt: string; transports?: string[] };

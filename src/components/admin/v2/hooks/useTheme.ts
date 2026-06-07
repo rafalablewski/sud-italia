@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { applyTheme, readTheme, THEME_ATTR, type ThemeMode } from "../theme";
+import { applyTheme, readTheme, THEME_ATTR, type ThemeMode } from "@/shared/theme";
 
 /**
  * Reads/sets the admin theme. The boot script in admin/layout.tsx applies the

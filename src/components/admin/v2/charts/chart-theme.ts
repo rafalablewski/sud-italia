@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPalette, readTheme, THEME_ATTR, type ThemeMode } from "../theme";
+import { getPalette, readTheme, THEME_ATTR, type ThemeMode } from "@/shared/theme";
 
 /**
  * Subscribes to admin theme changes so chart wrappers can rerender with

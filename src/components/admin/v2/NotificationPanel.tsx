@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useAdminBase } from "./useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, CheckCheck, Trash2, X } from "lucide-react";

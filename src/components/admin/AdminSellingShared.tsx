@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getMenu } from "@/data/menus/seed";
 import { getActiveLocations } from "@/data/locations";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import { DEFAULT_BUNDLES, BUNDLE_MARGIN_FLOOR } from "@/lib/bundles";
 import { worstBundleMargin } from "@/lib/bundle-margin";

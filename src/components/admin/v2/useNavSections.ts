@@ -9,7 +9,7 @@ import {
 } from "./nav.config";
 import type { AdminRole } from "@/lib/admin-roles";
 import { withAdminBase } from "@/lib/admin-base";
-import { useAdminBase } from "./useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 
 /**
  * Shared nav source for both sidebars (v2 AdminShell + Core suite shell) so the

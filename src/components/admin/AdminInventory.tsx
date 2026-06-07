@@ -20,7 +20,7 @@ import {
   type StockMovementType,
 } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { BundleAnalyticsCard } from "./BundleAnalyticsCard";
 import { formatPrice } from "@/lib/utils";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

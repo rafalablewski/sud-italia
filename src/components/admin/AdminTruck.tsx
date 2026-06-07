@@ -20,7 +20,7 @@ import type {
   TruckRoute,
   TruckStop,
 } from "@/data/types";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

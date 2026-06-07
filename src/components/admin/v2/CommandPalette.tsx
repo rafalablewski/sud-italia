@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ALL_NAV_ITEMS } from "./nav.config";
-import { useAdminBase } from "./useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 
 interface SearchResult {

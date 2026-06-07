@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, Pause, Play, X, Loader2, AlertCircle } from "lucide-react";
 import { PageHero } from "@/ui";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 
 type Status = "pending" | "active" | "paused" | "cancelled";
 

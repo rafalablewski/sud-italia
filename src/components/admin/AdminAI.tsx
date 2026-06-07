@@ -16,7 +16,7 @@ import {
   TrendingUp,
   Trash2,
 } from "lucide-react";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 
 import {

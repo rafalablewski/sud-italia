@@ -2,10 +2,10 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AdminLocationProvider } from "./LocationContext";
+import { AdminLocationProvider } from "@/shared/LocationContext";
 import { CommandPalette } from "./CommandPalette";
 import { NotificationPanel } from "./NotificationPanel";
-import { ShellContext, type ShellOverlays } from "./ShellContext";
+import { ShellContext, type ShellOverlays } from "@/shared/ShellContext";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -13,7 +13,7 @@ import { ToastProvider } from "@/ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { permissionForAdminPage } from "@/lib/permissions";
-import { useAdminBase } from "./useAdminBase";
+import { useAdminBase } from "@/shared/useAdminBase";
 import { adminBaseForRole, withAdminBase } from "@/lib/admin-base";
 
 interface Props {
