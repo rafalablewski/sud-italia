@@ -44,6 +44,23 @@ import type { AdminRole } from "@/lib/admin-roles";
 /** One entry in the "Recall" tray — the last few tickets a cook bumped. */
 type BumpEntry = { orderId: string; label: string; bumpedAt: number };
 
+// View-aware intro banner (windowed shell only — the fullscreen kiosk wall
+// stays bare for the cooks). One per KDS lens.
+const KDS_INTRO: Record<"fleet" | "floor" | "chef", { h1: string; p: string }> = {
+  fleet: {
+    h1: "KDS · Fleet Command — every truck at a glance",
+    p: "Owner Atlas lens: live throughput, at-risk & late counts, a cross-truck promise-accuracy benchmark, and per-truck panels with health, capacity and per-station pace bars — drill into any truck's Floor or Chef line.",
+  },
+  floor: {
+    h1: "KDS · Floor — the expo board",
+    p: "Three live lanes (New → Firing → Ready·Expo) with SLA-tier colouring, station-grouped lines, a cook-time progress meter, course-held hints, and one-tap bump. Stage filter + 86 up top.",
+  },
+  chef: {
+    h1: "KDS · Chef line — your station only",
+    p: "The cook's lens: a station-filtered, oversized make-queue. Big dish names + quantities readable across the line, modifiers in italic, allergen flags kept, and one full-width bump per ticket.",
+  },
+};
+
 // The recall tray must survive a tablet refresh (the KDS runs all day on a
 // wall-mounted screen that gets reloaded on Wi-Fi blips). We mirror the last 5
 // bumps to localStorage, scoped per location, and prune anything older than the
@@ -664,6 +681,10 @@ function AdminKDSDesktop({
     >
       <div className="kds-core in-shell">
         <div className="kds-wrap">
+          <div className="intro intro-slim kds-intro">
+            <h1>{KDS_INTRO[chefStrip ? "chef" : "floor"].h1}</h1>
+            <p>{KDS_INTRO[chefStrip ? "chef" : "floor"].p}</p>
+          </div>
           {opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
           {chefStrip && (
             <KdsChefStrip orders={orders} station={station} onStation={setStation} location={location} />

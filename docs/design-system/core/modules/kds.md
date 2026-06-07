@@ -23,8 +23,11 @@ back link is gone). The Fleet/Floor/Chef switch rides the subbar
 `.viewnav`; the stage filter + Sandbox badge ride the subbar right; the
 clock + sound/pause/refresh/fullscreen ride the header right. The
 **fullscreen kiosk** drops the shell chrome entirely and portals the bare
-dark wall (its own `.kds-top` header) to `<body>` (rule #4). `/core/kds` is
-a top-level `/core/*` route with its own layout. The three views:
+dark wall (its own `.kds-top` header) to `<body>` (rule #4) — and, being the
+cook-facing wall, it carries **no** intro banner. The windowed shell view
+opens each lens with a view-aware slim intro (`.intro.intro-slim.kds-intro`,
+text from `KDS_INTRO[mode]`). `/core/kds` is a top-level `/core/*` route with
+its own layout. The three views:
 
 - **Floor** (`AdminKDSDesktop`, `kds.html`): the shared header carries the
   Fleet/Floor/Chef viewswitch + stage filter + clock +

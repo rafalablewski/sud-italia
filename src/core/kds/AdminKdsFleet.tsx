@@ -283,7 +283,17 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
       }
     >
       <div className="kds-core in-shell">
-        <div className="kds-wrap">{boardBody}</div>
+        <div className="kds-wrap">
+          <div className="intro intro-slim kds-intro">
+            <h1>KDS · Fleet Command — every truck at a glance</h1>
+            <p>
+              Owner Atlas lens: live throughput, at-risk &amp; late counts, a cross-truck
+              promise-accuracy benchmark, and per-truck panels with health, capacity and per-station
+              pace bars — drill into any truck&apos;s Floor or Chef line.
+            </p>
+          </div>
+          {boardBody}
+        </div>
       </div>
     </CoreShell>
   );
