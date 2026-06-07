@@ -775,6 +775,12 @@
 /* ============================================================
    GUEST · GUESTS / CRM (ported from guest-crm.html)
    ============================================================ */
+/* CRM page wrapper — mockup geometry: intro + full-width KPI strip stacked
+   above the list|profile grid (the grid itself keeps its richer content). */
+.core-suite .crm-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.core-suite .crm-page > .intro { margin: 16px 18px 0; }
+.core-suite .crm-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px 8px; }
+.core-suite .crm-kpis .bk .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
 .core-suite .crm { display: grid; grid-template-columns: 380px 1fr; flex: 1; min-height: 0; }
 .core-suite .book { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--surface-1); }
 .core-suite .book-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px; }
@@ -862,6 +868,9 @@
 .core-suite .intro p b { color: var(--fg-muted); font-weight: 600; }
 .core-suite .intro p a { color: var(--brand-bright); }
 .core-suite .loy > .intro { margin: 16px 18px 0; }
+/* Surfaces that drop the intro straight into the body (no scroll wrapper)
+   still want it aligned to the 18px gutter. */
+.core-suite .core-body > .intro { margin: 14px 18px 0; }
 /* Loyalty › shared-balances cards (mockup "Family wallets — shared balances")
    — a quick-glance pool summary that sits under the Members table. */
 .core-suite .loy-balances-h { padding: 16px 18px 0; }

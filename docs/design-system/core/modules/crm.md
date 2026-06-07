@@ -6,27 +6,30 @@ The most exploratory surface in the suite. Where the KDS suppresses brand
 expression, the CRM lets it breathe — generous whitespace, Fraunces on the
 guest's name, soft platinum tier markers, count-up on lifetime value.
 
-**Live code:** `src/components/admin/AdminCustomers.tsx` and
-`AdminCrm.tsx` (the unified hub also covers Concierge + WhatsApp under one
-nav).
+**Live code:** `src/core/guest/AdminCrm.tsx` (the unified Guest hub also
+covers Loyalty + Concierge + WhatsApp under one nav).
 **Mockup:** `guest-crm.html`.
 
-## Layout — book + profile
+## Layout — intro + KPI strip + book/profile
 
-Two-pane master/detail:
+A serif `.intro` banner and a full-width 4-tile KPI strip (`.crm-kpis` —
+**Customers** all-time / **Members** loyalty-enrolled / **VIP** top-by-LTV
+/ **Total LTV**) stack above the two-pane master/detail (`.crm-page`
+wraps them):
 
 ```
++-----------------------------------------------------------------------+
+|  intro banner  ·  Customers | Members | VIP | Total LTV  (full-width)  |
 +--------------------------+------------------------------------------+
 |         The book         |              Deep profile                |
 |--------------------------|------------------------------------------|
-|  KPIs · 3-tile           |  Identity card · LTV · tier              |
-|  Search                  |  Health gauge + RFM + diagnosis          |
-|  Segment chips           |  Next Best Action (AI)                   |
-|  Channel chips · period  |  Lifetime stats · Identity & channels    |
-|  Sort                    |  Favourites · Loyalty · Consent          |
-|  Triggers ("Send today") |  Concierge notes · Recent orders         |
-|  ── Agentic group        |  GDPR (export · erase)                   |
-|  ── Customers group      |                                          |
+|  Search                  |  Identity card · LTV · tier              |
+|  Segment chips           |  Health gauge + RFM + diagnosis          |
+|  Channel chips · period  |  Next Best Action (AI)                   |
+|  Sort                    |  Lifetime stats · Identity & channels    |
+|  Triggers ("Send today") |  Favourites · Loyalty · Consent          |
+|  ── Agentic group        |  Concierge notes · Recent orders         |
+|  ── Customers group      |  GDPR (export · erase)                   |
 +--------------------------+------------------------------------------+
 ```
 

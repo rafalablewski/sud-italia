@@ -388,16 +388,13 @@ export function AdminCrm() {
   const kpis = useMemo(() => {
     const total = locPool.length;
     const members = locPool.filter((c) => c.member).length;
-    const noEmail = locPool.filter((c) => !c.email).length;
-    const cancels = locPool.reduce((s, c) => s + c.noShows, 0);
+    const vip = locPool.filter((c) => c.vip).length;
     const ltv = locPool.reduce((s, c) => s + c.totalSpent, 0);
     return [
-      { v: String(total), l: "Customers", cls: "" },
-      { v: String(members), l: "Members", cls: "good" },
-      { v: String(total - members), l: "Contacts", cls: "" },
-      { v: String(noEmail), l: "No email", cls: noEmail > 0 ? "alert" : "" },
-      { v: String(cancels), l: "Cancelled", cls: cancels > 0 ? "alert" : "" },
-      { v: fmtPLN0(ltv), l: "Total LTV", cls: "" },
+      { v: String(total), l: "Customers", sub: "all-time", cls: "" },
+      { v: String(members), l: "Members", sub: "loyalty enrolled", cls: "" },
+      { v: String(vip), l: "VIP", sub: "top by LTV", cls: "" },
+      { v: fmtPLN0(ltv), l: "Total LTV", sub: "lifetime", cls: "" },
     ];
   }, [locPool]);
 
@@ -597,17 +594,27 @@ export function AdminCrm() {
         </>
       }
     >
-      <div className="crm">
-        <section className="book" aria-label="Customer book">
-          <div className="book-kpis">
-            {kpis.map((k) => (
-              <div key={k.l} className={`bk${k.cls ? ` ${k.cls}` : ""}`}>
-                <div className="l">{k.l}</div>
-                <div className="v tnum">{k.v}</div>
-              </div>
-            ))}
-          </div>
-          <div className="book-filters">
+      <div className="crm-page">
+        <div className="intro">
+          <h1>Guest · Guests — the customer book (CRM)</h1>
+          <p>
+            Every guest across POS, web, WhatsApp &amp; delivery in one roster. Segment / channel /
+            recency filters, sort by value · recency · orders · points, and a profile drawer with LTV,
+            points, order timeline and contact.
+          </p>
+        </div>
+        <div className="crm-kpis">
+          {kpis.map((k) => (
+            <div key={k.l} className={`bk${k.cls ? ` ${k.cls}` : ""}`}>
+              <div className="l">{k.l}</div>
+              <div className="v tnum">{k.v}</div>
+              {k.sub && <div className="sub">{k.sub}</div>}
+            </div>
+          ))}
+        </div>
+        <div className="crm">
+          <section className="book" aria-label="Customer book">
+            <div className="book-filters">
             <div className="book-search">
               <Search />
               <input
@@ -745,6 +752,7 @@ export function AdminCrm() {
             <div className="thread-empty">Select a customer to see their profile.</div>
           )}
         </section>
+        </div>
       </div>
     </CoreShell>
   );
