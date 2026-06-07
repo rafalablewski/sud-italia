@@ -2,12 +2,15 @@
  * Sud Italia service worker (m5_1 + m5_2 + m5_3).
  *
  * Caching strategy:
- *   - Static shell (HTML + manifest + icons): cache-first with a
- *     network fallback. Lets the truck operator open the kitchen
- *     board with no signal.
+ *   - HTML navigations: NETWORK-FIRST with a cached fallback. The page
+ *     is always fresh when online (so a new deploy is picked up on the
+ *     next load, never a stale shell), and still paints from cache when
+ *     the truck operator has no signal. (Previously cache-first, which
+ *     pinned every visited page to its first-seen HTML across deploys.)
  *   - API GET (menu, public settings): stale-while-revalidate so the
  *     UI loads instantly off cache while a fresh copy is fetched in
  *     the background.
+ *   - Static assets (manifest, icons, css/js/img): cached on demand.
  *   - Everything else: network-first, falls back to cache.
  *
  * Offline outbox (m5_2): mutating fetches (POST /api/checkout,
@@ -22,7 +25,7 @@
  * caches are pruned on activate.
  */
 
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 
@@ -34,20 +37,6 @@ const STATIC_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
-
-/** Admin shell paths that should be served cache-first so a cold-start
- *  on a flaky network still paints the operator UI. The page-data
- *  itself (RSC payload) still hits the network when online. */
-const ADMIN_SHELL_PATHS = [
-  /^\/admin$/,
-  /^\/admin\/orders$/,
-  /^\/admin\/kds$/,
-  /^\/admin\/inventory$/,
-];
-
-function isAdminShell(url) {
-  return ADMIN_SHELL_PATHS.some((re) => re.test(url.pathname));
-}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -111,43 +100,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML / shell — cache-first.
+  // HTML navigations — NETWORK-FIRST. Always fetch fresh when online so a
+  // new deploy is served on the next load (never a stale cached shell); cache
+  // the latest copy as the offline fallback. When the network is unavailable,
+  // serve the cached page, then the generic shell.
   if (req.destination === "document") {
-    // Admin shell: serve cached shell instantly when available; the page
-    // hydrates from network once data fetches resolve. Fallback to the
-    // generic / cached shell if the specific route was never cached.
-    if (isAdminShell(url)) {
-      event.respondWith(
-        caches.match(req).then(
-          (cached) =>
-            cached ||
-            fetch(req)
-              .then((res) => {
-                if (res.ok) {
-                  caches
-                    .open(STATIC_CACHE)
-                    .then((cache) => cache.put(req, res.clone()));
-                }
-                return res;
-              })
-              .catch(() => caches.match("/admin") || caches.match("/")),
-        ),
-      );
-      return;
-    }
     event.respondWith(
-      caches.match(req).then(
-        (cached) =>
-          cached ||
-          fetch(req)
-            .then((res) => {
-              if (res.ok) {
-                caches.open(STATIC_CACHE).then((cache) => cache.put(req, res.clone()));
-              }
-              return res;
-            })
-            .catch(() => caches.match("/")),
-      ),
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match(req)
+            .then((cached) => cached || caches.match("/admin") || caches.match("/")),
+        ),
     );
     return;
   }
