@@ -421,6 +421,15 @@ refetches every 30s.
   `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
   still write to every site (rule #10). Selects + booleans in Pricing/Disclosures
   use `.av3-formgrid` + `.av3-togglerow` so they align instead of wrapping.
+  **Live preview (Operations interactivity pass):** the editor is now a
+  **two-column workbench** (`.av3-bodysplit`, 940px) — the tabbed form on the
+  left, a sticky **live customer menu-card preview** on the right that re-renders
+  as you type: category eyebrow + menu-role/delivery badges, name + price range,
+  description, dietary-tag + Nutri-Grade chips, an allergen "Contains:" line,
+  halal/pork/alcohol notes, and an availability state (Available / 86'd at some
+  sites / Currently 86'd from the per-site switches). It's the same dish the
+  customer sees, updating from the same edit state — so you frame the card while
+  you edit it.
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -447,6 +456,15 @@ refetches every 30s.
   (cost / food-cost % / batch / kcal) above a **tabbed** body (Ingredients /
   Nutrition / Notes — Nutrition & Notes flag with a dot when relevant); ingredient
   rows gained unit + `%` affixes. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
+  **Live economics panel (Operations interactivity pass):** the editor is now a
+  **two-column workbench** (`.av3-bodysplit`, 920px) — the tabbed builder on the
+  left, a sticky **live economics panel** on the right: a big **food-cost %** with
+  a **health gauge** (green ≤30 → amber ≤38 → red band, a marker tracking the live
+  figure), a **margin readout** (menu price · food cost · gross profit · GP
+  margin, computed against the dish's avg price), and an always-visible
+  **per-portion macros** grid (kcal + protein/carbs/sugar/fiber/fat) — so the
+  cost/health/nutrition consequences of every ingredient edit are visible without
+  switching tabs.
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table.
   **Workbench pass (Operations interactivity):** a **KPI rail** (readings ·
