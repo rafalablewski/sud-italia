@@ -24,19 +24,21 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await runBoardroomMeeting({ type: "daily", userId: "cron" });
-  if (!result.ok) {
-    logCronRun("boardroom-briefing", { ok: false, error: result.error });
+  if (!result.ok || !result.meeting) {
+    const error = result.error ?? "Meeting not created";
+    logCronRun("boardroom-briefing", { ok: false, error });
     // 200 with ok:false — a budget cap or transient model failure shouldn't
     // mark the whole dispatcher run as failed.
-    return NextResponse.json({ ok: false, error: result.error });
+    return NextResponse.json({ ok: false, error });
   }
 
+  const { meeting } = result;
   logCronRun("boardroom-briefing", {
     ok: true,
-    meetingId: result.meeting!.id,
-    decisions: result.meeting!.decisions.length,
-    flags: result.meeting!.agenda.length,
-    costGrosze: result.meeting!.costGrosze,
+    meetingId: meeting.id,
+    decisions: meeting.decisions.length,
+    flags: meeting.agenda.length,
+    costGrosze: meeting.costGrosze,
   });
-  return NextResponse.json({ ok: true, meetingId: result.meeting!.id });
+  return NextResponse.json({ ok: true, meetingId: meeting.id });
 }

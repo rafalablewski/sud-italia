@@ -736,11 +736,13 @@ function MeetingsTab({ gatewayConfigured, onAction, onRan }: { gatewayConfigured
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadMeetings = useCallback(async () => {
+  const loadMeetings = useCallback(async (selectNewest = false) => {
     const res = await fetch("/api/admin/ai/boardroom/meeting").then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const list: Meeting[] = res?.meetings ?? [];
     setMeetings(list);
-    setActiveId((prev) => prev ?? list[0]?.id ?? null);
+    // After a fresh run, jump to the newest meeting; otherwise keep the open one.
+    if (selectNewest && list[0]) setActiveId(list[0].id);
+    else setActiveId((prev) => prev ?? list[0]?.id ?? null);
     setLoading(false);
   }, []);
   useEffect(() => { void loadMeetings(); }, [loadMeetings]);
@@ -752,7 +754,7 @@ function MeetingsTab({ gatewayConfigured, onAction, onRan }: { gatewayConfigured
       <Card>
         <CardHead title="Convene the board" description="A real multi-agent meeting on today's live numbers — transcript + decisions" />
         <CardBody>
-          <RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={() => { loadMeetings(); onRan(); }} />
+          <RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={() => { loadMeetings(true); onRan(); }} />
         </CardBody>
       </Card>
 

@@ -29,10 +29,24 @@ registerTool<{ locationSlug?: string; dateFrom?: string; dateTo?: string }>({
     if (err) return { ok: false, error: err };
     const loc = defaultLocation(ctx, input.locationSlug);
 
-    const to = input.dateTo ? new Date(`${input.dateTo}T23:59:59.999Z`) : new Date();
-    const from = input.dateFrom
-      ? new Date(`${input.dateFrom}T00:00:00.000Z`)
-      : new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // LLMs occasionally emit non-date strings ("today", "last week"); guard
+    // before toISOString() so we return a clean error instead of a RangeError.
+    let to = new Date();
+    if (input.dateTo) {
+      const parsed = new Date(`${input.dateTo}T23:59:59.999Z`);
+      if (Number.isNaN(parsed.getTime())) {
+        return { ok: false, error: `Invalid dateTo '${input.dateTo}'. Expected YYYY-MM-DD.` };
+      }
+      to = parsed;
+    }
+    let from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (input.dateFrom) {
+      const parsed = new Date(`${input.dateFrom}T00:00:00.000Z`);
+      if (Number.isNaN(parsed.getTime())) {
+        return { ok: false, error: `Invalid dateFrom '${input.dateFrom}'. Expected YYYY-MM-DD.` };
+      }
+      from = parsed;
+    }
 
     const [labor, staff] = await Promise.all([
       getLaborCostInRange(loc, from.toISOString(), to.toISOString()),

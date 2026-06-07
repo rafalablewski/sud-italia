@@ -137,7 +137,9 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
         feature,
         system: systemPrompt,
         messages,
-        tools,
+        // Anthropic rejects an empty tools array — pass undefined when a
+        // persona's allowlist ∩ role gate leaves nothing.
+        tools: tools.length > 0 ? tools : undefined,
         maxTokens: 4096,
       });
     } catch (err) {
