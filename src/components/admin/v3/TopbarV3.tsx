@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS_V3 } from "./nav.config";
 import { ThemeToggleV3 } from "./ThemeToggleV3";
 import { useAdminLocationV3 } from "./LocationContext";
+import { adminV3BaseForPath, withAdminV3Base, canonicalAdminV3Path } from "@/lib/admin-base";
 
 interface Props {
   onOpenMobileNav: () => void;
@@ -18,9 +19,14 @@ interface Crumb {
 }
 
 function buildCrumbs(pathname: string): Crumb[] {
-  if (pathname === "/admin-v3") return [{ label: "Dashboard" }];
-  const segments = pathname.split("/").filter(Boolean); // ["admin-v3", ...]
-  const crumbs: Crumb[] = [{ label: "Admin", href: "/admin-v3" }];
+  // Role-prefix aware: under /manager or /franchisee the path is canonicalised
+  // to its /admin-v3 form for label lookup, while crumb hrefs are re-rooted back
+  // onto the URL's base so a manager's breadcrumbs stay in /manager.
+  const base = adminV3BaseForPath(pathname);
+  const canon = canonicalAdminV3Path(pathname);
+  if (canon === "/admin-v3") return [{ label: "Dashboard" }];
+  const segments = canon.split("/").filter(Boolean); // ["admin-v3", ...]
+  const crumbs: Crumb[] = [{ label: "Admin", href: withAdminV3Base(base, "/admin-v3") }];
   let acc = "/admin-v3";
   for (let i = 1; i < segments.length; i++) {
     acc += "/" + segments[i];
@@ -28,7 +34,7 @@ function buildCrumbs(pathname: string): Crumb[] {
     const isLast = i === segments.length - 1;
     crumbs.push({
       label: hit ? hit.label : segments[i].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      href: isLast ? undefined : acc,
+      href: isLast ? undefined : withAdminV3Base(base, acc),
     });
   }
   return crumbs;

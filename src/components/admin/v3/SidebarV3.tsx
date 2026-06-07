@@ -6,6 +6,7 @@ import { ChevronsLeft, ChevronsRight, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { filterNavForRoleV3, type NavSectionV3 } from "./nav.config";
 import type { AdminRole } from "@/lib/admin-roles";
+import { adminV3BaseForPath, withAdminV3Base, canonicalAdminV3Path } from "@/lib/admin-base";
 
 interface Props {
   collapsed: boolean;
@@ -34,10 +35,17 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
     };
   }, []);
 
+  // Role-prefix aware: managers/franchisees navigate v3 under /manager and
+  // /franchisee (rewritten onto /admin-v3 in next.config), so re-root every
+  // /admin-v3 href onto the URL's base and match active state on the canonical
+  // (/admin-v3) form.
+  const base = adminV3BaseForPath(pathname);
+  const canon = canonicalAdminV3Path(pathname);
+
   // Longest-matching href wins so only one item lights up.
   const activeHref = sections
     .flatMap((s) => s.items.map((i) => i.href))
-    .filter((href) => (href === "/admin-v3" ? pathname === "/admin-v3" : pathname === href || pathname.startsWith(href + "/")))
+    .filter((href) => (href === "/admin-v3" ? canon === "/admin-v3" : canon === href || canon.startsWith(href + "/")))
     .sort((a, b) => b.length - a.length)[0];
 
   const handleLogout = async () => {
@@ -53,7 +61,7 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
 
   return (
     <aside className="av3-side" aria-label="Admin navigation">
-      <Link href="/admin-v3" className="av3-brand" onClick={onNavigate}>
+      <Link href={withAdminV3Base(base, "/admin-v3")} className="av3-brand" onClick={onNavigate}>
         <span className="av3-brand-mark" aria-hidden>SI</span>
         <span className="av3-brand-text">
           <span className="av3-brand-name">Sud Italia</span>
@@ -71,7 +79,7 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={withAdminV3Base(base, item.href)}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={`av3-nav-item ${active ? "is-active" : ""}`}
