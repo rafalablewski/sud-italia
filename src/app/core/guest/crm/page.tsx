@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminCrm } from "@/components/admin/AdminCrm";
+import { AdminCrm } from "@/core/guest/AdminCrm";
 
 /**
  * Guest Engagement · Guests — the CRM customer book. One view of the unified

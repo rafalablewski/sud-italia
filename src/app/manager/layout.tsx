@@ -1,4 +1,4 @@
-import "../themes/admin/index.css";
+import "../themes/base/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 
@@ -34,7 +34,7 @@ export default function ManagerLayout({
     // `--font-ui` / `--font-display` re-resolve from the `--font-admin-*`
     // next/font vars on this element, so the bundled Inter / Fraunces actually
     // load (without it `.admin-bg` falls back to a generic font stack). Also
-    // the portal mount (rule #4). See themes/admin/index.css.
+    // the portal mount (rule #4). See themes/base/index.css.
     <div id="admin-portal-root" className={`${managerBody.variable} ${managerDisplay.variable} admin-bg`}>
       {children}
     </div>

@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia — Core unified shell (mockup, no-JS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ---- Core suite tokens (1:1 from src/app/themes/core/suite.css) ---- */
+:root{
+  --bg:#0c0b0e; --surface-1:#17161c; --surface-2:#1d1b23; --surface-3:#262430;
+  --surface-hover:#2f2c39; --border:rgba(255,255,255,.10); --border-strong:rgba(255,255,255,.16);
+  --fg:#f5f3ee; --fg-muted:#c0b9b0; --fg-subtle:#978e85;
+  --brand:#a62d49; --brand-bright:#c2415f; --brand-soft:rgba(166,45,73,.14);
+  --platinum:#cbb48a; --platinum-soft:rgba(203,180,138,.14);
+  --info:#6e92c0; --info-soft:rgba(110,146,192,.16); --success:#2fa875; --success-soft:rgba(47,168,117,.16);
+  --warning:#d9a441; --warning-soft:rgba(217,164,65,.16); --danger:#e2504b; --danger-soft:rgba(226,80,75,.16);
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  --sh-xs:0 1px 2px rgba(0,0,0,.32); --sh-sm:0 1px 3px rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.22);
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --display:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --canvas:#0a0a0c; --panel:#141318; --raised:#1f1d25;
+  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+  --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b; --firing:#4d90e8; --ready:#3dd68c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;-webkit-font-smoothing:antialiased}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle)}
+.muted{color:var(--fg-muted)} .subtle{color:var(--fg-subtle)} .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---- the no-JS radio switch: 12 hidden radios drive everything ---- */
+.pgr{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+
+/* ============ SHELL — unified header, no sidebar ============ */
+.core-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;flex:none}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--brand);box-shadow:var(--sh-sm),inset 0 0 0 1px var(--platinum-soft);display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;letter-spacing:.04em}
+.brand-name{font-family:var(--display);font-weight:600;font-size:16px;line-height:1}
+.brand-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle);margin-top:3px}
+.core-head{height:56px;flex:none;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--bg) 86%,transparent)}
+.core-head-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.core-nav{display:flex;align-items:center;gap:4px}
+.core-nav label{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:var(--r-md);color:var(--fg-muted);font:500 13px var(--ui);cursor:pointer;transition:background 120ms,color 120ms}
+.core-nav label:hover{background:var(--surface-hover);color:var(--fg)}
+.core-nav label svg{opacity:.85;flex:none}
+.subbar{min-height:46px;flex:none;display:flex;align-items:center;gap:14px;padding:7px 18px;border-bottom:1px solid var(--border);background:var(--surface-1)}
+.subbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.subbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.viewnav{display:flex;gap:4px;flex-wrap:wrap}
+.viewnav label{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:var(--r-md);cursor:pointer}
+.viewnav label:hover{background:var(--surface-hover);color:var(--fg)}
+.viewnav .n{font:600 11px var(--mono);color:var(--fg-subtle)}
+.core-body{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:auto;padding:18px 22px}
+
+/* surface-scoped chrome (eyebrow / viewnav group / controls) — hidden until its surface is active */
+.surf{display:none!important}
+/* panes hidden until selected */
+.pane{display:none;flex-direction:column;gap:16px;min-height:0}
+
+/* === SWITCH WIRING (pure CSS) === */
+/* show the active pane */
+#pg-pos-order:checked~.core-shell [data-p="pos-order"],
+#pg-pos-tender:checked~.core-shell [data-p="pos-tender"],
+#pg-kds-fleet:checked~.core-shell [data-p="kds-fleet"],
+#pg-kds-floor:checked~.core-shell [data-p="kds-floor"],
+#pg-kds-chef:checked~.core-shell [data-p="kds-chef"],
+#pg-guest-inbox:checked~.core-shell [data-p="guest-inbox"],
+#pg-guest-guests:checked~.core-shell [data-p="guest-guests"],
+#pg-guest-loyalty:checked~.core-shell [data-p="guest-loyalty"],
+#pg-guest-concierge:checked~.core-shell [data-p="guest-concierge"],
+#pg-guest-book:checked~.core-shell [data-p="guest-book"],
+#pg-service-floor:checked~.core-shell [data-p="service-floor"],
+#pg-service-slots:checked~.core-shell [data-p="service-slots"]{display:flex}
+/* primary nav active */
+#pg-pos-order:checked~.core-shell .pnav[data-s="pos"],#pg-pos-tender:checked~.core-shell .pnav[data-s="pos"],
+#pg-kds-fleet:checked~.core-shell .pnav[data-s="kds"],#pg-kds-floor:checked~.core-shell .pnav[data-s="kds"],#pg-kds-chef:checked~.core-shell .pnav[data-s="kds"],
+#pg-guest-inbox:checked~.core-shell .pnav[data-s="guest"],#pg-guest-guests:checked~.core-shell .pnav[data-s="guest"],#pg-guest-loyalty:checked~.core-shell .pnav[data-s="guest"],#pg-guest-concierge:checked~.core-shell .pnav[data-s="guest"],#pg-guest-book:checked~.core-shell .pnav[data-s="guest"],
+#pg-service-floor:checked~.core-shell .pnav[data-s="service"],#pg-service-slots:checked~.core-shell .pnav[data-s="service"]{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
+/* surface chrome visible */
+#pg-pos-order:checked~.core-shell .surf[data-s="pos"],#pg-pos-tender:checked~.core-shell .surf[data-s="pos"],
+#pg-kds-fleet:checked~.core-shell .surf[data-s="kds"],#pg-kds-floor:checked~.core-shell .surf[data-s="kds"],#pg-kds-chef:checked~.core-shell .surf[data-s="kds"],
+#pg-guest-inbox:checked~.core-shell .surf[data-s="guest"],#pg-guest-guests:checked~.core-shell .surf[data-s="guest"],#pg-guest-loyalty:checked~.core-shell .surf[data-s="guest"],#pg-guest-concierge:checked~.core-shell .surf[data-s="guest"],#pg-guest-book:checked~.core-shell .surf[data-s="guest"],
+#pg-service-floor:checked~.core-shell .surf[data-s="service"],#pg-service-slots:checked~.core-shell .surf[data-s="service"]{display:flex!important}
+/* active sub-tab */
+#pg-pos-order:checked~.core-shell .vtab[data-p="pos-order"],#pg-pos-tender:checked~.core-shell .vtab[data-p="pos-tender"],
+#pg-kds-fleet:checked~.core-shell .vtab[data-p="kds-fleet"],#pg-kds-floor:checked~.core-shell .vtab[data-p="kds-floor"],#pg-kds-chef:checked~.core-shell .vtab[data-p="kds-chef"],
+#pg-guest-inbox:checked~.core-shell .vtab[data-p="guest-inbox"],#pg-guest-guests:checked~.core-shell .vtab[data-p="guest-guests"],#pg-guest-loyalty:checked~.core-shell .vtab[data-p="guest-loyalty"],#pg-guest-concierge:checked~.core-shell .vtab[data-p="guest-concierge"],#pg-guest-book:checked~.core-shell .vtab[data-p="guest-book"],
+#pg-service-floor:checked~.core-shell .vtab[data-p="service-floor"],#pg-service-slots:checked~.core-shell .vtab[data-p="service-slots"]{background:var(--surface-3);color:var(--fg)}
+
+/* ---- shared primitives ---- */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:3px;gap:2px}
+.seg span{height:28px;padding:0 13px;display:inline-flex;align-items:center;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:6px}
+.seg span.on{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
+.seg .n{font:600 11px var(--mono);color:var(--fg-subtle);margin-left:5px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font:600 12.5px var(--ui)}
+.btn.icon{width:34px;padding:0;justify-content:center;color:var(--fg-muted)} .btn.primary{background:var(--brand);border-color:transparent;color:#fff} .btn.ghost{background:transparent}
+.badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:var(--r-pill);font:600 11px var(--ui)}
+.badge .d{width:6px;height:6px;border-radius:99px;background:currentColor}
+.badge.platinum{background:var(--platinum-soft);color:var(--platinum)} .badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.success{background:var(--success-soft);color:var(--success)} .badge.info{background:var(--info-soft);color:var(--info)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg)}
+.core-clock{font:600 16px var(--mono);padding:5px 12px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);color:var(--fg)}
+.datein{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface-2);color:var(--fg-muted);font:500 12.5px var(--mono)}
+svg{width:15px;height:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpis.k5{grid-template-columns:repeat(5,1fr)} .kpis.k7{grid-template-columns:repeat(7,1fr)}
+.bk{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
+.bk .l{font-size:11px;color:var(--fg-subtle)} .bk .v{font-family:var(--display);font-size:25px;font-weight:600;margin:4px 0} .bk .s{font-size:11px;color:var(--fg-subtle)}
+.bk .v.warn{color:var(--warning)} .bk .v.late{color:var(--danger)} .bk .v.good{color:var(--success)}
+.note{margin:0;padding:10px 14px;border-radius:var(--r-md);background:var(--platinum-soft);border:1px solid var(--platinum-soft);color:var(--platinum);font-size:12.5px}
+
+/* POS order */
+.pos-rail{display:flex;align-items:center;justify-content:space-between}
+.pos-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.pos-tab{width:150px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:11px 13px}
+.pos-tab.on{border-color:var(--platinum-soft);box-shadow:inset 0 0 0 1px var(--platinum-soft)}
+.pos-tab .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pos-tab .nm{font-weight:600} .pos-tab .st{font:600 10px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--success)}
+.pos-tab .r2{display:flex;justify-content:space-between;color:var(--fg-subtle);font-size:12px} .pos-tab .tot{color:var(--fg);font-weight:600}
+.pos-tab.add{display:grid;place-items:center;color:var(--fg-subtle);font-size:22px;width:64px}
+.pos-grid{display:grid;grid-template-columns:86px 1fr 340px;gap:14px;flex:1;min-height:0}
+.catrail{display:flex;flex-direction:column;gap:8px}
+.cat{padding:10px 6px;border-radius:var(--r-md);background:var(--surface-1);border:1px solid var(--border);text-align:center;font-size:11px}
+.cat.on{background:var(--surface-3);color:var(--fg)} .cat .t{font-size:9px;color:var(--fg-subtle);margin-top:3px}
+.menu{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+.prod{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px}
+.prod h4{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:4px}
+.prod p{font-size:12px;color:var(--fg-subtle);line-height:1.4;min-height:32px}
+.prod .pr{display:flex;justify-content:space-between;align-items:center;margin-top:9px} .prod .pr b{font-family:var(--mono)}
+.prod .add{width:26px;height:26px;border-radius:7px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:16px}
+.ticket{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
+.ticket .h{padding:13px;border-bottom:1px solid var(--border);font-weight:600}
+.ticket .empty{flex:1;display:grid;place-items:center;color:var(--fg-subtle);text-align:center;padding:24px;font-size:13px}
+/* POS tender */
+.tender{display:grid;grid-template-columns:1fr 380px;gap:16px;flex:1;min-height:0}
+.trow{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0} .trow.sub{color:var(--fg-subtle);font-size:12.5px}
+.totbig{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--border);margin-top:10px;padding-top:14px;font-family:var(--display);font-size:24px;font-weight:600}
+.paymethods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pm{height:42px;display:grid;place-items:center;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);font-weight:600}
+.pm.on{border-color:var(--platinum);color:var(--platinum);background:var(--platinum-soft)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:1}
+.keypad span{display:grid;place-items:center;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font:600 18px var(--mono);min-height:44px}
+/* KDS dark */
+.kdsbody{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--t)}
+.bench{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:14px}
+.bench .hd{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.benchrow{display:grid;grid-template-columns:160px 1fr 44px;align-items:center;gap:12px;margin:8px 0;font-size:12px}
+.btrack{height:8px;border-radius:99px;background:var(--raised);overflow:hidden} .bfill{height:100%;background:var(--ready);border-radius:99px}
+.trucks{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.truck{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px}
+.truck .th{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ring{width:46px;height:46px;border-radius:99px;border:3px solid var(--ready);display:grid;place-items:center;font:600 14px var(--mono);color:var(--ready)}
+.truck .nm{font-family:var(--display);font-size:18px;font-weight:600} .truck .sub{font-size:11px;color:var(--faint)} .truck .sub b{color:var(--ready)}
+.tstats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;border-top:1px solid var(--hair);padding-top:12px}
+.tstats .c .l{font-size:10px;color:var(--faint)} .tstats .c .v{font-size:18px;font-weight:600}
+.drill{margin-left:auto;display:flex;gap:8px}
+.kcols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+.kcolhead{font:600 12px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;justify-content:space-between;margin-bottom:10px}
+.tk{background:#161519;border:1px solid var(--hair);border-radius:var(--r-md);padding:12px 13px;margin-bottom:11px}
+.tk.late{border-color:rgba(229,72,77,.5)} .tk.firing{border-left:3px solid var(--firing)} .tk.ready{border-left:3px solid var(--ready)}
+.tk .tkh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tk .id{font-weight:600} .tk .chip{font:600 9px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--raised);border-radius:5px;padding:2px 6px}
+.tk .due{font:600 13px var(--mono)} .tk .due.warn{color:var(--warning)} .tk .due.late{color:var(--danger)} .tk .due.ready{color:var(--ready)}
+.tk .it{font-size:13px;margin:3px 0} .tk .it .q{color:var(--faint);margin-right:6px}
+.tk .act{margin-top:9px;text-align:center;padding:8px;border:1px solid var(--hair-2);border-radius:7px;background:var(--raised);color:var(--t);font-weight:600;font-size:13px}
+.stationrail{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.schip{height:30px;padding:0 13px;border-radius:99px;border:1px solid var(--hair);background:var(--raised);color:var(--dim);font:600 12px var(--ui);display:inline-flex;align-items:center;gap:7px}
+.schip.on{color:var(--t);border-color:var(--hair-2)} .schip .n{font:600 11px var(--mono);color:var(--faint)}
+.qdepth{margin-left:auto;color:var(--faint);font-size:12px}
+.chefqueue{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ct{background:#161519;border:1px solid var(--hair);border-radius:var(--r-md);padding:16px}
+.ct .cth{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ct .nm{font-family:var(--display);font-size:21px;font-weight:600} .ct .q{font:600 22px var(--mono);color:var(--t)}
+.ct .meta{font-size:11px;color:var(--faint);margin-bottom:12px}
+.ct .bump{text-align:center;padding:13px;border-radius:8px;background:var(--ready);color:#06231a;font:700 15px var(--ui)}
+/* Guest inbox */
+.inbox2{display:grid;grid-template-columns:300px 1fr;gap:14px;flex:1;min-height:0}
+.convs{display:flex;flex-direction:column;gap:8px}
+.conv{display:flex;gap:11px;padding:11px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-1)}
+.conv.on{border-color:var(--platinum-soft);box-shadow:inset 0 0 0 1px var(--platinum-soft)}
+.av{width:38px;height:38px;border-radius:99px;background:var(--surface-3);display:grid;place-items:center;font:600 13px var(--ui);color:var(--platinum);flex:none}
+.conv .nm{font-weight:600} .conv .pv{font-size:12px;color:var(--fg-subtle);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.thread{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-1);overflow:hidden;min-height:360px}
+.thread .th{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.bubs{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px}
+.bub{max-width:64%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4}
+.bub.in{align-self:flex-start;background:var(--surface-3)} .bub.out{align-self:flex-end;background:var(--brand-soft);border:1px solid var(--brand-soft)}
+.bub.bot{align-self:flex-end;background:var(--platinum-soft);color:var(--platinum)}
+/* tables */
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--border);background:var(--surface-1);color:var(--fg-muted);font:500 12px var(--ui);display:inline-flex;align-items:center;gap:6px}
+.fchip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--fg)} .fchip .n{font:600 11px var(--mono);color:var(--fg-subtle)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:10px;border-bottom:1px solid var(--border)} .tbl th{font-size:11px;color:var(--fg-subtle);font-weight:600}
+.tbl td.num,.tbl th.num{font-family:var(--mono);text-align:right}
+.wallets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.wallet{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
+.wallet .w1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px} .wallet .pts{font-family:var(--display);font-size:22px;font-weight:600;color:var(--platinum)}
+/* concierge */
+.cap{display:flex;align-items:center;gap:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:10px}
+.cap .ic{width:34px;height:34px;border-radius:var(--r-md);background:var(--surface-3);color:var(--platinum);display:grid;place-items:center}
+.cap .tx{flex:1} .cap .tx b{font-weight:600} .cap .tx .tag{font:600 9px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--info);margin-left:8px} .cap .tx p{font-size:12px;color:var(--fg-subtle);margin-top:2px}
+.sw{width:40px;height:23px;border-radius:99px;background:var(--brand);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:99px;background:#fff}
+.guestwrap{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+.matrix{width:100%;border-collapse:collapse;font-size:13px} .matrix th,.matrix td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--border)} .matrix th{font-size:11px;color:var(--fg-subtle);font-weight:600} .matrix td.diet{color:var(--fg-subtle)}
+/* book + service */
+.bookgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+.block{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-bottom:14px}
+.block .bh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.pk{height:34px;padding:0 14px;display:inline-flex;align-items:center;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);font:500 12.5px var(--ui)}
+.pk.on{border-color:var(--platinum);color:var(--platinum);background:var(--platinum-soft)} .pk.off{opacity:.4}
+.field{display:flex;flex-direction:column;gap:5px} .field label{font-size:11px;color:var(--fg-subtle)} .field .in{height:36px;display:flex;align-items:center;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);padding:0 11px;font:500 13px var(--ui)}
+.formrow{display:grid;grid-template-columns:90px 1fr 1fr;gap:12px}
+.tables{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tcard{aspect-ratio:1;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.tcard.seated{border-color:var(--brand);background:var(--brand-soft)} .tcard.freeing{border-color:var(--warning);background:var(--warning-soft)}
+.tcard .tn{font-family:var(--display);font-size:20px;font-weight:600} .tcard .ts{font-size:10px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:.06em}
+.slotlist{display:flex;flex-direction:column;gap:10px}
+.slot{display:grid;grid-template-columns:90px 1fr 130px 70px;align-items:center;gap:14px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 16px}
+.slot .tm{font:600 15px var(--mono)} .slot .cp{font-size:12px;color:var(--fg-subtle)}
+.captrack{height:7px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-top:5px} .capfill{height:100%;background:var(--info);border-radius:99px}
+.hint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--fg-subtle);background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:5px 13px;z-index:50}
+</style>
+</head>
+<body>
+<!-- ====== the 12 page radios (no JavaScript needed) ====== -->
+<input class="pgr" type="radio" name="pg" id="pg-pos-order" checked>
+<input class="pgr" type="radio" name="pg" id="pg-pos-tender">
+<input class="pgr" type="radio" name="pg" id="pg-kds-fleet">
+<input class="pgr" type="radio" name="pg" id="pg-kds-floor">
+<input class="pgr" type="radio" name="pg" id="pg-kds-chef">
+<input class="pgr" type="radio" name="pg" id="pg-guest-inbox">
+<input class="pgr" type="radio" name="pg" id="pg-guest-guests">
+<input class="pgr" type="radio" name="pg" id="pg-guest-loyalty">
+<input class="pgr" type="radio" name="pg" id="pg-guest-concierge">
+<input class="pgr" type="radio" name="pg" id="pg-guest-book">
+<input class="pgr" type="radio" name="pg" id="pg-service-floor">
+<input class="pgr" type="radio" name="pg" id="pg-service-slots">
+
+<div class="core-shell">
+  <header class="core-head">
+    <a class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Core</div></div></a>
+    <nav class="core-nav">
+      <label class="pnav" data-s="pos" for="pg-pos-order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 2h6v4H9z"/><path d="M8 11h8M8 15h5"/></svg>POS</label>
+      <label class="pnav" data-s="kds" for="pg-kds-fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>KDS</label>
+      <label class="pnav" data-s="guest" for="pg-guest-inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-3-5"/></svg>Guest</label>
+      <label class="pnav" data-s="service" for="pg-service-floor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0 1 18 0Z"/><path d="M12 2v3M2 16h20M5 20h14"/></svg>Service</label>
+    </nav>
+    <div class="core-head-right">
+      <!-- per-surface global actions -->
+      <div class="surf" data-s="pos" style="gap:10px;align-items:center"><div class="seg"><span class="on">Kraków</span><span>Warszawa</span></div><span class="btn icon">⤢</span></div>
+      <div class="surf" data-s="kds" style="gap:10px;align-items:center"><span class="core-clock">20:14:08</span><span class="btn icon">↻</span><span class="btn icon">♪</span><span class="btn icon">⏸</span><span class="btn icon">⤢</span></div>
+      <div class="surf" data-s="guest" style="gap:10px;align-items:center"><div class="seg"><span class="on">All</span><span>Kraków</span><span>Warszawa</span></div></div>
+      <div class="surf" data-s="service" style="gap:10px;align-items:center"><div class="seg"><span class="on">Kraków</span><span>Warszawa</span></div><span class="btn primary">+ Add table</span></div>
+    </div>
+  </header>
+
+  <div class="subbar">
+    <div class="subbar-left">
+      <!-- eyebrows -->
+      <span class="eyebrow surf" data-s="pos">Point of sale · Kraków</span>
+      <span class="eyebrow surf" data-s="kds">Kitchen</span>
+      <span class="eyebrow surf" data-s="guest">Guest Engagement</span>
+      <span class="eyebrow surf" data-s="service">Service</span>
+      <!-- viewnavs -->
+      <div class="viewnav surf" data-s="pos"><label class="vtab" data-p="pos-order" for="pg-pos-order">Order</label><label class="vtab" data-p="pos-tender" for="pg-pos-tender">Tender</label></div>
+      <div class="viewnav surf" data-s="kds"><label class="vtab" data-p="kds-fleet" for="pg-kds-fleet">Fleet</label><label class="vtab" data-p="kds-floor" for="pg-kds-floor">Floor</label><label class="vtab" data-p="kds-chef" for="pg-kds-chef">Chef</label></div>
+      <div class="viewnav surf" data-s="guest"><label class="vtab" data-p="guest-inbox" for="pg-guest-inbox">Inbox <span class="n">7</span></label><label class="vtab" data-p="guest-guests" for="pg-guest-guests">Guests</label><label class="vtab" data-p="guest-loyalty" for="pg-guest-loyalty">Loyalty</label><label class="vtab" data-p="guest-concierge" for="pg-guest-concierge">Concierge</label><label class="vtab" data-p="guest-book" for="pg-guest-book">Book</label></div>
+      <div class="viewnav surf" data-s="service"><label class="vtab" data-p="service-floor" for="pg-service-floor">Floor</label><label class="vtab" data-p="service-slots" for="pg-service-slots">Slots</label></div>
+    </div>
+    <div class="subbar-right">
+      <div class="surf" data-s="pos" style="gap:10px;align-items:center"><div class="seg"><span class="on">Takeout</span><span>Delivery</span><span>Dine-in</span></div><span class="badge warning"><span class="d"></span>Steer on</span></div>
+      <div class="surf" data-s="kds" style="gap:10px;align-items:center"><div class="seg"><span class="on">All <span class="n">9</span></span><span>New <span class="n">3</span></span><span>Firing <span class="n">4</span></span><span>Ready <span class="n">2</span></span></div><span class="badge platinum"><span class="d"></span>Sandbox</span></div>
+      <div class="surf" data-s="service" style="gap:10px;align-items:center"><span class="datein">▦ 2026-06-07</span></div>
+    </div>
+  </div>
+
+  <div class="core-body">
+    <!-- ===== POS · Order ===== -->
+    <section class="pane" data-p="pos-order">
+      <div class="pos-rail"><span class="eyebrow">Open checks</span><span class="subtle" style="font-size:12px"><b style="color:var(--fg)">3</b> tabs · <b style="color:var(--fg)">1</b> ready to pay · <b style="color:var(--fg)">142,00 zł</b> open</span></div>
+      <div class="pos-tabs">
+        <div class="pos-tab on"><div class="r1"><span class="nm">Table 7</span><span class="st">Open</span></div><div class="r2"><span>#A41 · T7 · 4 items</span><span class="tot">86,00 zł</span></div></div>
+        <div class="pos-tab"><div class="r1"><span class="nm">Marco</span><span class="st" style="color:var(--warning)">Ready</span></div><div class="r2"><span>#A42 · takeout · 2</span><span class="tot">38,00 zł</span></div></div>
+        <div class="pos-tab"><div class="r1"><span class="nm">Delivery</span><span class="st">Open</span></div><div class="r2"><span>#A43 · 1 item</span><span class="tot">18,00 zł</span></div></div>
+        <div class="pos-tab add">+</div>
+      </div>
+      <div class="pos-grid">
+        <div class="catrail"><div class="cat on">Pizze<div class="t">~14m</div></div><div class="cat">Antipasti<div class="t">~6m</div></div><div class="cat">Pasta<div class="t">~12m</div></div><div class="cat">Dolci<div class="t">~3m</div></div><div class="cat">Bibite<div class="t">~1m</div></div></div>
+        <div class="menu">
+          <div class="prod"><h4>Margherita</h4><p>San Marzano, fior di latte, basilico</p><div class="pr"><b>32 zł</b><span class="add">+</span></div></div>
+          <div class="prod"><h4>Diavola</h4><p>Nduja, salame piccante, fior di latte</p><div class="pr"><b>38 zł</b><span class="add">+</span></div></div>
+          <div class="prod"><h4>Bufala DOP</h4><p>Mozzarella di bufala, pomodorini</p><div class="pr"><b>42 zł</b><span class="add">+</span></div></div>
+          <div class="prod"><h4>Capricciosa</h4><p>Prosciutto, funghi, carciofi, olive</p><div class="pr"><b>40 zł</b><span class="add">+</span></div></div>
+          <div class="prod"><h4>Marinara</h4><p>San Marzano, aglio, origano</p><div class="pr"><b>26 zł</b><span class="add">+</span></div></div>
+          <div class="prod"><h4>Quattro Formaggi</h4><p>Fior di latte, gorgonzola, fontina</p><div class="pr"><b>41 zł</b><span class="add">+</span></div></div>
+        </div>
+        <div class="ticket"><div class="h">Table 7 · live ticket</div><div class="empty">🍕<br><br>Tap a dish to start the ticket.<br>The ticket is the order.</div></div>
+      </div>
+    </section>
+
+    <!-- ===== POS · Tender ===== -->
+    <section class="pane" data-p="pos-tender">
+      <div class="tender">
+        <div class="card" style="padding:18px;display:flex;flex-direction:column">
+          <div class="eyebrow">Table 7 · #A41 · tender</div>
+          <div style="flex:1;margin-top:14px">
+            <div class="trow"><span>2× Margherita</span><span class="mono">64,00</span></div>
+            <div class="trow"><span>1× Diavola</span><span class="mono">38,00</span></div>
+            <div class="trow"><span>2× San Pellegrino</span><span class="mono">16,00</span></div>
+            <div class="trow sub"><span>Subtotal</span><span class="mono">118,00</span></div>
+            <div class="trow sub"><span>Combo · pizza + bibita −10%</span><span class="mono" style="color:var(--success)">−11,80</span></div>
+          </div>
+          <div class="totbig"><span>Total</span><span>106,20 zł</span></div>
+        </div>
+        <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+          <div class="paymethods"><span class="pm on">Card</span><span class="pm">Cash</span><span class="pm">BLIK</span><span class="pm">Split</span></div>
+          <div class="keypad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>.</span><span>0</span><span>⌫</span></div>
+          <span class="btn primary" style="height:52px;font-size:16px;justify-content:center">Charge 106,20 zł</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== KDS · Fleet ===== -->
+    <section class="pane" data-p="kds-fleet">
+      <div class="kdsbody">
+        <div class="kpis k7">
+          <div class="bk"><div class="l">Active</div><div class="v">7</div><div class="s">2 ready for expo</div></div>
+          <div class="bk"><div class="l">At risk</div><div class="v warn">1</div><div class="s">predicted miss</div></div>
+          <div class="bk"><div class="l">Late</div><div class="v late">0</div><div class="s">over SLA</div></div>
+          <div class="bk"><div class="l">Ready</div><div class="v">2</div><div class="s">for expo</div></div>
+          <div class="bk"><div class="l">Throughput</div><div class="v">48<span style="font-size:13px">/hr</span></div><div class="s">last 60 min</div></div>
+          <div class="bk"><div class="l">Covers</div><div class="v">31<span style="font-size:13px">/hr</span></div><div class="s">seated</div></div>
+          <div class="bk"><div class="l">Revenue</div><div class="v">2,4k<span style="font-size:13px"> zł/hr</span></div><div class="s">live</div></div>
+        </div>
+        <div class="bench"><div class="hd"><span>Promise-accuracy · cross-truck benchmark</span><span>fleet 90% · target 90%</span></div>
+          <div class="benchrow"><span>Sud Italia — Kraków</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
+          <div class="benchrow"><span>Sud Italia — Warszawa</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div></div>
+        <div class="trucks">
+          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Kraków</div><div class="sub">Open · 3 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div><div class="tstats"><div class="c"><div class="l">Active</div><div class="v">3</div></div><div class="c"><div class="l">At risk</div><div class="v">1</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">4</div></div></div></div>
+          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Warszawa</div><div class="sub">Open · 4 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div><div class="tstats"><div class="c"><div class="l">Active</div><div class="v">4</div></div><div class="c"><div class="l">At risk</div><div class="v">0</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">3</div></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== KDS · Floor ===== -->
+    <section class="pane" data-p="kds-floor">
+      <div class="kdsbody"><div class="kcols">
+        <div class="kcol"><div class="kcolhead"><span>New</span><span>3</span></div>
+          <div class="tk"><div class="tkh"><span class="id">#4823 <span class="chip">Dine-in · T9</span></span><span class="due">0:18</span></div><div class="it"><span class="q">1×</span>Bruschetta</div><div class="it"><span class="q">1×</span>Marinara</div><div class="it"><span class="q">1×</span>Capricciosa</div><div class="act">Start prep</div></div>
+          <div class="tk"><div class="tkh"><span class="id">#4825 <span class="chip">Dine-in · T5</span></span><span class="due">0:09</span></div><div class="it"><span class="q">1×</span>Bruschetta</div><div class="it"><span class="q">1×</span>Olive Ascolane</div><div class="act">Start prep</div></div>
+          <div class="tk"><div class="tkh"><span class="id">#4824 <span class="chip">Takeaway</span></span><span class="due">0:41</span></div><div class="it"><span class="q">2×</span>Margherita</div><div class="act">Start prep</div></div>
+        </div>
+        <div class="kcol"><div class="kcolhead"><span>Firing</span><span>4</span></div>
+          <div class="tk late"><div class="tkh"><span class="id">#4818 <span class="chip">Delivery</span></span><span class="due late">14:32</span></div><div class="it"><span class="q">1×</span>Diavola · extra nduja</div><div class="it"><span class="q">1×</span>Nduja &amp; Honey</div><div class="act" style="border-color:var(--danger);color:var(--danger)">Mark ready</div></div>
+          <div class="tk firing"><div class="tkh"><span class="id">#4821 <span class="chip">Dine-in · T7</span></span><span class="due warn">9:07</span></div><div class="it"><span class="q">2×</span>Margherita</div><div class="it"><span class="q">1×</span>Bufala DOP</div><div class="act">Mark ready</div></div>
+        </div>
+        <div class="kcol"><div class="kcolhead"><span>Ready · pass</span><span>2</span></div>
+          <div class="tk ready"><div class="tkh"><span class="id">#4816 <span class="chip">Dine-in · T3</span></span><span class="due ready">Plated</span></div><div class="it"><span class="q">2×</span>Margherita</div><div class="act" style="border-color:var(--ready);color:var(--ready)">Bump · done</div></div>
+          <div class="tk ready"><div class="tkh"><span class="id">#4817 <span class="chip">Takeaway</span></span><span class="due ready">Plated</span></div><div class="it"><span class="q">1×</span>Capricciosa</div><div class="act" style="border-color:var(--ready);color:var(--ready)">Bump · done</div></div>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- ===== KDS · Chef ===== -->
+    <section class="pane" data-p="kds-chef">
+      <div class="kdsbody">
+        <div class="stationrail"><span class="schip on">All <span class="n">9</span></span><span class="schip">Pizza <span class="n">5</span></span><span class="schip">Antipasti <span class="n">3</span></span><span class="schip">Fritti <span class="n">1</span></span><span class="qdepth">In queue <b style="color:var(--t)">9</b> · Oldest <b style="color:var(--warning)">9:07</b></span></div>
+        <div class="chefqueue">
+          <div class="ct"><div class="cth"><span class="nm">Diavola</span><span class="q">×2</span></div><div class="meta">#4818 · Delivery · extra nduja</div><div class="bump">Bump</div></div>
+          <div class="ct"><div class="cth"><span class="nm">Margherita</span><span class="q">×2</span></div><div class="meta">#4821 · Dine-in T7 · course 2/3</div><div class="bump">Bump</div></div>
+          <div class="ct"><div class="cth"><span class="nm">Bufala DOP</span><span class="q">×1</span></div><div class="meta">#4821 · T7 · allergens: milk</div><div class="bump">Bump</div></div>
+          <div class="ct"><div class="cth"><span class="nm">Capricciosa</span><span class="q">×1</span></div><div class="meta">#4823 · Dine-in T9</div><div class="bump">Bump</div></div>
+          <div class="ct"><div class="cth"><span class="nm">Marinara</span><span class="q">×1</span></div><div class="meta">#4823 · T9 · vegan</div><div class="bump">Bump</div></div>
+          <div class="ct"><div class="cth"><span class="nm">Margherita</span><span class="q">×2</span></div><div class="meta">#4824 · Takeaway</div><div class="bump">Bump</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Guest · Inbox ===== -->
+    <section class="pane" data-p="guest-inbox">
+      <div class="kpis k5">
+        <div class="bk"><div class="l">Orders · 7d</div><div class="v">128</div><div class="s">paid via WhatsApp</div></div>
+        <div class="bk"><div class="l">Conversion · 7d</div><div class="v good">34%</div><div class="s">chat → paid</div></div>
+        <div class="bk"><div class="l">Active sessions</div><div class="v">3</div><div class="s">live now</div></div>
+        <div class="bk"><div class="l">Awaiting pay</div><div class="v warn">2</div><div class="s">link sent</div></div>
+        <div class="bk"><div class="l">Lifetime paid</div><div class="v">2 540</div><div class="s">orders</div></div>
+      </div>
+      <div class="inbox2">
+        <div class="convs">
+          <div class="conv on"><div class="av">LB</div><div><div class="nm">Lucia Bianchi</div><div class="pv">Perfect — see you at 8! Grazie 🙏</div></div></div>
+          <div class="conv"><div class="av">MK</div><div><div class="nm">Marek Kowalski</div><div class="pv">Is the Diavola very spicy?</div></div></div>
+          <div class="conv"><div class="av">SF</div><div><div class="nm">Sofia Ferrari</div><div class="pv">Payment link please 💳</div></div></div>
+          <div class="conv"><div class="av">AW</div><div><div class="nm">Anna Wójcik</div><div class="pv">Can I book for 4 tomorrow?</div></div></div>
+        </div>
+        <div class="thread">
+          <div class="th"><div class="av">LB</div><div><div style="font-weight:600">Lucia Bianchi</div><div class="subtle" style="font-size:11px">+39 ··· 412 · Kraków</div></div><span class="badge platinum" style="margin-left:auto">VIP · 4 200 zł</span></div>
+          <div class="bubs">
+            <div class="bub in">Hi! Do you have a table for 2 tonight around 8?</div>
+            <div class="bub bot">🤖 Yes — a dine-in slot at 20:00 has space, and table T7 fits 2. Shall I book it?</div>
+            <div class="bub in">Yes please, anniversary 🥂</div>
+            <div class="bub out">Booked T7 at 20:00 — and a complimentary limoncello on us. Buon anniversario! 🍋</div>
+            <div class="bub in">Perfect — see you at 8! Grazie 🙏</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Guest · Guests ===== -->
+    <section class="pane" data-p="guest-guests">
+      <div class="kpis">
+        <div class="bk"><div class="l">Customers</div><div class="v">1 284</div><div class="s">all-time</div></div>
+        <div class="bk"><div class="l">Members</div><div class="v">612</div><div class="s">loyalty enrolled</div></div>
+        <div class="bk"><div class="l">VIP</div><div class="v">48</div><div class="s">top 4% by LTV</div></div>
+        <div class="bk"><div class="l">Total LTV</div><div class="v">214k<span style="font-size:13px"> zł</span></div><div class="s">lifetime</div></div>
+      </div>
+      <div class="filters"><span class="fchip on">All <span class="n">1284</span></span><span class="fchip">VIP <span class="n">48</span></span><span class="fchip">Active <span class="n">503</span></span><span class="fchip">Repeat <span class="n">389</span></span><span class="fchip">New <span class="n">71</span></span><span class="fchip">Lapsed <span class="n">214</span></span></div>
+      <div class="card" style="padding:4px 14px">
+        <table class="tbl"><thead><tr><th>Customer</th><th>Channel</th><th class="num">Orders</th><th class="num">Points</th><th class="num">LTV</th><th>Last</th></tr></thead><tbody>
+          <tr><td>Lucia Bianchi <span class="badge platinum" style="height:18px;font-size:9px">VIP</span></td><td>Dine-in</td><td class="num">28</td><td class="num">4 200</td><td class="num">4 200 zł</td><td>2d</td></tr>
+          <tr><td>Marek Kowalski</td><td>Delivery</td><td class="num">11</td><td class="num">980</td><td class="num">980 zł</td><td>5d</td></tr>
+          <tr><td>Sofia Ferrari</td><td>Takeout</td><td class="num">9</td><td class="num">760</td><td class="num">760 zł</td><td>1d</td></tr>
+          <tr><td>Anna Wójcik</td><td>WhatsApp</td><td class="num">3</td><td class="num">210</td><td class="num">210 zł</td><td>3w</td></tr>
+          <tr><td>Giulia Romano</td><td>Dine-in</td><td class="num">16</td><td class="num">1 540</td><td class="num">1 540 zł</td><td>6d</td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <!-- ===== Guest · Loyalty ===== -->
+    <section class="pane" data-p="guest-loyalty">
+      <div class="kpis">
+        <div class="bk"><div class="l">Members</div><div class="v">612</div><div class="s">phone-enrolled</div></div>
+        <div class="bk"><div class="l">Points outstanding</div><div class="v">184k</div><div class="s">≈ 1 840 zł liability</div></div>
+        <div class="bk"><div class="l">Redemptions · 30d</div><div class="v">73</div><div class="s">rewards claimed</div></div>
+        <div class="bk"><div class="l">Family wallets</div><div class="v">38</div><div class="s">shared balances</div></div>
+      </div>
+      <div class="card" style="padding:4px 14px">
+        <table class="tbl"><thead><tr><th>Member</th><th>Tier</th><th class="num">Points</th><th class="num">Lifetime</th><th>Joined</th></tr></thead><tbody>
+          <tr><td>Lucia Bianchi</td><td><span class="badge platinum" style="height:18px;font-size:9px">Platinum</span></td><td class="num">4 200</td><td class="num">12 600</td><td>2024</td></tr>
+          <tr><td>Giulia Romano</td><td><span class="badge warning" style="height:18px;font-size:9px">Gold</span></td><td class="num">1 540</td><td class="num">5 400</td><td>2024</td></tr>
+          <tr><td>Marek Kowalski</td><td><span class="badge info" style="height:18px;font-size:9px">Silver</span></td><td class="num">980</td><td class="num">2 100</td><td>2025</td></tr>
+        </tbody></table>
+      </div>
+      <span class="eyebrow">Family wallets</span>
+      <div class="wallets">
+        <div class="wallet"><div class="w1"><b>Bianchi family</b><span class="badge platinum" style="height:18px;font-size:9px">3</span></div><div class="pts">6 120 pts</div><div class="subtle" style="font-size:12px">≈ 61,20 zł to redeem</div></div>
+        <div class="wallet"><div class="w1"><b>Romano household</b><span class="badge info" style="height:18px;font-size:9px">2</span></div><div class="pts">2 380 pts</div><div class="subtle" style="font-size:12px">≈ 23,80 zł to redeem</div></div>
+        <div class="wallet"><div class="w1"><b>Nowak &amp; Co</b><span class="badge info" style="height:18px;font-size:9px">4</span></div><div class="pts">1 050 pts</div><div class="subtle" style="font-size:12px">≈ 10,50 zł to redeem</div></div>
+      </div>
+    </section>
+
+    <!-- ===== Guest · Concierge ===== -->
+    <section class="pane" data-p="guest-concierge">
+      <div><b>6 capabilities · 6 live</b> <span class="subtle">· on the public read endpoint</span><p class="subtle" style="font-size:12.5px;margin-top:2px">One capability layer, exposed over MCP/HTTP and the WhatsApp bot — the agent never guesses; every answer is auditable.</p></div>
+      <div class="guestwrap">
+        <div>
+          <div class="cap"><div class="ic">📖</div><div class="tx"><b>get_menu</b><span class="tag">resource</span><p>Full menu with prices, categories and dietary tags.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic">⏱</div><div class="tx"><b>check_availability</b><span class="tag">tool</span><p>Live availability + prep time per item and location.</p></div><div class="sw"></div></div>
+          <div class="cap" style="border-color:var(--platinum-soft);box-shadow:inset 3px 0 0 var(--platinum)"><div class="ic">⚠</div><div class="tx"><b>get_allergens</b><span class="tag">tool</span><p>EU-14 allergen + dietary breakdown for any item.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic">🛍</div><div class="tx"><b>place_order</b><span class="tag">tool</span><p>Create a takeout / delivery order. Returns id + ETA.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic">💳</div><div class="tx"><b>create_payment</b><span class="tag">tool</span><p>Issue a Stripe payment link / take payment.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic">📍</div><div class="tx"><b>locate_truck</b><span class="tag">tool</span><p>Where the truck is now + today's schedule per city.</p></div><div class="sw"></div></div>
+        </div>
+        <div class="card" style="padding:15px">
+          <div class="eyebrow" style="margin-bottom:10px">EU-14 allergen matrix · Kraków</div>
+          <table class="matrix"><thead><tr><th>Item</th><th>🌾</th><th>🥛</th><th>🥚</th><th style="text-align:right">Diet</th></tr></thead><tbody>
+            <tr><td>Margherita</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+            <tr><td>Bufala DOP</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+            <tr><td>Diavola</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">spicy</td></tr>
+            <tr><td>Marinara</td><td>●</td><td>·</td><td>·</td><td class="diet" style="text-align:right">vegan</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Guest · Book ===== -->
+    <section class="pane" data-p="guest-book">
+      <div class="bookgrid">
+        <div>
+          <div class="block"><div class="bh"><span class="eyebrow">When · pick a slot</span><span class="subtle" style="font-size:12px">2026-06-07</span></div>
+            <div class="chips"><span class="pk">18:00 · 6 left</span><span class="pk on">20:00 · 3 left</span><span class="pk">21:30 · 8 left</span><span class="pk off">22:30 · full</span></div></div>
+          <div class="block"><div class="bh"><span class="eyebrow">Where · assign a table</span><span class="btn ghost">✨ Recommend</span></div>
+            <div class="chips"><span class="pk">T3 · 2</span><span class="pk on">T7 · 2</span><span class="pk">T9 · 4</span><span class="pk off">T5 · seated</span><span class="pk">T11 · 6</span></div></div>
+          <div class="block"><span class="eyebrow">Who</span>
+            <div class="formrow" style="margin-top:12px"><div class="field"><label>Party</label><div class="in">2</div></div><div class="field"><label>Name</label><div class="in">Lucia Bianchi</div></div><div class="field"><label>Phone</label><div class="in">+39 ··· 412</div></div></div>
+            <div class="field" style="margin-top:12px"><label>Notes</label><div class="in">Anniversary 🥂</div></div>
+            <div style="display:flex;justify-content:flex-end;margin-top:14px"><span class="btn primary">✓ Book slot + table</span></div></div>
+        </div>
+        <div class="card" style="padding:16px"><div class="bh" style="display:flex;justify-content:space-between"><span class="eyebrow">Booked · 2026-06-07</span><span class="badge success" style="height:18px;font-size:9px">3</span></div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+            <div class="trow"><span><b>20:00</b> · T7 · Lucia B. (2)</span><span class="subtle">conf</span></div>
+            <div class="trow"><span><b>20:00</b> · T9 · Nowak (4)</span><span class="subtle">conf</span></div>
+            <div class="trow"><span><b>21:30</b> · T11 · Romano (6)</span><span class="subtle">conf</span></div>
+          </div></div>
+      </div>
+    </section>
+
+    <!-- ===== Service · Floor ===== -->
+    <section class="pane" data-p="service-floor">
+      <div class="kpis">
+        <div class="bk"><div class="l">Occupancy</div><div class="v">62%</div><div class="s">8/13 seated</div></div>
+        <div class="bk"><div class="l">Open now</div><div class="v">5</div><div class="s">2 freeing ≤15m</div></div>
+        <div class="bk"><div class="l">Median turn</div><div class="v">54<span style="font-size:13px">m</span></div><div class="s">realized</div></div>
+        <div class="bk"><div class="l">Spend / hr</div><div class="v">118<span style="font-size:13px"> zł</span></div><div class="s">per table-hour</div></div>
+      </div>
+      <div class="note">Floor twin live — seat / clear from any table, predictive-seating recommender, bottleneck banner when the line can't absorb more covers.</div>
+      <div class="tables">
+        <div class="tcard seated"><div class="tn">T1</div><div class="ts">seated · 32m</div></div>
+        <div class="tcard"><div class="tn">T2</div><div class="ts">open</div></div>
+        <div class="tcard seated"><div class="tn">T3</div><div class="ts">seated · 1h04</div></div>
+        <div class="tcard freeing"><div class="tn">T5</div><div class="ts">freeing ~8m</div></div>
+        <div class="tcard"><div class="tn">T7</div><div class="ts">booked 20:00</div></div>
+        <div class="tcard seated"><div class="tn">T9</div><div class="ts">seated · 18m</div></div>
+        <div class="tcard"><div class="tn">T11</div><div class="ts">open</div></div>
+        <div class="tcard freeing"><div class="tn">T12</div><div class="ts">freeing ~12m</div></div>
+      </div>
+    </section>
+
+    <!-- ===== Service · Slots ===== -->
+    <section class="pane" data-p="service-slots">
+      <div class="kpis">
+        <div class="bk"><div class="l">Slots today</div><div class="v">9</div><div class="s">dine-in windows</div></div>
+        <div class="bk"><div class="l">Booked</div><div class="v">41</div><div class="s">of 78 covers</div></div>
+        <div class="bk"><div class="l">Fill rate</div><div class="v good">53%</div><div class="s">vs 48% last wk</div></div>
+        <div class="bk"><div class="l">Demand price</div><div class="v">1.0×</div><div class="s">no surge</div></div>
+      </div>
+      <div class="slotlist">
+        <div class="slot"><div class="tm">12:00</div><div><div>Lunch service</div><div class="captrack"><div class="capfill" style="width:67%"></div></div></div><div class="cp">40/60 · 67%</div><span class="btn ghost">Edit</span></div>
+        <div class="slot"><div class="tm">13:00</div><div><div>Lunch service</div><div class="captrack"><div class="capfill" style="width:67%"></div></div></div><div class="cp">52/78 · 67%</div><span class="btn ghost">Edit</span></div>
+        <div class="slot"><div class="tm">18:00</div><div><div>Dinner service</div><div class="captrack"><div class="capfill" style="width:33%"></div></div></div><div class="cp">30/90 · 33%</div><span class="btn ghost">Edit</span></div>
+        <div class="slot"><div class="tm">20:00</div><div><div>Dinner service</div><div class="captrack"><div class="capfill" style="width:89%"></div></div></div><div class="cp">85/96 · 89%</div><span class="btn ghost">Edit</span></div>
+        <div class="slot"><div class="tm">21:30</div><div><div>Dinner service</div><div class="captrack"><div class="capfill" style="width:63%"></div></div></div><div class="cp">38/60 · 63%</div><span class="btn ghost">Edit</span></div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="hint">Click <b>POS · KDS · Guest · Service</b> up top, then the sub-tabs — pure HTML/CSS, no JavaScript needed.</div>
+</body>
+</html>

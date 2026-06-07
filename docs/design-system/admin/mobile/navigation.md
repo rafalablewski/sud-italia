@@ -166,7 +166,7 @@ Holds filter chips + segment controls. Sticks below the topbar at `top: 48px`. O
 
 ### 6.3 Sub-tabs
 
-Mobile prefers `SegmentControl` (iOS-style) for ≤ 4 tabs. For more, `Tabs` (existing `v2/ui/Tabs`) is horizontally scrollable. Tab state persists in URL via query string (consistent with desktop).
+Mobile prefers `SegmentControl` (iOS-style) for ≤ 4 tabs. For more, `Tabs` (existing `src/ui/Tabs`) is horizontally scrollable. Tab state persists in URL via query string (consistent with desktop).
 
 ---
 

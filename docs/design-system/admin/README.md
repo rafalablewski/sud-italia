@@ -1,5 +1,13 @@
 # Admin — Design System
 
+> ⚠️ **v2 is retired.** The admin back-office now runs on **v3**
+> (`/admin` → `/admin-v3`; see [`v3/README.md`](./v3/README.md)). The v2
+> component tree (`src/components/admin/`) + the `src/app/admin/*` routes were
+> deleted. The shared base stylesheet lives on as `src/app/themes/base/index.css`
+> (it backs login + the staff portals + Core). The component/shell sections
+> below describe the **now-deleted v2** set and are pending a cleanup pass —
+> treat them as historical until then.
+
 The design language for the **back-office admin** — every `/admin/*` surface
 that is *not* one of the Core modules. Core (POS, KDS, Guest = CRM +
 Loyalty + Concierge + WhatsApp) is our IP and runs under its own theme — see
@@ -92,7 +100,7 @@ portal mount:** these layouts carry no theme-boot script, so `<html>` never
 gets `[data-admin-theme]` and the `--font-ui` / `--font-display` tokens only
 re-resolve from the element's `--font-admin-*` next/font vars at the
 `#admin-portal-root` scope (see [theme → typography](./theme/typography.md) /
-`themes/admin/index.css`). Drop the id and `.admin-bg` falls back to its generic
+`themes/base/index.css`). Drop the id and `.admin-bg` falls back to its generic
 `var(--font-ui, "Inter", …)` stack — the bundled Inter / Fraunces never load.
 
 The `/admin` HQ dashboard is **owner-only** (gated server-side in
@@ -151,11 +159,11 @@ production.
 
 **Portal target: `#admin-portal-root`, not `<body>`.** The shared v2 overlays
 (`Dialog` / `ConfirmDialog` / `InfoButton` / `Popover` / `Tooltip` / `Toast`)
-use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
+use the `adminOverlayTarget()` helper (`src/ui/portal.ts`), which returns the
 admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
 wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
 **and** the element that carries the `--font-admin-*` next/font vars. It also
-repairs the font tokens (in `themes/admin/index.css`) so the admin subtree
+repairs the font tokens (in `themes/base/index.css`) so the admin subtree
 renders in the right typefaces. Why repair is needed: `--font-ui` /
 `--font-display` are declared up on `[data-admin-theme]` (`<html>`) as
 `var(--font-admin-body|display), …`, but the `--font-admin-*` vars only exist on

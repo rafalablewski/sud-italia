@@ -165,7 +165,7 @@ e-commerce-flag waving; the oxblood button is the brand button.
 ## The shared base tokens
 
 These hold across themes (admin's `--info`, `--warning`, etc. exist
-separately in `themes/admin/index.css` — Homepage doesn't read them):
+separately in `themes/base/index.css` — Homepage doesn't read them):
 
 | Need                          | Homepage uses                                                |
 | ----------------------------- | ------------------------------------------------------------ |

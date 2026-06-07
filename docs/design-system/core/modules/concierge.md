@@ -7,7 +7,7 @@ The proprietary advantage made operator-visible. The Concierge is the
 HTTP) and the WhatsApp ordering bot — exposed once, served on both
 channels.
 
-**Live code:** `src/components/admin/AdminConcierge.tsx`,
+**Live code:** `src/core/guest/AdminConcierge.tsx`,
 `src/lib/concierge/capabilities.ts`, the public endpoint
 `src/app/api/agent/[capability]/route.ts`.
 **Mockup:** `guest-concierge.html`.

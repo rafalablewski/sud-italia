@@ -4,7 +4,7 @@
  * Client-safe leaf — like admin-roles.ts it imports nothing server-only, so the
  * nav config, the sidebar filter, the AdminShell page guard, and the Users
  * editor (all `"use client"`) can import the catalog + maps, while the server
- * side (admin-auth.ts, api-middleware.ts) imports the same resolver. One source
+ * side (admin-auth.ts, api-proxy.ts) imports the same resolver. One source
  * of truth gates the UI and the API identically.
  *
  * Model (CLAUDE rule for RBAC):

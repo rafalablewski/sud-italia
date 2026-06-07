@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentAdminUser } from "@/lib/admin-auth";
 import { ROLE_RANK } from "@/lib/admin-roles";
-import { PermissionsV3 } from "@/components/admin/v3/PermissionsV3";
+import { PermissionsV3 } from "@/admin-v3/PermissionsV3";
 
 export default async function AdminV3PermissionsPage() {
   const user = await getCurrentAdminUser();

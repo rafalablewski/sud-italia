@@ -1,9 +1,9 @@
 import "../themes/admin-v3/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
-import { AdminShellV3 } from "@/components/admin/v3/AdminShellV3";
-import { AdminCurrencyGuard } from "@/components/admin/AdminCurrencyGuard";
-import { themeBootScriptV3 } from "@/components/admin/v3/theme";
+import { AdminShellV3 } from "@/admin-v3/AdminShellV3";
+import { AdminCurrencyGuard } from "@/shared/AdminCurrencyGuard";
+import { themeBootScriptV3 } from "@/admin-v3/theme";
 
 // v3 owns its own next/font instances (namespaced --font-admin-*), independent
 // of the v2 admin layout so deleting v2 can't drift v3's typefaces.

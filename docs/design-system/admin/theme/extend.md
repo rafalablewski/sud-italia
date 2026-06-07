@@ -64,7 +64,7 @@ pages must:
 
 1. Be reachable from the **v2 admin shell** (`AdminShell.tsx`) — top
    nav or a section group.
-2. Build from the **`v2/ui` primitives** — `PageHeader` + `ViewToolbar` for the
+2. Build from the **`src/ui` primitives** — `PageHeader` + `ViewToolbar` for the
    command surface, `Card` / `Input` / `Select` / `Button` for content. **Never
    the legacy `glass-card` / `glass-input` / `glass-btn` classes** (older
    `--admin-*` token system, being retired — lint-guarded in the page layer).
@@ -228,7 +228,7 @@ The admin **page layer** (`src/app/admin/**/*.tsx` + the top-level
 (in `eslint.config.mjs`) at **`error`**. It bans, in that layer:
 
 - raw `<button>` / `<input>` / `<select>` — use `Button` / `IconButton` / `Input` /
-  `Select` from `v2/ui`;
+  `Select` from `src/ui`;
 - the legacy `glass-card` / `glass-input` / `glass-btn` classes — use `Card` /
   `Input` / `Button` (the `.v2-*` classes / components);
 - inline 6-digit hex literals — use a `var(--token)` (CSS) or the `theme.ts`
@@ -256,7 +256,7 @@ tracked in `eslint-suppressions.json` at the repo root.
   PR — since the rule is `error`, **new drift fails the build**; the suppressions
   baseline grandfathers the legacy.
 - **CODEOWNERS** (`.github/CODEOWNERS`) routes changes to the primitives
-  (`v2/ui`), the theme (`themes/admin`, `theme.ts`), the lint config +
+  (`src/ui`), the theme (`themes/admin`, `theme.ts`), the lint config +
   suppressions, and these docs to the **DS owner**. Pages compose primitives; they
   don't fork them.
 - **Scaffold** (`npm run scaffold:admin-page`) means new pages start compliant.

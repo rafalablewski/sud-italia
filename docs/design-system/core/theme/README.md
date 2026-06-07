@@ -6,7 +6,7 @@ change must leave Admin and Homepage visually unchanged.
 ## Two CSS layers (mid-migration)
 
 The Core theme ships in **two** stylesheets, both loaded by the Core
-suite's own `src/app/core/layout.tsx` (alongside `themes/admin/index.css`,
+suite's own `src/app/core/layout.tsx` (alongside `themes/base/index.css`,
 whose tokens Core reuses). The Core surfaces live at `/core/*` — POS, KDS,
 Guest, Service — under that layout; they left `/admin/*`, so the admin
 back-office no longer ships the core chunk:
@@ -18,7 +18,7 @@ back-office no longer ships the core chunk:
    `.btn` / `.badge` / `.seg` / `.stat` / `.shell` / `.prod` / `.conv` /
    …) can't leak into Admin or Homepage. This is what **POS** and the
    **Guest hub** render, inside `<CoreShell>`
-   (`src/components/admin/core/CoreShell.tsx`) — the mockup's SI sidebar
+   (`src/core/shell/CoreShell.tsx`) — the mockup's SI sidebar
    + topbar as a fixed full-viewport layer. Tokens are redeclared on
    `.core-suite` (same warm-neutral / burgundy / platinum values as
    `--cmd-*`, under the mockup's generic names `--bg` / `--fg` /

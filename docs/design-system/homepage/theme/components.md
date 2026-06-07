@@ -1367,7 +1367,7 @@ Three-step wizard rendered inside `.v8-order-card` +
 
 - It is **not** the Admin component set. The `glass-card`,
   `v2-btn`, `v2-input`, `v2-table` primitives live in
-  `themes/admin/index.css`. Homepage doesn't use them.
+  `themes/base/index.css`. Homepage doesn't use them.
 - It is **not** the Core component set. The `cmd-*`, `ka-*`,
   `pos-*` primitives live in `themes/core/index.css`. Homepage
   doesn't use them.

@@ -57,12 +57,12 @@ one surface with four views (Inbox / Guests / Loyalty / Concierge).
   console, moved here from Service). The bare `src/app/core/guest/page.tsx`
   `redirect()`s to `/core/guest/whatsapp` (the Inbox is the default).
 - **Switcher:** `<GuestViewNav>`
-  (`src/components/admin/guest/GuestViewNav.tsx`) renders the
+  (`src/core/guest/GuestViewNav.tsx`) renders the
   Inbox / Guests / Loyalty / Concierge / **Book** links (`<Link>` to
   `/core/guest/{whatsapp,crm,loyalty,concierge,book}`) into the CoreShell
-  topbar `.viewnav` slot. Each module drops it in with its own `current`
-  view, and every module's breadcrumb reads **Guest Engagement** so they
-  read as one surface.
+  subbar `.viewnav` slot (row 2). Each module drops it in with its own
+  `current` view, and every module's eyebrow reads **Guest Engagement** so
+  they read as one surface.
 - **No more redirects:** the old `/admin/crm`, `/admin/loyalty`,
   `/admin/concierge`, `/admin/whatsapp` stub pages were **deleted** — the
   nested `/core/guest/*` routes are the only home. The nav (Core group in
@@ -72,8 +72,8 @@ one surface with four views (Inbox / Guests / Loyalty / Concierge).
   shim), so all three Guest modules render their `.core-suite` layout at
   every width and reflow in CSS — no separate `Mobile*` screens. Phone (<
   900px) collapses the Inbox 3-pane → 2 → 1, stacks Concierge and CRM to one
-  column, and shrinks the CoreShell sidebar to a 52px icon rail. Breakpoint
-  table in
+  column, and reflows the shared header (brand → mark, `.core-nav` labels →
+  icons). Breakpoint table in
   [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
 
 ## Mockups

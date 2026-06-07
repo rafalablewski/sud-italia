@@ -7,7 +7,7 @@ Core suite theme so it reads as one platform with the other three views.
 
 ← back to [Core README](../README.md) · [Guest hub](./guest.md)
 
-> **Live code:** `src/components/admin/AdminLoyalty.tsx` (the view), rendered
+> **Live code:** `src/core/guest/AdminLoyalty.tsx` (the view), rendered
 > by the nested route `src/app/core/guest/loyalty/page.tsx`. (The old
 > `/admin/loyalty` stub page was deleted — `/core/guest/loyalty` is the only
 > home.) Styles live under the `LOYALTY` block in

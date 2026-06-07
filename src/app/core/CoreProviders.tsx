@@ -3,9 +3,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AdminLocationProvider } from "@/components/admin/v2/LocationContext";
-import { ShellContext, type ShellOverlays } from "@/components/admin/v2/ShellContext";
-import { ToastProvider } from "@/components/admin/v2/ui/Toast";
+import { AdminLocationProvider } from "@/shared/LocationContext";
+import { ShellContext, type ShellOverlays } from "@/shared/ShellContext";
+import { ToastProvider } from "@/ui/Toast";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**

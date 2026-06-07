@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { MenuV3 } from "@/components/admin/v3/MenuV3";
+import { MenuV3 } from "@/admin-v3/MenuV3";
 
 // Menu is a chain-wide product board (manager+ in v2). Any authenticated
 // operator can open it here; the menu endpoints enforce write access + the

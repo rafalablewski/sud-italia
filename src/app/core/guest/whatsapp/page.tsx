@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminWhatsApp } from "@/components/admin/AdminWhatsApp";
+import { AdminWhatsApp } from "@/core/guest/AdminWhatsApp";
 
 /**
  * Guest Engagement · Inbox — the live WhatsApp ordering channel (conversations

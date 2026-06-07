@@ -7,7 +7,7 @@ import {
   buildAllergenMatrix,
   buildCapabilityResponse,
 } from "@/lib/concierge/capabilities";
-import { AdminConcierge } from "@/components/admin/AdminConcierge";
+import { AdminConcierge } from "@/core/guest/AdminConcierge";
 
 /**
  * Guest Engagement · Concierge — the AI capability layer + EU-14 allergen

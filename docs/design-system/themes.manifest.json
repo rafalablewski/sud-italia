@@ -42,11 +42,11 @@
       "blurb": "The back-office around the Core modules: Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System. Glassmorphism + warm-neutral dark canvas.",
       "files": [
         {
-          "path": "src/app/themes/admin/index.css",
-          "description": "Full Admin CSS surface: [data-admin-theme=\"dark\"|\"light\"] token blocks + AdminShell + glass-* + v2-* + admin mobile (.v2-m-*)."
+          "path": "src/app/themes/base/index.css",
+          "description": "Shared base CSS surface (formerly themes/admin): [data-admin-theme=\"dark\"|\"light\"] token blocks + AdminShell + glass-* + v2-* + admin mobile (.v2-m-*). Kept as the base for login + the staff portals + Core; outlives the v2 deletion."
         },
         {
-          "path": "src/components/admin/v2/theme.ts",
+          "path": "src/shared/theme.ts",
           "description": "Typed mirror of the [data-admin-theme] tokens for Recharts + inline SVG + the boot script that sets the theme attribute before paint."
         }
       ],

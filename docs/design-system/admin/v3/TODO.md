@@ -11,9 +11,13 @@ _Last updated: 2026-06-05 (mobile-responsiveness pass — foundation)._
 
 Every admin **section** is migrated to v3 and at **functional parity with v2**
 (Menu, Recipes, Cross-sell, Upsell/Bundles, Calculator, and all the
-Operations/People/Customers/Finance/Intelligence/System surfaces). v2 is still
-live at `/admin/*`; v3 is the preview at `/admin-v3/*`. **Nothing in v2 has been
-deleted.** The cutover is intentionally on hold.
+Operations/People/Customers/Finance/Intelligence/System surfaces). **v2 is
+RETIRED.** Owner, managers and franchisees all run on v3 (`/admin`→`/admin-v3`;
+`/manager/*` and `/franchisee/*` rewrite to v3); the v2 component tree
+(`src/components/admin/`), the legacy `Admin*.tsx`, and the `src/app/admin/*`
+routes (except `/admin/login`) are **deleted**. The capabilities ledger moved to
+`/capabilities`. The shared base stylesheet (`src/app/themes/base/index.css`) is
+**kept** — it backs login + the staff portals + Core, so it outlived v2.
 
 ## Mobile UI 📱 — foundation shipped, refinements remain
 
@@ -62,29 +66,40 @@ touch*. Read that section before adding more (Rule #11).
 - **Real-device QA** — verify safe-area insets (notch/home-indicator), drawer
   gesture feel, and the topbar fit on a 360px viewport with a long location name.
 
-## Cutover — on hold (pending owner verification)
+## Cutover — step 2 DONE (owner on v3); step 3 (delete v2) pending prod
 
-The owner is verifying the full v3 on the preview before any swap. Do **not**
-flip routing or delete v2 until told to. The plan, when greenlit:
-
-1. **Both v2-only surfaces now have a v3 home** (a clean full swap is unblocked):
-   - ~~`ai/agent` → `OpsAgentChat`~~ — **DONE.** Re-homed as `AgentV3` at
-     `/admin-v3/ai/agent` (Intelligence nav). Same `/api/admin/ai-agent/*`
-     endpoints, v3-styled tool-approval flow.
-   - ~~`alerts` → `MobileAlerts`~~ — **DONE.** Re-homed as `AlertsV3` at
-     `/admin-v3/alerts` (see README migration status). Nav entry added.
-   - Every other `/admin`-only route is either a `/core/*` redirect stub
-     (slots, loyalty, crm, concierge, whatsapp, floor), `login`, or already
-     folded into a v3 surface (menu/[baseSlug] → menu dialog; reports/cohort +
-     reports/ltv-cac → Calculator sandboxes; customers/[phone] → customers view).
-2. **Swap** `/admin/*` → v3. Lowest-risk mechanism agreed: a Next.js redirect
-   with explicit pass-throughs for `login` + the two v2-only surfaces + the
-   `/core` redirect stubs. Reversible; keeps v2 in the tree.
-3. **Delete v2** only after the swap is verified in production: remove
-   `src/app/themes/admin/index.css`, `src/components/admin/v2/`, the legacy
-   `Admin*.tsx`, and the v2 capability/manifest rows; update
-   `docs/design-system/admin/*` (Rule #11) and the capabilities ledger (Rule #9).
-   The isolation contract in `README.md` lists exactly what's deletable.
+1. **Both v2-only surfaces have a v3 home** ✅ — `ai/agent` → `AgentV3`,
+   `alerts` → `AlertsV3`. Every other `/admin`-only route is a `/core/*`
+   redirect, `login`, `capabilities`, or folded into a v3 surface
+   (menu/[baseSlug] → menu dialog; reports/cohort + reports/ltv-cac →
+   Calculator sandboxes; customers/[phone] → customers view).
+2. **Swap `/admin/*` → v3** ✅ **DONE** (owner-greenlit, reversible).
+   Implemented in **`src/proxy.ts`**: every `/admin` + `/admin/*` request
+   307-redirects to the matching `/admin-v3/*`; `landingPathForRole` lands the
+   owner on `/admin-v3`. **Pass-throughs (stay v2):** `/admin/capabilities`
+   (the shared ledger v3 links to) and `/admin/login`. **Folded routes** redirect
+   to their v3 parent (`customers/* → customers`, `menu/* → menu`,
+   `reports/{cohort,ltv-cac} → reports`). **Manager / franchisee portals are
+   unchanged** — they rewrite to `/admin/*` v2 in `next.config.ts` and v3 has no
+   role-prefix support yet (`nav.config.ts` `P = "/admin-v3"`), so v2 must stay
+   live for them. **Reverting** = delete `src/proxy.ts` + set
+   `landingPathForRole` owner back to `"/admin"`.
+   - *Follow-up for a full v2 retirement:* give v3 role-prefix support (admin-base)
+     so `/manager` + `/franchisee` can point at v3 too — only then can v2 be
+     deleted without dropping those portals.
+3. **Delete v2** — ✅ **DONE** (owner-verified on deploy: owner + manager +
+   franchisee logins). Removed `src/components/admin/` (the v2 shell + 44
+   `Admin*.tsx` + helpers), the `src/app/admin/*` routes (kept `/admin/login`
+   on a shell-less layout), and the v2-only `src/lib/bundle-margin.ts` — 134
+   files. Capabilities re-homed to `/capabilities`; `/admin/*` 307s to v3
+   (`src/proxy.ts`); `/manager`+`/franchisee` rewrite to v3. The shared
+   base stylesheet (`themes/base`) is kept. Verified: tsc + prod build clean;
+   owner/manager/franchisee + login + capabilities all render.
+   - ✅ *Done:* renamed the proxy file to the Next 16 convention
+     (`src/middleware.ts` → `src/proxy.ts`, `export function proxy`), clearing
+     the deprecation warning; pruned the v2-specific sections from
+     `docs/design-system/admin/theme/*` (they described now-deleted code — the
+     kept base CSS lives on as `themes/base`).
 
 ## Calculator — optional deepening (not required for parity)
 

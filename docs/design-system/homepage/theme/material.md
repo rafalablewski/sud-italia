@@ -140,7 +140,7 @@ focused.
 
 (Admin overrides this with the steel-blue `--focus-ring` because
 admin's brand-red focus would clash with `[data-admin-theme]` chrome
-— see `themes/admin/index.css`.)
+— see `themes/base/index.css`.)
 
 ## The rules
 

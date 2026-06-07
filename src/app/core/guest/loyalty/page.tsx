@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminLoyalty } from "@/components/admin/AdminLoyalty";
+import { AdminLoyalty } from "@/core/guest/AdminLoyalty";
 
 /**
  * Guest Engagement · Loyalty — member roster + family wallets + redemption log.

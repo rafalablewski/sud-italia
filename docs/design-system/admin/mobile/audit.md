@@ -155,14 +155,14 @@ Five flows account for the majority of operator time. Each is mapped today and r
 
 | Failure mode | Where it lives | Specific pages |
 |---|---|---|
-| Wide tables (≥ 5 cols) requiring horizontal scroll | `<Table>` from `v2/ui/Table.tsx` | Orders, Inventory, Customers, Staff, POs, Recipes, Loyalty (×3 tables), Feedback, Audit log |
+| Wide tables (≥ 5 cols) requiring horizontal scroll | `<Table>` from `src/ui/Table.tsx` | Orders, Inventory, Customers, Staff, POs, Recipes, Loyalty (×3 tables), Feedback, Audit log |
 | KPI grids assuming ≥ 1200px | 4×2 in dashboard, 6-up in Reports, 6-up in customer LTV | Dashboard, Reports, Locations comparison, Customers |
 | Multi-column kanban | Custom kanban in `AdminOrders.tsx`, `AdminKDS.tsx` | Orders, KDS |
 | Side-by-side charts (`v2-grid-2-1` etc.) | dashboard sections | Dashboard, Reports, AI, Locations |
-| Form modals with 8+ fields | `Dialog` from `v2/ui/Dialog.tsx` | Settings, Menu edit, Recipe edit, Locations/manage, User edit, Slot create, Tier editor (Loyalty), Reward editor |
+| Form modals with 8+ fields | `Dialog` from `src/ui/Dialog.tsx` | Settings, Menu edit, Recipe edit, Locations/manage, User edit, Slot create, Tier editor (Loyalty), Reward editor |
 | Drag-drop interactions | BundleManager component | Upsell, ScheduledBundles |
 | Heatmaps requiring two-axis space | `v2/charts/Heatmap.tsx` | Dashboard (7d × 24h), Cohort report (12 × 12) |
-| Hover affordances (Tooltip, Popover) | `v2/ui/Tooltip.tsx`, `v2/ui/Popover.tsx` | LocationSwitcher, command palette result hints, sparkline tooltips |
+| Hover affordances (Tooltip, Popover) | `src/ui/Tooltip.tsx`, `src/ui/Popover.tsx` | LocationSwitcher, command palette result hints, sparkline tooltips |
 | Bulk select via checkboxes in row headers | Orders, Inventory, Loyalty members, Audit log | (same) |
 | Sound + interval polling (1s timer) | `AdminKDS.tsx` | KDS |
 | Map embeds requiring full-screen | `AdminTruck.tsx` | Truck, Locations/manage |

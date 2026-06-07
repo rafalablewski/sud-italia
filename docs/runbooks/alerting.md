@@ -16,7 +16,7 @@ create and why.
   and `logger.warn(...)` → `Sentry.captureMessage(level: "warning")`, with the
   per-request context (requestId / userId / locationSlug / path / method)
   attached as `extra`.
-- `withAdmin` (`src/lib/api-middleware.ts`) wraps the catch-all 500 in
+- `withAdmin` (`src/lib/api-proxy.ts`) wraps the catch-all 500 in
   `logger.error`, so any admin route that throws is captured.
 
 ## Configuration

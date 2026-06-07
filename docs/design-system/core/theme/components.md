@@ -9,9 +9,11 @@ and earns or loses operator trust on every one.
 ## Two vocabularies
 
 - **`.core-suite` primitives** (`suite.css`, ported from the mockup's
-  `system.css`) — used by **POS** and the **Guest hub** inside
-  `<CoreShell>`: `.shell` / `.topbar` / `.viewnav` (shell — the sidebar is now
-  the shared `.app-sidebar`, see [Sidebar](#sidebar--the-shared-app-sidebar)),
+  `system.css`) — used by **every** Core surface (POS, Guest, Service, and
+  the windowed KDS) inside `<CoreShell>`: the unified shell —
+  `.core-shell` / `.core-head` / `.core-nav` / `.subbar` / `.core-body`
+  (**no sidebar**, see [Shell](#shell--core-shell-unified-header-no-sidebar)),
+  plus `.viewnav` /
   `.card` / `.btn` (`.primary` / `.ghost` / `.lg` / `.xl` / `.icon`) /
   `.badge` (`.brand` / `.platinum` / `.success` / …) / `.input` / `.seg`
   / `.stat` / `.sw-toggle` / `.meter` / `.fchip` / `.cap` / `.matrix`,
@@ -77,7 +79,7 @@ The horizontal pill group for status / window / role switches.
   Concierge cross-view switcher rides the same `.cmd-seg-group`, but its
   segments are Next.js `<Link>` anchors (not buttons), so the
   `.guest-viewnav .cmd-seg` rule clears the default anchor underline.
-  `<GuestViewNav>` (`src/components/core/guest/GuestViewNav.tsx`) drops
+  `<GuestViewNav>` (`src/core/guest/GuestViewNav.tsx`) drops
   it into each module's `cmd-head`. Active segment uses the normal
   `[aria-pressed="true"]` inversion.
 
@@ -181,27 +183,33 @@ The shared `.core-suite` primitives (`.card` / `.btn` / `.badge` / `.seg`
 / `.stat` / `.sw-toggle` / `.fchip` …) mirror `system.css` 1:1 and are
 listed in [the README](./README.md#two-css-layers-mid-migration).
 
-### Sidebar — the shared `.app-sidebar`
+### Shell — `.core-shell` (unified header, no sidebar)
 
-`<CoreShell>` no longer has its own sidebar markup: it renders the **same
-`<Sidebar>` component** (`components/admin/v2/Sidebar.tsx`, class `.app-sidebar`)
-that AdminShell renders, so POS / Guest and the rest of admin are pixel-identical
-— one source of truth. CoreShell now owns only the `.shell` grid + topbar; the
-sidebar fills grid column 1. The Core suite was the *source of truth* for the
-look (`.brand` / eyebrow / nav-item vocabulary, now `.as-*`), but the styling
-lives in admin CSS so it can be shared (see
-[admin components → Sidebar](../../admin/theme/components.md#sidebar--one-component-one-vocabulary-app-sidebar)).
-The old `.core-suite .sidebar` / `.sidebar-scroll` / `.nav-item` / `.avatar`
-rules are dead (pending cleanup); `.core-suite .eyebrow` survives as a general
-type helper. KDS is the deliberate exception — its own `.kds-core` wall with no
-sidebar (see [KDS](../modules/kds.md)).
+Core is a **separate entity** from `/admin`: `<CoreShell>`
+(`core/shell/CoreShell.tsx`) renders **none** of the admin shell —
+no `.app-sidebar`, no `nav.config`, no `/admin` links. There is **no sidebar
+at all**. Every Core surface (POS, Guest, Service, and the windowed KDS) shares
+this one chrome, so each surface's controls sit in the same place:
 
-**Reset exemption:** `.core-suite *` zeroes margin/padding on mockup-ported
-content, which clobbered the shared sidebar's padding (the active pill +
-LocationSwitcher bled to the edge). The reset now exempts `.app-sidebar` + its
-descendants via `:where(:not(.app-sidebar, .app-sidebar *))` (same specificity,
-so core page rules are unchanged) while still applying `box-sizing: border-box`
-to everything. Tailwind preflight still handles structural resets inside it.
+- **`.core-shell`** — the flex column that owns the viewport (`height: 100%`).
+- **`.core-head`** (row 1) — `brand` (the SI mark + "Sud Italia / Core") ·
+  **`.core-nav`** (the primary switcher: POS · KDS · Guest · Service, a
+  pathname-highlighted `<CoreNav>`, `core/shell/CoreNav.tsx`) ·
+  **`.core-head-right`** (global actions — location toggle, fullscreen, the
+  KDS clock + controls).
+- **`.subbar`** (row 2, only when the surface passes `eyebrow` / `viewnav` /
+  `subRight`) — **`.subbar-left`** (an `.eyebrow` label + the surface's
+  `.viewnav` sub-tabs: GuestViewNav, ServiceViewNav, the KDS Fleet/Floor/Chef
+  switch) · **`.subbar-right`** (the surface's own controls — POS channel +
+  steer, the Slots date picker, the KDS stage filter + Sandbox badge).
+- **`.core-body`** — each surface owns its scroll/layout. `bleed` drops the
+  padding so the dark KDS wall (`.kds-core.in-shell`) can fill it.
+
+The old `.core-suite .shell` grid + `.sidebar*` / `.nav-item` / `.crumbs` /
+`.topbar` rules and the `.app-sidebar` reset exemption are **gone** — the reset
+is a plain `.core-suite *`. KDS keeps its own dark `.kds-core` body **inside**
+this shell (light header over the dark wall); fullscreen kiosk drops the chrome
+for the bare wall (see [KDS](../modules/kds.md)).
 
 ### Dialogs — `theme="core"`
 
@@ -214,7 +222,7 @@ and the POS table-assign / address dialogs. The full-screen tender pad is
 a bespoke `.core-suite-overlay` instead.
 
 Like every shared v2 overlay, these portal to `#admin-portal-root` (via
-`adminOverlayTarget()` in `v2/ui/portal.ts`), not `<body>` — that wrapper
+`adminOverlayTarget()` in `src/ui/portal.ts`), not `<body>` — that wrapper
 also wraps Core routes, so it keeps the dialog inside the `--font-admin-*`
 font scope. See the Dialogs/overlays note in
 [`admin/theme/components.md`](../../admin/theme/components.md#dialogs--overlays).

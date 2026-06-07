@@ -3,7 +3,7 @@ import { isAuthenticated } from "@/lib/admin-auth";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getUpsellSettings } from "@/lib/store";
-import { AdminPos } from "@/components/admin/AdminPos";
+import { AdminPos } from "@/core/pos/AdminPos";
 import type { MenuItem } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 
