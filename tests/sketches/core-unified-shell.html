@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia — Core unified shell (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ---- Core suite tokens (1:1 from src/app/themes/core/suite.css) ---- */
+:root{
+  --bg:#0c0b0e; --surface-1:#17161c; --surface-2:#1d1b23; --surface-3:#262430;
+  --surface-hover:#2f2c39; --border:rgba(255,255,255,.10); --border-strong:rgba(255,255,255,.16);
+  --fg:#f5f3ee; --fg-muted:#c0b9b0; --fg-subtle:#978e85;
+  --brand:#a62d49; --brand-bright:#c2415f; --brand-soft:rgba(166,45,73,.14);
+  --platinum:#cbb48a; --platinum-soft:rgba(203,180,138,.14);
+  --info:#6e92c0; --success:#2fa875; --success-soft:rgba(47,168,117,.16);
+  --warning:#d9a441; --warning-soft:rgba(217,164,65,.16); --danger:#e2504b;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  --sh-xs:0 1px 2px rgba(0,0,0,.32); --sh-sm:0 1px 3px rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.22);
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --display:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms; --ease:cubic-bezier(.32,.72,0,1);
+  /* KDS dark wall tokens */
+  --canvas:#0a0a0c; --panel:#141318; --raised:#1f1d25;
+  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+  --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;-webkit-font-smoothing:antialiased}
+::selection{background:var(--brand-soft)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle)}
+.muted{color:var(--fg-muted)} .subtle{color:var(--fg-subtle)} .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ============ SHELL — unified header, no sidebar ============ */
+.core-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;flex:none}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--brand);box-shadow:var(--sh-sm),inset 0 0 0 1px var(--platinum-soft);display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;letter-spacing:.04em}
+.brand-name{font-family:var(--display);font-weight:600;font-size:16px;line-height:1}
+.brand-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle);margin-top:3px}
+
+.core-head{height:56px;flex:none;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--bg) 86%,transparent);backdrop-filter:saturate(140%) blur(10px)}
+.core-head-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+
+.core-nav{display:flex;align-items:center;gap:4px}
+.core-nav a{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:var(--r-md);color:var(--fg-muted);font:500 13px var(--ui);text-decoration:none;cursor:pointer;transition:background var(--fast) var(--ease),color var(--fast)}
+.core-nav a:hover{background:var(--surface-hover);color:var(--fg)}
+.core-nav a.on{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
+.core-nav a svg{opacity:.85;flex:none}
+
+.subbar{min-height:46px;flex:none;display:flex;align-items:center;gap:14px;padding:7px 18px;border-bottom:1px solid var(--border);background:var(--surface-1)}
+.subbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.subbar-left .eyebrow{flex:none}
+.subbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+
+.viewnav{display:flex;gap:4px}
+.viewnav a,.viewnav button{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border:0;background:transparent;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:var(--r-md);cursor:pointer;text-decoration:none}
+.viewnav a:hover,.viewnav button:hover{background:var(--surface-hover);color:var(--fg)}
+.viewnav a.on,.viewnav button.on{background:var(--surface-3);color:var(--fg)}
+.viewnav .n{font:600 11px var(--mono);color:var(--fg-subtle)}
+
+.core-body{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:auto;padding:18px 22px}
+
+/* ---- shared primitives ---- */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:3px;gap:2px}
+.seg button{height:28px;padding:0 13px;border:0;background:transparent;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:6px;cursor:pointer}
+.seg button.on{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
+.seg .n{font:600 11px var(--mono);color:var(--fg-subtle);margin-left:5px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font:600 12.5px var(--ui);cursor:pointer}
+.btn:hover{border-color:var(--border-strong)}
+.btn.icon{width:34px;padding:0;justify-content:center;color:var(--fg-muted)}
+.btn.primary{background:var(--brand);border-color:transparent;color:#fff}
+.badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:var(--r-pill);font:600 11px var(--ui)}
+.badge .d{width:6px;height:6px;border-radius:99px;background:currentColor}
+.badge.platinum{background:var(--platinum-soft);color:var(--platinum)}
+.badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.success{background:var(--success-soft);color:var(--success)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg)}
+.core-clock{font:600 16px var(--mono);padding:5px 12px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);color:var(--fg);letter-spacing:.02em}
+svg{width:15px;height:15px}
+
+/* ---- surface panes ---- */
+.pane{display:none;flex-direction:column;gap:16px;min-height:0}
+.pane.on{display:flex}
+
+/* POS */
+.pos-rail{display:flex;align-items:center;justify-content:space-between}
+.pos-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.pos-tab{width:150px;text-align:left;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:11px 13px;cursor:pointer}
+.pos-tab.on{border-color:var(--platinum-soft);box-shadow:inset 0 0 0 1px var(--platinum-soft)}
+.pos-tab .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pos-tab .nm{font-weight:600} .pos-tab .st{font:600 10px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--success)}
+.pos-tab .r2{display:flex;justify-content:space-between;color:var(--fg-subtle);font-size:12px}
+.pos-tab .tot{color:var(--fg);font-weight:600}
+.pos-tab.add{display:grid;place-items:center;color:var(--fg-subtle);font-size:22px;width:64px}
+.pos-grid{display:grid;grid-template-columns:86px 1fr 360px;gap:14px;flex:1;min-height:0}
+.catrail{display:flex;flex-direction:column;gap:8px}
+.cat{padding:10px 6px;border-radius:var(--r-md);background:var(--surface-1);border:1px solid var(--border);text-align:center;font-size:11px;cursor:pointer}
+.cat.on{background:var(--surface-3);color:var(--fg)}
+.cat .t{font-size:9px;color:var(--fg-subtle);margin-top:3px}
+.menu{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+.prod{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px}
+.prod h4{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:4px}
+.prod p{font-size:12px;color:var(--fg-subtle);line-height:1.4;min-height:32px}
+.prod .pr{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+.prod .pr b{font-family:var(--mono)} .prod .add{width:26px;height:26px;border-radius:7px;background:var(--brand);color:#fff;border:0;font-size:16px;cursor:pointer}
+.ticket{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
+.ticket .h{padding:13px;border-bottom:1px solid var(--border);font-weight:600}
+.ticket .empty{flex:1;display:grid;place-items:center;color:var(--fg-subtle);text-align:center;padding:24px;font-size:13px}
+
+/* generic KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpis.k7{grid-template-columns:repeat(7,1fr)}
+.bk{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
+.bk .l{font-size:11px;color:var(--fg-subtle)} .bk .v{font-family:var(--display);font-size:26px;font-weight:600;margin:4px 0}
+.bk .s{font-size:11px;color:var(--fg-subtle)}
+.bk .v.warn{color:var(--warning)} .bk .v.late{color:var(--danger)}
+
+/* KDS wall body (dark) */
+.kdsbody{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--t)}
+.bench{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:14px}
+.bench .hd{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.benchrow{display:grid;grid-template-columns:140px 1fr 44px;align-items:center;gap:12px;margin:8px 0;font-size:12px}
+.btrack{height:8px;border-radius:99px;background:var(--raised);overflow:hidden}
+.bfill{height:100%;background:var(--success);border-radius:99px}
+.trucks{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.truck{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px}
+.truck .th{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ring{width:46px;height:46px;border-radius:99px;border:3px solid var(--success);display:grid;place-items:center;font:600 14px var(--mono);color:var(--success)}
+.truck .nm{font-family:var(--display);font-size:18px;font-weight:600}
+.truck .sub{font-size:11px;color:var(--faint)} .truck .sub b{color:var(--success)}
+.tstats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;border-top:1px solid var(--hair);padding-top:12px}
+.tstats .c .l{font-size:10px;color:var(--faint)} .tstats .c .v{font-size:18px;font-weight:600}
+.drill{margin-left:auto;display:flex;gap:8px}
+
+/* Guest concierge */
+.cap{display:flex;align-items:center;gap:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:10px}
+.cap .ic{width:34px;height:34px;border-radius:var(--r-md);background:var(--surface-3);color:var(--platinum);display:grid;place-items:center}
+.cap .tx{flex:1} .cap .tx b{font-weight:600} .cap .tx .tag{font:600 9px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--info);margin-left:8px}
+.cap .tx p{font-size:12px;color:var(--fg-subtle);margin-top:2px}
+.sw{width:40px;height:23px;border-radius:99px;background:var(--brand);position:relative}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:99px;background:#fff}
+.guestwrap{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th,.matrix td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--border)}
+.matrix th{font-size:11px;color:var(--fg-subtle);font-weight:600}
+.matrix td.diet{color:var(--fg-subtle)}
+
+/* Service */
+.svc-empty{flex:1;display:grid;place-items:center;color:var(--fg-subtle);min-height:240px}
+
+.note{margin:0 0 14px;padding:10px 14px;border-radius:var(--r-md);background:var(--platinum-soft);border:1px solid var(--platinum-soft);color:var(--platinum);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="core-shell">
+  <!-- ===== ROW 1: brand + primary nav + global actions ===== -->
+  <header class="core-head">
+    <a class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Core</div></div></a>
+    <nav class="core-nav" id="corenav">
+      <a data-s="pos" class="on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 2h6v4H9z"/><path d="M8 11h8M8 15h5"/></svg>POS</a>
+      <a data-s="kds">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>KDS</a>
+      <a data-s="guest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-3-5"/></svg>Guest</a>
+      <a data-s="service">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0 1 18 0Z"/><path d="M12 2v3M2 16h20M5 20h14"/></svg>Service</a>
+    </nav>
+    <div class="core-head-right" id="headright"></div>
+  </header>
+
+  <!-- ===== ROW 2: eyebrow + viewnav + surface controls ===== -->
+  <div class="subbar">
+    <div class="subbar-left"><span class="eyebrow" id="eyebrow">Point of sale · Kraków</span><div class="viewnav" id="viewnav"></div></div>
+    <div class="subbar-right" id="subright"></div>
+  </div>
+
+  <!-- ===== BODY ===== -->
+  <div class="core-body">
+    <!-- POS -->
+    <section class="pane on" data-pane="pos">
+      <div class="pos-rail">
+        <span class="eyebrow">Open checks</span>
+        <span class="subtle" style="font-size:12px"><b style="color:var(--fg)">3</b> tabs · <b style="color:var(--fg)">1</b> ready to pay · <b style="color:var(--fg)">142,00 zł</b> open</span>
+      </div>
+      <div class="pos-tabs">
+        <button class="pos-tab on"><div class="r1"><span class="nm">Table 7</span><span class="st">Open</span></div><div class="r2"><span>#A41 · T7 · 4 items</span><span class="tot">86,00 zł</span></div></button>
+        <button class="pos-tab"><div class="r1"><span class="nm">Marco</span><span class="st" style="color:var(--warning)">Ready</span></div><div class="r2"><span>#A42 · takeout · 2 items</span><span class="tot">38,00 zł</span></div></button>
+        <button class="pos-tab"><div class="r1"><span class="nm">Delivery</span><span class="st">Open</span></div><div class="r2"><span>#A43 · 1 item</span><span class="tot">18,00 zł</span></div></button>
+        <button class="pos-tab add">+</button>
+      </div>
+      <div class="pos-grid">
+        <div class="catrail">
+          <div class="cat on">Pizze<div class="t">~14m</div></div>
+          <div class="cat">Antipasti<div class="t">~6m</div></div>
+          <div class="cat">Pasta<div class="t">~12m</div></div>
+          <div class="cat">Dolci<div class="t">~3m</div></div>
+          <div class="cat">Bibite<div class="t">~1m</div></div>
+        </div>
+        <div class="menu">
+          <div class="prod"><h4>Margherita</h4><p>San Marzano, fior di latte, basilico</p><div class="pr"><b>32 zł</b><button class="add">+</button></div></div>
+          <div class="prod"><h4>Diavola</h4><p>Nduja, salame piccante, fior di latte</p><div class="pr"><b>38 zł</b><button class="add">+</button></div></div>
+          <div class="prod"><h4>Bufala DOP</h4><p>Mozzarella di bufala, pomodorini</p><div class="pr"><b>42 zł</b><button class="add">+</button></div></div>
+          <div class="prod"><h4>Capricciosa</h4><p>Prosciutto, funghi, carciofi, olive</p><div class="pr"><b>40 zł</b><button class="add">+</button></div></div>
+          <div class="prod"><h4>Marinara</h4><p>San Marzano, aglio, origano</p><div class="pr"><b>26 zł</b><button class="add">+</button></div></div>
+          <div class="prod"><h4>Quattro Formaggi</h4><p>Fior di latte, gorgonzola, fontina</p><div class="pr"><b>41 zł</b><button class="add">+</button></div></div>
+        </div>
+        <div class="ticket"><div class="h">Table 7 · live ticket</div><div class="empty">🍕<br><br>Tap a dish to start the ticket.<br>The ticket is the order.</div></div>
+      </div>
+    </section>
+
+    <!-- KDS -->
+    <section class="pane" data-pane="kds">
+      <div class="kpis k7">
+        <div class="bk"><div class="l">Active</div><div class="v">7</div><div class="s">2 ready for expo</div></div>
+        <div class="bk"><div class="l">At risk</div><div class="v warn">1</div><div class="s">predicted miss</div></div>
+        <div class="bk"><div class="l">Late</div><div class="v late">0</div><div class="s">over SLA</div></div>
+        <div class="bk"><div class="l">Ready</div><div class="v">2</div><div class="s">for expo</div></div>
+        <div class="bk"><div class="l">Throughput</div><div class="v">48<span style="font-size:13px">/hr</span></div><div class="s">last 60 min</div></div>
+        <div class="bk"><div class="l">Covers</div><div class="v">31<span style="font-size:13px">/hr</span></div><div class="s">seated</div></div>
+        <div class="bk"><div class="l">Revenue</div><div class="v">2,4k<span style="font-size:13px"> zł/hr</span></div><div class="s">live</div></div>
+      </div>
+      <div class="kdsbody">
+        <div class="bench">
+          <div class="hd"><span>Promise-accuracy · cross-truck benchmark</span><span>fleet 90% · target 90%</span></div>
+          <div class="benchrow"><span>Sud Italia — Kraków</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
+          <div class="benchrow"><span>Sud Italia — Warszawa</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
+        </div>
+        <div class="trucks">
+          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Kraków</div><div class="sub">Open · 3 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div>
+            <div class="tstats"><div class="c"><div class="l">Active</div><div class="v">3</div></div><div class="c"><div class="l">At risk</div><div class="v">1</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">4</div></div></div></div>
+          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Warszawa</div><div class="sub">Open · 4 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div>
+            <div class="tstats"><div class="c"><div class="l">Active</div><div class="v">4</div></div><div class="c"><div class="l">At risk</div><div class="v">0</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">3</div></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GUEST -->
+    <section class="pane" data-pane="guest">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><b>6 capabilities · 6 live</b> <span class="subtle">· on the public read endpoint</span><p class="subtle" style="font-size:12.5px;margin-top:2px">One capability layer, exposed over MCP/HTTP and the WhatsApp bot — the agent never guesses; every answer is auditable.</p></div></div>
+      <div class="guestwrap">
+        <div>
+          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div class="tx"><b>get_menu</b><span class="tag">resource</span><p>Full menu with prices, categories and dietary tags.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="tx"><b>check_availability</b><span class="tag">tool</span><p>Live availability + prep time per item and location.</p></div><div class="sw"></div></div>
+          <div class="cap" style="border-color:var(--platinum-soft);box-shadow:inset 3px 0 0 var(--platinum)"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 20h20z"/><path d="M12 9v5M12 17h0"/></svg></div><div class="tx"><b>get_allergens</b><span class="tag">tool</span><p>EU-14 allergen + dietary breakdown for any item.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14l-1 13H6z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg></div><div class="tx"><b>place_order</b><span class="tag">tool</span><p>Create a takeout / delivery order. Returns id + ETA.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div class="tx"><b>create_payment</b><span class="tag">tool</span><p>Issue a Stripe payment link / take payment.</p></div><div class="sw"></div></div>
+          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><div class="tx"><b>locate_truck</b><span class="tag">tool</span><p>Where the truck is now + today's schedule per city.</p></div><div class="sw"></div></div>
+        </div>
+        <div class="card" style="padding:15px">
+          <div class="eyebrow" style="margin-bottom:10px">EU-14 allergen matrix · Kraków</div>
+          <table class="matrix"><thead><tr><th>Item</th><th>🌾</th><th>🥛</th><th>🥚</th><th style="text-align:right">Diet</th></tr></thead>
+          <tbody>
+            <tr><td>Margherita</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+            <tr><td>Bufala DOP</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+            <tr><td>Diavola</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">spicy</td></tr>
+            <tr><td>Marinara</td><td>●</td><td>·</td><td>·</td><td class="diet" style="text-align:right">vegan</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICE -->
+    <section class="pane" data-pane="service">
+      <div class="kpis">
+        <div class="bk"><div class="l">Occupancy</div><div class="v">62%</div><div class="s">8/13 seated</div></div>
+        <div class="bk"><div class="l">Open now</div><div class="v">5</div><div class="s">2 freeing ≤15m</div></div>
+        <div class="bk"><div class="l">Median turn</div><div class="v">54<span style="font-size:13px">m</span></div><div class="s">realized</div></div>
+        <div class="bk"><div class="l">Spend / hr</div><div class="v">118<span style="font-size:13px"> zł</span></div><div class="s">per table-hour</div></div>
+      </div>
+      <div class="note">Floor twin live — seat / clear from any table, predictive-seating recommender, bottleneck banner when the line can't absorb more covers.</div>
+      <div class="card svc-empty">Floor model — tables render here (Twin view). Switch to <b style="color:var(--fg)">&nbsp;Slots&nbsp;</b> for capacity + the Demand Exchange.</div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ---- per-surface header config (mirrors the CoreShell slots) ----
+const SURFACES = {
+  pos: {
+    eyebrow: "Point of sale · Kraków",
+    viewnav: "",
+    subright: `<div class="seg"><button class="on">Takeout</button><button>Delivery</button><button>Dine-in</button></div>
+               <span class="badge warning"><span class="d"></span>Steer on</span>`,
+    headright: `<div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
+                <button class="btn icon" title="Fullscreen">⤢</button>`,
+  },
+  kds: {
+    eyebrow: "Kitchen · Fleet",
+    viewnav: `<button class="on">Fleet</button><button>Floor</button><button>Chef</button>`,
+    subright: `<div class="seg"><button class="on">All <span class="n">9</span></button><button>New <span class="n">3</span></button><button>Firing <span class="n">4</span></button><button>Ready <span class="n">2</span></button></div>
+               <span class="badge platinum"><span class="d"></span>Sandbox</span>`,
+    headright: `<span class="core-clock" id="clock">14:21:08</span>
+                <button class="btn icon" title="Refresh">↻</button>
+                <button class="btn icon" title="Sound">♪</button>
+                <button class="btn icon" title="Pause">⏸</button>
+                <button class="btn icon" title="Fullscreen kiosk">⤢</button>`,
+  },
+  guest: {
+    eyebrow: "Guest Engagement",
+    viewnav: `<button>Inbox <span class="n">7</span></button><button>Guests</button><button>Loyalty</button><button class="on">Concierge</button><button>Book</button>`,
+    subright: `<div class="seg"><button class="on">MCP server</button><button>WhatsApp</button></div>
+               <div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>`,
+    headright: `<div class="seg"><button class="on">All</button><button>Kraków</button><button>Warszawa</button></div>`,
+  },
+  service: {
+    eyebrow: "Service",
+    viewnav: `<button class="on">Floor</button><button>Slots</button>`,
+    subright: ``,
+    headright: `<div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
+                <button class="btn primary">+ Add table</button>`,
+  },
+};
+
+const navEl = document.getElementById("corenav");
+const eyebrowEl = document.getElementById("eyebrow");
+const viewnavEl = document.getElementById("viewnav");
+const subrightEl = document.getElementById("subright");
+const headrightEl = document.getElementById("headright");
+
+function select(s){
+  navEl.querySelectorAll("a").forEach(a => a.classList.toggle("on", a.dataset.s === s));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.dataset.pane === s));
+  const c = SURFACES[s];
+  eyebrowEl.textContent = c.eyebrow;
+  viewnavEl.innerHTML = c.viewnav;
+  subrightEl.innerHTML = c.subright;
+  headrightEl.innerHTML = c.headright;
+  // light interactivity for the demo: viewnav/seg toggles
+  document.querySelectorAll(".viewnav button, .subbar-right .seg button, .core-head-right .seg button").forEach(b=>{
+    b.addEventListener("click", e=>{ const g=e.currentTarget.parentElement; g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); e.currentTarget.classList.add("on"); });
+  });
+  if(s==="kds") startClock();
+}
+navEl.querySelectorAll("a").forEach(a => a.addEventListener("click", e=>{ e.preventDefault(); select(a.dataset.s); }));
+
+// POS tab selection demo
+document.querySelectorAll(".pos-tab:not(.add)").forEach(t=>t.addEventListener("click",()=>{document.querySelectorAll(".pos-tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");}));
+
+let clockTimer;
+function startClock(){
+  clearInterval(clockTimer);
+  const tick=()=>{const el=document.getElementById("clock"); if(!el)return; const d=new Date(); el.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,"0")).join(":");};
+  tick(); clockTimer=setInterval(tick,1000);
+}
+
+select("pos");
+</script>
+</body>
+</html>
