@@ -540,7 +540,20 @@ refetches every 30s.
   windows (variant/hours/title/sub/badge/CTA/one-tap-add, add/edit/toggle/delete)
   and **Menu badges** (Hero / Pizzaiolo's Choice / Chef's Signature / New /
   Popular / Staff Pick multi-selects, with `menuRole`-intrinsic items shown
-  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`) — **full
+  auto-locked). Saves on change (rule #7).
+  **Workbench upgrade (Menu/Recipes-parity interactivity):** the Combo deals tab
+  is now a full workbench — a reactive **KPI rail** (active combos · avg discount
+  with a five-section ⓘ · item-gated deals · windows-live-now with a five-section
+  ⓘ, all computed real from the live config + clock, rule #1), a **search** box +
+  **Board⇄Table** view toggle, and a default **Board view** of combo cards (each
+  showing the discount/min-items/channel/required badges + a real-price worked
+  example) with edit-on-click. The combo editor is a **two-column drill-in**
+  (`.av3-bodysplit`, 900px): the form on the left, a **live customer nudge
+  preview** + a **worked złoty example** (real cheapest-per-category / required
+  items × discount = subtotal/saving/pay) on the right that recompute as you type.
+  The Time-of-day editor gained the same split with a **live cart-banner preview**
+  and a "showing now / parked" indicator; the windows table flags the window live
+  at the current hour. Upsell (`/admin-v3/upsell`) — **full
   v2 parity (PR #139 follow-up):** two tabs. **Bundles** restores the full
   bundle-ladder editor (CRUD with composition slots, fixed/dynamic pricing,
   anchor/decoy/default flags, loyalty gate, channel, members-only, scarcity
@@ -552,6 +565,19 @@ refetches every 30s.
   comparison via `/api/admin/ml-upsell/compare`). **Item modifiers** is a
   read-only cross-location inventory. All config round-trips through
   `PUT /api/admin/upsell` (saves on change, rule #7).
+  **Workbench upgrade (Menu/Recipes-parity interactivity):** the Bundles tab is a
+  full workbench wired to **real 30-day analytics** (`/api/admin/bundle-analytics`,
+  rule #1) — a reactive **KPI rail** with five-section ⓘ explainers (active
+  bundles · penetration = applies/impressions · bundle AOV · 30d revenue · avg
+  effective discount), a **search** box + **Board⇄Table** view toggle, and a
+  default **Board view** of meal-period-grouped bundle cards (anchor/decoy/
+  default/members badges, price/discount, and the bundle's real 30d sold +
+  effective-discount + a 👎-rate flag joined from the analytics rollup). The
+  bundle editor is a **two-column drill-in** (`.av3-bodysplit`, 940px): the full
+  form on the left, a **live customer bundle-card preview** (tier, composition,
+  fixed price + strikethrough/save or dynamic %) + this bundle's **live 30-day
+  performance** grid (sold/ticket/saving/eff-discount/revenue/👍👎 + refund rate)
+  on the right.
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`), plus a
   **revenue-share `Donut`** + **orders-by-site `BarChart`** (flag #4, restored
