@@ -25,7 +25,7 @@
  * caches are pruned on activate.
  */
 
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC_CACHE = `sud-italia-static-${VERSION}`;
 const RUNTIME_CACHE = `sud-italia-runtime-${VERSION}`;
 

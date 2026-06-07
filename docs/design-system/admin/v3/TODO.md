@@ -12,7 +12,7 @@ _Last updated: 2026-06-05 (mobile-responsiveness pass — foundation)._
 Every admin **section** is migrated to v3 and at **functional parity with v2**
 (Menu, Recipes, Cross-sell, Upsell/Bundles, Calculator, and all the
 Operations/People/Customers/Finance/Intelligence/System surfaces). **v2 is
-RETIRED.** Owner, managers and franchisees all run on v3 (`/admin`→`/admin-v3`;
+RETIRED.** Owner, managers and franchisees all run on v3 (`/admin`→`/admin`;
 `/manager/*` and `/franchisee/*` rewrite to v3); the v2 component tree
 (`src/components/admin/`), the legacy `Admin*.tsx`, and the `src/app/admin/*`
 routes (except `/admin/login`) are **deleted**. The capabilities ledger moved to
@@ -75,13 +75,13 @@ touch*. Read that section before adding more (Rule #11).
    Calculator sandboxes; customers/[phone] → customers view).
 2. **Swap `/admin/*` → v3** ✅ **DONE** (owner-greenlit, reversible).
    Implemented in **`src/proxy.ts`**: every `/admin` + `/admin/*` request
-   307-redirects to the matching `/admin-v3/*`; `landingPathForRole` lands the
-   owner on `/admin-v3`. **Pass-throughs (stay v2):** `/admin/capabilities`
+   307-redirects to the matching `/admin/*`; `landingPathForRole` lands the
+   owner on `/admin`. **Pass-throughs (stay v2):** `/admin/capabilities`
    (the shared ledger v3 links to) and `/admin/login`. **Folded routes** redirect
    to their v3 parent (`customers/* → customers`, `menu/* → menu`,
    `reports/{cohort,ltv-cac} → reports`). **Manager / franchisee portals are
    unchanged** — they rewrite to `/admin/*` v2 in `next.config.ts` and v3 has no
-   role-prefix support yet (`nav.config.ts` `P = "/admin-v3"`), so v2 must stay
+   role-prefix support yet (`nav.config.ts` `P = "/admin"`), so v2 must stay
    live for them. **Reverting** = delete `src/proxy.ts` + set
    `landingPathForRole` owner back to `"/admin"`.
    - *Follow-up for a full v2 retirement:* give v3 role-prefix support (admin-base)

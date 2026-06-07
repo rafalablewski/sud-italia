@@ -6,7 +6,7 @@ import { runBoardroomMeeting } from "@/lib/ai/boardroom/meeting";
 /**
  * Boardroom daily briefing cron. Convenes the AI C-suite once a day on the
  * chain-wide live numbers and persists the meeting so operators walk in to a
- * ready board briefing (transcript + decisions) on /admin-v3/boardroom →
+ * ready board briefing (transcript + decisions) on /admin/boardroom →
  * Meetings instead of having to run it by hand.
  *
  * Self-skips when ANTHROPIC_API_KEY is unset (no spend, no error) and is

@@ -11,7 +11,7 @@ import { Soc2V3 } from "@/admin-v3/Soc2V3";
 export default async function AdminV3Soc2Page() {
   const user = await getCurrentAdminUser();
   if (!user) redirect("/login");
-  if (ROLE_RANK[user.role] < ROLE_RANK.owner) redirect("/admin-v3");
+  if (ROLE_RANK[user.role] < ROLE_RANK.owner) redirect("/admin");
 
   const [users, audit] = await Promise.all([getAdminUsers(), getAuditLog({ limit: 500 })]);
   const env = process.env;

@@ -44,12 +44,11 @@ import {
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
 
-// v3 nav — same taxonomy + permission model as v2 (mirrored from
-// components/admin/v2/nav.config.ts) but owned by the v3 tree so v2 can be
-// deleted. Hrefs are rooted at the `/admin-v3` preview prefix; they flip to
-// `/admin` when v3 becomes the live back-office. Core (POS/KDS/Guest/Service)
-// stays on its own /core routes and is intentionally absent here — v3 never
-// rebuilds Core.
+// v3 nav — owned by the v3 tree (the implementation behind the canonical
+// `/admin` HQ). Hrefs are rooted at `/admin`; the shell re-roots them onto
+// `/manager` / `/franchisee` per the URL the role navigates under. Core
+// (POS/KDS/Guest/Service) stays on its own /core routes and is intentionally
+// absent here — v3 never rebuilds Core.
 
 export interface NavItemV3 {
   href: string;
@@ -66,7 +65,7 @@ export interface NavSectionV3 {
   items: NavItemV3[];
 }
 
-const P = "/admin-v3";
+const P = "/admin";
 
 export const NAV_SECTIONS_V3: NavSectionV3[] = [
   {
