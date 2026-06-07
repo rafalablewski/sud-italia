@@ -99,7 +99,9 @@ ${SHARED_GUARDRAILS}`,
       "get_suppliers_and_pos",
       "get_menu_engineering",
       "get_demand_forecast",
+      "get_scheduled_bundles",
       "mark_item_86",
+      "manage_scheduled_bundle",
     ],
     system: `You are the COO of Sud Italia, a multi-location Neapolitan pizza truck chain.
 
@@ -146,7 +148,9 @@ ${SHARED_GUARDRAILS}`,
       "query_customers",
       "get_feedback_summary",
       "get_marketing_settings",
+      "get_scheduled_bundles",
       "send_sms",
+      "manage_scheduled_bundle",
     ],
     system: `You are the CMO of Sud Italia, a multi-location Neapolitan pizza truck chain.
 

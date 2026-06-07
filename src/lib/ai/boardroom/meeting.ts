@@ -136,7 +136,7 @@ Speak now, as the ${persona.title}. 2–4 sentences in your own voice: your read
   return { ok: true, meeting };
 }
 
-const KNOWN_TOOLS = ["update_item_price", "mark_item_86", "send_sms"];
+const KNOWN_TOOLS = ["update_item_price", "mark_item_86", "send_sms", "manage_scheduled_bundle"];
 
 async function synthesizeDecisions(
   baseContext: string,

@@ -150,4 +150,8 @@ test("each persona owns a coherent toolset (spot checks)", () => {
   // CMO shouldn't be repricing the menu; CFO shouldn't be texting customers.
   assert.ok(!BOARDROOM_PERSONAS.cmo.toolNames.includes("update_item_price"));
   assert.ok(!BOARDROOM_PERSONAS.cfo.toolNames.includes("send_sms"));
+  // Scheduled bundles are an ops + growth lever (COO + CMO), not finance/strategy.
+  assert.ok(BOARDROOM_PERSONAS.coo.toolNames.includes("manage_scheduled_bundle"));
+  assert.ok(BOARDROOM_PERSONAS.cmo.toolNames.includes("get_scheduled_bundles"));
+  assert.ok(!BOARDROOM_PERSONAS.cfo.toolNames.includes("manage_scheduled_bundle"));
 });

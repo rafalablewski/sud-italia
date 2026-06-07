@@ -22,6 +22,7 @@ import "./feedback";
 import "./marketing";
 import "./forecast";
 import "./update-item-price";
+import "./scheduled-bundles";
 
 export {
   executeToolCall,
