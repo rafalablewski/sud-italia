@@ -428,35 +428,49 @@ export function AdminLoyalty() {
           </p>
         </div>
 
-        <div className="loy-kpis">
+        <div className="kpis">
           {kpis.map((k) => (
             <div key={k.l} className="bk">
               <div className="l">{k.l}</div>
               <div className="v tnum">{k.v}</div>
-              {k.sub && <div className="sub">{k.sub}</div>}
+              {k.sub && <div className="s">{k.sub}</div>}
             </div>
           ))}
         </div>
 
-        <div className="loy-head">
-          <div className="seg">
-            {TABS.map((t) => (
+        {/* Mockup-exact filters row: tab chips · spacer · tier chips */}
+        <div className="filters">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`fchip${tab === t.key ? " on" : ""}`}
+              aria-pressed={tab === t.key}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+              {typeof t.count === "number" && <span className="n">{t.count}</span>}
+            </button>
+          ))}
+          <span style={{ flex: 1 }} />
+          {tab === "members" &&
+            TIER_CHIPS.map((c) => (
               <button
-                key={t.key}
+                key={c.key}
                 type="button"
-                className={tab === t.key ? "on" : ""}
-                onClick={() => setTab(t.key)}
+                className={`fchip${tierFilter === c.key ? " on" : ""}`}
+                aria-pressed={tierFilter === c.key}
+                onClick={() => setTierFilter(c.key)}
               >
-                {t.label}
-                {typeof t.count === "number" && <span className="n">{t.count}</span>}
+                {c.label}
+                <span className="n">{c.count}</span>
               </button>
             ))}
-          </div>
         </div>
 
         {tab === "members" && (
           <>
-            <div className="loy-filters">
+            <div className="loy-searchbar">
               <div className="book-search">
                 <Search />
                 <input
@@ -468,20 +482,6 @@ export function AdminLoyalty() {
                   autoComplete="off"
                   spellCheck={false}
                 />
-              </div>
-              <div className="filters">
-                {TIER_CHIPS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={`fchip${tierFilter === c.key ? " on" : ""}`}
-                    aria-pressed={tierFilter === c.key}
-                    onClick={() => setTierFilter(c.key)}
-                  >
-                    {c.label}
-                    <span className="n">{c.count}</span>
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -499,7 +499,7 @@ export function AdminLoyalty() {
                   </div>
                 </div>
               ) : (
-                <div className="loy-card">
+                <div className="card loy-tbl-card">
                   <table className="tbl">
                     <thead>
                       <tr>
@@ -588,24 +588,26 @@ export function AdminLoyalty() {
 
             {!loading && wallets.length > 0 && (
               <>
-                <span className="eyebrow loy-balances-h">Family wallets — shared balances</span>
-                <div className="loy-balances">
+                <span className="eyebrow">Family wallets — shared balances</span>
+                <div className="wallets">
                   {wallets.map((w) => {
                     const pts = w.spendablePool ?? 0;
                     return (
                       <button
                         key={w.id}
                         type="button"
-                        className="loy-balance"
+                        className="wallet"
                         onClick={() => setTab("wallets")}
                         title="Manage family wallets"
                       >
                         <div className="w1">
                           <b>{walletLabel(w)}</b>
-                          <span className="badge neutral">{w.memberCount ?? w.members.length}</span>
+                          <span className="badge platinum">{w.memberCount ?? w.members.length}</span>
                         </div>
                         <div className="pts">{fmtNum(pts)} pts</div>
-                        <div className="rd">≈ {fmtZl2(pointsToZl(pts))} to redeem</div>
+                        <div className="subtle" style={{ fontSize: 12 }}>
+                          ≈ {fmtZl2(pointsToZl(pts))} to redeem
+                        </div>
                       </button>
                     );
                   })}

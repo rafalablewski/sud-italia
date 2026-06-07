@@ -792,28 +792,31 @@ function AdminWhatsAppDesktop() {
         </p>
       </div>
 
-      <div className="kpis">
-        <div className="stat">
+      <div className="kpis k5">
+        <div className="bk">
           <div className="l">Orders · 7d</div>
           <div className="v tnum">{m7 ? m7.orders.paid : "—"}</div>
-          <div className="h">paid via WhatsApp</div>
+          <div className="s">paid via WhatsApp</div>
         </div>
-        <div className="stat good">
+        <div className="bk">
           <div className="l">Conversion · 7d</div>
-          <div className="v tnum">{m7 ? pct(m7.conversionRate) : "—"}</div>
-          <div className="h">chat → paid</div>
+          <div className="v good tnum">{m7 ? pct(m7.conversionRate) : "—"}</div>
+          <div className="s">chat → paid</div>
         </div>
-        <div className="stat">
+        <div className="bk">
           <div className="l">Active sessions</div>
           <div className="v tnum">{af ? af.totalSessions : "—"}</div>
+          <div className="s">live now</div>
         </div>
-        <div className="stat warn">
+        <div className="bk">
           <div className="l">Awaiting pay</div>
-          <div className="v tnum">{af ? af.awaitingPayment : "—"}</div>
+          <div className="v warn tnum">{af ? af.awaitingPayment : "—"}</div>
+          <div className="s">link sent</div>
         </div>
-        <div className="stat">
+        <div className="bk">
           <div className="l">Lifetime paid</div>
           <div className="v tnum">{mLife ? mLife.orders.paid : "—"}</div>
+          <div className="s">orders</div>
         </div>
       </div>
 

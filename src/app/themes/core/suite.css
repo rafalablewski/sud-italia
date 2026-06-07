@@ -652,7 +652,11 @@
 /* ============================================================
    GUEST · INBOX (ported from guest.html page styles)
    ============================================================ */
-.core-suite .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--border); flex: none; }
+/* KPI strip — 1:1 with the mockup: 4-up by default, k5/k7 modifiers. */
+.core-suite .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex: none; }
+.core-suite .kpis.k5 { grid-template-columns: repeat(5, 1fr); }
+.core-suite .kpis.k7 { grid-template-columns: repeat(7, 1fr); }
+.core-suite .core-body > .kpis { padding: 14px 18px 4px; }
 .core-suite .guest { display: grid; grid-template-columns: 312px 1fr 332px; flex: 1; min-height: 0; }
 
 /* pane 1: conversations */
@@ -784,9 +788,14 @@
 .core-suite .crm { display: grid; grid-template-columns: 380px 1fr; flex: 1; min-height: 0; }
 .core-suite .book { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--surface-1); }
 .core-suite .book-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px; }
-.core-suite .bk { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px 11px; }
-.core-suite .bk .l { font-size: 10px; color: var(--fg-subtle); }
-.core-suite .bk .v { font-family: var(--display); font-size: 18px; font-weight: 500; margin-top: 3px; }
+/* KPI card — 1:1 with the mockup (.bk): surface-1, large display number. */
+.core-suite .bk { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; }
+.core-suite .bk .l { font-size: 11px; color: var(--fg-subtle); }
+.core-suite .bk .v { font-family: var(--display); font-size: 25px; font-weight: 600; margin: 4px 0; }
+.core-suite .bk .s, .core-suite .bk .sub { font-size: 11px; color: var(--fg-subtle); }
+.core-suite .bk .v.warn { color: var(--warning); }
+.core-suite .bk .v.late { color: var(--danger); }
+.core-suite .bk .v.good { color: var(--success); }
 .core-suite .bk.alert .v { color: var(--danger); }
 .core-suite .book-filters { padding: 4px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
 .core-suite .book-search { position: relative; }
@@ -868,6 +877,14 @@
 .core-suite .intro p b { color: var(--fg-muted); font-weight: 600; }
 .core-suite .intro p a { color: var(--brand-bright); }
 .core-suite .loy > .intro { margin: 16px 18px 0; }
+/* Loyalty pane — mockup-exact rhythm (the .loy scroller has no padding of its
+   own, so each block carries the 18px gutter the mockup gets from the body). */
+.core-suite .loy > .kpis { padding: 14px 18px 4px; }
+.core-suite .loy > .filters { padding: 8px 18px; }
+.core-suite .loy > .loy-searchbar { padding: 0 18px 8px; }
+.core-suite .loy > .card { margin: 4px 18px; }
+.core-suite .loy > .eyebrow { display: block; padding: 16px 18px 0; }
+.core-suite .loy > .wallets { padding: 8px 18px 22px; }
 /* Surfaces that drop the intro straight into the body (no scroll wrapper)
    still want it aligned to the 18px gutter. */
 .core-suite .core-body > .intro { margin: 14px 18px 0; }
@@ -886,6 +903,14 @@
 .core-suite .loy-balance .w1 b { font-weight: 600; }
 .core-suite .loy-balance .pts { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--platinum); }
 .core-suite .loy-balance .rd { font-size: 12px; color: var(--fg-subtle); margin-top: 2px; }
+/* Family-wallet cards — 1:1 with the mockup (.wallets / .wallet / .pts). */
+.core-suite .wallets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.core-suite .wallet { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; transition: border-color var(--fast) var(--ease); }
+.core-suite .wallet:hover { border-color: var(--border-strong); }
+.core-suite .wallet .w1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.core-suite .wallet .pts { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--platinum); }
+@media (max-width: 1100px) { .core-suite .wallets { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 680px) { .core-suite .wallets { grid-template-columns: 1fr; } }
 .core-suite .loy-head { display: flex; align-items: center; gap: 12px; padding: 8px 18px 2px; }
 .core-suite .loy-head .seg button .n { font: 600 11px var(--mono); opacity: .6; margin-left: 6px; }
 .core-suite .loy-filters { display: flex; align-items: center; gap: 12px; padding: 8px 18px; flex-wrap: wrap; }
@@ -925,6 +950,8 @@
 .core-suite .wb-actions .btn { gap: 7px; }
 .core-suite .loy-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
 .core-suite .loy-card .tbl { background: transparent; }
+.core-suite .loy-tbl-card { overflow: hidden; }
+.core-suite .loy-tbl-card .tbl { background: transparent; }
 .core-suite .th-sort { background: transparent; border: 0; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .core-suite .th-sort:hover { color: var(--fg); }
 .core-suite .loy-member { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
