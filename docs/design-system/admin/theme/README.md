@@ -1,5 +1,16 @@
 # Admin theme — tokens, type, material, components
 
+> ⚠️ **Post-v2-retirement scope.** The admin back-office now runs on **v3**
+> (`.av3-*`, see [`../v3/README.md`](../v3/README.md)). The **CSS** described
+> here — `[data-admin-theme]` tokens, `.v2-*` primitives, `.glass-*`, the
+> colour/type/material rules — **still ships**, now as the shared base
+> stylesheet `src/app/themes/base/index.css` (it backs login + the staff
+> portals + Core). What was **deleted** is the v2 *React* layer (`AdminShell`,
+> the `Admin*.tsx` pages, `src/components/admin/v2/`). So: token/colour/type/
+> material docs below = current; any reference to a v2 *component/shell* =
+> historical (the class may still exist in the base CSS, the React component
+> does not).
+
 Everything the Admin theme owns: colour, typography, depth/material,
 component primitives. **No cross-theme links.** When a Core or Homepage
 rule looks identical, it is documented separately in that theme — do not

@@ -74,7 +74,7 @@ touch*. Read that section before adding more (Rule #11).
    (menu/[baseSlug] → menu dialog; reports/cohort + reports/ltv-cac →
    Calculator sandboxes; customers/[phone] → customers view).
 2. **Swap `/admin/*` → v3** ✅ **DONE** (owner-greenlit, reversible).
-   Implemented in **`src/middleware.ts`**: every `/admin` + `/admin/*` request
+   Implemented in **`src/proxy.ts`**: every `/admin` + `/admin/*` request
    307-redirects to the matching `/admin-v3/*`; `landingPathForRole` lands the
    owner on `/admin-v3`. **Pass-throughs (stay v2):** `/admin/capabilities`
    (the shared ledger v3 links to) and `/admin/login`. **Folded routes** redirect
@@ -82,7 +82,7 @@ touch*. Read that section before adding more (Rule #11).
    `reports/{cohort,ltv-cac} → reports`). **Manager / franchisee portals are
    unchanged** — they rewrite to `/admin/*` v2 in `next.config.ts` and v3 has no
    role-prefix support yet (`nav.config.ts` `P = "/admin-v3"`), so v2 must stay
-   live for them. **Reverting** = delete `src/middleware.ts` + set
+   live for them. **Reverting** = delete `src/proxy.ts` + set
    `landingPathForRole` owner back to `"/admin"`.
    - *Follow-up for a full v2 retirement:* give v3 role-prefix support (admin-base)
      so `/manager` + `/franchisee` can point at v3 too — only then can v2 be
@@ -92,13 +92,14 @@ touch*. Read that section before adding more (Rule #11).
    `Admin*.tsx` + helpers), the `src/app/admin/*` routes (kept `/admin/login`
    on a shell-less layout), and the v2-only `src/lib/bundle-margin.ts` — 134
    files. Capabilities re-homed to `/capabilities`; `/admin/*` 307s to v3
-   (`src/middleware.ts`); `/manager`+`/franchisee` rewrite to v3. The shared
+   (`src/proxy.ts`); `/manager`+`/franchisee` rewrite to v3. The shared
    base stylesheet (`themes/base`) is kept. Verified: tsc + prod build clean;
    owner/manager/franchisee + login + capabilities all render.
-   - *Follow-up (non-blocking):* prune the v2 component sections from
-     `docs/design-system/admin/theme/*` (they describe now-deleted code; the
-     base CSS they partly cover lives on as `themes/base`); rename
-     `src/middleware.ts` → `src/proxy.ts` (Next 16 deprecation warning).
+   - ✅ *Done:* renamed the proxy file to the Next 16 convention
+     (`src/middleware.ts` → `src/proxy.ts`, `export function proxy`), clearing
+     the deprecation warning; pruned the v2-specific sections from
+     `docs/design-system/admin/theme/*` (they described now-deleted code — the
+     kept base CSS lives on as `themes/base`).
 
 ## Calculator — optional deepening (not required for parity)
 

@@ -2,6 +2,13 @@
 
 ← back to [README](./README.md)
 
+> ⚠️ **v2 React components are retired** (admin runs on v3 — `.av3-*`). The
+> `.v2-*` / `.glass-*` **CSS classes** documented below still ship in the shared
+> base stylesheet (`src/app/themes/base/index.css`), but the React components
+> and shell that rendered them (`AdminShell`, `Sidebar`, `Topbar`, the
+> `Admin*.tsx` pages) are **deleted**. Treat this as the **base-CSS primitive
+> reference**; for live admin components see [`../v3/README.md`](../v3/README.md).
+
 The v2 library lives in `src/ui/`. Mockup equivalents
 live in `public/mockups/core-suite/system.css`. **All components read tokens
 — none hardcode colour.**

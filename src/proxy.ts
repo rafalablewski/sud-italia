@@ -21,7 +21,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * Folded routes (no 1:1 v3 page — the detail views became dialogs) land on
  * their v3 parent instead of 404ing.
  */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // The ledger moved out of /admin to its own shell-less route.
