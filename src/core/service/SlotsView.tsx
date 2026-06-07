@@ -160,6 +160,14 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
 
   return (
     <div className="svc slt">
+      <div className="intro">
+        <h1>Service · Slots — capacity &amp; demand</h1>
+        <p>
+          Define dine-in windows and their cover caps; watch fill-rate and a demand-based price
+          multiplier (surge when a slot runs hot). Manage / Demand and Day / Week views. Bookings made
+          here flow straight into the Guest · Book console.
+        </p>
+      </div>
       <div className="slt-bar">
         <div className="seg">
           <button type="button" className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>

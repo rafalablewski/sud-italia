@@ -12,6 +12,10 @@ nested route:
 - **Slots** (`/core/service/slots`) — time-slot capacity management + the
   Demand Exchange yield board.
 
+Each view opens with the mockup `.intro` banner (Floor "the live room twin",
+Slots "capacity & demand"); the `.core-suite .svc > .intro` rule aligns it to
+the 18px gutter.
+
 **Booking moved out:** the Book console is now a Guest-hub view at
 `/core/guest/book` (`<GuestBook>` → `BookView`) — Service is Floor + Slots only.
 The old `/admin/floor` and `/admin/slots` stub pages were **deleted**; the bare

@@ -75,6 +75,15 @@ export function FloorView({ loc }: { loc: string }) {
 
   return (
     <div className="svc flr">
+      <div className="intro">
+        <h1>Service · Floor — the live room twin</h1>
+        <p>
+          Seat / clear from any table, a predictive-seating recommender that fits a party to the room,
+          and a <b>bottleneck banner</b> wired to the live kitchen — it warns when the line can&apos;t
+          absorb more covers. Occupancy, turn time and spend-per-table-hour up top.
+        </p>
+      </div>
+
       {kitchen && kitchen.tier !== "calm" && (
         <div className={`flr-kitchen ${kitchen.tier}`}>
           <Gauge width={15} height={15} />
