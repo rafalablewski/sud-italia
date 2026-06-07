@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { AdminUser, Location } from "@/data/types";
 import { userCoversLocation } from "@/lib/user-locations";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -19,7 +19,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 
 interface LocationRecord extends Location {
   displayOrder?: number;

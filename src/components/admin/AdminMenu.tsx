@@ -20,7 +20,7 @@ import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Button,
@@ -33,7 +33,7 @@ import {
   Select,
   Switch,
   Textarea,
-} from "./v2/ui";
+} from "@/ui";
 
 const MENU_TAGS: ("vegetarian" | "vegan" | "spicy" | "gluten-free")[] = [
   "vegetarian",

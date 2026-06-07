@@ -55,7 +55,7 @@ import type {
   SimulationSssgSnapshot,
   SimulationWeather,
 } from "@/data/types";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -68,7 +68,7 @@ import {
   Input,
   PageHero,
   Select,
-} from "./v2/ui";
+} from "@/ui";
 import { Heatmap, KpiCard, LineChart, PieChart } from "./v2/charts";
 // Shared explainer callout blocks (CLAUDE.md Rule #12 — same five-section
 // vocabulary the reports and sandboxes use). These used to be defined

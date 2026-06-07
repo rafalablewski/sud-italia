@@ -9,7 +9,7 @@ import { ShellContext, type ShellOverlays } from "./ShellContext";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import { ToastProvider } from "./ui/Toast";
+import { ToastProvider } from "@/ui/Toast";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { ALL_NAV_ITEMS } from "./nav.config";
 import { permissionForAdminPage } from "@/lib/permissions";

@@ -6,7 +6,7 @@ import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { Coins, TrendingUp, Wallet, Timer, AlertTriangle, ExternalLink } from "lucide-react";
 import { MetricExplainer, PageExplainer } from "./Explainers";
-import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "./v2/ui";
+import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "@/ui";
 import { KpiCard } from "./v2/charts";
 import { LineChart } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";

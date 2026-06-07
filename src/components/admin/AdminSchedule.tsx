@@ -6,7 +6,7 @@ import type { Shift, ShiftStatus, StaffMember, StaffRole } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { STAFF_ROLE_LABEL, STAFF_ROLE_OPTIONS } from "@/lib/staff-roles";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -21,7 +21,7 @@ import {
   Input,
   Select,
   PageHero,
-} from "./v2/ui";
+} from "@/ui";
 
 const activeLocations = getActiveLocations();
 const FALLBACK_LOC = activeLocations[0]?.slug ?? "krakow";

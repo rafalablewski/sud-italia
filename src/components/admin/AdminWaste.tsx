@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -14,7 +14,7 @@ import {
   Input,
   Select,
   PageHero,
-} from "./v2/ui";
+} from "@/ui";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 

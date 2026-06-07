@@ -14,7 +14,7 @@ import {
   Star,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -26,7 +26,7 @@ import {
   PageHero,
   Table,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { BarChart, KpiCard, PieChart } from "./v2/charts";
 
 type AiSentiment = "positive" | "neutral" | "negative";

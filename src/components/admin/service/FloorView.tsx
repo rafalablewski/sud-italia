@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Gauge, Plus, RefreshCw, Sparkles } from "lucide-react";
 import type { TableStatus } from "@/data/types";
 import { recommendSeating, type FloorTwin } from "@/lib/floor-twin";
-import { Button, Dialog } from "../v2/ui";
-import { useToast } from "../v2/ui/Toast";
+import { Button, Dialog } from "@/ui";
+import { useToast } from "@/ui/Toast";
 
 /**
  * Floor view — the live room as a Core-suite surface (Module 3's Twin, folded

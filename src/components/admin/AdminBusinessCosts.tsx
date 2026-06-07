@@ -26,7 +26,7 @@ import type {
 } from "@/data/types";
 import { FREQUENCY_TO_MONTHS, monthlyGrosze } from "@/lib/business-costs-math";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -43,7 +43,7 @@ import {
   Textarea,
   type Column,
   PageHero,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 const CATEGORY_LABEL: Record<BusinessCostCategory, string> = {

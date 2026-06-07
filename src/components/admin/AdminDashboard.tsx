@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminLocation } from "./v2/LocationContext";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, PageHero, type Column, Table } from "./v2/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, PageHero, type Column, Table } from "@/ui";
 import { AreaChart, BarChart, Heatmap, KpiCard } from "./v2/charts";
 
 

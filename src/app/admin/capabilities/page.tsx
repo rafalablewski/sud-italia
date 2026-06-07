@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentAdminUser } from "@/lib/admin-auth";
 import { adminBaseForRole, withAdminBase, type AdminBase } from "@/lib/admin-base";
 import { gatewayConfigured } from "@/lib/ai/gateway";
-import { PageHero } from "@/components/admin/v2/ui";
+import { PageHero } from "@/ui";
 
 /**
  * Platform capabilities ledger. Every feature shipped across Phases

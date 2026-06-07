@@ -34,7 +34,7 @@ import type { AdminRole } from "@/lib/admin-roles";
 import { fulfillmentLabel, formatPartySize } from "@/lib/fulfillment";
 import { FulfillmentIcon } from "@/components/FulfillmentIcon";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -53,7 +53,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 
 type StatusFilter = "all" | OrderStatus;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Dialog } from "../v2/ui";
+import { Dialog } from "@/ui";
 
 /**
  * Conversion-funnel analytics for the WhatsApp channel. Reads the real

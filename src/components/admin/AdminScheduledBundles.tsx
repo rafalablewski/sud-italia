@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Calendar, Pause, Play, X, Loader2, AlertCircle } from "lucide-react";
-import { PageHero } from "./v2/ui";
+import { PageHero } from "@/ui";
 import { useAdminLocation } from "./v2/LocationContext";
 
 type Status = "pending" | "active" | "paused" | "cancelled";

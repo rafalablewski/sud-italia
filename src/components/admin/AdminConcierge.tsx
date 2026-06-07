@@ -16,7 +16,7 @@ import {
 import Link from "next/link";
 import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 type CapId =
   | "get_menu"

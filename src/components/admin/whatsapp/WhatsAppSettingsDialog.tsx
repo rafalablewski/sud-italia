@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, Dialog, Input, Select, Switch, Textarea } from "../v2/ui";
-import { useToast } from "../v2/ui/Toast";
+import { Button, Dialog, Input, Select, Switch, Textarea } from "@/ui";
+import { useToast } from "@/ui/Toast";
 import { getActiveLocations } from "@/data/locations";
 
 /**

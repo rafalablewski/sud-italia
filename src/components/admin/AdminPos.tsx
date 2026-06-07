@@ -38,7 +38,7 @@ import {
 } from "@/lib/pos-coursing";
 import type { CartItem, PosCourse } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
-import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "./v2/ui";
+import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "@/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
 const TABLE_STATUS_TONE: Record<FloorTable["status"], BadgeTone> = {

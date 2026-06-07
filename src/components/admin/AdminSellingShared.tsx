@@ -25,7 +25,7 @@ import {
   Switch,
   Tag,
   useToast,
-} from "./v2/ui";
+} from "@/ui";
 import type { MenuItem, MenuCategory } from "@/data/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────

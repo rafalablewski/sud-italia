@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bot, Send, Sparkles, AlertTriangle, Check, ChevronRight, Plus } from "lucide-react";
-import { Button, Card, CardBody, CardHeader, EmptyState, Textarea, Badge } from "./v2/ui";
+import { Button, Card, CardBody, CardHeader, EmptyState, Textarea, Badge } from "@/ui";
 
 interface ConversationSummary {
   id: string;

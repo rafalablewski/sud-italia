@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AdminLocationProvider } from "@/components/admin/v2/LocationContext";
 import { ShellContext, type ShellOverlays } from "@/components/admin/v2/ShellContext";
-import { ToastProvider } from "@/components/admin/v2/ui/Toast";
+import { ToastProvider } from "@/ui/Toast";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**

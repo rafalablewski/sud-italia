@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Building2, Plus, RefreshCw, Save, Trash2, Link2 } from "lucide-react";
-import { Button, PageHero } from "./v2/ui";
+import { Button, PageHero } from "@/ui";
 
 interface CorporatePayload {
   slug: string;

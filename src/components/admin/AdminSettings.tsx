@@ -18,7 +18,7 @@ import {
   Truck,
 } from "lucide-react";
 import { useAdminPush } from "./v2/useAdminPush";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import { ThemesTab } from "./settings/ThemesTab";
 import {
@@ -33,7 +33,7 @@ import {
   Switch,
   Table,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 
 interface Settings {
   deliveryFee: number;

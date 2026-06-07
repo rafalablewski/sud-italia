@@ -6,7 +6,7 @@ import { ChefHat, Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import type { MenuCategory, OrderStatus } from "@/data/types";
 import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
 import { Ring } from "./kds/KdsTicketCard";
 import { useFullscreen } from "./command/useFullscreen";

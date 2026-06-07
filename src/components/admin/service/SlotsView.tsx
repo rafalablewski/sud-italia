@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import type { FulfillmentType, TimeSlot } from "@/data/types";
 import type { DemandAction, DemandBoard, DemandTier } from "@/lib/demand-exchange";
-import { Button, Dialog } from "../v2/ui";
-import { useToast } from "../v2/ui/Toast";
+import { Button, Dialog } from "@/ui";
+import { useToast } from "@/ui/Toast";
 
 /**
  * Slots view — time-slot capacity management + the Demand Exchange yield board,

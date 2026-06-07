@@ -22,7 +22,7 @@ import {
   Tabs,
   useToast,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { BarChart, KpiCard } from "./v2/charts";
 import { StarRating } from "@/components/rating/StarRating";
 import { MetricExplainer } from "./Explainers";

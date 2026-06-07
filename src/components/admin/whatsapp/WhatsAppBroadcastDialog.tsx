@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Megaphone, Send } from "lucide-react";
-import { Button, Dialog, Input, Select } from "../v2/ui";
-import { useToast } from "../v2/ui/Toast";
+import { Button, Dialog, Input, Select } from "@/ui";
+import { useToast } from "@/ui/Toast";
 
 /**
  * Broadcast campaigns: send an approved Meta template to an opted-in customer

@@ -1,9 +1,9 @@
 "use client";
 
 import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck } from "lucide-react";
-import { Badge, Card, CardBody, PageHero } from "./v2/ui";
+import { Badge, Card, CardBody, PageHero } from "@/ui";
 import { KpiCard } from "./v2/charts";
-import type { BadgeTone } from "./v2/ui/Badge";
+import type { BadgeTone } from "@/ui/Badge";
 
 type Soc2Status = "met" | "partial" | "gap";
 type Soc2Category = "Security" | "Availability" | "Confidentiality" | "Processing Integrity";

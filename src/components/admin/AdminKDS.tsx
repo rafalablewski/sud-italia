@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import { CoreShell } from "./core/CoreShell";
 import {

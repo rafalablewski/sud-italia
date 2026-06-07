@@ -12,7 +12,7 @@ import {
   Select,
   Switch,
   useToast,
-} from "./v2/ui";
+} from "@/ui";
 
 type Locale = "pl" | "en" | "de" | "en-SG";
 

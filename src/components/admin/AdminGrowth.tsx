@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { getActiveLocations } from "@/data/locations";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -38,7 +38,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 interface Tier {

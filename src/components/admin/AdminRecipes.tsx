@@ -27,7 +27,7 @@ import {
   type MenuCategory,
   type NutritionInfo,
 } from "@/data/types";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -44,7 +44,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 import { Banknote, Coins, Percent } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";

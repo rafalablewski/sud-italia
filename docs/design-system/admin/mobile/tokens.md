@@ -147,7 +147,7 @@ All overlays use `createPortal(node, document.body)` per CLAUDE.md Rule #4.
 | `PageHeader` | Page title + optional subtitle + right slot. Falls back to MobileTopbar's title when stuck. |
 | `StickyToolbar` | Sticks below MobileTopbar. Holds filter chips + segment control. Animates with topbar. |
 | `Section` | Section header with optional action link. |
-| `EmptyState` | Reuses `v2/ui/EmptyState` — already mobile-friendly. |
+| `EmptyState` | Reuses `src/ui/EmptyState` — already mobile-friendly. |
 
 ### 2.3 Data display
 
@@ -185,7 +185,7 @@ All overlays use `createPortal(node, document.body)` per CLAUDE.md Rule #4.
 | `QuickActionsBar` | Sticky bottom toolbar replacing per-row actions during bulk selection. Shows count + 1–3 primary actions + "more". |
 | `SwipeRow` | Reveals left (destructive) + right (primary) actions on swipe. Threshold 35% commits. |
 | `LongPressMenu` | Long-press a row → contextual popover with up to 5 actions. |
-| `Toast` | Reuse `v2/ui/Toast`. Bottom-positioned with Undo affordance. |
+| `Toast` | Reuse `src/ui/Toast`. Bottom-positioned with Undo affordance. |
 | `Banner` | Inline page-level alert. Dismissible. |
 | `ConfirmSheet` | Replaces ConfirmDialog. Slides up with hero text and a single destructive button. |
 

@@ -21,7 +21,7 @@ import {
   Search,
 } from "lucide-react";
 import { CoreShell } from "./core/CoreShell";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
 import { formatPrice } from "@/lib/utils";

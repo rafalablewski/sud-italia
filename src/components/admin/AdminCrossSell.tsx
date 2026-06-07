@@ -12,7 +12,7 @@ import {
   Tag,
   Sandwich,
 } from "lucide-react";
-import { PageHero, SaveDock } from "./v2/ui";
+import { PageHero, SaveDock } from "@/ui";
 import {
   ComboEditor,
   ItemMultiSelect,

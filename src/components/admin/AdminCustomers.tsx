@@ -25,7 +25,7 @@ import {
   PageHero,
   Table,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 interface TriggerRow {

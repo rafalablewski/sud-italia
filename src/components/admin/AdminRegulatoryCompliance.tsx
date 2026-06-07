@@ -14,7 +14,7 @@ import {
   Switch,
   Textarea,
   useToast,
-} from "./v2/ui";
+} from "@/ui";
 import { locations as ALL_LOCATIONS } from "@/data/locations";
 
 type Zone = "EU" | "NYC" | "SG";

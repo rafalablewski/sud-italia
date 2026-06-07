@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Sparkles, Lightbulb, Calculator, Scale } from "lucide-react";
-import { Card, CardBody } from "./v2/ui";
+import { Card, CardBody } from "@/ui";
 
 /**
  * Plain-English explainer callout blocks, shared across the analytics

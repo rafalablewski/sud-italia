@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { ExpansionChecklist, ExpansionChecklistItem } from "@/data/types";
 import { locations as allLocations } from "@/data/locations";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -30,7 +30,7 @@ import {
   Select,
   Tabs,
   Textarea,
-} from "./v2/ui";
+} from "@/ui";
 
 type Category = ExpansionChecklistItem["category"];
 

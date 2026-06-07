@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw, Sparkles, Users } from "lucide-react";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { findReservationConflicts } from "@/lib/floor";
-import { Switch } from "../v2/ui";
-import { useToast } from "../v2/ui/Toast";
+import { Switch } from "@/ui";
+import { useToast } from "@/ui/Toast";
 
 /**
  * Book view — the unified slot+table booking console (body inside the Service

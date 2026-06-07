@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { RotateCcw, TrendingUp, Users } from "lucide-react";
-import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "./v2/ui";
+import { Button, Card, CardBody, EmptyState, InfoButton, PageHero } from "@/ui";
 import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";

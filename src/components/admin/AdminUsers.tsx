@@ -24,7 +24,7 @@ import {
   effectiveHas,
   resolveEffectivePermissions,
 } from "@/lib/permissions";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { KpiCard } from "./v2/charts";
 
 import {
@@ -45,7 +45,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 
 const ROLE_LABEL: Record<AdminRole, string> = {
   owner: "Owner",

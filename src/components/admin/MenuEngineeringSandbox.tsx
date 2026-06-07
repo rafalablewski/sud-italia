@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, Coins, TrendingUp, Boxes, FlaskConical } from "lucide-react";
-import { Button, Card, CardBody, Input, Select, Badge, InfoButton, type BadgeTone } from "./v2/ui";
+import { Button, Card, CardBody, Input, Select, Badge, InfoButton, type BadgeTone } from "@/ui";
 import { MetricExplainer, PageExplainer } from "./Explainers";
 import { KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";

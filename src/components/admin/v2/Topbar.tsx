@@ -8,7 +8,7 @@ import { ALL_NAV_ITEMS } from "./nav.config";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAdminShell } from "./ShellContext";
 import { useAdminLocation } from "./LocationContext";
-import { ScopeSwitcher } from "./ui";
+import { ScopeSwitcher } from "@/ui";
 import { adminBaseForPath } from "@/lib/admin-base";
 
 interface Props {

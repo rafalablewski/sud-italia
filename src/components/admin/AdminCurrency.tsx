@@ -13,7 +13,7 @@ import {
   Select,
   Switch,
   useToast,
-} from "./v2/ui";
+} from "@/ui";
 
 type Currency = "PLN" | "USD" | "SGD" | "EUR";
 

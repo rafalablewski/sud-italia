@@ -12,7 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { Badge, Card, CardBody, CardHeader, EmptyState, PageHero } from "./v2/ui";
+import { Badge, Card, CardBody, CardHeader, EmptyState, PageHero } from "@/ui";
 
 import { AreaChart, BarChart, KpiCard } from "./v2/charts";
 import { formatPrice } from "@/lib/utils";

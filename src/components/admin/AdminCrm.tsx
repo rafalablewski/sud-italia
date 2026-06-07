@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { CoreShell } from "./core/CoreShell";
 import { GuestViewNav } from "./guest/GuestViewNav";
-import { Button, Dialog } from "./v2/ui";
-import { useToast } from "./v2/ui/Toast";
+import { Button, Dialog } from "@/ui";
+import { useToast } from "@/ui/Toast";
 
 /* ====================== Types (mirror /api/admin/crm) ====================== */
 interface CrmCustomer {

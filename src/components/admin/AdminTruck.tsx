@@ -21,7 +21,7 @@ import type {
   TruckStop,
 } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -38,7 +38,7 @@ import {
   Textarea,
   type Column,
   PageHero,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 const activeLocations = getActiveLocations();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Card, CardBody, CardHeader, Tabs } from "@/components/admin/v2/ui";
+import { Badge, Card, CardBody, CardHeader, Tabs } from "@/ui";
 import { core as coreTokens } from "@/app/themes/core/theme";
 import { homepage as homepageTokens } from "@/app/themes/homepage/theme";
 import { palette as adminPalette } from "@/components/admin/v2/theme";

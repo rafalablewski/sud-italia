@@ -18,8 +18,8 @@ import {
 import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice, getBaseSlug, marginPct, marginTone } from "@/lib/utils";
-import { useToast } from "./v2/ui/Toast";
-import { Button, Card, CardBody, Input, PageHero, Switch } from "./v2/ui";
+import { useToast } from "@/ui/Toast";
+import { Button, Card, CardBody, Input, PageHero, Switch } from "@/ui";
 import { ModifierMatrix } from "./menu/ModifierEditor";
 
 interface MenuItemData {

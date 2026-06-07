@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { History, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Badge,
@@ -12,7 +12,7 @@ import {
   ConfirmDialog,
   EmptyState,
   PageHero,
-} from "./v2/ui";
+} from "@/ui";
 
 interface AuditLogEntry {
   id: string;
@@ -249,7 +249,7 @@ function AuditLogDesktop() {
           <CardBody>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
               <label style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.8125rem" }}>
-                {/* eslint-disable-next-line no-restricted-syntax -- ds-ok: tri-state multi-select checkbox; v2/ui has no Checkbox primitive (Switch is a toggle) */}
+                {/* eslint-disable-next-line no-restricted-syntax -- ds-ok: tri-state multi-select checkbox; the ui kit has no Checkbox primitive (Switch is a toggle) */}
                 <input
                   type="checkbox"
                   checked={filtered.length > 0 && visibleSelectedCount === filtered.length}
@@ -334,7 +334,7 @@ function AuditLogDesktop() {
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
                     {isOwner && (
-                      // eslint-disable-next-line no-restricted-syntax -- ds-ok: per-row multi-select checkbox; v2/ui has no Checkbox primitive (Switch is a toggle)
+                      // eslint-disable-next-line no-restricted-syntax -- ds-ok: per-row multi-select checkbox; the ui kit has no Checkbox primitive (Switch is a toggle)
                       <input
                         type="checkbox"
                         checked={selected.has(e.id)}

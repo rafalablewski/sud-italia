@@ -2,7 +2,7 @@
 
 ← back to [README](./README.md)
 
-The v2 library lives in `src/components/admin/v2/ui/`. Mockup equivalents
+The v2 library lives in `src/ui/`. Mockup equivalents
 live in `public/mockups/core-suite/system.css`. **All components read tokens
 — none hardcode colour.**
 
@@ -229,7 +229,7 @@ Key rules:
 
 - **Portaled to `#admin-portal-root` (the admin layout wrapper), falling back
   to `document.body`** — via the shared `adminOverlayTarget()` helper in
-  `v2/ui/portal.ts`. Every portaled admin overlay uses it: `Dialog` /
+  `src/ui/portal.ts`. Every portaled admin overlay uses it: `Dialog` /
   `ConfirmDialog` / `InfoButton` (which build on `Dialog`), plus `Popover`,
   `Tooltip` and the `Toast` stack. The wrapper is an ancestor of `.admin-bg`,
   so an overlay portaled here still escapes the `.admin-bg > *` stacking trap
@@ -268,7 +268,7 @@ Key rules:
 ## Metric explainers — the ⓘ contract
 
 Live code: `src/components/admin/Explainers.tsx` (+ `InfoButton` in
-`v2/ui/InfoButton.tsx`, which portals the dialog).
+`src/ui/InfoButton.tsx`, which portals the dialog).
 
 Any ⓘ `InfoButton` on a KPI card, metric or what-if lever (reports,
 sandboxes, the Calculator) explains itself in **five fixed sections, in this
@@ -502,7 +502,7 @@ bars** so *identity* and *control* never merge (the cause of three switcher idio
 stacking in one 120px panel). The heavy platinum-railed `.v2-page-header` is no
 longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars below.
 
-- **`PageHeader`** (`v2/ui/PageHeader.tsx`, `.v2-pagehead`) — **identity only**: a
+- **`PageHeader`** (`src/ui/PageHeader.tsx`, `.v2-pagehead`) — **identity only**: a
   ~52px hairline-based bar (no card, no rail, no shadow). Slots: `title` (serif
   display, the only h1), optional `info` (a quiet ⓘ → `Popover` of page help —
   this **replaces the always-on subtitle**; it is page help, *not* a metric ⓘ),
@@ -510,7 +510,7 @@ longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars be
   icon-only), `menu` (secondary actions collapsed under a `⋯` `Popover`, rows are
   `.v2-menu-item`), and an optional `back` slot for detail pages. **No location,
   no filters here.**
-- **`ViewToolbar`** (`v2/ui/ViewToolbar.tsx`, `.v2-toolbar`) — **control only**, a
+- **`ViewToolbar`** (`src/ui/ViewToolbar.tsx`, `.v2-toolbar`) — **control only**, a
   ~48px bar attached to the data: `tabs` (underline `Tabs`, sub-view navigation
   only) on the left; `children` (the filter / sort / display cluster) on the
   right. `sticky` pins it under the header on long tables. The toolbar owns the
@@ -539,7 +539,7 @@ longer rendered by admin pages (Phase 3) — `PageHero` composes the two bars be
 
 ### `Segmented` — the filter control
 
-`v2/ui/Segmented.tsx` (`.v2-seg`). The canonical **filter** widget for ≤ 4
+`src/ui/Segmented.tsx` (`.v2-seg`). The canonical **filter** widget for ≤ 4
 mutually-exclusive short options (status, view-mode, period). For 5+ / long
 options use `Select`; for stackable multi-dimensional filtering use filter chips;
 for sub-view navigation use the underline `Tabs`. `role="radiogroup"`, arrow-key
@@ -550,7 +550,7 @@ supersedes for filtering.)
 
 ### `ScopeSwitcher` — the one location selector
 
-`v2/ui/ScopeSwitcher.tsx` (`.v2-scope`). Location is operating **context**, not a
+`src/ui/ScopeSwitcher.tsx` (`.v2-scope`). Location is operating **context**, not a
 per-page filter, so this **one** control replaced both `LocationFilter` (per-page
 pills) and the sidebar `LocationSwitcher` — both removed in Phase 2. It now lives
 in the **topbar breadcrumb** (`Topbar.tsx`), wired to the persisted
@@ -563,7 +563,7 @@ gated on adding region metadata to the locations store.
 
 ### `SaveDock` + `useSaveState` — the editor save language
 
-`v2/ui/SaveDock.tsx` (`.v2-savedock`). The **one** save surface for editor pages
+`src/ui/SaveDock.tsx` (`.v2-savedock`). The **one** save surface for editor pages
 (Menu, Recipes, Growth, Users…): a transient pill-bar pinned bottom-centre that
 exists **only while dirty** (or while a save resolves), portaled to
 `#admin-portal-root` (Rule #4) and floating on `--shadow-md` (elevation = "this is
@@ -575,7 +575,7 @@ dirtiness stays page-owned. **Settings/toggles never use this** — they autosav
 
 ### `PageLoading` — the one loading state
 
-`v2/ui/PageLoading.tsx`. Wraps the `.v2-page-loading` pill and **guarantees the
+`src/ui/PageLoading.tsx`. Wraps the `.v2-page-loading` pill and **guarantees the
 `.v2-page` wrapper** (the mobile-pill trap — see [Loading states](#loading-states--the-v2-page-loading-pill)).
 `<PageLoading name="Orders" />` for a sole render; add `inline` when page chrome
 already renders. Replaces the hand-written `Loading X…` early-returns that drifted
@@ -599,7 +599,7 @@ stroke icon.
 
 ## Toggles
 
-`.v2-switch` (the `Switch` primitive, `v2/ui/Switch.tsx`) — a 40×22 pill,
+`.v2-switch` (the `Switch` primitive, `src/ui/Switch.tsx`) — a 40×22 pill,
 `role="switch"`. Off = `--surface-3` track + `--border` hairline + `--fg-subtle`
 thumb; on = `--success-soft` track + `--success` border-mix + `--success` thumb,
 thumb travels 18px on `--duration-base`/`--ease`. The green "on" reads as a

@@ -28,7 +28,7 @@ import {
 } from "@/lib/staff-roles";
 import { PIN_MAX_LENGTH, PIN_MIN_LENGTH } from "@/lib/password";
 import { useAdminLocation } from "./v2/LocationContext";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import {
   Badge,
   Button,
@@ -45,7 +45,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 const ROLE_LABEL = STAFF_ROLE_LABEL;

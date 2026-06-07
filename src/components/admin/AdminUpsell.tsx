@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Layers, Sliders } from "lucide-react";
-import { PageHero, SaveDock } from "./v2/ui";
+import { PageHero, SaveDock } from "@/ui";
 import {
   BundleRulesEditor,
   ExperimentEditor,

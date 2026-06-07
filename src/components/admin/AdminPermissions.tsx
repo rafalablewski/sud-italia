@@ -12,8 +12,8 @@ import {
   resolveEffectivePermissions,
   type PermissionKey,
 } from "@/lib/permissions";
-import { useToast } from "./v2/ui/Toast";
-import { Badge, Card, CardBody, EmptyState, PageHero } from "./v2/ui";
+import { useToast } from "@/ui/Toast";
+import { Badge, Card, CardBody, EmptyState, PageHero } from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 /** Row shape from /api/admin/users (secrets stripped; `permissions` kept). */

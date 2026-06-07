@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Building2, Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 
 import {
   Button,
@@ -16,7 +16,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 
 interface Supplier {
   id: string;

@@ -151,7 +151,7 @@ production.
 
 **Portal target: `#admin-portal-root`, not `<body>`.** The shared v2 overlays
 (`Dialog` / `ConfirmDialog` / `InfoButton` / `Popover` / `Tooltip` / `Toast`)
-use the `adminOverlayTarget()` helper (`v2/ui/portal.ts`), which returns the
+use the `adminOverlayTarget()` helper (`src/ui/portal.ts`), which returns the
 admin layout wrapper `#admin-portal-root` and falls back to `<body>`. That
 wrapper is an *ancestor* of `.admin-bg` (so overlays still escape the trap)
 **and** the element that carries the `--font-admin-*` next/font vars. It also

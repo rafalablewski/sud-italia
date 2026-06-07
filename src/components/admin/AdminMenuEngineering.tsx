@@ -24,7 +24,7 @@ import {
   Table,
   type BadgeTone,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 import { formatPricePLN } from "@/lib/utils";
 import type { SimulationMenuEngineeringLine } from "@/data/types";

@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { useToast } from "./v2/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { useAdminBase } from "./v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 
@@ -35,7 +35,7 @@ import {
   Table,
   Textarea,
   type Column,
-} from "./v2/ui";
+} from "@/ui";
 import { KpiCard } from "./v2/charts";
 
 interface OrderRow {
