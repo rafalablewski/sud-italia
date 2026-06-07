@@ -491,17 +491,21 @@ refetches every 30s.
   live variance, and a closed-session history (`/api/admin/cash` + `?action=drop|close`)
 - [x] Growth (partial) — Scheduled bundles (`/admin-v3/scheduled-bundles`):
   standing-pre-order status board (approve/pause/resume/cancel via
-  `PATCH /api/admin/scheduled-bundles/:id`). Truck ops (`/admin-v3/truck`):
+  `PATCH /api/admin/scheduled-bundles/:id`), rows sorted by weekday → ready-time
+  so the list mirrors the operator's fulfilment order (v2 parity). Truck ops (`/admin-v3/truck`):
   events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
   + `/api/admin/truck-routes`, plus the **KPI rail** (events / revenue / expected
   guests / live-upcoming) restored.
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
-  (referral config + reward/challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
+  (referral config + challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
   **Restored to v2 parity (flag #5):** the **Loyalty tiers** editor
   (bronze/silver/gold/platinum — label / threshold / multiplier / perks, saved
-  on blur) and the **Live activity widgets** manager (7-type widget catalogue,
+  on blur), the **Live activity widgets** manager (7-type widget catalogue,
   add/edit/delete/toggle/reorder + per-widget type-config + location targeting,
-  capped at `LIVE_WIDGET_LIMIT`).
+  capped at `LIVE_WIDGET_LIMIT`), the **Rewards** catalogue (full
+  add/edit/delete + toggle via `RewardDialogV3`, not toggle-only), and the
+  **Referral codes** table (in-circulation codes with owner / phone / uses /
+  earned-pts + remove, `GET`/`DELETE /api/admin/referrals`).
   Cross-sell (`/admin-v3/crosssell`) — **full v2 parity (PR #139 follow-up):**
   four tabs over the per-location selling config (`PUT /api/admin/upsell`, full
   config round-tripped so nothing is lost): **Cart pairings** (Coffee/Dessert/
