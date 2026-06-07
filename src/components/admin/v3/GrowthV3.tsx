@@ -316,7 +316,10 @@ function RewardDialogV3({ reward, onClose, onSubmit }: { reward: Reward; onClose
   const submit = () => {
     if (!name.trim()) return;
     // Derive a stable slug id for new rewards (matches v2's RewardDialog).
-    const id = reward.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+    // A name of only non-alphanumerics (e.g. "!!!") slugifies to "" — fall
+    // back to a generated id so we never produce an empty/colliding key.
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+    const id = reward.id || slug || `reward-${Date.now()}`;
     onSubmit({ id, name: name.trim(), description: description.trim() || undefined, pointsCost: Math.max(0, Math.round(Number(points) || 0)), active: reward.active });
   };
 
