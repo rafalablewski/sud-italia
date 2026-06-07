@@ -853,6 +853,25 @@
 .core-suite .loy-kpis .bk .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
 .core-suite .loy-sub { font-size: 12px; color: var(--fg-muted); padding: 6px 18px 4px; max-width: 820px; line-height: 1.5; }
 .core-suite .loy-sub a { color: var(--brand-bright); }
+/* Surface intro banner — the serif headline card that opens a mockup pane.
+   Reusable across Core surfaces; the leading margin aligns it to the 18px
+   gutter the KPI/body rows use. */
+.core-suite .intro { margin: 0; padding: 14px 16px; border-radius: var(--r-lg); background: linear-gradient(180deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border); }
+.core-suite .intro h1 { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.core-suite .intro p { color: var(--fg-subtle); font-size: 12.5px; margin-top: 4px; max-width: 900px; line-height: 1.55; }
+.core-suite .intro p b { color: var(--fg-muted); font-weight: 600; }
+.core-suite .intro p a { color: var(--brand-bright); }
+.core-suite .loy > .intro { margin: 16px 18px 0; }
+/* Loyalty › shared-balances cards (mockup "Family wallets — shared balances")
+   — a quick-glance pool summary that sits under the Members table. */
+.core-suite .loy-balances-h { padding: 16px 18px 0; }
+.core-suite .loy-balances { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; padding: 8px 18px 22px; }
+.core-suite .loy-balance { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; transition: border-color var(--fast) var(--ease); }
+.core-suite .loy-balance:hover { border-color: var(--border-strong); }
+.core-suite .loy-balance .w1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.core-suite .loy-balance .w1 b { font-weight: 600; }
+.core-suite .loy-balance .pts { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--platinum); }
+.core-suite .loy-balance .rd { font-size: 12px; color: var(--fg-subtle); margin-top: 2px; }
 .core-suite .loy-head { display: flex; align-items: center; gap: 12px; padding: 8px 18px 2px; }
 .core-suite .loy-head .seg button .n { font: 600 11px var(--mono); opacity: .6; margin-left: 6px; }
 .core-suite .loy-filters { display: flex; align-items: center; gap: 12px; padding: 8px 18px; flex-wrap: wrap; }

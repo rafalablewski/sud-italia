@@ -37,9 +37,19 @@ relationship layer; *configuration* and *marketing* are Admin concerns.
 | **Redemptions** | The burn log — when, which customer, solo or wallet, which reward, points spent. | `GET /api/admin/wallet-redemptions` |
 | **Win-back** | The auto-retention worklist (Phase 2) — at-risk regulars ranked by value-at-risk, each a prescribed, approvable action. Loads lazily (heavier — scans all orders). | `GET/POST /api/admin/retention` |
 
+A serif **intro banner** (`.intro` — the reusable Core surface header)
+opens the view with the programme one-liner and the `/admin/growth` link.
+
 The KPI strip (`.loy-kpis` of `.bk` cards) reads from the same data:
-total members (+ repeat-buyer count), Platinum count, Gold count,
-lifetime spend.
+**Members** (phone-enrolled count), **Points outstanding** (Σ member
+points, with a `≈ X zł liability` sub at the 100 pts ≈ 1 zł headline
+rate), **Redemptions · 30d** (burn-log entries in the trailing 30 days),
+and **Family wallets** (shared-pool count).
+
+Under the Members table, a **shared-balances** strip (`.loy-balances` of
+`.loy-balance` cards) gives a quick-glance read of each family wallet —
+its head-member label, member count, spendable-pool points and the
+`≈ X zł to redeem` estimate. Each card jumps to the Family-wallets tab.
 
 ## Tiers
 
