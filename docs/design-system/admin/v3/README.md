@@ -345,10 +345,15 @@ refetches every 30s.
 - [x] Boardroom (`/admin-v3/boardroom`) — the AI C-suite team (`BoardroomV3`,
   with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Four persona
   agents (CEO/COO/CFO/CMO) over the live store. **Tabs** (`.av3-filterchips`):
-  Overview (traffic-light KPI rail via `Kpi` with a status `Badge` dot +
-  five-section `InfoButton`, agent-status cards, quick-action meeting buttons, and
-  a "what needs attention" flag list), one panel per persona (the persona's owned
-  KPIs + a `ChatPanel`), a **Team chat** (the generalist board assistant — a
+  Overview — a calm, grouped layout: section labels (`SecLabel`) over two KPI
+  rails (Sales &amp; growth · Cost &amp; quality) of bespoke tiles (`KpiTile`) that
+  carry a single `StatusDot` + a five-section `InfoButton`, where only off-target
+  tiles get a faint wash/tinted border (`kpiSurface`); then agent-status cards
+  using `Monogram` chips + a status dot, the **What needs attention** flag card,
+  and the convene-the-board buttons. (Calm pass: no rainbow accent rails, no
+  status-word pills, emoji/per-agent icons → monogram chips; agent identity is
+  `Monogram` + `FUNCTION_LABEL` throughout.) One panel per persona (the persona's
+  owned KPIs + a `ChatPanel`), a **Team chat** (the generalist board assistant — a
   `ChatPanel` with `personaId={null}`, all read tools), and Meetings (which a
   daily cron, `/api/admin/cron/boardroom-briefing`, can also auto-populate). **Chat**
   reuses the Ops Agent endpoints

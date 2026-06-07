@@ -1,24 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertTriangle,
   Brain,
   Check,
   ChevronRight,
   CircleDot,
-  Crown,
   LineChart,
-  Megaphone,
   RefreshCw,
   Send,
   Sparkles,
   Users,
-  Wallet,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, Card, CardBody, CardHead, InfoButton, Kpi, SkeletonRows } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, InfoButton, SkeletonRows } from "./ui";
 import { KPI_EXPLAINERS } from "./boardroom-explainers";
 
 /**
@@ -88,20 +85,71 @@ interface Meeting {
   createdAt: string;
 }
 
-const PERSONA_META: Record<PersonaId, { short: string; icon: typeof Crown; accentVar: string }> = {
-  ceo: { short: "CEO", icon: Crown, accentVar: "--av3-c4" },
-  coo: { short: "COO", icon: Users, accentVar: "--av3-c3" },
-  cfo: { short: "CFO", icon: Wallet, accentVar: "--av3-ok" },
-  cmo: { short: "CMO", icon: Megaphone, accentVar: "--av3-c5" },
+const PERSONA_META: Record<PersonaId, { short: string; accentVar: string }> = {
+  ceo: { short: "CEO", accentVar: "--av3-c4" },
+  coo: { short: "COO", accentVar: "--av3-c3" },
+  cfo: { short: "CFO", accentVar: "--av3-ok" },
+  cmo: { short: "CMO", accentVar: "--av3-c5" },
 };
 
-const STATUS_TONE: Record<KpiStatus, BadgeTone> = { green: "ok", yellow: "warn", red: "bad", neutral: "neutral" };
-const STATUS_ACCENT: Record<KpiStatus, string> = {
-  green: "--av3-ok",
-  yellow: "--av3-warn",
-  red: "--av3-bad",
-  neutral: "--av3-muted",
+// Short function label per agent (calmer than the full persona title).
+const FUNCTION_LABEL: Record<PersonaId, string> = {
+  ceo: "Strategy & vision",
+  coo: "Operations",
+  cfo: "Finance",
+  cmo: "Marketing",
 };
+
+/** Monogram chip — the calm, consistent agent identity (replaces emoji /
+ *  per-agent icons). Tinted in the persona accent. */
+function Monogram({ id, size = 30 }: { id: PersonaId; size?: number }) {
+  const accent = PERSONA_META[id].accentVar;
+  return (
+    <span
+      style={{
+        width: size, height: size, borderRadius: 8, flexShrink: 0,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        fontSize: size <= 30 ? 10.5 : 11, fontWeight: 800, letterSpacing: 0.4,
+        background: `color-mix(in oklab, var(${accent}) 16%, transparent)`,
+        color: `var(${accent})`,
+      }}
+    >
+      {PERSONA_META[id].short}
+    </span>
+  );
+}
+
+/** Single status signal — one small dot; neutral = hollow ring. */
+function StatusDot({ status }: { status: KpiStatus }) {
+  const color =
+    status === "green" ? "var(--av3-ok)" : status === "yellow" ? "var(--av3-warn)" : status === "red" ? "var(--av3-bad)" : "transparent";
+  return (
+    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: color, border: status === "neutral" ? "1.5px solid var(--av3-subtle)" : "none" }} />
+  );
+}
+
+// Off-target tiles get a faint wash + tinted border; healthy/neutral stay plain.
+function kpiSurface(status: KpiStatus): { background: string; border: string } {
+  if (status === "red") return { background: "color-mix(in oklab, var(--av3-bad) 6%, var(--av3-s1))", border: "color-mix(in oklab, var(--av3-bad) 26%, var(--av3-line))" };
+  if (status === "yellow") return { background: "color-mix(in oklab, var(--av3-warn) 5%, var(--av3-s1))", border: "color-mix(in oklab, var(--av3-warn) 22%, var(--av3-line))" };
+  return { background: "var(--av3-s1)", border: "var(--av3-line)" };
+}
+
+const RAIL_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 };
+
+function SecLabel({ children, first }: { children: React.ReactNode; first?: boolean }) {
+  return (
+    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.7, color: "var(--av3-subtle)", fontWeight: 600, margin: first ? "0 2px 10px" : "22px 2px 10px" }}>
+      {children}
+    </div>
+  );
+}
+
+// Overview KPI grouping (stable taxonomy, not status-driven, so tiles don't
+// jump rows as health changes). The "What needs attention" card carries the
+// dynamic problem summary.
+const SALES_KPI_IDS = ["today-revenue", "avg-ticket", "revenue-growth", "refund-rate"];
+const COST_KPI_IDS = ["food-cost", "labor-cost", "prime-cost", "satisfaction"];
 
 type Tab = "overview" | PersonaId | "team" | "meetings";
 
@@ -217,14 +265,17 @@ export function BoardroomV3() {
 
 function KpiTile({ k }: { k: BoardKpi }) {
   const exp = KPI_EXPLAINERS[k.id];
+  const surface = kpiSurface(k.status);
   return (
-    <Kpi
-      label={k.label}
-      value={<span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Badge tone={STATUS_TONE[k.status]} dot>{k.status === "neutral" ? "—" : k.status}</Badge>{k.display}</span>}
-      accentVar={STATUS_ACCENT[k.status]}
-      spark={k.spark}
-      info={exp ? <InfoButton title={k.label} {...exp} /> : undefined}
-    />
+    <div style={{ background: surface.background, border: `1px solid ${surface.border}`, borderRadius: "var(--av3-r-lg)", padding: "13px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--av3-muted)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+        <StatusDot status={k.status} />
+        {k.label}
+        {exp && <span style={{ marginLeft: "auto" }}><InfoButton title={k.label} {...exp} /></span>}
+      </div>
+      <div style={{ fontSize: 23, fontWeight: 700, margin: "9px 0 5px", letterSpacing: -0.4 }}>{k.display}</div>
+      <div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{k.benchmark}</div>
+    </div>
   );
 }
 
@@ -242,60 +293,71 @@ function OverviewTab({
   onRan: () => void;
 }) {
   if (!snapshot) return <Card><CardBody>No data yet.</CardBody></Card>;
+  const byId = new Map(snapshot.kpis.map((k) => [k.id, k]));
+  const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((k): k is BoardKpi => !!k);
+  const sales = pick(SALES_KPI_IDS);
+  const cost = pick(COST_KPI_IDS);
+  const other = snapshot.kpis.filter((k) => !SALES_KPI_IDS.includes(k.id) && !COST_KPI_IDS.includes(k.id));
+
   return (
     <>
-      <div className="av3-kpi-rail">
-        {snapshot.kpis.map((k) => <KpiTile key={k.id} k={k} />)}
+      {sales.length > 0 && (
+        <>
+          <SecLabel first>Sales &amp; growth</SecLabel>
+          <div style={RAIL_STYLE}>{sales.map((k) => <KpiTile key={k.id} k={k} />)}</div>
+        </>
+      )}
+      {cost.length > 0 && (
+        <>
+          <SecLabel>Cost &amp; quality</SecLabel>
+          <div style={RAIL_STYLE}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div>
+        </>
+      )}
+      {other.length > 0 && <div style={{ ...RAIL_STYLE, marginTop: 14 }}>{other.map((k) => <KpiTile key={k.id} k={k} />)}</div>}
+
+      <SecLabel>Your executives</SecLabel>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+        {agents.map((a) => (
+          <button key={a.id} type="button" className="av3-conv-row" style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 13px" }} onClick={() => onOpenAgent(a.id)}>
+            <Monogram id={a.id} size={36} />
+            <span style={{ minWidth: 0, textAlign: "left" }}>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{FUNCTION_LABEL[a.id]}</span>
+              <span style={{ display: "block", fontSize: 11.5, color: "var(--av3-subtle)", marginTop: 1 }}>{a.statusText}</span>
+            </span>
+            <span style={{ marginLeft: "auto" }}><StatusDot status={a.status} /></span>
+          </button>
+        ))}
       </div>
 
+      <SecLabel>What needs attention</SecLabel>
       <Card>
-        <CardHead title="Agent status" description="What each of your executives is watching right now" />
-        <CardBody>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-            {agents.map((a) => {
-              const Icon = PERSONA_META[a.id].icon;
-              return (
-                <button key={a.id} type="button" className="av3-conv-row" style={{ alignItems: "flex-start", flexDirection: "column", gap: 6, padding: 12 }} onClick={() => onOpenAgent(a.id)}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
-                    <span style={{ width: 26, height: 26, borderRadius: 7, background: `color-mix(in oklab, var(${a.accentVar}) 18%, transparent)`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon style={{ width: 15, height: 15, color: `var(${a.accentVar})` }} />
-                    </span>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{PERSONA_META[a.id].short}</span>
-                    <span style={{ marginLeft: "auto" }}><Badge tone={STATUS_TONE[a.status]} dot>{a.status}</Badge></span>
-                  </span>
-                  <span className="av3-cell-muted" style={{ fontSize: 11.5, textAlign: "left" }}>{a.remit}</span>
-                  <span style={{ fontSize: 12, color: a.status === "green" ? "var(--av3-ok)" : "var(--av3-muted)" }}>{a.statusText}</span>
-                </button>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHead title="Quick actions" description="Convene the board on today's live numbers" />
-        <CardBody>
-          <RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={onRan} compact />
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHead title="What needs attention" description="Off-target metrics the board should address" actions={<Badge tone={snapshot.flags.length ? "warn" : "ok"}>{snapshot.flags.length || "0"}</Badge>} />
-        <CardBody>
-          {snapshot.flags.length === 0 ? (
+        {snapshot.flags.length === 0 ? (
+          <CardBody>
             <div className="av3-empty" style={{ padding: "20px 0" }}>
               <CircleDot style={{ width: 22, height: 22, color: "var(--av3-ok)", margin: "0 auto 8px" }} />
-              <div className="av3-empty-title">All headline KPIs on target</div>
+              <div className="av3-empty-title">All KPIs on target</div>
               <div className="av3-empty-text">Convene a meeting to hunt the next growth lever.</div>
             </div>
-          ) : (
-            snapshot.flags.map((f, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)", fontSize: 12.5 }}>
-                <AlertTriangle style={{ width: 15, height: 15, color: "var(--av3-warn)", flexShrink: 0, marginTop: 1 }} />
-                <span>{f}</span>
-              </div>
-            ))
-          )}
+          </CardBody>
+        ) : (
+          <>
+            <CardHead title={`${snapshot.flags.length} metric${snapshot.flags.length > 1 ? "s" : ""} off-target`} description="These seed the next board meeting" />
+            <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
+              {snapshot.flags.map((f, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < snapshot.flags.length - 1 ? "1px solid var(--av3-line)" : "none", fontSize: 12.5, color: "var(--av3-muted)" }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--av3-warn)", flexShrink: 0, marginTop: 5 }} />
+                  <span>{f}</span>
+                </div>
+              ))}
+            </CardBody>
+          </>
+        )}
+      </Card>
+
+      <SecLabel>Convene the board</SecLabel>
+      <Card>
+        <CardBody>
+          <RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={onRan} compact />
         </CardBody>
       </Card>
     </>
@@ -319,19 +381,17 @@ function PersonaTab({
   seed: string | null;
   onSeedConsumed: () => void;
 }) {
-  const accent = PERSONA_META[personaId].accentVar;
-  const Icon = PERSONA_META[personaId].icon;
   return (
     <>
       <Card>
         <CardHead
           title={agent?.title ?? PERSONA_META[personaId].short}
           description={agent?.remit}
-          actions={<span style={{ width: 30, height: 30, borderRadius: 8, background: `color-mix(in oklab, var(${accent}) 18%, transparent)`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon style={{ width: 17, height: 17, color: `var(${accent})` }} /></span>}
+          actions={<Monogram id={personaId} size={32} />}
         />
         {kpis.length > 0 && (
           <CardBody>
-            <div className="av3-kpi-rail" style={{ marginBottom: 0 }}>
+            <div style={RAIL_STYLE}>
               {kpis.map((k) => <KpiTile key={k.id} k={k} />)}
             </div>
           </CardBody>
@@ -736,21 +796,15 @@ function MeetingView({ meeting, onAction }: { meeting: Meeting; onAction: (d: De
               <strong style={{ color: "var(--av3-fg)" }}>Agenda:</strong> {meeting.agenda.length} off-target metric{meeting.agenda.length > 1 ? "s" : ""}.
             </div>
           )}
-          {meeting.contributions.map((c, i) => {
-            const meta = PERSONA_META[c.persona];
-            const Icon = meta.icon;
-            return (
-              <div key={i} style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                <span style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: `color-mix(in oklab, var(${meta.accentVar}) 18%, transparent)`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon style={{ width: 16, height: 16, color: `var(${meta.accentVar})` }} />
-                </span>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: `var(${meta.accentVar})` }}>{meta.short}</div>
-                  <div style={{ fontSize: 13, lineHeight: 1.55 }}>{c.text}</div>
-                </div>
+          {meeting.contributions.map((c, i) => (
+            <div key={i} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < meeting.contributions.length - 1 ? "1px solid var(--av3-line)" : "none" }}>
+              <Monogram id={c.persona} size={30} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: `var(${PERSONA_META[c.persona].accentVar})` }}>{FUNCTION_LABEL[c.persona]}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>{c.text}</div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </CardBody>
       </Card>
 
@@ -761,14 +815,14 @@ function MeetingView({ meeting, onAction }: { meeting: Meeting; onAction: (d: De
             <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No structured decisions were produced this round.</div>
           ) : (
             meeting.decisions.map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--av3-line)", alignItems: "flex-start" }}>
-                <Badge tone="neutral">{PERSONA_META[d.owner].short}</Badge>
+              <div key={i} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < meeting.decisions.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, padding: "3px 8px", borderRadius: "var(--av3-r-sm)", flexShrink: 0, background: `color-mix(in oklab, var(${PERSONA_META[d.owner].accentVar}) 16%, transparent)`, color: `var(${PERSONA_META[d.owner].accentVar})` }}>{PERSONA_META[d.owner].short}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{d.title}</div>
-                  {d.rationale && <div className="av3-cell-muted" style={{ fontSize: 12 }}>{d.rationale}</div>}
-                  {d.proposedTool && <div style={{ fontSize: 11, marginTop: 3, fontFamily: "var(--av3-mono)", color: "var(--av3-c4)" }}>action: {d.proposedTool}</div>}
+                  {d.rationale && <div className="av3-cell-muted" style={{ fontSize: 12, marginTop: 2 }}>{d.rationale}</div>}
+                  {d.proposedTool && <div style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--av3-mono)", color: "var(--av3-subtle)" }}>{d.proposedTool}</div>}
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => onAction(d)}>Action via {PERSONA_META[d.owner].short} <ChevronRight className="av3-btn-ico" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => onAction(d)}>Action <ChevronRight className="av3-btn-ico" /></Button>
               </div>
             ))
           )}
