@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
+import { DEFAULT_COMBO_DEALS, DEFAULT_TIME_WINDOWS } from "@/lib/upsell";
 import type { MenuCategory, MenuRole } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
 import { Badge, Button, type ColumnV3, Dialog, SkeletonRows, Switch, Table } from "./ui";
 
+interface RequiredItem { suffix: string; label: string }
 interface Combo {
   id: string;
   name: string;
@@ -16,6 +18,10 @@ interface Combo {
   minItems: number;
   active: boolean;
   channel?: "dine-in" | "delivery";
+  /** Specific-item gating (Italian Classic Deal pattern). Mirrors
+   *  ComboDeal.requiredItems — when set, every suffix must be in the cart
+   *  for the combo to fire. Round-tripped through edits so it isn't lost. */
+  requiredItems?: RequiredItem[];
 }
 interface TimeWindow {
   id: string; variant: string; startHour: number; endHour: number;
@@ -38,6 +44,23 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "timeOfDay", label: "Time-of-day" }, { key: "badges", label: "Menu badges" },
 ];
 const TIME_VARIANTS = ["morning", "lunch", "afternoon", "dinner", "late"];
+
+// Mirror v2 (getDefaultConfig + TimeWindowsEditor): when a location has no
+// saved combos / windows, show the canonical defaults the runtime serves
+// (DEFAULT_COMBO_DEALS / DEFAULT_TIME_WINDOWS) so the board isn't blank for
+// the live deals. Editing/toggling one materialises the full list (PUT).
+const DEFAULT_COMBOS: Combo[] = DEFAULT_COMBO_DEALS.map((c) => ({
+  id: c.id, name: c.name, description: c.description,
+  categories: [...c.categories], discountPercent: c.discountPercent,
+  minItems: c.minItems, active: true,
+  ...(c.requiredItems ? { requiredItems: c.requiredItems.map((r) => ({ ...r })) } : {}),
+  ...(c.channel ? { channel: c.channel } : {}),
+}));
+const DEFAULT_WINDOWS: TimeWindow[] = DEFAULT_TIME_WINDOWS.map((w) => ({
+  id: w.id, variant: w.variant, startHour: w.startHour, endHour: w.endHour,
+  title: w.title, sub: w.sub, badge: w.badge, cta: w.cta,
+  addItemIdSuffix: w.addItemId ?? "", active: true,
+}));
 
 export function CrossSellV3() {
   const { location } = useAdminLocationV3();
@@ -65,8 +88,10 @@ export function CrossSellV3() {
   useEffect(() => { setLoading(true); load(); }, [load]);
 
   const cfg = settings[loc] ?? {};
-  const combos = (cfg.combos ?? []) as Combo[];
-  const windows = (cfg.timeWindows ?? []) as TimeWindow[];
+  const usingDefaultCombos = !cfg.combos || cfg.combos.length === 0;
+  const combos = (usingDefaultCombos ? DEFAULT_COMBOS : cfg.combos) as Combo[];
+  const usingDefaultWindows = !cfg.timeWindows || cfg.timeWindows.length === 0;
+  const windows = (usingDefaultWindows ? DEFAULT_WINDOWS : cfg.timeWindows) as TimeWindow[];
 
   // Round-trip the FULL location config so nothing else is lost on a partial edit.
   const patchConfig = async (patch: Partial<LocationConfig>) => {
@@ -88,7 +113,11 @@ export function CrossSellV3() {
   const removeWindow = (id: string) => saveWindows(windows.filter((x) => x.id !== id));
 
   const comboCols: ColumnV3<Combo>[] = [
-    { key: "name", header: "Combo", render: (c) => <span style={{ fontWeight: 600 }}>{c.name}</span> },
+    { key: "name", header: "Combo", render: (c) => (
+      <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        {c.name}{c.requiredItems && c.requiredItems.length > 0 ? <Badge tone="neutral">{c.requiredItems.length} req. items</Badge> : null}
+      </span>
+    ) },
     { key: "cats", header: "Categories", render: (c) => <span className="av3-cell-muted">{c.categories.join(" + ") || "—"}</span> },
     { key: "disc", header: "Discount", num: true, render: (c) => `${c.discountPercent}%` },
     { key: "min", header: "Min items", num: true, render: (c) => `${c.minItems}` },
@@ -128,6 +157,11 @@ export function CrossSellV3() {
         </div>
       ) : tab === "combos" ? (
         <div className="av3-card" style={{ padding: 0 }}>
+          {usingDefaultCombos && (
+            <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--av3-line)", fontSize: 11.5, color: "var(--av3-muted)" }}>
+              Showing the default chain combos (live on this location). Edit or toggle any deal to customise — your changes save as this location&rsquo;s override.
+            </div>
+          )}
           {combos.length === 0 ? (
             <div className="av3-empty"><div className="av3-empty-title">No combos</div><div className="av3-empty-text">Add a combo deal to nudge a complementary category into the cart.</div></div>
           ) : (
@@ -136,6 +170,11 @@ export function CrossSellV3() {
         </div>
       ) : tab === "timeOfDay" ? (
         <div className="av3-card" style={{ padding: 0 }}>
+          {usingDefaultWindows && (
+            <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--av3-line)", fontSize: 11.5, color: "var(--av3-muted)" }}>
+              Showing the five default time-of-day banners (live on this location). Edit or toggle any window to customise — your changes save as this location&rsquo;s override.
+            </div>
+          )}
           {windows.length === 0 ? (
             <div className="av3-empty"><div className="av3-empty-title">No time windows</div><div className="av3-empty-text">Add a window to change the cart nudge by time of day (breakfast espresso, late-night deals…).</div></div>
           ) : (
@@ -154,7 +193,7 @@ export function CrossSellV3() {
         <BadgesTab menu={menu} cfg={cfg} onChange={patchConfig} />
       )}
 
-      {edit && <ComboDialog combo={edit === "new" ? null : edit} city={city} onClose={() => setEdit(null)} onSave={(c) => { upsertCombo(c); setEdit(null); }} onDelete={edit !== "new" ? () => { removeCombo((edit as Combo).id); setEdit(null); } : undefined} />}
+      {edit && <ComboDialog combo={edit === "new" ? null : edit} city={city} menu={menu} onClose={() => setEdit(null)} onSave={(c) => { upsertCombo(c); setEdit(null); }} onDelete={edit !== "new" ? () => { removeCombo((edit as Combo).id); setEdit(null); } : undefined} />}
       {editWin && <WindowDialog win={editWin === "new" ? null : editWin} city={city} onClose={() => setEditWin(null)} onSave={(w) => { upsertWindow(w); setEditWin(null); }} onDelete={editWin !== "new" ? () => { removeWindow((editWin as TimeWindow).id); setEditWin(null); } : undefined} />}
     </>
   );
@@ -228,7 +267,9 @@ function MultiSelectCard({ label, hint, menu, selected, intrinsicIds, onChange }
 }
 
 /* ── combo dialog ──────────────────────────────────────────────────────── */
-function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo | null; city: string; onClose: () => void; onSave: (c: Combo) => void; onDelete?: () => void }) {
+const deriveSuffix = (id: string) => id.replace(/^[^-]+-/, "");
+
+function ComboDialog({ combo, city, menu, onClose, onSave, onDelete }: { combo: Combo | null; city: string; menu: MenuItemLite[]; onClose: () => void; onSave: (c: Combo) => void; onDelete?: () => void }) {
   const [name, setName] = useState(combo?.name ?? "");
   const [description, setDescription] = useState(combo?.description ?? "");
   const [categories, setCategories] = useState((combo?.categories ?? []).join(", "));
@@ -236,9 +277,17 @@ function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo 
   const [minItems, setMinItems] = useState(String(combo?.minItems ?? 2));
   const [channel, setChannel] = useState<string>(combo?.channel ?? "");
   const [active, setActive] = useState(combo?.active ?? true);
+  // Round-trip requiredItems — without this, editing the Italian Classic /
+  // Pizza & Side defaults would silently drop their item gating (v2 parity).
+  const [requiredItems, setRequiredItems] = useState<RequiredItem[]>(combo?.requiredItems ?? []);
+
+  const updateReq = (i: number, patch: Partial<RequiredItem>) => setRequiredItems((arr) => arr.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const removeReq = (i: number) => setRequiredItems((arr) => arr.filter((_, idx) => idx !== i));
+  const addReq = () => { const first = menu[0]; if (!first) return; setRequiredItems((arr) => [...arr, { suffix: deriveSuffix(first.id), label: first.name }]); };
 
   const submit = () => {
     if (!name.trim()) return;
+    const reqs = requiredItems.filter((r) => r.suffix.trim());
     onSave({
       id: combo?.id ?? `combo-${Date.now()}`,
       name: name.trim(), description: description.trim(),
@@ -247,6 +296,7 @@ function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo 
       minItems: Math.max(1, Math.round(Number(minItems) || 1)),
       active,
       channel: channel === "" ? undefined : (channel as "dine-in" | "delivery"),
+      ...(reqs.length > 0 ? { requiredItems: reqs } : {}),
     });
   };
 
@@ -262,6 +312,28 @@ function ComboDialog({ combo, city, onClose, onSave, onDelete }: { combo: Combo 
         <label className="av3-field"><span className="av3-field-label">Channel</span><select className="av3-select" value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">Both</option><option value="dine-in">Dine-in</option><option value="delivery">Delivery</option></select></label>
         <div className="av3-field"><span className="av3-field-label">Live</span><Switch aria-label="Live" checked={active} onChange={setActive} /></div>
       </div>
+
+      <div className="av3-subhead">Required items <span style={{ fontWeight: 400, color: "var(--av3-subtle)" }}>(optional — overrides &ldquo;any of category&rdquo;)</span></div>
+      {requiredItems.length === 0 ? (
+        <div className="av3-cell-muted" style={{ fontSize: 11, marginBottom: 6 }}>Generic combo: any item in the categories above qualifies. Add a specific item to lock the deal (e.g. Italian Classic = Margherita + Limonata + Tiramisù).</div>
+      ) : (
+        requiredItems.map((r, i) => {
+          const matched = menu.find((m) => deriveSuffix(m.id) === r.suffix);
+          return (
+            <div key={i} className="av3-formrow" style={{ gridTemplateColumns: "1fr 1fr 28px", marginBottom: 6, alignItems: "end" }}>
+              <label className="av3-field"><span className="av3-field-label">Item</span>
+                <select className="av3-select" value={matched?.id ?? ""} onChange={(e) => { const p = menu.find((m) => m.id === e.target.value); if (p) updateReq(i, { suffix: deriveSuffix(p.id), label: p.name }); }}>
+                  {!matched && <option value="">⚠ Unknown ({r.suffix})</option>}
+                  {menu.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </label>
+              <label className="av3-field"><span className="av3-field-label">Label</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={r.label} onChange={(e) => updateReq(i, { label: e.target.value })} /></label>
+              <button type="button" className="av3-iconbtn-sm" aria-label="Remove required item" onClick={() => removeReq(i)}><Trash2 /></button>
+            </div>
+          );
+        })
+      )}
+      <Button variant="ghost" size="sm" onClick={addReq} disabled={menu.length === 0} style={{ marginTop: 4 }}><Plus className="av3-btn-ico" /> Add required item</Button>
     </Dialog>
   );
 }
