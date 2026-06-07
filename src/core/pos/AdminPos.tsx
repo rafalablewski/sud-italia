@@ -1239,6 +1239,20 @@ export function AdminPos({
                   {active && active.items.length > 0 && !active.channel ? "Select a channel" : `Charge ${fmtPLN(active ? grandG(active) : 0)}`}
                 </button>
               </div>
+              <div className="kbd-hint" aria-hidden="true">
+                <span>
+                  <kbd>N</kbd> new
+                </span>
+                <span>
+                  <kbd>1–9</kbd> switch tab
+                </span>
+                <span>
+                  <kbd>F</kbd> fullscreen
+                </span>
+                <span>
+                  <kbd>Esc</kbd> close
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -1246,21 +1260,33 @@ export function AdminPos({
 
       {tenderOpen && active && (
         <div className="core-suite-overlay" onClick={() => setTenderOpen(false)}>
-          <div className="dialog" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: 28, textAlign: "center" }}>
-              <div className="eyebrow">Take payment</div>
-              <div style={{ fontFamily: "var(--font-admin-display)", fontSize: 42, margin: "12px 0" }}>{fmtPLN(grandG(active))}</div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                <button type="button" className="btn primary lg" onClick={() => void pay("Card")}>
+          <div className="dialog tender-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="tender-h">
+              <h2>Charge</h2>
+              <button type="button" className="x" aria-label="Cancel" onClick={() => setTenderOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="tender-b">
+              <div className="subtle ctx">
+                {CHAN_LABEL(active.channel)}
+                {activeTable ? ` · Table ${activeTable.number}` : ""} · {active.name} · #{active.orderId ?? active.id}
+              </div>
+              <div className="amt tnum">{fmtPLN(grandG(active))}</div>
+              <div className="tender-acts">
+                <button type="button" className="btn primary xl" onClick={() => void pay("Card")}>
                   <CreditCard /> Card
                 </button>
                 <button type="button" className="btn lg" onClick={() => void pay("Cash")}>
                   <Banknote /> Cash
                 </button>
+                <button type="button" className="btn ghost" onClick={() => setTenderOpen(false)}>
+                  Cancel
+                </button>
               </div>
-              <button type="button" className="btn ghost" style={{ marginTop: 14 }} onClick={() => setTenderOpen(false)}>
-                Cancel
-              </button>
+              <p className="tender-note subtle">
+                Server-authoritative total · marks <b>paidAt</b> and closes the tab. Card opens the terminal flow.
+              </p>
             </div>
           </div>
         </div>

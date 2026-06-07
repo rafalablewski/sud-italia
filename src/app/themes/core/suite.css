@@ -332,6 +332,19 @@
    overlay rules live on .core-suite-overlay at the document root. */
 .core-suite-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); backdrop-filter: saturate(120%) blur(4px); display: grid; place-items: center; padding: 28px; font-family: var(--font-admin-body), system-ui, sans-serif; }
 .core-suite-overlay .dialog { width: min(700px, 100%); max-height: 92vh; display: flex; flex-direction: column; background: #17161c; border: 1px solid rgba(255,255,255,0.16); border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.34); overflow: hidden; color: #f5f3ee; }
+/* Tender sheet — ported 1:1 from pos-tender.html: header + ✕, context line,
+   big display total, stacked Card / Cash / Cancel, and the paidAt note. */
+.core-suite-overlay .tender-dialog { width: min(380px, 100%); }
+.core-suite-overlay .tender-h { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.core-suite-overlay .tender-h h2 { font-family: var(--display); font-weight: 600; font-size: 18px; }
+.core-suite-overlay .tender-h .x { background: transparent; border: 0; color: var(--fg-subtle); font-size: 15px; cursor: pointer; line-height: 1; padding: 4px; }
+.core-suite-overlay .tender-h .x:hover { color: var(--fg); }
+.core-suite-overlay .tender-b { padding: 22px 24px 24px; text-align: center; }
+.core-suite-overlay .tender-b .ctx { font-size: 12px; }
+.core-suite-overlay .tender-b .amt { font-family: var(--display); font-size: 44px; font-weight: 500; margin: 8px 0 22px; }
+.core-suite-overlay .tender-acts { display: grid; gap: 10px; }
+.core-suite-overlay .tender-acts .btn { width: 100%; justify-content: center; gap: 9px; }
+.core-suite-overlay .tender-note { font-size: 11px; margin-top: 16px; line-height: 1.5; }
 .core-suite .core-suite-toast { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--r-pill); background: var(--success); color: #06140d; font-size: 13px; font-weight: 600; box-shadow: var(--sh-lg); }
 .core-suite .core-suite-toast svg { width: 15px; height: 15px; }
 
@@ -1171,6 +1184,10 @@
 .core-suite .actions .btn { justify-content: center; }
 .core-suite .charge { padding: 0 14px 14px; }
 .core-suite .charge .btn { width: 100%; justify-content: center; }
+/* keyboard hint row — documents the live shortcuts (N / 1–9 / F / Esc) at the
+   foot of the ticket; ported 1:1 from pos.html `.kbd-hint`. */
+.core-suite .kbd-hint { padding: 9px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--fg-subtle); display: flex; flex-wrap: wrap; gap: 14px; }
+.core-suite .kbd-hint kbd { font-family: var(--mono); background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
 
 /* ===========================================================
    Responsive — POS + Guest reflow for tablet & phone.
