@@ -352,6 +352,79 @@ interface ChatEvent {
 }
 interface ChatTurn { id: string; userText: string; events: ChatEvent[] }
 
+// Persisted history (rendered read-only above the live turns).
+type HistItem =
+  | { id: string; kind: "user"; text: string }
+  | { id: string; kind: "bot"; text: string }
+  | { id: string; kind: "tool"; name: string; input: unknown; result: unknown; isError: boolean };
+interface StoredMsg { role: string; content: unknown }
+
+/** Flatten persisted Anthropic message blocks into a readable transcript:
+ *  user/assistant text bubbles + executed tool cards (output correlated from
+ *  the paired tool_result blocks). */
+function transformStoredMessages(messages: StoredMsg[]): HistItem[] {
+  const resultById = new Map<string, { isError: boolean; result: unknown }>();
+  for (const m of messages) {
+    if (m.role === "user" && Array.isArray(m.content)) {
+      for (const b of m.content as Record<string, unknown>[]) {
+        if (b && b.type === "tool_result" && typeof b.tool_use_id === "string") {
+          let result: unknown = b.content;
+          if (typeof b.content === "string") { try { result = JSON.parse(b.content); } catch { /* keep raw */ } }
+          resultById.set(b.tool_use_id, { isError: b.is_error === true, result });
+        }
+      }
+    }
+  }
+  const items: HistItem[] = [];
+  let n = 0;
+  for (const m of messages) {
+    const content = m.content;
+    if (m.role === "user") {
+      if (typeof content === "string") {
+        if (content.trim()) items.push({ id: `h-${n++}`, kind: "user", text: content });
+      } else if (Array.isArray(content)) {
+        for (const b of content as Record<string, unknown>[]) {
+          if (b && b.type === "text" && typeof b.text === "string" && b.text.trim()) items.push({ id: `h-${n++}`, kind: "user", text: b.text });
+        }
+      }
+    } else if (m.role === "assistant" && Array.isArray(content)) {
+      for (const b of content as Record<string, unknown>[]) {
+        if (b && b.type === "text" && typeof b.text === "string" && b.text.trim()) items.push({ id: `h-${n++}`, kind: "bot", text: b.text });
+        else if (b && b.type === "tool_use" && typeof b.name === "string" && typeof b.id === "string") {
+          const r = resultById.get(b.id as string);
+          items.push({ id: `h-${n++}`, kind: "tool", name: b.name as string, input: b.input, result: r?.result, isError: r?.isError ?? false });
+        }
+      }
+    }
+  }
+  return items;
+}
+
+function HistoryView({ items }: { items: HistItem[] }) {
+  return (
+    <>
+      {items.map((it) =>
+        it.kind === "user" ? (
+          <div key={it.id} className="av3-chat-user">{it.text}</div>
+        ) : it.kind === "bot" ? (
+          <div key={it.id} className="av3-chat-bot">{it.text}</div>
+        ) : (
+          <div key={it.id} className={`av3-tool ${it.isError ? "is-error" : "is-ok"}`}>
+            <div className="av3-tool-head">
+              <span className="av3-tool-name">{it.isError ? "× " : "✓ "}{it.name}</span>
+              {it.isError ? <Badge tone="bad">error</Badge> : <Badge tone="ok">executed</Badge>}
+            </div>
+            <details className="av3-tool-details">
+              <summary><ChevronRight style={{ width: 12, height: 12, display: "inline" }} /> details</summary>
+              <pre>{JSON.stringify({ input: it.input, output: it.result }, null, 2)}</pre>
+            </details>
+          </div>
+        ),
+      )}
+    </>
+  );
+}
+
 const PERSONA_SUGGESTIONS: Record<PersonaId, string> = {
   ceo: "Where should we focus next quarter? Give me one OKR with a number.",
   coo: "What's my biggest operational risk for tomorrow's service?",
@@ -370,7 +443,11 @@ function ChatPanel({
   seed?: string | null;
   onSeedConsumed?: () => void;
 }) {
+  // Conversation tag for persistence: real persona, or "team" for the
+  // generalist board chat (kept distinct from the standalone Ops Agent).
+  const tag = personaId ?? "team";
   const [convId, setConvId] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistItem[]>([]);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -378,17 +455,30 @@ function ChatPanel({
   const [cost, setCost] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Reset the thread when the persona changes (each agent has its own chat).
+  // On persona switch, reopen that agent's most recent persisted thread (so
+  // switching tabs continues the same conversation) and render its history.
   useEffect(() => {
+    let cancelled = false;
     setConvId(null);
+    setHistory([]);
     setTurns([]);
     setCost(0);
     setError(null);
-  }, [personaId]);
+    if (!gatewayConfigured) return;
+    (async () => {
+      const res = await fetch(`/api/admin/ai-agent/conversations/latest?persona=${tag}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      if (cancelled || !res?.conversation) return;
+      setConvId(res.conversation.id);
+      setHistory(transformStoredMessages((res.messages ?? []) as StoredMsg[]));
+    })();
+    return () => { cancelled = true; };
+  }, [tag, gatewayConfigured]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [turns]);
+  }, [turns, history]);
 
   // A board decision can seed the composer; the operator reviews then sends.
   useEffect(() => {
@@ -408,7 +498,7 @@ function ChatPanel({
           const created = await fetch("/api/admin/ai-agent/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: personaId ? `${PERSONA_META[personaId].short} chat` : "Team chat" }),
+            body: JSON.stringify({ title: personaId ? `${PERSONA_META[personaId].short} chat` : "Team chat", persona: tag }),
           })
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null);
@@ -471,14 +561,17 @@ function ChatPanel({
     <Card>
       <CardBody>
         <div ref={scrollRef} className="av3-chat-scroll">
-          {turns.length === 0 ? (
+          {history.length === 0 && turns.length === 0 ? (
             <div className="av3-empty">
               <Sparkles aria-hidden />
               <div className="av3-empty-title">Ask your {personaId ? PERSONA_META[personaId].short : "team"}</div>
               <div className="av3-empty-text">{personaId ? PERSONA_SUGGESTIONS[personaId] : "Ask the whole team anything about the business."}</div>
             </div>
           ) : (
-            turns.map((turn) => <TurnView key={turn.id} turn={turn} onApprove={approve} />)
+            <>
+              {history.length > 0 && <HistoryView items={history} />}
+              {turns.map((turn) => <TurnView key={turn.id} turn={turn} onApprove={approve} />)}
+            </>
           )}
         </div>
         {error && <div className="av3-chat-error">{error}</div>}

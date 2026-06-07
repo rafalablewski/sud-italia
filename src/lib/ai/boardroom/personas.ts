@@ -170,3 +170,17 @@ export function getPersona(id: string | undefined | null): BoardroomPersona | nu
 export function isBoardroomPersonaId(id: string | undefined | null): id is BoardroomPersonaId {
   return id === "ceo" || id === "coo" || id === "cfo" || id === "cmo";
 }
+
+/**
+ * Conversation-tag validator for persisting Boardroom threads. Accepts the
+ * four personas plus "team" (the generalist board chat). Used by the
+ * conversation create + latest endpoints so each Boardroom surface reopens
+ * its own thread — distinct from the standalone Ops Agent (untagged). The
+ * runtime agent persona still comes from isBoardroomPersonaId, so "team"
+ * runs the generalist ops agent (no persona).
+ */
+export function normalizeChatPersonaTag(raw: string | null | undefined): string | null {
+  if (isBoardroomPersonaId(raw)) return raw;
+  if (raw === "team") return "team";
+  return null;
+}

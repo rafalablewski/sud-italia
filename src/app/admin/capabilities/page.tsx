@@ -510,7 +510,7 @@ export default async function CapabilitiesPage() {
           envVars: ["ANTHROPIC_API_KEY", "AI_DAILY_BUDGET_GROSZE"],
           href: "/admin-v3/boardroom",
           summary:
-            "Four specialist agents — CEO (strategy/OKRs), COO (operations), CFO (margin/pricing), CMO (growth/retention) — over the live store. A central dashboard shows traffic-light KPIs (today's sales, food cost %, labour %, prime cost, avg ticket, satisfaction, refund rate, SSSG) each with a 5-section ⓘ explainer; per-agent panels add a Claude chat scoped to that persona's voice + tool allowlist, plus a Team-chat generalist for cross-functional questions. Meetings (daily briefing / weekly review) run a real round-robin (COO→CFO→CMO→CEO) then a CEO synthesis into a decisions list; decisions with a lever route back to the owning agent for an operator-approved, audit-logged action (update_item_price, mark_item_86, send_sms). KPIs render even without a key; chat + meetings degrade to 'needs-config'. Shares the gateway, tool registry, conversation store, and daily budget with the Ops Agent.",
+            "Four specialist agents — CEO (strategy/OKRs), COO (operations), CFO (margin/pricing), CMO (growth/retention) — over the live store. A central dashboard shows traffic-light KPIs (today's sales, food cost %, labour %, prime cost, avg ticket, satisfaction, refund rate, SSSG) each with a 5-section ⓘ explainer; per-agent panels add a Claude chat scoped to that persona's voice + tool allowlist (each thread persists per agent and reopens on revisit), plus a Team-chat generalist for cross-functional questions. A daily cron auto-runs the briefing so operators walk in to a ready board. Meetings (daily briefing / weekly review) run a real round-robin (COO→CFO→CMO→CEO) then a CEO synthesis into a decisions list; decisions with a lever route back to the owning agent for an operator-approved, audit-logged action (update_item_price, mark_item_86, send_sms). KPIs render even without a key; chat + meetings degrade to 'needs-config'. Shares the gateway, tool registry, conversation store, and daily budget with the Ops Agent.",
           caveats:
             "Food cost %, refund rate, and SSSG are chain-wide (computed across all locations); today's sales, labour %, and satisfaction honour the location switcher. Meeting decisions are advisory until an operator approves the proposed action.",
         },
@@ -1601,6 +1601,14 @@ export default async function CapabilitiesPage() {
           name: "Daily summary",
           status: "live",
           summary: "Per-location revenue / orders / AOV → audit + (when comms live) owner email.",
+        },
+        {
+          name: "Boardroom daily briefing",
+          status: gatewayConfigured() ? "live" : "needs-config",
+          envVars: ["ANTHROPIC_API_KEY"],
+          href: "/admin-v3/boardroom",
+          summary:
+            "Daily via the dispatcher. /api/admin/cron/boardroom-briefing convenes the AI C-suite on the chain-wide live numbers and persists the meeting (transcript + decisions) to the Boardroom → Meetings tab. Self-skips when ANTHROPIC_API_KEY is unset; budget-gated.",
         },
         {
           name: "Customers lapsed detect",

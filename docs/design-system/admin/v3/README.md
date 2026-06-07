@@ -349,10 +349,15 @@ refetches every 30s.
   five-section `InfoButton`, agent-status cards, quick-action meeting buttons, and
   a "what needs attention" flag list), one panel per persona (the persona's owned
   KPIs + a `ChatPanel`), a **Team chat** (the generalist board assistant — a
-  `ChatPanel` with `personaId={null}`, all read tools), and Meetings. **Chat**
+  `ChatPanel` with `personaId={null}`, all read tools), and Meetings (which a
+  daily cron, `/api/admin/cron/boardroom-briefing`, can also auto-populate). **Chat**
   reuses the Ops Agent endpoints
   (`/api/admin/ai-agent/*`) with a `personaId` body field that selects the agent
-  voice + tool allowlist; same human-in-the-loop tool-approval card flow and CSS
+  voice + tool allowlist. Each thread **persists per agent** (conversations are
+  tagged with a `persona` column; `…/conversations/latest?persona=` reopens and
+  re-renders the most recent thread on revisit, `HistoryView` flattening the
+  stored Anthropic blocks into bubbles + executed tool cards). Same
+  human-in-the-loop tool-approval card flow and CSS
   (§17 `.av3-chat-*`, `.av3-tool-*`). **Meetings** call `/api/admin/ai/boardroom/
   meeting` (run daily/weekly) + `…/overview` (KPIs): a real round-robin transcript
   (avatar rows) + a decisions list whose "Action via {agent}" buttons seed the

@@ -28,6 +28,10 @@ export interface AiConversationRow {
   userId: string;
   title: string;
   status: "active" | "archived";
+  /** Boardroom persona this thread belongs to (ceo/coo/cfo/cmo), or null
+   *  for the general ops-agent / team chat. Lets the Boardroom reopen the
+   *  same per-agent thread instead of starting fresh each visit. */
+  persona: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,8 +48,13 @@ async function ensureAiTables(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
+    // Added after the table shipped — idempotent ADD COLUMN so existing
+    // deploys gain the persona tag without a manual migration.
+    `ALTER TABLE ai_conversations ADD COLUMN IF NOT EXISTS persona TEXT`,
     `CREATE INDEX IF NOT EXISTS ai_conversations_user_idx
        ON ai_conversations (user_id, updated_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS ai_conversations_persona_idx
+       ON ai_conversations (user_id, persona, updated_at DESC)`,
     `CREATE TABLE IF NOT EXISTS ai_messages (
       id TEXT PRIMARY KEY,
       conversation_id TEXT NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
@@ -69,7 +78,11 @@ function dbReady(): boolean {
   return !!process.env.DATABASE_URL;
 }
 
-export async function createConversation(userId: string, title: string): Promise<AiConversationRow> {
+export async function createConversation(
+  userId: string,
+  title: string,
+  persona: string | null = null,
+): Promise<AiConversationRow> {
   await ensureAiTables();
   const id = `aic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const now = new Date().toISOString();
@@ -78,21 +91,75 @@ export async function createConversation(userId: string, title: string): Promise
     userId,
     title,
     status: "active",
+    persona,
     createdAt: now,
     updatedAt: now,
   };
   if (dbReady()) {
     const sql = neon(process.env.DATABASE_URL!);
     await sql.query(
-      `INSERT INTO ai_conversations (id, user_id, title, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [row.id, row.userId, row.title, row.status, row.createdAt, row.updatedAt],
+      `INSERT INTO ai_conversations (id, user_id, title, status, persona, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [row.id, row.userId, row.title, row.status, row.persona, row.createdAt, row.updatedAt],
     );
   } else {
     memConversations.set(id, row);
     memMessages.set(id, []);
   }
   return row;
+}
+
+/**
+ * Most-recently-updated conversation for a user + persona. The Boardroom
+ * uses this to reopen the same per-agent thread on revisit instead of
+ * spawning a fresh one. `persona` null = the general ops-agent / team chat.
+ */
+export async function findLatestConversation(
+  userId: string,
+  persona: string | null,
+): Promise<AiConversationRow | null> {
+  await ensureAiTables();
+  if (!dbReady()) {
+    return (
+      Array.from(memConversations.values())
+        .filter((c) => c.userId === userId && (c.persona ?? null) === persona && c.status === "active")
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null
+    );
+  }
+  const sql = neon(process.env.DATABASE_URL!);
+  const rows = (await sql.query(
+    `SELECT id, user_id, title, status, persona, created_at, updated_at
+       FROM ai_conversations
+      WHERE user_id = $1
+        AND status = 'active'
+        AND persona IS NOT DISTINCT FROM $2
+      ORDER BY updated_at DESC
+      LIMIT 1`,
+    [userId, persona],
+  )) as ConversationDbRow[];
+  return rows.length ? mapConversationRow(rows[0]) : null;
+}
+
+interface ConversationDbRow {
+  id: string;
+  user_id: string;
+  title: string;
+  status: string;
+  persona: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapConversationRow(r: ConversationDbRow): AiConversationRow {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    title: r.title,
+    status: r.status === "archived" ? "archived" : "active",
+    persona: r.persona ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
 }
 
 export async function listConversations(userId: string, limit = 30): Promise<AiConversationRow[]> {
@@ -105,24 +172,14 @@ export async function listConversations(userId: string, limit = 30): Promise<AiC
   }
   const sql = neon(process.env.DATABASE_URL!);
   const rows = (await sql.query(
-    `SELECT id, user_id, title, status, created_at, updated_at
+    `SELECT id, user_id, title, status, persona, created_at, updated_at
        FROM ai_conversations
       WHERE user_id = $1
       ORDER BY updated_at DESC
       LIMIT $2`,
     [userId, limit],
-  )) as {
-    id: string; user_id: string; title: string; status: string;
-    created_at: string; updated_at: string;
-  }[];
-  return rows.map((r) => ({
-    id: r.id,
-    userId: r.user_id,
-    title: r.title,
-    status: r.status === "archived" ? "archived" : "active",
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  }));
+  )) as ConversationDbRow[];
+  return rows.map(mapConversationRow);
 }
 
 export async function getConversation(id: string): Promise<AiConversationRow | null> {
@@ -130,23 +187,12 @@ export async function getConversation(id: string): Promise<AiConversationRow | n
   if (!dbReady()) return memConversations.get(id) ?? null;
   const sql = neon(process.env.DATABASE_URL!);
   const rows = (await sql.query(
-    `SELECT id, user_id, title, status, created_at, updated_at
+    `SELECT id, user_id, title, status, persona, created_at, updated_at
        FROM ai_conversations WHERE id = $1`,
     [id],
-  )) as {
-    id: string; user_id: string; title: string; status: string;
-    created_at: string; updated_at: string;
-  }[];
+  )) as ConversationDbRow[];
   if (rows.length === 0) return null;
-  const r = rows[0];
-  return {
-    id: r.id,
-    userId: r.user_id,
-    title: r.title,
-    status: r.status === "archived" ? "archived" : "active",
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  };
+  return mapConversationRow(rows[0]);
 }
 
 export async function appendMessage(

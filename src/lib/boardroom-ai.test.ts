@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { scopeError, defaultLocation } from "@/lib/ai/tools/scope";
 import { statusLowerBetter, statusHigherBetter } from "@/lib/ai/boardroom/kpis";
 import { parseDecisions } from "@/lib/ai/boardroom/meeting";
-import { BOARDROOM_PERSONAS, BOARDROOM_PERSONA_ORDER, isBoardroomPersonaId, getPersona } from "@/lib/ai/boardroom/personas";
+import { BOARDROOM_PERSONAS, BOARDROOM_PERSONA_ORDER, isBoardroomPersonaId, getPersona, normalizeChatPersonaTag } from "@/lib/ai/boardroom/personas";
 import "@/lib/ai/tools/index"; // side-effect: register every tool
 import { getTool, listToolsForRole } from "@/lib/ai/tools/registry";
 
@@ -116,6 +116,14 @@ test("isBoardroomPersonaId / getPersona", () => {
   assert.equal(isBoardroomPersonaId(undefined), false);
   assert.equal(getPersona("ceo")?.id, "ceo");
   assert.equal(getPersona("nope"), null);
+});
+
+test("normalizeChatPersonaTag accepts the 4 personas + 'team', else null", () => {
+  for (const id of BOARDROOM_PERSONA_ORDER) assert.equal(normalizeChatPersonaTag(id), id);
+  assert.equal(normalizeChatPersonaTag("team"), "team");
+  assert.equal(normalizeChatPersonaTag("ops"), null);
+  assert.equal(normalizeChatPersonaTag(null), null);
+  assert.equal(normalizeChatPersonaTag(undefined), null);
 });
 
 test("every persona tool name maps to a registered tool (no typos)", () => {

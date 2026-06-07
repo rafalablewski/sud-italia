@@ -20,7 +20,7 @@ Open it at **`/admin-v3/boardroom`** (Intelligence section, manager+).
 | **Finance · CFO** | The CFO's KPIs + chat (P&L, food/labour %, pricing, break-even). |
 | **Marketing · CMO** | The CMO's KPIs + chat (campaigns, loyalty, reputation, upsell). |
 | **Team chat** | A generalist board assistant (all read tools) for cross-functional questions that don't belong to one executive. |
-| **Meetings** | Run a **daily briefing** or **weekly review**: COO → CFO → CMO → CEO each speak on the live numbers, then the chair synthesises a **decisions list**. Each decision with a lever has an "Action via {agent}" button that hands it to the owning agent for an approved, audited action. |
+| **Meetings** | Auto-run daily by cron, or run a **daily briefing** / **weekly review** on demand: COO → CFO → CMO → CEO each speak on the live numbers, then the chair synthesises a **decisions list**. Each decision with a lever has an "Action via {agent}" button that hands it to the owning agent for an approved, audited action. |
 
 ### The agents and their tools
 
@@ -55,11 +55,17 @@ audit-logged as `actor='claude:<your-user-id>'`.
    and meetings show a "needs-config" state instead of crashing.
 3. **(Optional) Postgres.** Set `DATABASE_URL` to persist meetings and chats
    across restarts. Unset = in-memory fallback (fine for local dev). Tables
-   self-bootstrap on first use — no migration step.
-4. **Open** `/admin-v3/boardroom` as a manager/owner. Pick a location in the top
+   self-bootstrap on first use — no migration step. With it set, each agent
+   chat is **tagged by persona** and reopens its most recent thread on revisit
+   (so switching tabs continues the same conversation).
+4. **(Optional) Scheduled briefing.** Set `CRON_SECRET` and the daily cron
+   dispatcher auto-runs the board's daily briefing
+   (`/api/admin/cron/boardroom-briefing`) — operators arrive to a ready meeting
+   in the Meetings tab. Self-skips without `ANTHROPIC_API_KEY`.
+5. **Open** `/admin-v3/boardroom` as a manager/owner. Pick a location in the top
    bar to scope the location-aware KPIs (food cost %, refund rate, and growth are
    chain-wide by design).
-5. **Try it:** click **Run daily briefing**, read the transcript + decisions,
+6. **Try it:** click **Run daily briefing**, read the transcript + decisions,
    then **Action via …** a decision to hand it to the owning agent and approve the
    change.
 
