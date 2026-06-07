@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Operations interactivity pass — HACCP / Waste / Handover / Menu / Recipes (admin-v3 sketch)</title>
+<!--
+  Standalone preview of the admin-v3 Operations interactivity pass: clickable
+  row → detail popups, live feedback in the record forms, search + ⓘ explainers,
+  and Board⇄Table on the three log pages (HACCP, Waste, Shift handover), plus the
+  live customer-card / live-economics previews added to the Menu & Recipes editors.
+
+  Static mockup: tokens mirror src/app/themes/admin-v3/index.css (dark canonical).
+  Numbers are illustrative; the real surfaces compute everything from the live
+  store + clock (no mock data ships). The page switcher, ⓘ dialogs, live form
+  feedback, board cards and detail popups are wired with a little vanilla JS so
+  you can click around. Lives in /tests per the repo convention (never ships).
+-->
+<style>
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-mono:"JetBrains Mono",ui-monospace,monospace; --av3-ui:"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--av3-bg);color:var(--av3-fg);font-family:var(--av3-ui);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 22px 90px}
+  .sketch-note{font-size:11.5px;color:var(--av3-subtle);border:1px dashed var(--av3-line-strong);border-radius:var(--av3-r-md);padding:9px 12px;margin-bottom:20px}
+  h1{font-size:21px;font-weight:650;margin:0}
+  .mono{font-family:var(--av3-mono)} .muted{color:var(--av3-muted)} .subtle{color:var(--av3-subtle)}
+  .pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .pagehead-sub{font-size:12px;color:var(--av3-muted);margin-top:3px}
+
+  .pageswitch{display:flex;gap:7px;margin-bottom:20px;flex-wrap:wrap}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--av3-r-md);border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+  .btn:hover{background:var(--av3-hover)}
+  .btn.primary{background:var(--av3-brand);border-color:transparent;color:#fff}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.sm{height:27px;font-size:11.5px;padding:0 9px}
+  .btn.danger{color:var(--av3-bad)}
+
+  .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);margin-bottom:14px}
+  .card-head{padding:13px 15px;border-bottom:1px solid var(--av3-line)}
+  .card-title{font-size:13.5px;font-weight:600}
+  .card-desc{font-size:11.5px;color:var(--av3-muted);margin-top:2px}
+  .card-body{padding:15px}
+
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle)}
+  .input{height:32px;border-radius:var(--av3-r-md);border:1px solid var(--av3-line-strong);background:var(--av3-s1);color:var(--av3-fg);font:inherit;font-size:12.5px;padding:0 10px;width:100%}
+  .input:focus{outline:none;border-color:var(--av3-brand);box-shadow:0 0 0 3px color-mix(in oklab,var(--av3-brand) 18%,transparent)}
+  select.input{appearance:none}
+  .formrow{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+
+  /* KPI rail */
+  .kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{position:relative;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);padding:12px 13px 11px;box-shadow:var(--av3-sh-1);overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--av3-brand))}
+  .kpi-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle)}
+  .kpi-label svg{width:13px;height:13px;color:var(--accent,var(--av3-brand))}
+  .kpi-value{font-family:var(--av3-mono);font-size:21px;font-weight:650;margin-top:7px;letter-spacing:-.01em}
+  .kpi-foot{font-size:10.5px;color:var(--av3-subtle);margin-top:3px}
+  .info{margin-left:auto;width:15px;height:15px;display:grid;place-items:center;border:none;background:transparent;color:var(--av3-subtle);cursor:pointer;font-size:11px}
+  .info:hover{color:var(--av3-fg)}
+
+  /* toolbar + chips + toggle */
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .toolbar-spacer{flex:1}
+  .filterchips{display:flex;gap:6px;flex-wrap:wrap}
+  .fchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--av3-r-pill);border:1px solid var(--av3-line);background:var(--av3-s1);color:var(--av3-muted);font:inherit;font-size:12px;cursor:pointer}
+  .fchip.is-active{background:color-mix(in oklab,var(--av3-platinum) 14%,var(--av3-s1));border-color:color-mix(in oklab,var(--av3-platinum) 40%,var(--av3-line-strong));color:var(--av3-fg)}
+  .fchip-count{font-family:var(--av3-mono);font-size:10px;color:var(--av3-subtle)}
+  .viewtoggle{display:inline-flex;border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden}
+  .viewtoggle button{width:34px;height:30px;display:grid;place-items:center;border:none;background:var(--av3-s1);color:var(--av3-muted);cursor:pointer}
+  .viewtoggle button.is-active{background:var(--av3-s3);color:var(--av3-fg)}
+  .viewtoggle svg{width:15px;height:15px}
+
+  /* board */
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:11px}
+  .dcard{position:relative;display:flex;flex-direction:column;gap:9px;padding:13px 14px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);cursor:pointer;transition:.15s}
+  .dcard:hover{border-color:var(--av3-line-strong);background:color-mix(in oklab,var(--av3-hover) 55%,var(--av3-s1));box-shadow:var(--av3-sh-2)}
+  .dcard-name{font-size:13.5px;font-weight:600}
+  .dcard-badges{display:flex;flex-wrap:wrap;gap:4px}
+  .dcard-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:9px;border-top:1px solid var(--av3-line)}
+  .dcard-cta{font-size:11.5px;color:var(--av3-platinum);font-weight:500}
+  .dcard-sub{font-size:10.5px;color:var(--av3-subtle);margin-top:2px}
+
+  /* badges */
+  .badge{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:var(--av3-r-pill);font-size:10px;font-weight:600}
+  .badge.neutral{background:var(--av3-s3);color:var(--av3-muted)}
+  .badge.brand{background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));color:#e9a7b1}
+  .badge.info{background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));color:#a8cdf0}
+  .badge.warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:#f0d08a}
+  .badge.ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:#8fdcb8}
+  .badge.bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:#f3a7a3}
+  .dot::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
+
+  /* switch */
+  .sw{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--av3-muted);cursor:pointer}
+  .sw i{width:30px;height:17px;border-radius:var(--av3-r-pill);background:var(--av3-s3);border:1px solid var(--av3-line-strong);position:relative;transition:.15s;flex:0 0 auto}
+  .sw i::after{content:"";position:absolute;top:1px;left:1px;width:13px;height:13px;border-radius:50%;background:var(--av3-muted);transition:.15s}
+  .sw.on i{background:color-mix(in oklab,var(--av3-ok) 60%,var(--av3-s3));border-color:transparent}
+  .sw.on i::after{left:14px;background:#fff}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle);font-weight:600;padding:10px 14px;border-bottom:1px solid var(--av3-line-strong)}
+  th.num,td.num{text-align:right;font-family:var(--av3-mono)}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--av3-line)}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--av3-s2)}
+  tbody tr:last-child td{border-bottom:none}
+
+  .edhint{font-size:11.5px;color:var(--av3-muted);background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-sm);padding:9px 11px}
+  .edhint.warn{color:var(--av3-warn);background:var(--av3-warn-soft,color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1)));border-color:color-mix(in oklab,var(--av3-warn) 30%,transparent)}
+  .subhead{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle);margin:16px 0 9px}
+
+  /* od-grid (detail / readouts) */
+  .od-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--av3-line);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden}
+  .od-field{background:var(--av3-s1);padding:9px 11px}
+  .od-field .k{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle)}
+  .od-field .v{font-size:14px;font-weight:600;margin-top:2px}
+
+  /* range / food-cost gauge */
+  .gauge-track{position:relative;height:10px;border-radius:var(--av3-r-pill);background:var(--av3-s3);overflow:hidden;display:flex}
+  .gauge-band{position:absolute;top:0;bottom:0;background:color-mix(in oklab,var(--av3-ok) 45%,var(--av3-s3))}
+  .gauge-mark{position:absolute;top:-3px;width:3px;height:16px;transform:translateX(-50%);border-radius:2px}
+  .gauge-legend{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--av3-subtle);font-family:var(--av3-mono)}
+
+  /* live preview / live form feedback strips */
+  .preview-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle);margin-bottom:6px}
+  .livestrip{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--av3-line);border-radius:var(--av3-r-md);background:var(--av3-s2)}
+  .livestrip.warn{border-color:color-mix(in oklab,var(--av3-warn) 35%,var(--av3-line));background:color-mix(in oklab,var(--av3-warn) 13%,var(--av3-s1))}
+
+  /* dialog */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:38px 16px;overflow-y:auto;z-index:50}
+  .scrim.open{display:flex}
+  .dialog{width:100%;max-width:520px;background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2)}
+  .dialog.wide{max-width:940px}
+  .dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--av3-line)}
+  .dialog-title{font-size:15px;font-weight:650}
+  .dialog-sub{font-size:11.5px;color:var(--av3-subtle);margin-top:2px}
+  .x{border:none;background:transparent;color:var(--av3-muted);font-size:20px;cursor:pointer;line-height:1}
+  .dialog-body{padding:18px}
+  .dialog-foot{display:flex;align-items:center;gap:8px;padding:14px 18px;border-top:1px solid var(--av3-line)}
+  .bodysplit{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  @media(max-width:900px){.bodysplit{grid-template-columns:1fr}}
+
+  /* in-dialog tabs + recap (Menu/Recipes editors) */
+  .dtabs{display:flex;gap:2px;padding:2px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);margin-bottom:14px}
+  .dtab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;border:none;background:transparent;border-radius:var(--av3-r-sm);color:var(--av3-muted);font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+  .dtab.is-active{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong)}
+  .recap{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--av3-line);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden;margin-bottom:14px}
+  .recap-cell{background:var(--av3-s1);padding:9px 11px}
+  .recap-k{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle)}
+  .recap-v{font-family:var(--av3-mono);font-size:17px;font-weight:600;margin-top:2px}
+  .affix{position:relative}
+  .affix input{padding-right:26px}
+  .affix::after{content:attr(data-suffix);position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--av3-subtle);font-family:var(--av3-mono)}
+
+  /* preview cards */
+  .pcard{border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);background:var(--av3-s1);padding:14px;box-shadow:var(--av3-sh-1)}
+
+  /* ⓘ explainer */
+  .xp p{margin:0;font-size:13px;line-height:1.55}
+  .rail{margin-top:10px;padding:9px 11px;border-radius:6px;font-size:12px;line-height:1.5}
+  .rail .rl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .rail.inst{background:color-mix(in oklab,rgb(100,116,139) 9%,var(--av3-s1));border-left:3px solid rgb(100,116,139)}.rail.inst .rl{color:rgb(140,152,170)}
+  .rail.plain{background:color-mix(in oklab,var(--av3-c5) 9%,var(--av3-s1));border-left:3px solid var(--av3-c5)}.rail.plain .rl{color:var(--av3-c5)}
+  .rail.tips{background:color-mix(in oklab,var(--av3-ok) 9%,var(--av3-s1));border-left:3px solid var(--av3-ok)}.rail.tips .rl{color:var(--av3-ok)}
+  .rail.meth{background:color-mix(in oklab,var(--av3-c3) 9%,var(--av3-s1));border-left:3px solid var(--av3-c3)}.rail.meth .rl{color:var(--av3-c3)}
+
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sketch-note">
+    Sketch · admin-v3 <b>Operations interactivity pass</b>. Tokens mirror
+    <code>themes/admin-v3/index.css</code>. Switch pages below; click a KPI's ⓘ, a
+    board card / table row (→ detail popup), or just read the <b>live form feedback</b>
+    that updates as you'd type. Menu &amp; Recipes show the two-column editor with its
+    live preview panel. Figures are illustrative.
+  </div>
+
+  <div class="pageswitch">
+    <button class="btn primary" data-pg="haccp" onclick="showPage('haccp')">HACCP log</button>
+    <button class="btn" data-pg="waste" onclick="showPage('waste')">Waste log</button>
+    <button class="btn" data-pg="handover" onclick="showPage('handover')">Shift handover</button>
+    <button class="btn" data-pg="menu" onclick="showPage('menu')">Menu editor</button>
+    <button class="btn" data-pg="recipe" onclick="showPage('recipe')">Recipe editor</button>
+  </div>
+
+  <!-- ===================== HACCP ===================== -->
+  <section id="page-haccp">
+    <div class="pagehead"><div><h1>HACCP log</h1><div class="pagehead-sub">Cold / hot-holding temperature checks · Kraków</div></div></div>
+    <div class="kpi-rail">
+      <div class="kpi" style="--accent:var(--av3-c3)"><div class="kpi-label">🌡 Readings today</div><div class="kpi-value">12</div><div class="kpi-foot">logged this shift</div></div>
+      <div class="kpi" style="--accent:var(--av3-c4)"><div class="kpi-label">🛡 Compliance <button class="info" onclick="openXp('hcomp')">ⓘ</button></div><div class="kpi-value">92%</div><div class="kpi-foot">in safe range</div></div>
+      <div class="kpi" style="--accent:var(--av3-c1)"><div class="kpi-label">⚠ Out of range <button class="info" onclick="openXp('hflag')">ⓘ</button></div><div class="kpi-value">1</div><div class="kpi-foot">needs corrective action</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Record a reading</div><div class="card-desc">Walk-in fridge · safe 0.0–5.0 °C</div></div>
+      <div class="card-body">
+        <div class="formrow">
+          <label class="field" style="min-width:200px"><span class="field-label">Sensor</span><select class="input"><option>Walk-in fridge</option></select></label>
+          <label class="field" style="width:120px"><span class="field-label">Temp (°C)</span><input class="input" value="7.2"/></label>
+          <span class="badge bad dot">Out of range</span>
+          <button class="btn primary sm" style="margin-left:auto">Log reading</button>
+        </div>
+        <!-- LIVE range gauge -->
+        <div style="margin-top:14px;max-width:460px">
+          <div class="gauge-track">
+            <div class="gauge-band" style="left:38%;width:24%"></div>
+            <div class="gauge-mark" style="left:73%;background:var(--av3-bad)"></div>
+          </div>
+          <div class="gauge-legend"><span>-3.0 °C</span><span style="color:var(--av3-ok)">safe 0.0–5.0 °C</span><span>8.0 °C</span></div>
+          <div style="font-size:11.5px;margin-top:7px;color:var(--av3-bad)">7.2 °C is outside the safe band — logging this will flag a breach and you'll need a corrective action.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="input" style="width:220px" placeholder="Search sensor / temp…"/>
+      <span class="toolbar-spacer"></span>
+      <div class="filterchips"><div class="fchip is-active">All<span class="fchip-count">12</span></div><div class="fchip">Out of range<span class="fchip-count">1</span></div></div>
+      <div class="viewtoggle" id="haccp-vt"><button class="is-active" onclick="setView('haccp','board')" title="Board">▦</button><button onclick="setView('haccp','table')" title="Table">≣</button></div>
+    </div>
+
+    <div id="haccp-board" class="board">
+      <div class="dcard" onclick="openD('d-haccp')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Walk-in fridge</div><span class="subtle" style="font-size:11px">14:05</span></div>
+        <div class="mono" style="font-size:22px;font-weight:650;color:var(--av3-bad)">7.2 °C</div>
+        <div class="gauge-track"><div class="gauge-band" style="left:38%;width:24%"></div><div class="gauge-mark" style="left:73%;background:var(--av3-bad)"></div></div>
+        <div class="dcard-foot" style="padding-top:8px"><span class="badge bad dot">Out of range</span><span class="dcard-cta">Details →</span></div>
+      </div>
+      <div class="dcard" onclick="openD('d-haccp')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Pizza prep rail</div><span class="subtle" style="font-size:11px">13:40</span></div>
+        <div class="mono" style="font-size:22px;font-weight:650">3.8 °C</div>
+        <div class="gauge-track"><div class="gauge-band" style="left:38%;width:24%"></div><div class="gauge-mark" style="left:51%;background:var(--av3-fg)"></div></div>
+        <div class="dcard-foot" style="padding-top:8px"><span class="badge ok dot">OK</span><span class="dcard-cta">Details →</span></div>
+      </div>
+      <div class="dcard" onclick="openD('d-haccp')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Hot-hold cabinet</div><span class="subtle" style="font-size:11px">13:10</span></div>
+        <div class="mono" style="font-size:22px;font-weight:650">71.0 °C</div>
+        <div class="gauge-track"><div class="gauge-band" style="left:30%;width:40%"></div><div class="gauge-mark" style="left:55%;background:var(--av3-fg)"></div></div>
+        <div class="dcard-foot" style="padding-top:8px"><span class="badge ok dot">OK</span><span class="dcard-cta">Details →</span></div>
+      </div>
+    </div>
+    <div id="haccp-table" class="hidden card" style="margin-top:0">
+      <table><thead><tr><th>Time</th><th>Sensor</th><th class="num">Temp</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr onclick="openD('d-haccp')"><td class="muted">14:05</td><td>Walk-in fridge</td><td class="num">7.2 °C</td><td><span class="badge bad dot">Out of range</span></td></tr>
+        <tr onclick="openD('d-haccp')"><td class="muted">13:40</td><td>Pizza prep rail</td><td class="num">3.8 °C</td><td><span class="badge ok dot">OK</span></td></tr>
+        <tr onclick="openD('d-haccp')"><td class="muted">13:10</td><td>Hot-hold cabinet</td><td class="num">71.0 °C</td><td><span class="badge ok dot">OK</span></td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ===================== WASTE ===================== -->
+  <section id="page-waste" class="hidden">
+    <div class="pagehead"><div><h1>Waste log</h1><div class="pagehead-sub">Reason-coded write-offs · Kraków</div></div></div>
+    <div class="kpi-rail">
+      <div class="kpi" style="--accent:var(--av3-c5)"><div class="kpi-label">🗑 Entries today</div><div class="kpi-value">7</div><div class="kpi-foot">write-offs logged</div></div>
+      <div class="kpi" style="--accent:var(--av3-c1)"><div class="kpi-label">◈ Write-off today <button class="info" onclick="openXp('wcost')">ⓘ</button></div><div class="kpi-value">214,50 zł</div><div class="kpi-foot">est. food cost lost</div></div>
+      <div class="kpi" style="--accent:var(--av3-c4)"><div class="kpi-label">🏷 Top reason</div><div class="kpi-value" style="font-size:18px">Spoilage</div><div class="kpi-foot">biggest by cost</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Log waste</div></div>
+      <div class="card-body">
+        <div class="formrow">
+          <label class="field" style="flex:1;min-width:180px"><span class="field-label">Item</span><input class="input" value="Mozzarella"/></label>
+          <label class="field" style="width:90px"><span class="field-label">Qty</span><input class="input" value="1.5"/></label>
+          <label class="field" style="width:80px"><span class="field-label">Unit</span><input class="input" value="kg"/></label>
+          <label class="field" style="width:150px"><span class="field-label">Reason</span><select class="input"><option>Spoilage</option></select></label>
+          <label class="field" style="width:100px"><span class="field-label">Cost (zł)</span><input class="input" value="42.00"/></label>
+          <button class="btn primary sm">Log waste</button>
+        </div>
+        <!-- LIVE entry preview -->
+        <div class="livestrip">
+          <span style="font-size:12.5px;font-weight:600">Mozzarella</span>
+          <span class="mono muted" style="font-size:12px">1.5 kg</span>
+          <span class="badge neutral">Spoilage</span>
+          <span class="mono" style="font-size:13px;font-weight:600;color:var(--av3-bad)">42,00 zł</span>
+          <span class="subtle" style="font-size:11px">→ today's write-off becomes 256,50 zł</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="input" style="width:220px" placeholder="Search item…"/>
+      <span class="toolbar-spacer"></span><span class="muted" style="font-size:12px">7 shown</span>
+      <div class="viewtoggle" id="waste-vt"><button class="is-active" onclick="setView('waste','board')">▦</button><button onclick="setView('waste','table')">≣</button></div>
+    </div>
+    <div class="filterchips" style="margin-bottom:12px"><div class="fchip is-active">All<span class="fchip-count">7</span></div><div class="fchip">Spoilage<span class="fchip-count">3</span></div><div class="fchip">Prep error<span class="fchip-count">2</span></div><div class="fchip">Dropped / damaged<span class="fchip-count">2</span></div></div>
+
+    <div id="waste-board" class="board">
+      <div class="dcard" onclick="openD('d-waste')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Mozzarella</div><span class="subtle" style="font-size:11px">14:02</span></div>
+        <div class="dcard-badges"><span class="badge neutral">Spoilage</span></div>
+        <div class="dcard-foot" style="padding-top:8px"><div><div class="dcard-name" style="color:var(--av3-bad);font-family:var(--av3-mono);font-size:15.5px">42,00 zł</div><div class="dcard-sub">1.5 kg · 20% of today</div></div><span class="dcard-cta">Details →</span></div>
+      </div>
+      <div class="dcard" onclick="openD('d-waste')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">San Marzano tomatoes</div><span class="subtle" style="font-size:11px">12:30</span></div>
+        <div class="dcard-badges"><span class="badge neutral">Dropped / damaged</span></div>
+        <div class="dcard-foot" style="padding-top:8px"><div><div class="dcard-name" style="color:var(--av3-bad);font-family:var(--av3-mono);font-size:15.5px">28,00 zł</div><div class="dcard-sub">2 can · 13% of today</div></div><span class="dcard-cta">Details →</span></div>
+      </div>
+      <div class="dcard" onclick="openD('d-waste')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Dough balls</div><span class="subtle" style="font-size:11px">11:15</span></div>
+        <div class="dcard-badges"><span class="badge neutral">Over-production</span></div>
+        <div class="dcard-foot" style="padding-top:8px"><div><div class="dcard-name" style="font-family:var(--av3-mono);font-size:15.5px">—</div><div class="dcard-sub">8 piece</div></div><span class="dcard-cta">Details →</span></div>
+      </div>
+    </div>
+    <div id="waste-table" class="hidden card">
+      <table><thead><tr><th>Time</th><th>Item</th><th class="num">Qty</th><th>Reason</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+        <tr onclick="openD('d-waste')"><td class="muted">14:02</td><td>Mozzarella</td><td class="num">1.5 kg</td><td><span class="badge neutral">Spoilage</span></td><td class="num">42,00 zł</td></tr>
+        <tr onclick="openD('d-waste')"><td class="muted">12:30</td><td>San Marzano tomatoes</td><td class="num">2 can</td><td><span class="badge neutral">Dropped</span></td><td class="num">28,00 zł</td></tr>
+        <tr onclick="openD('d-waste')"><td class="muted">11:15</td><td>Dough balls</td><td class="num">8 piece</td><td><span class="badge neutral">Over-production</span></td><td class="num muted">—</td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ===================== HANDOVER ===================== -->
+  <section id="page-handover" class="hidden">
+    <div class="pagehead"><div><h1>Shift handover</h1><div class="pagehead-sub">End-of-shift sign-off · Kraków</div></div></div>
+    <div class="kpi-rail">
+      <div class="kpi" style="--accent:var(--av3-c3)"><div class="kpi-label">✓ This week</div><div class="kpi-value">9</div><div class="kpi-foot">sign-offs</div></div>
+      <div class="kpi" style="--accent:var(--av3-c1)"><div class="kpi-label">⚠ Issues flagged <button class="info" onclick="openXp('hoiss')">ⓘ</button></div><div class="kpi-value">2</div><div class="kpi-foot">a check not clear</div></div>
+      <div class="kpi" style="--accent:var(--av3-c2)"><div class="kpi-label">⚖ Net cash variance <button class="info" onclick="openXp('hovar')">ⓘ</button></div><div class="kpi-value">−12,50 zł</div><div class="kpi-foot">over the week</div></div>
+      <div class="kpi" style="--accent:var(--av3-c4)"><div class="kpi-label">◷ Last sign-off</div><div class="kpi-value" style="font-size:16px">Fri 23:10</div><div class="kpi-foot">most recent</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Sign off a shift</div></div>
+      <div class="card-body">
+        <div class="formrow" style="margin-bottom:12px">
+          <label class="field" style="width:150px"><span class="field-label">Shift</span><select class="input"><option>Closing</option></select></label>
+          <label class="field" style="width:130px"><span class="field-label">Cash counted (zł)</span><input class="input" value="1840.00"/></label>
+          <label class="field" style="flex:1"><span class="field-label">Outgoing manager</span><input class="input" value="Marek"/></label>
+          <label class="field" style="flex:1"><span class="field-label">Incoming</span><input class="input" value="Ola"/></label>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="field-label">Checks:</span>
+          <span class="sw on"><i></i>Temps</span><span class="sw on"><i></i>Waste logged</span><span class="sw"><i></i>Equipment</span>
+        </div>
+        <!-- LIVE sign-off summary (warn because equipment is off) -->
+        <div class="livestrip warn">
+          <span class="badge info">Closing</span>
+          <span style="font-size:12.5px;font-weight:600">Marek</span><span class="subtle" style="font-size:11.5px">→ Ola</span>
+          <span style="flex:1"></span>
+          <span class="badge ok dot">Temps</span><span class="badge ok dot">Waste</span><span class="badge bad dot">Equip</span>
+          <span class="mono" style="font-size:12px">cash 1 840,00 zł</span>
+          <span style="font-size:11px;color:var(--av3-warn);width:100%">One or more checks are not clear — this will flag the sign-off for the incoming manager.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="input" style="width:220px" placeholder="Search manager…"/>
+      <span class="toolbar-spacer"></span>
+      <div class="filterchips"><div class="fchip is-active">All<span class="fchip-count">9</span></div><div class="fchip">Opening<span class="fchip-count">3</span></div><div class="fchip">Closing<span class="fchip-count">6</span></div></div>
+      <div class="viewtoggle" id="handover-vt"><button class="is-active" onclick="setView('handover','board')">▦</button><button onclick="setView('handover','table')">≣</button></div>
+    </div>
+
+    <div id="handover-board" class="board">
+      <div class="dcard" onclick="openD('d-handover')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Marek</div><span class="subtle" style="font-size:11px">Fri 23:10</span></div>
+        <div class="dcard-badges"><span class="badge info">Closing</span><span class="badge ok dot">Temps</span><span class="badge ok dot">Waste</span><span class="badge bad dot">Equip</span></div>
+        <div class="dcard-foot" style="padding-top:8px"><span class="badge warn">−12,50 zł</span><span class="dcard-cta">Details →</span></div>
+      </div>
+      <div class="dcard" onclick="openD('d-handover')">
+        <div style="display:flex;justify-content:space-between"><div class="dcard-name">Ola</div><span class="subtle" style="font-size:11px">Fri 11:00</span></div>
+        <div class="dcard-badges"><span class="badge info">Opening</span><span class="badge ok dot">Temps</span><span class="badge ok dot">Waste</span><span class="badge ok dot">Equip</span></div>
+        <div class="dcard-foot" style="padding-top:8px"><span class="badge ok">+0,00 zł</span><span class="dcard-cta">Details →</span></div>
+      </div>
+    </div>
+    <div id="handover-table" class="hidden card">
+      <table><thead><tr><th>When</th><th>Shift</th><th>Outgoing</th><th>Checks</th><th class="num">Cash variance</th></tr></thead>
+      <tbody>
+        <tr onclick="openD('d-handover')"><td class="muted">Fri 23:10</td><td><span class="badge info">Closing</span></td><td>Marek</td><td><span class="badge ok">Temp</span> <span class="badge bad">Equip</span></td><td class="num"><span class="badge warn">−12,50 zł</span></td></tr>
+        <tr onclick="openD('d-handover')"><td class="muted">Fri 11:00</td><td><span class="badge info">Opening</span></td><td>Ola</td><td><span class="badge ok">Temp</span> <span class="badge ok">Equip</span></td><td class="num"><span class="badge ok">+0,00 zł</span></td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ===================== MENU EDITOR ===================== -->
+  <section id="page-menu" class="hidden">
+    <div class="pagehead"><div><h1>Menu editor</h1><div class="pagehead-sub">Click a dish to open the two-column editor — form + live customer menu-card preview</div></div></div>
+    <button class="btn primary" onclick="openD('d-menu')">Open “Margherita” editor</button>
+    <div style="margin-top:12px" class="edhint">The editor is the popup — opened by default below so you can see the live preview. Type in the form (left) and the customer card (right) re-renders.</div>
+    <div style="margin-top:14px"><button class="btn" onclick="openD('d-menu')">Reopen editor</button></div>
+  </section>
+
+  <!-- ===================== RECIPE EDITOR ===================== -->
+  <section id="page-recipe" class="hidden">
+    <div class="pagehead"><div><h1>Recipe editor</h1><div class="pagehead-sub">Click a dish to open the two-column editor — builder + live economics panel</div></div></div>
+    <button class="btn primary" onclick="openD('d-recipe')">Open “Margherita” recipe</button>
+    <div style="margin-top:12px" class="edhint">The editor is the popup — opened by default below. Edit an ingredient (left) and the food-cost gauge, margin readout and macros (right) update live.</div>
+    <div style="margin-top:14px"><button class="btn" onclick="openD('d-recipe')">Reopen editor</button></div>
+  </section>
+</div>
+
+<!-- ===================== DETAIL POPUPS ===================== -->
+<div class="scrim" id="d-haccp"><div class="dialog">
+  <div class="dialog-head"><div><div class="dialog-title">Walk-in fridge</div><div class="dialog-sub">Kraków · 14:05</div></div><span class="badge bad dot">Out of range</span></div>
+  <div class="dialog-body">
+    <div style="text-align:center;margin-bottom:16px"><div class="mono" style="font-size:40px;font-weight:700;color:var(--av3-bad)">7.2 °C</div></div>
+    <div class="gauge-track"><div class="gauge-band" style="left:38%;width:24%"></div><div class="gauge-mark" style="left:73%;background:var(--av3-bad)"></div></div>
+    <div class="gauge-legend"><span>-3.0 °C</span><span style="color:var(--av3-ok)">safe 0.0–5.0 °C</span><span>8.0 °C</span></div>
+    <div class="od-grid" style="margin-top:16px">
+      <div class="od-field"><div class="k">Sensor</div><div class="v">Walk-in fridge</div></div>
+      <div class="od-field"><div class="k">Safe range</div><div class="v mono" style="font-size:13px">0.0–5.0 °C</div></div>
+      <div class="od-field"><div class="k">Recorded</div><div class="v" style="font-size:12px">07.06.2026, 14:05</div></div>
+      <div class="od-field"><div class="k">Location</div><div class="v">Kraków</div></div>
+    </div>
+    <div class="edhint warn" style="margin-top:14px">This reading is outside the safe band — make sure a corrective action (move/discard stock, fix or swap the unit) was taken and recorded.</div>
+  </div>
+  <div class="dialog-foot"><button class="btn sm" onclick="closeD('d-haccp')">Close</button></div>
+</div></div>
+
+<div class="scrim" id="d-waste"><div class="dialog" style="max-width:480px">
+  <div class="dialog-head"><div><div class="dialog-title">Mozzarella</div><div class="dialog-sub">Kraków · 14:02</div></div><span class="badge neutral">Spoilage</span></div>
+  <div class="dialog-body">
+    <div class="od-grid">
+      <div class="od-field"><div class="k">Quantity</div><div class="v mono">1.5 kg</div></div>
+      <div class="od-field"><div class="k">Reason</div><div class="v">Spoilage</div></div>
+      <div class="od-field"><div class="k">Est. cost</div><div class="v mono" style="color:var(--av3-bad)">42,00 zł</div></div>
+      <div class="od-field"><div class="k">Share of today</div><div class="v mono">20%</div></div>
+      <div class="od-field"><div class="k">Recorded</div><div class="v" style="font-size:12px">07.06.2026, 14:02</div></div>
+      <div class="od-field"><div class="k">Location</div><div class="v">Kraków</div></div>
+    </div>
+  </div>
+  <div class="dialog-foot"><button class="btn sm" onclick="closeD('d-waste')">Close</button></div>
+</div></div>
+
+<div class="scrim" id="d-handover"><div class="dialog">
+  <div class="dialog-head"><div><div class="dialog-title">Closing handover</div><div class="dialog-sub">Kraków · Fri 23:10</div></div><span class="badge warn">−12,50 zł</span></div>
+  <div class="dialog-body">
+    <div class="od-grid" style="margin-bottom:14px">
+      <div class="od-field"><div class="k">Outgoing</div><div class="v">Marek</div></div>
+      <div class="od-field"><div class="k">Incoming</div><div class="v">Ola</div></div>
+      <div class="od-field"><div class="k">Cash counted</div><div class="v mono">1 840,00 zł</div></div>
+      <div class="od-field"><div class="k">Variance</div><div class="v mono">−12,50 zł</div></div>
+    </div>
+    <div class="preview-label">Shift checks</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><span class="badge ok dot">Temperatures</span><span class="badge ok dot">Waste logged</span><span class="badge bad dot">Equipment</span></div>
+    <div class="preview-label">Manager comment</div>
+    <div style="font-size:12.5px;line-height:1.5;padding:10px 12px;border:1px solid var(--av3-line);border-radius:var(--av3-r-md);background:var(--av3-s2)">Dough mixer making a grinding noise — booked the engineer for Tuesday AM. Don't run it on speed 3.</div>
+  </div>
+  <div class="dialog-foot"><button class="btn sm" onclick="closeD('d-handover')">Close</button></div>
+</div></div>
+
+<!-- ===================== MENU EDITOR DIALOG ===================== -->
+<div class="scrim" id="d-menu"><div class="dialog wide">
+  <div class="dialog-head"><div><div class="dialog-title">Margherita</div><div class="dialog-sub">Chain-wide product · 2 sites</div></div><span class="badge brand">recipe</span></div>
+  <div class="dialog-body">
+    <div class="bodysplit">
+      <div>
+        <div class="recap">
+          <div class="recap-cell"><div class="recap-k">Price</div><div class="recap-v">33,90–35,90 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">Avg margin</div><div class="recap-v" style="color:var(--av3-ok)">71%</div></div>
+          <div class="recap-cell"><div class="recap-k">Sites</div><div class="recap-v">2</div></div>
+        </div>
+        <div class="dtabs"><button class="dtab is-active">Product</button><button class="dtab">Pricing</button><button class="dtab">Modifiers</button><button class="dtab">Disclosures<span class="mono" style="font-size:10px;color:var(--av3-subtle)">3</span></button></div>
+        <div class="edhint" style="margin-bottom:12px">These fields apply to <b>every site</b> — a Margherita reads identically in Kraków and Warszawa (rule #10).</div>
+        <div class="formrow" style="margin-bottom:10px">
+          <label class="field" style="flex:1"><span class="field-label">Name</span><input class="input" value="Margherita"/></label>
+          <label class="field" style="flex:1"><span class="field-label">Slug (chain key)</span><input class="input" value="pizza-margherita" disabled/></label>
+        </div>
+        <label class="field" style="margin-bottom:10px"><span class="field-label">Description</span><input class="input" value="San Marzano, fior di latte, basil, EVOO"/></label>
+        <div class="formrow">
+          <label class="field" style="width:160px"><span class="field-label">Category</span><select class="input"><option>Pizza</option></select></label>
+          <label class="field" style="width:160px"><span class="field-label">Menu role</span><select class="input"><option>Hero</option></select></label>
+        </div>
+        <div style="margin-top:10px"><span class="field-label" style="display:block;margin-bottom:6px">Dietary tags</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="fchip is-active" style="height:26px">Vegetarian</span><span class="fchip" style="height:26px">Vegan</span><span class="fchip" style="height:26px">Spicy</span><span class="fchip" style="height:26px">Gluten-free</span></div>
+        </div>
+      </div>
+      <div style="position:sticky;top:0">
+        <div class="preview-label">Customer menu card · live</div>
+        <div class="pcard">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle)">Pizza</span><span class="badge brand">Hero</span></div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div style="font-size:15.5px;font-weight:600">Margherita</div><div class="mono" style="font-size:15px;font-weight:700">33,90–35,90 zł</div></div>
+          <div style="font-size:12px;color:var(--av3-muted);margin-top:4px">San Marzano, fior di latte, basil, EVOO</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:10px"><span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:color-mix(in oklab,var(--av3-ok) 14%,var(--av3-s2));color:var(--av3-ok);font-weight:600">Vegetarian</span><span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--av3-s3);color:var(--av3-muted);font-weight:600">Nutri-Grade B</span></div>
+          <div style="font-size:11px;color:var(--av3-subtle);margin-top:10px"><b>Contains:</b> 🌾 Gluten · 🥛 Milk</div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--av3-line);display:flex;align-items:center;justify-content:space-between"><span class="badge ok dot">Available</span><span style="font-size:11.5px;font-weight:600;color:var(--av3-platinum)">Add to order</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dialog-foot"><button class="btn ghost sm">Reset</button><button class="btn danger sm">Delete</button><span style="flex:1"></span><button class="btn sm" onclick="closeD('d-menu')">Cancel</button><button class="btn primary sm" onclick="closeD('d-menu')">Save</button></div>
+</div></div>
+
+<!-- ===================== RECIPE EDITOR DIALOG ===================== -->
+<div class="scrim" id="d-recipe"><div class="dialog wide">
+  <div class="dialog-head"><div><div class="dialog-title">Margherita</div><div class="dialog-sub">Chain-wide recipe · applies to all 2 sites</div></div><span class="badge brand">formula</span></div>
+  <div class="dialog-body">
+    <div class="bodysplit">
+      <div>
+        <div class="recap" style="grid-template-columns:repeat(4,1fr)">
+          <div class="recap-cell"><div class="recap-k">Cost / portion</div><div class="recap-v">9,80 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">Food cost %</div><div class="recap-v" style="color:var(--av3-ok)">28%</div></div>
+          <div class="recap-cell"><div class="recap-k">Batch cost</div><div class="recap-v">39,20 zł</div></div>
+          <div class="recap-cell"><div class="recap-k">kcal / portion</div><div class="recap-v">820</div></div>
+        </div>
+        <div class="dtabs"><button class="dtab is-active">Ingredients<span class="mono" style="font-size:10px;color:var(--av3-subtle)">5</span></button><button class="dtab">Nutrition</button><button class="dtab">Notes</button></div>
+        <div class="formrow" style="margin-bottom:12px">
+          <label class="field" style="width:120px"><span class="field-label">Yield (portions)</span><input class="input" value="4"/></label>
+          <label class="field" style="width:120px"><span class="field-label">Prep</span><span class="affix" data-suffix="min"><input class="input" value="12"/></span></label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 84px 70px 64px 24px;gap:6px;font-size:10px;text-transform:uppercase;color:var(--av3-subtle);padding:0 2px 4px"><span>Ingredient</span><span>Qty</span><span>Waste%</span><span style="text-align:right">Cost</span><span></span></div>
+        <div style="display:grid;grid-template-columns:1fr 84px 70px 64px 24px;gap:6px;align-items:center;padding:3px 0"><select class="input"><option>San Marzano DOP</option></select><span class="affix" data-suffix="g"><input class="input" value="180"/></span><span class="affix" data-suffix="%"><input class="input" value="5"/></span><span class="mono" style="text-align:right;font-size:12px">3,40 zł</span><span class="subtle">✕</span></div>
+        <div style="display:grid;grid-template-columns:1fr 84px 70px 64px 24px;gap:6px;align-items:center;padding:3px 0"><select class="input"><option>Fior di latte</option></select><span class="affix" data-suffix="g"><input class="input" value="120"/></span><span class="affix" data-suffix="%"><input class="input" value="2"/></span><span class="mono" style="text-align:right;font-size:12px">4,90 zł</span><span class="subtle">✕</span></div>
+        <div style="display:grid;grid-template-columns:1fr 84px 70px 64px 24px;gap:6px;align-items:center;padding:3px 0"><select class="input"><option>00 flour</option></select><span class="affix" data-suffix="g"><input class="input" value="250"/></span><span class="affix" data-suffix="%"><input class="input" value="0"/></span><span class="mono" style="text-align:right;font-size:12px">1,50 zł</span><span class="subtle">✕</span></div>
+        <div class="subhead">Cost breakdown</div>
+        <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:6px"><div style="width:50%;background:var(--av3-c2)"></div><div style="width:35%;background:var(--av3-c3)"></div><div style="width:15%;background:var(--av3-c4)"></div></div>
+        <div style="display:flex;gap:8px;font-size:10.5px;color:var(--av3-muted)"><span>● Fior di latte 50%</span><span>● San Marzano 35%</span><span>● 00 flour 15%</span></div>
+      </div>
+      <div style="position:sticky;top:0">
+        <div class="preview-label">Live economics · per portion</div>
+        <div class="pcard">
+          <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="field-label">Food cost</span><span class="mono" style="font-size:26px;font-weight:700;color:var(--av3-ok)">28%</span></div>
+          <div style="margin-top:8px">
+            <div class="gauge-track">
+              <div style="width:50%;background:color-mix(in oklab,var(--av3-ok) 30%,var(--av3-s3))"></div>
+              <div style="width:13%;background:color-mix(in oklab,var(--av3-warn) 30%,var(--av3-s3))"></div>
+              <div style="flex:1;background:color-mix(in oklab,var(--av3-bad) 30%,var(--av3-s3))"></div>
+              <div class="gauge-mark" style="left:47%;background:var(--av3-ok)"></div>
+            </div>
+            <div class="gauge-legend"><span>0%</span><span style="color:var(--av3-ok)">target ≤30%</span><span>60%+</span></div>
+          </div>
+        </div>
+        <div class="od-grid" style="margin-top:14px">
+          <div class="od-field"><div class="k">Menu price</div><div class="v mono">34,90 zł</div></div>
+          <div class="od-field"><div class="k">Food cost</div><div class="v mono">9,80 zł</div></div>
+          <div class="od-field"><div class="k">Gross profit</div><div class="v mono" style="color:var(--av3-ok)">25,10 zł</div></div>
+          <div class="od-field"><div class="k">GP margin</div><div class="v mono">72%</div></div>
+        </div>
+        <div class="preview-label" style="margin-top:14px">Per-portion macros</div>
+        <div class="od-grid">
+          <div class="od-field"><div class="k">kcal</div><div class="v mono">820</div></div>
+          <div class="od-field"><div class="k">Protein</div><div class="v mono">34 g</div></div>
+          <div class="od-field"><div class="k">Carbs</div><div class="v mono">98 g</div></div>
+          <div class="od-field"><div class="k">Sugar</div><div class="v mono">6 g</div></div>
+          <div class="od-field"><div class="k">Fiber</div><div class="v mono">5 g</div></div>
+          <div class="od-field"><div class="k">Fat</div><div class="v mono">28 g</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dialog-foot"><button class="btn danger sm">Delete recipe</button><span style="flex:1"></span><button class="btn sm" onclick="closeD('d-recipe')">Cancel</button><button class="btn primary sm" onclick="closeD('d-recipe')">Save recipe</button></div>
+</div></div>
+
+<!-- ===================== ⓘ EXPLAINER ===================== -->
+<div class="scrim" id="d-xp"><div class="dialog xp">
+  <div class="dialog-head"><div><div class="dialog-title" id="xp-title">Metric</div><div class="dialog-sub">What it is · why it matters · how to move it</div></div><button class="x" onclick="closeD('d-xp')">×</button></div>
+  <div class="dialog-body">
+    <p id="xp-desc"></p>
+    <div class="rail inst"><div class="rl">⚖ Institutional analysis</div><span id="xp-inst"></span></div>
+    <div class="rail plain"><div class="rl">✦ In plain terms</div><span id="xp-plain"></span></div>
+    <div class="rail tips"><div class="rl">💡 Tips — how to push this lever</div><span id="xp-tips"></span></div>
+    <div class="rail meth"><div class="rl">🖩 Methodology — how this is determined</div><span id="xp-meth"></span></div>
+  </div>
+</div></div>
+
+<script>
+  const PAGES = ["haccp","waste","handover","menu","recipe"];
+  function showPage(p){
+    PAGES.forEach(x => document.getElementById("page-"+x).classList.toggle("hidden", x!==p));
+    document.querySelectorAll(".pageswitch .btn").forEach(b => b.className = "btn"+(b.dataset.pg===p?" primary":""));
+    window.scrollTo(0,0);
+    if(p==="menu") openD("d-menu");
+    if(p==="recipe") openD("d-recipe");
+  }
+  function setView(pfx,v){
+    document.getElementById(pfx+"-board").classList.toggle("hidden", v!=="board");
+    document.getElementById(pfx+"-table").classList.toggle("hidden", v!=="table");
+    const vt = document.getElementById(pfx+"-vt").children;
+    vt[0].classList.toggle("is-active", v==="board");
+    vt[1].classList.toggle("is-active", v==="table");
+  }
+  function openD(id){ document.getElementById(id).classList.add("open"); }
+  function closeD(id){ document.getElementById(id).classList.remove("open"); }
+
+  const XP = {
+    hcomp:{t:"HACCP compliance",d:"Share of today's temperature checks that landed inside the safe holding range for their sensor.",
+      inst:"Food-safety law treats cold-chain and hot-holding control as a critical limit, not a target — an inspector wants 100% in-range with corrective action logged for every breach. Below 100% is a record an auditor will ask you to explain.",
+      plain:"Twelve checks today, one fridge at 7 °C instead of ≤5 °C → 92%. That breach is the one the inspector circles — so you want it caught, acted on and logged, not buried.",
+      tips:"Check at fixed times so gaps don't look like skipped controls; when a reading flags, act immediately and note it; calibrate probes monthly; a sensor that flags repeatedly is a failing unit — escalate.",
+      meth:"(readings − flagged) ÷ readings for today, where flagged = temp outside the sensor's safe band (tempVerdict in @/lib/haccp)."},
+    hflag:{t:"Out-of-range readings",d:"Count of today's temperature checks that fell outside the safe holding band and need corrective action.",
+      inst:"Every out-of-range reading is a critical-control-point breach that must carry a documented corrective action. An unactioned breach is the finding that fails an inspection — and the one that precedes a food-safety incident.",
+      plain:"If the hot-hold cabinet reads 58 °C when it must be ≥63 °C, the pasta in it is in the danger zone — reheat or bin it now and note what you did, not at end of shift.",
+      tips:"Treat any flag as act-now: move or discard the stock, fix or swap the unit, log the action; a recurring flag on one sensor is a hardware fault — book a service.",
+      meth:"Count of today's readings with status === 'flagged' (temp outside the sensor band) from /api/admin/haccp."},
+    wcost:{t:"Write-off today",d:"Total estimated cost of everything logged as waste today on this location.",
+      inst:"Waste hits the P&L at full food cost with zero offsetting revenue. Benchmark: a tight pizza op runs 2–4% of food cost as waste; above ~6% it's a process problem (over-prep, rotation, portioning), not bad luck.",
+      plain:"Bin 2 kg of mozzarella and a tray of dough and that's ~80 zł gone. At 25% food cost you'd need ~320 zł of extra sales just to break even on that one mistake.",
+      tips:"Log everything (uncosted waste is invisible waste); attack the top reason first; review at close so a bad pattern is caught in days, not at month-end stocktake.",
+      meth:"Sum of estimatedCostGrosze across today's waste entries (/api/admin/waste). Entries logged without a cost contribute zero."},
+    hoiss:{t:"Issues flagged this week",d:"Sign-offs in the last 7 days where at least one shift check (temps, waste, equipment) was not clear.",
+      inst:"The handover is the control that stops a small problem becoming tomorrow's crisis. Each flagged sign-off is a baton-pass where something was wrong; the value is whether the incoming manager acted. A cluster on one site/shift is a process or equipment signal.",
+      plain:"Closing manager marks 'equipment' red because the dough mixer is grinding. That flag is the difference between a planned Tuesday service and a dead mixer mid-Friday-rush.",
+      tips:"Read every flag at the next open and close it; if equipment flags repeat, book the service; if temps flag, cross-check the HACCP log; use the comment so the next manager inherits context.",
+      meth:"Count of handovers in the trailing 7 days where tempChecksOk, wasteNoted or equipmentOk is false."},
+    hovar:{t:"Net cash variance",d:"Sum of counted-vs-expected drawer differences across this week's sign-offs — over (+) or short (−).",
+      inst:"Small, random, near-zero net is healthy; a persistent one-direction drift is the classic indicator of a process leak or shrinkage. Auditors care about the trend and the spread, not a single odd night.",
+      plain:"Monday −40 zł, Tuesday +35 zł → net −5 zł, basically rounding. But −40 every single night is ~1,200 zł a month walking out — worth finding out where.",
+      tips:"Investigate any single variance over your comp cap; count the drawer blind so the number is honest; if one operator's shifts always run short, retrain or watch the void/refund pattern.",
+      meth:"Sum of cashVarianceGrosze (counted − expected drawer) over this week's handovers. Per-sign-off tone: green <2 zł, amber <10 zł, red ≥10 zł absolute."},
+  };
+  function openXp(k){
+    const x = XP[k]; if(!x) return;
+    xp_title.textContent=x.t; xp_desc.textContent=x.d; xp_inst.textContent=x.inst; xp_plain.textContent=x.plain; xp_tips.textContent=x.tips; xp_meth.textContent=x.meth;
+    openD("d-xp");
+  }
+  document.querySelectorAll(".scrim").forEach(s => s.addEventListener("click", e => { if(e.target===s) s.classList.remove("open"); }));
+  document.addEventListener("keydown", e => { if(e.key==="Escape") document.querySelectorAll(".scrim.open").forEach(s => s.classList.remove("open")); });
+</script>
+</body>
+</html>
