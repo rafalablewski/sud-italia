@@ -32,6 +32,11 @@
   --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b; --firing:#4d90e8; --ready:#3dd68c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* buttons/labels must inherit the page's light text — otherwise the UA's
+   default black button-text leaks through to any child without its own
+   color (the live app sets color:inherit on .prod/.offer for the same
+   reason). Class rules that set an explicit color still win. */
+button,label{color:inherit;font-family:inherit}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;-webkit-font-smoothing:antialiased}
 .eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle)}
