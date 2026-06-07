@@ -1,5 +1,13 @@
 # Admin — Design System
 
+> ⚠️ **v2 is retired.** The admin back-office now runs on **v3**
+> (`/admin` → `/admin-v3`; see [`v3/README.md`](./v3/README.md)). The v2
+> component tree (`src/components/admin/`) + the `src/app/admin/*` routes were
+> deleted. The shared base stylesheet lives on as `src/app/themes/base/index.css`
+> (it backs login + the staff portals + Core). The component/shell sections
+> below describe the **now-deleted v2** set and are pending a cleanup pass —
+> treat them as historical until then.
+
 The design language for the **back-office admin** — every `/admin/*` surface
 that is *not* one of the Core modules. Core (POS, KDS, Guest = CRM +
 Loyalty + Concierge + WhatsApp) is our IP and runs under its own theme — see

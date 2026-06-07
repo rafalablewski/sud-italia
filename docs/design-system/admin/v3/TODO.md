@@ -11,12 +11,13 @@ _Last updated: 2026-06-05 (mobile-responsiveness pass — foundation)._
 
 Every admin **section** is migrated to v3 and at **functional parity with v2**
 (Menu, Recipes, Cross-sell, Upsell/Bundles, Calculator, and all the
-Operations/People/Customers/Finance/Intelligence/System surfaces). **Cutover
-is LIVE for the owner** — `/admin/*` now 307-redirects to `/admin-v3/*`
-(`src/middleware.ts`) and owners land on `/admin-v3` (`landingPathForRole`).
-The swap is **reversible** and **nothing in v2 has been deleted** — v2 still
-serves the manager/franchisee portals and the shared `/admin/capabilities`
-ledger. v2 deletion (step 3) stays on hold pending production verification.
+Operations/People/Customers/Finance/Intelligence/System surfaces). **v2 is
+RETIRED.** Owner, managers and franchisees all run on v3 (`/admin`→`/admin-v3`;
+`/manager/*` and `/franchisee/*` rewrite to v3); the v2 component tree
+(`src/components/admin/`), the legacy `Admin*.tsx`, and the `src/app/admin/*`
+routes (except `/admin/login`) are **deleted**. The capabilities ledger moved to
+`/capabilities`. The shared base stylesheet (`src/app/themes/base/index.css`) is
+**kept** — it backs login + the staff portals + Core, so it outlived v2.
 
 ## Mobile UI 📱 — foundation shipped, refinements remain
 
@@ -86,14 +87,18 @@ touch*. Read that section before adding more (Rule #11).
    - *Follow-up for a full v2 retirement:* give v3 role-prefix support (admin-base)
      so `/manager` + `/franchisee` can point at v3 too — only then can v2 be
      deleted without dropping those portals.
-3. **Delete v2** — on hold until the swap is verified in production. Then remove
-   `src/components/admin/v2/`, the legacy `Admin*.tsx`, and the `src/app/admin/*`
-   page routes; rebuild `/admin/capabilities` under v3; drop the `/manager`+
-   `/franchisee` v2 rewrites; update `docs/design-system/admin/*` (Rule #11)
-   + the capabilities ledger (Rule #9). **Keep** `src/app/themes/base/index.css`
-   — it's the shared base stylesheet (login + staff portals + Core), not v2.
-   Status: ✅ manager/franchisee on v3 (done), ✅ base CSS neutralised (done);
-   remaining before delete = re-home capabilities + prod verification.
+3. **Delete v2** — ✅ **DONE** (owner-verified on deploy: owner + manager +
+   franchisee logins). Removed `src/components/admin/` (the v2 shell + 44
+   `Admin*.tsx` + helpers), the `src/app/admin/*` routes (kept `/admin/login`
+   on a shell-less layout), and the v2-only `src/lib/bundle-margin.ts` — 134
+   files. Capabilities re-homed to `/capabilities`; `/admin/*` 307s to v3
+   (`src/middleware.ts`); `/manager`+`/franchisee` rewrite to v3. The shared
+   base stylesheet (`themes/base`) is kept. Verified: tsc + prod build clean;
+   owner/manager/franchisee + login + capabilities all render.
+   - *Follow-up (non-blocking):* prune the v2 component sections from
+     `docs/design-system/admin/theme/*` (they describe now-deleted code; the
+     base CSS they partly cover lives on as `themes/base`); rename
+     `src/middleware.ts` → `src/proxy.ts` (Next 16 deprecation warning).
 
 ## Calculator — optional deepening (not required for parity)
 
