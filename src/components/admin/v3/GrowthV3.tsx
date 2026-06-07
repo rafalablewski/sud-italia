@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Crown, Gift, Pencil, Plus, Rocket, Sparkles, Target, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
-import { Badge, Button, Card, CardBody, CardHead, Dialog, Kpi, SkeletonPage, Switch } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, type ColumnV3, Dialog, Kpi, SkeletonPage, Switch, Table } from "./ui";
 
 interface Reward { id: string; name: string; pointsCost: number; description?: string; active: boolean }
+interface ReferralRow { code: string; owner: string; ownerPhone: string; used: number; earned: number; createdAt: string }
 interface Challenge { id: string; title: string; description?: string; target: number; rewardPoints: number; active: boolean }
 interface Seasonal { id: string; name: string; category?: string; price?: number; active: boolean; locationSlug?: string }
 interface Tier { label: string; threshold: number; multiplier: number; perks: string[] }
@@ -52,15 +53,21 @@ function makeWidgetId(): string {
 
 export function GrowthV3() {
   const [s, setS] = useState<Loyalty | null>(null);
+  const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refDraft, setRefDraft] = useState({ points: "", discount: "" });
   const [savingRef, setSavingRef] = useState(false);
   const [widgetEdit, setWidgetEdit] = useState<LiveWidget | null>(null);
+  const [rewardEdit, setRewardEdit] = useState<Reward | null>(null);
   const locations = useMemo(() => getActiveLocations(), []);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/growth").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const [res, refs] = await Promise.all([
+      fetch("/api/admin/growth").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/admin/referrals").then((r) => (r.ok ? r.json() : { referrals: [] })).catch(() => ({ referrals: [] })),
+    ]);
     setS(res);
+    setReferrals(Array.isArray(refs?.referrals) ? refs.referrals : []);
     if (res?.referral) setRefDraft({ points: String(res.referral.referrerPoints ?? 0), discount: String((res.referral.refereeDiscountGrosze ?? 0) / 100) });
     setLoading(false);
   }, []);
@@ -101,6 +108,18 @@ export function GrowthV3() {
   };
 
   const toggleReward = (id: string) => { const next = (s?.rewards ?? []).map((r) => (r.id === id ? { ...r, active: !r.active } : r)); put({ rewards: next }); };
+  // Reward CRUD (v2 parity — v3 previously only toggled). Persists immediately.
+  const upsertReward = (r: Reward) => {
+    const list = s?.rewards ?? [];
+    const next = list.some((x) => x.id === r.id) ? list.map((x) => (x.id === r.id ? r : x)) : [...list, r];
+    put({ rewards: next });
+  };
+  const deleteReward = (id: string) => put({ rewards: (s?.rewards ?? []).filter((r) => r.id !== id) });
+  // Referral codes table (v2 parity — was missing entirely from v3).
+  const deleteReferralCode = async (code: string) => {
+    const res = await fetch("/api/admin/referrals", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+    if (res.ok) setReferrals((arr) => arr.filter((r) => r.code !== code));
+  };
   const toggleChallenge = (id: string) => { const next = (s?.challenges ?? []).map((c) => (c.id === id ? { ...c, active: !c.active } : c)); put({ challenges: next }); };
   const toggleSeasonal = (id: string) => { const next = (s?.seasonalItems ?? []).map((i) => (i.id === id ? { ...i, active: !i.active } : i)); put({ seasonalItems: next }); };
 
@@ -144,6 +163,29 @@ export function GrowthV3() {
         </CardBody>
       </Card>
 
+      <Card>
+        <CardHead
+          title="Referral codes"
+          description={`${referrals.length} code${referrals.length === 1 ? "" : "s"} in circulation · ${referrals.reduce((a, r) => a + r.used, 0)} uses · ${referrals.reduce((a, r) => a + r.earned, 0).toLocaleString()} pts awarded`}
+        />
+        {referrals.length === 0 ? (
+          <CardBody><div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No referral codes yet — codes are created when customers tap Share on the rewards screen.</div></CardBody>
+        ) : (
+          <Table
+            columns={[
+              { key: "code", header: "Code", render: (r: ReferralRow) => <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{r.code}</span> },
+              { key: "owner", header: "Owner", render: (r: ReferralRow) => <span>{r.owner}</span> },
+              { key: "phone", header: "Phone", render: (r: ReferralRow) => <span className="av3-cell-muted mono" style={{ fontFamily: "var(--av3-mono)" }}>{r.ownerPhone}</span> },
+              { key: "used", header: "Uses", num: true, render: (r: ReferralRow) => <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{r.used.toLocaleString()}</span> },
+              { key: "earned", header: "Earned pts", num: true, render: (r: ReferralRow) => <span className="mono" style={{ fontFamily: "var(--av3-mono)" }}>{r.earned.toLocaleString()}</span> },
+              { key: "act", header: "", render: (r: ReferralRow) => <Button variant="ghost" size="sm" onClick={() => deleteReferralCode(r.code)}>Remove</Button> },
+            ] as ColumnV3<ReferralRow>[]}
+            rows={referrals}
+            rowKey={(r) => r.code}
+          />
+        )}
+      </Card>
+
       {s?.tiers && (
         <Card>
           <CardHead title="Loyalty tiers" description="Thresholds, point multipliers and perks — edits save on blur" />
@@ -173,12 +215,14 @@ export function GrowthV3() {
 
       <div className="av3-grid-2">
         <Card>
-          <CardHead title="Rewards" description="Points redemption catalogue" />
+          <CardHead title="Rewards" description="Points redemption catalogue" actions={<Button variant="primary" size="sm" onClick={() => setRewardEdit({ id: "", name: "", description: "", pointsCost: 100, active: true })}><Plus className="av3-btn-ico" /> New reward</Button>} />
           <CardBody style={{ paddingTop: 4, paddingBottom: 4 }}>
             {rewards.length === 0 ? <div className="av3-empty-text" style={{ color: "var(--av3-subtle)" }}>No rewards configured.</div> : rewards.map((r) => (
               <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--av3-line)" }}>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{r.pointsCost} pts</div></div>
+                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</div><div className="av3-cell-muted" style={{ fontSize: 11 }}>{r.pointsCost} pts{r.description ? ` · ${r.description}` : ""}</div></div>
                 <Switch checked={r.active} label={r.active ? "Live" : "Off"} onChange={() => toggleReward(r.id)} />
+                <button type="button" className="av3-iconbtn-sm" aria-label="Edit reward" onClick={() => setRewardEdit(r)}><Pencil /></button>
+                <button type="button" className="av3-iconbtn-sm" aria-label="Delete reward" onClick={() => deleteReward(r.id)}><Trash2 /></button>
               </div>
             ))}
           </CardBody>
@@ -252,7 +296,45 @@ export function GrowthV3() {
           onSubmit={(w) => { saveWidget(w); setWidgetEdit(null); }}
         />
       )}
+
+      {rewardEdit && (
+        <RewardDialogV3
+          reward={rewardEdit}
+          onClose={() => setRewardEdit(null)}
+          onSubmit={(r) => { upsertReward(r); setRewardEdit(null); }}
+        />
+      )}
     </>
+  );
+}
+
+function RewardDialogV3({ reward, onClose, onSubmit }: { reward: Reward; onClose: () => void; onSubmit: (r: Reward) => void }) {
+  const [name, setName] = useState(reward.name);
+  const [description, setDescription] = useState(reward.description ?? "");
+  const [points, setPoints] = useState(String(reward.pointsCost));
+
+  const submit = () => {
+    if (!name.trim()) return;
+    // Derive a stable slug id for new rewards (matches v2's RewardDialog).
+    // A name of only non-alphanumerics (e.g. "!!!") slugifies to "" — fall
+    // back to a generated id so we never produce an empty/colliding key.
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+    const id = reward.id || slug || `reward-${Date.now()}`;
+    onSubmit({ id, name: name.trim(), description: description.trim() || undefined, pointsCost: Math.max(0, Math.round(Number(points) || 0)), active: reward.active });
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={reward.id ? `Edit ${reward.name}` : "New reward"}
+      width={460}
+      footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" disabled={!name.trim()} onClick={submit}>{reward.id ? "Save" : "Create"}</Button></>}
+    >
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Free espresso" /></label>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><textarea className="av3-input" rows={2} style={{ height: "auto", fontFamily: "var(--av3-ui)", padding: "8px 10px", resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+      <label className="av3-field"><span className="av3-field-label">Cost (points)</span><input className="av3-input" type="number" min="0" value={points} onChange={(e) => setPoints(e.target.value)} /></label>
+    </Dialog>
   );
 }
 

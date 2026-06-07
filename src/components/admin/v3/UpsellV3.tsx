@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+import { DEFAULT_BUNDLES } from "@/lib/bundles";
 import type { MenuCategory, ModifierGroup } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
 import { Badge, Button, type ColumnV3, Dialog, SkeletonRows, Switch, Table } from "./ui";
@@ -59,7 +60,14 @@ export function UpsellV3() {
   useEffect(() => { setLoading(true); load(); }, [load]);
 
   const cfg = settings[loc] ?? {};
-  const bundles = (cfg.bundles ?? []) as Bundle[];
+  // Mirror v2 (AdminUpsell): when a location has no saved custom bundles,
+  // fall back to the canonical DEFAULT_BUNDLES ladders — the same list the
+  // runtime serves via resolveBundles(). Without this the board showed an
+  // empty "No custom bundles" state even though ~16 default tiers are live.
+  // Editing/toggling a default materialises the full list into the config
+  // (saveBundles → PUT), exactly like v2's `config.bundles ?? DEFAULT_BUNDLES_FALLBACK`.
+  const usingDefaultBundles = !cfg.bundles || cfg.bundles.length === 0;
+  const bundles = (usingDefaultBundles ? DEFAULT_BUNDLES : cfg.bundles) as Bundle[];
   const rules = (cfg.bundleRules ?? DEFAULT_RULES) as BundleRules;
   const experiment = (cfg.experiment ?? null) as Experiment | null;
 
@@ -130,8 +138,13 @@ export function UpsellV3() {
       ) : (
         <>
           <div className="av3-card" style={{ padding: 0 }}>
+            {usingDefaultBundles && (
+              <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--av3-line)", fontSize: 11.5, color: "var(--av3-muted)" }}>
+                Showing the default chain ladders (live on this location). Edit or toggle any tier to customise — your changes save as this location&rsquo;s override.
+              </div>
+            )}
             {bundles.length === 0 ? (
-              <div className="av3-empty"><div className="av3-empty-title">No custom bundles</div><div className="av3-empty-text">This location falls back to the default ladders. Add a bundle to customise.</div></div>
+              <div className="av3-empty"><div className="av3-empty-title">No bundles</div><div className="av3-empty-text">Add a bundle to start a ladder for this location.</div></div>
             ) : (
               <Table columns={bundleCols} rows={bundles} rowKey={(b) => b.id} onRowClick={(b) => setEditBundle(b)} />
             )}
@@ -345,6 +358,11 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
   const [price, setPrice] = useState(String((bundle?.priceGrosze ?? 0) / 100));
   const [refPrice, setRefPrice] = useState(String((bundle?.refPriceGrosze ?? 0) / 100));
   const [discount, setDiscount] = useState(String(bundle?.discountPercent ?? 0));
+  // Split-discount round-trip (v2 parity): the default dynamic bundles
+  // (Family, Family Feast, Feast Deluxe, Late dinner/Party, Pantry Pack)
+  // carry separate mains/add-ons %s. Blank = inherit the blended discount.
+  const [mainsDiscount, setMainsDiscount] = useState(bundle?.mainsDiscountPercent != null ? String(bundle.mainsDiscountPercent) : "");
+  const [addOnsDiscount, setAddOnsDiscount] = useState(bundle?.addOnsDiscountPercent != null ? String(bundle.addOnsDiscountPercent) : "");
   const [minMains, setMinMains] = useState(String(bundle?.minMains ?? 3));
   const [maxMains, setMaxMains] = useState(String(bundle?.maxMains ?? 0));
   const [mainCategories, setMainCategories] = useState((bundle?.mainCategories ?? ["pizza", "pasta"]).join(", "));
@@ -374,7 +392,7 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
       active, isAnchor, isDecoy, isDefault, membersOnly,
       ...(pricingMode === "fixed"
         ? { priceGrosze: Math.round((Number(price) || 0) * 100), refPriceGrosze: Math.round((Number(refPrice) || 0) * 100) }
-        : { discountPercent: Math.max(0, Math.min(50, Number(discount) || 0)), minMains: Number(minMains) || 1, ...(Number(maxMains) > 0 ? { maxMains: Number(maxMains) } : {}), mainCategories: mainCategories.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean) }),
+        : { discountPercent: Math.max(0, Math.min(50, Number(discount) || 0)), minMains: Number(minMains) || 1, ...(Number(maxMains) > 0 ? { maxMains: Number(maxMains) } : {}), mainCategories: mainCategories.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean), ...(mainsDiscount.trim() !== "" ? { mainsDiscountPercent: Math.max(0, Math.min(50, Number(mainsDiscount) || 0)) } : {}), ...(addOnsDiscount.trim() !== "" ? { addOnsDiscountPercent: Math.max(0, Math.min(50, Number(addOnsDiscount) || 0)) } : {}) }),
       ...(requiredTier ? { requiredTier: requiredTier as "gold" | "platinum" } : {}),
       ...(channel ? { channel: channel as "dine-in" | "delivery" } : {}),
       ...(limitedUntil ? { limitedUntil } : {}),
@@ -389,7 +407,7 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <label className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Tier</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={tier} onChange={(e) => setTier(e.target.value)} placeholder="Solo / Lunch+" /></label>
         <label className="av3-field" style={{ flex: 1, minWidth: 160 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Meal period</span><select className="av3-select" value={mealPeriod} onChange={(e) => setMealPeriod(e.target.value)}><option value="lunch">lunch</option><option value="family">family</option></select></label>
+        <label className="av3-field" style={{ width: 130 }}><span className="av3-field-label">Meal period</span><select className="av3-select" value={mealPeriod} onChange={(e) => setMealPeriod(e.target.value)}><option value="lunch">lunch</option><option value="family">family</option><option value="lateNight">lateNight</option></select></label>
       </div>
       <div className="av3-field" style={{ marginTop: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
 
@@ -403,7 +421,9 @@ function BundleDialog({ bundle, city, onClose, onSave, onDelete }: { bundle: Bun
           </>
         ) : (
           <>
-            <label className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Discount %</span><input className="av3-input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></label>
+            <label className="av3-field" style={{ width: 110 }}><span className="av3-field-label">Blended %</span><input className="av3-input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></label>
+            <label className="av3-field" style={{ width: 100 }}><span className="av3-field-label">Mains %</span><input className="av3-input" type="number" value={mainsDiscount} onChange={(e) => setMainsDiscount(e.target.value)} placeholder="blend" /></label>
+            <label className="av3-field" style={{ width: 100 }}><span className="av3-field-label">Add-ons %</span><input className="av3-input" type="number" value={addOnsDiscount} onChange={(e) => setAddOnsDiscount(e.target.value)} placeholder="blend" /></label>
             <label className="av3-field" style={{ width: 100 }}><span className="av3-field-label">Min mains</span><input className="av3-input" type="number" value={minMains} onChange={(e) => setMinMains(e.target.value)} /></label>
             <label className="av3-field" style={{ width: 100 }}><span className="av3-field-label">Max mains</span><input className="av3-input" type="number" value={maxMains} onChange={(e) => setMaxMains(e.target.value)} placeholder="∞" /></label>
             <label className="av3-field" style={{ flex: 1, minWidth: 140 }}><span className="av3-field-label">Main categories</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={mainCategories} onChange={(e) => setMainCategories(e.target.value)} /></label>

@@ -19,6 +19,7 @@ interface Intent {
 
 const STATUS_LABEL: Record<Status, string> = { pending: "Pending", active: "Active", paused: "Paused", cancelled: "Cancelled" };
 const STATUS_TONE: Record<Status, BadgeTone> = { pending: "warn", active: "ok", paused: "info", cancelled: "neutral" };
+const WEEKDAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function ScheduledBundlesV3() {
   const { location } = useAdminLocationV3();
@@ -50,7 +51,17 @@ export function ScheduledBundlesV3() {
     for (const i of list) c[i.status]++;
     return c;
   }, [list]);
-  const rows = useMemo(() => (filter === "all" ? list : list.filter((i) => i.status === filter)), [list, filter]);
+  // Sort by weekday → readyAt so the operator's fulfilment checklist mirrors
+  // how the day actually runs (v2 parity).
+  const rows = useMemo(() => {
+    const filtered = filter === "all" ? list : list.filter((i) => i.status === filter);
+    return [...filtered].sort((a, b) => {
+      const ai = WEEKDAY_ORDER.indexOf(a.weekday.toLowerCase());
+      const bi = WEEKDAY_ORDER.indexOf(b.weekday.toLowerCase());
+      if (ai !== bi) return ai - bi;
+      return a.readyAt.localeCompare(b.readyAt);
+    });
+  }, [list, filter]);
   const chips: ("all" | Status)[] = ["all", "pending", "active", "paused", "cancelled"];
 
   const cols: ColumnV3<Intent>[] = [
