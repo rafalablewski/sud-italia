@@ -580,14 +580,9 @@ export function AdminCrm() {
 
   const board = (
     <CoreShell
-      active="guest"
-      crumbs={
-        <>
-          Core / <b>Guest Engagement</b>
-        </>
-      }
+      eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="guests" counts={{ guests: data.length }} />}
-      topbarRight={
+      right={
         <>
           <button type="button" className="btn ghost icon" onClick={() => void load()} title="Refresh">
             <RefreshCw className={loading ? "crm-spin" : ""} />

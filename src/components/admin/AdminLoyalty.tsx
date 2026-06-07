@@ -377,14 +377,9 @@ export function AdminLoyalty() {
 
   return (
     <CoreShell
-      active="guest"
-      crumbs={
-        <>
-          Core / <b>Guest Engagement</b>
-        </>
-      }
+      eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="loyalty" counts={{ loyalty: members.length }} />}
-      topbarRight={
+      right={
         <button type="button" className="btn ghost icon" onClick={() => void fetchAll()} title="Refresh">
           <RefreshCw className={loading ? "crm-spin" : ""} />
         </button>

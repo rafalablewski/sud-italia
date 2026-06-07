@@ -75,14 +75,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 .core-suite *, .core-suite *::before, .core-suite *::after { box-sizing: border-box; }
-/* Aggressive margin/padding reset for the mockup-ported core content — but the
-   shared admin sidebar (.app-sidebar) is rendered inside .core-suite and is NOT
-   mockup content, so exempt it + its descendants or it loses its padding (the
-   active pill + LocationSwitcher bled to the edge). box-sizing above still
-   applies to it; Tailwind preflight still handles structural resets. :where()
-   keeps the selector at the same specificity so core page rules are unchanged. */
-.core-suite *:where(:not(.app-sidebar, .app-sidebar *)),
-.core-suite *::before, .core-suite *::after { margin: 0; padding: 0; }
+/* Aggressive margin/padding reset for the mockup-ported Core content. Core is a
+   separate entity from /admin — it no longer renders the admin sidebar, so
+   there's nothing to exempt. */
+.core-suite *, .core-suite *::before, .core-suite *::after { margin: 0; padding: 0; }
 .core-suite ::selection { background: var(--brand-soft-strong); }
 /* No visible scrollbars anywhere in the core surface — content still scrolls. */
 .core-suite, .core-suite * { scrollbar-width: none; }
@@ -97,21 +93,14 @@
 .core-suite .tnum { font-variant-numeric: tabular-nums; }
 
 /* ============================================================
-   SHELL — sidebar + topbar (shared by every module)
+   SHELL — one unified header, no sidebar (shared by every Core
+   surface: POS, KDS, Guest, Service). Core is a separate entity
+   from /admin and renders none of the admin shell/sidebar.
    ============================================================ */
-.core-suite .shell { display: grid; grid-template-columns: 244px 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; overflow: hidden; }
+.core-suite .core-shell { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-.core-suite .sidebar {
-  background: var(--surface-1);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  padding: 14px 12px;
-  gap: 4px;
-  /* grid item must be allowed to shrink below content height, or the full nav
-     overflows the (hidden) shell and .sidebar-scroll never gets a scroll. */
-  min-height: 0;
-}
-.core-suite .brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 14px; text-decoration: none; color: inherit; }
+/* Brand block (header, left) */
+.core-suite .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: inherit; flex: none; }
 .core-suite .brand-mark {
   width: 30px; height: 30px; border-radius: 9px;
   background: var(--brand);
@@ -119,52 +108,47 @@
   display: grid; place-items: center;
   color: #fff; font-weight: 700; font-size: 11px; letter-spacing: .04em;
 }
-.core-suite .brand-name { font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1; }
+.core-suite .brand-name { font-family: var(--display); font-weight: 600; font-size: 16px; line-height: 1; }
 .core-suite .brand-sub { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-subtle); margin-top: 3px; }
 
-/* The nav lists the full admin tree now, so it scrolls between the fixed
-   brand (top) and the operator foot (bottom); the brand + foot stay put. */
-.core-suite .sidebar-scroll {
-  flex: 1; min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 4px;
-  /* stay full-width even when the narrow rail sets align-items:center */
-  align-self: stretch;
-  margin: 0 -4px; padding: 0 4px;
-}
-.core-suite .nav-group { margin-top: 10px; }
-.core-suite .nav-group:first-child { margin-top: 2px; }
-.core-suite .nav-group > .eyebrow { padding: 6px 8px; font-size: 10px; }
-.core-suite .nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 9px; border-radius: var(--r-md);
-  color: var(--fg-muted); font-size: 13px; font-weight: 450;
-  cursor: pointer; transition: background var(--fast) var(--ease), color var(--fast);
-  position: relative; text-decoration: none;
-}
-.core-suite .nav-item:hover { background: var(--surface-hover); color: var(--fg); }
-.core-suite .nav-item.active { background: var(--surface-3); color: var(--fg); font-weight: 500; }
-.core-suite .nav-item.active::before {
-  content: ""; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
-  width: 3px; height: 18px; border-radius: 0 3px 3px 0; background: var(--brand);
-}
-.core-suite .nav-ico { width: 16px; height: 16px; opacity: .8; flex: none; }
-.core-suite .nav-item .dot { margin-left: auto; width: 7px; height: 7px; border-radius: 99px; background: var(--brand); }
-
-.core-suite .sidebar-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-.core-suite .avatar { width: 28px; height: 28px; border-radius: 99px; background: var(--surface-3); display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--platinum); border: 1px solid var(--border-strong); }
-
-.core-suite .main { display: flex; flex-direction: column; min-width: 0; }
-.core-suite .topbar {
-  height: 54px; flex: none;
+/* Header row 1 — brand · primary nav · global actions */
+.core-suite .core-head {
+  height: 56px; flex: none;
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 86%, transparent);
   backdrop-filter: saturate(140%) blur(10px);
-  display: flex; align-items: center; gap: 14px;
-  padding: 0 22px;
 }
-.core-suite .crumbs { font-size: 13px; color: var(--fg-subtle); }
-.core-suite .crumbs b { color: var(--fg); font-weight: 500; }
-.core-suite .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.core-suite .core-head-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Primary nav — the four Core surfaces, same place on every surface */
+.core-suite .core-nav { display: flex; align-items: center; gap: 4px; }
+.core-suite .core-nav a {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 13px; border-radius: var(--r-md);
+  color: var(--fg-muted); font: 500 13px var(--ui); text-decoration: none;
+  transition: background var(--fast) var(--ease), color var(--fast);
+}
+.core-suite .core-nav a:hover { background: var(--surface-hover); color: var(--fg); }
+.core-suite .core-nav a.on { background: var(--surface-3); color: var(--fg); box-shadow: var(--sh-xs); }
+.core-suite .core-nav a svg { opacity: .85; flex: none; }
+
+/* Header row 2 — eyebrow + sub-view tabs · the surface's own controls */
+.core-suite .subbar {
+  min-height: 46px; flex: none;
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.core-suite .subbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.core-suite .subbar-left .eyebrow { flex: none; }
+.core-suite .subbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Body — each surface owns its own scroll/layout. `bleed` is for the KDS wall. */
+.core-suite .core-body { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.core-suite .core-body > * { min-height: 0; }
 
 /* ============================================================
    PRIMITIVES — button, card, input, badge, segmented, kpi
@@ -404,6 +388,15 @@
 }
 .kds-core *, .kds-core *::before, .kds-core *::after { box-sizing: border-box; }
 .kds-core.is-fullscreen { z-index: 2147483600; }
+/* Windowed KDS: the dark wall lives inside the shared CoreShell body (rule:
+   Core is one shell). Drop the fixed full-viewport positioning so it fills
+   `.core-body.bleed` and scrolls within the shell instead of over it. */
+.core-suite .core-body.bleed { overflow: hidden; }
+.core-suite .kds-core.in-shell { position: static; inset: auto; z-index: auto; flex: 1; min-height: 0; height: auto; overflow: auto; }
+/* KDS controls reuse the shared header primitives (rule: same header). The
+   clock + stage filter just need their KDS flavour on the light chrome. */
+.core-suite .core-clock { font: 600 16px var(--mono); padding: 5px 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); letter-spacing: .02em; }
+.core-suite .seg.kds-stage-seg .n { font: 600 11px var(--mono); color: var(--fg-subtle); margin-left: 5px; }
 .kds-wrap { min-height: 100%; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
 .kds-top { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
 .kds-top .kds-id { display: flex; align-items: center; gap: 11px; }
@@ -1198,19 +1191,14 @@
   .core-suite .pos-body { grid-template-columns: 64px 1fr 320px; }
 }
 @media (max-width: 900px) {
-  /* phone: Core routes own the viewport (no separate mobile shell), so the
-     CoreShell sidebar IS the only nav — collapse it to an icon rail instead
-     of hiding it, so the user can always navigate out. The desktop layout
-     reflows 1:1, just denser. */
-  .core-suite .shell { grid-template-columns: 52px 1fr; }
-  .core-suite .sidebar { padding: 12px 6px; align-items: center; }
-  .core-suite .sidebar .brand { justify-content: center; padding: 4px 0 12px; gap: 0; }
-  .core-suite .sidebar .brand > div,
-  .core-suite .sidebar .nav-group > .eyebrow,
-  .core-suite .sidebar-foot { display: none; }
-  .core-suite .nav-item { justify-content: center; gap: 0; font-size: 0; padding: 9px 0; }
-  .core-suite .nav-item .dot { display: none; }
-  .core-suite .nav-ico { width: 18px; height: 18px; opacity: 1; }
+  /* phone: Core routes own the viewport (no separate mobile shell). The
+     unified header reflows — the brand label collapses to its mark and the
+     primary nav drops icon labels so all four surfaces still fit one row. */
+  .core-suite .core-head { gap: 10px; padding: 0 12px; }
+  .core-suite .brand > div { display: none; }
+  .core-suite .core-nav a { padding: 0 9px; gap: 0; font-size: 0; }
+  .core-suite .core-nav a svg { opacity: 1; }
+  .core-suite .subbar { padding: 7px 12px; }
   .core-suite .kpis { grid-template-columns: repeat(3, 1fr); }
   .core-suite .guest { grid-template-columns: 1fr; }
   .core-suite .convs { border-right: 0; }

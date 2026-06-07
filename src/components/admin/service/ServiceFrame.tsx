@@ -20,7 +20,6 @@ import { SlotsView } from "./SlotsView";
 // Label with the city (Kraków / Warszawa) to match the POS & Guest topbars.
 const LOCS = getActiveLocations().map((l) => ({ key: l.slug, label: l.city }));
 const FALLBACK = LOCS[0]?.key ?? "krakow";
-const VIEW_LABEL: Record<ServiceView, string> = { floor: "Floor", slots: "Slots" };
 // Shared so the chosen city survives Floor ↔ Slots ↔ Book navigation (each is
 // its own route, so component state would otherwise reset on every switch).
 const LOC_KEY = "sud-core-service-loc";
@@ -63,28 +62,24 @@ export function ServiceFrame({ view }: { view: ServiceView }) {
 
   return (
     <CoreShell
-      crumbs={
-        <>
-          Core / <b>Service</b> · {VIEW_LABEL[view]}
-        </>
-      }
+      eyebrow="Service"
       viewnav={<ServiceViewNav current={view} />}
-      topbarRight={
-        <>
-          <div className="seg">
-            {LOCS.map((l) => (
-              <button key={l.key} type="button" className={loc === l.key ? "on" : ""} onClick={() => pickLoc(l.key)}>
-                {l.label}
-              </button>
-            ))}
-          </div>
-          {view === "slots" && (
-            <label className="svc-date">
-              <CalendarDays width={14} height={14} />
-              <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-            </label>
-          )}
-        </>
+      right={
+        <div className="seg">
+          {LOCS.map((l) => (
+            <button key={l.key} type="button" className={loc === l.key ? "on" : ""} onClick={() => pickLoc(l.key)}>
+              {l.label}
+            </button>
+          ))}
+        </div>
+      }
+      subRight={
+        view === "slots" ? (
+          <label className="svc-date">
+            <CalendarDays width={14} height={14} />
+            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+        ) : undefined
       }
     >
       {view === "floor" ? <FloorView loc={loc} /> : <SlotsView loc={loc} date={date} />}

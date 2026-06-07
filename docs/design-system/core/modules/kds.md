@@ -14,22 +14,28 @@ shared `Ring`; its `.ka-ticket` card is no longer rendered). `KdsManagerOpsHeade
 was deleted in the mobile-shell cleanup — the desktop KDS reflows responsively.)
 **Mockups:** `kds-fleet.html` → `kds.html` → `kds-chef.html`.
 **Theme:** rebuilt 1:1 onto the core-suite mockups on the **`.kds-core`**
-surface (a fixed full-viewport layer in `suite.css`) — the KDS is a
-**full-screen kitchen wall** with its own dark `.kds-top` chrome and **no
-SI sidebar** (unlike POS / Guest, it doesn't use `<CoreShell>`).
-`/core/kds` is a top-level `/core/*` route with its own layout (no admin
-chrome to begin with); an "Admin" back link in the header is the way out.
-The three views:
+surface (`suite.css`). KDS now rides the **same unified `<CoreShell>`** as
+POS / Guest / Service — the shared light two-row header (brand + the
+POS · KDS · Guest · Service `<CoreNav>` + the stage filter / clock /
+controls) over the **dark `.kds-core.in-shell` wall body**. There is **no
+sidebar** (Core is a separate entity from `/admin`, and the old "Admin"
+back link is gone). The Fleet/Floor/Chef switch rides the subbar
+`.viewnav`; the stage filter + Sandbox badge ride the subbar right; the
+clock + sound/pause/refresh/fullscreen ride the header right. The
+**fullscreen kiosk** drops the shell chrome entirely and portals the bare
+dark wall (its own `.kds-top` header) to `<body>` (rule #4). `/core/kds` is
+a top-level `/core/*` route with its own layout. The three views:
 
-- **Floor** (`AdminKDSDesktop`, `kds.html`): `.kds-top` (SI brand-mark +
-  Fleet/Floor/Chef viewswitch + centred stage filter + clock +
-  sound/pause/refresh/fullscreen), the `.kds-ops` / `.ostat` manager ops
+- **Floor** (`AdminKDSDesktop`, `kds.html`): the shared header carries the
+  Fleet/Floor/Chef viewswitch + stage filter + clock +
+  sound/pause/refresh/fullscreen (the kiosk wall keeps these in `.kds-top`),
+  the `.kds-ops` / `.ostat` manager ops
   header, the 3-column `.kds-board`, and the **`.tk` ticket** (`KdsTk`:
   text timer escalating with the SLA, category-grouped items, allergen /
   notes, SLA meter, bump). 86 management is a `.kds-restore` row + native
   `.kds-btn86` picker.
 - **Chef** (`AdminKDSDesktop` with `chefStrip`, `kds-chef.html`): same
-  `.kds-top`, then the **`.kds-chefstrip`** — a `.kds-station` chip rail
+  shared header, then the **`.kds-chefstrip`** — a `.kds-station` chip rail
   (All + every station with a live ticket, real `ticketCategories` filter,
   depth count on each), the `.kds-qdepth` (In queue / Oldest, Oldest goes
   `.warn` past 8 min) and the `.kds-chef-86` controls — over a single flat
@@ -89,7 +95,7 @@ Same data, progressively narrower focus and bigger touch targets as you
 approach the heat. The owner reaches Floor by drilling into a truck from the
 Fleet wall (`onDrillIn` → `mode: "floor"`), then the viewswitch flips that
 truck between Floor (`opsHeader`) and Chef (`chefStrip`) via `onLens`; both
-drilled-in lenses run immersive (no SI sidebar). For a scoped role the
+drilled-in lenses ride the same shared shell (no sidebar). For a scoped role the
 viewswitch carries no `onLens` and stays decorative — the role *is* the lens.
 
 ## Lane headers — monochrome
@@ -207,9 +213,11 @@ body.kds { min-height: 100vh; }
 .tk { flex: none; }                                                  /* never get squashed */
 ```
 
-The top controls (stage switcher + clock + sound/pause/refresh/fullscreen)
-stay pinned via `position: sticky`. The board grows with content; the page
-scrolls.
+In the **fullscreen kiosk** wall the top controls live in the sticky
+`.kds-top` (above). In the **windowed** view those same controls live in the
+shared CoreShell header (fixed at the top of the shell), and the dark
+`.kds-core.in-shell` body scrolls within `.core-body.bleed`. Either way the
+board grows with content and the controls stay put.
 
 `flex: none` on `.tk` is critical — without it, a flex-column lane shrinks
 tickets to fit and `overflow: hidden` clips the footer (the late-ticket
@@ -259,7 +267,10 @@ live inside the wall.
 
 ## Top controls
 
-Pinned in the sticky topbar, in this order:
+The same set, in this order — in the shared CoreShell header (windowed:
+viewswitch in the subbar `.viewnav`, stage + Sandbox in the subbar right,
+clock + buttons in the header right) and in the kiosk wall's sticky
+`.kds-top`:
 
 ```
 [Brand mark]  [Fleet/Floor/Chef view-switch]  [Stage tabs]  [Clock]  [↻ Refresh]  [♪ Sound]  [⏸ Pause]  [⤢ Fullscreen]

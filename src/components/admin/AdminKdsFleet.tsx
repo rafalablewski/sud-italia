@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChefHat, ChevronLeft, Maximize2, Minimize2, RefreshCw } from "lucide-react";
+import { ChefHat, Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import type { MenuCategory, OrderStatus } from "@/data/types";
 import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
@@ -13,6 +13,7 @@ import { useFullscreen } from "./command/useFullscreen";
 import { fmtWallClock } from "./kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
+import { CoreShell } from "./core/CoreShell";
 
 /* ============================ Wire types ============================ */
 
@@ -193,10 +194,105 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
     [now],
   );
 
-  const clock = useMemo(() => fmtWallClock(now), [now]);
+  // Gate the wall clock on mount: `now` seeds from Date.now() (differs
+  // server↔client), so render a stable placeholder for SSR to avoid a
+  // hydration text mismatch, then fill in the live time after mount.
+  const clock = useMemo(() => (mounted ? fmtWallClock(now) : "--:--:--"), [now, mounted]);
 
-  const board = (
-    <div className={`kds-core${fullscreen ? " is-fullscreen" : ""}`}>
+  // Viewswitch (Fleet / Floor / Chef) — shared by the windowed CoreShell header
+  // and the dark kiosk wall. Floor / Chef drill into the first truck.
+  const viewswitchNodes = (
+    <>
+      <button type="button" className="on">Fleet</button>
+      <button
+        type="button"
+        disabled={!data?.tiles[0]}
+        onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "floor")}
+      >
+        Floor
+      </button>
+      <button
+        type="button"
+        disabled={!data?.tiles[0]}
+        onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "chef")}
+      >
+        Chef
+      </button>
+    </>
+  );
+
+  // The dark fleet board (benchmark bar + per-truck cards) — shared by the
+  // windowed shell body and the fullscreen kiosk wall.
+  const boardBody = (
+    <>
+      {data && <FleetBar data={data} now={now} toneOf={toneOf} />}
+
+      {loading && !data ? (
+        // The loading pill is portaled to <body> below (rule #4); the wall
+        // stays empty until the first frame lands. Error / "no trucks" are
+        // content, so they stay as .fleet-empty messages.
+        null
+      ) : error && !data ? (
+        <div className="fleet-empty">Couldn’t load fleet — {error}</div>
+      ) : data && data.tiles.length === 0 ? (
+        <div className="fleet-empty">No active trucks. Activate a location to see it here.</div>
+      ) : (
+        <div className="trucks">
+          {data?.tiles.map((tile) => (
+            <TruckBoard
+              key={tile.slug}
+              tile={tile}
+              now={now}
+              paceWindowMin={data.paceWindowMin}
+              toneOf={toneOf}
+              advancingId={advancingId}
+              onAdvance={advance}
+              onDrillIn={onDrillIn}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  // Windowed: the unified Core shell (light header, no sidebar, same nav as
+  // POS / Guest / Service) over the dark fleet body.
+  const windowed = (
+    <CoreShell
+      bleed
+      eyebrow="Kitchen · Fleet"
+      viewnav={viewswitchNodes}
+      subRight={
+        simEnabled ? (
+          <span className="badge platinum">
+            <span className="d" />
+            Sandbox
+          </span>
+        ) : undefined
+      }
+      right={
+        <>
+          <span className="core-clock">{clock}</span>
+          <button type="button" className="btn icon" onClick={() => void load()} title="Refresh now">
+            <RefreshCw />
+          </button>
+          <button type="button" className="btn icon" onClick={enterFs} title="Fullscreen fleet wall">
+            <Maximize2 />
+          </button>
+        </>
+      }
+    >
+      <div className="kds-core in-shell">
+        <div className="kds-wrap">{boardBody}</div>
+      </div>
+    </CoreShell>
+  );
+
+  // Kiosk: the bare dark wall, portaled to <body> so it escapes any stacking
+  // context (rule #4). The loading pill lands on `#admin-portal-root` (which
+  // holds the `--font-admin-*` vars), falling back to <body>.
+  const kioskBoard = (
+    <div className="kds-core is-fullscreen">
       <div className="kds-wrap">
         <div className="kds-top">
           <div className="kds-id">
@@ -206,23 +302,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
               <div className="loc">Atlas · all trucks</div>
             </div>
           </div>
-          <div className="kds-viewswitch">
-            <button type="button" className="on">Fleet</button>
-            <button
-              type="button"
-              disabled={!data?.tiles[0]}
-              onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "floor")}
-            >
-              Floor
-            </button>
-            <button
-              type="button"
-              disabled={!data?.tiles[0]}
-              onClick={() => data?.tiles[0] && onDrillIn?.(data.tiles[0].slug, "chef")}
-            >
-              Chef
-            </button>
-          </div>
+          <div className="kds-viewswitch">{viewswitchNodes}</div>
           {simEnabled && (
             <span className="kds-badge platinum">
               <span className="d" />
@@ -230,66 +310,21 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
             </span>
           )}
           <div className="kds-clock" style={{ marginLeft: "auto" }}>{clock}</div>
-          <a href="/admin" className="kds-ctrl" title="Back to admin">
-            <ChevronLeft className="h-4 w-4" />
-          </a>
           <button type="button" className="kds-ctrl" onClick={() => void load()} title="Refresh now">
             <RefreshCw className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            className={`kds-ctrl${fullscreen ? " on" : ""}`}
-            onClick={fullscreen ? exitFs : enterFs}
-            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen fleet wall"}
-          >
-            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          <button type="button" className="kds-ctrl on" onClick={exitFs} title="Exit fullscreen (Esc)">
+            <Minimize2 className="h-4 w-4" />
           </button>
         </div>
-
-        {data && <FleetBar data={data} now={now} toneOf={toneOf} />}
-
-        {loading && !data ? (
-          // The loading pill is portaled to <body> below (not rendered here):
-          // inside .kds-core / .admin-bg the shell's stacking context traps the
-          // fixed pill (rule #4), so it never reaches the viewport bottom-center
-          // like every other admin tab. The wall stays empty until the first
-          // frame lands — error and "no active trucks" remain .fleet-empty
-          // messages since those are content, not a transient load.
-          null
-        ) : error && !data ? (
-          <div className="fleet-empty">Couldn’t load fleet — {error}</div>
-        ) : data && data.tiles.length === 0 ? (
-          <div className="fleet-empty">No active trucks. Activate a location to see it here.</div>
-        ) : (
-          <div className="trucks">
-            {data?.tiles.map((tile) => (
-              <TruckBoard
-                key={tile.slug}
-                tile={tile}
-                now={now}
-                paceWindowMin={data.paceWindowMin}
-                toneOf={toneOf}
-                advancingId={advancingId}
-                onAdvance={advance}
-                onDrillIn={onDrillIn}
-              />
-            ))}
-          </div>
-        )}
+        {boardBody}
       </div>
     </div>
   );
 
-  // The loading pill rides the same escape hatch as the fullscreen wall, but
-  // lands on the admin layout wrapper (`#admin-portal-root`) rather than
-  // <body>: it's an ancestor of .admin-bg (so the pill escapes the
-  // `.admin-bg > *` stacking trap) yet it holds the `--font-admin-*` next/font
-  // vars, so `.v2-page-loading`'s `font-family: var(--font-ui)` resolves to
-  // Inter. `.v2-shell` is gone on this core route and <body> sits outside the
-  // font scope (browser default serif), so neither works. Fall back to <body>.
   return (
     <>
-      {fullscreen ? createPortal(board, document.body) : board}
+      {fullscreen ? createPortal(kioskBoard, document.body) : windowed}
       {loading &&
         !data &&
         mounted &&

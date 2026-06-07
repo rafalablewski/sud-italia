@@ -7,7 +7,6 @@ import {
   Bell,
   BellOff,
   ChefHat,
-  ChevronLeft,
   Maximize2,
   Minimize2,
   PauseCircle,
@@ -19,6 +18,7 @@ import type { Order, MenuCategory, OrderStatus } from "@/data/types";
 import { useAdminLocation } from "./v2/LocationContext";
 import { useToast } from "./v2/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
+import { CoreShell } from "./core/CoreShell";
 import {
   ACTIVE_STATUSES,
   KDS_COLUMNS,
@@ -360,7 +360,10 @@ function AdminKDSDesktop({
 
   // Wall-clock shown in the kiosk header — a glanceable institutional touch.
   // Keyed off `now` so it ticks with the live timers already running.
-  const clock = useMemo(() => fmtWallClock(now), [now]);
+  // Gate the wall clock on mount: `now` seeds from Date.now(), which differs
+  // server↔client, so render a stable placeholder for SSR to avoid a hydration
+  // text mismatch, then fill in the live time after mount.
+  const clock = useMemo(() => (mounted ? fmtWallClock(now) : "--:--:--"), [now, mounted]);
 
   // Bump-bar hotkeys (audit §3 — "button-click only" was costing ~3s
   // per bump at rush). Number keys 1-9 advance the corresponding
@@ -507,8 +510,178 @@ function AdminKDSDesktop({
   };
 
   const viewLabel = chefStrip ? "Chef" : "Floor";
-  const page = (
-    <div className={`kds-core${kiosk ? " is-fullscreen" : ""}`}>
+
+  // Viewswitch (Fleet / Floor / Chef) + stage filter — the same nodes ride the
+  // shared CoreShell header (windowed) and the dark kiosk wall, just under
+  // different parent classes (.viewnav / .seg vs .kds-viewswitch / .kds-stage).
+  const viewswitchNodes = (
+    <>
+      {fleetContext && onExitFleet && (
+        <button type="button" onClick={onExitFleet}>
+          Fleet
+        </button>
+      )}
+      <button
+        type="button"
+        className={(onLens ? lens === "floor" : viewLabel === "Floor") ? "on" : ""}
+        onClick={onLens ? () => onLens("floor") : undefined}
+      >
+        Floor
+      </button>
+      {(onLens || chefStrip) && (
+        <button
+          type="button"
+          className={(onLens ? lens === "chef" : true) ? "on" : ""}
+          onClick={onLens ? () => onLens("chef") : undefined}
+        >
+          Chef
+        </button>
+      )}
+    </>
+  );
+
+  const stageNodes = (
+    <>
+      <button type="button" className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
+        All <span className="n">{laneCounts.all}</span>
+      </button>
+      {KDS_COLUMNS.map((col) => (
+        <button
+          key={col.id}
+          type="button"
+          className={lane === col.id ? "on" : ""}
+          onClick={() => setLane(col.id)}
+        >
+          {col.label} <span className="n">{laneCounts[col.id]}</span>
+        </button>
+      ))}
+    </>
+  );
+
+  // The dark kitchen board + chime audio + legend/recall footrow — shared by
+  // the windowed shell body and the fullscreen kiosk wall. The manager/chef
+  // sub-headers are windowed-only (the kiosk wall maximises ticket space).
+  const boardBody = (
+    <>
+      <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
+        {loading ? (
+          // The loading pill is portaled to <body> below (rule #4); the body
+          // stays empty while we load rather than flashing a false "clear".
+          null
+        ) : orders.length === 0 ? (
+          <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
+        ) : chefStrip ? (
+          <KdsChefQueue columns={visibleByStatus} lane={lane} nowMs={now} updatingId={updatingId} onAdvance={advance} />
+        ) : lane === "all" ? (
+          <KdsBoard columns={visibleByStatus} stationFilter={station} nowMs={now} updatingId={updatingId} onAdvance={advance} />
+        ) : (
+          <KdsLane tickets={visibleByStatus.get(lane) || []} stationFilter={station} nowMs={now} updatingId={updatingId} onAdvance={advance} />
+        )}
+      </div>
+
+      {/* Chime audio — bundled WAV data-URIs so deployment never 404s. */}
+      <audio ref={audioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAGn/AAA7AGn/AAA7AGn/AAA7AGn/AAA7AA==" />
+      <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
+
+      <div className="kds-footrow">
+        {!chefStrip && bumpHistory.length > 0 && (
+          <div className="kds-recall">
+            <span className="lbl">Recall</span>
+            {bumpHistory.slice(0, 5).map((b) => (
+              <button
+                key={b.orderId}
+                type="button"
+                className="chip"
+                disabled={updatingId === b.orderId}
+                onClick={() => recall(b.orderId)}
+                title={`Recall ${b.label} to the expo column`}
+              >
+                <RotateCcw className="h-3 w-3" />#{kdsShortId(b.orderId)}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="kds-legend">
+          <span className="k"><span className="sw" />On time</span>
+          <span className="k"><span className="sw" style={{ background: "var(--warn)" }} />Approaching SLA</span>
+          <span className="k"><span className="sw" style={{ background: "var(--late)" }} />Late</span>
+          <span>
+            Keys <b>1–9</b> bump · <b>F</b> kiosk
+          </span>
+        </div>
+      </div>
+    </>
+  );
+
+  // Windowed: the unified Core shell (light header, no sidebar, same nav as
+  // POS / Guest / Service) over the dark kitchen body. The KDS controls live in
+  // the shared header slots so every Core surface's chrome sits in one place.
+  const windowed = (
+    <CoreShell
+      bleed
+      eyebrow={`Kitchen · ${brandLabel}`}
+      viewnav={viewswitchNodes}
+      subRight={
+        <>
+          <div className="seg kds-stage-seg" role="group" aria-label="Stage focus">
+            {stageNodes}
+          </div>
+          {simEnabled && (
+            <span className="badge platinum">
+              <span className="d" />
+              Sandbox
+            </span>
+          )}
+        </>
+      }
+      right={
+        <>
+          <span className="core-clock">{clock}</span>
+          <button type="button" className="btn icon" onClick={refresh} title="Refresh now">
+            <RefreshCw />
+          </button>
+          <button
+            type="button"
+            className={`btn icon${soundOn ? " on" : ""}`}
+            onClick={() => setSoundOn((s) => !s)}
+            title={soundOn ? "Mute new-ticket chime" : "Enable new-ticket chime"}
+          >
+            {soundOn ? <Bell /> : <BellOff />}
+          </button>
+          <button
+            type="button"
+            className={`btn icon${paused ? " on" : ""}`}
+            onClick={() => setPaused((p) => !p)}
+            title={paused ? "Resume" : "Pause"}
+          >
+            {paused ? <PlayCircle /> : <PauseCircle />}
+          </button>
+          <button type="button" className="btn icon" onClick={enterKiosk} title="Fullscreen kiosk">
+            <Maximize2 />
+          </button>
+        </>
+      }
+    >
+      <div className="kds-core in-shell">
+        <div className="kds-wrap">
+          {opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
+          {chefStrip && (
+            <KdsChefStrip orders={orders} station={station} onStation={setStation} location={location} />
+          )}
+          {boardBody}
+        </div>
+      </div>
+    </CoreShell>
+  );
+
+  // Kiosk: the bare dark wall, portaled to <body> so the edge-to-edge display
+  // escapes any stacking context (rule #4). Its own dark header carries the
+  // same controls. The subtree stays mounted, so SSE / hotkeys / timers keep
+  // running. The loading pill lands on `#admin-portal-root` (an ancestor of the
+  // stacking trap that still holds the `--font-admin-*` vars), falling back to
+  // <body> defensively.
+  const kioskPage = (
+    <div className="kds-core is-fullscreen">
       <div className="kds-wrap">
         <div className="kds-top">
           <div className="kds-id">
@@ -518,43 +691,9 @@ function AdminKDSDesktop({
               <div className="loc">{brandLabel}</div>
             </div>
           </div>
-          <div className="kds-viewswitch">
-            {fleetContext && onExitFleet && (
-              <button type="button" onClick={onExitFleet}>
-                Fleet
-              </button>
-            )}
-            <button
-              type="button"
-              className={(onLens ? lens === "floor" : viewLabel === "Floor") ? "on" : ""}
-              onClick={onLens ? () => onLens("floor") : undefined}
-            >
-              Floor
-            </button>
-            {(onLens || chefStrip) && (
-              <button
-                type="button"
-                className={(onLens ? lens === "chef" : true) ? "on" : ""}
-                onClick={onLens ? () => onLens("chef") : undefined}
-              >
-                Chef
-              </button>
-            )}
-          </div>
+          <div className="kds-viewswitch">{viewswitchNodes}</div>
           <div className="kds-stage" role="group" aria-label="Stage focus">
-            <button type="button" className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
-              All <span className="n">{laneCounts.all}</span>
-            </button>
-            {KDS_COLUMNS.map((col) => (
-              <button
-                key={col.id}
-                type="button"
-                className={lane === col.id ? "on" : ""}
-                onClick={() => setLane(col.id)}
-              >
-                {col.label} <span className="n">{laneCounts[col.id]}</span>
-              </button>
-            ))}
+            {stageNodes}
           </div>
           <div className="kds-clock">{clock}</div>
           {simEnabled && (
@@ -563,9 +702,6 @@ function AdminKDSDesktop({
               Sandbox
             </span>
           )}
-          <a href="/admin" className="kds-ctrl" title="Back to admin">
-            <ChevronLeft className="h-4 w-4" />
-          </a>
           <button type="button" className="kds-ctrl" onClick={refresh} title="Refresh now">
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -585,115 +721,18 @@ function AdminKDSDesktop({
           >
             {paused ? <PlayCircle className="h-4 w-4" /> : <PauseCircle className="h-4 w-4" />}
           </button>
-          <button
-            type="button"
-            className={`kds-ctrl${kiosk ? " on" : ""}`}
-            onClick={kiosk ? exitKiosk : enterKiosk}
-            title={kiosk ? "Exit fullscreen (Esc)" : "Fullscreen kiosk"}
-          >
-            {kiosk ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          <button type="button" className="kds-ctrl on" onClick={exitKiosk} title="Exit fullscreen (Esc)">
+            <Minimize2 className="h-4 w-4" />
           </button>
         </div>
-
-        {!kiosk && opsHeader && <KdsManagerOpsHeader orders={orders} location={location} />}
-
-        {!kiosk && chefStrip && (
-          <KdsChefStrip orders={orders} station={station} onStation={setStation} location={location} />
-        )}
-
-        <div className="ka-floor-body" style={{ flex: 1, minHeight: 0 }}>
-        {loading ? (
-          // The loading pill is portaled to <body> below (not rendered here):
-          // inside .kds-core / .admin-bg the shell's stacking context traps the
-          // fixed pill (rule #4), so it never reaches the viewport bottom-center
-          // like every other admin tab. The body stays empty while we load —
-          // showing the "Kitchen is clear" empty state before the first frame
-          // lands would be a lie.
-          null
-        ) : orders.length === 0 ? (
-          <div className="ka-empty">Kitchen is clear — new paid orders show up here within seconds.</div>
-        ) : chefStrip ? (
-          <KdsChefQueue
-            columns={visibleByStatus}
-            lane={lane}
-            nowMs={now}
-            updatingId={updatingId}
-            onAdvance={advance}
-          />
-        ) : lane === "all" ? (
-          <KdsBoard
-            columns={visibleByStatus}
-            stationFilter={station}
-            nowMs={now}
-            updatingId={updatingId}
-            onAdvance={advance}
-          />
-        ) : (
-          <KdsLane
-            tickets={visibleByStatus.get(lane) || []}
-            stationFilter={station}
-            nowMs={now}
-            updatingId={updatingId}
-            onAdvance={advance}
-          />
-        )}
-      </div>
-
-      {/* Chime audio. Public-domain short bell — bundled in /public if available,
-          otherwise falls back to a data: WAV so the file does not 404. */}
-      <audio ref={audioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAGn/AAA7AGn/AAA7AGn/AAA7AGn/AAA7AA==" />
-      {/* Second, more attention-grabbing chime fired once per ticket
-          when it crosses the promised-ready deadline. Same data-URI
-          fallback so deployment doesn't depend on shipping an mp3. */}
-      <audio ref={overdueAudioRef} preload="auto" src="data:audio/wav;base64,UklGRkAAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRwAAAAAAJL/AABuAJL/AABuAJL/AABuAJL/AABuAA==" />
-
-        <div className="kds-footrow">
-          {!chefStrip && bumpHistory.length > 0 && (
-            <div className="kds-recall">
-              <span className="lbl">Recall</span>
-              {bumpHistory.slice(0, 5).map((b) => (
-                <button
-                  key={b.orderId}
-                  type="button"
-                  className="chip"
-                  disabled={updatingId === b.orderId}
-                  onClick={() => recall(b.orderId)}
-                  title={`Recall ${b.label} to the expo column`}
-                >
-                  <RotateCcw className="h-3 w-3" />#{kdsShortId(b.orderId)}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="kds-legend">
-            <span className="k"><span className="sw" />On time</span>
-            <span className="k"><span className="sw" style={{ background: "var(--warn)" }} />Approaching SLA</span>
-            <span className="k"><span className="sw" style={{ background: "var(--late)" }} />Late</span>
-            <span>
-              Keys <b>1–9</b> bump · <b>F</b> kiosk
-            </span>
-          </div>
-        </div>
+        {boardBody}
       </div>
     </div>
   );
 
-  // Kiosk renders through a portal to document.body so the edge-to-edge
-  // display escapes the admin shell's stacking context (CLAUDE.md rule #4);
-  // the component subtree — and all its state, hooks and context — stays
-  // mounted, so the SSE stream, hotkeys and timers keep running uninterrupted.
-  //
-  // The loading pill rides the same escape hatch, but lands on the admin
-  // layout wrapper (`#admin-portal-root`) rather than <body>: it's an ancestor
-  // of .admin-bg (so the pill escapes the `.admin-bg > *` stacking trap) yet it
-  // holds the `--font-admin-*` next/font vars, so `.v2-page-loading`'s
-  // `font-family: var(--font-ui)` resolves to Inter. We can't reuse `.v2-shell`
-  // here — the KDS is a core route and drops that chrome — and <body> sits
-  // outside the font scope, so the chip would render in the browser default
-  // serif. Fall back to <body> defensively.
   return (
     <>
-      {kiosk ? createPortal(page, document.body) : page}
+      {kiosk ? createPortal(kioskPage, document.body) : windowed}
       {loading &&
         mounted &&
         createPortal(

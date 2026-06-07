@@ -742,10 +742,9 @@ function AdminWhatsAppDesktop() {
 
   const page = (
     <CoreShell
-      active="guest"
-      crumbs={<>Core / <b>Guest Engagement</b></>}
+      eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="inbox" counts={{ inbox: counts.inbox }} />}
-      topbarRight={
+      right={
         <>
           {simEnabled && (
             <span className="badge platinum">

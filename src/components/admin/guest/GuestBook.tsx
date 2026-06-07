@@ -57,13 +57,9 @@ export function GuestBook() {
 
   return (
     <CoreShell
-      crumbs={
-        <>
-          Core / <b>Guest Engagement</b> · Book
-        </>
-      }
+      eyebrow="Guest Engagement · Book"
       viewnav={<GuestViewNav current="book" />}
-      topbarRight={
+      right={
         <>
           <div className="seg">
             {LOCS.map((l) => (

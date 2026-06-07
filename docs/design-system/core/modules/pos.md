@@ -7,11 +7,13 @@ calm, and fast at once** — and the highest daily-use surface for staff.
 
 **Live code:** `src/components/admin/AdminPos.tsx`.
 **Mockups:** `pos.html` + `pos-tender.html` + `pos-tables.html`.
-**Theme:** renders on the Core suite shell (`<CoreShell active="pos">`,
-`.core-suite` in `src/app/themes/core/suite.css`) — the SI sidebar +
-topbar, with the channel + location segmented controls in the topbar.
-`/core/pos` is a top-level `/core/*` route with its own layout
-(`src/app/core/layout.tsx` + `CoreProviders`), so there's no admin chrome.
+**Theme:** renders on the unified Core suite shell (`<CoreShell>`,
+`.core-suite` in `src/app/themes/core/suite.css`) — the shared two-row
+header with **no sidebar**: the location toggle + fullscreen sit in the
+header right (row 1), the channel segmented control + Steer toggle in the
+subbar right (row 2). `/core/pos` is a top-level `/core/*` route with its
+own layout (`src/app/core/layout.tsx` + `CoreProviders`), so there's no
+admin chrome.
 The tab rail, category rail, text-forward `.prod` cards and the coursing
 `.ticket` are all ported 1:1 from `pos.html`; tender is a `.core-suite-
 overlay` dialog, and table-assign / address use the shared v2 `Dialog`
@@ -21,13 +23,16 @@ surface.
 ## Layout — two-pane, iPad-first
 
 ```
-+--------+---------------------------------+------------------+
-|        |  ──── Open checks (tab rail) ────                  |
-| sidebar+---------------------------------+------------------+
-|        | cat-  |  menu grid              | live ticket      |
-|        | rail  |                         | (persistent)     |
-|        | (86px)|                         | (396px)          |
-+--------+-------+-------------------------+------------------+
++----------------------------------------------------------+
+|  brand · POS·KDS·Guest·Service nav · location · ⛶  (head) |
+|  Point of sale · KRAKÓW   |   channel seg · Steer (subbar) |
++---------------------------------+------------------------+
+|  ──── Open checks (tab rail) ────                         |
++-------+-------------------------+------------------------+
+| cat-  |  menu grid              | live ticket             |
+| rail  |                         | (persistent)            |
+| (86px)|                         | (396px)                 |
++-------+-------------------------+------------------------+
 ```
 
 - **Vertical category rail** on the left (86px) — short thumb travel on
@@ -43,8 +48,9 @@ and reflows in CSS — there is no separate mobile POS. Tablet narrows the
 rails (cat-rail 64px, ticket 320px) and drops the menu to 2 cols; **phone
 (≤ 680px)** stacks it — the cat-rail becomes a horizontal scroller across the
 top, the menu goes 1-col, and the ticket drops below with its own capped
-(`46vh`) scroll. The CoreShell sidebar collapses to a 52px icon rail (it's
-the only nav out). See the breakpoint table in
+(`46vh`) scroll. The shared header reflows — the brand label collapses to its
+mark and the `.core-nav` switcher drops its labels to icons so all four
+surfaces still fit one row. See the breakpoint table in
 [`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
 
 ## Concurrent open checks — tab rail

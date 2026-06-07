@@ -191,7 +191,8 @@ through `/api/admin/customers/{phone}/send`:
 No separate mobile surface — the mobile shell is retired (see
 [`../../admin/mobile/README.md`](../../admin/mobile/README.md)). The Guests
 book renders its `.core-suite` layout at every width and reflows
-responsively on a phone (single column, sidebar → icon rail). The old
+responsively on a phone (single column; the shared header reflows brand →
+mark, `.core-nav` labels → icons). The old
 `MobileCustomers` / `MobileCustomerDetail` components were deleted in the
 cleanup.
 

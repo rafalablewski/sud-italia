@@ -50,14 +50,20 @@ mockup** design (`public/mockups/core-suite/`):
   `src/app/themes/core/index.css` now backs **only the Mobile KDS**
   (`.kds-atlas` / `.ka-*`) plus the WhatsApp dialog `.wa-*` chrome.
 - **Shell:** `<CoreShell>` (`src/components/admin/core/CoreShell.tsx`)
-  renders the mockup's SI sidebar + topbar as a fixed full-viewport layer
-  for POS + Guest. KDS is full-bleed with its own dark top bar (no
-  sidebar). The suite owns the top-level `/core/*` segment
-  (`/core/guest`, `/core/pos`, `/core/kds`, `/core/service`); its own
+  renders **one unified chrome shared by all four surfaces** (POS, KDS,
+  Guest, Service) as a fixed full-viewport layer — **no sidebar**. Core is
+  a separate entity from `/admin`: the shell renders none of the admin
+  shell (no `.app-sidebar`, no `nav.config`, no `/admin` links). Its header
+  is two rows — row 1 = brand + the primary `<CoreNav>` switcher
+  (POS · KDS · Guest · Service) + global actions; row 2 = an eyebrow + the
+  surface's `viewnav` sub-tabs + that surface's own controls. KDS rides the
+  same shell with its **dark wall body** (`.kds-core.in-shell`) under the
+  light header; its fullscreen kiosk still drops the chrome for the bare
+  wall. The suite owns the top-level `/core/*` segment (`/core/guest`,
+  `/core/pos`, `/core/kds`, `/core/service`); its own
   `src/app/core/layout.tsx` loads the Admin + Core theme CSS and
   `CoreProviders` (`src/app/core/CoreProviders.tsx`) supplies the data
-  providers (location, toast, shell context). There is no admin chrome to
-  step aside — unlike the old `/admin/*` placement, where AdminShell did.
+  providers (location, toast, shell context).
 - **Surfaces:** **POS** (`/core/pos`, `pos.html`) and the **Guest
   Engagement hub** (`/core/guest`, five nested-route views Inbox · Guests ·
   Loyalty · Concierge · Book — the old `/admin/crm`, `/admin/loyalty`,

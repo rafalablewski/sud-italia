@@ -31,12 +31,12 @@
   },
   "src/components/admin/AdminKDS.tsx": {
     "no-restricted-syntax": {
-      "count": 15
+      "count": 19
     }
   },
   "src/components/admin/AdminKdsFleet.tsx": {
     "no-restricted-syntax": {
-      "count": 7
+      "count": 9
     }
   },
   "src/components/admin/AdminLocationsManager.tsx": {

@@ -912,13 +912,8 @@ export function AdminPos({
 
   const page = (
     <CoreShell
-      active="pos"
-      crumbs={
-        <>
-          Core / <b>POS</b> · {locName}
-        </>
-      }
-      topbarRight={
+      eyebrow={`Point of sale · ${locName}`}
+      subRight={
         <>
           <div className="seg">
             {CHANNELS.map((c) => (
@@ -943,6 +938,10 @@ export function AdminPos({
             <span className="d" />
             Steer {steer ? "on" : "off"}
           </button>
+        </>
+      }
+      right={
+        <>
           <div className="seg">
             {locOptions.map((o) => (
               <button key={o.slug} type="button" className={pageLoc === o.slug ? "on" : ""} onClick={() => setPageLoc(o.slug)}>

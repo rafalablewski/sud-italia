@@ -142,14 +142,9 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
 
   const board = (
     <CoreShell
-      active="guest"
-      crumbs={
-        <>
-          Core / <b>Guest Engagement</b>
-        </>
-      }
+      eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="concierge" />}
-      topbarRight={
+      right={
         <>
           <div className="seg">
             <button type="button" className={view === "mcp" ? "on" : ""} onClick={() => setView("mcp")}>

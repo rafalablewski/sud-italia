@@ -1,58 +1,78 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Sidebar } from "../v2/Sidebar";
+import Link from "next/link";
+import { CoreNav } from "./CoreNav";
 
 /**
- * The Core suite shell — the mockup's topbar + the shared admin sidebar
- * (`.core-suite` is a fixed full-viewport layer). Replaces the admin chrome on
- * /core/pos and /core/guest (AdminShell steps aside for those routes; KDS
- * runs its own `.kds-core` wall with no sidebar).
+ * The Core suite shell — one self-contained chrome shared by **every** Core
+ * surface (POS, KDS, Guest, Service). Core is a separate entity from /admin:
+ * this shell does NOT render the admin sidebar or import anything from the
+ * admin v2 shell. There is no sidebar at all.
  *
- * The sidebar is the **same `<Sidebar>` component AdminShell renders** — one
- * source of truth (`.app-sidebar`), full navigation, so POS / Guest and the
- * rest of admin are pixel-identical. CoreShell only owns the topbar + body.
+ * Layout (identical for all four surfaces, so each subpage's controls sit in
+ * the same place):
+ *
+ *   ┌ header (row 1) ────────────────────────────────────────────┐
+ *   │ [brand]   [CoreNav: POS · KDS · Guest · Service]   {right} │
+ *   ├ subbar (row 2, only when eyebrow/viewnav/subRight given) ───┤
+ *   │ {eyebrow} {viewnav}                            {subRight}  │
+ *   └────────────────────────────────────────────────────────────┘
+ *   {children}
+ *
+ * - `right`    — global header actions (location toggle, fullscreen…).
+ * - `eyebrow`  — small label at the start of row 2 (e.g. "Guest Engagement").
+ * - `viewnav`  — the surface's sub-view tabs (GuestViewNav, ServiceViewNav,
+ *                the KDS Fleet/Floor/Chef switch).
+ * - `subRight` — the surface's own controls (POS channel/steer, the date
+ *                picker, the KDS stage filter + clock…).
+ *
+ * `bleed` drops the body padding/scroll container so a full-bleed surface
+ * (the KDS wall) can own its own layout.
  */
 
-type CoreKey = "pos" | "kds" | "guest";
-
 export function CoreShell({
-  crumbs,
+  right,
+  eyebrow,
   viewnav,
-  topbarRight,
+  subRight,
+  bleed = false,
   children,
 }: {
-  /**
-   * Legacy: which core surface is active. The shared sidebar highlights by
-   * pathname (it lists every route), so this no longer drives the active
-   * state — kept optional so existing call sites don't need to change.
-   */
-  active?: CoreKey;
-  /** Breadcrumb content, e.g. <>Core / <b>Guest Engagement</b></>. */
-  crumbs: ReactNode;
-  /** Optional sub-view switcher (rendered in the topbar `.viewnav` slot). */
+  right?: ReactNode;
+  eyebrow?: ReactNode;
   viewnav?: ReactNode;
-  /** Optional right-aligned topbar actions. */
-  topbarRight?: ReactNode;
+  subRight?: ReactNode;
+  bleed?: boolean;
   children: ReactNode;
 }) {
+  const hasSub = Boolean(eyebrow || viewnav || subRight);
   return (
     <div className="core-suite">
-      <div className="shell">
-        <Sidebar />
+      <div className="core-shell">
+        <header className="core-head">
+          <Link href="/core/pos" className="brand" aria-label="Sud Italia Core">
+            <div className="brand-mark">SI</div>
+            <div>
+              <div className="brand-name">Sud Italia</div>
+              <div className="brand-sub">Core</div>
+            </div>
+          </Link>
+          <CoreNav />
+          {right && <div className="core-head-right">{right}</div>}
+        </header>
 
-        <div className="main">
-          <div className="topbar">
-            <div className="crumbs">{crumbs}</div>
-            {viewnav && (
-              <div className="viewnav" style={{ marginLeft: 10 }}>
-                {viewnav}
-              </div>
-            )}
-            {topbarRight && <div className="topbar-right">{topbarRight}</div>}
+        {hasSub && (
+          <div className="subbar">
+            <div className="subbar-left">
+              {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+              {viewnav && <div className="viewnav">{viewnav}</div>}
+            </div>
+            {subRight && <div className="subbar-right">{subRight}</div>}
           </div>
-          {children}
-        </div>
+        )}
+
+        <div className={bleed ? "core-body bleed" : "core-body"}>{children}</div>
       </div>
     </div>
   );
