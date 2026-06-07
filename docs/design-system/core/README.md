@@ -55,7 +55,11 @@ mockup** design (`public/mockups/core-suite/`):
   a separate entity from `/admin`: the shell renders none of the admin
   shell (no `.app-sidebar`, no `nav.config`, no `/admin` links). Its header
   is two rows — row 1 = brand + the primary `<CoreNav>` switcher
-  (POS · KDS · Guest · Service) + global actions; row 2 = an eyebrow + the
+  (POS · KDS · Guest · Service, with the mockup's own inlined line glyphs —
+  POS terminal · KDS screen · guest · service cloche — not lucide) + global
+  actions; on the Guest hub those actions are `<GuestHeaderActions>`
+  (WhatsApp live/off status badge + Funnel · Settings · Broadcast, routing to
+  the Inbox where the dialogs live); row 2 = an eyebrow + the
   surface's `viewnav` sub-tabs + that surface's own controls. KDS rides the
   same shell with its **dark wall body** (`.kds-core.in-shell`) under the
   light header; its fullscreen kiosk still drops the chrome for the bare

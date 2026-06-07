@@ -132,7 +132,7 @@
 }
 .core-suite .core-nav a:hover { background: var(--surface-hover); color: var(--fg); }
 .core-suite .core-nav a.on { background: var(--surface-3); color: var(--fg); box-shadow: var(--sh-xs); }
-.core-suite .core-nav a svg { opacity: .85; flex: none; }
+.core-suite .core-nav a svg { width: 15px; height: 15px; opacity: .85; flex: none; }
 
 /* Header row 2 — eyebrow + sub-view tabs · the surface's own controls */
 .core-suite .subbar {
