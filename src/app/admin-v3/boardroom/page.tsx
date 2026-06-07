@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { BoardroomV3 } from "@/components/admin/v3/BoardroomV3";
+import { BoardroomV3 } from "@/admin-v3/BoardroomV3";
 
 /**
  * Boardroom — the AI C-suite team console (CEO/COO/CFO/CMO). Live

@@ -3,7 +3,7 @@ import { getCurrentAdminUser } from "@/lib/admin-auth";
 import { ROLE_RANK } from "@/lib/admin-roles";
 import { getAdminUsers, getAuditLog } from "@/lib/store";
 import { buildSoc2Register, type Soc2Signals } from "@/lib/soc2";
-import { Soc2V3 } from "@/components/admin/v3/Soc2V3";
+import { Soc2V3 } from "@/admin-v3/Soc2V3";
 
 // SOC 2 register — owner-only. Every control status is derived from REAL
 // runtime signals (env + admin-user table + audit log) by the same pure

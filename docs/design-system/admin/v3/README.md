@@ -36,8 +36,8 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 | Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs login/portals/Core) | `src/app/themes/admin-v3/index.css` |
 | Class prefix   | `.v2-*`, `.glass-*`, `.admin-*`, `.app-sidebar` | `.av3-*` (single prefix, no legacy aliases) |
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
-| JS token mirror| `src/components/admin/v2/theme.ts`          | `src/components/admin/v3/theme.ts`             |
-| Components      | `src/components/admin/v2/*`                 | `src/components/admin/v3/*`                     |
+| JS token mirror| `src/components/admin/v2/theme.ts`          | `src/admin-v3/theme.ts`             |
+| Components      | `src/components/admin/v2/*`                 | `src/admin-v3/*`                     |
 | Mount route    | `/admin/*` → 307s to v3 (`src/middleware.ts`); still serves manager/franchisee + `/admin/capabilities` | `/admin-v3/*` (**LIVE for owner** — cutover done; owner lands here) |
 
 **The one shared dependency v3 keeps:** the framework-level libs that are
@@ -55,7 +55,7 @@ leaves it intact. Dark is canonical; light is opt-in.
 
 All v3 tokens are `--av3-*` and live only inside `.av3-root` in
 `src/app/themes/admin-v3/index.css`, mirrored in
-`src/components/admin/v3/theme.ts` for charts / inline SVG. Never hardcode a
+`src/admin-v3/theme.ts` for charts / inline SVG. Never hardcode a
 hex in a v3 component — use the token.
 
 | Group     | Tokens (dark canonical)                                                  |
@@ -71,7 +71,7 @@ hex in a v3 component — use the token.
 
 ## Shell
 
-`AdminShellV3` (`src/components/admin/v3/AdminShellV3.tsx`) — a denser frame:
+`AdminShellV3` (`src/admin-v3/AdminShellV3.tsx`) — a denser frame:
 a **232px sidebar that collapses to a 60px icon rail** (state persisted), a
 **44px topbar** with breadcrumb + the single shell-level scope switcher +
 theme toggle + notification bell, and a content well on a tight grid. Nav
@@ -659,7 +659,7 @@ refetches every 30s.
   margin-trap / prep-heavy flags). All accept `?days=N`.
   **Part 3c shipped:** the five-section ⓘ explainer pass (Rule #12). A
   v3-native `MetricExplainer` + `InfoButton` primitive
-  (`src/components/admin/v3/ui/Explainer.tsx`, exported from `ui`) renders the
+  (`src/admin-v3/ui/Explainer.tsx`, exported from `ui`) renders the
   five required sections in the fixed order/labels — description → INSTITUTIONAL
   ANALYSIS → IN PLAIN TERMS → TIPS → METHODOLOGY (all five props required, so a
   half-written explanation won't compile). It is the admin-v3 counterpart to
