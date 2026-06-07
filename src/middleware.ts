@@ -8,10 +8,10 @@ import { NextResponse, type NextRequest } from "next/server";
  * v2, delete this file and revert `landingPathForRole` (owner → "/admin"). v2 is
  * left untouched in the tree (TODO §Cutover step 2: "swap … reversible; keeps v2").
  *
- * Pass-throughs (intentionally stay on v2):
- *   - `/admin/capabilities` — the shared deploy ledger (Rule #9 source of truth)
- *     that the v3 nav links to; not a themed surface worth rebuilding.
- *   - `/admin/login` — the owner login page; v3 reuses it as-is.
+ * Pass-throughs:
+ *   - `/admin/login` — the owner login page; v3 reuses it as-is (stays v2).
+ * The capabilities ledger moved to the standalone `/capabilities` route, so
+ * `/admin/capabilities` now redirects there (keeps old bookmarks working).
  *
  * Manager / franchisee portals are **unaffected**: they rewrite to `/admin/*`
  * (v2) in `next.config.ts`, and v3 has no role-prefix support yet
@@ -24,10 +24,13 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Pass-throughs — keep serving v2.
+  // The ledger moved out of /admin to its own shell-less route.
   if (pathname === "/admin/capabilities" || pathname.startsWith("/admin/capabilities/")) {
-    return NextResponse.next();
+    const url = req.nextUrl.clone();
+    url.pathname = "/capabilities";
+    return NextResponse.redirect(url, 307);
   }
+  // Pass-through — the owner login page stays on v2.
   if (pathname === "/admin/login") return NextResponse.next();
 
   let dest: string | null = null;
