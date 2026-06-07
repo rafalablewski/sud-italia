@@ -573,7 +573,7 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
       title={item.primary.name}
       subtitle={`Chain-wide product · ${item.variants.length} site${item.variants.length > 1 ? "s" : ""}`}
       headerExtra={item.anyRecipe ? <Badge tone="brand"><FlaskConical style={{ width: 11, height: 11 }} /> recipe</Badge> : undefined}
-      width={640}
+      width={940}
       footer={
         <>
           <Button variant="ghost" size="sm" loading={busy} onClick={() => dishBulk({ action: "reset" }, "Reset this dish's overrides back to seed?")}>Reset</Button>
@@ -584,6 +584,8 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
         </>
       }
     >
+      <div className="av3-bodysplit">
+       <div>
       {/* live recap — price range + avg margin from the per-site draft */}
       <div className="av3-recap" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
         <div className="av3-recap-cell"><div className="av3-recap-k">Price</div><div className="av3-recap-v">{recap.min === recap.max ? formatPrice(recap.min) : `${formatPrice(recap.min)}–${formatPrice(recap.max)}`}</div></div>
@@ -708,11 +710,81 @@ function MenuEditDialog({ item, onClose, onSaved }: { item: Unified; onClose: ()
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{ALLERGENS.map((a) => <ChipToggle key={a} on={allergens.includes(a)} onClick={() => toggleAllergen(a)}>{ALLERGEN_LABELS[a].emoji} {ALLERGEN_LABELS[a].en}</ChipToggle>)}</div>
         </>
       )}
+       </div>
+
+       <div style={{ position: "sticky", top: 0 }}>
+         <div className="av3-field-label" style={{ marginBottom: 6 }}>Customer menu card · live</div>
+         <MenuCardPreview
+           name={name} description={description} category={category} tags={tags} allergens={allergens}
+           menuRole={menuRole} deliveryOnly={deliveryOnly} nutriGrade={nutriGrade} halalStatus={halalStatus}
+           containsPork={containsPork} containsAlcohol={containsAlcohol}
+           priceMin={recap.min} priceMax={recap.max}
+           allOff={perLoc.length > 0 && perLoc.every((r) => !r.available)}
+           someOff={perLoc.some((r) => !r.available)}
+         />
+       </div>
+      </div>
     </Dialog>
   );
 }
 
 /* ── bulk edit dialog ──────────────────────────────────────────────────── */
+/* ── live customer menu-card preview (Menu editor) ─────────────────────── */
+const TAG_LABEL = Object.fromEntries(MENU_TAGS.map((t) => [t.key, t.label])) as Record<MenuTag, string>;
+const ROLE_LABEL = Object.fromEntries(MENU_ROLES.map((r) => [r.key, r.label])) as Record<MenuRole, string>;
+
+function MenuCardPreview({
+  name, description, category, tags, allergens, menuRole, deliveryOnly, nutriGrade, halalStatus,
+  containsPork, containsAlcohol, priceMin, priceMax, allOff, someOff,
+}: {
+  name: string; description: string; category: MenuCategory; tags: MenuTag[]; allergens: Allergen[];
+  menuRole: MenuRole | ""; deliveryOnly: boolean; nutriGrade: Nutri | ""; halalStatus: Halal | "";
+  containsPork: boolean; containsAlcohol: boolean; priceMin: number; priceMax: number; allOff: boolean; someOff: boolean;
+}) {
+  const priceLabel = priceMin === priceMax ? formatPrice(priceMin) : `${formatPrice(priceMin)}–${formatPrice(priceMax)}`;
+  return (
+    <div style={{ border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-lg)", background: "var(--av3-s1)", padding: 14, boxShadow: "var(--av3-sh-1)", opacity: allOff ? 0.7 : 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 5 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--av3-subtle)" }}>{CATEGORY_LABEL[category]}</span>
+        {menuRole && <Badge tone="brand">{ROLE_LABEL[menuRole]}</Badge>}
+        {deliveryOnly && <Badge tone="info">Delivery only</Badge>}
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.2 }}>{name || "Dish name"}</div>
+        <div className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 15, fontWeight: 700, whiteSpace: "nowrap" }}>{priceLabel}</div>
+      </div>
+      {description && <div style={{ fontSize: 12, color: "var(--av3-muted)", marginTop: 4, lineHeight: 1.45 }}>{description}</div>}
+      {(tags.length > 0 || nutriGrade) && (
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 10 }}>
+          {tags.map((t) => <span key={t} style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: "var(--av3-r-pill)", background: "color-mix(in oklab, var(--av3-ok) 14%, var(--av3-s2))", color: "var(--av3-ok)", fontWeight: 600 }}>{TAG_LABEL[t]}</span>)}
+          {nutriGrade && <span style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: "var(--av3-r-pill)", background: "var(--av3-s3)", color: "var(--av3-muted)", fontWeight: 600 }}>Nutri-Grade {nutriGrade}</span>}
+        </div>
+      )}
+      {allergens.length > 0 && (
+        <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 10, lineHeight: 1.5 }}>
+          <span style={{ fontWeight: 600 }}>Contains:</span> {allergens.map((a) => `${ALLERGEN_LABELS[a].emoji} ${ALLERGEN_LABELS[a].en}`).join(" · ")}
+        </div>
+      )}
+      {(halalStatus || containsPork || containsAlcohol) && (
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
+          {halalStatus === "halal" && <Badge tone="ok">Halal</Badge>}
+          {halalStatus === "non-halal" && <Badge tone="neutral">Non-halal</Badge>}
+          {containsPork && <Badge tone="warn">Contains pork</Badge>}
+          {containsAlcohol && <Badge tone="warn">Contains alcohol</Badge>}
+        </div>
+      )}
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--av3-line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        {allOff
+          ? <Badge tone="bad" dot>Currently 86&rsquo;d</Badge>
+          : someOff
+            ? <Badge tone="warn" dot>86&rsquo;d at some sites</Badge>
+            : <Badge tone="ok" dot>Available</Badge>}
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--av3-platinum)" }}>Add to order</span>
+      </div>
+    </div>
+  );
+}
+
 function BulkEditDialog({ count, onClose, onApply }: { count: number; onClose: () => void; onApply: (patch: Record<string, unknown>) => Promise<void> }) {
   const [fields, setFields] = useState({ price: false, cost: false, category: false, deliveryOnly: false, packagingCost: false });
   const [price, setPrice] = useState("");

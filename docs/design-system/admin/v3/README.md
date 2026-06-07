@@ -421,6 +421,15 @@ refetches every 30s.
   `modifierGroups`. Chain-wide product facts (name/description/dietary/disclosures)
   still write to every site (rule #10). Selects + booleans in Pricing/Disclosures
   use `.av3-formgrid` + `.av3-togglerow` so they align instead of wrapping.
+  **Live preview (Operations interactivity pass):** the editor is now a
+  **two-column workbench** (`.av3-bodysplit`, 940px) — the tabbed form on the
+  left, a sticky **live customer menu-card preview** on the right that re-renders
+  as you type: category eyebrow + menu-role/delivery badges, name + price range,
+  description, dietary-tag + Nutri-Grade chips, an allergen "Contains:" line,
+  halal/pork/alcohol notes, and an availability state (Available / 86'd at some
+  sites / Currently 86'd from the per-site switches). It's the same dish the
+  customer sees, updating from the same edit state — so you frame the card while
+  you edit it.
 - [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
@@ -447,15 +456,45 @@ refetches every 30s.
   (cost / food-cost % / batch / kcal) above a **tabbed** body (Ingredients /
   Nutrition / Notes — Nutrition & Notes flag with a dot when relevant); ingredient
   rows gained unit + `%` affixes. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
+  **Live economics panel (Operations interactivity pass):** the editor is now a
+  **two-column workbench** (`.av3-bodysplit`, 920px) — the tabbed builder on the
+  left, a sticky **live economics panel** on the right: a big **food-cost %** with
+  a **health gauge** (green ≤30 → amber ≤38 → red band, a marker tracking the live
+  figure), a **margin readout** (menu price · food cost · gross profit · GP
+  margin, computed against the dish's avg price), and an always-visible
+  **per-portion macros** grid (kcal + protein/carbs/sugar/fiber/fat) — so the
+  cost/health/nutrition consequences of every ingredient edit are visible without
+  switching tabs.
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
-  live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
+  live in/out-of-range verdict (`@/lib/haccp`); record + today's log table.
+  **Workbench pass (Operations interactivity):** a **KPI rail** (readings ·
+  compliance % · out-of-range) with five-section ⓘ explainers on compliance +
+  out-of-range; a **live safe-range gauge** under the record form that shades
+  the safe band and marks the entered temp as you type (red when it breaches);
+  **search + All/Out-of-range filter chips**; a **Board⇄Table toggle** with a
+  default board of reading cards (big temp, per-sensor gauge, OK/breach); and a
+  **row → detail popup** (large temp, gauge, safe range, recorded time, +
+  corrective-action reminder when flagged).
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
-  entries + write-off cost KPI (`POST /api/admin/waste`)
+  entries + write-off cost KPI (`POST /api/admin/waste`).
+  **Workbench pass (Operations interactivity):** a **KPI rail** (entries ·
+  write-off today · top reason) with a five-section ⓘ on write-off; a **live
+  entry preview** under the form (item · qty · reason · cost → projected new
+  daily write-off); **search + reason filter chips**; a **Board⇄Table toggle**
+  with a default board of waste cards (cost, qty, share-of-today); and a
+  **row → detail popup** (qty/reason/cost/share/time + an "uncosted = invisible"
+  nudge when no cost was recorded).
 - [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
-  week's log (`POST /api/admin/handover`). **Visual upgrade:** a **KPI rail**
-  (this-week count / issues flagged / net cash variance / last sign-off) above
-  the sign-off form.
+  week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /
+  issues flagged / net cash variance / last sign-off) sits above the form.
+  **Workbench pass (Operations interactivity):** five-section ⓘ explainers on
+  Issues flagged + Net cash variance; a **live sign-off summary** under the form
+  (shift · managers · the three check pills · cash, warn-tinted when a check is
+  not clear); **search + shift filter chips**; a **Board⇄Table toggle** with a
+  default board of handover cards (manager, shift, check pills, variance); and a
+  **row → detail popup** (both managers, cash counted + variance, all three
+  checks, the manager comment).
 - [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
   add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`). **Visual
   upgrade:** a **KPI rail** (suppliers / avg lead / fastest lead / with-contact)
@@ -519,10 +558,20 @@ refetches every 30s.
 - [x] Growth (partial) — Scheduled bundles (`/admin-v3/scheduled-bundles`):
   standing-pre-order status board (approve/pause/resume/cancel via
   `PATCH /api/admin/scheduled-bundles/:id`), rows sorted by weekday → ready-time
-  so the list mirrors the operator's fulfilment order (v2 parity). Truck ops (`/admin-v3/truck`):
-  events + routes CRUD (incl. route-stops editor) over `/api/admin/truck-events`
-  + `/api/admin/truck-routes`, plus the **KPI rail** (events / revenue / expected
-  guests / live-upcoming) restored.
+  so the list mirrors the operator's fulfilment order (v2 parity). **Workbench
+  upgrade:** a reactive **KPI rail** (pending-approval · active · weekly units ·
+  paused, computed real from the live list, rule #1) with five-section ⓘ
+  explainers on the two levers (pending approval · standing weekly units), and a
+  **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
+  the full standing-cart line items + the status actions, so the operator can
+  see *what's in* a recurring order, not just its item count. Truck ops
+  (`/admin-v3/truck`): events + routes CRUD (incl. route-stops editor) over
+  `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
+  (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
+  five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table
+  view toggle** for events with a default **Board** of event cards (status dot,
+  date, revenue, expected guests; upcoming-first sort) that open the editor on
+  click.
 - [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
   (referral config + challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
   **Restored to v2 parity (flag #5):** the **Loyalty tiers** editor
@@ -540,7 +589,20 @@ refetches every 30s.
   windows (variant/hours/title/sub/badge/CTA/one-tap-add, add/edit/toggle/delete)
   and **Menu badges** (Hero / Pizzaiolo's Choice / Chef's Signature / New /
   Popular / Staff Pick multi-selects, with `menuRole`-intrinsic items shown
-  auto-locked). Saves on change (rule #7). Upsell (`/admin-v3/upsell`) — **full
+  auto-locked). Saves on change (rule #7).
+  **Workbench upgrade (Menu/Recipes-parity interactivity):** the Combo deals tab
+  is now a full workbench — a reactive **KPI rail** (active combos · avg discount
+  with a five-section ⓘ · item-gated deals · windows-live-now with a five-section
+  ⓘ, all computed real from the live config + clock, rule #1), a **search** box +
+  **Board⇄Table** view toggle, and a default **Board view** of combo cards (each
+  showing the discount/min-items/channel/required badges + a real-price worked
+  example) with edit-on-click. The combo editor is a **two-column drill-in**
+  (`.av3-bodysplit`, 900px): the form on the left, a **live customer nudge
+  preview** + a **worked złoty example** (real cheapest-per-category / required
+  items × discount = subtotal/saving/pay) on the right that recompute as you type.
+  The Time-of-day editor gained the same split with a **live cart-banner preview**
+  and a "showing now / parked" indicator; the windows table flags the window live
+  at the current hour. Upsell (`/admin-v3/upsell`) — **full
   v2 parity (PR #139 follow-up):** two tabs. **Bundles** restores the full
   bundle-ladder editor (CRUD with composition slots, fixed/dynamic pricing,
   anchor/decoy/default flags, loyalty gate, channel, members-only, scarcity
@@ -552,6 +614,19 @@ refetches every 30s.
   comparison via `/api/admin/ml-upsell/compare`). **Item modifiers** is a
   read-only cross-location inventory. All config round-trips through
   `PUT /api/admin/upsell` (saves on change, rule #7).
+  **Workbench upgrade (Menu/Recipes-parity interactivity):** the Bundles tab is a
+  full workbench wired to **real 30-day analytics** (`/api/admin/bundle-analytics`,
+  rule #1) — a reactive **KPI rail** with five-section ⓘ explainers (active
+  bundles · penetration = applies/impressions · bundle AOV · 30d revenue · avg
+  effective discount), a **search** box + **Board⇄Table** view toggle, and a
+  default **Board view** of meal-period-grouped bundle cards (anchor/decoy/
+  default/members badges, price/discount, and the bundle's real 30d sold +
+  effective-discount + a 👎-rate flag joined from the analytics rollup). The
+  bundle editor is a **two-column drill-in** (`.av3-bodysplit`, 940px): the full
+  form on the left, a **live customer bundle-card preview** (tier, composition,
+  fixed price + strikethrough/save or dynamic %) + this bundle's **live 30-day
+  performance** grid (sold/ticket/saving/eff-discount/revenue/👍👎 + refund rate)
+  on the right.
 - [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`), plus a
   **revenue-share `Donut`** + **orders-by-site `BarChart`** (flag #4, restored
