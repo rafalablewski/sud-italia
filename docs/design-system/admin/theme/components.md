@@ -239,7 +239,7 @@ Key rules:
   browser-default **serif**. Two things were both required: (1) portal *into*
   `#admin-portal-root` so the overlay is inside the admin font scope, and
   (2) the `#admin-portal-root { font-family: var(--font-admin-body), … }` rule
-  in `themes/admin/index.css`. The subtlety behind (2): the theme's `--font-ui`
+  in `themes/base/index.css`. The subtlety behind (2): the theme's `--font-ui`
   token is declared on `[data-admin-theme]` (= `<html>`) as
   `var(--font-admin-body), …`, but `--font-admin-body` is only defined on
   `#admin-portal-root` — and a `var()` inside a custom property is substituted
@@ -309,7 +309,7 @@ order, with these labels** — the **CLAUDE.md Rule #12** contract:
 
 ## Loading states — the `.v2-page-loading` pill
 
-Live code: `.v2-page-loading` in `src/app/themes/admin/index.css`. A small
+Live code: `.v2-page-loading` in `src/app/themes/base/index.css`. A small
 fixed-position pill (`position: fixed; bottom: 16px; left: 50%`) that reads
 "Loading X…" while a page resolves its data.
 

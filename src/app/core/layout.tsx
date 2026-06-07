@@ -1,4 +1,4 @@
-import "../themes/admin/index.css";
+import "../themes/base/index.css";
 import "../themes/core/index.css";
 import "../themes/core/suite.css";
 import type { Metadata } from "next";

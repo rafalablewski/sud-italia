@@ -2,10 +2,11 @@
 
 > **Status: in active build (preview).** v3 is a ground-up rebuild of the
 > admin back-office, fully isolated from v2 so that once it reaches parity
-> the entire v2 system (`src/app/themes/admin/index.css`,
-> `src/components/admin/v2/`, the top-level `Admin*.tsx` page bodies) can be
-> deleted in one stroke without touching v3. **This doc grows with the code**
-> per design-system Rule #11.
+> the v2 system (`src/components/admin/v2/`, the top-level `Admin*.tsx` page
+> bodies, the `src/app/admin/*` routes) can be deleted without touching v3.
+> The shared base stylesheet (`src/app/themes/base/index.css`, formerly
+> `themes/admin`) is **kept** — it backs login + the staff portals + Core, so
+> it outlives v2. **This doc grows with the code** per design-system Rule #11.
 
 ## Why a v3
 
@@ -32,7 +33,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 
 | Concern        | v2 (to be deleted)                          | v3 (the rebuild)                               |
 | -------------- | ------------------------------------------- | ---------------------------------------------- |
-| Theme CSS      | `src/app/themes/admin/index.css`            | `src/app/themes/admin-v3/index.css`            |
+| Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs login/portals/Core) | `src/app/themes/admin-v3/index.css` |
 | Class prefix   | `.v2-*`, `.glass-*`, `.admin-*`, `.app-sidebar` | `.av3-*` (single prefix, no legacy aliases) |
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
 | JS token mirror| `src/components/admin/v2/theme.ts`          | `src/components/admin/v3/theme.ts`             |

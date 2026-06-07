@@ -1,4 +1,4 @@
-import "../themes/admin/index.css";
+import "../themes/base/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import { AdminShell } from "@/components/admin/v2/AdminShell";
@@ -8,7 +8,7 @@ import { themeBootScript } from "@/shared/theme";
 // Admin fonts — owned by the Admin theme. Independent next/font calls
 // from the Homepage layout so a weight / subset change here can't move
 // the storefront. Variable names are namespaced (--font-admin-*) and
-// the admin CSS (themes/admin/index.css) reads through them as
+// the admin CSS (themes/base/index.css) reads through them as
 // var(--font-ui) / var(--font-display).
 const adminBody = Inter({
   subsets: ["latin"],

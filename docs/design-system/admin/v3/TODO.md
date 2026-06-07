@@ -86,13 +86,14 @@ touch*. Read that section before adding more (Rule #11).
    - *Follow-up for a full v2 retirement:* give v3 role-prefix support (admin-base)
      so `/manager` + `/franchisee` can point at v3 too — only then can v2 be
      deleted without dropping those portals.
-3. **Delete v2** — still on hold until the swap is verified in production AND v3
-   gains manager/franchisee role-prefix support. Then remove
-   `src/app/themes/admin/index.css`, `src/components/admin/v2/`, the legacy
-   `Admin*.tsx`, rebuild `/admin/capabilities` under v3, drop the `/manager`+
-   `/franchisee` v2 rewrites, and update `docs/design-system/admin/*` (Rule #11)
-   + the capabilities ledger (Rule #9). The isolation contract in `README.md`
-   lists exactly what's deletable.
+3. **Delete v2** — on hold until the swap is verified in production. Then remove
+   `src/components/admin/v2/`, the legacy `Admin*.tsx`, and the `src/app/admin/*`
+   page routes; rebuild `/admin/capabilities` under v3; drop the `/manager`+
+   `/franchisee` v2 rewrites; update `docs/design-system/admin/*` (Rule #11)
+   + the capabilities ledger (Rule #9). **Keep** `src/app/themes/base/index.css`
+   — it's the shared base stylesheet (login + staff portals + Core), not v2.
+   Status: ✅ manager/franchisee on v3 (done), ✅ base CSS neutralised (done);
+   remaining before delete = re-home capabilities + prod verification.
 
 ## Calculator — optional deepening (not required for parity)
 

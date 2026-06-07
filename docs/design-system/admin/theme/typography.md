@@ -139,7 +139,7 @@ and `var(--font-display)` rule silently resolved to nothing and fell back to the
 portaled overlays (`Dialog` / `Popover` / `Tooltip` / `Toast`), and the sidebar
 brand wordmark.
 
-**Fix** (in `src/app/themes/admin/index.css`, on `#admin-portal-root`):
+**Fix** (in `src/app/themes/base/index.css`, on `#admin-portal-root`):
 
 ```css
 #admin-portal-root {

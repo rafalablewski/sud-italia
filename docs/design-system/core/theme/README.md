@@ -6,7 +6,7 @@ change must leave Admin and Homepage visually unchanged.
 ## Two CSS layers (mid-migration)
 
 The Core theme ships in **two** stylesheets, both loaded by the Core
-suite's own `src/app/core/layout.tsx` (alongside `themes/admin/index.css`,
+suite's own `src/app/core/layout.tsx` (alongside `themes/base/index.css`,
 whose tokens Core reuses). The Core surfaces live at `/core/*` — POS, KDS,
 Guest, Service — under that layout; they left `/admin/*`, so the admin
 back-office no longer ships the core chunk:
