@@ -15,8 +15,8 @@
   --fg:#f5f3ee; --fg-muted:#c0b9b0; --fg-subtle:#978e85;
   --brand:#a62d49; --brand-bright:#c2415f; --brand-soft:rgba(166,45,73,.14);
   --platinum:#cbb48a; --platinum-soft:rgba(203,180,138,.14);
-  --info:#6e92c0; --success:#2fa875; --success-soft:rgba(47,168,117,.16);
-  --warning:#d9a441; --warning-soft:rgba(217,164,65,.16); --danger:#e2504b;
+  --info:#6e92c0; --info-soft:rgba(110,146,192,.16); --success:#2fa875; --success-soft:rgba(47,168,117,.16);
+  --warning:#d9a441; --warning-soft:rgba(217,164,65,.16); --danger:#e2504b; --danger-soft:rgba(226,80,75,.16);
   --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
   --sh-xs:0 1px 2px rgba(0,0,0,.32); --sh-sm:0 1px 3px rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.22);
   --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
@@ -26,7 +26,7 @@
   /* KDS dark wall tokens */
   --canvas:#0a0a0c; --panel:#141318; --raised:#1f1d25;
   --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
-  --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b;
+  --t:#f4f2ee; --dim:#b6afa6; --faint:#8d847b; --queued:#6a655f; --firing:#4d90e8; --ready:#3dd68c;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -34,35 +34,30 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;-
 ::selection{background:var(--brand-soft)}
 .eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle)}
 .muted{color:var(--fg-muted)} .subtle{color:var(--fg-subtle)} .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.disp{font-family:var(--display)}
 
 /* ============ SHELL — unified header, no sidebar ============ */
 .core-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;flex:none}
 .brand-mark{width:30px;height:30px;border-radius:9px;background:var(--brand);box-shadow:var(--sh-sm),inset 0 0 0 1px var(--platinum-soft);display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;letter-spacing:.04em}
 .brand-name{font-family:var(--display);font-weight:600;font-size:16px;line-height:1}
 .brand-sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-subtle);margin-top:3px}
-
 .core-head{height:56px;flex:none;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--bg) 86%,transparent);backdrop-filter:saturate(140%) blur(10px)}
 .core-head-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-
 .core-nav{display:flex;align-items:center;gap:4px}
 .core-nav a{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:var(--r-md);color:var(--fg-muted);font:500 13px var(--ui);text-decoration:none;cursor:pointer;transition:background var(--fast) var(--ease),color var(--fast)}
 .core-nav a:hover{background:var(--surface-hover);color:var(--fg)}
 .core-nav a.on{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
 .core-nav a svg{opacity:.85;flex:none}
-
 .subbar{min-height:46px;flex:none;display:flex;align-items:center;gap:14px;padding:7px 18px;border-bottom:1px solid var(--border);background:var(--surface-1)}
 .subbar-left{display:flex;align-items:center;gap:14px;min-width:0}
 .subbar-left .eyebrow{flex:none}
 .subbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-
-.viewnav{display:flex;gap:4px}
-.viewnav a,.viewnav button{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border:0;background:transparent;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:var(--r-md);cursor:pointer;text-decoration:none}
-.viewnav a:hover,.viewnav button:hover{background:var(--surface-hover);color:var(--fg)}
-.viewnav a.on,.viewnav button.on{background:var(--surface-3);color:var(--fg)}
+.viewnav{display:flex;gap:4px;flex-wrap:wrap}
+.viewnav button{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border:0;background:transparent;color:var(--fg-muted);font:500 12.5px var(--ui);border-radius:var(--r-md);cursor:pointer}
+.viewnav button:hover{background:var(--surface-hover);color:var(--fg)}
+.viewnav button.on{background:var(--surface-3);color:var(--fg)}
 .viewnav .n{font:600 11px var(--mono);color:var(--fg-subtle)}
-
 .core-body{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:auto;padding:18px 22px}
 
 /* ---- shared primitives ---- */
@@ -71,285 +66,470 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;-
 .seg button.on{background:var(--surface-3);color:var(--fg);box-shadow:var(--sh-xs)}
 .seg .n{font:600 11px var(--mono);color:var(--fg-subtle);margin-left:5px}
 .btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font:600 12.5px var(--ui);cursor:pointer}
-.btn:hover{border-color:var(--border-strong)}
-.btn.icon{width:34px;padding:0;justify-content:center;color:var(--fg-muted)}
-.btn.primary{background:var(--brand);border-color:transparent;color:#fff}
+.btn:hover{border-color:var(--border-strong)} .btn.icon{width:34px;padding:0;justify-content:center;color:var(--fg-muted)}
+.btn.primary{background:var(--brand);border-color:transparent;color:#fff} .btn.ghost{background:transparent}
 .badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:var(--r-pill);font:600 11px var(--ui)}
 .badge .d{width:6px;height:6px;border-radius:99px;background:currentColor}
-.badge.platinum{background:var(--platinum-soft);color:var(--platinum)}
-.badge.warning{background:var(--warning-soft);color:var(--warning)}
-.badge.success{background:var(--success-soft);color:var(--success)}
+.badge.platinum{background:var(--platinum-soft);color:var(--platinum)} .badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.success{background:var(--success-soft);color:var(--success)} .badge.info{background:var(--info-soft);color:var(--info)}
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg)}
 .core-clock{font:600 16px var(--mono);padding:5px 12px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);color:var(--fg);letter-spacing:.02em}
+.datein{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface-2);color:var(--fg-muted);font:500 12.5px var(--mono)}
 svg{width:15px;height:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpis.k5{grid-template-columns:repeat(5,1fr)} .kpis.k7{grid-template-columns:repeat(7,1fr)}
+.bk{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
+.bk .l{font-size:11px;color:var(--fg-subtle)} .bk .v{font-family:var(--display);font-size:25px;font-weight:600;margin:4px 0} .bk .s{font-size:11px;color:var(--fg-subtle)}
+.bk .v.warn{color:var(--warning)} .bk .v.late{color:var(--danger)} .bk .v.good{color:var(--success)}
+.note{margin:0 0 4px;padding:10px 14px;border-radius:var(--r-md);background:var(--platinum-soft);border:1px solid var(--platinum-soft);color:var(--platinum);font-size:12.5px}
 
 /* ---- surface panes ---- */
 .pane{display:none;flex-direction:column;gap:16px;min-height:0}
 .pane.on{display:flex}
 
-/* POS */
+/* POS · Order */
 .pos-rail{display:flex;align-items:center;justify-content:space-between}
 .pos-tabs{display:flex;gap:10px;flex-wrap:wrap}
 .pos-tab{width:150px;text-align:left;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:11px 13px;cursor:pointer}
 .pos-tab.on{border-color:var(--platinum-soft);box-shadow:inset 0 0 0 1px var(--platinum-soft)}
 .pos-tab .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .pos-tab .nm{font-weight:600} .pos-tab .st{font:600 10px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--success)}
-.pos-tab .r2{display:flex;justify-content:space-between;color:var(--fg-subtle);font-size:12px}
-.pos-tab .tot{color:var(--fg);font-weight:600}
+.pos-tab .r2{display:flex;justify-content:space-between;color:var(--fg-subtle);font-size:12px} .pos-tab .tot{color:var(--fg);font-weight:600}
 .pos-tab.add{display:grid;place-items:center;color:var(--fg-subtle);font-size:22px;width:64px}
-.pos-grid{display:grid;grid-template-columns:86px 1fr 360px;gap:14px;flex:1;min-height:0}
+.pos-grid{display:grid;grid-template-columns:86px 1fr 340px;gap:14px;flex:1;min-height:0}
 .catrail{display:flex;flex-direction:column;gap:8px}
 .cat{padding:10px 6px;border-radius:var(--r-md);background:var(--surface-1);border:1px solid var(--border);text-align:center;font-size:11px;cursor:pointer}
-.cat.on{background:var(--surface-3);color:var(--fg)}
-.cat .t{font-size:9px;color:var(--fg-subtle);margin-top:3px}
+.cat.on{background:var(--surface-3);color:var(--fg)} .cat .t{font-size:9px;color:var(--fg-subtle);margin-top:3px}
 .menu{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
 .prod{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px}
 .prod h4{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:4px}
 .prod p{font-size:12px;color:var(--fg-subtle);line-height:1.4;min-height:32px}
-.prod .pr{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
-.prod .pr b{font-family:var(--mono)} .prod .add{width:26px;height:26px;border-radius:7px;background:var(--brand);color:#fff;border:0;font-size:16px;cursor:pointer}
+.prod .pr{display:flex;justify-content:space-between;align-items:center;margin-top:9px} .prod .pr b{font-family:var(--mono)}
+.prod .add{width:26px;height:26px;border-radius:7px;background:var(--brand);color:#fff;border:0;font-size:16px;cursor:pointer}
 .ticket{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
 .ticket .h{padding:13px;border-bottom:1px solid var(--border);font-weight:600}
 .ticket .empty{flex:1;display:grid;place-items:center;color:var(--fg-subtle);text-align:center;padding:24px;font-size:13px}
 
-/* generic KPI cards */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.kpis.k7{grid-template-columns:repeat(7,1fr)}
-.bk{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
-.bk .l{font-size:11px;color:var(--fg-subtle)} .bk .v{font-family:var(--display);font-size:26px;font-weight:600;margin:4px 0}
-.bk .s{font-size:11px;color:var(--fg-subtle)}
-.bk .v.warn{color:var(--warning)} .bk .v.late{color:var(--danger)}
+/* POS · Tender */
+.tender{display:grid;grid-template-columns:1fr 380px;gap:16px;flex:1;min-height:0}
+.trow{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0}
+.trow.sub{color:var(--fg-subtle);font-size:12.5px}
+.totbig{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--border);margin-top:10px;padding-top:14px;font-family:var(--display);font-size:24px;font-weight:600}
+.paymethods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pm{height:42px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);font-weight:600;cursor:pointer}
+.pm.on{border-color:var(--platinum);color:var(--platinum);background:var(--platinum-soft)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:1}
+.keypad button{border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font:600 18px var(--mono);cursor:pointer;min-height:44px}
 
-/* KDS wall body (dark) */
+/* KDS dark wall */
 .kdsbody{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--t)}
 .bench{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:14px}
 .bench .hd{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
-.benchrow{display:grid;grid-template-columns:140px 1fr 44px;align-items:center;gap:12px;margin:8px 0;font-size:12px}
-.btrack{height:8px;border-radius:99px;background:var(--raised);overflow:hidden}
-.bfill{height:100%;background:var(--success);border-radius:99px}
+.benchrow{display:grid;grid-template-columns:160px 1fr 44px;align-items:center;gap:12px;margin:8px 0;font-size:12px}
+.btrack{height:8px;border-radius:99px;background:var(--raised);overflow:hidden} .bfill{height:100%;background:var(--ready);border-radius:99px}
 .trucks{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .truck{background:#121116;border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px}
 .truck .th{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.ring{width:46px;height:46px;border-radius:99px;border:3px solid var(--success);display:grid;place-items:center;font:600 14px var(--mono);color:var(--success)}
-.truck .nm{font-family:var(--display);font-size:18px;font-weight:600}
-.truck .sub{font-size:11px;color:var(--faint)} .truck .sub b{color:var(--success)}
+.ring{width:46px;height:46px;border-radius:99px;border:3px solid var(--ready);display:grid;place-items:center;font:600 14px var(--mono);color:var(--ready)}
+.truck .nm{font-family:var(--display);font-size:18px;font-weight:600} .truck .sub{font-size:11px;color:var(--faint)} .truck .sub b{color:var(--ready)}
 .tstats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;border-top:1px solid var(--hair);padding-top:12px}
 .tstats .c .l{font-size:10px;color:var(--faint)} .tstats .c .v{font-size:18px;font-weight:600}
 .drill{margin-left:auto;display:flex;gap:8px}
+/* KDS floor board */
+.kcols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.kcolhead{font:600 12px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;justify-content:space-between;margin-bottom:10px}
+.tk{background:#161519;border:1px solid var(--hair);border-radius:var(--r-md);padding:12px 13px;margin-bottom:11px}
+.tk.late{border-color:rgba(229,72,77,.5)} .tk.firing{border-left:3px solid var(--firing)} .tk.ready{border-left:3px solid var(--ready)}
+.tk .tkh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tk .id{font-weight:600} .tk .chip{font:600 9px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--raised);border-radius:5px;padding:2px 6px}
+.tk .due{font:600 13px var(--mono)} .tk .due.warn{color:var(--warning)} .tk .due.late{color:var(--danger)} .tk .due.ready{color:var(--ready)}
+.tk .it{font-size:13px;color:var(--t);margin:3px 0} .tk .it .q{color:var(--faint);margin-right:6px}
+.tk .act{margin-top:9px;width:100%;height:34px;border:1px solid var(--hair-2);border-radius:7px;background:var(--raised);color:var(--t);font-weight:600;cursor:pointer}
+/* KDS chef */
+.stationrail{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.schip{height:30px;padding:0 13px;border-radius:99px;border:1px solid var(--hair);background:var(--raised);color:var(--dim);font:600 12px var(--ui);display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.schip.on{color:var(--t);border-color:var(--hair-2)} .schip .n{font:600 11px var(--mono);color:var(--faint)}
+.qdepth{margin-left:auto;color:var(--faint);font-size:12px}
+.chefqueue{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ct{background:#161519;border:1px solid var(--hair);border-radius:var(--r-md);padding:16px}
+.ct .cth{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ct .nm{font-family:var(--display);font-size:21px;font-weight:600} .ct .q{font:600 22px var(--mono);color:var(--t)}
+.ct .meta{font-size:11px;color:var(--faint);margin-bottom:12px}
+.ct .bump{width:100%;height:46px;border:0;border-radius:8px;background:var(--ready);color:#06231a;font:700 15px var(--ui);cursor:pointer}
 
-/* Guest concierge */
+/* Guest · Inbox */
+.inbox2{display:grid;grid-template-columns:300px 1fr;gap:14px;flex:1;min-height:0}
+.convs{display:flex;flex-direction:column;gap:8px}
+.conv{display:flex;gap:11px;padding:11px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-1);cursor:pointer}
+.conv.on{border-color:var(--platinum-soft);box-shadow:inset 0 0 0 1px var(--platinum-soft)}
+.av{width:38px;height:38px;border-radius:99px;background:var(--surface-3);display:grid;place-items:center;font:600 13px var(--ui);color:var(--platinum);flex:none}
+.conv .nm{font-weight:600} .conv .pv{font-size:12px;color:var(--fg-subtle);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.thread{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-1);overflow:hidden}
+.thread .th{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.bubs{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.bub{max-width:64%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4}
+.bub.in{align-self:flex-start;background:var(--surface-3)} .bub.out{align-self:flex-end;background:var(--brand-soft);border:1px solid var(--brand-soft)}
+.bub.bot{align-self:flex-end;background:var(--platinum-soft);color:var(--platinum)}
+
+/* Guest · Guests / Loyalty tables */
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--border);background:var(--surface-1);color:var(--fg-muted);font:500 12px var(--ui);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.fchip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--fg)} .fchip .n{font:600 11px var(--mono);color:var(--fg-subtle)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--border)}
+.tbl th{font-size:11px;color:var(--fg-subtle);font-weight:600;letter-spacing:.04em}
+.tbl td.num{font-family:var(--mono);text-align:right} .tbl th.num{text-align:right}
+.guestwrap{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+.wallets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.wallet{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px}
+.wallet .w1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.wallet .pts{font-family:var(--display);font-size:22px;font-weight:600;color:var(--platinum)}
+
+/* Guest · Concierge */
 .cap{display:flex;align-items:center;gap:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:10px}
 .cap .ic{width:34px;height:34px;border-radius:var(--r-md);background:var(--surface-3);color:var(--platinum);display:grid;place-items:center}
 .cap .tx{flex:1} .cap .tx b{font-weight:600} .cap .tx .tag{font:600 9px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--info);margin-left:8px}
 .cap .tx p{font-size:12px;color:var(--fg-subtle);margin-top:2px}
-.sw{width:40px;height:23px;border-radius:99px;background:var(--brand);position:relative}
+.sw{width:40px;height:23px;border-radius:99px;background:var(--brand);position:relative;flex:none}
 .sw::after{content:"";position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:99px;background:#fff}
-.guestwrap{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
 .matrix{width:100%;border-collapse:collapse;font-size:13px}
-.matrix th,.matrix td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--border)}
-.matrix th{font-size:11px;color:var(--fg-subtle);font-weight:600}
+.matrix th,.matrix td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--border)} .matrix th{font-size:11px;color:var(--fg-subtle);font-weight:600}
 .matrix td.diet{color:var(--fg-subtle)}
 
-/* Service */
-.svc-empty{flex:1;display:grid;place-items:center;color:var(--fg-subtle);min-height:240px}
-
-.note{margin:0 0 14px;padding:10px 14px;border-radius:var(--r-md);background:var(--platinum-soft);border:1px solid var(--platinum-soft);color:var(--platinum);font-size:12.5px}
+/* Guest · Book + Service */
+.bookgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+.block{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-bottom:14px}
+.block .bh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.pk{height:34px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);font:500 12.5px var(--ui);cursor:pointer}
+.pk.on{border-color:var(--platinum);color:var(--platinum);background:var(--platinum-soft)} .pk.off{opacity:.4}
+.field{display:flex;flex-direction:column;gap:5px} .field label{font-size:11px;color:var(--fg-subtle)}
+.field input{height:36px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface-2);color:var(--fg);padding:0 11px;font:500 13px var(--ui)}
+.formrow{display:grid;grid-template-columns:90px 1fr 1fr;gap:12px}
+.tables{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tcard{aspect-ratio:1;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.tcard.seated{border-color:var(--brand);background:var(--brand-soft)} .tcard.freeing{border-color:var(--warning);background:var(--warning-soft)}
+.tcard .tn{font-family:var(--display);font-size:20px;font-weight:600} .tcard .ts{font-size:10px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:.06em}
+.slotlist{display:flex;flex-direction:column;gap:10px}
+.slot{display:grid;grid-template-columns:90px 1fr 120px 90px;align-items:center;gap:14px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 16px}
+.slot .tm{font:600 15px var(--mono)} .slot .cap{font-size:12px;color:var(--fg-subtle)}
+.captrack{height:7px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-top:5px} .capfill{height:100%;background:var(--info);border-radius:99px}
 </style>
 </head>
 <body>
 <div class="core-shell">
-  <!-- ===== ROW 1: brand + primary nav + global actions ===== -->
   <header class="core-head">
     <a class="brand"><div class="brand-mark">SI</div><div><div class="brand-name">Sud Italia</div><div class="brand-sub">Core</div></div></a>
     <nav class="core-nav" id="corenav">
-      <a data-s="pos" class="on">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 2h6v4H9z"/><path d="M8 11h8M8 15h5"/></svg>POS</a>
-      <a data-s="kds">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>KDS</a>
-      <a data-s="guest">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-3-5"/></svg>Guest</a>
-      <a data-s="service">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0 1 18 0Z"/><path d="M12 2v3M2 16h20M5 20h14"/></svg>Service</a>
+      <a data-s="pos" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 2h6v4H9z"/><path d="M8 11h8M8 15h5"/></svg>POS</a>
+      <a data-s="kds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>KDS</a>
+      <a data-s="guest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-3-5"/></svg>Guest</a>
+      <a data-s="service"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0 1 18 0Z"/><path d="M12 2v3M2 16h20M5 20h14"/></svg>Service</a>
     </nav>
     <div class="core-head-right" id="headright"></div>
   </header>
-
-  <!-- ===== ROW 2: eyebrow + viewnav + surface controls ===== -->
   <div class="subbar">
-    <div class="subbar-left"><span class="eyebrow" id="eyebrow">Point of sale · Kraków</span><div class="viewnav" id="viewnav"></div></div>
+    <div class="subbar-left"><span class="eyebrow" id="eyebrow"></span><div class="viewnav" id="viewnav"></div></div>
     <div class="subbar-right" id="subright"></div>
   </div>
-
-  <!-- ===== BODY ===== -->
-  <div class="core-body">
-    <!-- POS -->
-    <section class="pane on" data-pane="pos">
-      <div class="pos-rail">
-        <span class="eyebrow">Open checks</span>
-        <span class="subtle" style="font-size:12px"><b style="color:var(--fg)">3</b> tabs · <b style="color:var(--fg)">1</b> ready to pay · <b style="color:var(--fg)">142,00 zł</b> open</span>
-      </div>
-      <div class="pos-tabs">
-        <button class="pos-tab on"><div class="r1"><span class="nm">Table 7</span><span class="st">Open</span></div><div class="r2"><span>#A41 · T7 · 4 items</span><span class="tot">86,00 zł</span></div></button>
-        <button class="pos-tab"><div class="r1"><span class="nm">Marco</span><span class="st" style="color:var(--warning)">Ready</span></div><div class="r2"><span>#A42 · takeout · 2 items</span><span class="tot">38,00 zł</span></div></button>
-        <button class="pos-tab"><div class="r1"><span class="nm">Delivery</span><span class="st">Open</span></div><div class="r2"><span>#A43 · 1 item</span><span class="tot">18,00 zł</span></div></button>
-        <button class="pos-tab add">+</button>
-      </div>
-      <div class="pos-grid">
-        <div class="catrail">
-          <div class="cat on">Pizze<div class="t">~14m</div></div>
-          <div class="cat">Antipasti<div class="t">~6m</div></div>
-          <div class="cat">Pasta<div class="t">~12m</div></div>
-          <div class="cat">Dolci<div class="t">~3m</div></div>
-          <div class="cat">Bibite<div class="t">~1m</div></div>
-        </div>
-        <div class="menu">
-          <div class="prod"><h4>Margherita</h4><p>San Marzano, fior di latte, basilico</p><div class="pr"><b>32 zł</b><button class="add">+</button></div></div>
-          <div class="prod"><h4>Diavola</h4><p>Nduja, salame piccante, fior di latte</p><div class="pr"><b>38 zł</b><button class="add">+</button></div></div>
-          <div class="prod"><h4>Bufala DOP</h4><p>Mozzarella di bufala, pomodorini</p><div class="pr"><b>42 zł</b><button class="add">+</button></div></div>
-          <div class="prod"><h4>Capricciosa</h4><p>Prosciutto, funghi, carciofi, olive</p><div class="pr"><b>40 zł</b><button class="add">+</button></div></div>
-          <div class="prod"><h4>Marinara</h4><p>San Marzano, aglio, origano</p><div class="pr"><b>26 zł</b><button class="add">+</button></div></div>
-          <div class="prod"><h4>Quattro Formaggi</h4><p>Fior di latte, gorgonzola, fontina</p><div class="pr"><b>41 zł</b><button class="add">+</button></div></div>
-        </div>
-        <div class="ticket"><div class="h">Table 7 · live ticket</div><div class="empty">🍕<br><br>Tap a dish to start the ticket.<br>The ticket is the order.</div></div>
-      </div>
-    </section>
-
-    <!-- KDS -->
-    <section class="pane" data-pane="kds">
-      <div class="kpis k7">
-        <div class="bk"><div class="l">Active</div><div class="v">7</div><div class="s">2 ready for expo</div></div>
-        <div class="bk"><div class="l">At risk</div><div class="v warn">1</div><div class="s">predicted miss</div></div>
-        <div class="bk"><div class="l">Late</div><div class="v late">0</div><div class="s">over SLA</div></div>
-        <div class="bk"><div class="l">Ready</div><div class="v">2</div><div class="s">for expo</div></div>
-        <div class="bk"><div class="l">Throughput</div><div class="v">48<span style="font-size:13px">/hr</span></div><div class="s">last 60 min</div></div>
-        <div class="bk"><div class="l">Covers</div><div class="v">31<span style="font-size:13px">/hr</span></div><div class="s">seated</div></div>
-        <div class="bk"><div class="l">Revenue</div><div class="v">2,4k<span style="font-size:13px"> zł/hr</span></div><div class="s">live</div></div>
-      </div>
-      <div class="kdsbody">
-        <div class="bench">
-          <div class="hd"><span>Promise-accuracy · cross-truck benchmark</span><span>fleet 90% · target 90%</span></div>
-          <div class="benchrow"><span>Sud Italia — Kraków</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
-          <div class="benchrow"><span>Sud Italia — Warszawa</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
-        </div>
-        <div class="trucks">
-          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Kraków</div><div class="sub">Open · 3 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div>
-            <div class="tstats"><div class="c"><div class="l">Active</div><div class="v">3</div></div><div class="c"><div class="l">At risk</div><div class="v">1</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">4</div></div></div></div>
-          <div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — Warszawa</div><div class="sub">Open · 4 active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div>
-            <div class="tstats"><div class="c"><div class="l">Active</div><div class="v">4</div></div><div class="c"><div class="l">At risk</div><div class="v">0</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">3</div></div></div></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- GUEST -->
-    <section class="pane" data-pane="guest">
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><b>6 capabilities · 6 live</b> <span class="subtle">· on the public read endpoint</span><p class="subtle" style="font-size:12.5px;margin-top:2px">One capability layer, exposed over MCP/HTTP and the WhatsApp bot — the agent never guesses; every answer is auditable.</p></div></div>
-      <div class="guestwrap">
-        <div>
-          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div class="tx"><b>get_menu</b><span class="tag">resource</span><p>Full menu with prices, categories and dietary tags.</p></div><div class="sw"></div></div>
-          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="tx"><b>check_availability</b><span class="tag">tool</span><p>Live availability + prep time per item and location.</p></div><div class="sw"></div></div>
-          <div class="cap" style="border-color:var(--platinum-soft);box-shadow:inset 3px 0 0 var(--platinum)"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 20h20z"/><path d="M12 9v5M12 17h0"/></svg></div><div class="tx"><b>get_allergens</b><span class="tag">tool</span><p>EU-14 allergen + dietary breakdown for any item.</p></div><div class="sw"></div></div>
-          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14l-1 13H6z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg></div><div class="tx"><b>place_order</b><span class="tag">tool</span><p>Create a takeout / delivery order. Returns id + ETA.</p></div><div class="sw"></div></div>
-          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div class="tx"><b>create_payment</b><span class="tag">tool</span><p>Issue a Stripe payment link / take payment.</p></div><div class="sw"></div></div>
-          <div class="cap"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><div class="tx"><b>locate_truck</b><span class="tag">tool</span><p>Where the truck is now + today's schedule per city.</p></div><div class="sw"></div></div>
-        </div>
-        <div class="card" style="padding:15px">
-          <div class="eyebrow" style="margin-bottom:10px">EU-14 allergen matrix · Kraków</div>
-          <table class="matrix"><thead><tr><th>Item</th><th>🌾</th><th>🥛</th><th>🥚</th><th style="text-align:right">Diet</th></tr></thead>
-          <tbody>
-            <tr><td>Margherita</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
-            <tr><td>Bufala DOP</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
-            <tr><td>Diavola</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">spicy</td></tr>
-            <tr><td>Marinara</td><td>●</td><td>·</td><td>·</td><td class="diet" style="text-align:right">vegan</td></tr>
-          </tbody></table>
-        </div>
-      </div>
-    </section>
-
-    <!-- SERVICE -->
-    <section class="pane" data-pane="service">
-      <div class="kpis">
-        <div class="bk"><div class="l">Occupancy</div><div class="v">62%</div><div class="s">8/13 seated</div></div>
-        <div class="bk"><div class="l">Open now</div><div class="v">5</div><div class="s">2 freeing ≤15m</div></div>
-        <div class="bk"><div class="l">Median turn</div><div class="v">54<span style="font-size:13px">m</span></div><div class="s">realized</div></div>
-        <div class="bk"><div class="l">Spend / hr</div><div class="v">118<span style="font-size:13px"> zł</span></div><div class="s">per table-hour</div></div>
-      </div>
-      <div class="note">Floor twin live — seat / clear from any table, predictive-seating recommender, bottleneck banner when the line can't absorb more covers.</div>
-      <div class="card svc-empty">Floor model — tables render here (Twin view). Switch to <b style="color:var(--fg)">&nbsp;Slots&nbsp;</b> for capacity + the Demand Exchange.</div>
-    </section>
-  </div>
+  <div class="core-body" id="body"></div>
 </div>
 
 <script>
-// ---- per-surface header config (mirrors the CoreShell slots) ----
-const SURFACES = {
-  pos: {
-    eyebrow: "Point of sale · Kraków",
-    viewnav: "",
-    subright: `<div class="seg"><button class="on">Takeout</button><button>Delivery</button><button>Dine-in</button></div>
-               <span class="badge warning"><span class="d"></span>Steer on</span>`,
-    headright: `<div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
-                <button class="btn icon" title="Fullscreen">⤢</button>`,
-  },
-  kds: {
-    eyebrow: "Kitchen · Fleet",
-    viewnav: `<button class="on">Fleet</button><button>Floor</button><button>Chef</button>`,
-    subright: `<div class="seg"><button class="on">All <span class="n">9</span></button><button>New <span class="n">3</span></button><button>Firing <span class="n">4</span></button><button>Ready <span class="n">2</span></button></div>
-               <span class="badge platinum"><span class="d"></span>Sandbox</span>`,
-    headright: `<span class="core-clock" id="clock">14:21:08</span>
-                <button class="btn icon" title="Refresh">↻</button>
-                <button class="btn icon" title="Sound">♪</button>
-                <button class="btn icon" title="Pause">⏸</button>
-                <button class="btn icon" title="Fullscreen kiosk">⤢</button>`,
-  },
-  guest: {
-    eyebrow: "Guest Engagement",
-    viewnav: `<button>Inbox <span class="n">7</span></button><button>Guests</button><button>Loyalty</button><button class="on">Concierge</button><button>Book</button>`,
-    subright: `<div class="seg"><button class="on">MCP server</button><button>WhatsApp</button></div>
-               <div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>`,
-    headright: `<div class="seg"><button class="on">All</button><button>Kraków</button><button>Warszawa</button></div>`,
-  },
-  service: {
-    eyebrow: "Service",
-    viewnav: `<button class="on">Floor</button><button>Slots</button>`,
-    subright: ``,
-    headright: `<div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>
-                <button class="btn primary">+ Add table</button>`,
-  },
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+
+/* ---------- reusable header fragments ---------- */
+const LOC2 = `<div class="seg"><button class="on">Kraków</button><button>Warszawa</button></div>`;
+const LOC3 = `<div class="seg"><button class="on">All</button><button>Kraków</button><button>Warszawa</button></div>`;
+const FULLSCREEN = `<button class="btn icon" title="Fullscreen">⤢</button>`;
+const POS_SUB = `<div class="seg"><button class="on">Takeout</button><button>Delivery</button><button>Dine-in</button></div><span class="badge warning"><span class="d"></span>Steer on</span>`;
+const KDS_SUB = `<div class="seg"><button class="on">All <span class="n">9</span></button><button>New <span class="n">3</span></button><button>Firing <span class="n">4</span></button><button>Ready <span class="n">2</span></button></div><span class="badge platinum"><span class="d"></span>Sandbox</span>`;
+const KDS_RIGHT = `<span class="core-clock" id="clock">14:21:08</span><button class="btn icon" title="Refresh">↻</button><button class="btn icon" title="Sound">♪</button><button class="btn icon" title="Pause">⏸</button><button class="btn icon" title="Fullscreen kiosk">⤢</button>`;
+const INBOX_RIGHT = `<span class="badge success"><span class="d"></span>WhatsApp live</span><button class="btn ghost">Funnel</button><button class="btn ghost">Settings</button><button class="btn primary">Broadcast</button>`;
+
+/* ---------- surfaces → sub-views ---------- */
+const NAV = {
+  pos:     { views:[{id:"order",label:"Order"},{id:"tender",label:"Tender"}] },
+  kds:     { views:[{id:"fleet",label:"Fleet"},{id:"floor",label:"Floor"},{id:"chef",label:"Chef"}] },
+  guest:   { views:[{id:"inbox",label:"Inbox",n:7},{id:"guests",label:"Guests"},{id:"loyalty",label:"Loyalty"},{id:"concierge",label:"Concierge"},{id:"book",label:"Book"}] },
+  service: { views:[{id:"floor",label:"Floor"},{id:"slots",label:"Slots"}] },
+};
+const HDR = {
+  pos:     { eyebrow:()=> "Point of sale · Kraków", sub:(v)=> v==="order"?POS_SUB:"", right:()=> LOC2+FULLSCREEN },
+  kds:     { eyebrow:(v)=> "Kitchen · "+cap(v),     sub:()=> KDS_SUB,                right:()=> KDS_RIGHT },
+  guest:   { eyebrow:()=> "Guest Engagement",       sub:(v)=> v==="concierge"?`<div class="seg"><button class="on">MCP server</button><button>WhatsApp</button></div>`:"",
+             right:(v)=> v==="inbox"?INBOX_RIGHT:LOC3 },
+  service: { eyebrow:()=> "Service",                sub:(v)=> v==="slots"?`<div class="seg"><button class="on">Manage</button><button>Demand</button></div><div class="seg"><button class="on">Day</button><button>Week</button></div>`:"",
+             right:(v)=> v==="slots"? LOC2+`<span class="datein">▦ 2026-06-07</span>`+`<button class="btn primary">+ New slot</button>` : LOC2+`<button class="btn primary">+ Add table</button>` },
 };
 
-const navEl = document.getElementById("corenav");
-const eyebrowEl = document.getElementById("eyebrow");
-const viewnavEl = document.getElementById("viewnav");
-const subrightEl = document.getElementById("subright");
-const headrightEl = document.getElementById("headright");
+/* ---------- bodies ---------- */
+const pizzaCards = [
+  ["Margherita","San Marzano, fior di latte, basilico","32 zł"],
+  ["Diavola","Nduja, salame piccante, fior di latte","38 zł"],
+  ["Bufala DOP","Mozzarella di bufala, pomodorini","42 zł"],
+  ["Capricciosa","Prosciutto, funghi, carciofi, olive","40 zł"],
+  ["Marinara","San Marzano, aglio, origano","26 zł"],
+  ["Quattro Formaggi","Fior di latte, gorgonzola, fontina","41 zł"],
+].map(([n,d,p])=>`<div class="prod"><h4>${n}</h4><p>${d}</p><div class="pr"><b>${p}</b><button class="add">+</button></div></div>`).join("");
 
-function select(s){
-  navEl.querySelectorAll("a").forEach(a => a.classList.toggle("on", a.dataset.s === s));
-  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.dataset.pane === s));
-  const c = SURFACES[s];
-  eyebrowEl.textContent = c.eyebrow;
-  viewnavEl.innerHTML = c.viewnav;
-  subrightEl.innerHTML = c.subright;
-  headrightEl.innerHTML = c.headright;
-  // light interactivity for the demo: viewnav/seg toggles
-  document.querySelectorAll(".viewnav button, .subbar-right .seg button, .core-head-right .seg button").forEach(b=>{
-    b.addEventListener("click", e=>{ const g=e.currentTarget.parentElement; g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); e.currentTarget.classList.add("on"); });
-  });
-  if(s==="kds") startClock();
-}
-navEl.querySelectorAll("a").forEach(a => a.addEventListener("click", e=>{ e.preventDefault(); select(a.dataset.s); }));
+const BODY = {
+"pos.order":`
+  <div class="pos-rail"><span class="eyebrow">Open checks</span><span class="subtle" style="font-size:12px"><b style="color:var(--fg)">3</b> tabs · <b style="color:var(--fg)">1</b> ready to pay · <b style="color:var(--fg)">142,00 zł</b> open</span></div>
+  <div class="pos-tabs">
+    <button class="pos-tab on"><div class="r1"><span class="nm">Table 7</span><span class="st">Open</span></div><div class="r2"><span>#A41 · T7 · 4 items</span><span class="tot">86,00 zł</span></div></button>
+    <button class="pos-tab"><div class="r1"><span class="nm">Marco</span><span class="st" style="color:var(--warning)">Ready</span></div><div class="r2"><span>#A42 · takeout · 2 items</span><span class="tot">38,00 zł</span></div></button>
+    <button class="pos-tab"><div class="r1"><span class="nm">Delivery</span><span class="st">Open</span></div><div class="r2"><span>#A43 · 1 item</span><span class="tot">18,00 zł</span></div></button>
+    <button class="pos-tab add">+</button>
+  </div>
+  <div class="pos-grid">
+    <div class="catrail">
+      <div class="cat on">Pizze<div class="t">~14m</div></div><div class="cat">Antipasti<div class="t">~6m</div></div>
+      <div class="cat">Pasta<div class="t">~12m</div></div><div class="cat">Dolci<div class="t">~3m</div></div><div class="cat">Bibite<div class="t">~1m</div></div>
+    </div>
+    <div class="menu">${pizzaCards}</div>
+    <div class="ticket"><div class="h">Table 7 · live ticket</div><div class="empty">🍕<br><br>Tap a dish to start the ticket.<br>The ticket is the order.</div></div>
+  </div>`,
 
-// POS tab selection demo
-document.querySelectorAll(".pos-tab:not(.add)").forEach(t=>t.addEventListener("click",()=>{document.querySelectorAll(".pos-tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");}));
+"pos.tender":`
+  <div class="tender">
+    <div class="card" style="padding:18px;display:flex;flex-direction:column">
+      <div class="eyebrow">Table 7 · #A41 · tender</div>
+      <div style="flex:1;margin-top:14px">
+        <div class="trow"><span>2× Margherita</span><span class="mono">64,00</span></div>
+        <div class="trow"><span>1× Diavola</span><span class="mono">38,00</span></div>
+        <div class="trow"><span>2× San Pellegrino</span><span class="mono">16,00</span></div>
+        <div class="trow sub"><span>Subtotal</span><span class="mono">118,00</span></div>
+        <div class="trow sub"><span>Combo · pizza + bibita −10%</span><span class="mono" style="color:var(--success)">−11,80</span></div>
+      </div>
+      <div class="totbig"><span>Total</span><span>106,20 zł</span></div>
+    </div>
+    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+      <div class="paymethods"><button class="pm on">Card</button><button class="pm">Cash</button><button class="pm">BLIK</button><button class="pm">Split</button></div>
+      <div class="keypad">${[1,2,3,4,5,6,7,8,9,".",0,"⌫"].map(k=>`<button>${k}</button>`).join("")}</div>
+      <button class="btn primary" style="height:52px;font-size:16px;justify-content:center">Charge 106,20 zł</button>
+    </div>
+  </div>`,
 
+"kds.fleet":`
+  <div class="kdsbody">
+    <div class="kpis k7">
+      <div class="bk"><div class="l">Active</div><div class="v">7</div><div class="s">2 ready for expo</div></div>
+      <div class="bk"><div class="l">At risk</div><div class="v warn">1</div><div class="s">predicted miss</div></div>
+      <div class="bk"><div class="l">Late</div><div class="v late">0</div><div class="s">over SLA</div></div>
+      <div class="bk"><div class="l">Ready</div><div class="v">2</div><div class="s">for expo</div></div>
+      <div class="bk"><div class="l">Throughput</div><div class="v">48<span style="font-size:13px">/hr</span></div><div class="s">last 60 min</div></div>
+      <div class="bk"><div class="l">Covers</div><div class="v">31<span style="font-size:13px">/hr</span></div><div class="s">seated</div></div>
+      <div class="bk"><div class="l">Revenue</div><div class="v">2,4k<span style="font-size:13px"> zł/hr</span></div><div class="s">live</div></div>
+    </div>
+    <div class="bench"><div class="hd"><span>Promise-accuracy · cross-truck benchmark</span><span>fleet 90% · target 90%</span></div>
+      <div class="benchrow"><span>Sud Italia — Kraków</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div>
+      <div class="benchrow"><span>Sud Italia — Warszawa</span><div class="btrack"><div class="bfill" style="width:90%"></div></div><span>90%</span></div></div>
+    <div class="trucks">
+      ${["Kraków:3:4","Warszawa:4:3"].map(t=>{const [c,a,sh]=t.split(":");return `<div class="truck"><div class="th"><div class="ring">100</div><div><div class="nm">Sud Italia — ${c}</div><div class="sub">Open · ${a} active · <b>HEALTHY</b></div></div><div class="drill"><span class="badge platinum">Open floor →</span><span class="badge platinum">Chef line →</span></div></div><div class="tstats"><div class="c"><div class="l">Active</div><div class="v">${a}</div></div><div class="c"><div class="l">At risk</div><div class="v">${c==="Kraków"?1:0}</div></div><div class="c"><div class="l">Late</div><div class="v">0</div></div><div class="c"><div class="l">Ready</div><div class="v">1</div></div><div class="c"><div class="l">On shift</div><div class="v">${sh}</div></div></div></div>`;}).join("")}
+    </div>
+  </div>`,
+
+"kds.floor":`
+  <div class="kdsbody"><div class="kcols">
+    <div class="kcol"><div class="kcolhead"><span>New</span><span>3</span></div>
+      <div class="tk"><div class="tkh"><span class="id">#4823 <span class="chip">Dine-in · T9</span></span><span class="due">0:18</span></div><div class="it"><span class="q">1×</span>Bruschetta</div><div class="it"><span class="q">1×</span>Marinara</div><div class="it"><span class="q">1×</span>Capricciosa</div><button class="act">Start prep</button></div>
+      <div class="tk"><div class="tkh"><span class="id">#4825 <span class="chip">Dine-in · T5</span></span><span class="due">0:09</span></div><div class="it"><span class="q">1×</span>Bruschetta</div><div class="it"><span class="q">1×</span>Olive Ascolane</div><button class="act">Start prep</button></div>
+      <div class="tk"><div class="tkh"><span class="id">#4824 <span class="chip">Takeaway</span></span><span class="due">0:41</span></div><div class="it"><span class="q">2×</span>Margherita</div><button class="act">Start prep</button></div>
+    </div>
+    <div class="kcol"><div class="kcolhead"><span>Firing</span><span>4</span></div>
+      <div class="tk late"><div class="tkh"><span class="id">#4818 <span class="chip">Delivery</span></span><span class="due late">14:32</span></div><div class="it"><span class="q">1×</span>Diavola · extra nduja</div><div class="it"><span class="q">1×</span>Nduja &amp; Honey</div><button class="act" style="border-color:var(--danger);color:var(--danger)">Mark ready</button></div>
+      <div class="tk firing"><div class="tkh"><span class="id">#4821 <span class="chip">Dine-in · T7</span></span><span class="due warn">9:07</span></div><div class="it"><span class="q">2×</span>Margherita</div><div class="it"><span class="q">1×</span>Bufala DOP</div><button class="act">Mark ready</button></div>
+    </div>
+    <div class="kcol"><div class="kcolhead"><span>Ready · pass</span><span>2</span></div>
+      <div class="tk ready"><div class="tkh"><span class="id">#4816 <span class="chip">Dine-in · T3</span></span><span class="due ready">Plated</span></div><div class="it"><span class="q">2×</span>Margherita</div><button class="act" style="border-color:var(--ready);color:var(--ready)">Bump · done</button></div>
+      <div class="tk ready"><div class="tkh"><span class="id">#4817 <span class="chip">Takeaway</span></span><span class="due ready">Plated</span></div><div class="it"><span class="q">1×</span>Capricciosa</div><button class="act" style="border-color:var(--ready);color:var(--ready)">Bump · done</button></div>
+    </div>
+  </div></div>`,
+
+"kds.chef":`
+  <div class="kdsbody">
+    <div class="stationrail">
+      <span class="schip on">All <span class="n">9</span></span><span class="schip">Pizza <span class="n">5</span></span><span class="schip">Antipasti <span class="n">3</span></span><span class="schip">Fritti <span class="n">1</span></span>
+      <span class="qdepth">In queue <b style="color:var(--t)">9</b> · Oldest <b style="color:var(--warning)">9:07</b></span>
+    </div>
+    <div class="chefqueue">
+      <div class="ct"><div class="cth"><span class="nm">Diavola</span><span class="q">×2</span></div><div class="meta">#4818 · Delivery · extra nduja · well-fired</div><button class="bump">Bump</button></div>
+      <div class="ct"><div class="cth"><span class="nm">Margherita</span><span class="q">×2</span></div><div class="meta">#4821 · Dine-in T7 · course 2 of 3</div><button class="bump">Bump</button></div>
+      <div class="ct"><div class="cth"><span class="nm">Bufala DOP</span><span class="q">×1</span></div><div class="meta">#4821 · Dine-in T7 · allergens: milk</div><button class="bump">Bump</button></div>
+      <div class="ct"><div class="cth"><span class="nm">Capricciosa</span><span class="q">×1</span></div><div class="meta">#4823 · Dine-in T9</div><button class="bump">Bump</button></div>
+      <div class="ct"><div class="cth"><span class="nm">Marinara</span><span class="q">×1</span></div><div class="meta">#4823 · Dine-in T9 · vegan</div><button class="bump">Bump</button></div>
+      <div class="ct"><div class="cth"><span class="nm">Margherita</span><span class="q">×2</span></div><div class="meta">#4824 · Takeaway</div><button class="bump">Bump</button></div>
+    </div>
+  </div>`,
+
+"guest.inbox":`
+  <div class="kpis k5">
+    <div class="bk"><div class="l">Orders · 7d</div><div class="v">128</div><div class="s">paid via WhatsApp</div></div>
+    <div class="bk"><div class="l">Conversion · 7d</div><div class="v good">34%</div><div class="s">chat → paid</div></div>
+    <div class="bk"><div class="l">Active sessions</div><div class="v">3</div><div class="s">live now</div></div>
+    <div class="bk"><div class="l">Awaiting pay</div><div class="v warn">2</div><div class="s">link sent</div></div>
+    <div class="bk"><div class="l">Lifetime paid</div><div class="v">2 540</div><div class="s">orders</div></div>
+  </div>
+  <div class="inbox2">
+    <div class="convs">
+      <div class="conv on"><div class="av">LB</div><div><div class="nm">Lucia Bianchi</div><div class="pv">Perfect — see you at 8! Grazie 🙏</div></div></div>
+      <div class="conv"><div class="av">MK</div><div><div class="nm">Marek Kowalski</div><div class="pv">Is the Diavola very spicy?</div></div></div>
+      <div class="conv"><div class="av">SF</div><div><div class="nm">Sofia Ferrari</div><div class="pv">Payment link please 💳</div></div></div>
+      <div class="conv"><div class="av">AW</div><div><div class="nm">Anna Wójcik</div><div class="pv">Can I book for 4 tomorrow?</div></div></div>
+    </div>
+    <div class="thread">
+      <div class="th"><div class="av">LB</div><div><div class="nm" style="font-weight:600">Lucia Bianchi</div><div class="subtle" style="font-size:11px">+39 ··· 412 · Kraków</div></div><span class="badge platinum" style="margin-left:auto">VIP · 4 200 zł</span></div>
+      <div class="bubs">
+        <div class="bub in">Hi! Do you have a table for 2 tonight around 8?</div>
+        <div class="bub bot">🤖 Yes — a dine-in slot at 20:00 has space, and table T7 fits 2. Shall I book it?</div>
+        <div class="bub in">Yes please, anniversary 🥂</div>
+        <div class="bub out">Booked T7 at 20:00 — and a complimentary limoncello on us. Buon anniversario! 🍋</div>
+        <div class="bub in">Perfect — see you at 8! Grazie 🙏</div>
+      </div>
+    </div>
+  </div>`,
+
+"guest.guests":`
+  <div class="kpis">
+    <div class="bk"><div class="l">Customers</div><div class="v">1 284</div><div class="s">all-time</div></div>
+    <div class="bk"><div class="l">Members</div><div class="v">612</div><div class="s">loyalty enrolled</div></div>
+    <div class="bk"><div class="l">VIP</div><div class="v">48</div><div class="s">top 4% by LTV</div></div>
+    <div class="bk"><div class="l">Total LTV</div><div class="v">214k<span style="font-size:13px"> zł</span></div><div class="s">lifetime</div></div>
+  </div>
+  <div class="filters"><span class="fchip on">All <span class="n">1284</span></span><span class="fchip">VIP <span class="n">48</span></span><span class="fchip">Active <span class="n">503</span></span><span class="fchip">Repeat <span class="n">389</span></span><span class="fchip">New <span class="n">71</span></span><span class="fchip">Lapsed <span class="n">214</span></span></div>
+  <div class="card" style="padding:4px 14px">
+    <table class="tbl"><thead><tr><th>Customer</th><th>Channel</th><th class="num">Orders</th><th class="num">Points</th><th class="num">LTV</th><th>Last</th></tr></thead><tbody>
+      <tr><td>Lucia Bianchi <span class="badge platinum" style="height:18px;font-size:9px">VIP</span></td><td>Dine-in</td><td class="num">28</td><td class="num">4 200</td><td class="num">4 200 zł</td><td>2d ago</td></tr>
+      <tr><td>Marek Kowalski</td><td>Delivery</td><td class="num">11</td><td class="num">980</td><td class="num">980 zł</td><td>5d ago</td></tr>
+      <tr><td>Sofia Ferrari</td><td>Takeout</td><td class="num">9</td><td class="num">760</td><td class="num">760 zł</td><td>1d ago</td></tr>
+      <tr><td>Anna Wójcik</td><td>WhatsApp</td><td class="num">3</td><td class="num">210</td><td class="num">210 zł</td><td>3w ago</td></tr>
+      <tr><td>Giulia Romano</td><td>Dine-in</td><td class="num">16</td><td class="num">1 540</td><td class="num">1 540 zł</td><td>6d ago</td></tr>
+    </tbody></table>
+  </div>`,
+
+"guest.loyalty":`
+  <div class="kpis">
+    <div class="bk"><div class="l">Members</div><div class="v">612</div><div class="s">phone-enrolled</div></div>
+    <div class="bk"><div class="l">Points outstanding</div><div class="v">184k</div><div class="s">≈ 1 840 zł liability</div></div>
+    <div class="bk"><div class="l">Redemptions · 30d</div><div class="v">73</div><div class="s">rewards claimed</div></div>
+    <div class="bk"><div class="l">Family wallets</div><div class="v">38</div><div class="s">shared balances</div></div>
+  </div>
+  <div class="card" style="padding:4px 14px">
+    <table class="tbl"><thead><tr><th>Member</th><th>Tier</th><th class="num">Points</th><th class="num">Lifetime</th><th>Joined</th></tr></thead><tbody>
+      <tr><td>Lucia Bianchi</td><td><span class="badge platinum" style="height:18px;font-size:9px">Platinum</span></td><td class="num">4 200</td><td class="num">12 600</td><td>2024</td></tr>
+      <tr><td>Giulia Romano</td><td><span class="badge warning" style="height:18px;font-size:9px">Gold</span></td><td class="num">1 540</td><td class="num">5 400</td><td>2024</td></tr>
+      <tr><td>Marek Kowalski</td><td><span class="badge info" style="height:18px;font-size:9px">Silver</span></td><td class="num">980</td><td class="num">2 100</td><td>2025</td></tr>
+    </tbody></table>
+  </div>
+  <div class="eyebrow">Family wallets</div>
+  <div class="wallets">
+    <div class="wallet"><div class="w1"><b>Bianchi family</b><span class="badge platinum" style="height:18px;font-size:9px">3 members</span></div><div class="pts">6 120 pts</div><div class="subtle" style="font-size:12px">≈ 61,20 zł to redeem</div></div>
+    <div class="wallet"><div class="w1"><b>Romano household</b><span class="badge info" style="height:18px;font-size:9px">2 members</span></div><div class="pts">2 380 pts</div><div class="subtle" style="font-size:12px">≈ 23,80 zł to redeem</div></div>
+    <div class="wallet"><div class="w1"><b>Nowak &amp; Co</b><span class="badge info" style="height:18px;font-size:9px">4 members</span></div><div class="pts">1 050 pts</div><div class="subtle" style="font-size:12px">≈ 10,50 zł to redeem</div></div>
+  </div>`,
+
+"guest.concierge":`
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><div><b>6 capabilities · 6 live</b> <span class="subtle">· on the public read endpoint</span><p class="subtle" style="font-size:12.5px;margin-top:2px">One capability layer, exposed over MCP/HTTP and the WhatsApp bot — the agent never guesses; every answer is auditable.</p></div></div>
+  <div class="guestwrap">
+    <div>
+      ${[["get_menu","resource","Full menu with prices, categories and dietary tags."],["check_availability","tool","Live availability + prep time per item and location."],["get_allergens","tool","EU-14 allergen + dietary breakdown for any item."],["place_order","tool","Create a takeout / delivery order. Returns id + ETA."],["create_payment","tool","Issue a Stripe payment link / take payment."],["locate_truck","tool","Where the truck is now + today's schedule per city."]].map((c,i)=>`<div class="cap" ${i===2?'style="border-color:var(--platinum-soft);box-shadow:inset 3px 0 0 var(--platinum)"':''}><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><div class="tx"><b>${c[0]}</b><span class="tag">${c[1]}</span><p>${c[2]}</p></div><div class="sw"></div></div>`).join("")}
+    </div>
+    <div class="card" style="padding:15px">
+      <div class="eyebrow" style="margin-bottom:10px">EU-14 allergen matrix · Kraków</div>
+      <table class="matrix"><thead><tr><th>Item</th><th>🌾</th><th>🥛</th><th>🥚</th><th style="text-align:right">Diet</th></tr></thead><tbody>
+        <tr><td>Margherita</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+        <tr><td>Bufala DOP</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">veg</td></tr>
+        <tr><td>Diavola</td><td>●</td><td>●</td><td>·</td><td class="diet" style="text-align:right">spicy</td></tr>
+        <tr><td>Marinara</td><td>●</td><td>·</td><td>·</td><td class="diet" style="text-align:right">vegan</td></tr>
+      </tbody></table>
+    </div>
+  </div>`,
+
+"guest.book":`
+  <div class="bookgrid">
+    <div>
+      <div class="block"><div class="bh"><span class="eyebrow">When · pick a slot</span><span class="subtle" style="font-size:12px">2026-06-07</span></div>
+        <div class="chips"><button class="pk">18:00 · 6 left</button><button class="pk on">20:00 · 3 left</button><button class="pk">21:30 · 8 left</button><button class="pk off">22:30 · full</button></div></div>
+      <div class="block"><div class="bh"><span class="eyebrow">Where · assign a table</span><button class="btn ghost">✨ Recommend</button></div>
+        <div class="chips"><button class="pk">T3 · 2</button><button class="pk on">T7 · 2</button><button class="pk">T9 · 4</button><button class="pk off">T5 · seated</button><button class="pk">T11 · 6</button></div></div>
+      <div class="block"><span class="eyebrow">Who</span>
+        <div class="formrow" style="margin-top:12px"><div class="field"><label>Party</label><input value="2"></div><div class="field"><label>Name</label><input placeholder="Guest name" value="Lucia Bianchi"></div><div class="field"><label>Phone</label><input placeholder="+48…" value="+39 ··· 412"></div></div>
+        <div class="field" style="margin-top:12px"><label>Notes</label><input placeholder="High chair, window…" value="Anniversary 🥂"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary">✓ Book slot + table</button></div></div>
+    </div>
+    <div class="card" style="padding:16px"><div class="bh" style="display:flex;justify-content:space-between"><span class="eyebrow">Booked · 2026-06-07</span><span class="badge success" style="height:18px;font-size:9px">3</span></div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+        <div class="trow"><span><b>20:00</b> · T7 · Lucia B. (2)</span><span class="subtle">conf</span></div>
+        <div class="trow"><span><b>20:00</b> · T9 · Nowak (4)</span><span class="subtle">conf</span></div>
+        <div class="trow"><span><b>21:30</b> · T11 · Romano (6)</span><span class="subtle">conf</span></div>
+      </div></div>
+  </div>`,
+
+"service.floor":`
+  <div class="kpis">
+    <div class="bk"><div class="l">Occupancy</div><div class="v">62%</div><div class="s">8/13 seated</div></div>
+    <div class="bk"><div class="l">Open now</div><div class="v">5</div><div class="s">2 freeing ≤15m</div></div>
+    <div class="bk"><div class="l">Median turn</div><div class="v">54<span style="font-size:13px">m</span></div><div class="s">realized</div></div>
+    <div class="bk"><div class="l">Spend / hr</div><div class="v">118<span style="font-size:13px"> zł</span></div><div class="s">per table-hour</div></div>
+  </div>
+  <div class="note">Floor twin live — seat / clear from any table, predictive-seating recommender, bottleneck banner when the line can't absorb more covers.</div>
+  <div class="tables">
+    <div class="tcard seated"><div class="tn">T1</div><div class="ts">seated · 32m</div></div>
+    <div class="tcard"><div class="tn">T2</div><div class="ts">open</div></div>
+    <div class="tcard seated"><div class="tn">T3</div><div class="ts">seated · 1h04</div></div>
+    <div class="tcard freeing"><div class="tn">T5</div><div class="ts">freeing ~8m</div></div>
+    <div class="tcard"><div class="tn">T7</div><div class="ts">open · booked 20:00</div></div>
+    <div class="tcard seated"><div class="tn">T9</div><div class="ts">seated · 18m</div></div>
+    <div class="tcard"><div class="tn">T11</div><div class="ts">open</div></div>
+    <div class="tcard freeing"><div class="tn">T12</div><div class="ts">freeing ~12m</div></div>
+  </div>`,
+
+"service.slots":`
+  <div class="kpis">
+    <div class="bk"><div class="l">Slots today</div><div class="v">9</div><div class="s">dine-in windows</div></div>
+    <div class="bk"><div class="l">Booked</div><div class="v">41</div><div class="s">of 78 covers</div></div>
+    <div class="bk"><div class="l">Fill rate</div><div class="v good">53%</div><div class="s">vs 48% last wk</div></div>
+    <div class="bk"><div class="l">Demand price</div><div class="v">1.0×</div><div class="s">no surge</div></div>
+  </div>
+  <div class="slotlist">
+    ${[["12:00","Lunch",60,40],["13:00","Lunch",78,52],["18:00","Dinner",90,30],["20:00","Dinner",96,85],["21:30","Dinner",60,38]].map(([t,l,cap,used])=>{const pct=Math.round(used/cap*100);return `<div class="slot"><div class="tm">${t}</div><div><div>${l} service</div><div class="captrack"><div class="capfill" style="width:${pct}%"></div></div></div><div class="cap">${used}/${cap} covers · ${pct}%</div><button class="btn ghost">Edit</button></div>`;}).join("")}
+  </div>`,
+};
+
+/* ---------- render ---------- */
+const navEl=document.getElementById("corenav"), eyebrowEl=document.getElementById("eyebrow"),
+  viewnavEl=document.getElementById("viewnav"), subrightEl=document.getElementById("subright"),
+  headrightEl=document.getElementById("headright"), bodyEl=document.getElementById("body");
 let clockTimer;
-function startClock(){
-  clearInterval(clockTimer);
+
+function render(surface, view){
+  navEl.querySelectorAll("a").forEach(a=>a.classList.toggle("on",a.dataset.s===surface));
+  // viewnav
+  viewnavEl.innerHTML = NAV[surface].views.map(v=>`<button data-v="${v.id}" class="${v.id===view?"on":""}">${v.label}${v.n?` <span class="n">${v.n}</span>`:""}</button>`).join("");
+  viewnavEl.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>render(surface,b.dataset.v)));
+  // header bits
+  const h=HDR[surface];
+  eyebrowEl.textContent=h.eyebrow(view);
+  subrightEl.innerHTML=h.sub(view);
+  headrightEl.innerHTML=h.right(view);
+  // body
+  bodyEl.innerHTML=`<section class="pane on">${BODY[surface+"."+view]||"<p class='subtle'>—</p>"}</section>`;
+  // light interactivity: seg + chip + pill + cat + tabs toggle within their group
+  bodyEl.querySelectorAll(".seg button, .schip, .fchip, .pk, .cat, .pos-tab:not(.add), .pm, .stationrail .schip").forEach(el=>{});
+  document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",e=>toggleGroup(e.currentTarget)));
+  bodyEl.querySelectorAll(".cat,.pos-tab:not(.add),.pm,.fchip,.schip,.pk").forEach(b=>b.addEventListener("click",e=>toggleSiblings(e.currentTarget)));
+  if(surface==="kds") startClock();
+}
+function toggleGroup(btn){ const g=btn.parentElement; g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); btn.classList.add("on"); }
+function toggleSiblings(btn){ const g=btn.parentElement; g.querySelectorAll(btn.className.split(" ")[0]?"."+btn.classList[0]:"*"); [...g.children].forEach(x=>x.classList&&x.classList.remove("on")); btn.classList.add("on"); }
+navEl.querySelectorAll("a").forEach(a=>a.addEventListener("click",e=>{e.preventDefault(); render(a.dataset.s, NAV[a.dataset.s].views[0].id);}));
+
+function startClock(){ clearInterval(clockTimer);
   const tick=()=>{const el=document.getElementById("clock"); if(!el)return; const d=new Date(); el.textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,"0")).join(":");};
   tick(); clockTimer=setInterval(tick,1000);
 }
-
-select("pos");
+render("pos","order");
 </script>
 </body>
 </html>
