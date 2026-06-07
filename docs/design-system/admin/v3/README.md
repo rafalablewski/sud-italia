@@ -448,14 +448,35 @@ refetches every 30s.
   Nutrition / Notes — Nutrition & Notes flag with a dot when relevant); ingredient
   rows gained unit + `%` affixes. CSS §19 (`.av3-dtabs`, `.av3-recap`, `.av3-affix`).
 - [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
-  live in/out-of-range verdict (`@/lib/haccp`); record + today's log table
+  live in/out-of-range verdict (`@/lib/haccp`); record + today's log table.
+  **Workbench pass (Operations interactivity):** a **KPI rail** (readings ·
+  compliance % · out-of-range) with five-section ⓘ explainers on compliance +
+  out-of-range; a **live safe-range gauge** under the record form that shades
+  the safe band and marks the entered temp as you type (red when it breaches);
+  **search + All/Out-of-range filter chips**; a **Board⇄Table toggle** with a
+  default board of reading cards (big temp, per-sensor gauge, OK/breach); and a
+  **row → detail popup** (large temp, gauge, safe range, recorded time, +
+  corrective-action reminder when flagged).
 - [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
-  entries + write-off cost KPI (`POST /api/admin/waste`)
+  entries + write-off cost KPI (`POST /api/admin/waste`).
+  **Workbench pass (Operations interactivity):** a **KPI rail** (entries ·
+  write-off today · top reason) with a five-section ⓘ on write-off; a **live
+  entry preview** under the form (item · qty · reason · cost → projected new
+  daily write-off); **search + reason filter chips**; a **Board⇄Table toggle**
+  with a default board of waste cards (cost, qty, share-of-today); and a
+  **row → detail popup** (qty/reason/cost/share/time + an "uncosted = invisible"
+  nudge when no cost was recorded).
 - [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
-  week's log (`POST /api/admin/handover`). **Visual upgrade:** a **KPI rail**
-  (this-week count / issues flagged / net cash variance / last sign-off) above
-  the sign-off form.
+  week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /
+  issues flagged / net cash variance / last sign-off) sits above the form.
+  **Workbench pass (Operations interactivity):** five-section ⓘ explainers on
+  Issues flagged + Net cash variance; a **live sign-off summary** under the form
+  (shift · managers · the three check pills · cash, warn-tinted when a check is
+  not clear); **search + shift filter chips**; a **Board⇄Table toggle** with a
+  default board of handover cards (manager, shift, check pills, variance); and a
+  **row → detail popup** (both managers, cash counted + variance, all three
+  checks, the manager comment).
 - [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
   add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`). **Visual
   upgrade:** a **KPI rail** (suppliers / avg lead / fastest lead / with-contact)
