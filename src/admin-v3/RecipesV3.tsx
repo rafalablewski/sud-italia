@@ -320,6 +320,11 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
     return Math.round(total / yieldN);
   };
   const missingKcal = lines.filter((l) => l.ingredientId && Number(l.quantity) > 0 && typeof ingById.get(l.ingredientId)?.kcalPerUnit !== "number");
+  // Live per-portion macros snapshot for the always-visible right-hand panel.
+  const macros = {
+    kcal: macro("kcalPerUnit"), protein: macro("proteinPerUnit"), carbs: macro("carbsPerUnit"),
+    sugar: macro("sugarPerUnit"), fiber: macro("fiberPerUnit"), fat: macro("fatPerUnit"),
+  };
 
   const save = async () => {
     setSaving(true);
@@ -353,7 +358,7 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
       open onClose={onClose} title={dish.name}
       subtitle={`Chain-wide recipe · applies to all ${dish.siteCount} site${dish.siteCount > 1 ? "s" : ""}`}
       headerExtra={<Badge tone="brand"><FlaskConical style={{ width: 11, height: 11 }} /> formula</Badge>}
-      width={620}
+      width={920}
       footer={
         <>
           {recipe && (recipe.ingredients?.length ?? 0) > 0 && <Button variant="danger" size="sm" loading={deleting} onClick={deleteRecipe} style={{ marginRight: "auto" }}>Delete recipe</Button>}
@@ -362,6 +367,8 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
         </>
       }
     >
+      <div className="av3-bodysplit">
+       <div>
       {/* sticky per-portion recap — always visible while editing */}
       <div className="av3-recap">
         <div className="av3-recap-cell"><div className="av3-recap-k">Cost / portion</div><div className="av3-recap-v">{formatPrice(Math.round(estCost))}</div></div>
@@ -443,7 +450,71 @@ function RecipeEditDialog({ dish, recipe, ingredients, onClose, onSaved }: {
       {tab === "notes" && (
         <textarea className="av3-input" style={{ fontFamily: "var(--av3-ui)", minHeight: 120, resize: "vertical" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Method, plating, station notes for the KDS…" />
       )}
+       </div>
+
+       <div style={{ position: "sticky", top: 0 }}>
+         <div className="av3-field-label" style={{ marginBottom: 6 }}>Live economics · per portion</div>
+         <RecipeLivePanel price={dish.avgPrice} cost={estCost} fcPct={fcPct} macros={macros} hasLines={lines.some((l) => Number(l.quantity) > 0)} />
+       </div>
+      </div>
     </Dialog>
+  );
+}
+
+/* ── food-cost health gauge (Recipe editor live panel) ─────────────────── */
+function FoodCostGauge({ pct }: { pct: number }) {
+  const max = 60;
+  const pos = (Math.max(0, Math.min(max, pct)) / max) * 100;
+  const color = foodCostTone(pct) === "ok" ? "var(--av3-ok)" : foodCostTone(pct) === "warn" ? "var(--av3-warn)" : foodCostTone(pct) === "bad" ? "var(--av3-bad)" : "var(--av3-muted)";
+  return (
+    <div>
+      <div style={{ position: "relative", height: 10, borderRadius: "var(--av3-r-pill)", overflow: "hidden", display: "flex" }}>
+        <div style={{ width: `${(30 / max) * 100}%`, background: "color-mix(in oklab, var(--av3-ok) 30%, var(--av3-s3))" }} />
+        <div style={{ width: `${(8 / max) * 100}%`, background: "color-mix(in oklab, var(--av3-warn) 30%, var(--av3-s3))" }} />
+        <div style={{ flex: 1, background: "color-mix(in oklab, var(--av3-bad) 30%, var(--av3-s3))" }} />
+        {pct > 0 && <div style={{ position: "absolute", left: `${pos}%`, top: -3, width: 3, height: 16, transform: "translateX(-50%)", borderRadius: 2, background: color }} />}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>
+        <span>0%</span><span style={{ color: "var(--av3-ok)" }}>target ≤30%</span><span>60%+</span>
+      </div>
+    </div>
+  );
+}
+
+function RecipeLivePanel({ price, cost, fcPct, macros, hasLines }: {
+  price: number; cost: number; fcPct: number; hasLines: boolean;
+  macros: { kcal: number; protein: number; carbs: number; sugar: number; fiber: number; fat: number };
+}) {
+  const gp = price - cost;
+  const gpPct = price > 0 ? (gp / price) * 100 : 0;
+  const fcColor = foodCostTone(fcPct) === "ok" ? "var(--av3-ok)" : foodCostTone(fcPct) === "warn" ? "var(--av3-warn)" : foodCostTone(fcPct) === "bad" ? "var(--av3-bad)" : "var(--av3-fg)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-lg)", background: "var(--av3-s1)", padding: 14, boxShadow: "var(--av3-sh-1)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <span className="av3-field-label">Food cost</span>
+          <span className="mono" style={{ fontFamily: "var(--av3-mono)", fontSize: 26, fontWeight: 700, color: fcColor }}>{fcPct > 0 ? `${fcPct.toFixed(0)}%` : "—"}</span>
+        </div>
+        <div style={{ marginTop: 8 }}><FoodCostGauge pct={fcPct} /></div>
+      </div>
+      <div className="av3-od-grid">
+        <div className="av3-od-field"><div className="k">Menu price</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{price ? formatPrice(price) : "—"}</div></div>
+        <div className="av3-od-field"><div className="k">Food cost</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{hasLines ? formatPrice(Math.round(cost)) : "—"}</div></div>
+        <div className="av3-od-field"><div className="k">Gross profit</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)", color: gp >= 0 ? "var(--av3-ok)" : "var(--av3-bad)" }}>{hasLines && price ? formatPrice(Math.round(gp)) : "—"}</div></div>
+        <div className="av3-od-field"><div className="k">GP margin</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{hasLines && price > 0 ? `${gpPct.toFixed(0)}%` : "—"}</div></div>
+      </div>
+      <div>
+        <div className="av3-field-label" style={{ marginBottom: 6 }}>Per-portion macros</div>
+        <div className="av3-od-grid">
+          <div className="av3-od-field"><div className="k">kcal</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.kcal || "—"}</div></div>
+          <div className="av3-od-field"><div className="k">Protein</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.protein} g</div></div>
+          <div className="av3-od-field"><div className="k">Carbs</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.carbs} g</div></div>
+          <div className="av3-od-field"><div className="k">Sugar</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.sugar} g</div></div>
+          <div className="av3-od-field"><div className="k">Fiber</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.fiber} g</div></div>
+          <div className="av3-od-field"><div className="k">Fat</div><div className="v mono" style={{ fontFamily: "var(--av3-mono)" }}>{macros.fat} g</div></div>
+        </div>
+      </div>
+    </div>
   );
 }
 

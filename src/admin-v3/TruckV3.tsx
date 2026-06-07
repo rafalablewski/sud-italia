@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Banknote, MapPin, Plus, Radio, Truck, Users, X } from "lucide-react";
+import { Banknote, LayoutGrid, MapPin, Plus, Radio, Rows3, Truck, Users, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { TruckEvent, TruckEventStatus, TruckRoute, TruckStop } from "@/data/types";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, Kpi, SkeletonRows, Table } from "./ui";
+import { Badge, type BadgeTone, Button, type ColumnV3, Dialog, InfoButton, Kpi, SkeletonRows, Table } from "./ui";
 
 const STATUS_LABEL: Record<TruckEventStatus, string> = { scheduled: "Scheduled", live: "Live", done: "Done", cancelled: "Cancelled" };
 const STATUS_TONE: Record<TruckEventStatus, BadgeTone> = { scheduled: "warn", live: "info", done: "ok", cancelled: "neutral" };
@@ -22,6 +22,7 @@ export function TruckV3() {
   const [routes, setRoutes] = useState<TruckRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"events" | "routes">("events");
+  const [view, setView] = useState<"board" | "table">("board");
   const [eventDialog, setEventDialog] = useState<TruckEvent | "new" | null>(null);
   const [routeDialog, setRouteDialog] = useState<TruckRoute | "new" | null>(null);
 
@@ -72,8 +73,18 @@ export function TruckV3() {
 
       <div className="av3-kpi-rail">
         <Kpi label="Events" icon={Truck} value={`${events.length}`} accentVar="--av3-c3" />
-        <Kpi label="Revenue" icon={Banknote} value={formatPrice(events.reduce((s, e) => s + (e.actualRevenueGrosze ?? 0), 0))} accentVar="--av3-c1" />
-        <Kpi label="Expected guests" icon={Users} value={events.reduce((s, e) => s + (e.expectedAttendance ?? 0), 0).toLocaleString("pl-PL")} accentVar="--av3-c4" />
+        <Kpi label="Revenue" icon={Banknote} value={formatPrice(events.reduce((s, e) => s + (e.actualRevenueGrosze ?? 0), 0))} accentVar="--av3-c1"
+          info={<InfoButton title="Truck event revenue" description="Total recorded takings across this location's truck events (pop-ups, markets, private bookings)."
+            institutional="Off-premise events are a capacity-light growth channel: they borrow the brand and the kitchen without a second lease. The discipline is yield per event — revenue ÷ events should clear the marginal cost of staffing and stock for the day, and ideally beat an average in-store day. A long tail of low-revenue events is brand exposure, not a P&L line; treat those as marketing, not revenue."
+            plain="If eight events brought in 24,000 zł, that's ~3,000 zł a day the truck earned away from its usual spot. One strong market can be worth a slow weekday on the regular pitch."
+            tips="Record actual revenue on every 'done' event so this stays real; double down on the event types with the best per-event yield; pair high-expected-guest events with extra stock and a second pair of hands; cancel rather than under-staff a thin booking."
+            methodology="Sum of actualRevenueGrosze over the location's truck events (/api/admin/truck-events). Events without recorded revenue contribute zero — fill it in on the event editor when the day closes." />} />
+        <Kpi label="Expected guests" icon={Users} value={events.reduce((s, e) => s + (e.expectedAttendance ?? 0), 0).toLocaleString("pl-PL")} accentVar="--av3-c4"
+          info={<InfoButton title="Expected guests" description="Sum of expected attendance across the location's scheduled and upcoming truck events — your demand-planning number."
+            institutional="Expected attendance is the input to prep, stock and staffing for off-premise days. The institutional value is in the gap between expected and actual: a persistent over-estimate wastes stock and labour, a persistent under-estimate sells out early and leaves money (and goodwill) on the table. Calibrate it against recorded revenue to turn guesses into a forecast."
+            plain="If three weekend events expect 1,200 guests between them, you know roughly how much dough to prep and how many people to roster — instead of finding out at 13:00 that you're short."
+            tips="Set a realistic expected count on every event from the organiser's figure or last year's; after the event, compare to actual revenue and adjust your conversion assumption; flag big events early so purchasing and rota can react."
+            methodology="Sum of expectedAttendance over the location's truck events. Used for prep/stock planning; compare against the Revenue tile to sanity-check your spend-per-guest assumption." />} />
         <Kpi label="Live / upcoming" icon={Radio} value={`${events.filter((e) => e.status === "live" || e.status === "scheduled").length}`} accentVar="--av3-c5" />
       </div>
 
@@ -82,16 +93,29 @@ export function TruckV3() {
         <button type="button" className={`av3-fchip ${tab === "routes" ? "is-active" : ""}`} onClick={() => setTab("routes")}>Routes<span className="av3-fchip-count">{routes.length}</span></button>
       </div>
 
+      {tab === "events" && !loading && events.length > 0 && (
+        <div className="av3-toolbar">
+          <span className="av3-toolbar-spacer" />
+          <span className="av3-cell-muted" style={{ fontSize: 12 }}>{events.length} event{events.length === 1 ? "" : "s"}</span>
+          <div className="av3-viewtoggle" role="tablist" aria-label="Event view">
+            <button type="button" role="tab" aria-selected={view === "board"} className={view === "board" ? "is-active" : ""} onClick={() => setView("board")} aria-label="Board view" title="Board view"><LayoutGrid /></button>
+            <button type="button" role="tab" aria-selected={view === "table"} className={view === "table" ? "is-active" : ""} onClick={() => setView("table")} aria-label="Table view" title="Table view"><Rows3 /></button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "events" ? (
-        <div className="av3-card" style={{ padding: 0 }}>
-          {events.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No events</div><div className="av3-empty-text">Schedule a pop-up, market or private booking.</div></div>
-          ) : (
+        events.length === 0 ? (
+          <div className="av3-card" style={{ padding: 0 }}><div className="av3-empty"><div className="av3-empty-title">No events</div><div className="av3-empty-text">Schedule a pop-up, market or private booking.</div></div></div>
+        ) : view === "table" ? (
+          <div className="av3-card" style={{ padding: 0 }}>
             <Table columns={eventCols} rows={events} rowKey={(e) => e.id} onRowClick={(e) => setEventDialog(e)} />
-          )}
-        </div>
+          </div>
+        ) : (
+          <EventBoard events={events} onOpen={(e) => setEventDialog(e)} />
+        )
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {routes.length === 0 ? (
@@ -105,6 +129,36 @@ export function TruckV3() {
       {eventDialog && <EventDialog event={eventDialog === "new" ? null : eventDialog} routes={routes} locationSlug={loc} onClose={() => setEventDialog(null)} onSaved={async () => { await load(); setEventDialog(null); }} />}
       {routeDialog && <RouteDialog route={routeDialog === "new" ? null : routeDialog} locationSlug={loc} onClose={() => setRouteDialog(null)} onSaved={async () => { await load(); setRouteDialog(null); }} />}
     </>
+  );
+}
+
+/* ── event board (card view) ───────────────────────────────────────────── */
+function EventBoard({ events, onOpen }: { events: TruckEvent[]; onOpen: (e: TruckEvent) => void }) {
+  // Upcoming (scheduled/live) first, then by date — mirrors how the day runs.
+  const sorted = useMemo(() => {
+    const rank = (e: TruckEvent) => (e.status === "live" ? 0 : e.status === "scheduled" ? 1 : e.status === "done" ? 2 : 3);
+    return [...events].sort((a, b) => rank(a) - rank(b) || a.date.localeCompare(b.date));
+  }, [events]);
+  return (
+    <div className="av3-board">
+      {sorted.map((e) => (
+        <div key={e.id} className="av3-dcard" data-dim={e.status === "cancelled"} role="button" tabIndex={0}
+          onClick={() => onOpen(e)}
+          onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); onOpen(e); } }}>
+          <div className="av3-dcard-name">{e.name}</div>
+          <div className="av3-dcard-badges">
+            <Badge tone={STATUS_TONE[e.status]} dot>{STATUS_LABEL[e.status]}</Badge>
+            <Badge tone="neutral">{e.date}</Badge>
+          </div>
+          <div className="av3-dcard-foot">
+            <div>
+              <div className="av3-dcard-price">{e.actualRevenueGrosze != null ? formatPrice(e.actualRevenueGrosze) : "—"}</div>
+              <div className="av3-dcard-sub">{e.expectedAttendance != null ? `${e.expectedAttendance.toLocaleString("pl-PL")} expected` : "no estimate"}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
