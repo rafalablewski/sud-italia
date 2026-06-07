@@ -9,10 +9,17 @@
  *   - reservations  → Book + Service · Floor (booked tables)
  *
  * This is NOT mock data baked into the app — it's real data written through
- * the same persistence the app uses, scoped to the gitignored `.data/` dir.
- * Re-runnable: it clears its own demo rows first (by id prefix).
+ * the same persistence the app uses. Re-runnable: it clears its own demo
+ * rows first (orders/tables/slots by `demo-` id prefix, reservations by the
+ * demo guest phones), so it never piles up and only ever touches its own rows.
  *
- *   npx tsx scripts/seed-core-demo.ts
+ * Local (.data filesystem store):
+ *   npx tsx scripts/seed-core-demo.ts          # or: npm run seed:demo
+ *
+ * Deployed preview (Neon Postgres) — the store auto-routes to the DB when
+ * DATABASE_URL is set; ALLOW_DB_SEED is a deliberate guard so this can never
+ * be run against a real/production DB by accident:
+ *   DATABASE_URL=postgres://… ALLOW_DB_SEED=1 npm run seed:demo
  */
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
@@ -21,12 +28,20 @@ import {
   saveTable,
   createSlot,
   getSlots,
+  getOrders,
+  getTables,
+  getReservations,
+  deleteOrder,
+  deleteTable,
+  deleteSlot,
+  deleteReservation,
   addLoyaltyMember,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
 import type { CartItem, FulfillmentType, MenuItem, Order, OrderStatus, TimeSlot } from "@/data/types";
 
 const TODAY = "2026-06-07";
+const useDB = !!process.env.DATABASE_URL;
 const now = Date.now();
 const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
 const min = (m: number) => m * 60_000;
@@ -149,9 +164,37 @@ async function seedSlots(locationSlug: string): Promise<void> {
   }
 }
 
+const GUEST_PHONES = new Set(GUESTS.map((g) => g.phone));
+
+/** Remove only this seeder's own demo rows, so a re-run (or seeding a shared
+ *  DB) never duplicates and never touches real data. */
+async function cleanup(): Promise<void> {
+  const orders = await getOrders(undefined, undefined, { includeSimulated: true });
+  let n = 0;
+  for (const o of orders) if (o.id.startsWith("demo-ord")) { await deleteOrder(o.id); n++; }
+  const tables = await getTables();
+  for (const t of tables) if (t.id.startsWith("demo-tbl")) await deleteTable(t.id);
+  const slots = await getSlots();
+  for (const s of slots) if (s.id.startsWith("demo-slot")) await deleteSlot(s.id);
+  const resvs = await getReservations(undefined, TODAY);
+  for (const r of resvs) if (r.customerPhone && GUEST_PHONES.has(r.customerPhone)) await deleteReservation(r.id);
+  console.log(`cleanup: removed ${n} prior demo orders + demo tables/slots/bookings`);
+}
+
 async function main() {
+  console.log(`store mode: ${useDB ? "Neon Postgres (DATABASE_URL set)" : "filesystem (.data)"}`);
+  if (useDB && process.env.ALLOW_DB_SEED !== "1") {
+    console.error(
+      "\nRefusing to seed a Postgres DB without an explicit opt-in.\n" +
+        "This writes demo orders/customers/loyalty rows — never run it against production.\n" +
+        "If this is a throwaway preview DB, re-run with:  ALLOW_DB_SEED=1 npm run seed:demo\n",
+    );
+    process.exit(2);
+  }
+
   const locations = await getActiveLocationsAsync();
   console.log("locations:", locations.map((l) => l.slug).join(", "));
+  await cleanup();
 
   for (const loc of locations) {
     const slug = loc.slug;
