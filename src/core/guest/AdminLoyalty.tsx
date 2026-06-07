@@ -513,24 +513,19 @@ export function AdminLoyalty() {
                             Tier{sortArrow("tier")}
                           </button>
                         </th>
-                        <th style={{ textAlign: "right" }}>
+                        <th className="num">
                           <button type="button" className="th-sort" onClick={() => toggleSort("points")}>
                             Points{sortArrow("points")}
                           </button>
                         </th>
-                        <th style={{ textAlign: "right" }}>
-                          <button type="button" className="th-sort" onClick={() => toggleSort("orders")}>
-                            Orders{sortArrow("orders")}
-                          </button>
-                        </th>
-                        <th style={{ textAlign: "right" }}>
+                        <th className="num">
                           <button type="button" className="th-sort" onClick={() => toggleSort("spent")}>
-                            Lifetime spend{sortArrow("spent")}
+                            Lifetime{sortArrow("spent")}
                           </button>
                         </th>
                         <th>
                           <button type="button" className="th-sort" onClick={() => toggleSort("last")}>
-                            Last order{sortArrow("last")}
+                            Last{sortArrow("last")}
                           </button>
                         </th>
                         <th aria-label="Actions" />
@@ -551,30 +546,26 @@ export function AdminLoyalty() {
                               {TIER_LABEL[m.tier]}
                             </span>
                           </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtNum(m.points)}
-                          </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtNum(m.orders)}
-                          </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtPLN0(m.totalSpent)}
-                          </td>
+                          <td className="num">{fmtNum(m.points)}</td>
+                          <td className="num">{fmtPLN0(m.totalSpent)}</td>
                           <td className="muted">{fmtDate(m.lastOrder)}</td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="loy-actions-cell">
                             <div className="loy-row-actions">
                               <button
                                 type="button"
-                                className="btn ghost"
+                                className="btn ghost icon"
                                 onClick={() => setIntelMember(m)}
                                 title="Customer intelligence"
                               >
                                 <Brain width={14} height={14} />
-                                Intelligence
                               </button>
-                              <button type="button" className="btn ghost" onClick={() => setPointsDialog(m)}>
+                              <button
+                                type="button"
+                                className="btn ghost icon"
+                                onClick={() => setPointsDialog(m)}
+                                title="Adjust points"
+                              >
                                 <Coins width={14} height={14} />
-                                Adjust
                               </button>
                             </div>
                           </td>

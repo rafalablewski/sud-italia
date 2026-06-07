@@ -917,7 +917,10 @@
 .core-suite .loy-filters .book-search { position: relative; flex: 1; min-width: 220px; max-width: 360px; }
 .core-suite .loy-filters .filters { display: flex; gap: 7px; flex-wrap: wrap; }
 .core-suite .loy-body { padding: 4px 18px 22px; }
-.core-suite .loy-row-actions { display: inline-flex; gap: 6px; justify-content: flex-end; }
+.core-suite .loy-actions-cell { text-align: right; width: 1%; white-space: nowrap; }
+.core-suite .loy-row-actions { display: inline-flex; gap: 6px; justify-content: flex-end; opacity: 0; transition: opacity var(--fast) var(--ease); }
+.core-suite .tbl tr:hover .loy-row-actions { opacity: 1; }
+@media (pointer: coarse) { .core-suite .loy-row-actions { opacity: 1; } }
 /* Win-back worklist (Loyalty › Win-back tab) */
 .core-suite .wb-summary { display: flex; align-items: center; gap: 22px; padding: 10px 2px 16px; flex-wrap: wrap; }
 .core-suite .wb-stat { display: flex; flex-direction: column; gap: 2px; }

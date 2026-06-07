@@ -32,7 +32,7 @@ relationship layer; *configuration* and *marketing* are Admin concerns.
 
 | Tab            | What it shows | Data source |
 | -------------- | ------------- | ----------- |
-| **Members**    | Every loyalty member — tier badge, point balance, orders, lifetime spend, last order. Name/phone search + tier-filter chips (`all` / Platinum / Gold / Silver / Bronze) + sortable columns. Each row links to the customer detail page; the row actions open the **Intelligence** dialog + the **adjust-points** dialog. | `GET /api/admin/members` |
+| **Members**    | Mockup-exact `.card > .tbl`: Member · Tier · Points · Lifetime · Last (5 columns, sortable). Tier / search live in the shared `.filters` row above (tab chips · spacer · tier chips). Each row links to the customer detail page; **Intelligence** + **adjust-points** are icon buttons that reveal on row hover (pointer-coarse shows them always). | `GET /api/admin/members` |
 | **Family wallets** | Each shared pool (head + up to 6 phones) with per-member status (`active` / `pending`); operator can **Dissolve** a wallet. | `GET /api/admin/wallets`, `DELETE /api/admin/wallets` |
 | **Redemptions** | The burn log — when, which customer, solo or wallet, which reward, points spent. | `GET /api/admin/wallet-redemptions` |
 | **Win-back** | The auto-retention worklist (Phase 2) — at-risk regulars ranked by value-at-risk, each a prescribed, approvable action. Loads lazily (heavier — scans all orders). | `GET/POST /api/admin/retention` |
