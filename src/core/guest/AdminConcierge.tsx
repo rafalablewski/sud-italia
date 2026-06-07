@@ -168,6 +168,14 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
         </>
       }
     >
+      <div className="intro">
+        <h1>Guest · Concierge — the auditable agent layer</h1>
+        <p>
+          One capability layer exposed over MCP/HTTP <em>and</em> the WhatsApp bot — the agent never
+          guesses; every answer is auditable. Toggle capabilities live, test them against the real read
+          endpoint, and see exactly what the agent sees.
+        </p>
+      </div>
       <div className="conc">
         <section className="cap-side" aria-label="Capabilities">
           <div className="cap-statline">
