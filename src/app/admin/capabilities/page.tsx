@@ -505,6 +505,16 @@ export default async function CapabilitiesPage() {
       title: "AI Operating System",
       items: [
         {
+          name: "Boardroom (AI C-suite team)",
+          status: gatewayConfigured() ? "live" : "needs-config",
+          envVars: ["ANTHROPIC_API_KEY", "AI_DAILY_BUDGET_GROSZE"],
+          href: "/admin-v3/boardroom",
+          summary:
+            "Four specialist agents — CEO (strategy/OKRs), COO (operations), CFO (margin/pricing), CMO (growth/retention) — over the live store. A central dashboard shows traffic-light KPIs (today's sales, food cost %, labour %, prime cost, avg ticket, satisfaction, refund rate, SSSG) each with a 5-section ⓘ explainer; per-agent panels add a Claude chat scoped to that persona's voice + tool allowlist (each thread persists per agent and reopens on revisit), plus a Team-chat generalist for cross-functional questions. A daily cron auto-runs the briefing so operators walk in to a ready board. Meetings (daily briefing / weekly review) run a real round-robin (COO→CFO→CMO→CEO) then a CEO synthesis into a decisions list; decisions with a lever route back to the owning agent for an operator-approved, audit-logged action (update_item_price, mark_item_86, send_sms, manage_scheduled_bundle). KPIs render even without a key; chat + meetings degrade to 'needs-config'. Shares the gateway, tool registry, conversation store, and daily budget with the Ops Agent.",
+          caveats:
+            "Food cost %, refund rate, and SSSG are chain-wide (computed across all locations); today's sales, labour %, and satisfaction honour the location switcher. Meeting decisions are advisory until an operator approves the proposed action.",
+        },
+        {
           name: "Ops Agent (Claude)",
           status: gatewayConfigured() ? "live" : "needs-config",
           envVars: ["ANTHROPIC_API_KEY"],
@@ -514,7 +524,7 @@ export default async function CapabilitiesPage() {
         {
           name: "Tool registry + audit",
           status: "live",
-          summary: "8 tools: query_orders, query_customers, refund_order, mark_item_86, send_sms, etc. Every call audit-logged as actor='claude:<userId>'.",
+          summary: "20 tools incl. query_orders, query_customers, refund_order, mark_item_86, send_sms, plus the Boardroom advisor reads (get_pnl_snapshot, get_labor_cost, get_menu_engineering, get_inventory_status, get_staff_roster, get_suppliers_and_pos, get_feedback_summary, get_marketing_settings, get_demand_forecast, get_scheduled_bundles) and the gated levers update_item_price + manage_scheduled_bundle (approve/pause/cancel standing pre-orders). Every call audit-logged as actor='claude:<userId>'.",
         },
         {
           name: "Daily spend budget",
@@ -1591,6 +1601,14 @@ export default async function CapabilitiesPage() {
           name: "Daily summary",
           status: "live",
           summary: "Per-location revenue / orders / AOV → audit + (when comms live) owner email.",
+        },
+        {
+          name: "Boardroom daily briefing",
+          status: gatewayConfigured() ? "live" : "needs-config",
+          envVars: ["ANTHROPIC_API_KEY"],
+          href: "/admin-v3/boardroom",
+          summary:
+            "Daily via the dispatcher. /api/admin/cron/boardroom-briefing convenes the AI C-suite on the chain-wide live numbers and persists the meeting (transcript + decisions) to the Boardroom → Meetings tab. Self-skips when ANTHROPIC_API_KEY is unset; budget-gated.",
         },
         {
           name: "Customers lapsed detect",

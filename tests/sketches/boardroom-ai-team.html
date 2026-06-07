@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia — AI Boardroom (mockup)</title>
+<!--
+  Standalone visual mockup of the AI Boardroom (/admin-v3/boardroom).
+  Refined for calm: one status signal per KPI (a dot), only off-target tiles
+  carry a faint wash, no rainbow rails / status-word pills, consistent
+  monogram chips instead of emoji. Tokens mirror admin-v3 (index.css).
+  Data is illustrative — the real page reads the live store. Tabs switch
+  between Overview, Finance · CFO (persona panel + chat), and Meetings.
+-->
+<style>
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f; --av3-c6:#9b7ec0;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+    --av3-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--av3-bg);color:var(--av3-fg);font-family:var(--av3-sans);font-size:14px;-webkit-font-smoothing:antialiased}
+  .app{display:flex;min-height:100vh}
+
+  /* sidebar — text-led, no glyph noise; active item carries the only accent */
+  .side{width:228px;flex-shrink:0;background:var(--av3-s1);border-right:1px solid var(--av3-line);padding:14px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+  .brand{display:flex;align-items:center;gap:9px;padding:4px 6px 16px}
+  .brand .logo{width:25px;height:25px;border-radius:var(--av3-r-sm);background:var(--av3-brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff}
+  .brand b{font-size:14px;letter-spacing:.2px}
+  .navsec{margin-top:14px}
+  .navsec .h{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--av3-subtle);padding:4px 8px 6px}
+  .navi{padding:7px 10px;border-radius:var(--av3-r-sm);color:var(--av3-muted);font-size:13px;cursor:default;margin-bottom:1px;border-left:2px solid transparent}
+  .navi:hover{background:var(--av3-s3);color:var(--av3-fg)}
+  .navi.active{background:var(--av3-s3);color:var(--av3-fg);border-left-color:var(--av3-brand);font-weight:600}
+
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:46px;border-bottom:1px solid var(--av3-line);display:flex;align-items:center;padding:0 22px;color:var(--av3-subtle);font-size:12px}
+  .content{padding:22px 24px;max-width:1100px;width:100%}
+
+  .pagehead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+  .pagehead h1{font-size:19px;margin:0 0 3px;font-weight:700;letter-spacing:-.2px}
+  .pagehead .sub{font-size:12.5px;color:var(--av3-muted);max-width:620px;line-height:1.45}
+  .pagehead .left{display:flex;align-items:center;gap:11px}
+  .pagehead .ic{width:28px;height:28px;border-radius:var(--av3-r-md);background:color-mix(in oklab,var(--av3-brand) 14%,transparent);display:flex;align-items:center;justify-content:center}
+
+  .btn{border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);border-radius:var(--av3-r-md);padding:7px 13px;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{background:var(--av3-s3)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--av3-muted)}
+  .btn.ghost:hover{color:var(--av3-fg)}
+  .btn.primary{background:var(--av3-brand);border-color:transparent;color:#fff}
+  .btn.sm{padding:5px 11px;font-size:12px}
+  .ic-svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+  /* tabs */
+  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--av3-line)}
+  .tab{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--av3-muted);padding:9px 13px;font-size:13px;cursor:pointer;margin-bottom:-1px}
+  .tab:hover{color:var(--av3-fg)}
+  .tab.active{color:var(--av3-fg);border-bottom-color:var(--av3-brand);font-weight:600}
+
+  /* section label */
+  .seclab{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--av3-subtle);margin:22px 2px 10px;font-weight:600}
+  .seclab:first-child{margin-top:0}
+
+  /* KPI tiles — calm by default; only off-target tiles get a faint wash */
+  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px}
+  .kpi{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);padding:13px 14px}
+  .kpi.warn{background:color-mix(in oklab,var(--av3-warn) 5%,var(--av3-s1));border-color:color-mix(in oklab,var(--av3-warn) 22%,var(--av3-line))}
+  .kpi.bad{background:color-mix(in oklab,var(--av3-bad) 6%,var(--av3-s1));border-color:color-mix(in oklab,var(--av3-bad) 26%,var(--av3-line))}
+  .kpi .lab{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--av3-muted);text-transform:uppercase;letter-spacing:.4px}
+  .kpi .lab .info{margin-left:auto;color:var(--av3-subtle);cursor:help;font-size:12px;opacity:.6}
+  .kpi .val{font-size:23px;font-weight:700;margin:9px 0 5px;letter-spacing:-.4px}
+  .kpi .sub{font-size:11px;color:var(--av3-subtle)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .dot.green{background:var(--av3-ok)} .dot.warn{background:var(--av3-warn)} .dot.bad{background:var(--av3-bad)}
+  .dot.neutral{background:transparent;border:1.5px solid var(--av3-subtle)}
+
+  /* cards */
+  .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);margin-bottom:14px;overflow:hidden}
+  .card-head{padding:13px 16px;border-bottom:1px solid var(--av3-line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card-head .t{font-size:13.5px;font-weight:600}
+  .card-head .d{font-size:12px;color:var(--av3-muted);margin-top:2px}
+  .card-body{padding:14px 16px}
+
+  /* agent rows — monogram chip + meta + single status dot */
+  .agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:10px}
+  .agent{display:flex;align-items:center;gap:11px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);padding:12px 13px;cursor:pointer}
+  .agent:hover{border-color:var(--av3-line-strong)}
+  .mono{width:36px;height:36px;border-radius:var(--av3-r-md);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:.4px}
+  .agent .nm{font-size:13px;font-weight:600}
+  .agent .rm{font-size:11.5px;color:var(--av3-subtle);margin-top:1px;line-height:1.35}
+  .agent .meta{min-width:0}
+
+  /* flags */
+  .flag{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--av3-line);font-size:12.5px;color:var(--av3-muted)}
+  .flag:last-child{border-bottom:0}
+  .flag b{color:var(--av3-fg);font-weight:600}
+  .flag .pin{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+
+  /* chat */
+  .chat-scroll{display:flex;flex-direction:column;gap:11px}
+  .c-user{align-self:flex-end;background:var(--av3-brand);color:#fff;padding:9px 13px;border-radius:11px 11px 3px 11px;max-width:74%;font-size:13px;line-height:1.5}
+  .c-bot{align-self:flex-start;background:var(--av3-s2);border:1px solid var(--av3-line);padding:10px 13px;border-radius:11px 11px 11px 3px;max-width:82%;font-size:13px;line-height:1.55}
+  .tool{align-self:flex-start;max-width:88%;border:1px solid color-mix(in oklab,var(--av3-warn) 40%,var(--av3-line));background:color-mix(in oklab,var(--av3-warn) 7%,var(--av3-s1));border-radius:var(--av3-r-md);padding:11px 13px;font-size:12.5px}
+  .tool .th{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .tool .nm2{font-family:var(--av3-mono);font-size:12px;font-weight:600}
+  .tool .tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--av3-warn);border:1px solid color-mix(in oklab,var(--av3-warn) 40%,transparent);padding:1px 7px;border-radius:var(--av3-r-pill)}
+  .tool .pv{margin:6px 0 10px;color:var(--av3-fg);line-height:1.5}
+  .composer{display:flex;gap:9px;margin-top:14px;align-items:flex-end}
+  .composer textarea{flex:1;background:var(--av3-s2);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-md);color:var(--av3-fg);padding:9px 11px;font-family:inherit;font-size:13px;resize:none}
+  .costline{font-size:11px;color:var(--av3-subtle);margin-top:9px;font-family:var(--av3-mono)}
+
+  /* meeting */
+  .turn{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--av3-line)}
+  .turn:last-child{border-bottom:0}
+  .turn .who{font-size:11px;font-weight:700;margin-bottom:3px;letter-spacing:.3px}
+  .turn .tx{font-size:13px;line-height:1.6;color:var(--av3-fg)}
+  .dec{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--av3-line)}
+  .dec:last-child{border-bottom:0}
+  .dchip{font-size:10px;font-weight:700;letter-spacing:.3px;padding:3px 8px;border-radius:var(--av3-r-sm);flex-shrink:0}
+  .dec .ti{font-size:13px;font-weight:600}
+  .dec .ra{font-size:12px;color:var(--av3-muted);margin-top:2px;line-height:1.45}
+  .dec .ac{font-size:11px;margin-top:4px;font-family:var(--av3-mono);color:var(--av3-subtle)}
+
+  .hide{display:none}
+  .banner{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);padding:12px 15px;margin-bottom:13px;font-size:12.5px;color:var(--av3-muted);line-height:1.5}
+  .pillbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .pill{background:var(--av3-s2);border:1px solid var(--av3-line);color:var(--av3-muted);padding:6px 12px;border-radius:var(--av3-r-pill);font-size:12px;cursor:pointer}
+  .pill.active{background:var(--av3-s3);border-color:var(--av3-line-strong);color:var(--av3-fg);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand"><span class="logo">S</span><b>Sud Italia</b></div>
+    <div class="navsec">
+      <div class="h">Overview</div>
+      <div class="navi">Dashboard</div>
+      <div class="navi">Orders</div>
+      <div class="navi">Alerts</div>
+    </div>
+    <div class="navsec">
+      <div class="h">Finance</div>
+      <div class="navi">Reports</div>
+      <div class="navi">Cash</div>
+      <div class="navi">Calculator</div>
+    </div>
+    <div class="navsec">
+      <div class="h">Intelligence</div>
+      <div class="navi">Multi-location</div>
+      <div class="navi active">Boardroom</div>
+      <div class="navi">Insights</div>
+      <div class="navi">Ops Agent</div>
+      <div class="navi">Expansion</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">Intelligence&nbsp;&nbsp;›&nbsp;&nbsp;<span style="color:var(--av3-fg)">Boardroom</span></div>
+    <div class="content">
+
+      <div class="pagehead">
+        <div class="left">
+          <span class="ic"><svg class="ic-svg" style="width:17px;height:17px;stroke:var(--av3-brand)" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-3 3"/><path d="M12 5a3 3 0 1 1 3 3"/><path d="M9 8a3 3 0 0 0-3 5"/><path d="M15 8a3 3 0 0 1 3 5"/><path d="M7 13a3 3 0 1 0 4 4"/><path d="M17 13a3 3 0 1 1-4 4"/><path d="M11 17a3 3 0 1 0 2 0"/></svg></span>
+          <div>
+            <h1>Boardroom</h1>
+            <div class="sub">Your AI C-suite reads the live numbers, flags what's off-target, and proposes actions you approve · Kraków</div>
+          </div>
+        </div>
+        <button class="btn ghost sm">↻ Refresh</button>
+      </div>
+
+      <!-- tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="ceo">Strategy</button>
+        <button class="tab" data-tab="coo">Operations</button>
+        <button class="tab" data-tab="cfo">Finance</button>
+        <button class="tab" data-tab="cmo">Marketing</button>
+        <button class="tab" data-tab="team">Team chat</button>
+        <button class="tab" data-tab="meetings">Meetings</button>
+      </div>
+
+      <!-- ================= OVERVIEW ================= -->
+      <section data-pane="overview">
+        <div class="seclab">Today &amp; the headline economics</div>
+        <div class="rail">
+          <div class="kpi"><div class="lab"><span class="dot neutral"></span>Today's sales<span class="info">ⓘ</span></div><div class="val">4 820 zł</div><div class="sub">112 orders so far</div></div>
+          <div class="kpi"><div class="lab"><span class="dot neutral"></span>Average ticket<span class="info">ⓘ</span></div><div class="val">43.05 zł</div><div class="sub">Grow via mix, not price</div></div>
+          <div class="kpi"><div class="lab"><span class="dot green"></span>Revenue growth<span class="info">ⓘ</span></div><div class="val">+6.4%</div><div class="sub">vs prior 30 days</div></div>
+          <div class="kpi"><div class="lab"><span class="dot green"></span>Refund rate<span class="info">ⓘ</span></div><div class="val">2.1%</div><div class="sub">Healthy under 3%</div></div>
+        </div>
+
+        <div class="seclab">Cost &amp; quality — needs attention</div>
+        <div class="rail">
+          <div class="kpi warn"><div class="lab"><span class="dot warn"></span>Food cost<span class="info">ⓘ</span></div><div class="val">33.1%</div><div class="sub">Target 28–32%</div></div>
+          <div class="kpi warn"><div class="lab"><span class="dot warn"></span>Labour cost<span class="info">ⓘ</span></div><div class="val">33.8%</div><div class="sub">Target 25–30%</div></div>
+          <div class="kpi bad"><div class="lab"><span class="dot bad"></span>Prime cost<span class="info">ⓘ</span></div><div class="val">66.9%</div><div class="sub">Keep under 60%</div></div>
+          <div class="kpi warn"><div class="lab"><span class="dot warn"></span>Satisfaction<span class="info">ⓘ</span></div><div class="val">4.18 ★</div><div class="sub">≥4.3 healthy · 86 reviews</div></div>
+        </div>
+
+        <div class="seclab">Your executives</div>
+        <div class="agents">
+          <div class="agent">
+            <span class="mono" style="background:color-mix(in oklab,var(--av3-c4) 16%,transparent);color:var(--av3-c4)">CEO</span>
+            <div class="meta"><div class="nm">Strategy &amp; vision</div><div class="rm">All clear in my area</div></div>
+            <span class="dot green" style="margin-left:auto" title="on target"></span>
+          </div>
+          <div class="agent">
+            <span class="mono" style="background:color-mix(in oklab,var(--av3-c3) 16%,transparent);color:var(--av3-c3)">COO</span>
+            <div class="meta"><div class="nm">Operations</div><div class="rm">Watching 1 metric — labour</div></div>
+            <span class="dot warn" style="margin-left:auto" title="1 off-target"></span>
+          </div>
+          <div class="agent">
+            <span class="mono" style="background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">CFO</span>
+            <div class="meta"><div class="nm">Finance</div><div class="rm">Watching 2 — food &amp; prime cost</div></div>
+            <span class="dot bad" style="margin-left:auto" title="2 off-target"></span>
+          </div>
+          <div class="agent">
+            <span class="mono" style="background:color-mix(in oklab,var(--av3-c5) 16%,transparent);color:var(--av3-c5)">CMO</span>
+            <div class="meta"><div class="nm">Marketing</div><div class="rm">Watching 1 — satisfaction</div></div>
+            <span class="dot warn" style="margin-left:auto" title="1 off-target"></span>
+          </div>
+        </div>
+
+        <div class="seclab">What needs attention</div>
+        <div class="card">
+          <div class="card-head"><div class="t">4 metrics off-target</div><div class="d" style="margin-top:0">Worst first · these seed the next board meeting</div></div>
+          <div class="card-body" style="padding-top:6px;padding-bottom:6px">
+            <div class="flag"><span class="pin" style="background:var(--av3-bad)"></span><span><b>Prime cost 66.9%</b> — over the 60% ceiling. Food + labour are both running hot.</span></div>
+            <div class="flag"><span class="pin" style="background:var(--av3-warn)"></span><span><b>Food cost 33.1%</b> — above the 28–32% target. Check portioning &amp; the Diavola plate.</span></div>
+            <div class="flag"><span class="pin" style="background:var(--av3-warn)"></span><span><b>Labour cost 33.8%</b> — above the 25–30% target. Mon/Tue lunches look over-covered.</span></div>
+            <div class="flag"><span class="pin" style="background:var(--av3-warn)"></span><span><b>Satisfaction 4.18 ★</b> — under the 4.3 bar. Theme: slow Tuesday-evening service.</span></div>
+          </div>
+        </div>
+
+        <div class="seclab">Convene the board</div>
+        <div class="card"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <div style="font-size:12.5px;color:var(--av3-muted)">Run a live meeting on today's numbers — each executive weighs in, then the board agrees on actions.</div>
+          <div style="display:flex;gap:8px"><button class="btn primary sm">Run daily briefing</button><button class="btn sm">Weekly review</button></div>
+        </div></div>
+      </section>
+
+      <!-- ================= CFO PERSONA ================= -->
+      <section data-pane="cfo" class="hide">
+        <div class="card">
+          <div class="card-head">
+            <div style="display:flex;align-items:center;gap:11px">
+              <span class="mono" style="background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">CFO</span>
+              <div><div class="t">Financial Guardian</div><div class="d">P&amp;L · food &amp; labour cost % · pricing · break-even</div></div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="rail">
+              <div class="kpi warn"><div class="lab"><span class="dot warn"></span>Food cost<span class="info">ⓘ</span></div><div class="val">33.1%</div><div class="sub">Target 28–32%</div></div>
+              <div class="kpi bad"><div class="lab"><span class="dot bad"></span>Prime cost<span class="info">ⓘ</span></div><div class="val">66.9%</div><div class="sub">Keep under 60%</div></div>
+              <div class="kpi"><div class="lab"><span class="dot neutral"></span>Average ticket<span class="info">ⓘ</span></div><div class="val">43.05 zł</div><div class="sub">Grow via mix</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="chat-scroll">
+              <div class="c-user">Which item is leaking margin, and what should I reprice it to?</div>
+              <div class="c-bot">Your <b>Diavola at Kraków</b> is the worst offender — sells well but runs a <b>38% food cost</b> at 31.90 zł against a 12.10 zł plate, above our 32% gate. Repricing to <b>34.90 zł</b> lifts its margin 3 points toward target. Want me to prepare the change?</div>
+              <div class="c-user">Yes, set it to 34.90.</div>
+              <div class="tool">
+                <div class="th"><span class="nm2">update_item_price</span><span class="tag">awaiting approval</span></div>
+                <div class="pv">Reprice <b>Diavola</b> at Kraków: 31.90 zł → 34.90 zł &nbsp;·&nbsp; margin 62% → 65% &nbsp;·&nbsp; food cost 12.10 zł</div>
+                <button class="btn primary sm">Confirm &amp; execute</button>
+              </div>
+            </div>
+            <div class="composer">
+              <textarea rows="2" placeholder="Ask the CFO…"></textarea>
+              <button class="btn primary">Send</button>
+            </div>
+            <div class="costline">Session cost · 0.18 zł</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= MEETINGS ================= -->
+      <section data-pane="meetings" class="hide">
+        <div class="card"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <div style="font-size:12.5px;color:var(--av3-muted)">A real multi-agent meeting on the live numbers — transcript + agreed decisions.</div>
+          <div style="display:flex;gap:8px"><button class="btn primary sm">Run daily briefing</button><button class="btn sm">Weekly review</button></div>
+        </div></div>
+
+        <div class="pillbar">
+          <span class="pill active">Weekly · 7 Jun</span>
+          <span class="pill">Daily · 6 Jun</span>
+          <span class="pill">Daily · 5 Jun</span>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><div class="t">Weekly review · Kraków</div><div class="d">7 Jun 2026, 09:02 · session cost 0.42 zł · 4 metrics off-target</div></div></div>
+          <div class="card-body">
+            <div class="turn">
+              <span class="mono" style="background:color-mix(in oklab,var(--av3-c3) 16%,transparent);color:var(--av3-c3)">COO</span>
+              <div><div class="who" style="color:var(--av3-c3)">Operations</div><div class="tx">Labour's at 33.8%, over the 30% gate, and Mon/Tue lunches are over-covered against the forecast. I can drop one KP from each and claw back ~2 points without touching service quality.</div></div>
+            </div>
+            <div class="turn">
+              <span class="mono" style="background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">CFO</span>
+              <div><div class="who" style="color:var(--av3-ok)">Finance</div><div class="tx">Food cost at 33.1% is the other leak — the Diavola runs a 38% plate. Repricing 31.90 → 34.90 zł lifts margin 3 points. Between the labour trim and this, prime drops to ~62%.</div></div>
+            </div>
+            <div class="turn">
+              <span class="mono" style="background:color-mix(in oklab,var(--av3-c5) 16%,transparent);color:var(--av3-c5)">CMO</span>
+              <div><div class="who" style="color:var(--av3-c5)">Marketing</div><div class="tx">Satisfaction slipped to 4.18 — the theme is slow Tuesday evenings, a quiet daypart. A Tuesday "Pasta Night" bundle lifts it with an easier, higher-margin ticket, paired with a win-back SMS.</div></div>
+            </div>
+            <div class="turn">
+              <span class="mono" style="background:color-mix(in oklab,var(--av3-c4) 16%,transparent);color:var(--av3-c4)">CEO</span>
+              <div><div class="who" style="color:var(--av3-c4)">Strategy</div><div class="tx">Good — margin protected without discounting the brand. Order: CFO's reprice today, COO's roster this week, CMO's bundle next. OKR: cut prime to ≤62% in 30 days while holding satisfaction ≥4.3. CFO owns it.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="t">Decisions</div><div class="d" style="margin-top:0">4 agreed</div></div>
+          <div class="card-body">
+            <div class="dec">
+              <span class="dchip" style="background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">CFO</span>
+              <div style="flex:1"><div class="ti">Reprice Diavola at Kraków to 34.90 zł</div><div class="ra">Plate runs 38% food cost; +3 pts moves blended food cost toward 32%.</div><div class="ac">update_item_price</div></div>
+              <button class="btn ghost sm">Action ›</button>
+            </div>
+            <div class="dec">
+              <span class="dchip" style="background:color-mix(in oklab,var(--av3-c3) 16%,transparent);color:var(--av3-c3)">COO</span>
+              <div style="flex:1"><div class="ti">Trim one KP from Mon &amp; Tue lunch rosters</div><div class="ra">Over-covered vs forecast; ~2 points of labour back, no service hit.</div></div>
+              <button class="btn ghost sm">Action ›</button>
+            </div>
+            <div class="dec">
+              <span class="dchip" style="background:color-mix(in oklab,var(--av3-c5) 16%,transparent);color:var(--av3-c5)">CMO</span>
+              <div style="flex:1"><div class="ti">Launch a Tuesday "Pasta Night" bundle</div><div class="ra">Lifts the slow Tuesday-evening daypart with a higher-margin ticket.</div></div>
+              <button class="btn ghost sm">Action ›</button>
+            </div>
+            <div class="dec">
+              <span class="dchip" style="background:color-mix(in oklab,var(--av3-c4) 16%,transparent);color:var(--av3-c4)">CEO</span>
+              <div style="flex:1"><div class="ti">OKR: prime cost ≤62% in 30 days, hold satisfaction ≥4.3</div><div class="ra">Combines the reprice + labour trim; CFO owns the number, weekly review.</div></div>
+              <button class="btn ghost sm">Action ›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- placeholder panes -->
+      <section data-pane="ceo" class="hide"><div class="banner">CEO panel — same calm layout as Finance: the CEO's owned KPIs (Today's sales, Revenue growth) above a strategy-voiced chat.</div></section>
+      <section data-pane="coo" class="hide"><div class="banner">COO panel — the COO's owned KPIs (Labour, Refund rate) above an operations chat with mark_item_86 approval cards.</div></section>
+      <section data-pane="cmo" class="hide"><div class="banner">CMO panel — the CMO's owned KPI (Satisfaction) above a growth chat with send_sms approval cards.</div></section>
+      <section data-pane="team" class="hide"><div class="banner">Team chat — a generalist board assistant for cross-functional questions that don't belong to one executive.</div></section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab[data-tab]');
+  const panes = document.querySelectorAll('section[data-pane]');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const id = t.getAttribute('data-tab');
+    panes.forEach(p => p.classList.toggle('hide', p.getAttribute('data-pane') !== id));
+  }));
+</script>
+</body>
+</html>

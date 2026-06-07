@@ -10,6 +10,19 @@ import "./mark-item-86";
 import "./refund-order";
 import "./sms";
 import "./analytics";
+// Boardroom advisor tools (AI C-suite team) — read-only domain reads for
+// the CEO/COO/CFO/CMO personas, plus one gated pricing lever.
+import "./pnl";
+import "./labor";
+import "./menu-engineering";
+import "./inventory";
+import "./staff";
+import "./suppliers";
+import "./feedback";
+import "./marketing";
+import "./forecast";
+import "./update-item-price";
+import "./scheduled-bundles";
 
 export {
   executeToolCall,
