@@ -37,7 +37,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
 | JS token mirror| `src/components/admin/v2/theme.ts`          | `src/components/admin/v3/theme.ts`             |
 | Components      | `src/components/admin/v2/*`                 | `src/components/admin/v3/*`                     |
-| Mount route    | `/admin/*` (live)                           | `/admin-v3/*` (preview, flips to `/admin` at parity) |
+| Mount route    | `/admin/*` → 307s to v3 (`src/middleware.ts`); still serves manager/franchisee + `/admin/capabilities` | `/admin-v3/*` (**LIVE for owner** — cutover done; owner lands here) |
 
 **The one shared dependency v3 keeps:** the framework-level libs that are
 *not* part of either theme — `@/lib/permissions`, `@/lib/admin-roles`,
