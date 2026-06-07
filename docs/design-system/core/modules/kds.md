@@ -6,7 +6,7 @@ The single most important module rule in the system. The KDS is a wall
 display under pressure — the only thing that matters is that the eye lands
 on what's wrong.
 
-**Live code:** `src/components/admin/AdminKDS.tsx` + sub-components
+**Live code:** `src/core/kds/AdminKDS.tsx` + sub-components
 (`AdminKdsFleet.tsx`, `kds-board.tsx`, `kds/KdsTk.tsx` (floor `.tk`),
 `kds/KdsCt.tsx` (chef `.ct`), `kds/KdsTicketCard.tsx` — now only exports the
 shared `Ring`; its `.ka-ticket` card is no longer rendered). `KdsManagerOpsHeader`

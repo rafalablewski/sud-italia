@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAdminBase } from "./v2/useAdminBase";
+import { useAdminBase } from "@/components/admin/v2/useAdminBase";
 import { withAdminBase } from "@/lib/admin-base";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -20,8 +20,8 @@ import {
   Trash2,
   Wallet,
 } from "lucide-react";
-import { CoreShell } from "./core/CoreShell";
-import { GuestViewNav } from "./guest/GuestViewNav";
+import { CoreShell } from "@/core/shell/CoreShell";
+import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";

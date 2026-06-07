@@ -4,7 +4,7 @@ import type { MenuCategory, Order, OrderStatus } from "@/data/types";
 import { MENU_CATEGORY_LABELS } from "@/data/types";
 import { ticketTone, type TicketTone } from "@/lib/kds-prediction";
 import type { KdsTicket } from "@/lib/kds-ticket";
-import { KdsTk } from "./kds/KdsTk";
+import { KdsTk } from "@/core/kds/KdsTk";
 
 /**
  * Shared Kitchen Display board primitives.

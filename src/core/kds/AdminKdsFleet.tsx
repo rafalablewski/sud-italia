@@ -8,12 +8,12 @@ import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useToast } from "@/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
-import { Ring } from "./kds/KdsTicketCard";
-import { useFullscreen } from "./command/useFullscreen";
-import { fmtWallClock } from "./kds-board";
+import { Ring } from "@/core/kds/KdsTicketCard";
+import { useFullscreen } from "@/core/kds/useFullscreen";
+import { fmtWallClock } from "@/core/kds/kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";
-import { CoreShell } from "./core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 
 /* ============================ Wire types ============================ */
 

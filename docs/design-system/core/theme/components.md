@@ -79,7 +79,7 @@ The horizontal pill group for status / window / role switches.
   Concierge cross-view switcher rides the same `.cmd-seg-group`, but its
   segments are Next.js `<Link>` anchors (not buttons), so the
   `.guest-viewnav .cmd-seg` rule clears the default anchor underline.
-  `<GuestViewNav>` (`src/components/core/guest/GuestViewNav.tsx`) drops
+  `<GuestViewNav>` (`src/core/guest/GuestViewNav.tsx`) drops
   it into each module's `cmd-head`. Active segment uses the normal
   `[aria-pressed="true"]` inversion.
 
@@ -186,7 +186,7 @@ listed in [the README](./README.md#two-css-layers-mid-migration).
 ### Shell — `.core-shell` (unified header, no sidebar)
 
 Core is a **separate entity** from `/admin`: `<CoreShell>`
-(`components/admin/core/CoreShell.tsx`) renders **none** of the admin shell —
+(`core/shell/CoreShell.tsx`) renders **none** of the admin shell —
 no `.app-sidebar`, no `nav.config`, no `/admin` links. There is **no sidebar
 at all**. Every Core surface (POS, Guest, Service, and the windowed KDS) shares
 this one chrome, so each surface's controls sit in the same place:
@@ -194,7 +194,7 @@ this one chrome, so each surface's controls sit in the same place:
 - **`.core-shell`** — the flex column that owns the viewport (`height: 100%`).
 - **`.core-head`** (row 1) — `brand` (the SI mark + "Sud Italia / Core") ·
   **`.core-nav`** (the primary switcher: POS · KDS · Guest · Service, a
-  pathname-highlighted `<CoreNav>`, `components/admin/core/CoreNav.tsx`) ·
+  pathname-highlighted `<CoreNav>`, `core/shell/CoreNav.tsx`) ·
   **`.core-head-right`** (global actions — location toggle, fullscreen, the
   KDS clock + controls).
 - **`.subbar`** (row 2, only when the surface passes `eyebrow` / `viewnav` /

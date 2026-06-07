@@ -20,13 +20,13 @@ import {
   RotateCw,
   Search,
 } from "lucide-react";
-import { CoreShell } from "./core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 import { useToast } from "@/ui/Toast";
 import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
 import { formatPrice } from "@/lib/utils";
 import { loyaltyTier } from "@/lib/loyalty-tier";
-import { GuestViewNav } from "./guest/GuestViewNav";
+import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { WhatsAppSettingsDialog } from "./whatsapp/WhatsAppSettingsDialog";
 import { WhatsAppFunnelDialog } from "./whatsapp/WhatsAppFunnelDialog";
 import { WhatsAppBroadcastDialog } from "./whatsapp/WhatsAppBroadcastDialog";

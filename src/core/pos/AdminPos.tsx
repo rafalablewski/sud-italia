@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CoreShell } from "./core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 import {
   Armchair,
   Banknote,
@@ -37,7 +37,7 @@ import {
   defaultCourseForCategory,
 } from "@/lib/pos-coursing";
 import type { CartItem, PosCourse } from "@/data/types";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/components/admin/v2/LocationContext";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "@/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).

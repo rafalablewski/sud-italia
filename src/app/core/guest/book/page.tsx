@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { GuestBook } from "@/components/admin/guest/GuestBook";
+import { GuestBook } from "@/core/guest/GuestBook";
 
 /**
  * Guest Engagement · Book — the unified slot+table booking console. One view of

@@ -18,8 +18,8 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { CoreShell } from "./core/CoreShell";
-import { GuestViewNav } from "./guest/GuestViewNav";
+import { CoreShell } from "@/core/shell/CoreShell";
+import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 

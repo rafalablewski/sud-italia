@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { CoreShell } from "../core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "./GuestViewNav";
-import { BookView } from "../service/BookView";
+import { BookView } from "@/core/service/BookView";
 
 /**
  * Book view inside the Guest Engagement hub (`/core/guest/book`). The unified

@@ -49,7 +49,7 @@ mockup** design (`public/mockups/core-suite/`):
   the rebuilt **desktop KDS** (`.kds-core` — Fleet / Floor / Chef).
   `src/app/themes/core/index.css` now backs **only the Mobile KDS**
   (`.kds-atlas` / `.ka-*`) plus the WhatsApp dialog `.wa-*` chrome.
-- **Shell:** `<CoreShell>` (`src/components/admin/core/CoreShell.tsx`)
+- **Shell:** `<CoreShell>` (`src/core/shell/CoreShell.tsx`)
   renders **one unified chrome shared by all four surfaces** (POS, KDS,
   Guest, Service) as a fixed full-viewport layer — **no sidebar**. Core is
   a separate entity from `/admin`: the shell renders none of the admin

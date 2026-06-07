@@ -24,7 +24,7 @@ The old `/admin/floor` and `/admin/slots` stub pages were **deleted**; the bare
 > admin chrome), each rendering the shared `ServiceFrame.tsx` (CoreShell +
 > `ServiceViewNav.tsx` + the loc toggle in the header right / date picker in
 > the subbar right) with its `view`. Views
-> `FloorView.tsx` / `SlotsView.tsx` (in `src/components/admin/service/`; the
+> `FloorView.tsx` / `SlotsView.tsx` (in `src/core/service/`; the
 > shared `BookView.tsx` lives here too but is rendered by the Guest hub's
 > `GuestBook.tsx`). Styles under the `SERVICE` block in
 > `src/app/themes/core/suite.css` (`.svc-*` / `.flr-*` / `.slt-*`). Booking

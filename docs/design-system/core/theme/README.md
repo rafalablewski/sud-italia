@@ -18,7 +18,7 @@ back-office no longer ships the core chunk:
    `.btn` / `.badge` / `.seg` / `.stat` / `.shell` / `.prod` / `.conv` /
    …) can't leak into Admin or Homepage. This is what **POS** and the
    **Guest hub** render, inside `<CoreShell>`
-   (`src/components/admin/core/CoreShell.tsx`) — the mockup's SI sidebar
+   (`src/core/shell/CoreShell.tsx`) — the mockup's SI sidebar
    + topbar as a fixed full-viewport layer. Tokens are redeclared on
    `.core-suite` (same warm-neutral / burgundy / platinum values as
    `--cmd-*`, under the mockup's generic names `--bg` / `--fg` /

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { ServiceFrame } from "@/components/admin/service/ServiceFrame";
+import { ServiceFrame } from "@/core/service/ServiceFrame";
 
 /**
  * Service · Floor — the live room (tables + digital twin). One view of the

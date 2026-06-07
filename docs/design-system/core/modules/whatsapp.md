@@ -6,8 +6,8 @@ The operator console for the live ordering channel. WhatsApp is **not** a
 secondary surface — it's where many orders actually happen, and it sits
 inside the unified **Guest Engagement** hub (Inbox / Guests / Concierge).
 
-**Live code:** `src/components/admin/AdminWhatsApp.tsx` and the dialogs
-in `src/components/admin/whatsapp/`.
+**Live code:** `src/core/guest/AdminWhatsApp.tsx` and the dialogs
+in `src/core/guest/whatsapp/`.
 **Mockups:** `guest.html` (Inbox), plus the dialogs:
 - `guest-settings.html` — full channel settings
 - `guest-broadcast.html` — campaign composer

@@ -5,7 +5,7 @@
 The money surface. The hardest test of the system — has to be **clean,
 calm, and fast at once** — and the highest daily-use surface for staff.
 
-**Live code:** `src/components/admin/AdminPos.tsx`.
+**Live code:** `src/core/pos/AdminPos.tsx`.
 **Mockups:** `pos.html` + `pos-tender.html` + `pos-tables.html`.
 **Theme:** renders on the unified Core suite shell (`<CoreShell>`,
 `.core-suite` in `src/app/themes/core/suite.css`) — the shared two-row

@@ -15,10 +15,10 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
-import { useAdminLocation } from "./v2/LocationContext";
+import { useAdminLocation } from "@/components/admin/v2/LocationContext";
 import { useToast } from "@/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
-import { CoreShell } from "./core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 import {
   ACTIVE_STATUSES,
   KDS_COLUMNS,
@@ -33,9 +33,9 @@ import {
   ticketCategories,
   toneForTicket,
   totalPrepSeconds,
-} from "./kds-board";
-import { KdsCt } from "./kds/KdsCt";
-import { useFullscreen } from "./command/useFullscreen";
+} from "@/core/kds/kds-board";
+import { KdsCt } from "@/core/kds/KdsCt";
+import { useFullscreen } from "@/core/kds/useFullscreen";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, kdsShortId, type KdsTicket } from "@/lib/kds-ticket";
 import { useKdsSimulator } from "@/lib/useKdsSimulator";

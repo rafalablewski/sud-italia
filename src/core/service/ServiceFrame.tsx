@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
-import { CoreShell } from "../core/CoreShell";
+import { CoreShell } from "@/core/shell/CoreShell";
 import { ServiceViewNav, type ServiceView } from "./ServiceViewNav";
 import { FloorView } from "./FloorView";
 import { SlotsView } from "./SlotsView";

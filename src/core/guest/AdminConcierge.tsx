@@ -14,8 +14,8 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import Link from "next/link";
-import { CoreShell } from "./core/CoreShell";
-import { GuestViewNav } from "./guest/GuestViewNav";
+import { CoreShell } from "@/core/shell/CoreShell";
+import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { useToast } from "@/ui/Toast";
 
 type CapId =

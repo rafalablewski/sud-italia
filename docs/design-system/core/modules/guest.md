@@ -57,7 +57,7 @@ one surface with four views (Inbox / Guests / Loyalty / Concierge).
   console, moved here from Service). The bare `src/app/core/guest/page.tsx`
   `redirect()`s to `/core/guest/whatsapp` (the Inbox is the default).
 - **Switcher:** `<GuestViewNav>`
-  (`src/components/admin/guest/GuestViewNav.tsx`) renders the
+  (`src/core/guest/GuestViewNav.tsx`) renders the
   Inbox / Guests / Loyalty / Concierge / **Book** links (`<Link>` to
   `/core/guest/{whatsapp,crm,loyalty,concierge,book}`) into the CoreShell
   subbar `.viewnav` slot (row 2). Each module drops it in with its own
