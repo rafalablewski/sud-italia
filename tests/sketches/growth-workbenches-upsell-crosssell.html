@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Growth workbenches — Upsell &amp; Cross-sell (admin-v3 sketch)</title>
+<!--
+  Standalone preview of the Upsell (Bundles) and Cross-sell (Combos) workbenches
+  added to admin-v3 — KPI rail + ⓘ explainers, search + board/table toggle, and a
+  two-column drill-in editor with a live customer preview.
+
+  Static mockup: tokens mirror src/app/themes/admin-v3/index.css (dark canonical).
+  Numbers shown are illustrative; the real surfaces compute them from
+  /api/admin/bundle-analytics, the live config and the clock (no mock data ships).
+  Tabs / view-toggle / the ⓘ dialog are wired with a little vanilla JS so you can
+  click around. Lives in /tests per the repo convention (never ships).
+-->
+<style>
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b; --av3-c5:#d3884f;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+    --av3-ui:"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--av3-bg);color:var(--av3-fg);font-family:var(--av3-ui);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 80px}
+  .sketch-note{font-size:11.5px;color:var(--av3-subtle);border:1px dashed var(--av3-line-strong);border-radius:var(--av3-r-md);padding:9px 12px;margin-bottom:22px}
+  h1{font-size:21px;font-weight:650;margin:0}
+  .pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .pagehead-sub{font-size:12px;color:var(--av3-muted);margin-top:3px}
+  .mono{font-family:var(--av3-mono)}
+  .muted{color:var(--av3-muted)} .subtle{color:var(--av3-subtle)}
+
+  /* page switcher */
+  .pageswitch{display:flex;gap:8px;margin-bottom:20px}
+  .pageswitch button{flex:0 0 auto}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--av3-r-md);border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);font:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:.15s}
+  .btn:hover{background:var(--av3-hover)}
+  .btn.primary{background:var(--av3-brand);border-color:transparent;color:#fff}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.sm{height:27px;font-size:11.5px;padding:0 9px}
+
+  /* filter chips + view toggle */
+  .filterchips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .fchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--av3-r-pill);border:1px solid var(--av3-line);background:var(--av3-s1);color:var(--av3-muted);font:inherit;font-size:12px;cursor:pointer}
+  .fchip:hover{color:var(--av3-fg);border-color:var(--av3-line-strong)}
+  .fchip.is-active{background:color-mix(in oklab,var(--av3-platinum) 14%,var(--av3-s1));border-color:color-mix(in oklab,var(--av3-platinum) 40%,var(--av3-line-strong));color:var(--av3-fg)}
+  .fchip-count{font-family:var(--av3-mono);font-size:10px;color:var(--av3-subtle)}
+
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .toolbar-spacer{flex:1}
+  .input{height:32px;border-radius:var(--av3-r-md);border:1px solid var(--av3-line-strong);background:var(--av3-s1);color:var(--av3-fg);font:inherit;font-size:12.5px;padding:0 10px}
+  .input:focus{outline:none;border-color:var(--av3-brand);box-shadow:0 0 0 3px color-mix(in oklab,var(--av3-brand) 18%,transparent)}
+  .viewtoggle{display:inline-flex;border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden}
+  .viewtoggle button{width:34px;height:30px;display:grid;place-items:center;border:none;background:var(--av3-s1);color:var(--av3-muted);cursor:pointer}
+  .viewtoggle button.is-active{background:var(--av3-s3);color:var(--av3-fg)}
+  .viewtoggle svg{width:15px;height:15px}
+
+  /* KPI rail */
+  .kpi-rail{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+  .kpi{position:relative;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);padding:12px 13px 11px;box-shadow:var(--av3-sh-1);overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--av3-brand))}
+  .kpi-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle)}
+  .kpi-label svg{width:13px;height:13px;color:var(--accent,var(--av3-brand))}
+  .kpi-value{font-family:var(--av3-mono);font-size:21px;font-weight:650;margin-top:7px;letter-spacing:-.01em}
+  .kpi-foot{font-size:10.5px;color:var(--av3-subtle);margin-top:3px}
+  .info{margin-left:auto;width:15px;height:15px;display:grid;place-items:center;border:none;background:transparent;color:var(--av3-subtle);cursor:pointer}
+  .info:hover{color:var(--av3-fg)}
+  .info svg{width:13px;height:13px}
+
+  /* board */
+  .board-section{display:flex;align-items:center;gap:9px;margin:16px 2px 9px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle)}
+  .board-section .c{font-family:var(--av3-mono);color:var(--av3-muted)}
+  .board-section::after{content:"";flex:1;height:1px;background:var(--av3-line)}
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:11px}
+  .dcard{position:relative;display:flex;flex-direction:column;gap:9px;padding:13px 14px;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);cursor:pointer;transition:.15s}
+  .dcard:hover{border-color:var(--av3-line-strong);background:color-mix(in oklab,var(--av3-hover) 55%,var(--av3-s1));box-shadow:var(--av3-sh-2)}
+  .dcard[data-dim=true]{opacity:.55}
+  .dcard-name{font-size:13.5px;font-weight:600;line-height:1.25}
+  .dcard-badges{display:flex;flex-wrap:wrap;gap:4px}
+  .dcard-desc{font-size:11.5px;color:var(--av3-muted);line-height:1.35;min-height:31px}
+  .dcard-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:9px;border-top:1px solid var(--av3-line)}
+  .dcard-price{font-family:var(--av3-mono);font-size:15.5px;font-weight:650}
+  .dcard-sub{font-size:10.5px;color:var(--av3-subtle);margin-top:2px}
+
+  /* badges */
+  .badge{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px;border-radius:var(--av3-r-pill);font-size:10px;font-weight:600;border:1px solid transparent}
+  .badge.neutral{background:var(--av3-s3);color:var(--av3-muted)}
+  .badge.brand{background:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));color:#e9a7b1;border-color:color-mix(in oklab,var(--av3-brand) 35%,transparent)}
+  .badge.info{background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));color:#a8cdf0}
+  .badge.warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:#f0d08a}
+  .badge.ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:#8fdcb8}
+  .badge.bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:#f3a7a3}
+  .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  /* switch */
+  .sw{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--av3-muted)}
+  .sw i{width:30px;height:17px;border-radius:var(--av3-r-pill);background:var(--av3-s3);border:1px solid var(--av3-line-strong);position:relative;transition:.15s;flex:0 0 auto}
+  .sw i::after{content:"";position:absolute;top:1px;left:1px;width:13px;height:13px;border-radius:50%;background:var(--av3-muted);transition:.15s}
+  .sw.on i{background:color-mix(in oklab,var(--av3-ok) 60%,var(--av3-s3));border-color:transparent}
+  .sw.on i::after{left:14px;background:#fff}
+
+  /* table */
+  .card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle);font-weight:600;padding:10px 14px;border-bottom:1px solid var(--av3-line-strong);background:var(--av3-s1)}
+  th.num,td.num{text-align:right;font-family:var(--av3-mono)}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--av3-line)}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--av3-s2)}
+  tbody tr:last-child td{border-bottom:none}
+
+  .edhint{font-size:11.5px;color:var(--av3-muted);background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-sm);padding:8px 10px;margin-bottom:12px}
+  .subhead{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle);margin:16px 0 9px}
+
+  /* ── dialog (drill-in editor) ───────────────────────────────── */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50}
+  .scrim.open{display:flex}
+  .dialog{width:100%;max-width:940px;background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2)}
+  .dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--av3-line)}
+  .dialog-title{font-size:15px;font-weight:650}
+  .dialog-sub{font-size:11.5px;color:var(--av3-subtle);margin-top:2px}
+  .x{border:none;background:transparent;color:var(--av3-muted);font-size:20px;cursor:pointer;line-height:1}
+  .dialog-body{padding:18px}
+  .dialog-foot{display:flex;align-items:center;gap:8px;padding:14px 18px;border-top:1px solid var(--av3-line)}
+  .bodysplit{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  @media(max-width:900px){.bodysplit{grid-template-columns:1fr}.kpi-rail{grid-template-columns:repeat(2,1fr)}}
+
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  .field-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle)}
+  .field .input{width:100%}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row .field{flex:1;min-width:0;margin-bottom:0}
+  select.input{appearance:none}
+
+  /* live preview card */
+  .preview-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--av3-subtle);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .pcard{border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);background:var(--av3-s1);padding:14px;box-shadow:var(--av3-sh-1)}
+  .pcard.anchor{border-color:color-mix(in oklab,var(--av3-platinum) 45%,var(--av3-line-strong))}
+  .pcard-tier{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-platinum)}
+  .pcard-name{font-size:15px;font-weight:600;margin-top:4px}
+  .pcard-desc{font-size:12px;color:var(--av3-muted);margin-top:3px}
+  .pcard-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
+  .pcard-list li{font-size:12px;display:flex;gap:7px}
+  .pcard-list .q{font-family:var(--av3-mono);color:var(--av3-platinum)}
+  .pcard-price{margin-top:12px;padding-top:10px;border-top:1px solid var(--av3-line);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .pcard-price .big{font-family:var(--av3-mono);font-size:20px;font-weight:700}
+  .pcard-price .strike{font-family:var(--av3-mono);font-size:12.5px;color:var(--av3-subtle);text-decoration:line-through}
+  .pcard-cta{margin-top:10px;height:30px;border-radius:var(--av3-r-pill);background:color-mix(in oklab,var(--av3-platinum) 16%,var(--av3-s2));display:grid;place-items:center;font-size:12px;font-weight:600}
+
+  /* stats grid */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--av3-line);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden;margin-top:12px}
+  .stats .cell{background:var(--av3-s1);padding:8px 10px}
+  .stats .k{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--av3-subtle)}
+  .stats .v{font-family:var(--av3-mono);font-size:14px;font-weight:600;margin-top:2px}
+  .stats .v.bad{color:var(--av3-bad)}
+
+  /* worked example */
+  .ex{border:1px solid var(--av3-line);border-radius:var(--av3-r-md);overflow:hidden}
+  .ex .line{display:flex;justify-content:space-between;gap:8px;padding:6px 11px;font-size:12px;border-bottom:1px solid var(--av3-line)}
+  .ex .line.save{color:var(--av3-ok)}
+  .ex .line.pay{font-weight:600;border-top:1px solid var(--av3-line);background:var(--av3-s2);border-bottom:none}
+  .ex .m{font-family:var(--av3-mono);color:var(--av3-muted)}
+
+  /* ⓘ explainer dialog */
+  .xp{max-width:560px}
+  .xp p{margin:0;font-size:13px;line-height:1.55}
+  .rail{margin-top:10px;padding:9px 11px;border-radius:6px;font-size:12px;line-height:1.5}
+  .rail .rl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  .rail.inst{background:color-mix(in oklab,rgb(100,116,139) 9%,var(--av3-s1));border-left:3px solid rgb(100,116,139)}.rail.inst .rl{color:rgb(140,152,170)}
+  .rail.plain{background:color-mix(in oklab,var(--av3-c5) 9%,var(--av3-s1));border-left:3px solid var(--av3-c5)}.rail.plain .rl{color:var(--av3-c5)}
+  .rail.tips{background:color-mix(in oklab,var(--av3-ok) 9%,var(--av3-s1));border-left:3px solid var(--av3-ok)}.rail.tips .rl{color:var(--av3-ok)}
+  .rail.meth{background:color-mix(in oklab,var(--av3-c3) 9%,var(--av3-s1));border-left:3px solid var(--av3-c3)}.rail.meth .rl{color:var(--av3-c3)}
+
+  .hidden{display:none}
+  h2.shot{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle);margin:34px 0 14px;padding-top:18px;border-top:1px solid var(--av3-line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sketch-note">
+    Sketch · admin-v3 Growth workbenches (Upsell &amp; Cross-sell). Tokens mirror
+    <code>themes/admin-v3/index.css</code>. Click the tabs, the ⓘ on a KPI, the
+    view toggle, or any board card / table row to open the drill-in editor with its
+    live preview. Figures are illustrative — production reads real analytics/config.
+  </div>
+
+  <div class="pageswitch">
+    <button class="btn primary" id="tab-upsell" onclick="showPage('upsell')">Upsell · Bundles</button>
+    <button class="btn" id="tab-cross" onclick="showPage('cross')">Cross-sell · Combos</button>
+  </div>
+
+  <!-- ============================ UPSELL ============================ -->
+  <section id="page-upsell">
+    <div class="pagehead">
+      <div>
+        <h1>Upsell</h1>
+        <div class="pagehead-sub">Bundle ladders · rules · A/B · ML ranker — Kraków</div>
+      </div>
+      <button class="btn primary sm">＋ Add bundle</button>
+    </div>
+
+    <div class="filterchips">
+      <div class="fchip is-active">Bundles <span class="fchip-count">6</span></div>
+      <div class="fchip">Item modifiers</div>
+    </div>
+
+    <div class="kpi-rail">
+      <div class="kpi" style="--accent:var(--av3-c2)">
+        <div class="kpi-label">▦ Active bundles</div>
+        <div class="kpi-value">5/6</div><div class="kpi-foot">live on this location</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c3)">
+        <div class="kpi-label">▲ Penetration (30d)
+          <button class="info" onclick="openXp('pen')" title="About">ⓘ</button></div>
+        <div class="kpi-value">9.4%</div><div class="kpi-foot">applies ÷ impressions</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c4)">
+        <div class="kpi-label">🛍 Bundle AOV (30d)
+          <button class="info" onclick="openXp('aov')" title="About">ⓘ</button></div>
+        <div class="kpi-value">58,40 zł</div><div class="kpi-foot">vs 42 zł à-la-carte</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c5)">
+        <div class="kpi-label">◈ Revenue (30d)
+          <button class="info" onclick="openXp('rev')" title="About">ⓘ</button></div>
+        <div class="kpi-value">26 180 zł</div><div class="kpi-foot">bundle-bearing orders</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c1)">
+        <div class="kpi-label">％ Avg discount
+          <button class="info" onclick="openXp('disc')" title="About">ⓘ</button></div>
+        <div class="kpi-value">14.6%</div><div class="kpi-foot">effective markdown</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="input" style="width:240px" placeholder="Search bundles…" />
+      <span class="toolbar-spacer"></span>
+      <span class="muted" style="font-size:12px">6 shown</span>
+      <div class="viewtoggle" id="up-vt">
+        <button class="is-active" onclick="setView('up','board')" title="Board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+        <button onclick="setView('up','table')" title="Table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="edhint">Showing the default chain ladders (live on this location). Edit or toggle any tier to customise — your changes save as this location’s override.</div>
+
+    <!-- board view -->
+    <div id="up-board">
+      <div class="board-section">Lunch ladder <span class="c">3</span></div>
+      <div class="board">
+        <div class="dcard" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Solo · </span>Lunch Solo</div>
+          <div class="dcard-badges"><span class="badge neutral">decoy</span></div>
+          <div class="dcard-desc">One pizza, one drink — the simple weekday lunch.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">42,00 zł <span class="strike" style="font-size:11px;color:var(--av3-subtle);text-decoration:line-through;font-weight:400">48,00 zł</span></div><div class="dcard-sub">38 sold · 13% off (30d)</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Lunch+ · </span>Lunch Plus</div>
+          <div class="dcard-badges"><span class="badge brand">anchor</span><span class="badge info">default</span></div>
+          <div class="dcard-desc">Pizza + drink + dessert. The one most people pick.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">49,00 zł <span class="strike" style="font-size:11px;color:var(--av3-subtle);text-decoration:line-through;font-weight:400">61,00 zł</span></div><div class="dcard-sub">91 sold · 20% off (30d)</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Lunch++ · </span>Lunch Deluxe</div>
+          <div class="dcard-badges"><span class="badge warn">gold</span><span class="badge bad">31% 👎</span></div>
+          <div class="dcard-desc">Two courses + coffee. Gold-tier reward upgrade.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">66,00 zł <span class="strike" style="font-size:11px;color:var(--av3-subtle);text-decoration:line-through;font-weight:400">79,00 zł</span></div><div class="dcard-sub">12 sold · 16% off (30d)</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+      </div>
+
+      <div class="board-section">Family ladder <span class="c">2</span></div>
+      <div class="board">
+        <div class="dcard" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Family · </span>Family Feast</div>
+          <div class="dcard-badges"><span class="badge brand">anchor</span></div>
+          <div class="dcard-desc">3+ mains, dynamic discount that grows with the cart.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">18% off</div><div class="dcard-sub">54 sold · 18% off (30d)</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" data-dim="true" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Feast+ · </span>Feast Deluxe</div>
+          <div class="dcard-badges"><span class="badge warn">members</span></div>
+          <div class="dcard-desc">4+ mains, sides &amp; drinks — weekend family table.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">22% off</div><div class="dcard-sub">No 30d data</div></div><div class="sw"><i></i>Paused</div></div>
+        </div>
+      </div>
+
+      <div class="board-section">Late-night ladder <span class="c">1</span></div>
+      <div class="board">
+        <div class="dcard" onclick="openBundle()">
+          <div class="dcard-name"><span class="subtle" style="font-weight:500">Party · </span>Late Party Box</div>
+          <div class="dcard-badges"><span class="badge neutral">decoy</span></div>
+          <div class="dcard-desc">Two pizzas + sides after 21:00. Delivery only.</div>
+          <div class="dcard-foot"><div><div class="dcard-price">15% off</div><div class="dcard-sub">23 sold · 15% off (30d)</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- table view -->
+    <div id="up-table" class="hidden">
+      <div class="card">
+        <table>
+          <thead><tr><th>Bundle</th><th>Period</th><th class="num">Price</th><th class="num">30d sold</th><th></th></tr></thead>
+          <tbody>
+            <tr onclick="openBundle()"><td><b>Lunch Plus</b> <span class="badge brand">anchor</span> <span class="badge info">default</span><div class="subtle" style="font-size:11px">Pizza + drink + dessert.</div></td><td class="muted">lunch · dyn</td><td class="num">49,00 zł <span class="subtle" style="text-decoration:line-through">61,00</span></td><td class="num">91</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openBundle()"><td><b>Lunch Solo</b> <span class="badge neutral">decoy</span></td><td class="muted">lunch</td><td class="num">42,00 zł</td><td class="num">38</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openBundle()"><td><b>Family Feast</b> <span class="badge brand">anchor</span></td><td class="muted">family · dyn</td><td class="num">18% off</td><td class="num">54</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openBundle()"><td><b>Late Party Box</b> <span class="badge neutral">decoy</span></td><td class="muted">lateNight · dyn</td><td class="num">15% off</td><td class="num">23</td><td><div class="sw on"><i></i>Live</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ CROSS-SELL ============================ -->
+  <section id="page-cross" class="hidden">
+    <div class="pagehead">
+      <div>
+        <h1>Cross-sell</h1>
+        <div class="pagehead-sub">Pairings · combos · time-of-day · badges — Kraków</div>
+      </div>
+      <button class="btn primary sm">＋ Add combo</button>
+    </div>
+
+    <div class="filterchips">
+      <div class="fchip">Cart pairings</div>
+      <div class="fchip is-active">Combo deals <span class="fchip-count">5</span></div>
+      <div class="fchip">Time-of-day</div>
+      <div class="fchip">Menu badges</div>
+    </div>
+
+    <div class="kpi-rail" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi" style="--accent:var(--av3-c2)">
+        <div class="kpi-label">🏷 Active combos</div>
+        <div class="kpi-value">4/5</div><div class="kpi-foot">live on this location</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c4)">
+        <div class="kpi-label">％ Avg discount
+          <button class="info" onclick="openXp('cdisc')" title="About">ⓘ</button></div>
+        <div class="kpi-value">11%</div><div class="kpi-foot">across live combos</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c5)">
+        <div class="kpi-label">✦ Item-gated deals</div>
+        <div class="kpi-value">2</div><div class="kpi-foot">specific-item locks</div>
+      </div>
+      <div class="kpi" style="--accent:var(--av3-c3)">
+        <div class="kpi-label">◷ Windows live now
+          <button class="info" onclick="openXp('win')" title="About">ⓘ</button></div>
+        <div class="kpi-value">1</div><div class="kpi-foot">at the current hour</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="input" style="width:240px" placeholder="Search combos…" />
+      <span class="toolbar-spacer"></span>
+      <span class="muted" style="font-size:12px">5 shown</span>
+      <div class="viewtoggle" id="cr-vt">
+        <button class="is-active" onclick="setView('cr','board')" title="Board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+        <button onclick="setView('cr','table')" title="Table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="edhint">Showing the default chain combos (live on this location). Edit or toggle any deal to customise — your changes save as this location’s override.</div>
+
+    <div id="cr-board">
+      <div class="board">
+        <div class="dcard" onclick="openCombo()">
+          <div class="dcard-name">Italian Classic Deal</div>
+          <div class="dcard-badges"><span class="badge brand">10% off</span><span class="badge neutral">3+ items</span><span class="badge warn">3 req.</span></div>
+          <div class="dcard-desc">Margherita + Limonata + Tiramisù — the full Napoli table.</div>
+          <div class="dcard-foot"><div><div class="dcard-price" style="font-size:13px">pizza + drinks + desserts</div><div class="dcard-sub">e.g. save 6,60 zł on 66,00 zł</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" onclick="openCombo()">
+          <div class="dcard-name">Pizza &amp; a Drink</div>
+          <div class="dcard-badges"><span class="badge brand">10% off</span><span class="badge neutral">2+ items</span></div>
+          <div class="dcard-desc">Any pizza with any drink — the easy attach.</div>
+          <div class="dcard-foot"><div><div class="dcard-price" style="font-size:13px">pizza + drinks</div><div class="dcard-sub">e.g. save 3,68 zł on 36,80 zł</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" onclick="openCombo()">
+          <div class="dcard-name">Sweet Finish</div>
+          <div class="dcard-badges"><span class="badge brand">15% off</span><span class="badge neutral">2+ items</span></div>
+          <div class="dcard-desc">Add a dessert to any main and save.</div>
+          <div class="dcard-foot"><div><div class="dcard-price" style="font-size:13px">pasta + desserts</div><div class="dcard-sub">e.g. save 7,20 zł on 48,00 zł</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" onclick="openCombo()">
+          <div class="dcard-name">Antipasti Starter</div>
+          <div class="dcard-badges"><span class="badge brand">12% off</span><span class="badge neutral">2+ items</span><span class="badge info">dine-in</span></div>
+          <div class="dcard-desc">Bruschetta with any pizza, dine-in only.</div>
+          <div class="dcard-foot"><div><div class="dcard-price" style="font-size:13px">antipasti + pizza</div><div class="dcard-sub">e.g. save 6,12 zł on 51,00 zł</div></div><div class="sw on"><i></i>Live</div></div>
+        </div>
+        <div class="dcard" data-dim="true" onclick="openCombo()">
+          <div class="dcard-name">Aperitivo Hour</div>
+          <div class="dcard-badges"><span class="badge brand">15% off</span><span class="badge neutral">2+ items</span><span class="badge warn">1 req.</span></div>
+          <div class="dcard-desc">Spritz + a small plate. Paused for the season.</div>
+          <div class="dcard-foot"><div><div class="dcard-price" style="font-size:13px">drinks + antipasti</div><div class="dcard-sub">e.g. save 4,35 zł on 29,00 zł</div></div><div class="sw"><i></i>Off</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cr-table" class="hidden">
+      <div class="card">
+        <table>
+          <thead><tr><th>Combo</th><th>Categories</th><th class="num">Discount</th><th class="num">Min</th><th>Channel</th><th></th></tr></thead>
+          <tbody>
+            <tr onclick="openCombo()"><td><b>Italian Classic Deal</b> <span class="badge neutral">3 req. items</span></td><td class="muted">pizza + drinks + desserts</td><td class="num">10%</td><td class="num">3</td><td class="muted">both</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openCombo()"><td><b>Pizza &amp; a Drink</b></td><td class="muted">pizza + drinks</td><td class="num">10%</td><td class="num">2</td><td class="muted">both</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openCombo()"><td><b>Sweet Finish</b></td><td class="muted">pasta + desserts</td><td class="num">15%</td><td class="num">2</td><td class="muted">both</td><td><div class="sw on"><i></i>Live</div></td></tr>
+            <tr onclick="openCombo()"><td><b>Antipasti Starter</b></td><td class="muted">antipasti + pizza</td><td class="num">12%</td><td class="num">2</td><td class="muted">dine-in</td><td><div class="sw on"><i></i>Live</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================ BUNDLE EDITOR ============================ -->
+<div class="scrim" id="dlg-bundle">
+  <div class="dialog">
+    <div class="dialog-head">
+      <div><div class="dialog-title">Lunch Plus</div><div class="dialog-sub">Kraków · bundle ladder tier</div></div>
+      <button class="x" onclick="closeDlg('dlg-bundle')">×</button>
+    </div>
+    <div class="dialog-body">
+      <div class="bodysplit">
+        <div>
+          <div class="row">
+            <div class="field" style="flex:0 0 110px"><span class="field-label">Tier</span><input class="input" value="Lunch+"/></div>
+            <div class="field"><span class="field-label">Name</span><input class="input" value="Lunch Plus"/></div>
+            <div class="field" style="flex:0 0 130px"><span class="field-label">Meal period</span><select class="input"><option>lunch</option></select></div>
+          </div>
+          <div class="field"><span class="field-label">Description</span><input class="input" value="Pizza + drink + dessert. The one most people pick."/></div>
+          <div class="subhead">Pricing</div>
+          <div class="row">
+            <div class="field" style="flex:0 0 130px"><span class="field-label">Mode</span><select class="input"><option>Fixed price</option><option>Dynamic %</option></select></div>
+            <div class="field" style="flex:0 0 120px"><span class="field-label">Price (zł)</span><input class="input" value="49.00"/></div>
+            <div class="field" style="flex:0 0 120px"><span class="field-label">Ref price (zł)</span><input class="input" value="61.00"/></div>
+          </div>
+          <div class="subhead">Composition</div>
+          <div class="row" style="margin-bottom:5px"><div class="field" style="flex:0 0 110px;margin-bottom:0"><select class="input"><option>Category</option></select></div><div class="field" style="margin-bottom:0"><select class="input"><option>pizza</option></select></div><div class="field" style="flex:0 0 70px;margin-bottom:0"><input class="input" value="1"/></div></div>
+          <div class="row" style="margin-bottom:5px"><div class="field" style="flex:0 0 110px;margin-bottom:0"><select class="input"><option>Category</option></select></div><div class="field" style="margin-bottom:0"><select class="input"><option>drinks</option></select></div><div class="field" style="flex:0 0 70px;margin-bottom:0"><input class="input" value="1"/></div></div>
+          <div class="row"><div class="field" style="flex:0 0 110px;margin-bottom:0"><select class="input"><option>Category</option></select></div><div class="field" style="margin-bottom:0"><select class="input"><option>desserts</option></select></div><div class="field" style="flex:0 0 70px;margin-bottom:0"><input class="input" value="1"/></div></div>
+          <div class="subhead">Gating &amp; framing</div>
+          <div class="row" style="gap:14px"><label class="sw on"><i></i>Anchor</label><label class="sw on"><i></i>Default</label><label class="sw"><i></i>Members-only</label><label class="sw on"><i></i>Active</label></div>
+        </div>
+        <div style="position:sticky;top:0">
+          <div class="preview-label">Customer preview · live</div>
+          <div class="pcard anchor">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px"><span class="pcard-tier">Lunch+</span><span class="badge brand">Best value</span></div>
+            <div class="pcard-name">Lunch Plus</div>
+            <div class="pcard-desc">Pizza + drink + dessert. The one most people pick.</div>
+            <ul class="pcard-list"><li><span class="q">1×</span><span>pizza</span></li><li><span class="q">1×</span><span>drinks</span></li><li><span class="q">1×</span><span>desserts</span></li></ul>
+            <div class="pcard-price"><span class="big">49,00 zł</span><span class="strike">61,00 zł</span><span class="badge ok">Save 12,00 zł · 20%</span></div>
+            <div class="pcard-cta">Add bundle to cart</div>
+          </div>
+          <div class="preview-label" style="margin-top:12px">Live performance · last 30 days</div>
+          <div class="stats">
+            <div class="cell"><div class="k">30d sold</div><div class="v">91</div></div>
+            <div class="cell"><div class="k">Avg ticket</div><div class="v">58,40 zł</div></div>
+            <div class="cell"><div class="k">Avg saving</div><div class="v">12,00 zł</div></div>
+            <div class="cell"><div class="k">Eff. discount</div><div class="v">20%</div></div>
+            <div class="cell"><div class="k">Revenue</div><div class="v">5 314 zł</div></div>
+            <div class="cell"><div class="k">👍 / 👎</div><div class="v">47 / 3</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-foot"><button class="btn ghost sm" style="color:var(--av3-bad);margin-right:auto">Delete</button><button class="btn sm" onclick="closeDlg('dlg-bundle')">Cancel</button><button class="btn primary sm" onclick="closeDlg('dlg-bundle')">Save</button></div>
+  </div>
+</div>
+
+<!-- ============================ COMBO EDITOR ============================ -->
+<div class="scrim" id="dlg-combo">
+  <div class="dialog" style="max-width:900px">
+    <div class="dialog-head">
+      <div><div class="dialog-title">Italian Classic Deal</div><div class="dialog-sub">Kraków · combo deal</div></div>
+      <button class="x" onclick="closeDlg('dlg-combo')">×</button>
+    </div>
+    <div class="dialog-body">
+      <div class="bodysplit">
+        <div>
+          <div class="field"><span class="field-label">Name</span><input class="input" value="Italian Classic Deal"/></div>
+          <div class="field"><span class="field-label">Description</span><input class="input" value="Margherita + Limonata + Tiramisù — the full Napoli table."/></div>
+          <div class="field"><span class="field-label">Categories (comma-separated)</span><input class="input" value="pizza, drinks, desserts"/></div>
+          <div class="row">
+            <div class="field"><span class="field-label">Discount %</span><input class="input" value="10"/></div>
+            <div class="field"><span class="field-label">Min items</span><input class="input" value="3"/></div>
+            <div class="field"><span class="field-label">Channel</span><select class="input"><option>Both</option></select></div>
+            <div class="field" style="flex:0 0 90px"><span class="field-label">Live</span><label class="sw on"><i></i></label></div>
+          </div>
+          <div class="subhead">Required items <span class="subtle" style="font-weight:400;text-transform:none;letter-spacing:0">(optional — overrides “any of category”)</span></div>
+          <div class="row" style="margin-bottom:6px"><div class="field" style="margin-bottom:0"><span class="field-label">Item</span><select class="input"><option>Margherita</option></select></div><div class="field" style="margin-bottom:0"><span class="field-label">Label</span><input class="input" value="Margherita"/></div></div>
+          <div class="row" style="margin-bottom:6px"><div class="field" style="margin-bottom:0"><span class="field-label">Item</span><select class="input"><option>Limonata</option></select></div><div class="field" style="margin-bottom:0"><span class="field-label">Label</span><input class="input" value="Limonata"/></div></div>
+          <div class="row"><div class="field" style="margin-bottom:0"><span class="field-label">Item</span><select class="input"><option>Tiramisù</option></select></div><div class="field" style="margin-bottom:0"><span class="field-label">Label</span><input class="input" value="Tiramisù"/></div></div>
+        </div>
+        <div style="position:sticky;top:0">
+          <div class="preview-label">Customer preview · live</div>
+          <div class="pcard">
+            <div style="display:flex;gap:6px"><span class="badge brand">10% off</span></div>
+            <div class="pcard-name" style="margin-top:7px">Italian Classic Deal</div>
+            <div class="pcard-desc">Margherita + Limonata + Tiramisù — the full Napoli table.</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px">
+              <span class="badge neutral">Margherita</span><span class="badge neutral">Limonata</span><span class="badge neutral">Tiramisù</span>
+            </div>
+            <div class="subtle" style="font-size:11.5px;margin-top:9px">Add all listed items to unlock 10% off.</div>
+          </div>
+          <div class="preview-label" style="margin-top:12px">Worked example · this menu</div>
+          <div class="ex">
+            <div class="line"><span>Margherita</span><span class="m">33,90 zł</span></div>
+            <div class="line"><span>Limonata</span><span class="m">12,00 zł</span></div>
+            <div class="line"><span>Tiramisù</span><span class="m">20,10 zł</span></div>
+            <div class="line"><span class="muted">Subtotal</span><span class="m">66,00 zł</span></div>
+            <div class="line save"><span>Combo saving (10%)</span><span class="m">−6,60 zł</span></div>
+            <div class="line pay"><span>They pay</span><span class="m">59,40 zł</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-foot"><button class="btn ghost sm" style="color:var(--av3-bad);margin-right:auto">Delete</button><button class="btn sm" onclick="closeDlg('dlg-combo')">Cancel</button><button class="btn primary sm" onclick="closeDlg('dlg-combo')">Save</button></div>
+  </div>
+</div>
+
+<!-- ============================ ⓘ EXPLAINER ============================ -->
+<div class="scrim" id="dlg-xp">
+  <div class="dialog xp">
+    <div class="dialog-head">
+      <div><div class="dialog-title" id="xp-title">Metric</div><div class="dialog-sub">What it is · why it matters · how to move it</div></div>
+      <button class="x" onclick="closeDlg('dlg-xp')">×</button>
+    </div>
+    <div class="dialog-body">
+      <p id="xp-desc"></p>
+      <div class="rail inst"><div class="rl">⚖ Institutional analysis</div><span id="xp-inst"></span></div>
+      <div class="rail plain"><div class="rl">✦ In plain terms</div><span id="xp-plain"></span></div>
+      <div class="rail tips"><div class="rl">💡 Tips — how to push this lever</div><span id="xp-tips"></span></div>
+      <div class="rail meth"><div class="rl">🖩 Methodology — how this is determined</div><span id="xp-meth"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showPage(p){
+    document.getElementById('page-upsell').classList.toggle('hidden', p!=='upsell');
+    document.getElementById('page-cross').classList.toggle('hidden', p!=='cross');
+    document.getElementById('tab-upsell').className = 'btn'+(p==='upsell'?' primary':'');
+    document.getElementById('tab-cross').className = 'btn'+(p==='cross'?' primary':'');
+    window.scrollTo(0,0);
+  }
+  function setView(pfx, v){
+    document.getElementById(pfx+'-board').classList.toggle('hidden', v!=='board');
+    document.getElementById(pfx+'-table').classList.toggle('hidden', v!=='table');
+    const vt = document.getElementById(pfx+'-vt').children;
+    vt[0].classList.toggle('is-active', v==='board');
+    vt[1].classList.toggle('is-active', v==='table');
+  }
+  function openBundle(){ document.getElementById('dlg-bundle').classList.add('open'); }
+  function openCombo(){ document.getElementById('dlg-combo').classList.add('open'); }
+  function closeDlg(id){ document.getElementById(id).classList.remove('open'); }
+
+  const XP = {
+    pen:{t:"Bundle penetration",d:"Share of bundle impressions that ended in a bundle actually applied to the cart, over the last 30 days.",
+      inst:"The headline conversion of the upsell funnel. Best-in-class QSR bundle attach sits ~8–15% of carts seeing the offer; under 4% means the offer or its framing is off, not the customer.",
+      plain:"If 1,000 people saw the lunch bundle nudge and 90 added it, that's 9% — nine extra combos you didn't upsell by hand. Push it to 12% and that's 30 more bundles a month from the same traffic.",
+      tips:"Lead with the anchor tier; make the saving explicit on the card; shorten composition to 2–3 slots; A/B the discount via the Experiment card.",
+      meth:"funnel.applies ÷ funnel.impressions from /api/admin/bundle-analytics (30d, this location). Shows — until impressions are logged."},
+    aov:{t:"Bundle order value",d:"Average final basket value of orders that included a bundle, over the last 30 days.",
+      inst:"The whole point of a ladder is to lift average ticket. Bundle AOV should sit meaningfully above à-la-carte AOV — if it doesn't, the discount erodes more than the attach adds.",
+      plain:"If a normal order is 42 zł and a bundle order is 58 zł, every bundle is 16 zł of basket you'd otherwise not capture. On 90 bundles that's ~1,440 zł of incremental ticket.",
+      tips:"Add a high-margin slot (drink, dessert) rather than discounting mains deeper; gate the richest tier to Gold; watch effective discount so the lift isn't given back.",
+      meth:"totalBundleRevenueGrosze ÷ totalBundleOrders from /api/admin/bundle-analytics (30d)."},
+    rev:{t:"Bundle revenue (30d)",d:"Total basket value of all bundle-bearing orders on this location in the last 30 days.",
+      inst:"The scale check: penetration and AOV can both look healthy on tiny volume. This tells you whether bundles are a rounding error or a real revenue line.",
+      plain:"If bundles drove 26,000 zł of baskets last month, that's the slice of revenue the ladder is touching. Pair with the effective-discount KPI to see what markdown earned it.",
+      tips:"Grow it by lifting penetration before deepening discounts; promote a winning A/B variant chain-wide; schedule the family ladder for weekends.",
+      meth:"Sum of finalPriceGrosze across bundle orders from /api/admin/bundle-analytics (30d), in PLN."},
+    disc:{t:"Average effective discount",d:"The blended markdown actually given on bundle orders — savings as a share of what the items would cost separately.",
+      inst:"The cost of the ladder. Effective discount should stay below the contribution the attach creates; a sustainable QSR bundle gives ~8–18% off. Above ~25% you're likely cannibalising full-price orders.",
+      plain:"If items separately would be 65 zł and the bundle sells for 55 zł, that's 10 zł / ~15% given away. Fine if those baskets are extra — expensive if those customers would have spent 50 zł anyway.",
+      tips:"Trim the headline % and add value instead; use split mains/add-ons discounts; let the A/B experiment find the smallest discount that holds penetration.",
+      meth:"totalSavingsGrosze ÷ (totalRevenueGrosze + totalSavingsGrosze) from /api/admin/bundle-analytics (30d)."},
+    cdisc:{t:"Average combo discount",d:"The mean discount across every combo deal currently switched live on this location.",
+      inst:"Combos are a margin trade: a discount to pull a complementary category into the basket. A healthy cross-sell discount sits ~10–15%; above ~20% you're likely discounting baskets that would have converted anyway.",
+      plain:"Add a pizza and we'll take 10% off if you also grab a drink. On a 39 zł pizza + 9 zł drink that's ~4.80 zł off — cheap if the high-margin drink only joins the basket because of the nudge.",
+      tips:"Keep the discount just high enough to be noticed; prefer attaching high-margin categories; use a required-item deal to lock the pairing you actually want.",
+      meth:"Mean of discountPercent over combos where active === true (this location's resolved config)."},
+    win:{t:"Time-of-day windows live now",d:"How many time-of-day cart banners are scheduled to be showing at the current hour on this location.",
+      inst:"Dayparting: the same impression converts very differently by hour, so a window live in its natural daypart out-earns an always-on banner. Zero live now during a trading hour is a missed nudge.",
+      plain:"Right now it's after lunch, so the 'afternoon pick-me-up' banner is showing and the breakfast one is parked until tomorrow — each speaks to what people want at this hour.",
+      tips:"Cover your real trading hours with non-overlapping windows; align each to its daypart; use the one-tap add item so the nudge is a single click.",
+      meth:"Counts timeWindows where active === true and the current local hour falls within [startHour, endHour) (wrapping past midnight)."},
+  };
+  function openXp(k){
+    const x = XP[k]; if(!x) return;
+    document.getElementById('xp-title').textContent = x.t;
+    document.getElementById('xp-desc').textContent = x.d;
+    document.getElementById('xp-inst').textContent = x.inst;
+    document.getElementById('xp-plain').textContent = x.plain;
+    document.getElementById('xp-tips').textContent = x.tips;
+    document.getElementById('xp-meth').textContent = x.meth;
+    document.getElementById('dlg-xp').classList.add('open');
+  }
+  // click scrim to close
+  document.querySelectorAll('.scrim').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('open')}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.scrim.open').forEach(s=>s.classList.remove('open'))});
+</script>
+</body>
+</html>
