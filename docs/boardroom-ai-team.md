@@ -19,6 +19,7 @@ Open it at **`/admin-v3/boardroom`** (Intelligence section, manager+).
 | **Operations · COO** | The COO's KPIs + chat (kitchen efficiency, staffing, inventory, food safety). |
 | **Finance · CFO** | The CFO's KPIs + chat (P&L, food/labour %, pricing, break-even). |
 | **Marketing · CMO** | The CMO's KPIs + chat (campaigns, loyalty, reputation, upsell). |
+| **Team chat** | A generalist board assistant (all read tools) for cross-functional questions that don't belong to one executive. |
 | **Meetings** | Run a **daily briefing** or **weekly review**: COO → CFO → CMO → CEO each speak on the live numbers, then the chair synthesises a **decisions list**. Each decision with a lever has an "Action via {agent}" button that hands it to the owning agent for an approved, audited action. |
 
 ### The agents and their tools

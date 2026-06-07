@@ -103,7 +103,7 @@ const STATUS_ACCENT: Record<KpiStatus, string> = {
   neutral: "--av3-muted",
 };
 
-type Tab = "overview" | PersonaId | "meetings";
+type Tab = "overview" | PersonaId | "team" | "meetings";
 
 export function BoardroomV3() {
   const { location } = useAdminLocationV3();
@@ -146,6 +146,7 @@ export function BoardroomV3() {
     { id: "coo", label: "Operations · COO" },
     { id: "cfo", label: "Finance · CFO" },
     { id: "cmo", label: "Marketing · CMO" },
+    { id: "team", label: "Team chat" },
     { id: "meetings", label: "Meetings" },
   ];
 
@@ -191,6 +192,13 @@ export function BoardroomV3() {
         <OverviewTab snapshot={snapshot} agents={agents} onOpenAgent={(id) => setTab(id)} gatewayConfigured={gatewayConfigured} onRan={load} />
       ) : tab === "meetings" ? (
         <MeetingsTab gatewayConfigured={gatewayConfigured} onAction={actionDecision} onRan={load} />
+      ) : tab === "team" ? (
+        <>
+          <Card>
+            <CardHead title="Ask the whole team" description="A generalist board assistant with access to every read tool — for cross-functional questions that don't belong to one executive. For a structured, multi-voice discussion, run a meeting." />
+          </Card>
+          <ChatPanel personaId={null} gatewayConfigured={gatewayConfigured} />
+        </>
       ) : (
         <PersonaTab
           personaId={tab}

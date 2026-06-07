@@ -48,15 +48,15 @@ const pln = (grosze: number) => `${(grosze / 100).toLocaleString("pl-PL", { mini
 const pct = (frac: number) => `${(frac * 100).toFixed(1)}%`;
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Status where lower is better (cost ratios). */
-function statusLowerBetter(value: number, green: number, yellow: number): KpiStatus {
+/** Status where lower is better (cost ratios). Exported for unit tests. */
+export function statusLowerBetter(value: number, green: number, yellow: number): KpiStatus {
   if (!Number.isFinite(value) || value <= 0) return "neutral";
   if (value <= green) return "green";
   if (value <= yellow) return "yellow";
   return "red";
 }
-/** Status where higher is better (ratings, growth). */
-function statusHigherBetter(value: number, green: number, yellow: number): KpiStatus {
+/** Status where higher is better (ratings, growth). Exported for unit tests. */
+export function statusHigherBetter(value: number, green: number, yellow: number): KpiStatus {
   if (!Number.isFinite(value)) return "neutral";
   if (value >= green) return "green";
   if (value >= yellow) return "yellow";

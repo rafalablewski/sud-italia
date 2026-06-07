@@ -348,7 +348,9 @@ refetches every 30s.
   Overview (traffic-light KPI rail via `Kpi` with a status `Badge` dot +
   five-section `InfoButton`, agent-status cards, quick-action meeting buttons, and
   a "what needs attention" flag list), one panel per persona (the persona's owned
-  KPIs + a `ChatPanel`), and Meetings. **Chat** reuses the Ops Agent endpoints
+  KPIs + a `ChatPanel`), a **Team chat** (the generalist board assistant — a
+  `ChatPanel` with `personaId={null}`, all read tools), and Meetings. **Chat**
+  reuses the Ops Agent endpoints
   (`/api/admin/ai-agent/*`) with a `personaId` body field that selects the agent
   voice + tool allowlist; same human-in-the-loop tool-approval card flow and CSS
   (§17 `.av3-chat-*`, `.av3-tool-*`). **Meetings** call `/api/admin/ai/boardroom/

@@ -182,7 +182,7 @@ Produce the decision JSON now.`;
   }
 }
 
-function parseDecisions(text: string): MeetingDecision[] {
+export function parseDecisions(text: string): MeetingDecision[] {
   // The model is asked for bare JSON, but strip any stray fence just in case.
   const cleaned = text.replace(/```(?:json)?/gi, "").trim();
   const start = cleaned.indexOf("{");
