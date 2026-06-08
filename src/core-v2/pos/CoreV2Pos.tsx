@@ -30,6 +30,14 @@ const TAG_META: Record<MenuItem["tags"][number], { label: string; cls: string }>
   "gluten-free": { label: "GF", cls: "fast" },
 };
 
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+  hero: { label: "Hero", cls: "hero" },
+  "profit-driver": { label: "Profit", cls: "profit" },
+  anchor: { label: "Anchor", cls: "anchor" },
+  lto: { label: "LTO", cls: "lto" },
+};
+const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
 
@@ -64,13 +72,13 @@ export function CoreV2Pos({
     const present = new Set(menu.filter((m) => m.available).map((m) => m.category));
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [menu]);
-  const [cat, setCat] = useState<MenuCategory | null>(null);
-  const activeCat = cat && categories.includes(cat) ? cat : categories[0] ?? null;
+  const [cat, setCat] = useState<MenuCategory | "all" | null>(null);
+  const activeCat = cat && (cat === "all" || categories.includes(cat)) ? cat : categories[0] ?? null;
 
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const renameSeq = useRef(1);
+  const [hydrated, setHydrated] = useState(false);
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const loadTabs = useCallback(async () => {
@@ -82,9 +90,10 @@ export function CoreV2Pos({
       const list = Array.isArray(data.tabs) ? data.tabs : [];
       setTabs(list);
       setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
-      renameSeq.current = list.length + 1;
     } catch {
       /* non-fatal */
+    } finally {
+      setHydrated(true);
     }
   }, [pageLoc]);
 
@@ -213,6 +222,9 @@ export function CoreV2Pos({
     () => mutateActive((t) => ({ ...t, status: t.status === "parked" ? "open" : "parked" })),
     [mutateActive],
   );
+  const setName = useCallback((name: string) => mutateActive((t) => ({ ...t, name: name.slice(0, 40) })), [mutateActive]);
+  // Dine-in kitchen timing — course-by-course firing vs everything at once.
+  const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
   const recourse = useCallback(
     (menuItemId: string, course: PosCourse) =>
@@ -222,7 +234,13 @@ export function CoreV2Pos({
 
   const newTab = useCallback(async () => {
     if (!pageLoc) return;
-    const name = `Tab ${renameSeq.current++}`;
+    // Derive the next default name from the highest existing "Tab N" so it never
+    // collides — even after middle checks are closed (a plain counter repeats).
+    const maxNum = tabs.reduce((max, t) => {
+      const m = /^Tab (\d+)$/.exec(t.name);
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
+    }, 0);
+    const name = `Tab ${maxNum + 1}`;
     try {
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, {
         method: "POST",
@@ -238,7 +256,7 @@ export function CoreV2Pos({
     } catch {
       /* offline — no-op */
     }
-  }, [pageLoc]);
+  }, [pageLoc, tabs]);
 
   // --- Tables (dine-in picker) --------------------------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
@@ -260,6 +278,14 @@ export function CoreV2Pos({
     };
   }, [pageLoc]);
   const tableById = useCallback((id?: string) => (id ? tables.find((t) => t.id === id) : undefined), [tables]);
+  const tablesByZone = useMemo(() => {
+    const m = new Map<string, FloorTable[]>();
+    for (const t of tables) {
+      const z = t.zone || "Floor";
+      (m.get(z) ?? m.set(z, []).get(z)!).push(t);
+    }
+    return [...m.entries()];
+  }, [tables]);
 
   // --- Send / Fire / Charge ------------------------------------------------
   const [busyTabId, setBusyTabId] = useState<string | null>(null);
@@ -354,15 +380,102 @@ export function CoreV2Pos({
   const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
 
   const active = getActive();
-  const items = menu.filter(
-    (m) => m.available && m.category === activeCat && (active?.channel === "delivery" || !m.deliveryOnly),
+
+  // Tab-rail rollup: how many checks are in flight, ready to pay, parked, and
+  // the open value across all of them — the at-a-glance "state of the till".
+  const railSummary = useMemo(() => {
+    const ready = tabs.filter((t) => t.status === "pay").length;
+    const parked = tabs.filter((t) => t.status === "parked").length;
+    const openValue = tabs.reduce((s, t) => s + grandG(t), 0);
+    return { count: tabs.length, ready, parked, openValue };
+  }, [tabs, grandG]);
+
+  // Other open, non-parked dine-in checks already seated at a table — the
+  // double-seat guard for the table picker.
+  const tabsOnTable = useCallback(
+    (tableId: string, exceptId?: string) =>
+      tabs.filter((t) => t.id !== exceptId && t.status !== "parked" && t.channel === "dine-in" && t.tableId === tableId),
+    [tabs],
   );
+  const handlePickTable = (tbl: FloorTable) => {
+    if (!active) return;
+    setTableOpen(false);
+    if (active.tableId === tbl.id) {
+      assignTable(null);
+      return;
+    }
+    assignTable(tbl.id);
+    const conflict = tabsOnTable(tbl.id, active.id).length > 0;
+    const over = tbl.seats < (active.covers ?? 2);
+    if (conflict || over) {
+      const bits: string[] = [];
+      if (conflict) bits.push("also on another open check");
+      if (over) bits.push(`seats ${tbl.seats} for a party of ${active.covers ?? 2}`);
+      toast(`Table ${tbl.number} — ${bits.join(" · ")}`, "danger");
+    } else {
+      toast(`Seated at table ${tbl.number}`, "success");
+    }
+  };
+
+  // Channel-true available menu; "all" shows every category stacked.
+  const channelMenu = menu.filter((m) => m.available && (active?.channel === "delivery" || !m.deliveryOnly));
+  const items = activeCat === "all" ? channelMenu : channelMenu.filter((m) => m.category === activeCat);
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
 
+  // Combo-completion offer — a partially-matched deal one or two items short.
+  const combo = active ? comboOf(active) : null;
+  const comboNeed = combo?.activeDeal && !combo.isComplete
+    ? combo.missingItems.length
+      ? combo.missingItems.join(", ")
+      : combo.missingCategories.length
+        ? combo.missingCategories.map((c) => MENU_CATEGORY_LABELS[c]).join(", ")
+        : combo.missingQuantity
+          ? `${combo.missingQuantity} more item${combo.missingQuantity > 1 ? "s" : ""}`
+          : null
+    : null;
+  const completeCombo = () => {
+    if (!combo?.activeDeal) return;
+    const ids: string[] = [];
+    if (combo.activeDeal.requiredItems) {
+      for (const label of combo.missingItems) {
+        const req = combo.activeDeal.requiredItems.find((r) => r.label === label);
+        const m = req && channelMenu.find((x) => x.id.endsWith(req.suffix));
+        if (m) ids.push(m.id);
+      }
+    }
+    for (const c of combo.missingCategories) {
+      const m = channelMenu.filter((x) => x.category === c).sort((a, b) => a.price - b.price)[0];
+      if (m) ids.push(m.id);
+    }
+    if (ids.length === 0 && combo.missingQuantity > 0 && active) {
+      // categories already matched — just need volume; repeat the first line.
+      const first = active.items[0];
+      if (first) ids.push(first.menuItemId);
+    }
+    ids.forEach((id) => addLine(id));
+  };
+
   // --- Pace steering (real: server analyzeTruck over live orders) ----------
-  const [steer, setSteer] = useState<{ active: boolean; bottleneck: { label: string; util: number; tier: string } | null; reason: string | null } | null>(null);
+  interface SteerPlan {
+    active: boolean;
+    bottleneck: { label: string; util: number; tier: string } | null;
+    reason: string | null;
+    makeNow: string[];
+    throttle: string[];
+    promiseSecondsByCategory: Record<string, number>;
+    deliveryCapNextWindow: number;
+  }
+  const [steer, setSteer] = useState<SteerPlan | null>(null);
   const [windowMin, setWindowMin] = useState(15);
+  // Pace-steering item cues + per-check promise, all from the live plan.
+  const makeNowSet = useMemo(() => new Set(steer?.makeNow ?? []), [steer]);
+  const throttleSet = useMemo(() => new Set(steer?.throttle ?? []), [steer]);
+  const tabPromiseSec = useMemo(() => {
+    if (!active || !steer) return 0;
+    return Math.max(0, ...active.items.map((l) => steer.promiseSecondsByCategory[byId(l.menuItemId)?.category ?? ""] ?? 0));
+  }, [active, steer, byId]);
+  const deliveryPaused = !!(steer?.active && active?.channel === "delivery" && steer.deliveryCapNextWindow === 0);
   useEffect(() => {
     if (!pageLoc) return;
     let cancelled = false;
@@ -409,7 +522,54 @@ export function CoreV2Pos({
   // --- Dialogs -------------------------------------------------------------
   const [tableOpen, setTableOpen] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false);
+  // Leaving a check (or its dine-in channel) drops back to the menu.
+  useEffect(() => {
+    setTableOpen(false);
+  }, [activeTabId]);
   const [addrDraft, setAddrDraft] = useState("");
+
+  const tableButton = (t: FloorTable) => {
+    const inUse = tabsOnTable(t.id, active?.id).length > 0;
+    const under = active ? t.seats < (active.covers ?? 2) : false;
+    return (
+      <button
+        key={t.id}
+        type="button"
+        className={`cv-tablebtn${active?.tableId === t.id ? " on" : ""}${t.status === "out-of-service" ? " oos" : ""}`}
+        onClick={() => handlePickTable(t)}
+      >
+        <span className="tn">{t.number}</span>
+        <span className="tc">{t.seats} seats{t.zone ? ` · ${t.zone}` : ""}</span>
+        <span className="cv-tablebadges">
+          {inUse && <span className="cv-tbadge warn">In use</span>}
+          {under && <span className="cv-tbadge warn">Seats {t.seats} &lt; {active?.covers ?? 2}</span>}
+          {t.status === "reserved" && <span className="cv-tbadge info">Reserved</span>}
+          {t.status === "out-of-service" && <span className="cv-tbadge">Out of service</span>}
+        </span>
+      </button>
+    );
+  };
+
+  const productCard = (m: MenuItem) => (
+    <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
+      <div className="pn">
+        {m.name}
+        {m.menuRole && <span className={`cv-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
+      </div>
+      <div className="pd">{m.description}</div>
+      <div className="cv-tagrow">
+        {m.tags.map((t) => (
+          <span key={t} className={`cv-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
+        ))}
+        {steer?.active && makeNowSet.has(m.id) && <span className="cv-steer-tag now">★ make now</span>}
+        {steer?.active && throttleSet.has(m.id) && <span className="cv-steer-tag ease">▼ ease</span>}
+      </div>
+      <div className="pf">
+        <span className="pp">{zl(m.price)}</span>
+        <span className="add" aria-hidden>+</span>
+      </div>
+    </button>
+  );
 
   const lineRow = (menuItemId: string, quantity: number) => {
     const m = byId(menuItemId);
@@ -426,6 +586,7 @@ export function CoreV2Pos({
           dragItem.current = null;
         }}
       >
+        <span className="cv-grip" aria-hidden title="Drag to re-course">⠿</span>
         <div className="cv-qstep">
           <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
             −
@@ -465,95 +626,148 @@ export function CoreV2Pos({
         </>
       }
     >
+      {/* open-check bar — spans the full width, above the panes */}
+      <div className="cv-checkbar">
+        {tabs.length > 0 && (
+          <div className="cv-tabrail-sum">
+            {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
+            <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
+          </div>
+        )}
+        <div className="cv-tabrail">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" className={t.id === activeTabId ? "cv-ttab on" : "cv-ttab"} onClick={() => setActiveTabId(t.id)}>
+              <span className="tt">{t.name}</span>
+              <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
+            </button>
+          ))}
+          <button type="button" className="cv-ttab cv-ttab-new" onClick={() => void newTab()}>
+            <span className="tt">+ New</span>
+            <span className="ts">open check</span>
+          </button>
+        </div>
+      </div>
       <div className="cv-pos">
         {/* category rail */}
         <aside className="cv-rail">
           <div className="lbl">Menu</div>
+          <button type="button" className={activeCat === "all" ? "cv-cat on" : "cv-cat"} onClick={() => setCat("all")}>
+            All
+            <span className="n">{channelMenu.length}</span>
+          </button>
           {categories.map((c) => (
             <button key={c} type="button" className={c === activeCat ? "cv-cat on" : "cv-cat"} onClick={() => setCat(c)}>
               {MENU_CATEGORY_LABELS[c]}
+              {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
+                <span className="cv-cat-promise">{promiseMin(steer.promiseSecondsByCategory[c])}</span>
+              )}
               <span className="n">{menu.filter((m) => m.available && m.category === c).length}</span>
             </button>
           ))}
         </aside>
 
-        {/* menu grid */}
+        {/* menu grid — or the table picker, in place */}
         <main className="cv-menu">
-          {steer && (
-            steer.active && steer.bottleneck ? (
-              <div className={`cv-steer ${steer.bottleneck.tier}`}>
-                <span className="dot" />
-                <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
-                <span className="cap">cap · {windowMin}m</span>
+          {tableOpen && active?.channel === "dine-in" ? (
+            <div className="cv-tablepick">
+              <div className="cv-tablepick-h">
+                <div>
+                  <div className="tt">Assign table</div>
+                  <div className="ts">
+                    {active.name} · party of {active.covers ?? 2}
+                    {active.tableId ? ` · currently Table ${tableById(active.tableId)?.number ?? "?"}` : ""}
+                  </div>
+                </div>
+                <button type="button" className="cv-btn ghost sm" onClick={() => setTableOpen(false)}>← Back to menu</button>
               </div>
-            ) : (
-              <div className="cv-steer calm">
-                <span className="dot" />
-                <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
-              </div>
-            )
+              {tables.length === 0 ? (
+                <div className="cv-tender-note" style={{ padding: 16 }}>No tables configured for this truck.</div>
+              ) : (
+                tablesByZone.map(([zone, ts]) => (
+                  <div key={zone} className="cv-tablezone">
+                    <div className="cv-tablezone-h">{zone}<span className="n">{ts.length}</span></div>
+                    <div className="cv-tablegrid big">{ts.map(tableButton)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <>
+              {steer && (
+                steer.active && steer.bottleneck ? (
+                  <div className={`cv-steer ${steer.bottleneck.tier}`}>
+                    <span className="dot" />
+                    <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
+                    <span className="cap">cap · {windowMin}m</span>
+                  </div>
+                ) : (
+                  <div className="cv-steer calm">
+                    <span className="dot" />
+                    <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
+                  </div>
+                )
+              )}
+              {activeCat === "all" ? (
+                categories.map((c) => {
+                  const group = items.filter((m) => m.category === c);
+                  if (group.length === 0) return null;
+                  return (
+                    <div key={c} className="cv-menu-sec">
+                      <div className="cv-menu-sec-h">{MENU_CATEGORY_LABELS[c]}</div>
+                      <div className="cv-menu-grid">{group.map(productCard)}</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="cv-menu-grid">{items.map(productCard)}</div>
+              )}
+            </>
           )}
-          <div className="cv-menu-grid">
-            {items.map((m) => (
-              <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
-                <div className="pn">{m.name}</div>
-                <div className="pd">{m.description}</div>
-                <div className="cv-tagrow">
-                  {m.tags.map((t) => (
-                    <span key={t} className={`cv-tag ${TAG_META[t].cls}`}>
-                      {TAG_META[t].label}
-                    </span>
-                  ))}
-                </div>
-                <div className="pf">
-                  <span className="pp">{zl(m.price)}</span>
-                  <span className="add" aria-hidden>
-                    +
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
         </main>
 
         {/* ticket */}
         <aside className="cv-ticket">
-          <div className="cv-tabrail">
-            {tabs.map((t) => (
-              <button key={t.id} type="button" className={t.id === activeTabId ? "cv-ttab on" : "cv-ttab"} onClick={() => setActiveTabId(t.id)}>
-                <span className="tt">{t.name}</span>
-                <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
-              </button>
-            ))}
-            <button type="button" className="cv-ttab cv-ttab-new" onClick={() => void newTab()}>
-              <span className="tt">+ New</span>
-              <span className="ts">open check</span>
-            </button>
-          </div>
-
           {!active ? (
             <div className="cv-ticket-empty">
-              <div>
-                <div className="ti">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-                    <path d="M5 3h14l-1.5 16.5a1 1 0 0 1-1 .9H7.5a1 1 0 0 1-1-.9L5 3Z" />
-                    <path d="M9 8h6" />
-                  </svg>
+              {!hydrated ? (
+                <div>
+                  <h3>Loading open checks…</h3>
                 </div>
-                <h3>No open check</h3>
-                <p>Start a check with + New, then tap menu items to build the ticket.</p>
-              </div>
+              ) : (
+                <div>
+                  <div className="ti">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+                      <path d="M5 3h14l-1.5 16.5a1 1 0 0 1-1 .9H7.5a1 1 0 0 1-1-.9L5 3Z" />
+                      <path d="M9 8h6" />
+                    </svg>
+                  </div>
+                  <h3>No open check</h3>
+                  <p>Start a check with + New, then tap menu items to build the ticket.</p>
+                </div>
+              )}
             </div>
           ) : (
             <>
               <div className="cv-thead">
-                <div>
-                  <div className="th-t">{active.name}</div>
+                <div className="th-id">
+                  <input
+                    className="cv-th-name"
+                    value={active.name ?? ""}
+                    maxLength={40}
+                    onChange={(e) => setName(e.target.value)}
+                    aria-label="Check name"
+                    title="Rename this check"
+                  />
                   <div className="th-s">
                     {active.channel ? CHANNELS.find((c) => c.key === active.channel)?.label : "No channel"}
                     {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
                   </div>
                 </div>
+                {tabPromiseSec > 0 && (
+                  <span className={`cv-tabpromise ${steer?.bottleneck?.tier ?? "calm"}`} title="Estimated kitchen ready time for this check">
+                    ready {promiseMin(tabPromiseSec)}
+                  </span>
+                )}
                 {active.channel === "dine-in" && (
                   <div className="cv-covers">
                     <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">
@@ -598,6 +812,23 @@ export function CoreV2Pos({
                 )}
               </div>
 
+              {deliveryPaused && (
+                <div className="cv-delivery-paused">
+                  ⏸ Delivery paused — the kitchen is at capacity for the next {windowMin}m window. New delivery checks won&apos;t promise a slot yet.
+                </div>
+              )}
+
+              {/* dine-in kitchen timing — coursed vs all-together */}
+              {active.channel === "dine-in" && (
+                <div className="cv-timing">
+                  <span className="cv-timing-l">Kitchen timing</span>
+                  <div className="cv-seg">
+                    <button type="button" className={isCoursed ? "on" : ""} onClick={() => !isCoursed && toggleCoursed()}>Coursed</button>
+                    <button type="button" className={!isCoursed ? "on" : ""} onClick={() => isCoursed && toggleCoursed()}>All together</button>
+                  </div>
+                </div>
+              )}
+
               {/* lines */}
               <div className="cv-lines">
                 {active.items.length === 0 ? (
@@ -635,6 +866,17 @@ export function CoreV2Pos({
                   })
                 ) : (
                   active.items.map((l) => lineRow(l.menuItemId, l.quantity))
+                )}
+
+                {/* combo completion */}
+                {comboNeed && combo?.activeDeal && (
+                  <button type="button" className="cv-offer combo" onClick={completeCombo}>
+                    <span className="oi">🎁</span>
+                    <span className="ot">
+                      <b>Make it the {combo.activeDeal.name}</b> — add {comboNeed}
+                    </span>
+                    <span className="op mono">deal</span>
+                  </button>
                 )}
 
                 {/* cross-sell */}
@@ -717,27 +959,6 @@ export function CoreV2Pos({
             </div>
           </div>
         )}
-      </CoreV2Dialog>
-
-      {/* Table picker */}
-      <CoreV2Dialog open={tableOpen} onClose={() => setTableOpen(false)} title="Assign table">
-        <div className="cv-tablegrid">
-          {tables.length === 0 && <p className="cv-tender-note">No tables configured for this truck.</p>}
-          {tables.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={active?.tableId === t.id ? "cv-tablebtn on" : "cv-tablebtn"}
-              onClick={() => {
-                assignTable(active?.tableId === t.id ? null : t.id);
-                setTableOpen(false);
-              }}
-            >
-              <span className="tn">{t.number}</span>
-              <span className="tc">{t.seats} seats</span>
-            </button>
-          ))}
-        </div>
       </CoreV2Dialog>
 
       {/* Delivery address */}

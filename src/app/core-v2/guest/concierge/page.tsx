@@ -20,5 +20,15 @@ export default async function CoreV2ConciergePage() {
     ),
   ]);
   const byLocation = Object.fromEntries(locationEntries);
-  return <CoreV2Concierge meta={CAPABILITY_ORDER.map((id) => CAPABILITY_META[id])} settings={settings} byLocation={byLocation} />;
+  const waConfigured = !!(
+    process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() && process.env.WHATSAPP_ACCESS_TOKEN?.trim()
+  );
+  return (
+    <CoreV2Concierge
+      meta={CAPABILITY_ORDER.map((id) => CAPABILITY_META[id])}
+      settings={settings}
+      byLocation={byLocation}
+      waConfigured={waConfigured}
+    />
+  );
 }

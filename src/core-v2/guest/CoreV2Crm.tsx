@@ -55,6 +55,22 @@ const SORTS = [
   { key: "name", label: "Name" },
 ];
 
+const PERIODS = [
+  { key: "all", label: "Any time" },
+  { key: "1", label: "24h" },
+  { key: "7", label: "7d" },
+  { key: "30", label: "30d" },
+];
+const CHANNEL_LABEL: Record<string, string> = {
+  "dine-in": "Dine-in",
+  takeout: "Takeaway",
+  takeaway: "Takeaway",
+  delivery: "Delivery",
+  whatsapp: "WhatsApp",
+  web: "Web",
+};
+const chanLabel = (k: string) => (k ? CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1) : "");
+
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const seen = (d: number | null) => (d == null ? "never" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`);
 
@@ -99,7 +115,11 @@ export function CoreV2Crm() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [seg, setSeg] = useState("all");
+  const [chan, setChan] = useState("all");
+  const [recency, setRecency] = useState("all");
   const [sort, setSort] = useState("ltv");
+  const [eraseOpen, setEraseOpen] = useState(false);
+  const [erasing, setErasing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [noteDraft, setNoteDraft] = useState("");
@@ -136,10 +156,21 @@ export function CoreV2Crm() {
       .catch(() => {});
   }, [selected]);
 
+  // Channels actually present in the book — drives the channel filter chips.
+  const channelKeys = useMemo(
+    () => Array.from(new Set(data.flatMap((c) => c.channels ?? []))).filter((k): k is string => typeof k === "string" && !!k).sort(),
+    [data],
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const recN = recency === "all" ? null : Number(recency);
     const rows = data.filter(
-      (c) => inSeg(c, seg) && (!q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email ?? "").toLowerCase().includes(q)),
+      (c) =>
+        inSeg(c, seg) &&
+        (chan === "all" || c.channels.includes(chan)) &&
+        (recN == null || (c.lastDays != null && c.lastDays <= recN)) &&
+        (!q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email ?? "").toLowerCase().includes(q)),
     );
     rows.sort((a, b) => {
       switch (sort) {
@@ -151,7 +182,7 @@ export function CoreV2Crm() {
       }
     });
     return rows;
-  }, [data, query, seg, sort]);
+  }, [data, query, seg, chan, recency, sort]);
 
   const kpis = useMemo(() => {
     const members = data.filter((c) => c.member).length;
@@ -221,6 +252,30 @@ export function CoreV2Crm() {
     }
   };
 
+  // GDPR Art. 17 erasure — hard-deletes every record tied to the phone.
+  const eraseCustomer = async () => {
+    if (!selected || erasing) return;
+    setErasing(true);
+    try {
+      const res = await fetch("/api/admin/gdpr/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: selected, confirm: true }),
+      });
+      if (res.ok) {
+        toast("Customer data erased", "success");
+        setEraseOpen(false);
+        setSelected(null);
+        void load();
+      } else {
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        toast(d.error || "Could not erase (owner only)", "danger");
+      }
+    } finally {
+      setErasing(false);
+    }
+  };
+
   const toggleConsent = async (patch: { smsOptIn?: boolean; emailOptIn?: boolean }) => {
     if (!selected) return;
     const res = await fetch(`/api/admin/customers/${encodeURIComponent(selected)}/consent`, {
@@ -265,6 +320,23 @@ export function CoreV2Crm() {
             ))}
           </div>
         </div>
+
+        <div className="cv-crm-filters2">
+            <span className="cv-filter-l">Channel</span>
+            <div className="cv-segs">
+              <button className={chan === "all" ? "on" : ""} onClick={() => setChan("all")}>All</button>
+              {channelKeys.map((k) => (
+                <button key={k} className={chan === k ? "on" : ""} onClick={() => setChan(k)}>{chanLabel(k)}</button>
+              ))}
+            </div>
+            <div className="cv-sp" />
+            <span className="cv-filter-l">Seen</span>
+            <div className="cv-seg">
+              {PERIODS.map((p) => (
+                <button key={p.key} className={recency === p.key ? "on" : ""} onClick={() => setRecency(p.key)}>{p.label}</button>
+              ))}
+            </div>
+          </div>
 
         <div className="cv-crm-table-wrap">
           {loading ? (
@@ -348,6 +420,9 @@ export function CoreV2Crm() {
               <a className="cv-gdpr" href={`/api/admin/gdpr/export?phone=${encodeURIComponent(cust.phone)}`} target="_blank" rel="noreferrer">
                 GDPR export ↗
               </a>
+              <button className="cv-gdpr danger" onClick={() => setEraseOpen(true)}>
+                Erase ⚠
+              </button>
             </div>
 
             {/* recent orders */}
@@ -422,6 +497,26 @@ export function CoreV2Crm() {
             </div>
           </div>
         )}
+      </CoreV2Dialog>
+
+      {/* GDPR erasure confirm */}
+      <CoreV2Dialog
+        open={eraseOpen && !!cust}
+        onClose={() => setEraseOpen(false)}
+        title="Erase customer data"
+        footer={
+          <>
+            <button type="button" className="cv-btn ghost" onClick={() => setEraseOpen(false)} disabled={erasing}>Cancel</button>
+            <button type="button" className="cv-btn danger" onClick={() => void eraseCustomer()} disabled={erasing}>
+              {erasing ? "Erasing…" : "Erase permanently"}
+            </button>
+          </>
+        }
+      >
+        <p className="cv-tender-note" style={{ lineHeight: 1.55 }}>
+          This permanently deletes <b>{cust?.name}</b> ({cust?.phone}) and every record tied to that phone — profile,
+          loyalty, notes and consent. This satisfies a <b>GDPR Art. 17</b> right-to-erasure request and <b>cannot be undone</b>.
+        </p>
       </CoreV2Dialog>
     </CoreV2Shell>
   );

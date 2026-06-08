@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
+import type { CustomerIntelligence } from "@/lib/customer-intelligence";
 import { guestTabs } from "./guestTabs";
 
 interface MemberRow {
@@ -51,6 +52,10 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 const TIERS = ["all", "platinum", "gold", "silver", "bronze"];
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 });
+const CHANNEL_LABEL: Record<string, string> = { "dine-in": "Dine-in", takeout: "Takeaway", delivery: "Delivery", whatsapp: "WhatsApp", web: "Web" };
+const chanLabel = (k: string) => CHANNEL_LABEL[k] ?? (k ? k[0].toUpperCase() + k.slice(1) : "—");
+const riskTone = (r: string) => (r === "lost" ? "bad" : r === "watch" ? "warn" : "ok");
+const fmtDays = (d: number) => (d < 1 ? "today" : `${Math.round(d)}d ago`);
 
 /**
  * Core v2 · Guest · Loyalty — members, wallets, redemptions, win-back, wired to
@@ -72,6 +77,21 @@ export function CoreV2Loyalty() {
   const [adjust, setAdjust] = useState<MemberRow | null>(null);
   const [ptAmount, setPtAmount] = useState("");
   const [ptReason, setPtReason] = useState("");
+  const [intelOf, setIntelOf] = useState<MemberRow | null>(null);
+  const [intel, setIntel] = useState<CustomerIntelligence | null>(null);
+  const [intelLoading, setIntelLoading] = useState(false);
+  const [confirmAll, setConfirmAll] = useState(false);
+
+  const openIntel = useCallback((m: MemberRow) => {
+    setIntelOf(m);
+    setIntel(null);
+    setIntelLoading(true);
+    fetch(`/api/admin/customer-intelligence?phone=${encodeURIComponent(m.phone)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setIntel(d?.intelligence ?? null))
+      .catch(() => setIntel(null))
+      .finally(() => setIntelLoading(false));
+  }, []);
 
   const load = useCallback(async () => {
     const [m, w, r] = await Promise.all([
@@ -96,13 +116,14 @@ export function CoreV2Loyalty() {
   }, [tab, winback]);
 
   const kpis = useMemo(() => {
+    // Outstanding points are a real liability: the standard 100 pts = 1 zł.
     const liability = members.reduce((s, m) => s + m.points, 0);
     return [
       { l: "Members", v: String(members.length) },
-      { l: "Points out", v: liability.toLocaleString("pl-PL") },
+      { l: "Points out", v: liability.toLocaleString("pl-PL"), s: `≈ ${Math.round(liability / 100).toLocaleString("pl-PL")} zł liability` },
       { l: "Redemptions", v: String(redemptions.length) },
       { l: "Wallets", v: String(wallets.length) },
-    ];
+    ] as { l: string; v: string; s?: string }[];
   }, [members, redemptions, wallets]);
 
   const visibleMembers = useMemo(() => {
@@ -192,6 +213,7 @@ export function CoreV2Loyalty() {
             <div className="k" key={k.l}>
               <div className="kl">{k.l}</div>
               <div className="kv mono">{k.v}</div>
+              {k.s && <div className="cv-kpi-sub">{k.s}</div>}
             </div>
           ))}
         </div>
@@ -221,7 +243,7 @@ export function CoreV2Loyalty() {
             <div className="cv-crm-table-wrap">
               <table className="cv-tbl">
                 <thead>
-                  <tr><th>Member</th><th>Tier</th><th className="num">Points</th><th className="num">Orders</th><th className="num">Lifetime</th><th>Last</th></tr>
+                  <tr><th>Member</th><th>Tier</th><th className="num">Points</th><th className="num">Orders</th><th className="num">Lifetime</th><th>Last</th><th></th></tr>
                 </thead>
                 <tbody>
                   {visibleMembers.map((m) => (
@@ -232,6 +254,17 @@ export function CoreV2Loyalty() {
                       <td className="num mono">{m.orders}</td>
                       <td className="num mono">{zl(m.totalSpent)} zł</td>
                       <td className="cv-cust-sub">{m.lastOrder}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="cv-intel-btn"
+                          title="Customer intelligence"
+                          aria-label={`Intelligence for ${m.name}`}
+                          onClick={(e) => { e.stopPropagation(); openIntel(m); }}
+                        >
+                          ◆
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -290,7 +323,7 @@ export function CoreV2Loyalty() {
               <>
                 <div className="cv-winback-head">
                   <span className="cv-cust-sub">{winback.length} at-risk members · ranked by value at risk</span>
-                  <button className="cv-btn primary" disabled={busy} onClick={() => void sendAll()}>Send all</button>
+                  <button className="cv-btn primary" disabled={busy} onClick={() => setConfirmAll(true)}>Send all ({winback.length})</button>
                 </div>
                 <div className="cv-winback">
                   {winback.map((w) => (
@@ -332,6 +365,95 @@ export function CoreV2Loyalty() {
             <input className="cv-inp" style={{ flex: 1 }} value={ptReason} onChange={(e) => setPtReason(e.target.value)} placeholder="Reason (e.g. comp for cold pizza)" />
           </div>
         )}
+      </CoreV2Dialog>
+
+      {/* customer intelligence */}
+      <CoreV2Dialog open={intelOf != null} onClose={() => setIntelOf(null)} title={`Intelligence · ${intelOf?.name ?? ""}`} width={640}>
+        {intelLoading ? (
+          <div className="cv-kds-empty pad">Modelling order history…</div>
+        ) : !intel ? (
+          <div className="cv-kds-empty pad">Not enough order history to model this member yet.</div>
+        ) : (
+          <div className="cv-intel">
+            <div className="cv-intel-headline">
+              <p>{intel.nextOrder.headline}</p>
+              <span className={`cv-conf ${intel.confidence}`}>{intel.confidence} confidence</span>
+            </div>
+
+            <div className="cv-intel-cards">
+              <div className="cv-intel-card">
+                <div className="t">Churn risk</div>
+                <div className={`cv-intel-risk ${riskTone(intel.churn.risk)}`}>{intel.churn.risk}</div>
+                <p className="cv-cust-sub">{intel.churn.reason}</p>
+              </div>
+              <div className="cv-intel-card">
+                <div className="t">Cadence</div>
+                <div className="cv-intel-v">every ~{Math.round(intel.cadence.avgIntervalDays ?? 0)}d</div>
+                <p className="cv-cust-sub">last order {fmtDays(intel.cadence.daysSinceLast ?? 0)} · usually {intel.temporal.label}</p>
+              </div>
+            </div>
+
+            <h4 className="cv-profile-h">Channel mix</h4>
+            <div className="cv-intel-bars">
+              {intel.channelMix.map((c) => (
+                <div key={c.channel} className="cv-intel-bar">
+                  <span className="lab">{chanLabel(c.channel)}</span>
+                  <div className="cv-track"><i style={{ width: `${Math.round(c.share * 100)}%` }} /></div>
+                  <span className="pv">{Math.round(c.share * 100)}%</span>
+                </div>
+              ))}
+            </div>
+
+            <h4 className="cv-profile-h">Favourite dishes</h4>
+            <div className="cv-intel-items">
+              {intel.topItems.slice(0, 5).map((it) => (
+                <div key={it.name} className="cv-intel-item">
+                  <span>{it.name}</span>
+                  <span className="cv-cust-sub">{it.qty}× · {Math.round(it.share * 100)}%</span>
+                </div>
+              ))}
+            </div>
+
+            {intel.attachRules.length > 0 && (
+              <>
+                <h4 className="cv-profile-h">Attach patterns</h4>
+                <div className="cv-intel-items">
+                  {intel.attachRules.slice(0, 4).map((r, i) => (
+                    <div key={i} className="cv-intel-item">
+                      <span>{r.item}</span>
+                      <span className="cv-cust-sub">{r.trigger} · {r.lift.toFixed(1)}× lift</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="cv-intel-foot cv-cust-sub">
+              {intel.orderCount} orders · {zl(intel.avgOrderValueGrosze)} zł avg · prefers {chanLabel(intel.preferredChannel ?? "")}
+              {intel.party.avg ? ` · party ~${intel.party.avg}` : ""}
+            </div>
+          </div>
+        )}
+      </CoreV2Dialog>
+
+      {/* send-all win-back confirm */}
+      <CoreV2Dialog
+        open={confirmAll}
+        onClose={() => setConfirmAll(false)}
+        title="Send all win-back offers"
+        footer={
+          <>
+            <button className="cv-btn ghost" onClick={() => setConfirmAll(false)} disabled={busy}>Cancel</button>
+            <button className="cv-btn primary" disabled={busy} onClick={() => { setConfirmAll(false); void sendAll(); }}>
+              Send {winback?.length ?? 0}
+            </button>
+          </>
+        }
+      >
+        <p className="cv-tender-note" style={{ lineHeight: 1.55 }}>
+          Approves and sends a win-back offer to all <b>{winback?.length ?? 0}</b> at-risk members, each with its bonus
+          points. Reachable members get an SMS/email; the rest are logged for the next visit.
+        </p>
       </CoreV2Dialog>
     </CoreV2Shell>
   );
