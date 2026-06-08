@@ -79,7 +79,6 @@ export function CoreV2Pos({
   const [tabs, setTabs] = useState<PosTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const renameSeq = useRef(1);
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const loadTabs = useCallback(async () => {
@@ -91,7 +90,6 @@ export function CoreV2Pos({
       const list = Array.isArray(data.tabs) ? data.tabs : [];
       setTabs(list);
       setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
-      renameSeq.current = list.length + 1;
     } catch {
       /* non-fatal */
     } finally {
@@ -236,7 +234,13 @@ export function CoreV2Pos({
 
   const newTab = useCallback(async () => {
     if (!pageLoc) return;
-    const name = `Tab ${renameSeq.current++}`;
+    // Derive the next default name from the highest existing "Tab N" so it never
+    // collides — even after middle checks are closed (a plain counter repeats).
+    const maxNum = tabs.reduce((max, t) => {
+      const m = /^Tab (\d+)$/.exec(t.name);
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
+    }, 0);
+    const name = `Tab ${maxNum + 1}`;
     try {
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, {
         method: "POST",
@@ -252,7 +256,7 @@ export function CoreV2Pos({
     } catch {
       /* offline — no-op */
     }
-  }, [pageLoc]);
+  }, [pageLoc, tabs]);
 
   // --- Tables (dine-in picker) --------------------------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
