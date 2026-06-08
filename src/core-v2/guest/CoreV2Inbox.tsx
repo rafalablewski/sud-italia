@@ -41,6 +41,8 @@ interface WaMessage {
   direction: "in" | "out";
   body: string;
   actor: "customer" | "bot" | "operator" | "system";
+  kind?: "text" | "selection" | "location" | "buttons" | "list" | "cta_url" | "template" | "unsupported";
+  meta?: Record<string, unknown>;
 }
 interface GuestRollup {
   name: string | null;
@@ -68,6 +70,17 @@ function initials(name: string | null, phone: string): string {
   if (name) return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return phone.slice(-2);
 }
+// Non-text message kinds get a small badge so the operator sees the interaction
+// type (a template send, an interactive menu, a shared pin) at a glance.
+const KIND_BADGE: Record<string, string> = {
+  template: "Template",
+  buttons: "Buttons",
+  list: "List",
+  cta_url: "Link",
+  location: "📍 Location",
+  selection: "Selection",
+  unsupported: "Unsupported",
+};
 function dayLabel(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
@@ -141,8 +154,9 @@ interface WaSettings {
   autoReplies: { keyword: string; reply: string }[];
   businessHours: { enabled: boolean; days: { open: string; close: string; closed: boolean }[] };
   abandonedCart: { enabled: boolean; delayHours: number };
-  flows: unknown[];
+  flows: WaFlow[];
 }
+interface WaFlow { id: string; name: string; trigger: string; enabled: boolean; steps: { prompt: string }[] }
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /**
@@ -168,6 +182,8 @@ function WaSettingsDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
   const patch = (p: Partial<WaSettings>) => setS((cur) => (cur ? { ...cur, ...p } : cur));
   const setDay = (i: number, p: Partial<{ open: string; close: string; closed: boolean }>) =>
     setS((cur) => (cur ? { ...cur, businessHours: { ...cur.businessHours, days: cur.businessHours.days.map((d, j) => (j === i ? { ...d, ...p } : d)) } } : cur));
+  const mapFlows = (fn: (flows: WaFlow[]) => WaFlow[]) => setS((cur) => (cur ? { ...cur, flows: fn(cur.flows) } : cur));
+  const setFlow = (i: number, p: Partial<WaFlow>) => mapFlows((fs) => fs.map((f, j) => (j === i ? { ...f, ...p } : f)));
 
   const save = async () => {
     if (!s || saving) return;
@@ -290,6 +306,32 @@ function WaSettingsDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
               <input className="cv-inp" type="number" value={s.abandonedCart.delayHours} onChange={(e) => patch({ abandonedCart: { ...s.abandonedCart, delayHours: parseInt(e.target.value, 10) || 0 } })} />
             </label>
           )}
+
+          {/* scripted flows — deterministic, run ahead of the LLM */}
+          <div className="cv-wa-sec-h">Scripted flows</div>
+          <div className="cv-wa-flows">
+            {s.flows.map((f, i) => (
+              <div key={f.id} className="cv-wa-flow">
+                <div className="cv-wa-flow-h">
+                  <input className="cv-inp" value={f.name} onChange={(e) => setFlow(i, { name: e.target.value })} placeholder="Flow name" />
+                  <button type="button" className={`cv-toggle ${f.enabled ? "on" : ""}`} onClick={() => setFlow(i, { enabled: !f.enabled })} aria-pressed={f.enabled}><span className="knob" /></button>
+                  <button type="button" className="cv-slot-x" aria-label="Remove flow" onClick={() => mapFlows((fs) => fs.filter((_, j) => j !== i))}>✕</button>
+                </div>
+                <input className="cv-inp" value={f.trigger} onChange={(e) => setFlow(i, { trigger: e.target.value })} placeholder="Trigger phrase (e.g. catering)" />
+                <div className="cv-wa-steps">
+                  {f.steps.map((st, si) => (
+                    <div key={si} className="cv-wa-step">
+                      <span className="sn">{si + 1}</span>
+                      <input className="cv-inp" value={st.prompt} onChange={(e) => setFlow(i, { steps: f.steps.map((x, k) => (k === si ? { prompt: e.target.value } : x)) })} placeholder="Bot prompt for this step" />
+                      <button type="button" className="cv-slot-x" aria-label="Remove step" onClick={() => setFlow(i, { steps: f.steps.filter((_, k) => k !== si) })}>✕</button>
+                    </div>
+                  ))}
+                  <button type="button" className="cv-btn ghost sm" onClick={() => setFlow(i, { steps: [...f.steps, { prompt: "" }] })}>+ Step</button>
+                </div>
+              </div>
+            ))}
+            <button type="button" className="cv-btn ghost sm" onClick={() => mapFlows((fs) => [...fs, { id: `flow-${Date.now()}`, name: "New flow", trigger: "", enabled: true, steps: [{ prompt: "" }] }])}>+ Add flow</button>
+          </div>
         </div>
       )}
     </CoreV2Dialog>
@@ -695,6 +737,9 @@ export function CoreV2Inbox() {
                           <Fragment key={i}>
                             {sep && <div className="cv-day-sep"><span>{dayLabel(m.at)}</span></div>}
                             <div className={`cv-bub ${m.actor}`}>
+                              {m.kind && m.kind !== "text" && KIND_BADGE[m.kind] && (
+                                <span className="cv-bub-kind">{KIND_BADGE[m.kind]}</span>
+                              )}
                               {m.body}
                               <span className="t">{m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : m.actor === "system" ? "System" : ""} {clock(m.at)}</span>
                             </div>

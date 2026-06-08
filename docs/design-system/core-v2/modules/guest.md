@@ -16,9 +16,11 @@ The guest engagement hub. `/core-v2/guest`.
 - **Layout:** a 5-up KPI strip over the 3-pane console — conversation list
   (`.cv-conv` rows with avatar, LIVE/PAY badges, search + inbox/live/
   awaiting/archived filters) · thread (`.cv-bub` bubbles toned by actor:
-  customer/operator/bot/system, grouped under `.cv-day-sep` **day
-  separators**; the header carries a `.cv-window` **24h-window** chip
-  open/closed) + a `.cv-quickreplies` row of starters (Menu · Payment link
+  customer/operator/bot/system, with a `.cv-bub-kind` badge on non-text
+  kinds — Template / Buttons / List / Link / 📍 Location / Selection —
+  grouped under `.cv-day-sep` **day separators**; the header carries a
+  `.cv-window` **24h-window** chip open/closed) + a `.cv-quickreplies`
+  row of starters (Menu · Payment link
   [injects the live pay URL] · Reservation · Comp dessert) over the
   composer · context (`.cv-ctx`: live cart + guest rollup + tier).
 - **Funnel:** a subbar **Funnel** button opens a `CoreV2Dialog` with a
@@ -35,9 +37,11 @@ The guest engagement hub. `/core-v2/guest`.
   (`.cv-wa-settings`) — bot enable, welcome message, AI toggle +
   instructions, away message, daily cap, auto-archive, re-open template,
   opt-out phrases, **keyword auto-replies** (add/remove), **business
-  hours** (per-day open/close/closed), and **abandoned-cart** recovery.
-  Loads `GET /api/admin/whatsapp/settings`, writes the whole edited object
-  back via `PATCH` (preserving `flows` + `defaultLocation`).
+  hours** (per-day open/close/closed), **abandoned-cart** recovery, and a
+  **scripted-flows** builder (`.cv-wa-flows` — name/trigger/enable per
+  flow + ordered step prompts, add/remove). Loads
+  `GET /api/admin/whatsapp/settings`, writes the whole edited object back
+  via `PATCH` (preserving `defaultLocation`).
 - **Engine + API** — same as today's `/core/guest/whatsapp`:
   `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}` (10s
   poll), `GET …/transcripts/{phone}` (6s on select),

@@ -471,6 +471,7 @@
 .cv2 .cv-msgs { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 9px; }
 .cv2 .cv-bub { max-width: 74%; padding: 9px 13px; border-radius: 13px; font-size: 13.5px; line-height: 1.45; position: relative; }
 .cv2 .cv-bub .t { display: block; font-size: 9px; opacity: .6; margin-top: 4px; font-family: var(--mono); }
+.cv2 .cv-bub-kind { display: block; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .7; margin-bottom: 3px; }
 .cv2 .cv-bub.customer { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
 .cv2 .cv-bub.operator { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
 .cv2 .cv-bub.bot { align-self: flex-end; background: var(--info-wash); color: var(--ink); border: 1px solid var(--line); border-bottom-right-radius: 4px; }
@@ -501,6 +502,15 @@
 .cv2 .cv-wa-day .dn { width: 38px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .cv2 .cv-wa-day .cv-inp { width: 110px; }
 .cv2 .cv-wa-day .cv-chip { margin-left: auto; height: 28px; font-size: 11px; }
+/* scripted-flows builder */
+.cv2 .cv-wa-flows { display: flex; flex-direction: column; gap: 10px; }
+.cv2 .cv-wa-flow { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 11px; display: flex; flex-direction: column; gap: 8px; }
+.cv2 .cv-wa-flow-h { display: flex; align-items: center; gap: 8px; }
+.cv2 .cv-wa-flow-h .cv-inp { flex: 1; }
+.cv2 .cv-wa-steps { display: flex; flex-direction: column; gap: 6px; padding-left: 4px; border-left: 2px solid var(--line); margin-left: 2px; }
+.cv2 .cv-wa-step { display: flex; align-items: center; gap: 8px; }
+.cv2 .cv-wa-step .sn { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--panel-3); color: var(--ink-3); font-family: var(--mono); font-size: 10px; font-weight: 600; }
+.cv2 .cv-wa-step .cv-inp { flex: 1; }
 /* broadcast campaign list */
 .cv2 .cv-bc-list { display: flex; flex-direction: column; gap: 9px; }
 .cv2 .cv-bc { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; }
