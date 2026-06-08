@@ -7,7 +7,7 @@ Per-surface anatomy for the four surfaces the truck runs on. Each lands
 | --- | --- | --- | --- |
 | **POS** | `/core-v2/pos` | **Wired** — multi-tab checks, coursing, combos, Charge→Tender | [`pos.md`](./pos.md) |
 | **KDS** | `/core-v2/kds` | **Wired** — Floor lanes + Chef + Fleet, live stream + bump | [`kds.md`](./kds.md) |
-| **Guest** | `/core-v2/guest` | Scaffold — shell + subbar live (Step 5) | [`guest.md`](./guest.md) |
+| **Guest** | `/core-v2/guest` | **Inbox wired** (5a); Guests/Loyalty/Concierge/Book scaffold (5b–e) | [`guest.md`](./guest.md) |
 | **Service** | `/core-v2/service` | Scaffold — shell + subbar live (Step 6) | [`service.md`](./service.md) |
 
 All four share the one chrome — `CoreV2Shell` (`src/core-v2/shell/`),

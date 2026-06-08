@@ -2,23 +2,38 @@
 
 The guest engagement hub. `/core-v2/guest`.
 
-- **Live code:** `src/app/core-v2/guest/page.tsx` (scaffold via
-  `ScaffoldSurface`).
-- **Status:** **Scaffold (Step 5 pending).** Shell + subbar live (Inbox ·
-  Guests · Loyalty · Concierge · Book tabs); body is the scaffold panel.
+- **Routes:** five nested views under `/core-v2/guest/*`; the bare hub
+  redirects to **Inbox**. The view switcher is `guestTabs(active)`
+  (`src/core-v2/guest/guestTabs.ts`) on the CoreV2Shell subbar.
+- **Status:** **Inbox wired** (Step 5a). Guests · Loyalty · Concierge ·
+  Book render the shell + scaffold panel (their tabs live) until 5b–5e.
 
-## Planned anatomy
+## Inbox (`/core-v2/guest/inbox`) — wired
 
-One roster across every channel, five nested views:
+- **Live code:** `src/core-v2/guest/CoreV2Inbox.tsx`.
+- **Theme:** `.cv-guest-inbox` / `.cv-kpi-strip` / `.cv-inbox` (3-pane:
+  `.cv-convs` · `.cv-thread` · `.cv-ctx`) in `themes/core-v2/index.css`.
+- **Layout:** a 5-up KPI strip over the 3-pane console — conversation list
+  (`.cv-conv` rows with avatar, LIVE/PAY badges, search + inbox/live/
+  awaiting/archived filters) · thread (`.cv-bub` bubbles toned by actor:
+  customer/operator/bot/system) + composer · context (`.cv-ctx`: live
+  cart + guest rollup + tier).
+- **Engine + API** — same as today's `/core/guest/whatsapp`:
+  `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics}` (10s
+  poll), `GET …/transcripts/{phone}` (6s on select),
+  `GET /api/admin/customers/{phone}` for the rollup; **send** =
+  `POST …/sessions/{phone}/message {body}`; **archive/pin** =
+  `POST …/flags {phone, archived?, pinned?}`. `mergeConversations` folds
+  active sessions over transcript heads.
 
-- **Inbox** — the WhatsApp till: a 3-pane (conversation list · thread ·
-  live order context + next-best-action), bot/staff bubbles, 24h-window
-  state.
+## Planned anatomy (5b–5e)
+
 - **Guests** — the customer book (CRM): roster + filters + profile drawer
-  (LTV, points, timeline).
-- **Loyalty** — phone-enrolled members, tiers (Bronze → Platinum), family
-  wallets, redemptions, win-back.
-- **Concierge** — the AI capability layer + EU-14 allergen matrix.
-- **Book** — slot + table in one move.
+  (LTV, points, timeline). `GET /api/admin/crm`.
+- **Loyalty** — members (Bronze → Platinum), wallets, redemptions,
+  win-back. `GET /api/admin/{members,wallets,wallet-redemptions}`.
+- **Concierge** — MCP capability inspector + EU-14 allergen matrix.
+  `GET/PATCH /api/admin/concierge`.
+- **Book** — slot + table in one move (shared with Service).
 
 Parity target: today's `/core/guest`. Classes documented here when ported.

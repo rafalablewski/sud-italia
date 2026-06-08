@@ -108,7 +108,8 @@ four surfaces and their views:
    coursing, combos, cross-sell, Charge→Tender).
 4. ✅ **KDS** (always-dark wall) — Floor lanes + Chef + Fleet, live order
    stream + bump.
-5. **Guest** hub (Inbox · CRM · Loyalty · Concierge · Book).
+5. **Guest** hub (Inbox · CRM · Loyalty · Concierge · Book) — _Inbox
+   wired (5a); CRM · Loyalty · Concierge · Book next (5b–e)._
 6. **Service** (Floor · Slots).
 7. **Swap** — delete `/core`, promote `/core-v2` → `/core`, retire
    `suite.css` + the old `index.css` threads.
