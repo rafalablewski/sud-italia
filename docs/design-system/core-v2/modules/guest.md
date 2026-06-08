@@ -30,10 +30,12 @@ The guest engagement hub. `/core-v2/guest`.
 
 `src/core-v2/guest/CoreV2Crm.tsx`. Roster (`.cv-tbl`) with a 4-up KPI strip, search + segment chips (All/VIP/Members/Active/Repeat/New/Lapsed) + sort (value/recency/orders/points/name), an RFM-derived **Health** pill, and a profile drawer (`CoreV2Dialog`): stat grid, SMS/email **consent** toggles + GDPR export, recent-orders timeline, **points** adjust, and **notes** (add/delete). Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/points` (POST), `customers/{phone}/consent` (PATCH). `health`/`rfm`/`inSeg` mirror the live classification.
 
-## Planned anatomy (5c–5e)
+## Loyalty (`/core-v2/guest/loyalty`) — wired
 
-- **Loyalty** — members (Bronze → Platinum), wallets, redemptions,
-  win-back. `GET /api/admin/{members,wallets,wallet-redemptions}`.
+`src/core-v2/guest/CoreV2Loyalty.tsx`. Four tabs (Members · Wallets · Redemptions · Win-back) over a KPI strip. Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
+
+## Planned anatomy (5d–5e)
+
 - **Concierge** — MCP capability inspector + EU-14 allergen matrix.
   `GET/PATCH /api/admin/concierge`.
 - **Book** — slot + table in one move (shared with Service).
