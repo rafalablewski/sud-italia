@@ -34,11 +34,26 @@ for owners (role from `/api/admin/me`).
 
 ## Ticket card (`.cv-tk`)
 
-`#shortId` + channel chiplet · a toned **due** clock · the item lines
-(`.q` qty + name + italic notes; items off the active station dim) · a
-`.cv-meter` cook-time bar · a `.cv-bump` button. SLA **tone** drives the
-left border, due colour and meter fill: `queued · firing · warn · risk ·
-late · ready`.
+Header: `#shortId` + channel chiplet on the left; an `At risk` pill
+(`.cv-tk-risk`) + the toned **due** clock on the right (`.cv-tk-hend`).
+Below, in order, the **safety-relevant** content the line needs:
+
+- `.cv-tk-sim` — *Simulation — not a real order* (sandbox tickets; the
+  card also goes dashed via `.cv-tk.sim`).
+- `.cv-tk-course` — *Coursed · Mains, Dessert held* when a dine-in check
+  has held courses (`t.coursing.held`).
+- `.cv-tk-items` — lines grouped by station (`.cv-tk-grp` header per
+  category, canonical order; headers shown only in the all-station Floor
+  view). Each `.it` is `.q` qty + an `.it-body` (name, then `.mod`
+  modifier lines — flagged picks render `.mod.flag` bold-amber — then any
+  note). Items off the active station dim.
+- `.cv-tk-alrg` — an amber-hairline allergen strip (`Allergens · …`,
+  deduped across the ticket). **Never dropped** — it's a safety line.
+- `.cv-tk-note` — the order's special instructions (`Note …`).
+
+Then a `.cv-meter` cook-time bar and a `.cv-bump` button. SLA **tone**
+drives the left border, due colour and meter fill: `queued · firing ·
+warn · risk · late · ready`.
 
 ## Engine + API contract
 
@@ -55,7 +70,10 @@ Wired 1:1 to the same engine as today's `/core/kds`:
 
 ## At parity
 
-Fullscreen kiosk (bare wall), number-key bump (1–9), recall
-(`POST /api/admin/orders/{id}/recall`), an opt-in chime, and the 86
-control (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature
-with today's `/core/kds`.
+Fullscreen kiosk (bare wall), number-key bump (1–9), a manual `⟳`
+refresh, pause/resume, recall (`POST /api/admin/orders/{id}/recall`,
+tray persisted per location in `localStorage` so a refresh keeps the undo
+window), two opt-in chimes (bright bell on a new ticket, lower alarm the
+instant a ticket breaches SLA), and the 86 control
+(`/api/admin/kds/eighty-six`) are all wired — feature-for-feature with
+today's `/core/kds`.

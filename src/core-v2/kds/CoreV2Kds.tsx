@@ -7,7 +7,8 @@ import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { analyzeTruck } from "@/lib/kds-prediction";
-import { buildKdsTicket, type KdsTicket } from "@/lib/kds-ticket";
+import { buildKdsTicket, type KdsTicket, type KdsTicketItem } from "@/lib/kds-ticket";
+import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
 import {
   KDS_COLUMNS,
   STATION_FILTERS,
@@ -25,6 +26,45 @@ const BUMP_LABEL: Partial<Record<OrderStatus, string>> = {
   preparing: "Mark ready",
   ready: "Bump to pass",
 };
+
+// Canonical station order for grouping a multi-station ticket's lines.
+const CATEGORY_ORDER = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
+function catRank(c: string): number {
+  const i = CATEGORY_ORDER.indexOf(c);
+  return i < 0 ? 99 : i;
+}
+function groupItems(items: KdsTicketItem[]): [string, KdsTicketItem[]][] {
+  const groups = new Map<string, KdsTicketItem[]>();
+  for (const it of items) {
+    const arr = groups.get(it.category) ?? [];
+    arr.push(it);
+    groups.set(it.category, arr);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => catRank(a[0]) - catRank(b[0]))
+    .map(([, arr]) => [arr[0].categoryLabel, arr] as [string, KdsTicketItem[]]);
+}
+
+// Short synthesised beep (no asset files) — the new-ticket bell + breach alarm.
+function playTone(freq: number, dur: number, gain = 0.2): void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.start();
+    o.stop(ctx.currentTime + dur + 0.02);
+  } catch {
+    /* audio blocked — no-op */
+  }
+}
 
 function channelTag(t: KdsTicket): string {
   if (t.fulfillmentType === "dine-in") return `Dine-in${t.partySize ? ` · ${t.partySize}p` : ""}`;
@@ -151,6 +191,27 @@ export function CoreV2Kds() {
     const id = setInterval(() => setRecalls((r) => r.filter((x) => Date.now() - x.at < 10 * 60 * 1000)), 30000);
     return () => clearInterval(id);
   }, [recalls.length]);
+  // Persist the recall tray per location so a tablet refresh keeps its undo
+  // window (the recall API only works for ~10 min after the bump anyway).
+  const recallKey = location ? `cv2-kds-recall:${location}` : null;
+  useEffect(() => {
+    if (!recallKey) return;
+    try {
+      const raw = localStorage.getItem(recallKey);
+      const saved = raw ? (JSON.parse(raw) as { orderId: string; label: string; at: number }[]) : [];
+      setRecalls(saved.filter((x) => Date.now() - x.at < 10 * 60 * 1000));
+    } catch {
+      setRecalls([]);
+    }
+  }, [recallKey]);
+  useEffect(() => {
+    if (!recallKey) return;
+    try {
+      localStorage.setItem(recallKey, JSON.stringify(recalls));
+    } catch {
+      /* storage full / unavailable — non-fatal */
+    }
+  }, [recallKey, recalls]);
 
   const toggleKiosk = useCallback(() => {
     setKiosk((k) => {
@@ -224,32 +285,31 @@ export function CoreV2Kds() {
     return () => window.removeEventListener("keydown", onKey);
   }, [bumpList, advance]);
 
-  // Chime when a new ticket lands (off by default — the line opts in).
+  // Two opt-in chimes (off by default — the line opts in): a bright bell when
+  // a new ticket lands, and a lower alarm the instant a ticket breaches SLA.
   const prevNew = useRef(0);
   useEffect(() => {
     const n = counts.confirmed ?? 0;
-    if (soundOn && n > prevNew.current) {
-      try {
-        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (Ctx) {
-          const ctx = new Ctx();
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.frequency.value = 880;
-          o.connect(g);
-          g.connect(ctx.destination);
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-          o.start();
-          o.stop(ctx.currentTime + 0.26);
-        }
-      } catch {
-        /* audio blocked — no-op */
-      }
-    }
+    if (soundOn && n > prevNew.current) playTone(880, 0.25);
     prevNew.current = n;
   }, [counts.confirmed, soundOn]);
+
+  // SLA-breach alarm — fires once per ticket as it crosses the promised time.
+  // Already-late tickets are seeded silently so toggling sound on (or a refresh)
+  // never triggers a back-catalogue of alarms; only fresh breaches sound.
+  const breached = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const present = new Set<string>();
+    for (const t of allTickets) {
+      present.add(t.id);
+      const late = t.status !== "ready" && t.promisedReadyAtMs !== null && t.promisedReadyAtMs < now;
+      if (late && !breached.current.has(t.id)) {
+        breached.current.add(t.id);
+        if (soundOn) playTone(320, 0.4, 0.22);
+      }
+    }
+    for (const id of breached.current) if (!present.has(id)) breached.current.delete(id);
+  }, [allTickets, now, soundOn]);
 
   const isOwner = role === "owner";
   const tabs = [
@@ -261,27 +321,55 @@ export function CoreV2Kds() {
   const ticketCard = (t: KdsTicket) => {
     const due = dueLabel(t, now);
     const pct = slaPct(t, now);
+    const atRisk = t.atRisk && t.status !== "ready";
+    const groups = groupItems(t.items);
+    const grouped = station === "all" && groups.length > 1;
+    const allergens = Array.from(new Set(t.items.flatMap((i) => i.allergens))).filter(Boolean);
+    const held = t.coursing?.held ?? [];
     return (
-      <div key={t.id} className={`cv-tk t-${due.tone}`}>
+      <div key={t.id} className={`cv-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
         <div className="cv-tk-h">
           <span className="id">
             #{t.shortId}
             <span className="chiplet">{channelTag(t)}</span>
           </span>
-          <span className={`due t-${due.tone}`}>{due.text}</span>
+          <span className="cv-tk-hend">
+            {atRisk && <span className="cv-tk-risk">At risk</span>}
+            <span className={`due t-${due.tone}`}>{due.text}</span>
+          </span>
         </div>
+        {t.simulated && <div className="cv-tk-sim">Simulation — not a real order</div>}
+        {held.length > 0 && (
+          <div className="cv-tk-course">Coursed · {held.map((c) => POS_COURSE_LABELS[c]).join(", ")} held</div>
+        )}
         <div className="cv-tk-items">
-          {t.items.map((it, i) => {
-            const dim = station !== "all" && it.category !== station;
-            return (
-              <div key={i} className={dim ? "it dim" : "it"}>
-                <span className="q">{it.quantity}×</span>
-                <span className="nm">{it.name}</span>
-                {it.notes && <span className="mod">{it.notes}</span>}
-              </div>
-            );
-          })}
+          {groups.map(([label, items]) => (
+            <div key={label} className="cv-tk-grp-block">
+              {grouped && <div className="cv-tk-grp">{label}</div>}
+              {items.map((it, i) => {
+                const dim = station !== "all" && it.category !== station;
+                return (
+                  <div key={i} className={dim ? "it dim" : "it"}>
+                    <span className="q">{it.quantity}×</span>
+                    <div className="it-body">
+                      <div className="nm">{it.name}</div>
+                      {it.modifiers.map((m, mi) => (
+                        <div key={mi} className={m.flag ? "mod flag" : "mod"}>{m.label}</div>
+                      ))}
+                      {it.notes && <div className="mod">{it.notes}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
+        {allergens.length > 0 && <div className="cv-tk-alrg">Allergens · {allergens.join(" · ")}</div>}
+        {t.specialInstructions && (
+          <div className="cv-tk-note">
+            <b>Note</b> {t.specialInstructions}
+          </div>
+        )}
         <div className="cv-meter">
           <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
         </div>
@@ -312,6 +400,7 @@ export function CoreV2Kds() {
             ↩ {recalls.length}
           </button>
         )}
+        <button type="button" className="cv-iconbtn" title="Refresh now" onClick={() => refresh()}>⟳</button>
         <button type="button" className="cv-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
         <button type="button" className="cv-iconbtn" title={soundOn ? "Mute" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
           {soundOn ? "🔔" : "🔕"}

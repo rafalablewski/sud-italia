@@ -288,12 +288,24 @@
 .cv2 .cv-tk-h .due { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--t-queued); }
 .cv2 .cv-tk-h .due.t-firing { color: var(--t-firing); } .cv2 .cv-tk-h .due.t-warn { color: var(--t-warn); }
 .cv2 .cv-tk-h .due.t-risk { color: var(--t-risk); } .cv2 .cv-tk-h .due.t-late { color: var(--t-late); } .cv2 .cv-tk-h .due.t-ready { color: var(--t-ready); }
+.cv2 .cv-tk-hend { display: flex; align-items: center; gap: 7px; }
+.cv2 .cv-tk-risk { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--t-risk); background: rgba(155,127,214,.16); border-radius: 5px; padding: 2px 6px; }
+.cv2 .cv-tk.sim { border-style: dashed; }
+.cv2 .cv-tk-sim { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.cv2 .cv-tk-course { font-size: 11.5px; color: var(--ink-2); margin-bottom: 6px; }
+.cv2 .cv-tk-grp-block + .cv-tk-grp-block { margin-top: 5px; }
+.cv2 .cv-tk-grp { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
 .cv2 .cv-tk-items { display: flex; flex-direction: column; gap: 3px; }
-.cv2 .cv-tk-items .it { display: flex; gap: 8px; font-size: 14px; align-items: baseline; }
+.cv2 .cv-tk-items .it { display: flex; gap: 8px; font-size: 14px; }
 .cv2 .cv-tk-items .it.dim { opacity: .4; }
-.cv2 .cv-tk-items .it .q { font-family: var(--mono); font-weight: 600; color: var(--t-warn); flex: none; }
-.cv2 .cv-tk-items .it .nm { flex: 1; min-width: 0; }
+.cv2 .cv-tk-items .it .q { font-family: var(--mono); font-weight: 600; color: var(--t-warn); flex: none; line-height: 1.35; }
+.cv2 .cv-tk-items .it .it-body { flex: 1; min-width: 0; }
+.cv2 .cv-tk-items .it .nm { line-height: 1.35; }
 .cv2 .cv-tk-items .it .mod { color: var(--ink-3); font-style: italic; font-size: 12px; }
+.cv2 .cv-tk-items .it .mod.flag { color: var(--t-warn); font-style: normal; font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: .03em; }
+.cv2 .cv-tk-alrg { margin-top: 8px; font-size: 11.5px; color: var(--t-warn); background: rgba(217,154,60,.12); border: 1px solid rgba(217,154,60,.32); border-radius: 6px; padding: 5px 8px; }
+.cv2 .cv-tk-note { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
+.cv2 .cv-tk-note b { color: var(--ink); font-weight: 600; margin-right: 4px; }
 .cv2 .cv-meter { height: 5px; border-radius: 3px; background: rgba(255,255,255,.09); margin: 10px 0 0; overflow: hidden; }
 .cv2 .cv-meter i { display: block; height: 100%; border-radius: 3px; background: var(--t-firing); }
 .cv2 .cv-meter i.t-warn { background: var(--t-warn); } .cv2 .cv-meter i.t-risk { background: var(--t-risk); }
