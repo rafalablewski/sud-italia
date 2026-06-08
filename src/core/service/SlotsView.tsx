@@ -134,10 +134,17 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
     [board],
   );
 
-  const slotRow = (s: TimeSlot) => (
+  const slotRow = (s: TimeSlot) => {
+    const fill = s.maxOrders > 0 ? Math.min(100, (s.currentOrders / s.maxOrders) * 100) : 0;
+    return (
     <div key={s.id} className="slt-row">
       <span className="slt-time mono">{s.time}</span>
-      <span className="tnum slt-cap">{s.currentOrders}/{s.maxOrders}</span>
+      <div className="slt-cap-col">
+        <span className="tnum slt-cap">{s.currentOrders}/{s.maxOrders}</span>
+        <div className="captrack">
+          <div className={`capfill${fill >= 85 ? " hot" : ""}`} style={{ width: `${fill}%` }} />
+        </div>
+      </div>
       <div className="slt-types">
         {s.fulfillmentTypes.map((f) => (
           <span key={f} className="slt-type">{f}</span>
@@ -154,7 +161,8 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
         <button type="button" className="btn ghost" disabled={acting === s.id} onClick={() => void del(s)}>Delete</button>
       </div>
     </div>
-  );
+    );
+  };
 
   const byTime = (a: TimeSlot, b: TimeSlot) => a.time.localeCompare(b.time);
 
