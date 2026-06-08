@@ -21,7 +21,9 @@ for owners (role from `/api/admin/me`).
   `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
   the subbar focuses a single lane into the dense `.cv-chefq` wrap.
 - **Chef** — the same tickets as a single station-filtered make-queue
-  (`.cv-chefq`).
+  (`.cv-chefq`), under a `.cv-chef-depth` strip showing the cook's
+  focused-station **queue depth** + **oldest** ticket (amber past 8 min)
+  and the active station name.
 - **Fleet** — `FleetWall`: the owner Atlas. A cross-truck
   `.cv-fleet-bench` (one promise-accuracy `.cv-track` bar per truck,
   leader flagged) over a 2-up `.cv-fleet-grid` of `.cv-truck` tiles. Each

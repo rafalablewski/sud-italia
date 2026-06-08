@@ -288,6 +288,14 @@ export function CoreV2Kds() {
     return { oldest: Math.max(...ages), avg: ages.reduce((a, b) => a + b, 0) / ages.length };
   }, [allTickets, now]);
 
+  // The cook's focused-station depth: how many tickets touch this station and
+  // the oldest one waiting — the Chef view's queue pressure.
+  const chefDepth = useMemo(() => {
+    const ts = station === "all" ? allTickets : allTickets.filter((t) => t.items.some((it) => it.category === station));
+    const ages = ts.filter((t) => t.status !== "ready").map((t) => Math.max(0, (now - t.paidAtMs) / 1000));
+    return { count: ts.length, oldest: ages.length ? Math.max(...ages) : 0 };
+  }, [allTickets, station, now]);
+
   // Number-key bump (1–9, 0=10th) on the focused lane, or the leftmost
   // non-empty lane — the commercial bump-bar wiring. Ignored while typing.
   const bumpList = useMemo(() => {
@@ -479,13 +487,20 @@ export function CoreV2Kds() {
             </div>
 
             {view === "chef" ? (
-              <div className="cv-chefq">
-                {allTickets.length === 0 ? (
-                  <div className="cv-kds-empty">No active tickets.</div>
-                ) : (
-                  allTickets.map(ticketCard)
-                )}
-              </div>
+              <>
+                <div className="cv-chef-depth">
+                  <div><span className="dl">In queue</span><span className="dv">{chefDepth.count}</span></div>
+                  <div><span className="dl">Oldest</span><span className={chefDepth.oldest >= 480 ? "dv warn" : "dv"}>{chefDepth.oldest ? fmtClock(chefDepth.oldest) : "—"}</span></div>
+                  <div className="dstn">{station === "all" ? "All stations" : MENU_CATEGORY_LABELS[station]}</div>
+                </div>
+                <div className="cv-chefq">
+                  {allTickets.length === 0 ? (
+                    <div className="cv-kds-empty">No active tickets.</div>
+                  ) : (
+                    allTickets.map(ticketCard)
+                  )}
+                </div>
+              </>
             ) : lane === "all" ? (
               <div className="cv-lanes">
                 {KDS_COLUMNS.map((col) => {

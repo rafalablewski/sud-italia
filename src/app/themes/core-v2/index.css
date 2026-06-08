@@ -316,6 +316,11 @@
 .cv2 .cv-lane-b { overflow-y: auto; padding: 11px; display: flex; flex-direction: column; gap: 11px; }
 
 /* chef / single-lane: dense wrap */
+.cv2 .cv-chef-depth { display: flex; align-items: center; gap: 22px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; }
+.cv2 .cv-chef-depth > div { display: flex; flex-direction: column; gap: 1px; }
+.cv2 .cv-chef-depth .dl { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.cv2 .cv-chef-depth .dv { font-family: var(--mono); font-weight: 600; font-size: 18px; } .cv2 .cv-chef-depth .dv.warn { color: var(--t-warn); }
+.cv2 .cv-chef-depth .dstn { margin-left: auto; font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--ink-2); }
 .cv2 .cv-chefq { flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-content: start; }
 
 /* ticket card */
