@@ -37,7 +37,7 @@ import {
   defaultCourseForCategory,
 } from "@/lib/pos-coursing";
 import type { CartItem, PosCourse } from "@/data/types";
-import { useAdminLocation } from "@/shared/LocationContext";
+import { useLocation } from "@/shared/LocationContext";
 import { Badge, Button, Dialog, EmptyState, type BadgeTone } from "@/ui";
 
 // Floor-table status → admin Badge tone (standard admin styling for the picker).
@@ -121,7 +121,7 @@ export function AdminPos({
   menusByLocation: Record<string, MenuItem[]>;
   upsellByLocation: Record<string, UpsellConfig | null>;
 }) {
-  const { location, activeLocations } = useAdminLocation();
+  const { location, activeLocations } = useLocation();
 
   const locationKeys = useMemo(() => Object.keys(menusByLocation), [menusByLocation]);
   const fallbackLoc = locationKeys[0] ?? "";

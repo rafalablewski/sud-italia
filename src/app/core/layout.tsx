@@ -3,7 +3,7 @@ import "../themes/core/index.css";
 import "../themes/core/suite.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
-import { AdminCurrencyGuard } from "@/shared/AdminCurrencyGuard";
+import { CurrencyGuard } from "@/shared/CurrencyGuard";
 import { themeBootScript } from "@/shared/theme";
 import { CoreProviders } from "./CoreProviders";
 
@@ -52,7 +52,7 @@ export default function CoreLayout({
       className={`${adminBody.variable} ${adminDisplay.variable} ${adminMono.variable} flex flex-col flex-1`}
     >
       <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-      <AdminCurrencyGuard />
+      <CurrencyGuard />
       <CoreProviders>{children}</CoreProviders>
     </div>
   );

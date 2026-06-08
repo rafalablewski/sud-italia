@@ -10,8 +10,30 @@ promote `/core-v2` → `/core`) is the final step.
 > (`base/index.css` → `core/index.css` → `core/suite.css`), old-theme
 > threads still backing Mobile KDS + WhatsApp dialogs, and dialogs/fonts
 > leaning on the Admin layer. Core v2 starts from **one** theme, owns its
-> own shell, and shares only the neutral `src/ui` kit — so "Core ≠ Admin"
-> is true at every layer.
+> own shell, and builds its **own** UI primitives (`src/core-v2/ui/` —
+> toasts, dialogs, buttons) rather than the admin-styled `src/ui` kit — so
+> "Core ≠ Admin" is true at every layer.
+
+## What core-v2 reuses (and what it does not)
+
+**UI: nothing.** No `suite.css`, no `themes/core/`, no `src/core/*`
+component, no `src/ui` kit. The theme, shell, and every primitive are
+written fresh under `src/app/themes/core-v2/` + `src/core-v2/`.
+
+**Platform: the shared engine**, because the brief is "keep all
+functionalities and technicals" — forking these would mean two databases,
+two auth systems, two menus:
+
+- data/store — `@/data/menus`, `@/data/types`, `@/lib/locations-store`
+- auth — `@/lib/admin-auth`, `@/lib/permissions`
+- shared state/infra — `@/shared/LocationContext` (`LocationProvider` /
+  `useLocation`), `@/shared/CurrencyGuard` (PLN pin)
+
+The shared infra was **neutralised** out of the `Admin*` naming
+(`AdminLocationProvider` → `LocationProvider`, `useAdminLocation` →
+`useLocation`, `AdminCurrencyGuard` → `CurrencyGuard`) so nothing in
+core-v2 reads as "admin". (Admin's own scope hook is the separate
+`useAdminLocationV3`, untouched.)
 
 ## Status — scaffold live
 

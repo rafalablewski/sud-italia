@@ -1,7 +1,7 @@
 import "../themes/core-v2/index.css";
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
-import { AdminCurrencyGuard } from "@/shared/AdminCurrencyGuard";
+import { CurrencyGuard } from "@/shared/CurrencyGuard";
 import { CoreV2Providers } from "./CoreV2Providers";
 
 /**
@@ -40,7 +40,7 @@ export default function CoreV2Layout({ children }: { children: React.ReactNode }
       className={`cv2 ${cvUi.variable} ${cvDisplay.variable} ${cvMono.variable}`}
     >
       <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
-      <AdminCurrencyGuard />
+      <CurrencyGuard />
       <CoreV2Providers>{children}</CoreV2Providers>
     </div>
   );

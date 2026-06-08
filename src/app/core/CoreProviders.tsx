@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AdminLocationProvider } from "@/shared/LocationContext";
+import { LocationProvider } from "@/shared/LocationContext";
 import { ShellContext, type ShellOverlays } from "@/shared/ShellContext";
 import { ToastProvider } from "@/ui/Toast";
 import { permissionForAdminPage } from "@/lib/permissions";
@@ -77,10 +77,10 @@ export function CoreProviders({ children }: { children: ReactNode }) {
   }, [pathname, gate, router]);
 
   return (
-    <AdminLocationProvider>
+    <LocationProvider>
       <ShellContext.Provider value={value}>
         <ToastProvider>{children}</ToastProvider>
       </ShellContext.Provider>
-    </AdminLocationProvider>
+    </LocationProvider>
   );
 }

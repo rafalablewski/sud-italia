@@ -8,7 +8,7 @@ import { markAdminContext, unmarkAdminContext } from "@/lib/currency";
  *  CurrencySwitcher's mount effect clears the pin when the operator
  *  navigates back to a customer route. See lib/currency.ts header for
  *  the wider design note. */
-export function AdminCurrencyGuard() {
+export function CurrencyGuard() {
   useEffect(() => {
     markAdminContext();
     return () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useAdminLocation } from "@/shared/LocationContext";
+import { useLocation } from "@/shared/LocationContext";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { MENU_CATEGORY_LABELS, type MenuCategory, type MenuItem } from "@/data/types";
 
@@ -25,7 +25,7 @@ function zl(grosze: number): string {
  * shows the empty-check state so the surface reads honestly.
  */
 export function CoreV2Pos({ menusByLocation }: { menusByLocation: Record<string, MenuItem[]> }) {
-  const { location } = useAdminLocation();
+  const { location } = useLocation();
   const locationKeys = useMemo(() => Object.keys(menusByLocation), [menusByLocation]);
   const activeKey = location && menusByLocation[location] ? location : locationKeys[0];
   const menu = useMemo(() => menusByLocation[activeKey] ?? [], [menusByLocation, activeKey]);

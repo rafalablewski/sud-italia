@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAdminLocation } from "@/shared/LocationContext";
+import { useLocation } from "@/shared/LocationContext";
 
 /**
  * Location chip — shows the active truck (real data from LocationContext) and
@@ -9,7 +9,7 @@ import { useAdminLocation } from "@/shared/LocationContext";
  * rest of Core reads, so a switch here follows you across surfaces.
  */
 export function CoreV2LocationChip() {
-  const { location, setLocation, activeLocations } = useAdminLocation();
+  const { location, setLocation, activeLocations } = useLocation();
   const order = ["", ...activeLocations.map((l) => l.slug)];
   const current = activeLocations.find((l) => l.slug === location);
   const label = current ? current.name : "All trucks";

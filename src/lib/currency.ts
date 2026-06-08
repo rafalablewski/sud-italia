@@ -15,7 +15,7 @@
 // Admin contexts: `formatPrice()` in admin pages must always return PLN
 // because the operator works in source-of-truth currency. Cookies are
 // origin-wide so we can't naturally scope away — instead, the admin
-// layout mounts <AdminCurrencyGuard /> on first paint, which calls
+// layout mounts <CurrencyGuard /> on first paint, which calls
 // `markAdminContext()` and pins the formatter to PLN for the duration
 // of that client session. Returning to customer routes via
 // CurrencySwitcher's effect clears the pin (calls
@@ -52,7 +52,7 @@ const CURRENCY_STORAGE_KEY = "sud-italia-currency";
 let currentCurrency: Currency = "PLN";
 let currentRates: Record<Currency, number> = { ...DEFAULT_RATES };
 
-// Admin-context pin — set by <AdminCurrencyGuard/> on mount, cleared by
+// Admin-context pin — set by <CurrencyGuard/> on mount, cleared by
 // the customer CurrencySwitcher when it next reads the cookie. While the
 // pin is on, `getCurrency()` always returns "PLN" regardless of cookie /
 // localStorage state — kills the "operator visits /locations, switches
@@ -160,7 +160,7 @@ function getFormatter(target: Currency): Intl.NumberFormat {
 /** Currency-aware price formatter. When `currency` is omitted, reads the
  *  customer's preference from the cookie (server + client) or
  *  localStorage fallback (legacy). The admin pin (set by
- *  <AdminCurrencyGuard/>) forces PLN regardless. */
+ *  <CurrencyGuard/>) forces PLN regardless. */
 export function formatPriceInCurrency(
   grosze: number,
   currency?: Currency,

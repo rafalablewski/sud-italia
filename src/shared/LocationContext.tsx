@@ -18,7 +18,7 @@ interface LocationContextValue {
 
 const LocationContext = createContext<LocationContextValue | null>(null);
 
-export function AdminLocationProvider({ children }: { children: ReactNode }) {
+export function LocationProvider({ children }: { children: ReactNode }) {
   const activeLocations = useMemo(() => getActiveLocations(), []);
   const [location, setLocationState] = useState<AdminLocationValue>("");
 
@@ -51,10 +51,10 @@ export function AdminLocationProvider({ children }: { children: ReactNode }) {
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }
 
-export function useAdminLocation(): LocationContextValue {
+export function useLocation(): LocationContextValue {
   const ctx = useContext(LocationContext);
   if (!ctx) {
-    throw new Error("useAdminLocation must be used within <AdminLocationProvider>");
+    throw new Error("useLocation must be used within <LocationProvider>");
   }
   return ctx;
 }

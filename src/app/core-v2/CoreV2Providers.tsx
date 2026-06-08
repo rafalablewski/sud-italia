@@ -2,15 +2,19 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AdminLocationProvider } from "@/shared/LocationContext";
-import { ToastProvider } from "@/ui/Toast";
+import { LocationProvider } from "@/shared/LocationContext";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**
  * Provider envelope for Core v2 (`/core-v2/*`). Core v2 is a separate entity
  * from /admin and from the current /core — but it keeps the same *technicals*
- * (location context, toasts, and the client page-guard) so every functionality
- * carries over. Styling is 100% the core-v2 theme; these are data/infra only.
+ * (location context + the client page-guard) so every functionality carries
+ * over. Styling is 100% the core-v2 theme; these are data/infra only.
+ *
+ * Core v2 builds its OWN UI primitives (toasts, dialogs, buttons) under
+ * `src/core-v2/ui/` rather than importing the admin-styled `src/ui` kit — it
+ * loads none of the admin CSS those rely on. The toast provider lands here
+ * with the first surface that fires one (Step 3+).
  *
  * The page-guard mirrors the current Core: a custom-grant user who lacks a
  * surface's `.view` permission is bounced to their own home. The server still
@@ -50,9 +54,5 @@ export function CoreV2Providers({ children }: { children: ReactNode }) {
     }
   }, [pathname, gate, router]);
 
-  return (
-    <AdminLocationProvider>
-      <ToastProvider>{children}</ToastProvider>
-    </AdminLocationProvider>
-  );
+  return <LocationProvider>{children}</LocationProvider>;
 }
