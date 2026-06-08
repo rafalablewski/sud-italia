@@ -1,19 +1,38 @@
 # Core v2 · Service
 
-The merged Floor + Slots surface. `/core-v2/service`.
+The merged Floor + Slots surface. `/core-v2/service` (redirects to Floor).
+Two nested views via `serviceTabs` (`src/core-v2/service/serviceTabs.ts`).
 
-- **Live code:** `src/app/core-v2/service/page.tsx` (scaffold via
-  `ScaffoldSurface`).
-- **Status:** **Scaffold (Step 6 pending).** Shell + subbar live (Floor ·
-  Slots tabs); body is the scaffold panel.
+## Floor (`/core-v2/service/floor`) — wired
 
-## Planned anatomy
+- **Live code:** `src/core-v2/service/CoreV2Floor.tsx`.
+- **Theme:** `.cv-floor` / `.cv-zone-h` / `.cv-tables` / `.cv-tbl2` +
+  `.cv-bottleneck` in `themes/core-v2/index.css`.
+- The live room: a 4-up KPI strip (covers seated · occupancy · turn time ·
+  freeing ≤15m) over zoned table tiles. Each `.cv-tbl2` is toned by state
+  — free · seated · **freeing** (predicted ≤15m) · reserved ·
+  out-of-service — and shows party / dwell / open check. The
+  **kitchen-bottleneck banner** (`.cv-bottleneck`) fires when the KDS
+  engine reports a strained station. Tap a table to **seat / clear**.
+- **Engine:** `GET /api/admin/floor-twin?location=` → `{ twin, kitchen }`
+  (15s poll); seat/clear = `POST /api/admin/floor-twin { action, tableId }`.
 
-- **Floor** — the live room: zoned table tiles (**seated / booked /
-  free**) with covers, turn time, and per-table state; a capacity KPI
-  strip.
-- **Slots** — tonight's capacity fill bar + the slot list with demand
-  **surge** flags.
+## Slots (`/core-v2/service/slots`) — wired
 
-Parity target: today's `/core/service`. Classes documented here when
-ported.
+- **Live code:** `src/core-v2/service/CoreV2Slots.tsx`.
+- **Theme:** `.cv-slot-list` / `.cv-slot` (capacity bars) + `.cv-tier-d` /
+  `.cv-act` (the demand board).
+- Two tabs: **Manage** — the slot list with a capacity fill bar
+  (green→amber→red ≥85%), covers, channels, and an active/draft toggle,
+  over a KPI strip (slots · booked · fill rate · demand-price multiplier).
+  **Demand** — the Demand Exchange: per-slot forecast vs capacity with a
+  **tier** (under · healthy · tight · over · kitchen-capped) and a
+  recommended lever (**raise · trim · protect · hold**); Apply one or
+  Apply-all.
+- **Engine:** `GET /api/admin/slots?location=&date=` (capacity) +
+  `GET /api/admin/demand-exchange?location=&date=` (forecast); toggle =
+  `PUT /api/admin/slots`; apply = `POST /api/admin/demand-exchange`
+  (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
+
+Parity target: today's `/core/service`. The booking console (slot + table
+in one move) lives in the Guest hub's **Book** view (`CoreV2Book`), shared.

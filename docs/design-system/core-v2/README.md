@@ -109,7 +109,7 @@ four surfaces and their views:
 4. ✅ **KDS** (always-dark wall) — Floor lanes + Chef + Fleet, live order
    stream + bump.
 5. ✅ **Guest** hub — Inbox · CRM · Loyalty · Concierge · Book all wired.
-6. **Service** (Floor · Slots).
+6. ✅ **Service** — Floor (live room) + Slots (capacity + Demand Exchange).
 7. **Swap** — delete `/core`, promote `/core-v2` → `/core`, retire
    `suite.css` + the old `index.css` threads.
 
