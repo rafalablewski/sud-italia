@@ -1040,6 +1040,12 @@
 .core-suite .svc-date { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-muted); }
 .core-suite .svc-date .input { height: 30px; padding: 0 8px; }
 .core-suite .svc-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 18px; align-items: start; }
+/* Booking slot/table picks — mockup .pk rectangular buttons. */
+.core-suite .pk { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-muted); font: 500 12.5px var(--ui); cursor: pointer; }
+.core-suite .pk:hover:not(:disabled) { color: var(--fg); }
+.core-suite .pk.on { border-color: var(--platinum); color: var(--platinum); background: var(--platinum-soft); }
+.core-suite .pk.off, .core-suite .pk:disabled { opacity: .4; }
+.core-suite .pk .n { font: 600 11px var(--mono); color: var(--fg-subtle); }
 .core-suite .svc-form { display: flex; flex-direction: column; gap: 16px; }
 .core-suite .svc-block { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; }
 .core-suite .svc-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 2px; }

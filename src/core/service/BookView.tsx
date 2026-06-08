@@ -211,7 +211,7 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
                     <button
                       key={s.id}
                       type="button"
-                      className={`fchip${slotId === s.id ? " on" : ""}${full ? " svc-full" : ""}`}
+                      className={`pk${slotId === s.id ? " on" : ""}${full ? " off" : ""}`}
                       aria-pressed={slotId === s.id}
                       disabled={full && !override}
                       onClick={() => setSlotId(s.id)}
@@ -242,7 +242,7 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
                     <button
                       key={t.id}
                       type="button"
-                      className={`fchip${tableId === t.id ? " on" : ""}${st.ok ? "" : " svc-full"}`}
+                      className={`pk${tableId === t.id ? " on" : ""}${st.ok ? "" : " off"}`}
                       aria-pressed={tableId === t.id}
                       disabled={!st.ok && !override}
                       onClick={() => setTableId(t.id)}
