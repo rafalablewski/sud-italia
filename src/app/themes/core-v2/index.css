@@ -267,6 +267,18 @@
 .cv2 .cv-pay:hover { background: var(--brand-wash); border-color: var(--brand); } .cv2 .cv-pay:disabled { opacity: .5; cursor: default; }
 
 .cv2 .cv-tablegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 9px; }
+/* in-pane (middle) table picker — full-size, zone-grouped, readable */
+.cv2 .cv-tablepick { display: flex; flex-direction: column; }
+.cv2 .cv-tablepick-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.cv2 .cv-tablepick-h .tt { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.cv2 .cv-tablepick-h .ts { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.cv2 .cv-tablezone + .cv-tablezone { margin-top: 18px; }
+.cv2 .cv-tablezone-h { display: flex; align-items: center; gap: 9px; margin: 0 2px 10px; font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); }
+.cv2 .cv-tablezone-h .n { font-family: var(--mono); font-size: 11px; color: var(--ink-3); background: var(--panel-3); border-radius: 5px; padding: 1px 7px; }
+.cv2 .cv-tablegrid.big { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+.cv2 .cv-tablegrid.big .cv-tablebtn { padding: 18px 10px; gap: 4px; }
+.cv2 .cv-tablegrid.big .cv-tablebtn .tn { font-size: 24px; }
+.cv2 .cv-tablegrid.big .cv-tablebtn .tc { font-size: 12px; }
 .cv2 .cv-tablebtn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-2); }
 .cv2 .cv-tablebtn:hover { border-color: var(--line-2); background: var(--hover); }
 .cv2 .cv-tablebtn.on { border-color: var(--brand); background: var(--brand-wash); }

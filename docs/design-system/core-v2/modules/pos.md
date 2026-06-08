@@ -49,8 +49,8 @@ UI, identical contract.
   shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
 - **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
-  delivery); `.cv-chan-aux` opens the table picker (dine-in) or address
-  dialog (delivery).
+  delivery); `.cv-chan-aux` opens the in-pane table picker (dine-in) or
+  the address dialog (delivery).
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.
@@ -90,16 +90,19 @@ total and the `orderId` — the till only ever sends item ids + quantities.
 ## Own UI primitives
 
 POS uses Core v2's **own** kit (no `src/ui`): `CoreV2Dialog`
-(`src/core-v2/ui/Dialog.tsx`, the tender / table / address modals) and
+(`src/core-v2/ui/Dialog.tsx`, the tender / address modals) and
 `useCoreToast` (`src/core-v2/ui/Toast.tsx`) — both portaled into the
 `.cv2` theme root. Classes: `.cv-scrim` / `.cv-modal*` / `.cv-btn` /
 `.cv-toast*`.
 
-The **table picker** (`.cv-tablegrid` / `.cv-tablebtn`) shows each table's
-seats + zone and flags conflicts with `.cv-tbadge` chips — *In use*
-(another open dine-in check is on it), *Seats N < party* (undersized),
-*Reserved*, *Out of service* — and toasts a warning when you seat onto a
-conflicted/over-capacity table.
+The **table picker** is **not** a modal — it takes over the middle (menu)
+pane (`.cv-tablepick`) for a full-size, **zone-grouped** board
+(`.cv-tablezone` → `.cv-tablegrid.big` / `.cv-tablebtn`) with a *← Back to
+menu* return; switching checks closes it. Each table shows seats + zone
+and flags conflicts with `.cv-tbadge` chips — *In use* (another open
+dine-in check is on it), *Seats N < party* (undersized), *Reserved*,
+*Out of service* — and toasts a warning when you seat onto a conflicted/
+over-capacity table.
 
 ## At parity
 

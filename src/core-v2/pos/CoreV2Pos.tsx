@@ -274,6 +274,14 @@ export function CoreV2Pos({
     };
   }, [pageLoc]);
   const tableById = useCallback((id?: string) => (id ? tables.find((t) => t.id === id) : undefined), [tables]);
+  const tablesByZone = useMemo(() => {
+    const m = new Map<string, FloorTable[]>();
+    for (const t of tables) {
+      const z = t.zone || "Floor";
+      (m.get(z) ?? m.set(z, []).get(z)!).push(t);
+    }
+    return [...m.entries()];
+  }, [tables]);
 
   // --- Send / Fire / Charge ------------------------------------------------
   const [busyTabId, setBusyTabId] = useState<string | null>(null);
@@ -510,7 +518,33 @@ export function CoreV2Pos({
   // --- Dialogs -------------------------------------------------------------
   const [tableOpen, setTableOpen] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false);
+  // Leaving a check (or its dine-in channel) drops back to the menu.
+  useEffect(() => {
+    setTableOpen(false);
+  }, [activeTabId]);
   const [addrDraft, setAddrDraft] = useState("");
+
+  const tableButton = (t: FloorTable) => {
+    const inUse = tabsOnTable(t.id, active?.id).length > 0;
+    const under = active ? t.seats < (active.covers ?? 2) : false;
+    return (
+      <button
+        key={t.id}
+        type="button"
+        className={`cv-tablebtn${active?.tableId === t.id ? " on" : ""}${t.status === "out-of-service" ? " oos" : ""}`}
+        onClick={() => handlePickTable(t)}
+      >
+        <span className="tn">{t.number}</span>
+        <span className="tc">{t.seats} seats{t.zone ? ` · ${t.zone}` : ""}</span>
+        <span className="cv-tablebadges">
+          {inUse && <span className="cv-tbadge warn">In use</span>}
+          {under && <span className="cv-tbadge warn">Seats {t.seats} &lt; {active?.covers ?? 2}</span>}
+          {t.status === "reserved" && <span className="cv-tbadge info">Reserved</span>}
+          {t.status === "out-of-service" && <span className="cv-tbadge">Out of service</span>}
+        </span>
+      </button>
+    );
+  };
 
   const productCard = (m: MenuItem) => (
     <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
@@ -607,35 +641,62 @@ export function CoreV2Pos({
           ))}
         </aside>
 
-        {/* menu grid */}
+        {/* menu grid — or the table picker, in place */}
         <main className="cv-menu">
-          {steer && (
-            steer.active && steer.bottleneck ? (
-              <div className={`cv-steer ${steer.bottleneck.tier}`}>
-                <span className="dot" />
-                <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
-                <span className="cap">cap · {windowMin}m</span>
-              </div>
-            ) : (
-              <div className="cv-steer calm">
-                <span className="dot" />
-                <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
-              </div>
-            )
-          )}
-          {activeCat === "all" ? (
-            categories.map((c) => {
-              const group = items.filter((m) => m.category === c);
-              if (group.length === 0) return null;
-              return (
-                <div key={c} className="cv-menu-sec">
-                  <div className="cv-menu-sec-h">{MENU_CATEGORY_LABELS[c]}</div>
-                  <div className="cv-menu-grid">{group.map(productCard)}</div>
+          {tableOpen && active?.channel === "dine-in" ? (
+            <div className="cv-tablepick">
+              <div className="cv-tablepick-h">
+                <div>
+                  <div className="tt">Assign table</div>
+                  <div className="ts">
+                    {active.name} · party of {active.covers ?? 2}
+                    {active.tableId ? ` · currently Table ${tableById(active.tableId)?.number ?? "?"}` : ""}
+                  </div>
                 </div>
-              );
-            })
+                <button type="button" className="cv-btn ghost sm" onClick={() => setTableOpen(false)}>← Back to menu</button>
+              </div>
+              {tables.length === 0 ? (
+                <div className="cv-tender-note" style={{ padding: 16 }}>No tables configured for this truck.</div>
+              ) : (
+                tablesByZone.map(([zone, ts]) => (
+                  <div key={zone} className="cv-tablezone">
+                    <div className="cv-tablezone-h">{zone}<span className="n">{ts.length}</span></div>
+                    <div className="cv-tablegrid big">{ts.map(tableButton)}</div>
+                  </div>
+                ))
+              )}
+            </div>
           ) : (
-            <div className="cv-menu-grid">{items.map(productCard)}</div>
+            <>
+              {steer && (
+                steer.active && steer.bottleneck ? (
+                  <div className={`cv-steer ${steer.bottleneck.tier}`}>
+                    <span className="dot" />
+                    <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
+                    <span className="cap">cap · {windowMin}m</span>
+                  </div>
+                ) : (
+                  <div className="cv-steer calm">
+                    <span className="dot" />
+                    <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
+                  </div>
+                )
+              )}
+              {activeCat === "all" ? (
+                categories.map((c) => {
+                  const group = items.filter((m) => m.category === c);
+                  if (group.length === 0) return null;
+                  return (
+                    <div key={c} className="cv-menu-sec">
+                      <div className="cv-menu-sec-h">{MENU_CATEGORY_LABELS[c]}</div>
+                      <div className="cv-menu-grid">{group.map(productCard)}</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="cv-menu-grid">{items.map(productCard)}</div>
+              )}
+            </>
           )}
         </main>
 
@@ -892,34 +953,6 @@ export function CoreV2Pos({
             </div>
           </div>
         )}
-      </CoreV2Dialog>
-
-      {/* Table picker */}
-      <CoreV2Dialog open={tableOpen} onClose={() => setTableOpen(false)} title="Assign table">
-        <div className="cv-tablegrid">
-          {tables.length === 0 && <p className="cv-tender-note">No tables configured for this truck.</p>}
-          {tables.map((t) => {
-            const inUse = tabsOnTable(t.id, active?.id).length > 0;
-            const under = active ? t.seats < (active.covers ?? 2) : false;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                className={`cv-tablebtn${active?.tableId === t.id ? " on" : ""}${t.status === "out-of-service" ? " oos" : ""}`}
-                onClick={() => handlePickTable(t)}
-              >
-                <span className="tn">{t.number}</span>
-                <span className="tc">{t.seats} seats{t.zone ? ` · ${t.zone}` : ""}</span>
-                <span className="cv-tablebadges">
-                  {inUse && <span className="cv-tbadge warn">In use</span>}
-                  {under && <span className="cv-tbadge warn">Seats {t.seats} &lt; {active?.covers ?? 2}</span>}
-                  {t.status === "reserved" && <span className="cv-tbadge info">Reserved</span>}
-                  {t.status === "out-of-service" && <span className="cv-tbadge">Out of service</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </CoreV2Dialog>
 
       {/* Delivery address */}
