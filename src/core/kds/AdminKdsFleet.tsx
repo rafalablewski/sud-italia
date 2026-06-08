@@ -334,7 +334,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
 
   return (
     <>
-      {fullscreen ? createPortal(kioskBoard, document.body) : windowed}
+      {fullscreen ? createPortal(kioskBoard, document.getElementById("admin-portal-root") ?? document.body) : windowed}
       {loading &&
         !data &&
         mounted &&

@@ -753,7 +753,7 @@ function AdminKDSDesktop({
 
   return (
     <>
-      {kiosk ? createPortal(kioskPage, document.body) : windowed}
+      {kiosk ? createPortal(kioskPage, document.getElementById("admin-portal-root") ?? document.body) : windowed}
       {loading &&
         mounted &&
         createPortal(

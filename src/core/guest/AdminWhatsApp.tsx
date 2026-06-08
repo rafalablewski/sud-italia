@@ -1096,7 +1096,7 @@ function AdminWhatsAppDesktop() {
   // Kiosk renders through a portal to document.body so the edge-to-edge console
   // escapes the admin shell's stacking context (CLAUDE.md rule #4); the subtree
   // stays mounted, so polling, the thread feed and timers keep running.
-  return kiosk ? createPortal(page, document.body) : page;
+  return kiosk ? createPortal(page, document.getElementById("admin-portal-root") ?? document.body) : page;
 }
 
 // ---- subcomponents ------------------------------------------------------
