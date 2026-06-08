@@ -32,7 +32,7 @@ The guest engagement hub. `/core-v2/guest`.
 
 ## Loyalty (`/core-v2/guest/loyalty`) — wired
 
-`src/core-v2/guest/CoreV2Loyalty.tsx`. Four tabs (Members · Wallets · Redemptions · Win-back) over a KPI strip. Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
+`src/core-v2/guest/CoreV2Loyalty.tsx`. Four tabs (Members · Wallets · Redemptions · Win-back) over a KPI strip (the **Points out** card carries a `.cv-kpi-sub` ≈zł **liability** line, 100 pts = 1 zł). Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog; a `◆` action opens the **customer-intelligence** modal — `GET /api/admin/customer-intelligence?phone=` → next-order headline + confidence, churn-risk + reason, cadence, channel-mix bars, favourite dishes, attach patterns). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all **behind a confirm dialog**). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention,customer-intelligence}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
 
 ## Concierge (`/core-v2/guest/concierge`) — wired
 

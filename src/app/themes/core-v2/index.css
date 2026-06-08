@@ -550,6 +550,31 @@
 .cv2 .cv-wb-f { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .cv2 .cv-btn.sm, .cv2 .cv-btn.primary.sm { height: 30px; padding: 0 13px; font-size: 12px; }
 
+/* KPI sub-line (e.g. points liability) */
+.cv2 .cv-kpi-strip .cv-kpi-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+
+/* per-member customer-intelligence trigger + modal */
+.cv2 .cv-intel-btn { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-3); font-size: 12px; }
+.cv2 .cv-intel-btn:hover { color: var(--brand-bright); border-color: var(--brand); }
+.cv2 .cv-intel-headline { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; margin-bottom: 14px; }
+.cv2 .cv-intel-headline p { font-size: 14px; line-height: 1.45; color: var(--ink); margin: 0; }
+.cv2 .cv-conf { flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--pill); background: var(--panel-3); color: var(--ink-2); }
+.cv2 .cv-conf.high { background: var(--basil-wash); color: var(--basil); } .cv2 .cv-conf.medium { background: var(--amber-wash); color: var(--amber); } .cv2 .cv-conf.low { background: var(--panel-3); color: var(--ink-3); }
+.cv2 .cv-intel-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.cv2 .cv-intel-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; }
+.cv2 .cv-intel-card .t { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+.cv2 .cv-intel-card .cv-intel-v { font-family: var(--mono); font-weight: 600; font-size: 18px; margin-bottom: 4px; }
+.cv2 .cv-intel-risk { display: inline-block; font-size: 13px; font-weight: 700; text-transform: capitalize; margin-bottom: 4px; }
+.cv2 .cv-intel-risk.ok { color: var(--basil); } .cv2 .cv-intel-risk.warn { color: var(--amber); } .cv2 .cv-intel-risk.bad { color: var(--danger); }
+.cv2 .cv-intel-bars { display: flex; flex-direction: column; gap: 7px; }
+.cv2 .cv-intel-bar { display: grid; grid-template-columns: 78px 1fr 42px; align-items: center; gap: 10px; font-size: 12px; }
+.cv2 .cv-intel-bar .lab { color: var(--ink-2); }
+.cv2 .cv-intel-bar .pv { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.cv2 .cv-intel-items { display: flex; flex-direction: column; gap: 4px; }
+.cv2 .cv-intel-item { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.cv2 .cv-intel-item:last-child { border-bottom: 0; }
+.cv2 .cv-intel-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+
 /* ============================================================
    Guest · Concierge — capability inspector + allergen matrix
    ============================================================ */
