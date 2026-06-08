@@ -304,20 +304,56 @@
 
 /* fleet */
 .cv2 .cv-fleet { flex: 1; overflow-y: auto; padding: 16px; }
-.cv2 .cv-fleet-bench { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); font-size: 12px; color: var(--ink-2); margin-bottom: 14px; }
-.cv2 .cv-fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+/* cross-truck promise-accuracy benchmark, one bar per truck */
+.cv2 .cv-fleet-bench { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px; margin-bottom: 14px; }
+.cv2 .cv-fleet-bench .hd { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+.cv2 .cv-benchrow { display: grid; grid-template-columns: 180px 1fr 78px; align-items: center; gap: 12px; margin: 8px 0; font-size: 12px; }
+.cv2 .cv-benchrow .nm { color: var(--ink-2); }
+.cv2 .cv-benchrow .pv { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+
+/* shared bar track — benchmark + per-station pace */
+.cv2 .cv-track { height: 8px; border-radius: 99px; background: var(--panel-3); overflow: hidden; }
+.cv2 .cv-track > i { display: block; height: 100%; border-radius: 99px; background: var(--t-ready); transition: width var(--fast) ease; }
+.cv2 .cv-track > i.warn, .cv2 .cv-track > i.tier-warn { background: var(--t-warn); }
+.cv2 .cv-track > i.tier-risk { background: var(--t-late); }
+
+.cv2 .cv-fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 14px; }
 .cv2 .cv-truck { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; }
-.cv2 .cv-truck-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cv2 .cv-truck-h { display: flex; align-items: center; gap: 12px; }
 .cv2 .cv-ring { width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--t-ready); display: grid; place-items: center; font: 600 14px var(--mono); color: var(--t-ready); flex: none; }
 .cv2 .cv-ring.warn { border-color: var(--t-warn); color: var(--t-warn); } .cv2 .cv-ring.risk { border-color: var(--t-risk); color: var(--t-risk); } .cv2 .cv-ring.alert { border-color: var(--t-late); color: var(--t-late); }
-.cv2 .cv-truck-id .nm { font-family: var(--display); font-weight: 600; font-size: 17px; } .cv2 .cv-truck-id .sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.cv2 .cv-truck-id .nm { font-family: var(--display); font-weight: 600; font-size: 18px; } .cv2 .cv-truck-id .sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.cv2 .cv-truck-id .sub b { color: var(--ink); }
 .cv2 .cv-truck-id .sub b.h-good { color: var(--t-ready); } .cv2 .cv-truck-id .sub b.h-warn { color: var(--t-warn); } .cv2 .cv-truck-id .sub b.h-risk { color: var(--t-risk); } .cv2 .cv-truck-id .sub b.h-alert { color: var(--t-late); }
-.cv2 .cv-truck-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
-.cv2 .cv-truck-stats > div { display: flex; flex-direction: column; gap: 1px; }
-.cv2 .cv-truck-stats .sv { font-family: var(--mono); font-weight: 600; font-size: 16px; } .cv2 .cv-truck-stats .sv.warn { color: var(--t-warn); } .cv2 .cv-truck-stats .sv.bad { color: var(--t-late); }
-.cv2 .cv-truck-stats .sl { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
-.cv2 .cv-truck-drill { margin-top: 4px; height: 32px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 12px; }
-.cv2 .cv-truck-drill:hover { background: var(--hover); }
+.cv2 .cv-truck-drill { margin-left: auto; display: flex; gap: 8px; }
+.cv2 .cv-truck-drill button { height: 32px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 12px; cursor: pointer; }
+.cv2 .cv-truck-drill button:hover { background: var(--hover); }
+
+.cv2 .cv-truck-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); }
+.cv2 .cv-truck-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.cv2 .cv-truck-stats .sl { font-size: 10px; letter-spacing: .04em; color: var(--ink-3); }
+.cv2 .cv-truck-stats .sv { font-family: var(--mono); font-weight: 600; font-size: 18px; } .cv2 .cv-truck-stats .sv.warn { color: var(--t-warn); } .cv2 .cv-truck-stats .sv.bad { color: var(--t-late); }
+
+/* per-station pace bars (next 15m) */
+.cv2 .cv-pace { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.cv2 .cv-pace-h { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+.cv2 .cv-pace-h .bad { color: var(--t-late); }
+.cv2 .cv-pace-row { display: grid; grid-template-columns: 64px 1fr 92px; align-items: center; gap: 10px; margin: 6px 0; font-size: 12px; }
+.cv2 .cv-pace-row .lab { color: var(--ink-2); }
+.cv2 .cv-pace-row .pv { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+
+/* per-truck ticket preview stack */
+.cv2 .cv-preview { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.cv2 .cv-preview-empty { font-size: 12px; color: var(--ink-3); padding: 4px 2px; }
+.cv2 .cv-prow { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--t-queued); border-radius: 7px; padding: 8px 11px; font-size: 12px; }
+.cv2 .cv-prow.tone-firing { border-left-color: var(--t-firing); } .cv2 .cv-prow.tone-warn { border-left-color: var(--t-warn); }
+.cv2 .cv-prow.tone-risk { border-left-color: var(--t-risk); } .cv2 .cv-prow.tone-late { border-left-color: var(--t-late); } .cv2 .cv-prow.tone-ready { border-left-color: var(--t-ready); }
+.cv2 .cv-prow .pid { font-family: var(--mono); font-weight: 600; }
+.cv2 .cv-prow .chip { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: rgba(255,255,255,.06); border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+.cv2 .cv-prow .dish { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv2 .cv-prow .t { margin-left: auto; font: 600 13px var(--mono); color: var(--t-queued); }
+.cv2 .cv-prow .t.tone-firing { color: var(--t-firing); } .cv2 .cv-prow .t.tone-warn { color: var(--t-warn); } .cv2 .cv-prow .t.tone-risk { color: var(--t-risk); } .cv2 .cv-prow .t.tone-late { color: var(--t-late); } .cv2 .cv-prow .t.tone-ready { color: var(--t-ready); }
 
 /* fullscreen kiosk — bare dark wall, no shell */
 .cv2 .cv-kiosk {

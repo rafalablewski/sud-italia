@@ -19,9 +19,18 @@ for owners (role from `/api/admin/me`).
   single lane into the dense `.cv-chefq` wrap.
 - **Chef** — the same tickets as a single station-filtered make-queue
   (`.cv-chefq`).
-- **Fleet** — `FleetWall`: per-truck `.cv-truck` tiles with a health
-  `.cv-ring`, counts (ready / at-risk / late / throughput / promise), and
-  a drill-in that sets the location + switches to Floor.
+- **Fleet** — `FleetWall`: the owner Atlas. A cross-truck
+  `.cv-fleet-bench` (one promise-accuracy `.cv-track` bar per truck,
+  leader flagged) over a 2-up `.cv-fleet-grid` of `.cv-truck` tiles. Each
+  tile carries a health `.cv-ring`, the `Open · N active · STATE` line, a
+  5-up `.cv-truck-stats` strip (**Active · At risk · Late · Ready · On
+  shift**), per-station **`.cv-pace` bars** (`Pace · next 15m`, one
+  `.cv-track` per loaded station, hottest first, coloured by tier — the
+  header flips to *predicted to fall behind* when any station hits the
+  **risk** tier), and a 3-row `.cv-preview` ticket stack (`#shortId` ·
+  channel chip · dish summary · toned due clock, most-urgent first). Two
+  drills per tile — **Open floor →** / **Chef line →** — set the location
+  and switch to that view.
 
 ## Ticket card (`.cv-tk`)
 

@@ -329,7 +329,7 @@ export function CoreV2Kds() {
   const board = (
     <div className="cv-kds">
         {view === "fleet" ? (
-          <FleetWall fleet={fleet} now={now} onDrill={(slug) => { setLocation(slug); setView("floor"); }} />
+          <FleetWall fleet={fleet} now={now} onDrill={(slug, target) => { setLocation(slug); setView(target); }} />
         ) : (
           <>
             <div className="cv-kpi">
@@ -492,7 +492,17 @@ function EightySix({ location, open, onClose }: { location: string; open: boolea
   );
 }
 
-// ---- Fleet (owner) ----
+// ---- Fleet (owner Atlas) ----
+interface FleetStationWire {
+  id: string;
+  label: string;
+  currentLoad: number;
+  forecast: number;
+  demand: number;
+  capacity: number;
+  pct: number;
+  tier: "calm" | "warn" | "risk";
+}
 interface FleetTileWire {
   slug: string;
   name: string;
@@ -503,48 +513,139 @@ interface FleetTileWire {
   onShift: number;
   throughputHr: number;
   promiseAccuracy: number;
+  stations: FleetStationWire[];
+  tickets: KdsTicket[];
 }
 interface FleetWire {
   promiseTarget: number;
+  paceWindowMin: number;
   benchmark: { fleetAccuracy: number; leader: string | null; gap: number };
   tiles: FleetTileWire[];
 }
 
-function FleetWall({ fleet, onDrill }: { fleet: FleetWire | null; now: number; onDrill: (slug: string) => void }) {
+// Most-urgent-first ordering for the per-truck ticket preview.
+const TONE_RANK: Record<string, number> = { late: 4, risk: 3, warn: 2, firing: 1 };
+
+// Compact "2× Margherita · Bufala +1" line for a preview row.
+function dishSummary(t: KdsTicket): string {
+  const parts = t.items.slice(0, 2).map((it) => (it.quantity > 1 ? `${it.quantity}× ${it.name}` : it.name));
+  const extra = t.items.length - 2;
+  return parts.join(" · ") + (extra > 0 ? ` +${extra}` : "");
+}
+
+function FleetWall({ fleet, now, onDrill }: { fleet: FleetWire | null; now: number; onDrill: (slug: string, view: View) => void }) {
   if (!fleet) return <div className="cv-kds-empty pad">Loading fleet…</div>;
+  const { benchmark, promiseTarget, paceWindowMin } = fleet;
+  const leaderSlug = fleet.tiles.reduce<FleetTileWire | null>(
+    (best, t) => (t.promiseAccuracy > (best?.promiseAccuracy ?? -1) ? t : best),
+    null,
+  )?.slug;
   return (
     <div className="cv-fleet">
       <div className="cv-fleet-bench">
-        <span>Promise-accuracy · cross-truck benchmark</span>
-        <span>
-          fleet {Math.round(fleet.benchmark.fleetAccuracy)}% · target {fleet.promiseTarget}%
-          {fleet.benchmark.leader ? ` · ${fleet.benchmark.leader} leads` : ""}
-        </span>
+        <div className="hd">
+          <span>Promise-accuracy · cross-truck benchmark</span>
+          <span>
+            fleet {Math.round(benchmark.fleetAccuracy)}% · target {promiseTarget}%
+            {benchmark.leader && benchmark.gap > 0
+              ? ` · ${benchmark.leader} leads by ${Math.round(benchmark.gap)} pts`
+              : ""}
+          </span>
+        </div>
+        {fleet.tiles.map((t) => {
+          const below = t.promiseAccuracy < promiseTarget;
+          return (
+            <div key={t.slug} className="cv-benchrow">
+              <span className="nm">{t.name}</span>
+              <div className="cv-track">
+                <i className={below ? "warn" : ""} style={{ width: `${Math.min(100, Math.round(t.promiseAccuracy))}%` }} />
+              </div>
+              <span className="pv">
+                {Math.round(t.promiseAccuracy)}%{!below && t.slug === leaderSlug ? " LEAD" : ""}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <div className="cv-fleet-grid">
-        {fleet.tiles.map((t) => (
-          <div key={t.slug} className="cv-truck">
-            <div className="cv-truck-h">
-              <div className={`cv-ring ${t.healthClass}`}>{t.health}</div>
-              <div className="cv-truck-id">
-                <div className="nm">{t.name}</div>
-                <div className="sub">
-                  {t.counts.active} active · <b className={`h-${t.healthClass}`}>{t.healthState}</b> · {t.onShift} on shift
+        {fleet.tiles.map((t) => {
+          // Only the loaded stations, hottest first — idle stations are noise.
+          const stations = t.stations.filter((s) => s.demand > 0).sort((a, b) => b.pct - a.pct);
+          const fallingBehind = stations.some((s) => s.tier === "risk");
+          const preview = [...t.tickets]
+            .sort(
+              (a, b) =>
+                (TONE_RANK[toneForTicket(b, now)] ?? 0) - (TONE_RANK[toneForTicket(a, now)] ?? 0) ||
+                a.paidAtMs - b.paidAtMs,
+            )
+            .slice(0, 3);
+          return (
+            <div key={t.slug} className="cv-truck">
+              <div className="cv-truck-h">
+                <div className={`cv-ring ${t.healthClass}`}>{t.health}</div>
+                <div className="cv-truck-id">
+                  <div className="nm">{t.name}</div>
+                  <div className="sub">
+                    Open · {t.counts.active} active · <b className={`h-${t.healthClass}`}>{t.healthState.toUpperCase()}</b>
+                  </div>
+                </div>
+                <div className="cv-truck-drill">
+                  <button type="button" onClick={() => onDrill(t.slug, "floor")}>Open floor →</button>
+                  <button type="button" onClick={() => onDrill(t.slug, "chef")}>Chef line →</button>
                 </div>
               </div>
+              <div className="cv-truck-stats">
+                <div><span className="sl">Active</span><span className="sv">{t.counts.active}</span></div>
+                <div><span className="sl">At risk</span><span className={t.counts.risk ? "sv warn" : "sv"}>{t.counts.risk}</span></div>
+                <div><span className="sl">Late</span><span className={t.counts.late ? "sv bad" : "sv"}>{t.counts.late}</span></div>
+                <div><span className="sl">Ready</span><span className="sv">{t.counts.ready}</span></div>
+                <div><span className="sl">On shift</span><span className="sv">{t.onShift}</span></div>
+              </div>
+              {stations.length > 0 && (
+                <div className="cv-pace">
+                  <div className="cv-pace-h">
+                    Pace · next {paceWindowMin}m
+                    {fallingBehind && <span className="bad"> · predicted to fall behind</span>}
+                  </div>
+                  {stations.map((s) => (
+                    <div key={s.id} className="cv-pace-row">
+                      <span className="lab">{s.label}</span>
+                      <div className="cv-track">
+                        <i
+                          className={`tier-${s.tier}`}
+                          style={{
+                            width: `${Math.min(100, s.capacity > 0 ? Math.round((s.currentLoad / s.capacity) * 100) : 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="pv">
+                        {s.currentLoad}/{Math.round(s.capacity)}
+                        {s.forecast > 0 ? ` · +${s.forecast}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="cv-preview">
+                {preview.length === 0 ? (
+                  <div className="cv-preview-empty">No active tickets</div>
+                ) : (
+                  preview.map((tk) => {
+                    const due = dueLabel(tk, now);
+                    return (
+                      <div key={tk.id} className={`cv-prow tone-${due.tone}`}>
+                        <span className="pid">#{tk.shortId}</span>
+                        <span className="chip">{channelTag(tk)}</span>
+                        <span className="dish">{dishSummary(tk)}</span>
+                        <span className={`t tone-${due.tone}`}>{due.text}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-            <div className="cv-truck-stats">
-              <div><span className="sv">{t.counts.ready}</span><span className="sl">Ready</span></div>
-              <div><span className={t.counts.risk ? "sv warn" : "sv"}>{t.counts.risk}</span><span className="sl">At risk</span></div>
-              <div><span className={t.counts.late ? "sv bad" : "sv"}>{t.counts.late}</span><span className="sl">Late</span></div>
-              <div><span className="sv">{t.throughputHr}</span><span className="sl">/hr</span></div>
-              <div><span className="sv">{Math.round(t.promiseAccuracy)}%</span><span className="sl">Promise</span></div>
-            </div>
-            <button type="button" className="cv-truck-drill" onClick={() => onDrill(t.slug)}>
-              Open floor →
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
