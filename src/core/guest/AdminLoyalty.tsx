@@ -23,6 +23,7 @@ import {
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
+import { SkeletonList, SkeletonTable } from "@/core/shared/Skeleton";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -484,7 +485,9 @@ export function AdminLoyalty() {
 
             <div className="loy-body">
               {loading ? (
-                <div className="pane-msg">Loading Loyalty…</div>
+                <div className="card loy-tbl-card">
+                  <SkeletonTable rows={9} cols={[2, 1, 1, 1, 1]} />
+                </div>
               ) : sortedMembers.length === 0 ? (
                 <div className="loy-empty">
                   <Heart />
@@ -608,7 +611,7 @@ export function AdminLoyalty() {
         {tab === "wallets" &&
           (loading ? (
             <div className="loy-body">
-              <div className="pane-msg">Loading wallets…</div>
+              <SkeletonList rows={5} />
             </div>
           ) : wallets.length === 0 ? (
             <div className="loy-body">
@@ -653,7 +656,9 @@ export function AdminLoyalty() {
         {tab === "redemptions" && (
           <div className="loy-body">
             {loading ? (
-              <div className="pane-msg">Loading redemptions…</div>
+              <div className="loy-card">
+                <SkeletonTable rows={6} cols={[2, 1, 1, 1]} />
+              </div>
             ) : redemptions.length === 0 ? (
               <div className="loy-empty">
                 <Sparkles />

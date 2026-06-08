@@ -227,6 +227,35 @@ also wraps Core routes, so it keeps the dialog inside the `--font-admin-*`
 font scope. See the Dialogs/overlays note in
 [`admin/theme/components.md`](../../admin/theme/components.md#dialogs--overlays).
 
+### Loading skeleton — `.skel*` + `Skeleton.tsx`
+
+The client-fetched surfaces (CRM · Loyalty · Inbox · Slots · Book) fetch
+their rows in a `useEffect`, so their first frame has no data. Instead of a
+dead centered **`.pane-msg`** "Loading…" label, they render a **shimmer
+skeleton** shaped like the content that's arriving — the cheapest way to
+make a fetch read as *fast* rather than *stalled*.
+
+Live code: `src/core/shared/Skeleton.tsx` (one shared primitive for the
+whole suite) + `.core-suite .skel*` in `suite.css`.
+
+- **`<Skeleton w h r />`** → `.skel` — a single shimmer block; `w`/`h`/`r`
+  are inline so callers shape it to a name, a number, an avatar. The sheen
+  is a `::after` gradient swept by `@keyframes core-skel-sheen`; it stops
+  under `prefers-reduced-motion: reduce`.
+- **`<SkeletonTable rows cols />`** → `.skel-tbl` / `.skel-row` — rows on
+  the same **48px** grid + 12px gutters as `.tbl`, columns sized by `cols`
+  (numbers → `fr`), so the placeholder lines up with the real table. Used
+  by CRM (6-col), Loyalty roster (5-col), redemptions (4-col).
+- **`<SkeletonList rows avatar />`** → `.skel-list` / `.skel-li` — two-line
+  entries with an optional leading avatar circle. Used by the Inbox
+  conversation list (`avatar`), Loyalty wallets, Slots, and Book.
+
+Each container carries `role="status"` + `aria-busy="true"`; the Inbox
+transcript composes raw `<Skeleton>` bubbles inline (alternating
+left/right) rather than a list. This is **Core's own** loading idiom — it
+does not use the admin `.v2-page-loading` pill (that stays the KDS
+first-frame chip, see [KDS](../modules/kds.md#loading-pill)).
+
 ## What this component set is not
 
 - It is **not** the Admin component set. Admin has `glass-card`,

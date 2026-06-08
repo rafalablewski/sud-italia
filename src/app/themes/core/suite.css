@@ -1377,3 +1377,51 @@
   .core-suite .ticket::before { display: none; }
   .core-suite .tabrail { flex-wrap: nowrap; overflow-x: auto; }
 }
+
+/* ============================================================
+   Loading skeleton — the shimmer placeholder the client-fetched
+   surfaces (CRM · Loyalty · Inbox · Slots · Book) render while
+   their data lands, in place of bare "Loading…" pane-msg text.
+   Markup comes from src/core/shared/Skeleton.tsx. The sheen sweep
+   stops under prefers-reduced-motion.
+   ============================================================ */
+.core-suite .skel {
+  --skel-base: var(--surface-2);
+  --skel-sheen: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--skel-base);
+}
+.core-suite .skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--skel-sheen), transparent);
+  animation: core-skel-sheen 1.25s ease-in-out infinite;
+}
+@keyframes core-skel-sheen { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .core-suite .skel::after { animation: none; }
+}
+/* Table-shaped: rows on the same 48px grid + 12px gutters as .tbl, so the
+   columns line up with the real table that swaps in. */
+.core-suite .skel-tbl { width: 100%; }
+.core-suite .skel-row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+/* List-shaped: two-line entries with an optional avatar (inbox / wallets). */
+.core-suite .skel-list { display: flex; flex-direction: column; }
+.core-suite .skel-li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}

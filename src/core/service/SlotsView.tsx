@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import type { FulfillmentType, TimeSlot } from "@/data/types";
 import type { DemandAction, DemandBoard, DemandTier } from "@/lib/demand-exchange";
+import { SkeletonList } from "@/core/shared/Skeleton";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 
@@ -244,7 +245,7 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
 
       {tab === "manage" ? (
         loading ? (
-          <div className="pane-msg">Loading slots…</div>
+          <SkeletonList rows={6} />
         ) : range === "week" ? (
           <div className="slt-week">
             {weekDates(date).map((d) => {
