@@ -38,7 +38,9 @@ UI, identical contract.
 
 - **`.cv-tabrail-sum`** — rollup line above the tabs (`N tabs · R ready to
   pay · P parked · VALUE open`).
-- **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`.
+- **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`. The
+  rail **wraps** (self-contained chip tabs, capped height + scroll) so a
+  busy till's checks stay browsable without a horizontal-scroll hunt.
 - **`.cv-thead`** — `.cv-th-name` (the check name is an **inline editable
   input** — click to rename, persisted via the same debounced `PUT`) ·
   channel/order tag · a `.cv-tabpromise` per-check ETA (max

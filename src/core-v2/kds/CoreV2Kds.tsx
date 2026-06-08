@@ -126,7 +126,13 @@ export function CoreV2Kds() {
   useEffect(() => {
     fetch("/api/admin/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j?.role && setRole(j.role))
+      .then((j) => {
+        if (!j?.role) return;
+        setRole(j.role);
+        // Owners land on the cross-truck Atlas (Fleet) by default; the line
+        // roles stay on their board.
+        if (j.role === "owner") setView("fleet");
+      })
       .catch(() => {});
   }, []);
 
@@ -658,11 +664,18 @@ interface FleetWire {
   promiseTarget: number;
   paceWindowMin: number;
   benchmark: { fleetAccuracy: number; leader: string | null; gap: number };
+  totals: { active: number; late: number; risk: number; ready: number; throughputHr: number; coversHr: number; revenueHr: number };
   tiles: FleetTileWire[];
 }
 
 // Most-urgent-first ordering for the per-truck ticket preview.
 const TONE_RANK: Record<string, number> = { late: 4, risk: 3, warn: 2, firing: 1 };
+
+// Compact złoty-per-hour figure: 3140 grosze → "31", 310000 → "3.1k".
+function revPerHr(grosze: number): string {
+  const z = grosze / 100;
+  return z >= 1000 ? `${(z / 1000).toFixed(1)}k` : `${Math.round(z)}`;
+}
 
 // Compact "2× Margherita · Bufala +1" line for a preview row.
 function dishSummary(t: KdsTicket): string {
@@ -678,8 +691,18 @@ function FleetWall({ fleet, now, onDrill }: { fleet: FleetWire | null; now: numb
     (best, t) => (t.promiseAccuracy > (best?.promiseAccuracy ?? -1) ? t : best),
     null,
   )?.slug;
+  const tot = fleet.totals;
   return (
     <div className="cv-fleet">
+      <div className="cv-fleet-kpi">
+        <div className="kc"><div className="l">Active</div><div className="v">{tot.active}</div><div className="s">{tot.ready} ready for expo</div></div>
+        <div className="kc"><div className="l">At risk</div><div className="v warn">{tot.risk}</div><div className="s">predicted miss</div></div>
+        <div className="kc"><div className="l">Late</div><div className="v bad">{tot.late}</div><div className="s">over SLA</div></div>
+        <div className="kc"><div className="l">Ready</div><div className="v ok">{tot.ready}</div><div className="s">for expo</div></div>
+        <div className="kc"><div className="l">Throughput</div><div className="v">{tot.throughputHr}<span className="u">/hr</span></div><div className="s">last 60 min</div></div>
+        <div className="kc"><div className="l">Covers</div><div className="v">{tot.coversHr}<span className="u">/hr</span></div><div className="s">seated</div></div>
+        <div className="kc"><div className="l">Revenue</div><div className="v">{revPerHr(tot.revenueHr)}<span className="u"> zł/hr</span></div><div className="s">live</div></div>
+      </div>
       <div className="cv-fleet-bench">
         <div className="hd">
           <span>Promise-accuracy · cross-truck benchmark</span>
