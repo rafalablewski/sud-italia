@@ -13,15 +13,20 @@ promote `/core-v2` → `/core`) is the final step.
 > own shell, and shares only the neutral `src/ui` kit — so "Core ≠ Admin"
 > is true at every layer.
 
-## Status — design phase
+## Status — scaffold live
 
-Locked the **design language** as standalone mockups first (the repo's
-proven redesign path: mockup → port). No theme code yet; these tokens
-become `src/app/themes/core-v2/` at scaffold time.
+Design language locked as mockups (the repo's proven redesign path:
+mockup → port), then scaffolded into real code. The `/core-v2/*` routes
+render live: the shell + switcher work end-to-end, **POS** shows the real
+per-location menu, and KDS / Guest / Service render the shell over an
+honest "scaffolded" panel until their port step.
 
-- **Design language + POS hero** — `tests/sketches/core-v2-design-language.html`
-- **All four surfaces, switchable** — `tests/sketches/core-v2-all-surfaces.html`
-  (POS · KDS · Guest · Service, dark-default with a light toggle)
+- **Theme:** `src/app/themes/core-v2/` (`tokens.css` + `index.css`)
+- **Shell + surfaces:** `src/core-v2/`
+- **Routes + layout:** `src/app/core-v2/`
+- **Reference mockups:** `tests/sketches/core-v2-design-language.html`
+  (POS hero) · `tests/sketches/core-v2-all-surfaces.html` (all four,
+  switchable)
 
 ## The design language
 
@@ -75,9 +80,10 @@ four surfaces and their views:
 ## Build plan
 
 1. ✅ Design language locked (mockups).
-2. Scaffold `themes/core-v2/` (tokens → CSS) + `src/core-v2/` shell +
+2. ✅ Scaffold `themes/core-v2/` (tokens → CSS) + `src/core-v2/` shell +
    `/core-v2` route + layout — rendering live.
-3. **POS** ported, wired to the real store/APIs.
+3. **POS** ported, wired to the real store/APIs _(rail + real menu live;
+   ticket/Charge next)_.
 4. **KDS** (dark wall).
 5. **Guest** hub (Inbox · CRM · Loyalty · Concierge · Book).
 6. **Service** (Floor · Slots).
