@@ -30,6 +30,14 @@ const TAG_META: Record<MenuItem["tags"][number], { label: string; cls: string }>
   "gluten-free": { label: "GF", cls: "fast" },
 };
 
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+  hero: { label: "Hero", cls: "hero" },
+  "profit-driver": { label: "Profit", cls: "profit" },
+  anchor: { label: "Anchor", cls: "anchor" },
+  lto: { label: "LTO", cls: "lto" },
+};
+const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.round(sec / 60)}m` : null);
+
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
 
@@ -404,8 +412,25 @@ export function CoreV2Pos({
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
 
   // --- Pace steering (real: server analyzeTruck over live orders) ----------
-  const [steer, setSteer] = useState<{ active: boolean; bottleneck: { label: string; util: number; tier: string } | null; reason: string | null } | null>(null);
+  interface SteerPlan {
+    active: boolean;
+    bottleneck: { label: string; util: number; tier: string } | null;
+    reason: string | null;
+    makeNow: string[];
+    throttle: string[];
+    promiseSecondsByCategory: Record<string, number>;
+    deliveryCapNextWindow: number;
+  }
+  const [steer, setSteer] = useState<SteerPlan | null>(null);
   const [windowMin, setWindowMin] = useState(15);
+  // Pace-steering item cues + per-check promise, all from the live plan.
+  const makeNowSet = useMemo(() => new Set(steer?.makeNow ?? []), [steer]);
+  const throttleSet = useMemo(() => new Set(steer?.throttle ?? []), [steer]);
+  const tabPromiseSec = useMemo(() => {
+    if (!active || !steer) return 0;
+    return Math.max(0, ...active.items.map((l) => steer.promiseSecondsByCategory[byId(l.menuItemId)?.category ?? ""] ?? 0));
+  }, [active, steer, byId]);
+  const deliveryPaused = !!(steer?.active && active?.channel === "delivery" && steer.deliveryCapNextWindow === 0);
   useEffect(() => {
     if (!pageLoc) return;
     let cancelled = false;
@@ -515,6 +540,9 @@ export function CoreV2Pos({
           {categories.map((c) => (
             <button key={c} type="button" className={c === activeCat ? "cv-cat on" : "cv-cat"} onClick={() => setCat(c)}>
               {MENU_CATEGORY_LABELS[c]}
+              {steer?.active && promiseMin(steer.promiseSecondsByCategory[c]) && (
+                <span className="cv-cat-promise">{promiseMin(steer.promiseSecondsByCategory[c])}</span>
+              )}
               <span className="n">{menu.filter((m) => m.available && m.category === c).length}</span>
             </button>
           ))}
@@ -539,7 +567,10 @@ export function CoreV2Pos({
           <div className="cv-menu-grid">
             {items.map((m) => (
               <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
-                <div className="pn">{m.name}</div>
+                <div className="pn">
+                  {m.name}
+                  {m.menuRole && <span className={`cv-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
+                </div>
                 <div className="pd">{m.description}</div>
                 <div className="cv-tagrow">
                   {m.tags.map((t) => (
@@ -547,6 +578,8 @@ export function CoreV2Pos({
                       {TAG_META[t].label}
                     </span>
                   ))}
+                  {steer?.active && makeNowSet.has(m.id) && <span className="cv-steer-tag now">★ make now</span>}
+                  {steer?.active && throttleSet.has(m.id) && <span className="cv-steer-tag ease">▼ ease</span>}
                 </div>
                 <div className="pf">
                   <span className="pp">{zl(m.price)}</span>
@@ -616,6 +649,11 @@ export function CoreV2Pos({
                     {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
                   </div>
                 </div>
+                {tabPromiseSec > 0 && (
+                  <span className={`cv-tabpromise ${steer?.bottleneck?.tier ?? "calm"}`} title="Estimated kitchen ready time for this check">
+                    ready {promiseMin(tabPromiseSec)}
+                  </span>
+                )}
                 {active.channel === "dine-in" && (
                   <div className="cv-covers">
                     <button type="button" onClick={() => changeCovers(-1)} aria-label="Fewer covers">
@@ -659,6 +697,12 @@ export function CoreV2Pos({
                   </button>
                 )}
               </div>
+
+              {deliveryPaused && (
+                <div className="cv-delivery-paused">
+                  ⏸ Delivery paused — the kitchen is at capacity for the next {windowMin}m window. New delivery checks won&apos;t promise a slot yet.
+                </div>
+              )}
 
               {/* dine-in kitchen timing — coursed vs all-together */}
               {active.channel === "dine-in" && (

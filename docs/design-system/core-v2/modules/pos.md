@@ -14,13 +14,17 @@ A three-column grid inside the shell body: **rail · menu · ticket**.
 
 - **`.cv-rail`** — the category rail. `.cv-cat` buttons list only the
   categories present on the active location's menu, each with a live
-  item count (`.n`). `.on` = the selected category (filled ink).
+  item count (`.n`) and, when steering is active, a `.cv-cat-promise`
+  per-category ETA (`~Nm` from `promiseSecondsByCategory`). `.on` = the
+  selected category (filled ink).
 - **`.cv-menu` / `.cv-menu-grid`** — auto-fill grid of `.cv-prod` cards.
   Each card is **text-forward** (no photo dependency): `.pn` (display
-  name) · `.pd` (description, clamped to 2 lines) · `.cv-tagrow` of
-  `.cv-tag` chips (veg/vegan → `.veg`, spicy → `.hot`, gluten-free →
-  `.fast`) · `.pf` footer with the `.pp` mono price and the burgundy
-  `.add` button. Cards **stretch to equal height per row** and the `.pf`
+  name, with a `.cv-role` menu-engineering badge — Hero / Profit / Anchor
+  / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
+  `.cv-tagrow` of `.cv-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
+  gluten-free → `.fast`) plus a live `.cv-steer-tag` pace cue (**★ make
+  now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
+  with the `.pp` mono price and the burgundy `.add` button. Cards **stretch to equal height per row** and the `.pf`
   footer is pinned to the bottom (`margin-top: auto`), so a long
   description can't make one card taller than its row-mates.
 - **`.cv-ticket`** — the open-check panel. Today it shows
@@ -36,7 +40,11 @@ UI, identical contract.
 - **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`.
 - **`.cv-thead`** — `.cv-th-name` (the check name is an **inline editable
   input** — click to rename, persisted via the same debounced `PUT`) ·
-  channel/order tag · `.cv-covers` stepper (dine-in).
+  channel/order tag · a `.cv-tabpromise` per-check ETA (max
+  `promiseSecondsByCategory` across the lines, toned by the bottleneck
+  tier) · `.cv-covers` stepper (dine-in). A `.cv-delivery-paused` banner
+  shows when steering has capped the next delivery window
+  (`deliveryCapNextWindow === 0`).
 - **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
   delivery); `.cv-chan-aux` opens the table picker (dine-in) or address
   dialog (delivery).
