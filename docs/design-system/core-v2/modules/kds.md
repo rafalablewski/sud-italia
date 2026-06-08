@@ -44,8 +44,9 @@ Wired 1:1 to the same engine as today's `/core/kds`:
   (confirmed → preparing → ready → completed), then `refresh()`.
 - **Fleet** — `GET /api/admin/kds/fleet?includeSimulated=1` (owner), polled 6s.
 
-## What's next
+## At parity
 
-Parity polish with today's `/core/kds`: fullscreen kiosk (drop the
-chrome), number-key bump hotkeys, the recall tray, sound chime, and the
-86 control.
+Fullscreen kiosk (bare wall), number-key bump (1–9), recall
+(`POST /api/admin/orders/{id}/recall`), an opt-in chime, and the 86
+control (`/api/admin/kds/eighty-six`) are all wired — feature-for-feature
+with today's `/core/kds`.

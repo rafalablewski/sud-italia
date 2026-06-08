@@ -28,7 +28,7 @@ The guest engagement hub. `/core-v2/guest`.
 
 ## Guests · CRM (`/core-v2/guest/guests`) — wired
 
-`src/core-v2/guest/CoreV2Crm.tsx`. Roster (`.cv-tbl`) with a 4-up KPI strip, search + segment chips (All/VIP/Members/Active/Repeat/New/Lapsed) + sort (value/recency/orders/points/name), an RFM-derived **Health** pill, and a profile drawer (`CoreV2Dialog`): stat grid, SMS/email **consent** toggles + GDPR export, recent-orders timeline, **points** adjust, and **notes** (add/delete). Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/points` (POST), `customers/{phone}/consent` (PATCH). `health`/`rfm`/`inSeg` mirror the live classification.
+`src/core-v2/guest/CoreV2Crm.tsx`. Roster (`.cv-tbl`) with a 4-up KPI strip, search + segment chips (All/VIP/Members/Active/Repeat/New/Lapsed) + sort (value/recency/orders/points/name), an RFM-derived **Health** pill, and a profile drawer (`CoreV2Dialog`): stat grid, SMS/email **consent** toggles + GDPR export, recent-orders timeline, **points** adjust, and **notes** (add/delete). Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/points` (POST), `customers/{phone}/consent` (PATCH); ad-hoc **SMS/email** = `POST /api/admin/customers/{phone}/send` (consent-gated). `health`/`rfm`/`inSeg` mirror the live classification.
 
 ## Loyalty (`/core-v2/guest/loyalty`) — wired
 

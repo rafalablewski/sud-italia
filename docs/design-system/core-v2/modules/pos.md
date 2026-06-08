@@ -71,7 +71,8 @@ POS uses Core v2's **own** kit (no `src/ui`): `CoreV2Dialog`
 `.cv2` theme root. Classes: `.cv-scrim` / `.cv-modal*` / `.cv-btn` /
 `.cv-toast*`.
 
-## What's next
+## At parity
 
-Polish parity with today's `/core/pos`: capacity-true **pace steering**
-banner, parking checks, drag-to-recourse, and the fullscreen kiosk.
+Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
+drag-to-recourse (drop a line on a course header), and the fullscreen
+kiosk are all wired — feature-for-feature with today's `/core/pos`.

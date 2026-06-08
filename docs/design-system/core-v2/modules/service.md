@@ -31,7 +31,9 @@ Two nested views via `serviceTabs` (`src/core-v2/service/serviceTabs.ts`).
   Apply-all.
 - **Engine:** `GET /api/admin/slots?location=&date=` (capacity) +
   `GET /api/admin/demand-exchange?location=&date=` (forecast); toggle =
-  `PUT /api/admin/slots`; apply = `POST /api/admin/demand-exchange`
+  `PUT /api/admin/slots`; create/bulk = `POST /api/admin/slots[?bulk=1]`;
+  delete = `DELETE /api/admin/slots?id=`; apply =
+  `POST /api/admin/demand-exchange`
   (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
 Parity target: today's `/core/service`. The booking console (slot + table

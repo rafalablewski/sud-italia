@@ -35,13 +35,13 @@ The shared infra was **neutralised** out of the `Admin*` naming
 core-v2 reads as "admin". (Admin's own scope hook is the separate
 `useAdminLocationV3`, untouched.)
 
-## Status — scaffold live
+## Status — feature-complete (parity with `/core`)
 
-Design language locked as mockups (the repo's proven redesign path:
-mockup → port), then scaffolded into real code. The `/core-v2/*` routes
-render live: the shell + switcher work end-to-end, **POS** shows the real
-per-location menu, and KDS / Guest / Service render the shell over an
-honest "scaffolded" panel until their port step.
+All four surfaces are wired to the real engine and at **feature parity**
+with today's `/core` (the deferred polish — POS pace-steering/park/
+recourse/kiosk, KDS kiosk/hotkeys/recall/chime/86, CRM send, Slots
+create/delete — is all closed). Only **Step 7 (the swap)** remains:
+delete `/core` and promote `/core-v2` → `/core`.
 
 - **Theme:** `src/app/themes/core-v2/` (`tokens.css` + `index.css`)
 - **Shell + surfaces:** `src/core-v2/`
