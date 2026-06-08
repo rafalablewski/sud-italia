@@ -10,27 +10,24 @@ guest's name, soft platinum tier markers, count-up on lifetime value.
 covers Loyalty + Concierge + WhatsApp under one nav).
 **Mockup:** `guest-crm.html`.
 
-## Layout — intro + KPI strip + book/profile
+## Layout — intro + KPI strip + filters + table/profile
 
-A serif `.intro` banner and a full-width 4-tile KPI strip (`.crm-kpis` —
-**Customers** all-time / **Members** loyalty-enrolled / **VIP** top-by-LTV
-/ **Total LTV**) stack above the two-pane master/detail (`.crm-page`
-wraps them):
+Mockup-exact: a serif `.intro` banner, a full-width 4-tile KPI strip
+(`.crm-kpis` — **Customers** all-time / **Members** loyalty-enrolled /
+**VIP** top-by-LTV / **Total LTV**), a horizontal `.crm-filters` row
+(search · segment chips · channel chips · sort), then the `.crm-grid`:
+a flat customer **table** (`.card > .tbl` — Customer · Channel · Orders ·
+Points · LTV · Last; row-click selects) beside the deep profile card.
+`.crm-page` wraps the stack.
 
 ```
 +-----------------------------------------------------------------------+
 |  intro banner  ·  Customers | Members | VIP | Total LTV  (full-width)  |
-+--------------------------+------------------------------------------+
-|         The book         |              Deep profile                |
-|--------------------------|------------------------------------------|
-|  Search                  |  Identity card · LTV · tier              |
-|  Segment chips           |  Health gauge + RFM + diagnosis          |
-|  Channel chips · period  |  Next Best Action (AI)                   |
-|  Sort                    |  Lifetime stats · Identity & channels    |
-|  Triggers ("Send today") |  Favourites · Loyalty · Consent          |
-|  ── Agentic group        |  Concierge notes · Recent orders         |
-|  ── Customers group      |  GDPR (export · erase)                   |
-+--------------------------+------------------------------------------+
+|  search · segment chips · channel chips ............. period · sort     |
++----------------------------------------------+------------------------+
+|  Customer · Channel · Orders · Points · LTV  |   Deep profile         |
+|  …rows (row-click → profile)…                |   health · NBA · GDPR  |
++----------------------------------------------+------------------------+
 ```
 
 ## Filters (the customer book)

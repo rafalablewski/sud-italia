@@ -614,119 +614,140 @@ export function AdminCrm() {
             </div>
           ))}
         </div>
-        <div className="crm">
-          <section className="book" aria-label="Customer book">
-            <div className="book-filters">
-            <div className="book-search">
-              <Search />
-              <input
-                className="input"
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, phone, email…"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-            <div className="filters">
-              {SEGS.map((s) =>
-                "sep" in s ? null : (
-                  <button
-                    key={s.key}
-                    type="button"
-                    className={`fchip${seg === s.key ? " on" : ""}`}
-                    aria-pressed={seg === s.key}
-                    onClick={() => setSeg(s.key)}
-                  >
-                    {s.label}
-                    <span className="n">{locPool.filter((c) => inSeg(c, s.key)).length}</span>
-                  </button>
-                ),
-              )}
-            </div>
-            <div className="filters">
-              <button
-                type="button"
-                className={`fchip${chan === "all" ? " on" : ""}`}
-                aria-pressed={chan === "all"}
-                onClick={() => setChan("all")}
-              >
-                All<span className="n">{locPool.length}</span>
-              </button>
-              {CHANNEL_ORDER.map((k) => {
-                const m = CHANNEL_META[k];
-                const n = locPool.filter((c) => c.channels.includes(k)).length;
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    className={`fchip${chan === k ? " on" : ""}`}
-                    aria-pressed={chan === k}
-                    onClick={() => setChan(k)}
-                  >
-                    <span className="cdot" style={{ background: m.color }} />
-                    {k}
-                    <span className="n">{n}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div className="seg" style={{ flex: 1 }}>
-                {PERIODS.map((p) => (
-                  <button key={p.key} type="button" className={period === p.key ? "on" : ""} onClick={() => setPeriod(p.key)}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <div className="seg">
-                {SORTS.map((s) => (
-                  <button key={s.key} type="button" className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key as SortKey)}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Mockup-exact filters row: search · segment chips · channel chips · sort */}
+        <div className="crm-filters">
+          <div className="book-search">
+            <Search />
+            <input
+              className="input"
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, phone, email…"
+              autoComplete="off"
+              spellCheck={false}
+            />
           </div>
-
-          {triggers.length > 0 && (
-            <button type="button" className="promo" onClick={() => setSelected(triggers[0].phone)} title="Reach out with a greeting today">
-              <Cake />
-              <span style={{ flex: 1, fontSize: "12.5px" }}>Send today · {triggerSummary(triggers)}</span>
-              <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--platinum)" }}>Open →</span>
+          <div className="filters">
+            {SEGS.map((s) =>
+              "sep" in s ? null : (
+                <button
+                  key={s.key}
+                  type="button"
+                  className={`fchip${seg === s.key ? " on" : ""}`}
+                  aria-pressed={seg === s.key}
+                  onClick={() => setSeg(s.key)}
+                >
+                  {s.label}
+                  <span className="n">{locPool.filter((c) => inSeg(c, s.key)).length}</span>
+                </button>
+              ),
+            )}
+            <button
+              type="button"
+              className={`fchip${chan === "all" ? " on" : ""}`}
+              aria-pressed={chan === "all"}
+              onClick={() => setChan("all")}
+            >
+              All<span className="n">{locPool.length}</span>
             </button>
-          )}
+            {CHANNEL_ORDER.map((k) => {
+              const m = CHANNEL_META[k];
+              const n = locPool.filter((c) => c.channels.includes(k)).length;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  className={`fchip${chan === k ? " on" : ""}`}
+                  aria-pressed={chan === k}
+                  onClick={() => setChan(k)}
+                >
+                  <span className="cdot" style={{ background: m.color }} />
+                  {k}
+                  <span className="n">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+          <span style={{ flex: 1 }} />
+          <div className="seg">
+            {PERIODS.map((p) => (
+              <button key={p.key} type="button" className={period === p.key ? "on" : ""} onClick={() => setPeriod(p.key)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="seg">
+            {SORTS.map((s) => (
+              <button key={s.key} type="button" className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key as SortKey)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <div className="book-list" ref={listRef}>
+        {triggers.length > 0 && (
+          <button type="button" className="promo crm-promo" onClick={() => setSelected(triggers[0].phone)} title="Reach out with a greeting today">
+            <Cake />
+            <span style={{ flex: 1, fontSize: "12.5px" }}>Send today · {triggerSummary(triggers)}</span>
+            <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--platinum)" }}>Open →</span>
+          </button>
+        )}
+
+        <div className="crm-grid">
+          <div className="card crm-table-card" ref={listRef}>
             {loading ? (
               <div className="pane-msg">Loading customer book…</div>
             ) : visible.length === 0 ? (
               <div className="pane-msg">No customers match.</div>
             ) : (
-              <>
-                <div className="grp-h">
-                  <Bot width={13} height={13} /> Agentic · WhatsApp / Voice
-                  <span style={{ marginLeft: "auto" }}>{agentic.length}</span>
-                </div>
-                {agentic.length ? (
-                  agentic.map((c) => <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />)
-                ) : (
-                  <div className="pane-msg">No agentic customers match.</div>
-                )}
-                <div className="grp-h">
-                  <Users width={13} height={13} /> Customers · staff channels
-                  <span style={{ marginLeft: "auto" }}>{regular.length}</span>
-                </div>
-                {regular.length ? (
-                  regular.map((c) => <CustRow key={c.phone} c={c} active={c.phone === selected} onSelect={setSelected} />)
-                ) : (
-                  <div className="pane-msg">No customers match.</div>
-                )}
-              </>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Channel</th>
+                    <th className="num">Orders</th>
+                    <th className="num">Points</th>
+                    <th className="num">LTV</th>
+                    <th>Last</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((c) => {
+                    const m = c.channels[0] ? CHANNEL_META[c.channels[0]] : null;
+                    return (
+                      <tr
+                        key={c.phone}
+                        className={c.phone === selected ? "on" : ""}
+                        onClick={() => setSelected(c.phone)}
+                      >
+                        <td>
+                          <span className="crm-cell-name">
+                            {c.name}
+                            {c.vip && (
+                              <span className="badge platinum" style={{ height: 16, fontSize: 9 }}>
+                                VIP
+                              </span>
+                            )}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="crm-cell-chan">
+                            {m && <span className="cdot" style={{ background: m.color }} />}
+                            {c.channels[0] ?? "—"}
+                          </span>
+                        </td>
+                        <td className="num">{c.orderCount}</td>
+                        <td className="num">{c.points.toLocaleString("pl-PL")}</td>
+                        <td className="num">{fmtPLN0(c.totalSpent)}</td>
+                        <td className="muted">{seenLabel(c.lastDays)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
-        </section>
 
         <section className="profile" aria-label="Customer detail">
           {selectedCustomer ? (

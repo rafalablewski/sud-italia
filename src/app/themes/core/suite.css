@@ -803,6 +803,19 @@
 .core-suite .crm-page > .intro { margin: 16px 18px 0; }
 .core-suite .crm-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px 8px; }
 .core-suite .crm-kpis .bk .sub { font-size: 11px; color: var(--fg-subtle); margin-top: 3px; }
+/* Mockup CRM body: top filter row + a flat table | profile grid. */
+.core-suite .crm-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 18px; }
+.core-suite .crm-filters .book-search { position: relative; flex: 1; min-width: 220px; max-width: 340px; }
+.core-suite .crm-promo { margin: 0 18px 4px; }
+.core-suite .crm-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 4px 18px 18px; }
+.core-suite .crm-grid > * { min-height: 0; }
+.core-suite .crm-table-card { overflow: auto; }
+.core-suite .crm-table-card .tbl { background: transparent; }
+.core-suite .crm-table-card .tbl tr { cursor: pointer; }
+.core-suite .crm-table-card .tbl tr.on td { background: var(--surface-2); }
+.core-suite .crm-cell-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.core-suite .crm-cell-chan { display: inline-flex; align-items: center; gap: 7px; text-transform: capitalize; }
+.core-suite .crm-grid .profile { overflow-y: auto; }
 .core-suite .crm { display: grid; grid-template-columns: 380px 1fr; flex: 1; min-height: 0; }
 .core-suite .book { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--surface-1); }
 .core-suite .book-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px; }
