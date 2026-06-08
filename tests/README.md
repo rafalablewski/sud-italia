@@ -30,6 +30,8 @@ Scratchpad for things that aren't part of the deployed site. Anything in this fo
 
 - `sketches/core-v2-guest-inbox.html` — **Core v2 · Guest · Inbox** (preview). The WhatsApp till as a 3-pane console (conversation list with LIVE/PAY badges + filters · actor-toned message bubbles + composer · live order + guest/tier context) over a 5-up KPI strip, in the real `cv-` CSS. Wired 1:1 to `/api/admin/whatsapp/*` (sessions+transcripts+flags+metrics, send, archive/pin); the seed has no WhatsApp data so the live inbox shows its empty state — this preview is populated. Open directly in a browser.
 
+- `sketches/core-v2-guest-crm.html` — **Core v2 · Guests / CRM** (preview, light mode). The customer book: a roster table with segment chips + sort + an RFM-derived Health column over a KPI strip; the profile drawer adds a stat grid, consent toggles, recent-orders timeline, points adjust and notes. Real `cv-` CSS, wired to `/api/admin/crm` (+ notes/points/consent). Open directly in a browser.
+
 ## Tests
 
 `tests/*.test.ts` (and `src/lib/*.test.ts`) are the `node:test` suite, run by `npm test` (`tsx --test`) and gated in CI. Most are pure-logic invariants. `bundle-composer.test.ts` is the exception: a **render** test that mounts a real React component in `happy-dom` (`@happy-dom/global-registrator` + `react-dom/client` + `act`) and asserts behaviour through the mount → fetch → render cycle — added after the inline `BundleComposer` shipped stuck-loading / lost-prefill bugs that pure-logic tests can't catch. Use it as the template for future component render tests; keep such files extension `.ts` and build the tree with `React.createElement` so they match the `tests/*.test.ts` glob.

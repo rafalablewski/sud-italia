@@ -26,10 +26,12 @@ The guest engagement hub. `/core-v2/guest`.
   `POST …/flags {phone, archived?, pinned?}`. `mergeConversations` folds
   active sessions over transcript heads.
 
-## Planned anatomy (5b–5e)
+## Guests · CRM (`/core-v2/guest/guests`) — wired
 
-- **Guests** — the customer book (CRM): roster + filters + profile drawer
-  (LTV, points, timeline). `GET /api/admin/crm`.
+`src/core-v2/guest/CoreV2Crm.tsx`. Roster (`.cv-tbl`) with a 4-up KPI strip, search + segment chips (All/VIP/Members/Active/Repeat/New/Lapsed) + sort (value/recency/orders/points/name), an RFM-derived **Health** pill, and a profile drawer (`CoreV2Dialog`): stat grid, SMS/email **consent** toggles + GDPR export, recent-orders timeline, **points** adjust, and **notes** (add/delete). Engine: `GET /api/admin/crm`, `customer-notes` (GET/POST/DELETE), `members/points` (POST), `customers/{phone}/consent` (PATCH). `health`/`rfm`/`inSeg` mirror the live classification.
+
+## Planned anatomy (5c–5e)
+
 - **Loyalty** — members (Bronze → Platinum), wallets, redemptions,
   win-back. `GET /api/admin/{members,wallets,wallet-redemptions}`.
 - **Concierge** — MCP capability inspector + EU-14 allergen matrix.
