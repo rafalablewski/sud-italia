@@ -20,14 +20,16 @@ export const GET = withAdmin(
   async (_req, _ctx, { locationSlug }) => {
     if (!locationSlug) return NextResponse.json({ error: "location is required" }, { status: 400 });
 
-    // Measured-dwell instrumentation: 30 days of status transitions.
+    // Measured-dwell instrumentation: 30 days of status transitions. The same
+    // window scopes the order read — pushing the location + since filters into
+    // the query (PG indexes / a single-location slice) instead of pulling every
+    // order across all trucks for all time and filtering in memory.
     const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-    const [tables, allOrders, events] = await Promise.all([
+    const [tables, orders, events] = await Promise.all([
       getTables(locationSlug),
-      getOrders(),
+      getOrders(locationSlug, since),
       getFloorEvents(locationSlug, since),
     ]);
-    const orders = allOrders.filter((o) => o.locationSlug === locationSlug);
 
     const twin = buildFloorTwin({
       transitions: events.map((e) => ({ tableId: e.tableId, from: e.from, to: e.to, at: e.at })),

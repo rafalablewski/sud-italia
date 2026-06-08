@@ -90,8 +90,10 @@ total and the `orderId` — the till only ever sends item ids + quantities.
   `upsellByLocation` (`getUpsellSettings`). The surface picks the menu for
   the `LocationContext` truck (shell chip), falling back to the first.
 - **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. Local
-  edits debounce 350ms to `PUT`; a 5s poll syncs other tills (skipped
-  mid-debounce).
+  edits debounce 350ms to `PUT`; a visibility-aware 5s poll (`usePolling`)
+  syncs other tills — skipped while an edit is mid-debounce **or** its save
+  is still on the wire, and reconciled by `updatedAt` so an already-in-flight
+  poll can't revert a fresher local edit.
 - **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
 - **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
   returns the authoritative `totalAmount`, closes the tab.

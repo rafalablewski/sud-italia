@@ -122,7 +122,7 @@ export function CoreV2Kds() {
   const [eightySixOpen, setEightySixOpen] = useState(false);
   const [recalls, setRecalls] = useState<{ orderId: string; label: string; at: number }[]>([]);
 
-  const { orders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
+  const { orders, refresh, patchOrder } = useAdminOrdersStream(location, { paused, includeSimulated: true });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -161,6 +161,10 @@ export function CoreV2Kds() {
       const next = nextStatus(t.status);
       if (!next || updatingId) return;
       setUpdatingId(t.id);
+      // Move the ticket instantly and pin it there until the server echoes the
+      // new status — otherwise a stream frame computed before the write commits
+      // snaps it back to the old column for a few seconds.
+      patchOrder(t.id, { status: next });
       try {
         const res = await fetch(`/api/admin/orders`, {
           method: "PUT",
@@ -169,6 +173,8 @@ export function CoreV2Kds() {
         });
         if (!res.ok) {
           const d = (await res.json().catch(() => ({}))) as { error?: string };
+          // Roll the optimistic move back to the real status on failure.
+          patchOrder(t.id, { status: t.status });
           toast(d.error || "Could not bump ticket", "danger");
           return;
         }
@@ -181,7 +187,7 @@ export function CoreV2Kds() {
         setUpdatingId(null);
       }
     },
-    [updatingId, refresh, toast],
+    [updatingId, refresh, toast, patchOrder],
   );
 
   // Recall the last bump (completed → ready), the mis-tap undo.
@@ -189,12 +195,15 @@ export function CoreV2Kds() {
     async (orderId: string) => {
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/recall`, { method: "POST" });
       if (res.ok) {
+        // Recall un-completes a ticket (completed → ready); pin it so the stream
+        // can't briefly re-show it as done.
+        patchOrder(orderId, { status: "ready" });
         setRecalls((r) => r.filter((x) => x.orderId !== orderId));
         toast("Ticket recalled to Expo", "success");
         refresh();
       } else toast("Could not recall", "danger");
     },
-    [refresh, toast],
+    [refresh, toast, patchOrder],
   );
   // Expire recall entries after 10 min.
   useEffect(() => {

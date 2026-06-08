@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "@/shared/LocationContext";
+import { usePolling } from "@/lib/usePolling";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
@@ -125,13 +126,11 @@ export function CoreV2Pos({
     void loadTabs();
   }, [loadTabs]);
 
-  // Live cross-till sync — skipped while a local edit is mid-debounce.
-  useEffect(() => {
-    if (!pageLoc) return;
-    const id = setInterval(async () => {
-      // Skip while a local edit is mid-debounce or its save is still on the
-      // wire — otherwise the poll reverts the just-made change.
-      if (persistTimers.current.size > 0 || pendingSaves.current > 0) return;
+  // Live cross-till sync — visibility-aware poll, skipped while a local edit is
+  // mid-debounce or its save is still on the wire (else the poll reverts it).
+  usePolling(
+    async () => {
+      if (!pageLoc || persistTimers.current.size > 0 || pendingSaves.current > 0) return;
       try {
         const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
         if (!res.ok) return;
@@ -142,9 +141,10 @@ export function CoreV2Pos({
       } catch {
         /* non-fatal */
       }
-    }, 5000);
-    return () => clearInterval(id);
-  }, [pageLoc, mergeTabs]);
+    },
+    5000,
+    { enabled: !!pageLoc },
+  );
 
   useEffect(() => {
     const timers = persistTimers.current;
@@ -507,28 +507,22 @@ export function CoreV2Pos({
     return Math.max(0, ...active.items.map((l) => steer.promiseSecondsByCategory[byId(l.menuItemId)?.category ?? ""] ?? 0));
   }, [active, steer, byId]);
   const deliveryPaused = !!(steer?.active && active?.channel === "delivery" && steer.deliveryCapNextWindow === 0);
-  useEffect(() => {
+  const loadSteer = useCallback(async () => {
     if (!pageLoc) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/admin/pace/steering?location=${encodeURIComponent(pageLoc)}`);
-        if (!res.ok) return;
-        const d = await res.json();
-        if (cancelled) return;
-        setSteer(d.plan ?? null);
-        if (d.paceWindowMin) setWindowMin(d.paceWindowMin);
-      } catch {
-        /* non-fatal — the till just shows no steering hint */
-      }
-    };
-    void load();
-    const id = setInterval(load, 15000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    try {
+      const res = await fetch(`/api/admin/pace/steering?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setSteer(d.plan ?? null);
+      if (d.paceWindowMin) setWindowMin(d.paceWindowMin);
+    } catch {
+      /* non-fatal — the till just shows no steering hint */
+    }
   }, [pageLoc]);
+  useEffect(() => {
+    void loadSteer();
+  }, [loadSteer]);
+  usePolling(loadSteer, 15000, { enabled: !!pageLoc });
 
   // --- Drag-to-recourse + fullscreen kiosk --------------------------------
   const dragItem = useRef<string | null>(null);

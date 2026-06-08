@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePolling } from "@/lib/usePolling";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
@@ -47,11 +48,12 @@ export function CoreV2Floor() {
       /* non-fatal */
     }
   }, [loc]);
+  // Initial load + on location change; the recurring refresh is a
+  // visibility-aware poll so a backgrounded floor board stops polling.
   useEffect(() => {
     void load();
-    const id = setInterval(load, 15000);
-    return () => clearInterval(id);
   }, [load]);
+  usePolling(load, 15000);
 
   const post = async (action: "seat" | "clear", tableId: string, number: string) => {
     if (acting) return;
