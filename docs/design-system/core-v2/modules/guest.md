@@ -36,7 +36,7 @@ The guest engagement hub. `/core-v2/guest`.
 
 ## Concierge (`/core-v2/guest/concierge`) — wired
 
-`src/core-v2/guest/CoreV2Concierge.tsx` (+ a server page that builds the meta / per-location samples / allergen matrix, like today's). A two-pane inspector: the six MCP capabilities with live exposure toggles (`.cv-toggle`, PATCH `/api/admin/concierge`) · the selected capability's real sample JSON + a Test link to `/api/agent/{cap}` + the EU-14 allergen matrix per location (`.cv-matrix`).
+`src/core-v2/guest/CoreV2Concierge.tsx` (+ a server page that builds the meta / per-location samples / allergen matrix + a `waConfigured` flag from the WhatsApp env, like today's). A two-pane inspector: the six MCP capabilities with live exposure toggles (`.cv-toggle`, PATCH `/api/admin/concierge`) · then the selected capability's **transports** panel (`.cv-transport` — the MCP/HTTP read API, always Live; WhatsApp Business `/api/whatsapp/webhook`, *Connected ↗* to the inbox when `waConfigured` else *Needs config*) · a **live probe** (`▶ Test live` hits `/api/agent/{cap}` for real, times it, shows an HTTP-status `.cv-tbadge2` + the response JSON in place of the static sample) · the EU-14 allergen matrix per location (`.cv-matrix`, with a legend noting the agent reads — never guesses — allergens).
 
 ## Book (`/core-v2/guest/book`) — wired
 
