@@ -104,9 +104,10 @@ four surfaces and their views:
 1. ✅ Design language locked (mockups).
 2. ✅ Scaffold `themes/core-v2/` (tokens → CSS) + `src/core-v2/` shell +
    `/core-v2` route + layout — rendering live.
-3. **POS** ported, wired to the real store/APIs _(rail + real menu live;
-   ticket/Charge next)_.
-4. **KDS** (dark wall).
+3. ✅ **POS** ported, wired to the real store/APIs (multi-tab checks,
+   coursing, combos, cross-sell, Charge→Tender).
+4. ✅ **KDS** (always-dark wall) — Floor lanes + Chef + Fleet, live order
+   stream + bump.
 5. **Guest** hub (Inbox · CRM · Loyalty · Concierge · Book).
 6. **Service** (Floor · Slots).
 7. **Swap** — delete `/core`, promote `/core-v2` → `/core`, retire
