@@ -258,6 +258,36 @@ export function CoreV2Kds() {
     };
   }, [view]);
 
+  // ----- Manager ops metrics (throughput + on-shift, the live floor-ops feed)
+  const [ops, setOps] = useState<{ throughputLastHour: number; onShift: number } | null>(null);
+  useEffect(() => {
+    if (view === "fleet" || !location) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/admin/kds/floor-ops?location=${encodeURIComponent(location)}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled) setOps({ throughputLastHour: d.throughputLastHour ?? 0, onShift: d.onShift ?? 0 });
+      } catch {
+        /* non-fatal — manager-only endpoint; the band just shows — */
+      }
+    };
+    void load();
+    const id = setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [view, location]);
+
+  // Oldest + mean age across the open (non-ready) tickets — the floor pressure.
+  const ageStats = useMemo(() => {
+    const ages = allTickets.filter((t) => t.status !== "ready").map((t) => Math.max(0, (now - t.paidAtMs) / 1000));
+    if (ages.length === 0) return { oldest: 0, avg: 0 };
+    return { oldest: Math.max(...ages), avg: ages.reduce((a, b) => a + b, 0) / ages.length };
+  }, [allTickets, now]);
+
   // Number-key bump (1–9, 0=10th) on the focused lane, or the leftmost
   // non-empty lane — the commercial bump-bar wiring. Ignored while typing.
   const bumpList = useMemo(() => {
@@ -428,6 +458,10 @@ export function CoreV2Kds() {
               <div className="k"><div className="kl">Ready</div><div className="kv ok">{counts.ready}</div></div>
               <div className="k"><div className="kl">At risk</div><div className={counts.risk ? "kv warn" : "kv"}>{counts.risk}</div></div>
               <div className="k"><div className="kl">Late</div><div className={counts.late ? "kv bad" : "kv"}>{counts.late}</div></div>
+              <div className="k"><div className="kl">Oldest</div><div className={ageStats.oldest >= 600 ? "kv bad" : "kv"}>{ageStats.oldest ? fmtClock(ageStats.oldest) : "—"}</div></div>
+              <div className="k"><div className="kl">Avg age</div><div className="kv">{ageStats.avg ? fmtClock(ageStats.avg) : "—"}</div></div>
+              <div className="k"><div className="kl">Done/hr</div><div className="kv ok">{ops?.throughputLastHour ?? "—"}</div></div>
+              <div className="k"><div className="kl">On shift</div><div className="kv">{ops?.onShift ?? "—"}</div></div>
             </div>
 
             {/* station strip (chef + floor) */}

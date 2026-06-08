@@ -13,10 +13,13 @@ The always-dark kitchen wall. `/core-v2/kds`.
 A `viewnav` switch in the subbar (Fleet · Floor · Chef); Fleet shows only
 for owners (role from `/api/admin/me`).
 
-- **Floor** (default) — the expo board. A 6-up `.cv-kpi` band (Open · New
-  · Firing · Ready · At risk · Late) over three `.cv-lane` columns
-  (**New → Firing → Ready·Expo**). A stage filter in the subbar focuses a
-  single lane into the dense `.cv-chefq` wrap.
+- **Floor** (default) — the expo board. A manager **ops band** (the
+  responsive `.cv-kpi`: Open · New · Firing · Ready · At risk · Late ·
+  Oldest · Avg age · Done/hr · On shift) over three `.cv-lane` columns
+  (**New → Firing → Ready·Expo**). Counts + Oldest/Avg-age are derived
+  from the live ticket stream; **Done/hr** and **On shift** come from
+  `GET /api/admin/kds/floor-ops?location=` (15s poll). A stage filter in
+  the subbar focuses a single lane into the dense `.cv-chefq` wrap.
 - **Chef** — the same tickets as a single station-filtered make-queue
   (`.cv-chefq`).
 - **Fleet** — `FleetWall`: the owner Atlas. A cross-truck

@@ -271,7 +271,7 @@
 .cv2 .cv-kds-empty.pad { padding: 60px; }
 
 /* KPI band */
-.cv2 .cv-kpi { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
+.cv2 .cv-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); flex: none; }
 .cv2 .cv-kpi .k { background: var(--bg); padding: 11px 16px; }
 .cv2 .cv-kpi .kl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .cv2 .cv-kpi .kv { font-family: var(--mono); font-weight: 600; font-size: 21px; margin-top: 3px; }
