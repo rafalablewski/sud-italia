@@ -8,7 +8,6 @@ import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useToast } from "@/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
-import { Ring } from "@/core/kds/KdsTicketCard";
 import { useFullscreen } from "@/core/kds/useFullscreen";
 import { fmtWallClock } from "@/core/kds/kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
@@ -520,7 +519,6 @@ function TruckBoard({
 
   const maxUtil = Math.max(1.5, ...tile.stations.map((s) => (Number.isFinite(s.pct) ? s.pct / 100 : 1.5)));
   const markLeft = (1 / maxUtil) * 100;
-  const bottleneck = tile.bottleneck;
 
   return (
     <div className="truck">
@@ -531,11 +529,8 @@ function TruckBoard({
           onClick={onDrillIn ? () => onDrillIn(tile.slug, "floor") : undefined}
           title={onDrillIn ? `Open ${tile.name}'s floor board` : undefined}
         >
-          <div className="ring">
-            <Ring size={54} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
-            <span className="sc">
-              <b style={{ color: healthColor }}>{liveHealth.health}</b>
-            </span>
+          <div className="ring" style={{ borderColor: healthColor, color: healthColor }}>
+            {liveHealth.health}
           </div>
           <div>
             <div className="city">{tile.name}</div>
@@ -581,28 +576,6 @@ function TruckBoard({
         <div className="tcell">
           <div className="l">On shift</div>
           <div className="v">{tile.onShift}</div>
-        </div>
-      </div>
-
-      <div className="pacehead">
-        <div className="met">
-          <div className="l">Covers / hr</div>
-          <div className="v">{tile.coversHr}</div>
-        </div>
-        <div className="met">
-          <div className="l">Revenue / hr</div>
-          <div className="v">{zl(tile.revenueHr)}</div>
-        </div>
-        <Sparkline points={tile.throughputSeries} color={healthColor} />
-        <div className="capmeter">
-          <div className="lbl">
-            <span>Capacity · {bottleneck ? bottleneck.label : "within capacity"}</span>
-            <span className="hint">{bottleneck ? `${bottleneck.pct}%` : ""}</span>
-          </div>
-          <div className={`cmtrack ${paceClass(bottleneck?.tier)}`}>
-            <i style={{ width: `${bottleneck ? Math.min(100, (bottleneck.pct / 100 / maxUtil) * 100) : 0}%` }} />
-            <span className="m100" style={{ left: `${markLeft}%` }} title="100% capacity" />
-          </div>
         </div>
       </div>
 
