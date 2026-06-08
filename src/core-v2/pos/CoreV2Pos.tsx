@@ -72,8 +72,8 @@ export function CoreV2Pos({
     const present = new Set(menu.filter((m) => m.available).map((m) => m.category));
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [menu]);
-  const [cat, setCat] = useState<MenuCategory | null>(null);
-  const activeCat = cat && categories.includes(cat) ? cat : categories[0] ?? null;
+  const [cat, setCat] = useState<MenuCategory | "all" | null>(null);
+  const activeCat = cat && (cat === "all" || categories.includes(cat)) ? cat : categories[0] ?? null;
 
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
@@ -405,11 +405,44 @@ export function CoreV2Pos({
     }
   };
 
-  const items = menu.filter(
-    (m) => m.available && m.category === activeCat && (active?.channel === "delivery" || !m.deliveryOnly),
-  );
+  // Channel-true available menu; "all" shows every category stacked.
+  const channelMenu = menu.filter((m) => m.available && (active?.channel === "delivery" || !m.deliveryOnly));
+  const items = activeCat === "all" ? channelMenu : channelMenu.filter((m) => m.category === activeCat);
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
+
+  // Combo-completion offer — a partially-matched deal one or two items short.
+  const combo = active ? comboOf(active) : null;
+  const comboNeed = combo?.activeDeal && !combo.isComplete
+    ? combo.missingItems.length
+      ? combo.missingItems.join(", ")
+      : combo.missingCategories.length
+        ? combo.missingCategories.map((c) => MENU_CATEGORY_LABELS[c]).join(", ")
+        : combo.missingQuantity
+          ? `${combo.missingQuantity} more item${combo.missingQuantity > 1 ? "s" : ""}`
+          : null
+    : null;
+  const completeCombo = () => {
+    if (!combo?.activeDeal) return;
+    const ids: string[] = [];
+    if (combo.activeDeal.requiredItems) {
+      for (const label of combo.missingItems) {
+        const req = combo.activeDeal.requiredItems.find((r) => r.label === label);
+        const m = req && channelMenu.find((x) => x.id.endsWith(req.suffix));
+        if (m) ids.push(m.id);
+      }
+    }
+    for (const c of combo.missingCategories) {
+      const m = channelMenu.filter((x) => x.category === c).sort((a, b) => a.price - b.price)[0];
+      if (m) ids.push(m.id);
+    }
+    if (ids.length === 0 && combo.missingQuantity > 0 && active) {
+      // categories already matched — just need volume; repeat the first line.
+      const first = active.items[0];
+      if (first) ids.push(first.menuItemId);
+    }
+    ids.forEach((id) => addLine(id));
+  };
 
   // --- Pace steering (real: server analyzeTruck over live orders) ----------
   interface SteerPlan {
@@ -479,6 +512,27 @@ export function CoreV2Pos({
   const [addrOpen, setAddrOpen] = useState(false);
   const [addrDraft, setAddrDraft] = useState("");
 
+  const productCard = (m: MenuItem) => (
+    <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
+      <div className="pn">
+        {m.name}
+        {m.menuRole && <span className={`cv-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
+      </div>
+      <div className="pd">{m.description}</div>
+      <div className="cv-tagrow">
+        {m.tags.map((t) => (
+          <span key={t} className={`cv-tag ${TAG_META[t].cls}`}>{TAG_META[t].label}</span>
+        ))}
+        {steer?.active && makeNowSet.has(m.id) && <span className="cv-steer-tag now">★ make now</span>}
+        {steer?.active && throttleSet.has(m.id) && <span className="cv-steer-tag ease">▼ ease</span>}
+      </div>
+      <div className="pf">
+        <span className="pp">{zl(m.price)}</span>
+        <span className="add" aria-hidden>+</span>
+      </div>
+    </button>
+  );
+
   const lineRow = (menuItemId: string, quantity: number) => {
     const m = byId(menuItemId);
     if (!m) return null;
@@ -537,6 +591,10 @@ export function CoreV2Pos({
         {/* category rail */}
         <aside className="cv-rail">
           <div className="lbl">Menu</div>
+          <button type="button" className={activeCat === "all" ? "cv-cat on" : "cv-cat"} onClick={() => setCat("all")}>
+            All
+            <span className="n">{channelMenu.length}</span>
+          </button>
           {categories.map((c) => (
             <button key={c} type="button" className={c === activeCat ? "cv-cat on" : "cv-cat"} onClick={() => setCat(c)}>
               {MENU_CATEGORY_LABELS[c]}
@@ -564,32 +622,20 @@ export function CoreV2Pos({
               </div>
             )
           )}
-          <div className="cv-menu-grid">
-            {items.map((m) => (
-              <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
-                <div className="pn">
-                  {m.name}
-                  {m.menuRole && <span className={`cv-role ${ROLE_BADGE[m.menuRole].cls}`}>{ROLE_BADGE[m.menuRole].label}</span>}
+          {activeCat === "all" ? (
+            categories.map((c) => {
+              const group = items.filter((m) => m.category === c);
+              if (group.length === 0) return null;
+              return (
+                <div key={c} className="cv-menu-sec">
+                  <div className="cv-menu-sec-h">{MENU_CATEGORY_LABELS[c]}</div>
+                  <div className="cv-menu-grid">{group.map(productCard)}</div>
                 </div>
-                <div className="pd">{m.description}</div>
-                <div className="cv-tagrow">
-                  {m.tags.map((t) => (
-                    <span key={t} className={`cv-tag ${TAG_META[t].cls}`}>
-                      {TAG_META[t].label}
-                    </span>
-                  ))}
-                  {steer?.active && makeNowSet.has(m.id) && <span className="cv-steer-tag now">★ make now</span>}
-                  {steer?.active && throttleSet.has(m.id) && <span className="cv-steer-tag ease">▼ ease</span>}
-                </div>
-                <div className="pf">
-                  <span className="pp">{zl(m.price)}</span>
-                  <span className="add" aria-hidden>
-                    +
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+              );
+            })
+          ) : (
+            <div className="cv-menu-grid">{items.map(productCard)}</div>
+          )}
         </main>
 
         {/* ticket */}
@@ -752,6 +798,17 @@ export function CoreV2Pos({
                   })
                 ) : (
                   active.items.map((l) => lineRow(l.menuItemId, l.quantity))
+                )}
+
+                {/* combo completion */}
+                {comboNeed && combo?.activeDeal && (
+                  <button type="button" className="cv-offer combo" onClick={completeCombo}>
+                    <span className="oi">🎁</span>
+                    <span className="ot">
+                      <b>Make it the {combo.activeDeal.name}</b> — add {comboNeed}
+                    </span>
+                    <span className="op mono">deal</span>
+                  </button>
                 )}
 
                 {/* cross-sell */}

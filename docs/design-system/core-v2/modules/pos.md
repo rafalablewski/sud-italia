@@ -12,11 +12,12 @@ The till. `/core-v2/pos`.
 
 A three-column grid inside the shell body: **rail · menu · ticket**.
 
-- **`.cv-rail`** — the category rail. `.cv-cat` buttons list only the
-  categories present on the active location's menu, each with a live
-  item count (`.n`) and, when steering is active, a `.cv-cat-promise`
-  per-category ETA (`~Nm` from `promiseSecondsByCategory`). `.on` = the
-  selected category (filled ink).
+- **`.cv-rail`** — the category rail. An **All** chip (stacks every
+  category as `.cv-menu-sec` blocks with `.cv-menu-sec-h` headers) over
+  the per-category `.cv-cat` buttons — each lists only categories present
+  on the active location's menu, with a live item count (`.n`) and, when
+  steering is active, a `.cv-cat-promise` per-category ETA (`~Nm` from
+  `promiseSecondsByCategory`). `.on` = the selected category (filled ink).
 - **`.cv-menu` / `.cv-menu-grid`** — auto-fill grid of `.cv-prod` cards.
   Each card is **text-forward** (no photo dependency): `.pn` (display
   name, with a `.cv-role` menu-engineering badge — Hero / Profit / Anchor
@@ -55,7 +56,11 @@ UI, identical contract.
   mono line price. Dine-in coursed checks group lines into `.cv-course`
   blocks with a `.cv-course-h` header and a per-course **Fire** button;
   fired courses dim (`.cv-course.fired`) and show `✓ Fired`.
-- **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`).
+- **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`), plus a
+  `.cv-offer.combo` **combo-completion** prompt when a deal is one or two
+  items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
+  / `missingQuantity`); tapping it adds exactly the missing items so the
+  real discount fires.
 - **`.cv-foot`** — `.cv-frow` subtotal, `.cv-frow.disc` combo discount,
   `.cv-ftot` total, then `.cv-send` (Send to KDS) + `.cv-charge`.
 

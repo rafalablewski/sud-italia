@@ -98,6 +98,9 @@
    clamped to two lines and the price footer pinned to the bottom — so a long
    description (Tartufata) can't make its card taller than its row-mates. */
 .cv2 .cv-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-items: stretch; }
+/* "All" view — categories stacked with section headers */
+.cv2 .cv-menu-sec + .cv-menu-sec { margin-top: 18px; }
+.cv2 .cv-menu-sec-h { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin: 0 2px 9px; }
 .cv2 .cv-prod { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--r-md); padding: 14px; text-align: left; transition: all var(--fast); box-shadow: var(--sh-1); width: 100%; }
 .cv2 .cv-prod:hover { border-color: var(--line-2); box-shadow: var(--sh-2); transform: translateY(-1px); }
@@ -203,6 +206,9 @@
 .cv2 .cv-offer .oi { width: 26px; height: 26px; border-radius: 7px; background: var(--amber-wash); color: var(--amber); display: grid; place-items: center; flex: none; font-size: 15px; }
 .cv2 .cv-offer .ot { flex: 1; font-size: 12px; color: var(--ink-2); } .cv2 .cv-offer .ot b { color: var(--ink); font-weight: 600; }
 .cv2 .cv-offer .op { font-size: 12.5px; font-weight: 600; }
+.cv2 .cv-offer.combo { border-color: var(--brand); background: var(--brand-wash); }
+.cv2 .cv-offer.combo .oi { background: var(--brand); color: #fff; }
+.cv2 .cv-offer.combo .op { color: var(--brand-bright); text-transform: uppercase; font-size: 10px; letter-spacing: .05em; }
 
 /* ---------- ticket foot: totals + actions ---------- */
 .cv2 .cv-foot { border-top: 1px solid var(--line); padding: 14px 16px; background: var(--panel-2); flex: none; }
