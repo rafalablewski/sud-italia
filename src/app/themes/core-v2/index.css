@@ -449,6 +449,8 @@
 .cv2 .cv-note { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; }
 .cv2 .cv-note .b { font-size: 13px; } .cv2 .cv-note .m { font-size: 10.5px; color: var(--ink-3); margin-top: 5px; display: flex; align-items: center; gap: 8px; }
 .cv2 .cv-note .m button { margin-left: auto; color: var(--ink-3); font-size: 12px; } .cv2 .cv-note .m button:hover { color: var(--danger); }
+.cv2 .cv-msg-compose { margin-bottom: 16px; }
+.cv2 .cv-msg-compose .cv-seg button:disabled { opacity: .4; cursor: default; }
 
 /* ============================================================
    Guest · Loyalty

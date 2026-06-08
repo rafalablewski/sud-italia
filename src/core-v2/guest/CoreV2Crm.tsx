@@ -105,6 +105,10 @@ export function CoreV2Crm() {
   const [noteDraft, setNoteDraft] = useState("");
   const [ptAmount, setPtAmount] = useState("");
   const [ptReason, setPtReason] = useState("");
+  const [msgChannel, setMsgChannel] = useState<"sms" | "email">("sms");
+  const [msgSubject, setMsgSubject] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -197,6 +201,26 @@ export function CoreV2Crm() {
       void load();
     } else toast("Could not adjust points", "danger");
   };
+  const sendMessage = async () => {
+    if (!selected || !msgBody.trim() || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${encodeURIComponent(selected)}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: msgChannel, body: msgBody.trim(), subject: msgChannel === "email" ? msgSubject.trim() || undefined : undefined }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.ok) {
+        toast(`${msgChannel === "sms" ? "SMS" : "Email"} sent`, "success");
+        setMsgBody("");
+        setMsgSubject("");
+      } else toast(d.error || "Could not send (manager+ only)", "danger");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const toggleConsent = async (patch: { smsOptIn?: boolean; emailOptIn?: boolean }) => {
     if (!selected) return;
     const res = await fetch(`/api/admin/customers/${encodeURIComponent(selected)}/consent`, {
@@ -341,6 +365,24 @@ export function CoreV2Crm() {
                 </div>
               </>
             )}
+
+            {/* message */}
+            <h4 className="cv-profile-h">Send a message</h4>
+            <div className="cv-msg-compose">
+              <div className="cv-seg" style={{ marginBottom: 8 }}>
+                <button className={msgChannel === "sms" ? "on" : ""} onClick={() => setMsgChannel("sms")} disabled={!cust.smsOptIn} title={cust.smsOptIn ? "" : "No SMS consent"}>SMS</button>
+                <button className={msgChannel === "email" ? "on" : ""} onClick={() => setMsgChannel("email")} disabled={!cust.email || !cust.emailOptIn} title={cust.email ? (cust.emailOptIn ? "" : "No email consent") : "No email on file"}>Email</button>
+              </div>
+              {msgChannel === "email" && (
+                <input className="cv-inp" style={{ width: "100%", marginBottom: 8 }} value={msgSubject} onChange={(e) => setMsgSubject(e.target.value)} placeholder="Subject" />
+              )}
+              <textarea className="cv-textarea" rows={2} value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder={`Message to ${cust.name.split(" ")[0]}…`} />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="cv-btn primary" disabled={!msgBody.trim() || sending} onClick={() => void sendMessage()}>
+                  Send {msgChannel === "sms" ? "SMS" : "email"}
+                </button>
+              </div>
+            </div>
 
             {/* points */}
             <h4 className="cv-profile-h">Adjust points</h4>
