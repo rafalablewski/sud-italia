@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
+import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
 import { analyzeTruck } from "@/lib/kds-prediction";
@@ -71,6 +72,10 @@ export function CoreV2Kds() {
   const [now, setNow] = useState(() => Date.now());
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [kiosk, setKiosk] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+  const [eightySixOpen, setEightySixOpen] = useState(false);
+  const [recalls, setRecalls] = useState<{ orderId: string; label: string; at: number }[]>([]);
 
   const { orders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
 
@@ -116,6 +121,10 @@ export function CoreV2Kds() {
           toast(d.error || "Could not bump ticket", "danger");
           return;
         }
+        // A bump to "completed" can be recalled within 10 min (mis-tap insurance).
+        if (next === "completed") {
+          setRecalls((r) => [{ orderId: t.id, label: `#${t.shortId}`, at: Date.now() }, ...r].slice(0, 5));
+        }
         refresh();
       } finally {
         setUpdatingId(null);
@@ -123,6 +132,41 @@ export function CoreV2Kds() {
     },
     [updatingId, refresh, toast],
   );
+
+  // Recall the last bump (completed → ready), the mis-tap undo.
+  const recall = useCallback(
+    async (orderId: string) => {
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/recall`, { method: "POST" });
+      if (res.ok) {
+        setRecalls((r) => r.filter((x) => x.orderId !== orderId));
+        toast("Ticket recalled to Expo", "success");
+        refresh();
+      } else toast("Could not recall", "danger");
+    },
+    [refresh, toast],
+  );
+  // Expire recall entries after 10 min.
+  useEffect(() => {
+    if (recalls.length === 0) return;
+    const id = setInterval(() => setRecalls((r) => r.filter((x) => Date.now() - x.at < 10 * 60 * 1000)), 30000);
+    return () => clearInterval(id);
+  }, [recalls.length]);
+
+  const toggleKiosk = useCallback(() => {
+    setKiosk((k) => {
+      const next = !k;
+      if (next) void document.documentElement.requestFullscreen?.().catch(() => {});
+      else if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setKiosk(false);
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
 
   const stationsPresent = useMemo(() => {
     const present = new Set<MenuCategory>();
@@ -152,6 +196,60 @@ export function CoreV2Kds() {
       clearInterval(id);
     };
   }, [view]);
+
+  // Number-key bump (1–9, 0=10th) on the focused lane, or the leftmost
+  // non-empty lane — the commercial bump-bar wiring. Ignored while typing.
+  const bumpList = useMemo(() => {
+    if (lane !== "all") return visibleByStatus.get(lane) ?? [];
+    for (const c of KDS_COLUMNS) {
+      const a = visibleByStatus.get(c.id) ?? [];
+      if (a.length) return a;
+    }
+    return [] as KdsTicket[];
+  }, [visibleByStatus, lane]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const d = e.key === "0" ? 10 : /^[1-9]$/.test(e.key) ? parseInt(e.key, 10) : 0;
+      if (!d) return;
+      const t = bumpList[d - 1];
+      if (t) {
+        e.preventDefault();
+        void advance(t);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [bumpList, advance]);
+
+  // Chime when a new ticket lands (off by default — the line opts in).
+  const prevNew = useRef(0);
+  useEffect(() => {
+    const n = counts.confirmed ?? 0;
+    if (soundOn && n > prevNew.current) {
+      try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.frequency.value = 880;
+          o.connect(g);
+          g.connect(ctx.destination);
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+          o.start();
+          o.stop(ctx.currentTime + 0.26);
+        }
+      } catch {
+        /* audio blocked — no-op */
+      }
+    }
+    prevNew.current = n;
+  }, [counts.confirmed, soundOn]);
 
   const isOwner = role === "owner";
   const tabs = [
@@ -196,32 +294,40 @@ export function CoreV2Kds() {
     );
   };
 
-  return (
-    <CoreV2Shell
-      eyebrow={`Kitchen Display · ${location || "all trucks"}`}
-      tabs={tabs}
-      bleed
-      subRight={
-        view === "fleet" ? null : (
-          <>
-            <div className="cv-seg">
-              <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
-                All <b>{counts.all}</b>
-              </button>
-              {KDS_COLUMNS.map((c) => (
-                <button key={c.id} className={lane === c.id ? "on" : ""} onClick={() => setLane(c.id)}>
-                  {c.label.split(" ")[0]} <b>{counts[c.id]}</b>
-                </button>
-              ))}
-            </div>
-            <button type="button" className="cv-iconbtn" title={paused ? "Resume" : "Pause"} onClick={() => setPaused((p) => !p)}>
-              {paused ? "▶" : "❚❚"}
+  const controls =
+    view === "fleet" ? null : (
+      <>
+        <div className="cv-seg">
+          <button className={lane === "all" ? "on" : ""} onClick={() => setLane("all")}>
+            All <b>{counts.all}</b>
+          </button>
+          {KDS_COLUMNS.map((c) => (
+            <button key={c.id} className={lane === c.id ? "on" : ""} onClick={() => setLane(c.id)}>
+              {c.label.split(" ")[0]} <b>{counts[c.id]}</b>
             </button>
-          </>
-        )
-      }
-    >
-      <div className="cv-kds">
+          ))}
+        </div>
+        {recalls.length > 0 && (
+          <button type="button" className="cv-iconbtn" title={`Recall ${recalls[0].label}`} onClick={() => void recall(recalls[0].orderId)}>
+            ↩ {recalls.length}
+          </button>
+        )}
+        <button type="button" className="cv-iconbtn" title="86 an item" onClick={() => setEightySixOpen(true)}>86</button>
+        <button type="button" className="cv-iconbtn" title={soundOn ? "Mute" : "Chime on new ticket"} onClick={() => setSoundOn((s) => !s)}>
+          {soundOn ? "🔔" : "🔕"}
+        </button>
+        <button type="button" className="cv-iconbtn" title={paused ? "Resume" : "Pause"} onClick={() => setPaused((p) => !p)}>
+          {paused ? "▶" : "❚❚"}
+        </button>
+      </>
+    );
+
+  const overlays = (
+    <EightySix location={location || ""} open={eightySixOpen} onClose={() => setEightySixOpen(false)} />
+  );
+
+  const board = (
+    <div className="cv-kds">
         {view === "fleet" ? (
           <FleetWall fleet={fleet} now={now} onDrill={(slug) => { setLocation(slug); setView("floor"); }} />
         ) : (
@@ -281,8 +387,108 @@ export function CoreV2Kds() {
             )}
           </>
         )}
+    </div>
+  );
+
+  // Fullscreen kiosk — drop the shell chrome for the bare wall (Floor/Chef).
+  if (kiosk && view !== "fleet") {
+    return (
+      <div className="cv-kiosk">
+        <div className="cv-kiosk-top">
+          <span className="cv-kiosk-brand">Sud Italia · KDS · {location || "line"}</span>
+          {controls}
+          <button type="button" className="cv-iconbtn" title="Exit fullscreen" onClick={toggleKiosk}>✕</button>
+        </div>
+        {board}
+        {overlays}
       </div>
+    );
+  }
+
+  return (
+    <CoreV2Shell
+      eyebrow={`Kitchen Display · ${location || "all trucks"}`}
+      tabs={tabs}
+      bleed
+      subRight={
+        <>
+          {controls}
+          {view !== "fleet" && (
+            <button type="button" className="cv-iconbtn" title="Fullscreen kiosk" onClick={toggleKiosk}>⛶</button>
+          )}
+        </>
+      }
+    >
+      {board}
+      {overlays}
     </CoreV2Shell>
+  );
+}
+
+// ---- 86 (eighty-six) — quick item availability ----
+function EightySix({ location, open, onClose }: { location: string; open: boolean; onClose: () => void }) {
+  const toast = useCoreToast();
+  const [available, setAvailable] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [off, setOff] = useState<{ id: string; name: string }[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!location) return;
+    const [menu, es] = await Promise.all([
+      fetch(`/api/agent/get_menu?location=${encodeURIComponent(location)}`).then((r) => (r.ok ? r.json() : { items: [] })),
+      fetch(`/api/admin/kds/eighty-six?location=${encodeURIComponent(location)}`).then((r) => (r.ok ? r.json() : { eightySixed: [] })),
+    ]);
+    setAvailable((menu.items ?? []).map((m: { id: string; name: string; category: string }) => ({ id: m.id, name: m.name, category: m.category })));
+    setOff(es.eightySixed ?? []);
+  }, [location]);
+  useEffect(() => {
+    if (open) void load();
+  }, [open, load]);
+
+  const toggle = async (id: string, name: string, makeAvailable: boolean) => {
+    setBusy(id);
+    try {
+      const r = await fetch(`/api/admin/kds/eighty-six?location=${encodeURIComponent(location)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, available: makeAvailable }),
+      });
+      if (r.ok) {
+        toast(makeAvailable ? `${name} restored` : `${name} 86'd`, "success");
+        await load();
+      } else toast("Could not update", "danger");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <CoreV2Dialog open={open} onClose={onClose} title="86 — item availability" width={520}>
+      {off.length > 0 && (
+        <>
+          <h4 className="cv-profile-h">86&apos;d · tap to restore</h4>
+          <div className="cv-86-chips">
+            {off.map((m) => (
+              <button key={m.id} className="cv-86-chip off" disabled={busy === m.id} onClick={() => void toggle(m.id, m.name, true)}>
+                {m.name} <span>↺</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <h4 className="cv-profile-h">On the menu · tap to 86</h4>
+      <div className="cv-86-chips">
+        {available.length === 0 ? (
+          <div className="cv-ctx-empty">Loading…</div>
+        ) : (
+          available.map((m) => (
+            <button key={m.id} className="cv-86-chip" disabled={busy === m.id} onClick={() => void toggle(m.id, m.name, false)}>
+              {m.name}
+            </button>
+          ))
+        )}
+      </div>
+    </CoreV2Dialog>
   );
 }
 

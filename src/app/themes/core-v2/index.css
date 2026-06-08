@@ -319,6 +319,26 @@
 .cv2 .cv-truck-drill { margin-top: 4px; height: 32px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 12px; }
 .cv2 .cv-truck-drill:hover { background: var(--hover); }
 
+/* fullscreen kiosk — bare dark wall, no shell */
+.cv2 .cv-kiosk {
+  position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column;
+  --bg: #0b0a0d; --panel: #141318; --panel-2: #1c1a22; --panel-3: #28262e;
+  --ink: #f4f1ec; --ink-2: #b8b0a6; --ink-3: #857d74;
+  --line: rgba(255,255,255,.09); --line-2: rgba(255,255,255,.16);
+  background: var(--bg); color: var(--ink);
+}
+.cv2 .cv-kiosk-top { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; }
+.cv2 .cv-kiosk-brand { font-family: var(--display); font-weight: 700; font-size: 15px; margin-right: auto; }
+.cv2 .cv-kiosk .cv-kds { flex: 1; min-height: 0; }
+
+/* 86 picker chips (in the dialog — follows the app theme) */
+.cv2 .cv-86-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+.cv2 .cv-86-chip { height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-weight: 550; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; }
+.cv2 .cv-86-chip:hover { border-color: var(--danger); color: var(--danger); }
+.cv2 .cv-86-chip.off { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
+.cv2 .cv-86-chip.off:hover { color: var(--basil); }
+.cv2 .cv-86-chip:disabled { opacity: .5; cursor: default; }
+
 @media (max-width: 1000px) { .cv2 .cv-lanes { grid-template-columns: 1fr; } .cv2 .cv-kpi { grid-template-columns: repeat(3, 1fr); } }
 
 /* ============================================================
