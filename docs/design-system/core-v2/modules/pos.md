@@ -26,23 +26,52 @@ A three-column grid inside the shell body: **rail · menu · ticket**.
 - **`.cv-ticket`** — the open-check panel. Today it shows
   `.cv-ticket-empty` (the no-open-check state).
 
-## Data
+## The ticket (open check)
 
-Real, server-resolved. `page.tsx` calls `getMenuWithOverrides(slug)` for
-every active location and hands `menusByLocation` to the client. The
-surface picks the menu for the location in `LocationContext` (the shell's
-location chip), falling back to the first active truck. Prices are in
-grosze, formatted to `27,90` (Polish decimal). **No mock data** — the
-grid is the live menu (Rule #1).
+Wired 1:1 to the same server engine as today's `/core/pos` — fresh `cv-`
+UI, identical contract.
 
-## Status & what's next
+- **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`.
+- **`.cv-thead`** — check name · channel/order tag · `.cv-covers` stepper
+  (dine-in).
+- **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
+  delivery); `.cv-chan-aux` opens the table picker (dine-in) or address
+  dialog (delivery).
+- **`.cv-lines`** — `.cv-line` rows with a `.cv-qstep` −/＋ counter and a
+  mono line price. Dine-in coursed checks group lines into `.cv-course`
+  blocks with a `.cv-course-h` header and a per-course **Fire** button;
+  fired courses dim (`.cv-course.fired`) and show `✓ Fired`.
+- **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`).
+- **`.cv-foot`** — `.cv-frow` subtotal, `.cv-frow.disc` combo discount,
+  `.cv-ftot` total, then `.cv-send` (Send to KDS) + `.cv-charge`.
 
-**Scaffold (Step 3).** Live: per-location menu, category rail with
-counts, text-forward cards, the empty-ticket state. The card `.add`
-button and category switch are wired; the **ticket** is not yet.
+## Engine + API contract
 
-Next pass wires the till proper, at parity with today's `/core/pos`:
-multi-tab open checks · add-to-ticket · dine-in **coursing** (Fire
-course-by-course) · combo + cross-sell offers · capacity-true pace
-steering · table assignment + covers · the **Charge → Tender** flow.
-Those land here with their `.cv-*` classes documented in the same commit.
+Real, server-resolved; **no mock data** (Rule #1). The server owns the
+total and the `orderId` — the till only ever sends item ids + quantities.
+
+- `page.tsx` resolves `menusByLocation` (`getMenuWithOverrides`) +
+  `upsellByLocation` (`getUpsellSettings`). The surface picks the menu for
+  the `LocationContext` truck (shell chip), falling back to the first.
+- **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. Local
+  edits debounce 350ms to `PUT`; a 5s poll syncs other tills (skipped
+  mid-debounce).
+- **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
+- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
+  returns the authoritative `totalAmount`, closes the tab.
+- **Pricing** — `getActiveComboDeals` (discount gated on `isComplete`,
+  subtracted from the real total) + `getCartSuggestions`, both from
+  `@/lib/upsell`; prices in grosze, formatted `27,90`.
+
+## Own UI primitives
+
+POS uses Core v2's **own** kit (no `src/ui`): `CoreV2Dialog`
+(`src/core-v2/ui/Dialog.tsx`, the tender / table / address modals) and
+`useCoreToast` (`src/core-v2/ui/Toast.tsx`) — both portaled into the
+`.cv2` theme root. Classes: `.cv-scrim` / `.cv-modal*` / `.cv-btn` /
+`.cv-toast*`.
+
+## What's next
+
+Polish parity with today's `/core/pos`: capacity-true **pace steering**
+banner, parking checks, drag-to-recourse, and the fullscreen kiosk.
