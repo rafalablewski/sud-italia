@@ -34,10 +34,12 @@ The guest engagement hub. `/core-v2/guest`.
 
 `src/core-v2/guest/CoreV2Loyalty.tsx`. Four tabs (Members · Wallets · Redemptions · Win-back) over a KPI strip. Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
 
-## Planned anatomy (5d–5e)
+## Concierge (`/core-v2/guest/concierge`) — wired
 
-- **Concierge** — MCP capability inspector + EU-14 allergen matrix.
-  `GET/PATCH /api/admin/concierge`.
+`src/core-v2/guest/CoreV2Concierge.tsx` (+ a server page that builds the meta / per-location samples / allergen matrix, like today's). A two-pane inspector: the six MCP capabilities with live exposure toggles (`.cv-toggle`, PATCH `/api/admin/concierge`) · the selected capability's real sample JSON + a Test link to `/api/agent/{cap}` + the EU-14 allergen matrix per location (`.cv-matrix`).
+
+## Planned anatomy (5e)
+
 - **Book** — slot + table in one move (shared with Service).
 
 Parity target: today's `/core/guest`. Classes documented here when ported.
