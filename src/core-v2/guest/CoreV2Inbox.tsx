@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePolling } from "@/lib/usePolling";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
@@ -527,9 +528,9 @@ export function CoreV2Inbox() {
   useEffect(() => {
     void loadAll();
     fetch("/api/admin/whatsapp/metrics").then((r) => (r.ok ? r.json() : null)).then(setMetrics).catch(() => {});
-    const id = setInterval(loadAll, 10000);
-    return () => clearInterval(id);
   }, [loadAll]);
+  // Visibility-aware refresh — a backgrounded inbox stops polling the API.
+  usePolling(loadAll, 10000);
 
   const loadThread = useCallback(async (phone: string) => {
     try {
@@ -553,9 +554,17 @@ export function CoreV2Inbox() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setRollup({ name: d.name ?? null, tier: d.tier ?? "—", ltv: d.ltv ?? d.totalSpent ?? 0, visits: d.visits ?? d.orderCount ?? 0, isMember: !!(d.isMember ?? d.member) }))
       .catch(() => {});
-    const id = setInterval(() => loadThread(selected), 6000);
-    return () => clearInterval(id);
   }, [selected, loadThread]);
+  // Visibility-aware thread refresh; skipped while a reply is on the wire so it
+  // can't replace the thread with a server copy that predates the just-sent
+  // message (the optimistic bubble would flicker out and back).
+  usePolling(
+    () => {
+      if (selected && !sending) void loadThread(selected);
+    },
+    6000,
+    { enabled: !!selected },
+  );
 
   useEffect(() => {
     msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight });
@@ -597,19 +606,28 @@ export function CoreV2Inbox() {
 
   const send = async () => {
     if (!selected || !reply.trim() || sending) return;
+    const body = reply.trim();
+    // Optimistic bubble — the operator sees their reply land instantly instead
+    // of waiting a round-trip for loadThread. The poll is held while `sending`
+    // so a stale frame can't drop it; loadThread reconciles to server truth.
+    const optimistic: WaMessage = { at: new Date().toISOString(), direction: "out", body, actor: "operator", kind: "text" };
     setSending(true);
+    setThread((t) => [...t, optimistic]);
+    setReply("");
     try {
       const res = await fetch(`/api/admin/whatsapp/sessions/${encodeURIComponent(selected)}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: reply }),
+        body: JSON.stringify({ body }),
       });
       if (res.ok) {
-        setReply("");
         await loadThread(selected);
         toast("Message sent", "success");
       } else {
         const d = await res.json().catch(() => ({}));
+        // Roll the bubble back and restore the draft so nothing is silently lost.
+        setThread((t) => t.filter((m) => m !== optimistic));
+        setReply(body);
         toast(d.error || "Outside the 24h window — send a template to reopen", "danger");
       }
     } finally {

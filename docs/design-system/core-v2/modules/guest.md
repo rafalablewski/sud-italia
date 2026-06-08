@@ -43,12 +43,14 @@ The guest engagement hub. `/core-v2/guest`.
   `GET /api/admin/whatsapp/settings`, writes the whole edited object back
   via `PATCH` (preserving `defaultLocation`).
 - **Engine + API** — same as today's `/core/guest/whatsapp`:
-  `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}` (10s
-  poll), `GET …/transcripts/{phone}` (6s on select),
+  `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}`
+  (visibility-aware 10s `usePolling`), `GET …/transcripts/{phone}` (6s on
+  select, skipped while a reply is sending),
   `GET /api/admin/customers/{phone}` for the rollup; **send** =
-  `POST …/sessions/{phone}/message {body}`; **archive/pin** =
-  `POST …/flags {phone, archived?, pinned?}`. `mergeConversations` folds
-  active sessions over transcript heads.
+  `POST …/sessions/{phone}/message {body}` (the reply bubble appears
+  optimistically and reconciles via the thread refetch; rolls back on
+  failure); **archive/pin** = `POST …/flags {phone, archived?, pinned?}`.
+  `mergeConversations` folds active sessions over transcript heads.
 
 ## Guests · CRM (`/core-v2/guest/guests`) — wired
 
