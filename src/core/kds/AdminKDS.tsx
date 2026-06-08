@@ -846,14 +846,14 @@ function KdsManagerOpsHeader({ orders, location }: { orders: Order[]; location: 
 
   return (
     <div className="kds-ops">
-      <div className="kds-ops-stats">
-        <div className="ostat"><div className="l">Open</div><div className="v">{orders.length}</div></div>
-        <div className={`ostat${late > 0 ? " alert" : ""}`}><div className="l">Late</div><div className="v">{late}</div></div>
-        <div className={`ostat${soon > 0 ? " warn" : ""}`}><div className="l">Due &lt;3m</div><div className="v">{soon}</div></div>
-        <div className="ostat"><div className="l">Oldest</div><div className="v">{orders.length > 0 ? fmtClock(oldest) : "—"}</div></div>
-        <div className="ostat"><div className="l">Avg age</div><div className="v">{orders.length > 0 ? fmtClock(avg) : "—"}</div></div>
-        <div className="ostat good"><div className="l">Done/hr</div><div className="v">{ops ? ops.throughputLastHour : "…"}</div></div>
-        <div className="ostat"><div className="l">On shift</div><div className="v">{ops ? ops.onShift : "…"}</div></div>
+      <div className="kpi-dark k7c">
+        <div className="kc"><div className="l">Open</div><div className="v">{orders.length}</div></div>
+        <div className="kc"><div className="l">Late</div><div className={`v${late > 0 ? " late" : ""}`}>{late}</div></div>
+        <div className="kc"><div className="l">Due &lt;3m</div><div className={`v${soon > 0 ? " warn" : ""}`}>{soon}</div></div>
+        <div className="kc"><div className="l">Oldest</div><div className="v">{orders.length > 0 ? fmtClock(oldest) : "—"}</div></div>
+        <div className="kc"><div className="l">Avg age</div><div className="v">{orders.length > 0 ? fmtClock(avg) : "—"}</div></div>
+        <div className="kc"><div className="l">Done/hr</div><div className="v good">{ops ? ops.throughputLastHour : "…"}</div></div>
+        <div className="kc"><div className="l">On shift</div><div className="v">{ops ? ops.onShift : "…"}</div></div>
       </div>
       <div className="kds-86">
         <span className="lbl">86&apos;d</span>

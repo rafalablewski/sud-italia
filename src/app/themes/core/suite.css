@@ -412,6 +412,18 @@
 .core-suite .core-clock { font: 600 16px var(--mono); padding: 5px 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); letter-spacing: .02em; }
 .core-suite .seg.kds-stage-seg .n { font: 600 11px var(--mono); color: var(--fg-subtle); margin-left: 5px; }
 .kds-wrap { min-height: 100%; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
+/* Mockup kpi-dark strip — the 7-up KPI band at the top of the Fleet/Floor wall. */
+.kpi-dark { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--r-lg); overflow: hidden; flex: none; }
+.kpi-dark .kc { background: var(--panel); padding: 13px 14px; }
+.kpi-dark .kc .l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.kpi-dark .kc .v { font: 600 22px var(--mono); margin-top: 5px; color: var(--t); }
+.kpi-dark .kc .v.warn { color: var(--warn); }
+.kpi-dark .kc .v.late { color: var(--late); }
+.kpi-dark .kc .v.good { color: var(--ready); }
+.kpi-dark .kc .v .u { font-size: 12px; font-weight: 400; color: var(--dim); }
+.kpi-dark .kc .s { font-size: 10px; color: var(--faint); margin-top: 3px; }
+@media (max-width: 1100px) { .kpi-dark { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 640px) { .kpi-dark { grid-template-columns: repeat(2, 1fr); } }
 .kds-top { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
 .kds-top .kds-id { display: flex; align-items: center; gap: 11px; }
 .kds-top .brand-mark { width: 28px; height: 28px; border-radius: 9px; background: var(--brand, #a62d49); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 11px; letter-spacing: .04em; }
@@ -438,6 +450,7 @@
 .kds-badge.platinum { background: var(--platinum-soft); color: var(--platinum); }
 
 .kds-ops { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; }
+.kds-ops > .kpi-dark { flex: 1 1 100%; }
 .kds-ops-stats { display: flex; gap: 7px; flex-wrap: wrap; }
 .ostat { background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 13px; min-width: 80px; }
 .ostat .l { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }

@@ -386,28 +386,28 @@ function FleetBar({
 
   return (
     <>
-      <div className="cmdbar">
-        <div className="cstat">
+      <div className="kpi-dark k7c">
+        <div className="kc">
           <div className="l">Active</div>
           <div className="v">{active}</div>
           <div className="s">{ready} ready for expo</div>
         </div>
-        <div className="cstat risk">
+        <div className="kc">
           <div className="l">At risk</div>
-          <div className="v">{risk}</div>
+          <div className="v warn">{risk}</div>
           <div className="s">predicted miss</div>
         </div>
-        <div className="cstat late">
+        <div className="kc">
           <div className="l">Late</div>
-          <div className="v">{late}</div>
+          <div className="v late">{late}</div>
           <div className="s">over SLA</div>
         </div>
-        <div className="cstat ready">
+        <div className="kc">
           <div className="l">Ready</div>
-          <div className="v">{ready}</div>
+          <div className="v good">{ready}</div>
           <div className="s">for expo</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Throughput</div>
           <div className="v">
             {totals.throughputHr}
@@ -415,19 +415,21 @@ function FleetBar({
           </div>
           <div className="s">last 60 min</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Covers</div>
           <div className="v">
             {totals.coversHr}
             <span className="u">/hr</span>
           </div>
+          <div className="s">seated</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Revenue</div>
           <div className="v">
             {zl(totals.revenueHr)}
             <span className="u">/hr</span>
           </div>
+          <div className="s">live</div>
         </div>
       </div>
 
