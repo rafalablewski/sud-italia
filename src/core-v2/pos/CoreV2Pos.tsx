@@ -211,6 +211,16 @@ export function CoreV2Pos({
     (addr: string) => mutateActive((t) => ({ ...t, address: addr.trim() || undefined })),
     [mutateActive],
   );
+  const togglePark = useCallback(
+    () => mutateActive((t) => ({ ...t, status: t.status === "parked" ? "open" : "parked" })),
+    [mutateActive],
+  );
+  // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
+  const recourse = useCallback(
+    (menuItemId: string, course: PosCourse) =>
+      mutateActive((t) => ({ ...t, items: t.items.map((l) => (l.menuItemId === menuItemId ? { ...l, course } : l)) })),
+    [mutateActive],
+  );
 
   const newTab = useCallback(async () => {
     if (!pageLoc) return;
@@ -352,6 +362,52 @@ export function CoreV2Pos({
   const offers = active && active.items.length > 0 ? getCartSuggestions(cartOf(active), menu, 4, config) : [];
   const isCoursed = !!active && active.channel === "dine-in" && (active.coursed ?? true);
 
+  // --- Pace steering (real: server analyzeTruck over live orders) ----------
+  const [steer, setSteer] = useState<{ active: boolean; bottleneck: { label: string; util: number; tier: string } | null; reason: string | null } | null>(null);
+  const [windowMin, setWindowMin] = useState(15);
+  useEffect(() => {
+    if (!pageLoc) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/admin/pace/steering?location=${encodeURIComponent(pageLoc)}`);
+        if (!res.ok) return;
+        const d = await res.json();
+        if (cancelled) return;
+        setSteer(d.plan ?? null);
+        if (d.paceWindowMin) setWindowMin(d.paceWindowMin);
+      } catch {
+        /* non-fatal — the till just shows no steering hint */
+      }
+    };
+    void load();
+    const id = setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [pageLoc]);
+
+  // --- Drag-to-recourse + fullscreen kiosk --------------------------------
+  const dragItem = useRef<string | null>(null);
+  const [dropCourse, setDropCourse] = useState<PosCourse | null>(null);
+  const [kiosk, setKiosk] = useState(false);
+  const toggleKiosk = useCallback(() => {
+    setKiosk((k) => {
+      const next = !k;
+      if (next) void document.documentElement.requestFullscreen?.().catch(() => {});
+      else if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setKiosk(false);
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
   // --- Dialogs -------------------------------------------------------------
   const [tableOpen, setTableOpen] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false);
@@ -361,7 +417,17 @@ export function CoreV2Pos({
     const m = byId(menuItemId);
     if (!m) return null;
     return (
-      <div className="cv-line" key={menuItemId}>
+      <div
+        className="cv-line"
+        key={menuItemId}
+        draggable
+        onDragStart={() => {
+          dragItem.current = menuItemId;
+        }}
+        onDragEnd={() => {
+          dragItem.current = null;
+        }}
+      >
         <div className="cv-qstep">
           <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
             −
@@ -388,7 +454,17 @@ export function CoreV2Pos({
         },
       ]}
       subRight={
-        active?.channel ? <span className="cv-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span> : null
+        <>
+          {active?.channel && <span className="cv-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
+          {active && (
+            <button type="button" className={active.status === "parked" ? "cv-chip on" : "cv-chip"} style={{ height: 32 }} onClick={togglePark} title="Park / resume this check">
+              {active.status === "parked" ? "▣ Parked" : "▢ Park"}
+            </button>
+          )}
+          <button type="button" className="cv-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
+            {kiosk ? "✕" : "⛶"}
+          </button>
+        </>
       }
     >
       <div className="cv-pos">
@@ -405,6 +481,20 @@ export function CoreV2Pos({
 
         {/* menu grid */}
         <main className="cv-menu">
+          {steer && (
+            steer.active && steer.bottleneck ? (
+              <div className={`cv-steer ${steer.bottleneck.tier}`}>
+                <span className="dot" />
+                <span><b>{steer.bottleneck.label} {Math.round(steer.bottleneck.util)}%</b> — {steer.reason ?? "nearing capacity; pace the firing."}</span>
+                <span className="cap">cap · {windowMin}m</span>
+              </div>
+            ) : (
+              <div className="cv-steer calm">
+                <span className="dot" />
+                <span><b>Line clear</b> — all stations within capacity, honest promise times live.</span>
+              </div>
+            )
+          )}
           <div className="cv-menu-grid">
             {items.map((m) => (
               <button key={m.id} type="button" className="cv-prod" onClick={() => (active ? addLine(m.id) : toast("Open a check first"))}>
@@ -518,7 +608,19 @@ export function CoreV2Pos({
                   groupLinesByCourse(active.items).map((g) => {
                     const fired = (active.firedCourses ?? []).includes(g.course);
                     return (
-                      <div key={g.course} className={fired ? "cv-course fired" : "cv-course"}>
+                      <div
+                        key={g.course}
+                        className={`${fired ? "cv-course fired" : "cv-course"}${dropCourse === g.course ? " drop" : ""}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (dropCourse !== g.course) setDropCourse(g.course);
+                        }}
+                        onDragLeave={() => setDropCourse((c) => (c === g.course ? null : c))}
+                        onDrop={() => {
+                          if (dragItem.current) recourse(dragItem.current, g.course);
+                          setDropCourse(null);
+                        }}
+                      >
                         <div className="cv-course-h">
                           <span className="c-n">{POS_COURSE_LABELS[g.course]}</span>
                           {fired ? (

@@ -186,6 +186,19 @@
 .cv2 .cv-charge { flex: 2; height: 46px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; box-shadow: var(--sh-2); }
 .cv2 .cv-charge:hover { background: var(--brand-bright); } .cv2 .cv-charge:disabled { opacity: .5; cursor: default; box-shadow: none; }
 
+/* pace-steering banner (sticky atop the menu) */
+.cv2 .cv-steer { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 9px; margin: -18px -18px 14px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; border-bottom: 1px solid var(--line); }
+.cv2 .cv-steer .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.cv2 .cv-steer .cap { margin-left: auto; font-family: var(--mono); font-size: 11px; opacity: .75; }
+.cv2 .cv-steer.calm { background: var(--basil-wash); color: var(--basil); }
+.cv2 .cv-steer.warn { background: var(--amber-wash); color: var(--amber); }
+.cv2 .cv-steer.risk { background: var(--danger-wash); color: var(--danger); }
+.cv2 .cv-chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+/* drag-to-recourse */
+.cv2 .cv-line { cursor: grab; }
+.cv2 .cv-line:active { cursor: grabbing; }
+.cv2 .cv-course.drop { background: var(--brand-wash); box-shadow: inset 0 0 0 2px var(--brand); border-radius: var(--r-md); }
+
 /* ============================================================
    Own UI primitives — Dialog, Toast, Button
    ============================================================ */
