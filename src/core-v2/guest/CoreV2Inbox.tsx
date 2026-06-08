@@ -127,6 +127,175 @@ function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): 
   return [...byPhone.values()].sort((a, b) => +new Date(b.lastAt) - +new Date(a.lastAt));
 }
 
+interface WaSettings {
+  enabled: boolean;
+  welcomeMessage: string;
+  optOutPhrases: string[];
+  defaultLocation: string | null;
+  dailyMessageCap: number;
+  reopenTemplate: string;
+  autoArchiveMinutes: number;
+  aiEnabled: boolean;
+  aiInstructions: string;
+  awayMessage: string;
+  autoReplies: { keyword: string; reply: string }[];
+  businessHours: { enabled: boolean; days: { open: string; close: string; closed: boolean }[] };
+  abandonedCart: { enabled: boolean; delayHours: number };
+  flows: unknown[];
+}
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * The WhatsApp bot configuration panel — welcome / opt-out / cap / AI / away /
+ * keyword auto-replies / business hours / abandoned-cart. Loads the live
+ * settings (GET) and writes the whole edited object back (PATCH). `flows` +
+ * `defaultLocation` are preserved untouched.
+ */
+function WaSettingsDialog({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const toast = useCoreToast();
+  const [s, setS] = useState<WaSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setS(null);
+    fetch("/api/admin/whatsapp/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setS(d))
+      .catch(() => setS(null));
+  }, [open]);
+
+  const patch = (p: Partial<WaSettings>) => setS((cur) => (cur ? { ...cur, ...p } : cur));
+  const setDay = (i: number, p: Partial<{ open: string; close: string; closed: boolean }>) =>
+    setS((cur) => (cur ? { ...cur, businessHours: { ...cur.businessHours, days: cur.businessHours.days.map((d, j) => (j === i ? { ...d, ...p } : d)) } } : cur));
+
+  const save = async () => {
+    if (!s || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(s),
+      });
+      if (res.ok) {
+        toast("WhatsApp settings saved", "success");
+        onSaved();
+        onClose();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast(d.error || "Could not save settings", "danger");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <CoreV2Dialog
+      open={open}
+      onClose={onClose}
+      title="WhatsApp settings"
+      width={600}
+      footer={
+        <>
+          <button className="cv-btn ghost" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="cv-btn primary" onClick={() => void save()} disabled={saving || !s}>Save</button>
+        </>
+      }
+    >
+      {!s ? (
+        <div className="cv-kds-empty pad">Loading settings…</div>
+      ) : (
+        <div className="cv-wa-settings">
+          <label className="cv-wa-row">
+            <span>Bot enabled</span>
+            <button type="button" className={`cv-toggle ${s.enabled ? "on" : ""}`} onClick={() => patch({ enabled: !s.enabled })} aria-pressed={s.enabled}><span className="knob" /></button>
+          </label>
+
+          <label className="cv-tbl-field"><span>Welcome message</span>
+            <textarea className="cv-textarea" rows={2} value={s.welcomeMessage} onChange={(e) => patch({ welcomeMessage: e.target.value })} />
+          </label>
+
+          <label className="cv-wa-row">
+            <span>AI concierge</span>
+            <button type="button" className={`cv-toggle ${s.aiEnabled ? "on" : ""}`} onClick={() => patch({ aiEnabled: !s.aiEnabled })} aria-pressed={s.aiEnabled}><span className="knob" /></button>
+          </label>
+          <label className="cv-tbl-field"><span>AI instructions (persona / promos)</span>
+            <textarea className="cv-textarea" rows={2} value={s.aiInstructions} onChange={(e) => patch({ aiInstructions: e.target.value })} placeholder="e.g. Always suggest a dessert. Mention the lunch combo before 14:00." />
+          </label>
+          <label className="cv-tbl-field"><span>Away message (when AI is off / out of hours)</span>
+            <textarea className="cv-textarea" rows={2} value={s.awayMessage} onChange={(e) => patch({ awayMessage: e.target.value })} />
+          </label>
+
+          <div className="cv-wa-grid">
+            <label className="cv-tbl-field"><span>Daily message cap</span>
+              <input className="cv-inp" type="number" value={s.dailyMessageCap} onChange={(e) => patch({ dailyMessageCap: parseInt(e.target.value, 10) || 0 })} />
+            </label>
+            <label className="cv-tbl-field"><span>Auto-archive after (min, 0 = off)</span>
+              <input className="cv-inp" type="number" value={s.autoArchiveMinutes} onChange={(e) => patch({ autoArchiveMinutes: parseInt(e.target.value, 10) || 0 })} />
+            </label>
+          </div>
+          <label className="cv-tbl-field"><span>Re-open template name</span>
+            <input className="cv-inp" value={s.reopenTemplate} onChange={(e) => patch({ reopenTemplate: e.target.value })} placeholder="welcome_back" />
+          </label>
+          <label className="cv-tbl-field"><span>Opt-out phrases (comma-separated)</span>
+            <input className="cv-inp" value={s.optOutPhrases.join(", ")} onChange={(e) => patch({ optOutPhrases: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} />
+          </label>
+
+          {/* keyword auto-replies */}
+          <div className="cv-wa-sec-h">Keyword auto-replies</div>
+          <div className="cv-wa-ar">
+            {s.autoReplies.map((ar, i) => (
+              <div key={i} className="cv-wa-ar-row">
+                <input className="cv-inp" value={ar.keyword} placeholder="keyword" onChange={(e) => patch({ autoReplies: s.autoReplies.map((x, j) => (j === i ? { ...x, keyword: e.target.value } : x)) })} />
+                <input className="cv-inp" value={ar.reply} placeholder="canned reply" onChange={(e) => patch({ autoReplies: s.autoReplies.map((x, j) => (j === i ? { ...x, reply: e.target.value } : x)) })} />
+                <button type="button" className="cv-slot-x" aria-label="Remove" onClick={() => patch({ autoReplies: s.autoReplies.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            ))}
+            <button type="button" className="cv-btn ghost sm" onClick={() => patch({ autoReplies: [...s.autoReplies, { keyword: "", reply: "" }] })}>+ Add auto-reply</button>
+          </div>
+
+          {/* business hours */}
+          <div className="cv-wa-sec-h">
+            Business hours
+            <button type="button" className={`cv-toggle ${s.businessHours.enabled ? "on" : ""}`} onClick={() => patch({ businessHours: { ...s.businessHours, enabled: !s.businessHours.enabled } })} aria-pressed={s.businessHours.enabled}><span className="knob" /></button>
+          </div>
+          {s.businessHours.enabled && (
+            <div className="cv-wa-days">
+              {s.businessHours.days.map((d, i) => (
+                <div key={i} className="cv-wa-day">
+                  <span className="dn">{WEEKDAYS[i]}</span>
+                  {d.closed ? (
+                    <span className="cv-cust-sub" style={{ flex: 1 }}>Closed</span>
+                  ) : (
+                    <>
+                      <input className="cv-inp" type="time" value={d.open} onChange={(e) => setDay(i, { open: e.target.value })} />
+                      <input className="cv-inp" type="time" value={d.close} onChange={(e) => setDay(i, { close: e.target.value })} />
+                    </>
+                  )}
+                  <button type="button" className={d.closed ? "cv-chip on" : "cv-chip"} onClick={() => setDay(i, { closed: !d.closed })}>{d.closed ? "Closed" : "Open"}</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* abandoned cart */}
+          <div className="cv-wa-sec-h">
+            Abandoned-cart recovery
+            <button type="button" className={`cv-toggle ${s.abandonedCart.enabled ? "on" : ""}`} onClick={() => patch({ abandonedCart: { ...s.abandonedCart, enabled: !s.abandonedCart.enabled } })} aria-pressed={s.abandonedCart.enabled}><span className="knob" /></button>
+          </div>
+          {s.abandonedCart.enabled && (
+            <label className="cv-tbl-field"><span>Send the re-open template after (hours)</span>
+              <input className="cv-inp" type="number" value={s.abandonedCart.delayHours} onChange={(e) => patch({ abandonedCart: { ...s.abandonedCart, delayHours: parseInt(e.target.value, 10) || 0 } })} />
+            </label>
+          )}
+        </div>
+      )}
+    </CoreV2Dialog>
+  );
+}
+
 /**
  * Core v2 · Guest · Inbox — the WhatsApp till. A 3-pane console (conversation
  * list · thread · live context), wired 1:1 to the same engine as today's
@@ -149,6 +318,7 @@ export function CoreV2Inbox() {
   const [funnelOpen, setFunnelOpen] = useState(false);
   const [funnelWindow, setFunnelWindow] = useState<FunnelWindow>("7d");
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -298,6 +468,7 @@ export function CoreV2Inbox() {
       subRight={
         <>
           <button type="button" className="cv-btn ghost sm" onClick={() => setFunnelOpen(true)}>Funnel</button>
+          <button type="button" className="cv-btn ghost sm" onClick={() => setSettingsOpen(true)}>Settings</button>
           <span className="cv-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
         </>
       }
@@ -492,6 +663,8 @@ export function CoreV2Inbox() {
           )}
         </div>
       </CoreV2Dialog>
+
+      <WaSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => void loadAll()} />
     </CoreV2Shell>
   );
 }

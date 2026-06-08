@@ -25,6 +25,13 @@ The guest engagement hub. `/core-v2/guest`.
   7d/30d/all window switch — `GET /api/admin/whatsapp/funnel?window=` →
   Started/Paid/Conversion/Unique KPIs over per-stage `.cv-funnel-stage`
   bars (count · % of start · drop-from-previous).
+- **Settings:** a subbar **Settings** button opens `WaSettingsDialog`
+  (`.cv-wa-settings`) — bot enable, welcome message, AI toggle +
+  instructions, away message, daily cap, auto-archive, re-open template,
+  opt-out phrases, **keyword auto-replies** (add/remove), **business
+  hours** (per-day open/close/closed), and **abandoned-cart** recovery.
+  Loads `GET /api/admin/whatsapp/settings`, writes the whole edited object
+  back via `PATCH` (preserving `flows` + `defaultLocation`).
 - **Engine + API** — same as today's `/core/guest/whatsapp`:
   `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}` (10s
   poll), `GET …/transcripts/{phone}` (6s on select),
