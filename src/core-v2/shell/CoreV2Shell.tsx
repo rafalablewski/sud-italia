@@ -7,6 +7,7 @@ export interface CoreV2Tab {
   label: string;
   href?: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
 /**
@@ -60,7 +61,7 @@ export function CoreV2Shell({
                   {t.label}
                 </Link>
               ) : (
-                <button key={t.label} type="button" className={t.active ? "on" : undefined}>
+                <button key={t.label} type="button" className={t.active ? "on" : undefined} onClick={t.onClick}>
                   {t.label}
                 </button>
               ),
