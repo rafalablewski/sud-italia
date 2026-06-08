@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
+import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { guestTabs } from "./guestTabs";
 
@@ -67,6 +68,27 @@ function initials(name: string | null, phone: string): string {
   if (name) return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return phone.slice(-2);
 }
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+interface FunnelStage { stage: string; label: string; count: number; pctOfStart: number; pctOfPrev: number; dropFromPrev: number }
+interface FunnelData { startedCount: number; paidCount: number; conversionRate: number; uniqueConversations: number; stages: FunnelStage[] }
+type FunnelWindow = "7d" | "30d" | "all";
+
+// Operator quick-reply starters; "Payment link" injects the live pay URL.
+const QUICK_REPLIES: { label: string; text: (payUrl: string | null) => string | null }[] = [
+  { label: "Menu", text: () => "Here's our menu — what are you craving today? 🍕 Just send the dishes and I'll start your order." },
+  { label: "Payment link", text: (u) => u },
+  { label: "Reservation", text: () => "Happy to book you a table — which day, time and how many guests?" },
+  { label: "Comp dessert", text: () => "On us today: a complimentary tiramisù with your order. 🍰" },
+];
 
 function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): ConversationRow[] {
   const byPhone = new Map<string, ConversationRow>();
@@ -124,7 +146,19 @@ export function CoreV2Inbox() {
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<Filter>("inbox");
   const [query, setQuery] = useState("");
+  const [funnelOpen, setFunnelOpen] = useState(false);
+  const [funnelWindow, setFunnelWindow] = useState<FunnelWindow>("7d");
+  const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const msgsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!funnelOpen) return;
+    setFunnel(null);
+    fetch(`/api/admin/whatsapp/funnel?window=${funnelWindow}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setFunnel(d))
+      .catch(() => setFunnel(null));
+  }, [funnelOpen, funnelWindow]);
 
   const loadAll = useCallback(async () => {
     try {
@@ -195,6 +229,23 @@ export function CoreV2Inbox() {
 
   const selectedConv = conversations.find((c) => c.phone === selected) ?? null;
 
+  // WhatsApp's 24h customer-service window: free-text replies only land while
+  // the last inbound message is < 24h old; otherwise a template must reopen it.
+  const windowOpen = useMemo(() => {
+    for (let i = thread.length - 1; i >= 0; i--) {
+      if (thread[i].direction === "in") return Date.now() - new Date(thread[i].at).getTime() < 24 * 3600 * 1000;
+    }
+    return false;
+  }, [thread]);
+
+  const insertReply = (text: string | null) => {
+    if (!text) {
+      toast("No payment link on this conversation yet", "danger");
+      return;
+    }
+    setReply((r) => (r.trim() ? `${r.trim()} ${text}` : text));
+  };
+
   const send = async () => {
     if (!selected || !reply.trim() || sending) return;
     setSending(true);
@@ -244,7 +295,12 @@ export function CoreV2Inbox() {
     <CoreV2Shell
       eyebrow="Guest Engagement"
       tabs={guestTabs("inbox")}
-      subRight={<span className="cv-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>}
+      subRight={
+        <>
+          <button type="button" className="cv-btn ghost sm" onClick={() => setFunnelOpen(true)}>Funnel</button>
+          <span className="cv-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
+        </>
+      }
     >
       <div className="cv-guest-inbox">
         {kpis.length > 0 && (
@@ -308,6 +364,7 @@ export function CoreV2Inbox() {
                     <div className="nm">{selectedConv.customerName || selectedConv.phone}</div>
                     <div className="meta">{selectedConv.phone} · WhatsApp</div>
                   </div>
+                  <span className={`cv-window ${windowOpen ? "open" : "closed"}`}>24h · {windowOpen ? "open" : "closed"}</span>
                   <button className="cv-iconbtn" title={pinnedSet.has(selectedConv.phone) ? "Unpin" : "Pin"} onClick={() => void setFlag(selectedConv.phone, { pinned: !pinnedSet.has(selectedConv.phone) })}>
                     {pinnedSet.has(selectedConv.phone) ? "📌" : "📍"}
                   </button>
@@ -319,13 +376,31 @@ export function CoreV2Inbox() {
                   {thread.length === 0 ? (
                     <div className="cv-kds-empty pad">No messages yet.</div>
                   ) : (
-                    thread.map((m, i) => (
-                      <div key={i} className={`cv-bub ${m.actor}`}>
-                        {m.body}
-                        <span className="t">{m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : ""} {clock(m.at)}</span>
-                      </div>
-                    ))
+                    (() => {
+                      let lastDay = "";
+                      return thread.map((m, i) => {
+                        const dk = new Date(m.at).toDateString();
+                        const sep = dk !== lastDay;
+                        lastDay = dk;
+                        return (
+                          <Fragment key={i}>
+                            {sep && <div className="cv-day-sep"><span>{dayLabel(m.at)}</span></div>}
+                            <div className={`cv-bub ${m.actor}`}>
+                              {m.body}
+                              <span className="t">{m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : m.actor === "system" ? "System" : ""} {clock(m.at)}</span>
+                            </div>
+                          </Fragment>
+                        );
+                      });
+                    })()
                   )}
+                </div>
+                <div className="cv-quickreplies">
+                  {QUICK_REPLIES.map((q) => (
+                    <button key={q.label} type="button" onClick={() => insertReply(q.text(selectedConv.pendingPaymentUrl))}>
+                      {q.label}
+                    </button>
+                  ))}
                 </div>
                 <div className="cv-composer">
                   <textarea
@@ -337,7 +412,7 @@ export function CoreV2Inbox() {
                         void send();
                       }
                     }}
-                    placeholder="Type a reply… (Enter to send)"
+                    placeholder={windowOpen ? "Type a reply… (Enter to send)" : "24h window closed — a template is needed to reopen"}
                     rows={1}
                   />
                   <button className="cv-send-msg" disabled={!reply.trim() || sending} onClick={() => void send()}>
@@ -382,6 +457,41 @@ export function CoreV2Inbox() {
           </aside>
         </div>
       </div>
+
+      {/* conversion funnel */}
+      <CoreV2Dialog open={funnelOpen} onClose={() => setFunnelOpen(false)} title="WhatsApp conversion funnel" width={560}>
+        <div className="cv-funnel">
+          <div className="cv-seg" style={{ marginBottom: 14 }}>
+            {(["7d", "30d", "all"] as FunnelWindow[]).map((w) => (
+              <button key={w} type="button" className={funnelWindow === w ? "on" : ""} onClick={() => setFunnelWindow(w)}>{w === "all" ? "All" : w}</button>
+            ))}
+          </div>
+          {!funnel ? (
+            <div className="cv-kds-empty pad">Loading funnel…</div>
+          ) : (
+            <>
+              <div className="cv-funnel-kpis">
+                <div><span className="sv mono">{funnel.startedCount}</span><span className="sl">Started</span></div>
+                <div><span className="sv mono">{funnel.paidCount}</span><span className="sl">Paid</span></div>
+                <div><span className="sv mono">{Math.round(funnel.conversionRate * 100)}%</span><span className="sl">Conversion</span></div>
+                <div><span className="sv mono">{funnel.uniqueConversations}</span><span className="sl">Unique</span></div>
+              </div>
+              <div className="cv-funnel-stages">
+                {funnel.stages.map((s) => (
+                  <div key={s.stage} className="cv-funnel-stage">
+                    <div className="row">
+                      <span className="lab">{s.label}</span>
+                      <span className="cnt mono">{s.count}<span className="pct"> · {Math.round(s.pctOfStart * 100)}%</span></span>
+                    </div>
+                    <div className="cv-track"><i style={{ width: `${Math.round(s.pctOfStart * 100)}%` }} /></div>
+                    {s.dropFromPrev > 0 && <span className="drop">−{Math.round(s.dropFromPrev * 100)}% from previous step</span>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </CoreV2Dialog>
     </CoreV2Shell>
   );
 }

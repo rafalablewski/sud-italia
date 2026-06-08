@@ -16,10 +16,17 @@ The guest engagement hub. `/core-v2/guest`.
 - **Layout:** a 5-up KPI strip over the 3-pane console — conversation list
   (`.cv-conv` rows with avatar, LIVE/PAY badges, search + inbox/live/
   awaiting/archived filters) · thread (`.cv-bub` bubbles toned by actor:
-  customer/operator/bot/system) + composer · context (`.cv-ctx`: live
-  cart + guest rollup + tier).
+  customer/operator/bot/system, grouped under `.cv-day-sep` **day
+  separators**; the header carries a `.cv-window` **24h-window** chip
+  open/closed) + a `.cv-quickreplies` row of starters (Menu · Payment link
+  [injects the live pay URL] · Reservation · Comp dessert) over the
+  composer · context (`.cv-ctx`: live cart + guest rollup + tier).
+- **Funnel:** a subbar **Funnel** button opens a `CoreV2Dialog` with a
+  7d/30d/all window switch — `GET /api/admin/whatsapp/funnel?window=` →
+  Started/Paid/Conversion/Unique KPIs over per-stage `.cv-funnel-stage`
+  bars (count · % of start · drop-from-previous).
 - **Engine + API** — same as today's `/core/guest/whatsapp`:
-  `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics}` (10s
+  `GET /api/admin/whatsapp/{sessions,transcripts,flags,metrics,funnel}` (10s
   poll), `GET …/transcripts/{phone}` (6s on select),
   `GET /api/admin/customers/{phone}` for the rollup; **send** =
   `POST …/sessions/{phone}/message {body}`; **archive/pin** =
