@@ -17,9 +17,12 @@ A three-column grid inside the shell body: **rail · menu · ticket**.
   item count (`.n`). `.on` = the selected category (filled ink).
 - **`.cv-menu` / `.cv-menu-grid`** — auto-fill grid of `.cv-prod` cards.
   Each card is **text-forward** (no photo dependency): `.pn` (display
-  name) · `.pd` (description) · `.cv-tagrow` of `.cv-tag` chips
-  (veg/vegan → `.veg`, spicy → `.hot`, gluten-free → `.fast`) · `.pf`
-  footer with the `.pp` mono price and the burgundy `.add` button.
+  name) · `.pd` (description, clamped to 2 lines) · `.cv-tagrow` of
+  `.cv-tag` chips (veg/vegan → `.veg`, spicy → `.hot`, gluten-free →
+  `.fast`) · `.pf` footer with the `.pp` mono price and the burgundy
+  `.add` button. Cards **stretch to equal height per row** and the `.pf`
+  footer is pinned to the bottom (`margin-top: auto`), so a long
+  description can't make one card taller than its row-mates.
 - **`.cv-ticket`** — the open-check panel. Today it shows
   `.cv-ticket-empty` (the no-open-check state).
 

@@ -94,18 +94,22 @@
 .cv2 .cv-cat .n { font-family: var(--mono); font-size: 11.5px; opacity: .65; }
 
 .cv2 .cv-menu { overflow-y: auto; padding: 18px; background: var(--bg); }
-.cv2 .cv-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+/* Cards stretch to equal height per row (grid default), with the description
+   clamped to two lines and the price footer pinned to the bottom — so a long
+   description (Tartufata) can't make its card taller than its row-mates. */
+.cv2 .cv-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-items: stretch; }
 .cv2 .cv-prod { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--r-md); padding: 14px; text-align: left; transition: all var(--fast); box-shadow: var(--sh-1); width: 100%; }
 .cv2 .cv-prod:hover { border-color: var(--line-2); box-shadow: var(--sh-2); transform: translateY(-1px); }
 .cv2 .cv-prod .pn { font-family: var(--display); font-weight: 600; font-size: 15.5px; letter-spacing: -.01em; line-height: 1.15; }
-.cv2 .cv-prod .pd { font-size: 11.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.45; }
-.cv2 .cv-prod .pf { display: flex; align-items: center; justify-content: space-between; margin-top: 11px; }
+.cv2 .cv-prod .pd { font-size: 11.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.45; min-height: 33px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cv2 .cv-prod .pf { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 11px; }
 .cv2 .cv-prod .pp { font-family: var(--mono); font-weight: 600; font-size: 14.5px; color: var(--ink); }
 .cv2 .cv-prod .add { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; display: grid; place-items: center;
   font-size: 18px; line-height: 1; box-shadow: var(--sh-1); transition: all var(--fast); flex: none; }
 .cv2 .cv-prod:hover .add { background: var(--brand-bright); }
-.cv2 .cv-tagrow { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+.cv2 .cv-tagrow { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; min-height: 20px; }
 .cv2 .cv-tag { font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 6px; background: var(--panel-3); color: var(--ink-2); }
 .cv2 .cv-tag.veg { background: var(--basil-wash); color: var(--basil); }
 .cv2 .cv-tag.hot { background: var(--brand-wash); color: var(--brand); }
