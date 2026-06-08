@@ -608,6 +608,31 @@
 .cv2 .cv-tbl2 .tst { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--basil-wash); color: var(--basil); }
 .cv2 .cv-tbl2 .tst.seated { background: var(--brand-wash); color: var(--brand-bright); } .cv2 .cv-tbl2 .tst.freeing { background: var(--amber-wash); color: var(--amber); } .cv2 .cv-tbl2 .tst.booked { background: var(--info-wash); color: var(--info); } .cv2 .cv-tbl2 .tst.oos { background: var(--panel-3); color: var(--ink-3); }
 .cv2 .cv-tbl2 .tinfo { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+/* tile wrapper so the edit affordance isn't a button nested in a button */
+.cv2 .cv-tbl2-wrap { position: relative; display: flex; }
+.cv2 .cv-tbl2-wrap .cv-tbl2 { width: 100%; }
+.cv2 .cv-tbl2-edit { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--ink-3); font-size: 14px; line-height: 1; opacity: 0; transition: opacity var(--fast), background var(--fast); }
+.cv2 .cv-tbl2-wrap:hover .cv-tbl2-edit { opacity: 1; }
+.cv2 .cv-tbl2-edit:hover { background: var(--panel-3); color: var(--ink); }
+
+/* predictive-seating recommender bar */
+.cv2 .cv-floor-bar { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.cv2 .cv-rec-lbl { font-size: 12.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.cv2 .cv-rec-n { width: 64px; height: 32px; flex: none; }
+.cv2 .cv-rec-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cv2 .cv-rec-empty { font-size: 12px; color: var(--ink-3); }
+.cv2 .cv-fchip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: var(--pill); border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); font-weight: 600; font-size: 12.5px; }
+.cv2 .cv-fchip .n { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--basil); text-transform: uppercase; letter-spacing: .03em; }
+.cv2 .cv-fchip:not(:disabled):hover { border-color: var(--brand); }
+.cv2 .cv-fchip:disabled { opacity: .55; cursor: default; }
+.cv2 .cv-fchip:disabled .n { color: var(--amber); }
+
+/* table editor form */
+.cv2 .cv-tbl-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 12px; color: var(--ink-2); }
+.cv2 .cv-tbl-field:last-child { margin-bottom: 0; }
+.cv2 .cv-tbl-field .cv-inp { width: 100%; }
+.cv2 .cv-btn.danger { background: var(--danger-wash); border-color: transparent; color: var(--danger); }
+.cv2 .cv-btn.danger:hover { background: var(--danger); color: #fff; }
 
 /* slots */
 .cv2 .cv-slot-list { display: flex; flex-direction: column; gap: 8px; }
