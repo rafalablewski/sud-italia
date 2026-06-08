@@ -1123,7 +1123,8 @@
 /* ============================================================
    POS (ported from pos.html)
    ============================================================ */
-.core-suite .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.core-suite .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--bg); }
+.core-suite .core-body > .pos-shell { margin: 12px 18px 18px; }
 .core-suite .tabrail { flex: none; border-bottom: 1px solid var(--border); background: var(--surface-1); }
 .core-suite .tabrail-head { display: flex; align-items: center; gap: 14px; padding: 9px 18px 0; }
 .core-suite .tabrail-head .eyebrow { font-size: 10px; }
