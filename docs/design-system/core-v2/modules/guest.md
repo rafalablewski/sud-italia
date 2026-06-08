@@ -25,6 +25,12 @@ The guest engagement hub. `/core-v2/guest`.
   7d/30d/all window switch — `GET /api/admin/whatsapp/funnel?window=` →
   Started/Paid/Conversion/Unique KPIs over per-stage `.cv-funnel-stage`
   bars (count · % of start · drop-from-previous).
+- **Broadcast:** a subbar **Broadcast** button opens `WaBroadcastDialog`
+  (`GET /api/admin/whatsapp/broadcasts` → audiences + campaigns) — pick an
+  audience snapshot (All / Active / Lapsed / VIP / New, with live counts)
+  + a Meta template, `POST` to queue, then **Drive send →** loops
+  `POST …/broadcasts/{id}/send` in batches (updating the `.cv-bc` progress
+  bar) until the campaign hits a terminal status.
 - **Settings:** a subbar **Settings** button opens `WaSettingsDialog`
   (`.cv-wa-settings`) — bot enable, welcome message, AI toggle +
   instructions, away message, daily cap, auto-archive, re-open template,

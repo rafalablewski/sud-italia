@@ -501,6 +501,14 @@
 .cv2 .cv-wa-day .dn { width: 38px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .cv2 .cv-wa-day .cv-inp { width: 110px; }
 .cv2 .cv-wa-day .cv-chip { margin-left: auto; height: 28px; font-size: 11px; }
+/* broadcast campaign list */
+.cv2 .cv-bc-list { display: flex; flex-direction: column; gap: 9px; }
+.cv2 .cv-bc { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; }
+.cv2 .cv-bc-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 3px; }
+.cv2 .cv-bc-h b { font-size: 13px; }
+.cv2 .cv-bc-status { font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: var(--pill); }
+.cv2 .cv-bc-status.live { background: var(--amber-wash); color: var(--amber); }
+.cv2 .cv-bc-status.done { background: var(--basil-wash); color: var(--basil); }
 /* conversion-funnel modal */
 .cv2 .cv-funnel-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .cv2 .cv-funnel-kpis > div { background: var(--panel); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }

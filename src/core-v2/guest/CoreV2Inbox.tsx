@@ -296,6 +296,142 @@ function WaSettingsDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
   );
 }
 
+interface WaAudience { key: string; label: string; hint: string; count: number }
+interface WaCampaign {
+  id: string;
+  template: string;
+  audienceLabel: string;
+  phones: string[];
+  cursor: number;
+  sentCount: number;
+  failedCount: number;
+  status: string;
+}
+
+/**
+ * WhatsApp broadcast campaigns — pick an audience snapshot + a Meta template,
+ * queue it, then drive it to completion in batches (`/{id}/send` looped until
+ * the campaign reports a terminal status).
+ */
+function WaBroadcastDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useCoreToast();
+  const [audiences, setAudiences] = useState<WaAudience[]>([]);
+  const [campaigns, setCampaigns] = useState<WaCampaign[]>([]);
+  const [audienceKey, setAudienceKey] = useState("all");
+  const [template, setTemplate] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await fetch("/api/admin/whatsapp/broadcasts");
+    if (!r.ok) return;
+    const d = await r.json();
+    setAudiences(d.audiences ?? []);
+    setCampaigns(d.campaigns ?? []);
+  }, []);
+  useEffect(() => {
+    if (open) void load();
+  }, [open, load]);
+
+  const create = async () => {
+    if (!template.trim() || busy) {
+      if (!template.trim()) toast("A Meta template name is required", "danger");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch("/api/admin/whatsapp/broadcasts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: template.trim(), audienceKey }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.campaign) {
+        setCampaigns((c) => [d.campaign, ...c]);
+        setTemplate("");
+        toast("Campaign queued", "success");
+      } else toast(d.error || "Could not create campaign", "danger");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const driveSend = async (id: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      for (let i = 0; i < 200; i++) {
+        const r = await fetch(`/api/admin/whatsapp/broadcasts/${encodeURIComponent(id)}/send`, { method: "POST" });
+        if (!r.ok) {
+          toast("Send failed", "danger");
+          break;
+        }
+        const d = await r.json();
+        const c = d.campaign as WaCampaign;
+        setCampaigns((cur) => cur.map((x) => (x.id === id ? c : x)));
+        if (["done", "completed", "cancelled", "failed"].includes(c.status)) {
+          toast(`Campaign ${c.status} · ${c.sentCount} sent`, "success");
+          break;
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selAud = audiences.find((a) => a.key === audienceKey);
+
+  return (
+    <CoreV2Dialog open={open} onClose={onClose} title="Broadcast campaign" width={580}>
+      <div className="cv-wa-settings">
+        <div className="cv-tbl-field"><span>Audience</span>
+          <div className="cv-segs" style={{ marginTop: 2 }}>
+            {audiences.map((a) => (
+              <button key={a.key} type="button" className={audienceKey === a.key ? "on" : ""} onClick={() => setAudienceKey(a.key)} title={a.hint}>
+                {a.label} · {a.count}
+              </button>
+            ))}
+          </div>
+          {selAud && <p className="cv-cust-sub" style={{ marginTop: 6 }}>{selAud.hint} — {selAud.count} reachable.</p>}
+        </div>
+        <label className="cv-tbl-field"><span>Meta template name</span>
+          <input className="cv-inp" value={template} onChange={(e) => setTemplate(e.target.value)} placeholder="weekend_special" />
+        </label>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button type="button" className="cv-btn primary" disabled={busy || !template.trim()} onClick={() => void create()}>Queue campaign</button>
+        </div>
+
+        <div className="cv-wa-sec-h">Campaigns</div>
+        {campaigns.length === 0 ? (
+          <div className="cv-cust-sub">No campaigns yet.</div>
+        ) : (
+          <div className="cv-bc-list">
+            {campaigns.map((c) => {
+              const total = c.phones?.length ?? 0;
+              const pct = total ? Math.round((c.cursor / total) * 100) : 0;
+              const terminal = ["done", "completed", "cancelled", "failed"].includes(c.status);
+              return (
+                <div key={c.id} className="cv-bc">
+                  <div className="cv-bc-h">
+                    <b>{c.template}</b>
+                    <span className={`cv-bc-status ${terminal ? "done" : "live"}`}>{c.status}</span>
+                  </div>
+                  <div className="cv-cust-sub">{c.audienceLabel} · {total} recipients · {c.sentCount} sent{c.failedCount ? ` · ${c.failedCount} failed` : ""}</div>
+                  <div className="cv-track" style={{ marginTop: 6 }}><i style={{ width: `${pct}%` }} /></div>
+                  {!terminal && (
+                    <button type="button" className="cv-btn sm" style={{ marginTop: 8 }} disabled={busy} onClick={() => void driveSend(c.id)}>
+                      {busy ? "Sending…" : "Drive send →"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </CoreV2Dialog>
+  );
+}
+
 /**
  * Core v2 · Guest · Inbox — the WhatsApp till. A 3-pane console (conversation
  * list · thread · live context), wired 1:1 to the same engine as today's
@@ -319,6 +455,7 @@ export function CoreV2Inbox() {
   const [funnelWindow, setFunnelWindow] = useState<FunnelWindow>("7d");
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -468,6 +605,7 @@ export function CoreV2Inbox() {
       subRight={
         <>
           <button type="button" className="cv-btn ghost sm" onClick={() => setFunnelOpen(true)}>Funnel</button>
+          <button type="button" className="cv-btn ghost sm" onClick={() => setBroadcastOpen(true)}>Broadcast</button>
           <button type="button" className="cv-btn ghost sm" onClick={() => setSettingsOpen(true)}>Settings</button>
           <span className="cv-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
         </>
@@ -664,6 +802,7 @@ export function CoreV2Inbox() {
         </div>
       </CoreV2Dialog>
 
+      <WaBroadcastDialog open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
       <WaSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => void loadAll()} />
     </CoreV2Shell>
   );
