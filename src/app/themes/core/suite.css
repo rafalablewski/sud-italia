@@ -1163,6 +1163,24 @@
    ============================================================ */
 .core-suite .pos-shell { display: flex; flex-direction: column; flex: 1; min-height: 600px; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--bg); }
 .core-suite .core-body > .pos-shell { margin: 12px 18px 18px; }
+/* POS Tender view (the Order/Tender viewnav) — mockup tender-grid. */
+.core-suite .tender-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px 18px 18px; align-items: start; overflow-y: auto; }
+.core-suite .tender-summary { padding: 18px 20px; }
+.core-suite .tender-summary-name { font-family: var(--display); font-size: 22px; font-weight: 600; margin: 6px 0 2px; }
+.core-suite .tender-summary .ts-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.core-suite .tender-summary .ts-total .amt { font-family: var(--display); font-size: 30px; font-weight: 600; }
+.core-suite .tender-view-dialog { background: var(--surface-1); border: 1px solid var(--border-strong); border-radius: 16px; overflow: hidden; box-shadow: var(--sh-lg); }
+.core-suite .tender-view-dialog .tender-h { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.core-suite .tender-view-dialog .tender-h h2 { font-family: var(--display); font-weight: 600; font-size: 18px; }
+.core-suite .tender-view-dialog .tender-h .x { background: transparent; border: 0; color: var(--fg-subtle); font-size: 15px; cursor: pointer; padding: 4px; }
+.core-suite .tender-view-dialog .tender-b { padding: 22px 24px 24px; text-align: center; }
+.core-suite .tender-view-dialog .tender-b .amt { font-family: var(--display); font-size: 40px; font-weight: 500; margin: 6px 0 20px; }
+.core-suite .tender-view-dialog .paymethods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.core-suite .tender-view-dialog .pm { height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-2); color: var(--fg); font-weight: 600; cursor: pointer; }
+.core-suite .tender-view-dialog .pm:hover { border-color: var(--platinum); color: var(--platinum); }
+.core-suite .tender-view-dialog .tender-acts { display: grid; gap: 10px; }
+.core-suite .tender-view-dialog .tender-acts .btn { width: 100%; justify-content: center; }
+.core-suite .tender-view-dialog .tender-note { margin-top: 14px; }
 /* Let the till scroll the page when the viewport is shorter than the shell
    (the mockup body scrolls; ours was height-locked, so the bottom was unreachable). */
 .core-suite .core-body:has(> .pos-shell) { overflow-y: auto; }
