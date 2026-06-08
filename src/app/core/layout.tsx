@@ -23,6 +23,10 @@ const adminBody = Inter({
 });
 const adminDisplay = Fraunces({
   subsets: ["latin"],
+  // Match the mockup's Fraunces, which loads the optical-size axis
+  // (`Fraunces:opsz,wght@…`). Without `opsz` the headings render flat — with
+  // it the browser's `font-optical-sizing: auto` refines them like the mockup.
+  axes: ["opsz"],
   variable: "--font-admin-display",
   display: "swap",
 });
