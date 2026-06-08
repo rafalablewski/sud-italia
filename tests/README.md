@@ -36,6 +36,8 @@ Scratchpad for things that aren't part of the deployed site. Anything in this fo
 
 - `sketches/core-v2-guest-concierge.html` — **Core v2 · Concierge** (preview). A two-pane MCP inspector: six capabilities with live exposure toggles · the selected capability's sample JSON + a Test link + the EU-14 allergen matrix per location. Real `cv-` CSS, wired to `/api/admin/concierge` + `/api/agent/*`. Open directly in a browser.
 
+- `sketches/core-v2-guest-book.html` — **Core v2 · Book** (preview). Slot + table in one move: dine-in slot picks, party stepper, table picks with live fit/conflict (booked/too-small dim) + ✨ Recommend, guest fields + override, and today's bookings with cancel. Real `cv-` CSS, wired to `/api/admin/{slots,floor/tables,floor/reservations,booking}`. Open directly in a browser.
+
 ## Tests
 
 `tests/*.test.ts` (and `src/lib/*.test.ts`) are the `node:test` suite, run by `npm test` (`tsx --test`) and gated in CI. Most are pure-logic invariants. `bundle-composer.test.ts` is the exception: a **render** test that mounts a real React component in `happy-dom` (`@happy-dom/global-registrator` + `react-dom/client` + `act`) and asserts behaviour through the mount → fetch → render cycle — added after the inline `BundleComposer` shipped stuck-loading / lost-prefill bugs that pure-logic tests can't catch. Use it as the template for future component render tests; keep such files extension `.ts` and build the tree with `React.createElement` so they match the `tests/*.test.ts` glob.

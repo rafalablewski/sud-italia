@@ -38,8 +38,8 @@ The guest engagement hub. `/core-v2/guest`.
 
 `src/core-v2/guest/CoreV2Concierge.tsx` (+ a server page that builds the meta / per-location samples / allergen matrix, like today's). A two-pane inspector: the six MCP capabilities with live exposure toggles (`.cv-toggle`, PATCH `/api/admin/concierge`) · the selected capability's real sample JSON + a Test link to `/api/agent/{cap}` + the EU-14 allergen matrix per location (`.cv-matrix`).
 
-## Planned anatomy (5e)
+## Book (`/core-v2/guest/book`) — wired
 
-- **Book** — slot + table in one move (shared with Service).
+`src/core-v2/guest/CoreV2Book.tsx` (shared with Service). Pick a dine-in slot (`.cv-pk`) + party size, then a table — live fit/conflict via the pure `findReservationConflicts` (booked/too-small tables dim) with a ✨ Recommend that fits party to seats — capture the guest, and confirm. Today's bookings on the right with cancel. Engine: `GET /api/admin/{slots,floor/tables,floor/reservations}`; create `POST /api/admin/booking`; cancel `DELETE /api/admin/floor/reservations`.
 
-Parity target: today's `/core/guest`. Classes documented here when ported.
+The whole Guest hub is now wired — parity with today's `/core/guest`.
