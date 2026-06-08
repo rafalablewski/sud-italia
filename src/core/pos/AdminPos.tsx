@@ -490,6 +490,7 @@ export function AdminPos({
   );
 
   const [tenderOpen, setTenderOpen] = useState(false);
+  const [posView, setPosView] = useState<"order" | "tender">("order");
   const openTender = useCallback(() => {
     const t = getActive();
     if (!t || t.items.length === 0) return;
@@ -497,7 +498,7 @@ export function AdminPos({
       toast("Pick a channel first");
       return;
     }
-    setTenderOpen(true);
+    setPosView("tender");
   }, [getActive, toast]);
 
   const pay = useCallback(
@@ -506,6 +507,7 @@ export function AdminPos({
       if (!t || busyTabId) return;
       setBusyTabId(t.id);
       setTenderOpen(false);
+      setPosView("order");
       try {
         const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
           method: "PATCH",
@@ -913,6 +915,21 @@ export function AdminPos({
   const page = (
     <CoreShell
       eyebrow={`Point of sale · ${locName}`}
+      viewnav={
+        <>
+          <button type="button" className={posView === "order" ? "on" : ""} onClick={() => setPosView("order")}>
+            Order
+          </button>
+          <button
+            type="button"
+            className={posView === "tender" ? "on" : ""}
+            disabled={!active || active.items.length === 0}
+            onClick={() => active && active.items.length > 0 && setPosView("tender")}
+          >
+            Tender
+          </button>
+        </>
+      }
       subRight={
         <>
           <div className="seg">
@@ -955,6 +972,63 @@ export function AdminPos({
         </>
       }
     >
+      {posView === "tender" && active ? (
+        <div className="tender-grid">
+          <div className="card tender-summary">
+            <div className="eyebrow">Charging</div>
+            <h2 className="tender-summary-name">{active.name}</h2>
+            <div className="subtle">
+              {CHAN_LABEL(active.channel)}
+              {activeTable ? ` · Table ${activeTable.number}` : ""} · {active.items.length} items · #
+              {active.orderId ?? active.id}
+            </div>
+            <div className="ts-total">
+              <span>Total due</span>
+              <span className="amt tnum">{fmtPLN(grandG(active))}</span>
+            </div>
+          </div>
+          <div className="tender-dialog tender-view-dialog">
+            <div className="tender-h">
+              <h2>Tender</h2>
+              <button type="button" className="x" aria-label="Back to order" onClick={() => setPosView("order")}>
+                ✕
+              </button>
+            </div>
+            <div className="tender-b">
+              <div className="subtle ctx">{active.name}</div>
+              <div className="amt tnum">{fmtPLN(grandG(active))}</div>
+              <div className="paymethods">
+                <button type="button" className="pm" onClick={() => void pay("Card")}>
+                  <CreditCard /> Card
+                </button>
+                <button type="button" className="pm" onClick={() => void pay("Cash")}>
+                  <Banknote /> Cash
+                </button>
+              </div>
+              <div className="tender-acts">
+                <button type="button" className="btn primary xl" onClick={() => void pay("Card")}>
+                  Charge {fmtPLN(grandG(active))}
+                </button>
+                <button type="button" className="btn ghost" onClick={() => setPosView("order")}>
+                  ← Back to order
+                </button>
+              </div>
+              <p className="tender-note subtle">
+                Server-authoritative total · marks <b>paidAt</b> and closes the tab. Card opens the terminal flow.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+      <div className="intro intro-slim">
+        <h1>POS · Order — the ticket is the order</h1>
+        <p>
+          Multi-tab open checks with live combo &amp; cross-sell, capacity-true pace steering, dine-in
+          coursing (fire course-by-course to the kitchen), table + covers, and a single Charge CTA.
+          Everything persists the moment you touch it — no save button.
+        </p>
+      </div>
       <div className="pos-shell">
         <div className="tabrail">
           <div className="tabrail-head">
@@ -1257,6 +1331,8 @@ export function AdminPos({
           </div>
         )}
       </div>
+        </>
+      )}
 
       {tenderOpen && active && (
         <div className="core-suite-overlay" onClick={() => setTenderOpen(false)}>
@@ -1426,7 +1502,7 @@ export function AdminPos({
   // Kiosk renders through a portal to document.body so the edge-to-edge POS
   // escapes the admin shell's stacking context (CLAUDE.md rule #4); the subtree
   // stays mounted, so tab state, timers and the steering feed keep running.
-  return kiosk ? createPortal(page, document.body) : page;
+  return kiosk ? createPortal(page, document.getElementById("admin-portal-root") ?? document.body) : page;
 }
 
 // ---- product grid + chips ----------------------------------------------

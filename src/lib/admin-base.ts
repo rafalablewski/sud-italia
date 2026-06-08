@@ -59,40 +59,30 @@ export function canonicalAdminPath(pathname: string): string {
 }
 
 /* ==========================================================================
-   Admin v3 variant. The v3 rebuild mounts at `/admin-v3` (the owner's HQ),
-   but managers/franchisees navigate it under their own prefix — the same
-   role-prefixed model as v2, just rooted at `/admin-v3` instead of `/admin`.
-   `/manager/:path+` and `/franchisee/:path+` rewrite onto `/admin-v3/:path+`
-   (next.config.ts), so only the visible URL differs.
+   Admin v3 variant. The v3 rebuild is the *implementation* behind the
+   canonical `/admin` HQ (there is no `/admin-v3` route — admin is always one,
+   swappable to v4/v5 internally). Managers/franchisees navigate it under their
+   own prefix — the same role-prefixed model, rooted at `/admin`.
+   `/manager/:path+` and `/franchisee/:path+` rewrite onto `/admin/:path+`
+   (next.config.ts), so only the visible URL differs. These helpers are kept
+   under their `…V3` names so the v3 components don't have to re-import, but
+   they operate on the canonical `/admin` base.
    ========================================================================== */
-export type AdminV3Base = "/admin-v3" | "/manager" | "/franchisee";
+export type AdminV3Base = AdminBase;
 
-/** The v3 base prefix the *current URL* is being served under. */
+/** The base prefix the *current URL* is being served under. */
 export function adminV3BaseForPath(pathname: string): AdminV3Base {
-  if (pathname === "/manager" || pathname.startsWith("/manager/")) return "/manager";
-  if (pathname === "/franchisee" || pathname.startsWith("/franchisee/")) return "/franchisee";
-  return "/admin-v3";
+  return adminBaseForPath(pathname);
 }
 
-/** Re-root a canonical `"/admin-v3…"` href onto `base`. No-op for `/admin-v3`;
+/** Re-root a canonical `"/admin…"` href onto `base`. No-op for `/admin`;
  *  leaves `/core/*`, API and external links untouched. */
 export function withAdminV3Base(base: AdminV3Base, href: string): string {
-  if (base === "/admin-v3") return href;
-  if (href === "/admin-v3") return base;
-  if (
-    href.startsWith("/admin-v3/") ||
-    href.startsWith("/admin-v3#") ||
-    href.startsWith("/admin-v3?")
-  ) {
-    return base + href.slice("/admin-v3".length);
-  }
-  return href;
+  return withAdminBase(base, href);
 }
 
-/** Strip any role prefix back to the canonical `/admin-v3…` form (for nav
+/** Strip any role prefix back to the canonical `/admin…` form (for nav
  *  active-state matching that keys on the config hrefs). */
 export function canonicalAdminV3Path(pathname: string): string {
-  const base = adminV3BaseForPath(pathname);
-  if (base === "/admin-v3") return pathname;
-  return "/admin-v3" + pathname.slice(base.length);
+  return canonicalAdminPath(pathname);
 }

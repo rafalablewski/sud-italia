@@ -1,47 +1,42 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Admin v3 cutover — reversible.
+ * Admin route shims.
  *
- * The owner back-office now serves the **v3** rebuild: every `/admin/*` request
- * 307-redirects to the matching `/admin-v3/*` route. To fall straight back to
- * v2, delete this file and revert `landingPathForRole` (owner → "/admin"). v2 is
- * left untouched in the tree (TODO §Cutover step 2: "swap … reversible; keeps v2").
+ * The owner back-office is the canonical `/admin` surface — there is no
+ * `/admin-v3` route. "Admin is always one": the v3 rebuild is the
+ * *implementation* mounted under `src/app/admin/(shell)/*`, swappable to a
+ * future v4/v5 without ever changing the visible URL. So this middleware no
+ * longer redirects `/admin` anywhere; it only smooths over two edges:
  *
- * Pass-throughs:
- *   - `/admin/login` — the owner login page; v3 reuses it as-is (stays v2).
- * The capabilities ledger moved to the standalone `/capabilities` route, so
- * `/admin/capabilities` now redirects there (keeps old bookmarks working).
+ *   1. The capabilities ledger lives at the standalone, shell-less
+ *      `/capabilities` route, so `/admin/capabilities` redirects there (keeps
+ *      old bookmarks + the nav link working).
+ *   2. A handful of legacy *detail* URLs have no 1:1 page in the v3 rebuild —
+ *      the detail views became dialogs opened from their parent list. Those
+ *      fold onto the parent instead of 404ing.
  *
- * Manager / franchisee portals are **unaffected**: they rewrite to `/admin/*`
- * (v2) in `next.config.ts`, and v3 has no role-prefix support yet
- * (`nav.config.ts` → `P = "/admin-v3"`). The matcher below only fires on
- * `/admin` + `/admin/*`, so `/manager/*` and `/franchisee/*` never reach here.
- *
- * Folded routes (no 1:1 v3 page — the detail views became dialogs) land on
- * their v3 parent instead of 404ing.
+ * Everything else under `/admin/*` is a real page and passes straight through.
+ * Manager / franchisee portals rewrite onto `/admin/*` in next.config.ts.
  */
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // The ledger moved out of /admin to its own shell-less route.
+  // The ledger lives on its own shell-less route.
   if (pathname === "/admin/capabilities" || pathname.startsWith("/admin/capabilities/")) {
     const url = req.nextUrl.clone();
     url.pathname = "/capabilities";
     return NextResponse.redirect(url, 307);
   }
-  // Pass-through — the owner login page stays on v2.
-  if (pathname === "/admin/login") return NextResponse.next();
 
+  // Folded routes — no 1:1 page (the detail views became dialogs on the parent
+  // list). Land on the parent instead of 404ing.
   let dest: string | null = null;
-  if (pathname === "/admin") {
-    dest = "/admin-v3";
-  } else if (pathname.startsWith("/admin/")) {
+  if (pathname.startsWith("/admin/")) {
     const rest = pathname.slice("/admin/".length);
-    if (rest.startsWith("customers/")) dest = "/admin-v3/customers"; // detail → dialog
-    else if (rest.startsWith("menu/")) dest = "/admin-v3/menu"; // edit → dialog
-    else if (rest === "reports/cohort" || rest === "reports/ltv-cac") dest = "/admin-v3/reports"; // → Calculator sandboxes
-    else dest = "/admin-v3/" + rest;
+    if (rest.startsWith("customers/")) dest = "/admin/customers"; // detail → dialog
+    else if (rest.startsWith("menu/")) dest = "/admin/menu"; // edit → dialog
+    else if (rest === "reports/cohort" || rest === "reports/ltv-cac") dest = "/admin/reports"; // → Calculator sandboxes
   }
   if (!dest) return NextResponse.next();
 
@@ -51,5 +46,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin/:path*"],
 };

@@ -1,8 +1,10 @@
 # Admin — Design System
 
-> ⚠️ **v2 is retired.** The admin back-office now runs on **v3**
-> (`/admin` → `/admin-v3`; see [`v3/README.md`](./v3/README.md)). The v2
-> component tree (`src/components/admin/`) + the `src/app/admin/*` routes were
+> ⚠️ **v2 is retired.** The admin back-office now runs on **v3**, mounted at
+> the canonical `/admin` route (there is **no** `/admin-v3` URL — admin is
+> always one; the v3 rebuild is the swappable *implementation* under
+> `src/app/admin/(shell)/*` + `src/admin-v3/*`; see [`v3/README.md`](./v3/README.md)).
+> The old v2 component tree (`src/components/admin/`) was
 > deleted. The shared base stylesheet lives on as `src/app/themes/base/index.css`
 > (it backs login + the staff portals + Core). The component/shell sections
 > below describe the **now-deleted v2** set and are pending a cleanup pass —

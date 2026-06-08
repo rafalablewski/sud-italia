@@ -1,7 +1,7 @@
 # Admin v3 — parity-gap closure checklist
 
 Tracking the **genuine** feature gaps between the live `/admin` (v2) surfaces
-and the `/admin-v3` rebuild. Every item is verified against the actual v3
+and the `/admin` rebuild. Every item is verified against the actual v3
 component source (not excerpts) before it lands here, and every fix ships in the
 **v3 visual language** (`.av3-*` tokens/classes, `v3/ui` primitives — never a
 `.v2-*` / `.glass-*` reuse, per the isolation contract in `README.md`).
@@ -27,11 +27,11 @@ false positives or intentional v3 density decisions** and were dropped:
 
 ## Genuine gaps to close
 
-- [x] **1. Alerts inbox** — `/admin-v3/alerts`. `AlertsV3` over
+- [x] **1. Alerts inbox** — `/admin/alerts`. `AlertsV3` over
   `/api/admin/notifications` (filter chips with counts, Today/Yesterday/Earlier
   buckets, per-type tone+icon, mark-read / mark-all-read, tap-to-navigate).
   Nav entry (Overview), CSS §14, docs, mockup `admin-v3/alerts.html`. **DONE.**
-- [x] **2. Ops Agent chat** — `/admin-v3/ai/agent`. `AgentV3` — conversational
+- [x] **2. Ops Agent chat** — `/admin/ai/agent`. `AgentV3` — conversational
   ops assistant over `/api/admin/ai-agent/*` (conversations + turn): tool-approval
   flow (human-in-the-loop on mutating tools), executed/error tool cards with
   expandable I/O, conversation history, session cost readout, and the
@@ -52,7 +52,7 @@ false positives or intentional v3 density decisions** and were dropped:
   (`/api/admin/gdpr/export`) + **Art. 17 erasure** (`POST /api/admin/gdpr/delete`,
   confirm-gated) — all over the existing `/api/admin/customers/[phone]` payload.
   CSS §16, mockup `admin-v3/customer-detail.html`. **DONE.**
-- [x] **5. Dashboard executive overview** — the live `/admin-v3` cockpit was
+- [x] **5. Dashboard executive overview** — the live `/admin` cockpit was
   missing the analytics surface from `public/mockups/admin-v3/dashboard.html`
   (revenue, orders, avg order, profit margin, gross profit, cancellations, labour
   ratio, revenue trend, top sellers, Location network comparison). Added a

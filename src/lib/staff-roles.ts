@@ -94,10 +94,10 @@ export function landingPathForRole(role: AdminRole): string {
       return "/franchisee";
     case "owner":
     default:
-      // Admin v3 cutover: the owner HQ is now the v3 rebuild. /admin still
-      // works (middleware 307s it to /admin-v3), but land owners directly to
-      // skip the redirect hop. Revert to "/admin" to fall back to v2.
-      return "/admin-v3";
+      // The owner HQ is the canonical `/admin` back-office (the v3 rebuild is
+      // the implementation behind it, swappable to v4/v5 without changing the
+      // URL). There is no `/admin-v3` route — admin is always one.
+      return "/admin";
   }
 }
 

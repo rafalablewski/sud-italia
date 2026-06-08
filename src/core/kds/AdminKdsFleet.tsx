@@ -8,7 +8,6 @@ import { formatPricePLN } from "@/lib/utils";
 import { fulfillmentLabel } from "@/lib/fulfillment";
 import { useToast } from "@/ui/Toast";
 import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib/kds-prediction";
-import { Ring } from "@/core/kds/KdsTicketCard";
 import { useFullscreen } from "@/core/kds/useFullscreen";
 import { fmtWallClock } from "@/core/kds/kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
@@ -283,7 +282,17 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
       }
     >
       <div className="kds-core in-shell">
-        <div className="kds-wrap">{boardBody}</div>
+        <div className="kds-wrap">
+          <div className="intro intro-slim kds-intro">
+            <h1>KDS · Fleet Command — every truck at a glance</h1>
+            <p>
+              Owner Atlas lens: live throughput, at-risk &amp; late counts, a cross-truck
+              promise-accuracy benchmark, and per-truck panels with health, capacity and per-station
+              pace bars — drill into any truck&apos;s Floor or Chef line.
+            </p>
+          </div>
+          {boardBody}
+        </div>
       </div>
     </CoreShell>
   );
@@ -324,7 +333,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
 
   return (
     <>
-      {fullscreen ? createPortal(kioskBoard, document.body) : windowed}
+      {fullscreen ? createPortal(kioskBoard, document.getElementById("admin-portal-root") ?? document.body) : windowed}
       {loading &&
         !data &&
         mounted &&
@@ -376,28 +385,28 @@ function FleetBar({
 
   return (
     <>
-      <div className="cmdbar">
-        <div className="cstat">
+      <div className="kpi-dark k7c">
+        <div className="kc">
           <div className="l">Active</div>
           <div className="v">{active}</div>
           <div className="s">{ready} ready for expo</div>
         </div>
-        <div className="cstat risk">
+        <div className="kc">
           <div className="l">At risk</div>
-          <div className="v">{risk}</div>
+          <div className="v warn">{risk}</div>
           <div className="s">predicted miss</div>
         </div>
-        <div className="cstat late">
+        <div className="kc">
           <div className="l">Late</div>
-          <div className="v">{late}</div>
+          <div className="v late">{late}</div>
           <div className="s">over SLA</div>
         </div>
-        <div className="cstat ready">
+        <div className="kc">
           <div className="l">Ready</div>
-          <div className="v">{ready}</div>
+          <div className="v good">{ready}</div>
           <div className="s">for expo</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Throughput</div>
           <div className="v">
             {totals.throughputHr}
@@ -405,19 +414,21 @@ function FleetBar({
           </div>
           <div className="s">last 60 min</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Covers</div>
           <div className="v">
             {totals.coversHr}
             <span className="u">/hr</span>
           </div>
+          <div className="s">seated</div>
         </div>
-        <div className="cstat">
+        <div className="kc">
           <div className="l">Revenue</div>
           <div className="v">
             {zl(totals.revenueHr)}
             <span className="u">/hr</span>
           </div>
+          <div className="s">live</div>
         </div>
       </div>
 
@@ -508,7 +519,6 @@ function TruckBoard({
 
   const maxUtil = Math.max(1.5, ...tile.stations.map((s) => (Number.isFinite(s.pct) ? s.pct / 100 : 1.5)));
   const markLeft = (1 / maxUtil) * 100;
-  const bottleneck = tile.bottleneck;
 
   return (
     <div className="truck">
@@ -519,11 +529,8 @@ function TruckBoard({
           onClick={onDrillIn ? () => onDrillIn(tile.slug, "floor") : undefined}
           title={onDrillIn ? `Open ${tile.name}'s floor board` : undefined}
         >
-          <div className="ring">
-            <Ring size={54} frac={liveHealth.health / 100} color={healthColor} strokeW={4} />
-            <span className="sc">
-              <b style={{ color: healthColor }}>{liveHealth.health}</b>
-            </span>
+          <div className="ring" style={{ borderColor: healthColor, color: healthColor }}>
+            {liveHealth.health}
           </div>
           <div>
             <div className="city">{tile.name}</div>
@@ -569,28 +576,6 @@ function TruckBoard({
         <div className="tcell">
           <div className="l">On shift</div>
           <div className="v">{tile.onShift}</div>
-        </div>
-      </div>
-
-      <div className="pacehead">
-        <div className="met">
-          <div className="l">Covers / hr</div>
-          <div className="v">{tile.coversHr}</div>
-        </div>
-        <div className="met">
-          <div className="l">Revenue / hr</div>
-          <div className="v">{zl(tile.revenueHr)}</div>
-        </div>
-        <Sparkline points={tile.throughputSeries} color={healthColor} />
-        <div className="capmeter">
-          <div className="lbl">
-            <span>Capacity · {bottleneck ? bottleneck.label : "within capacity"}</span>
-            <span className="hint">{bottleneck ? `${bottleneck.pct}%` : ""}</span>
-          </div>
-          <div className={`cmtrack ${paceClass(bottleneck?.tier)}`}>
-            <i style={{ width: `${bottleneck ? Math.min(100, (bottleneck.pct / 100 / maxUtil) * 100) : 0}%` }} />
-            <span className="m100" style={{ left: `${markLeft}%` }} title="100% capacity" />
-          </div>
         </div>
       </div>
 

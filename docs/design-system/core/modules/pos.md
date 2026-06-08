@@ -22,6 +22,16 @@ surface.
 
 ## Layout — two-pane, iPad-first
 
+A slim `.intro.intro-slim` banner (the mockup pane header) opens the
+surface above the till — same banner family as the rest of Core, tightened
+so the bordered-card `.pos-shell` keeps its vertical room.
+
+An **Order / Tender** `viewnav` rides the subbar (mockup). **Order** is the
+till; **Charge** (or the Tender tab) switches to the **Tender** view — the
+mockup `.tender-grid` (order summary + a `.tender-dialog` with the amount,
+`.paymethods`, and the charge/back actions), wired to the same server-
+authoritative `pay()`. Paying resets to Order.
+
 ```
 +----------------------------------------------------------+
 |  brand · POS·KDS·Guest·Service nav · location · ⛶  (head) |

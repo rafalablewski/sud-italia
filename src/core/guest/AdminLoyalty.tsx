@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
+import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
@@ -54,7 +55,9 @@ interface WalletSummary {
   headPhone: string;
   createdAt: string;
   members: WalletMember[];
-  pointsTotal?: number;
+  /** Points the pool can still spend (earned − redeemed), from the store. */
+  spendablePool?: number;
+  memberCount?: number;
 }
 
 interface Redemption {
@@ -87,6 +90,14 @@ const TIER_BADGE: Record<LoyaltyTier, string> = {
 
 const fmtPLN0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
 const fmtNum = (n: number) => n.toLocaleString("pl-PL");
+/** Compact count for the headline KPI (e.g. 184 200 → "184k"). */
+const fmtCompact = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : fmtNum(n));
+/** Display convention: 100 points ≈ 1 zł of redemption value (the rewards
+ *  ladder is configured in /admin/growth; this is the headline estimate). */
+const POINTS_PER_PLN = 100;
+const pointsToZl = (pts: number) => pts / POINTS_PER_PLN;
+const fmtZl2 = (zl: number) =>
+  `${zl.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
 
 function fmtDate(iso?: string): string {
   if (!iso) return "—";
@@ -309,8 +320,26 @@ export function AdminLoyalty() {
     const spent = members.reduce((acc, m) => acc + m.totalSpent, 0);
     const orders = members.reduce((acc, m) => acc + m.orders, 0);
     const repeat = members.filter((m) => m.orders >= 2).length;
-    return { spent, orders, repeat };
+    const pointsOutstanding = members.reduce((acc, m) => acc + Math.max(0, m.points), 0);
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const redemptions30d = redemptions.filter((r) => {
+      const t = Date.parse(r.createdAt);
+      return Number.isFinite(t) && t >= cutoff;
+    }).length;
+    return { spent, orders, repeat, pointsOutstanding, redemptions30d };
+  }, [members, redemptions]);
+
+  // Wallet cards name themselves from the head member's roster entry.
+  const nameByPhone = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of members) if (m.name) map.set(m.phone, m.name);
+    return map;
   }, [members]);
+
+  const walletLabel = useCallback(
+    (w: WalletSummary) => nameByPhone.get(w.headPhone) || `Wallet ${w.id.slice(-6).toUpperCase()}`,
+    [nameByPhone],
+  );
 
   const submitPoints = async (amount: number, reason: string) => {
     if (!pointsDialog) return;
@@ -354,10 +383,14 @@ export function AdminLoyalty() {
   const sortArrow = (key: SortKey) => (sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "");
 
   const kpis: { l: string; v: string; sub?: string }[] = [
-    { l: "Total members", v: fmtNum(members.length), sub: `${totals.repeat} repeat buyers` },
-    { l: "Platinum", v: fmtNum(tierCounts.platinum) },
-    { l: "Gold", v: fmtNum(tierCounts.gold) },
-    { l: "Lifetime spend", v: fmtPLN0(totals.spent) },
+    { l: "Members", v: fmtNum(members.length), sub: "phone-enrolled" },
+    {
+      l: "Points outstanding",
+      v: fmtCompact(totals.pointsOutstanding),
+      sub: `≈ ${fmtNum(Math.round(pointsToZl(totals.pointsOutstanding)))} zł liability`,
+    },
+    { l: "Redemptions · 30d", v: fmtNum(totals.redemptions30d), sub: "rewards claimed" },
+    { l: "Family wallets", v: fmtNum(wallets.length), sub: "shared balances" },
   ];
 
   const TABS: { key: TabKey; label: string; count?: number }[] = [
@@ -379,49 +412,62 @@ export function AdminLoyalty() {
     <CoreShell
       eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="loyalty" counts={{ loyalty: members.length }} />}
-      right={
-        <button type="button" className="btn ghost icon" onClick={() => void fetchAll()} title="Refresh">
-          <RefreshCw className={loading ? "crm-spin" : ""} />
-        </button>
-      }
+      right={<GuestHeaderActions />}
     >
       <div className="loy">
-        <div className="loy-kpis">
+        <div className="intro">
+          <h1>Guest · Loyalty — phone-enrolled, zero friction</h1>
+          <p>
+            Members auto-enroll on a phone-verified order. Tiers compute from earned + manual points
+            (the same ledger across POS / web / WhatsApp). Family wallets share balances; redemptions
+            &amp; win-back live here. Programme rules are edited in{" "}
+            <Link href={withAdminBase(base, "/admin/growth")}>/admin/growth</Link>.
+          </p>
+        </div>
+
+        <div className="kpis">
           {kpis.map((k) => (
             <div key={k.l} className="bk">
               <div className="l">{k.l}</div>
               <div className="v tnum">{k.v}</div>
-              {k.sub && <div className="sub">{k.sub}</div>}
+              {k.sub && <div className="s">{k.sub}</div>}
             </div>
           ))}
         </div>
 
-        <p className="loy-sub">
-          Members, family wallets and redemptions. Tiers are calculated from earned + manually-adjusted
-          points — the same ledger guests earn on at the POS, online, or by WhatsApp. To edit the
-          programme itself (tier labels / thresholds / multipliers / perks + the rewards catalogue),
-          go to <Link href={withAdminBase(base, "/admin/growth")}>/admin/growth</Link>.
-        </p>
-
-        <div className="loy-head">
-          <div className="seg">
-            {TABS.map((t) => (
+        {/* Mockup-exact filters row: tab chips · spacer · tier chips */}
+        <div className="filters">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`fchip${tab === t.key ? " on" : ""}`}
+              aria-pressed={tab === t.key}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+              {typeof t.count === "number" && <span className="n">{t.count}</span>}
+            </button>
+          ))}
+          <span style={{ flex: 1 }} />
+          {tab === "members" &&
+            TIER_CHIPS.map((c) => (
               <button
-                key={t.key}
+                key={c.key}
                 type="button"
-                className={tab === t.key ? "on" : ""}
-                onClick={() => setTab(t.key)}
+                className={`fchip${tierFilter === c.key ? " on" : ""}`}
+                aria-pressed={tierFilter === c.key}
+                onClick={() => setTierFilter(c.key)}
               >
-                {t.label}
-                {typeof t.count === "number" && <span className="n">{t.count}</span>}
+                {c.label}
+                <span className="n">{c.count}</span>
               </button>
             ))}
-          </div>
         </div>
 
         {tab === "members" && (
           <>
-            <div className="loy-filters">
+            <div className="loy-searchbar">
               <div className="book-search">
                 <Search />
                 <input
@@ -433,20 +479,6 @@ export function AdminLoyalty() {
                   autoComplete="off"
                   spellCheck={false}
                 />
-              </div>
-              <div className="filters">
-                {TIER_CHIPS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={`fchip${tierFilter === c.key ? " on" : ""}`}
-                    aria-pressed={tierFilter === c.key}
-                    onClick={() => setTierFilter(c.key)}
-                  >
-                    {c.label}
-                    <span className="n">{c.count}</span>
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -464,7 +496,7 @@ export function AdminLoyalty() {
                   </div>
                 </div>
               ) : (
-                <div className="loy-card">
+                <div className="card loy-tbl-card">
                   <table className="tbl">
                     <thead>
                       <tr>
@@ -478,24 +510,19 @@ export function AdminLoyalty() {
                             Tier{sortArrow("tier")}
                           </button>
                         </th>
-                        <th style={{ textAlign: "right" }}>
+                        <th className="num">
                           <button type="button" className="th-sort" onClick={() => toggleSort("points")}>
                             Points{sortArrow("points")}
                           </button>
                         </th>
-                        <th style={{ textAlign: "right" }}>
-                          <button type="button" className="th-sort" onClick={() => toggleSort("orders")}>
-                            Orders{sortArrow("orders")}
-                          </button>
-                        </th>
-                        <th style={{ textAlign: "right" }}>
+                        <th className="num">
                           <button type="button" className="th-sort" onClick={() => toggleSort("spent")}>
-                            Lifetime spend{sortArrow("spent")}
+                            Lifetime{sortArrow("spent")}
                           </button>
                         </th>
                         <th>
                           <button type="button" className="th-sort" onClick={() => toggleSort("last")}>
-                            Last order{sortArrow("last")}
+                            Last{sortArrow("last")}
                           </button>
                         </th>
                         <th aria-label="Actions" />
@@ -516,30 +543,26 @@ export function AdminLoyalty() {
                               {TIER_LABEL[m.tier]}
                             </span>
                           </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtNum(m.points)}
-                          </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtNum(m.orders)}
-                          </td>
-                          <td className="num" style={{ textAlign: "right" }}>
-                            {fmtPLN0(m.totalSpent)}
-                          </td>
+                          <td className="num">{fmtNum(m.points)}</td>
+                          <td className="num">{fmtPLN0(m.totalSpent)}</td>
                           <td className="muted">{fmtDate(m.lastOrder)}</td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="loy-actions-cell">
                             <div className="loy-row-actions">
                               <button
                                 type="button"
-                                className="btn ghost"
+                                className="btn ghost icon"
                                 onClick={() => setIntelMember(m)}
                                 title="Customer intelligence"
                               >
                                 <Brain width={14} height={14} />
-                                Intelligence
                               </button>
-                              <button type="button" className="btn ghost" onClick={() => setPointsDialog(m)}>
+                              <button
+                                type="button"
+                                className="btn ghost icon"
+                                onClick={() => setPointsDialog(m)}
+                                title="Adjust points"
+                              >
                                 <Coins width={14} height={14} />
-                                Adjust
                               </button>
                             </div>
                           </td>
@@ -550,6 +573,35 @@ export function AdminLoyalty() {
                 </div>
               )}
             </div>
+
+            {!loading && wallets.length > 0 && (
+              <>
+                <span className="eyebrow">Family wallets — shared balances</span>
+                <div className="wallets">
+                  {wallets.map((w) => {
+                    const pts = w.spendablePool ?? 0;
+                    return (
+                      <button
+                        key={w.id}
+                        type="button"
+                        className="wallet"
+                        onClick={() => setTab("wallets")}
+                        title="Manage family wallets"
+                      >
+                        <div className="w1">
+                          <b>{walletLabel(w)}</b>
+                          <span className="badge platinum">{w.memberCount ?? w.members.length}</span>
+                        </div>
+                        <div className="pts">{fmtNum(pts)} pts</div>
+                        <div className="subtle" style={{ fontSize: 12 }}>
+                          ≈ {fmtZl2(pointsToZl(pts))} to redeem
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </>
         )}
 

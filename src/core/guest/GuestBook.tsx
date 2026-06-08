@@ -5,6 +5,7 @@ import { CalendarDays } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "./GuestViewNav";
+import { GuestHeaderActions } from "./GuestHeaderActions";
 import { BookView } from "@/core/service/BookView";
 
 /**
@@ -59,7 +60,8 @@ export function GuestBook() {
     <CoreShell
       eyebrow="Guest Engagement · Book"
       viewnav={<GuestViewNav current="book" />}
-      right={
+      right={<GuestHeaderActions />}
+      subRight={
         <>
           <div className="seg">
             {LOCS.map((l) => (
@@ -75,6 +77,14 @@ export function GuestBook() {
         </>
       }
     >
+      <div className="intro">
+        <h1>Guest · Book — slot + table in one move</h1>
+        <p>
+          Pick a dine-in slot, assign a table (with an AI <b>Recommend</b> that fits party to seats and
+          avoids conflicts), capture the guest, and confirm. Conflicts &amp; over-capacity are flagged —
+          an override toggle lets staff seat anyway. Today&apos;s bookings on the right.
+        </p>
+      </div>
       <BookView loc={loc} date={date} />
     </CoreShell>
   );

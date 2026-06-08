@@ -6,28 +6,28 @@ The most exploratory surface in the suite. Where the KDS suppresses brand
 expression, the CRM lets it breathe — generous whitespace, Fraunces on the
 guest's name, soft platinum tier markers, count-up on lifetime value.
 
-**Live code:** `src/components/admin/AdminCustomers.tsx` and
-`AdminCrm.tsx` (the unified hub also covers Concierge + WhatsApp under one
-nav).
+**Live code:** `src/core/guest/AdminCrm.tsx` (the unified Guest hub also
+covers Loyalty + Concierge + WhatsApp under one nav).
 **Mockup:** `guest-crm.html`.
 
-## Layout — book + profile
+## Layout — intro + KPI strip + filters + table/profile
 
-Two-pane master/detail:
+Mockup-exact: a serif `.intro` banner, a full-width 4-tile KPI strip
+(`.crm-kpis` — **Customers** all-time / **Members** loyalty-enrolled /
+**VIP** top-by-LTV / **Total LTV**), a horizontal `.crm-filters` row
+(search · segment chips · channel chips · sort), then the `.crm-grid`:
+a flat customer **table** (`.card > .tbl` — Customer · Channel · Orders ·
+Points · LTV · Last; row-click selects) beside the deep profile card.
+`.crm-page` wraps the stack.
 
 ```
-+--------------------------+------------------------------------------+
-|         The book         |              Deep profile                |
-|--------------------------|------------------------------------------|
-|  KPIs · 3-tile           |  Identity card · LTV · tier              |
-|  Search                  |  Health gauge + RFM + diagnosis          |
-|  Segment chips           |  Next Best Action (AI)                   |
-|  Channel chips · period  |  Lifetime stats · Identity & channels    |
-|  Sort                    |  Favourites · Loyalty · Consent          |
-|  Triggers ("Send today") |  Concierge notes · Recent orders         |
-|  ── Agentic group        |  GDPR (export · erase)                   |
-|  ── Customers group      |                                          |
-+--------------------------+------------------------------------------+
++-----------------------------------------------------------------------+
+|  intro banner  ·  Customers | Members | VIP | Total LTV  (full-width)  |
+|  search · segment chips · channel chips ............. period · sort     |
++----------------------------------------------+------------------------+
+|  Customer · Channel · Orders · Points · LTV  |   Deep profile         |
+|  …rows (row-click → profile)…                |   health · NBA · GDPR  |
++----------------------------------------------+------------------------+
 ```
 
 ## Filters (the customer book)

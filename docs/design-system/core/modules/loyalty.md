@@ -32,14 +32,24 @@ relationship layer; *configuration* and *marketing* are Admin concerns.
 
 | Tab            | What it shows | Data source |
 | -------------- | ------------- | ----------- |
-| **Members**    | Every loyalty member — tier badge, point balance, orders, lifetime spend, last order. Name/phone search + tier-filter chips (`all` / Platinum / Gold / Silver / Bronze) + sortable columns. Each row links to the customer detail page; the row actions open the **Intelligence** dialog + the **adjust-points** dialog. | `GET /api/admin/members` |
+| **Members**    | Mockup-exact `.card > .tbl`: Member · Tier · Points · Lifetime · Last (5 columns, sortable). Tier / search live in the shared `.filters` row above (tab chips · spacer · tier chips). Each row links to the customer detail page; **Intelligence** + **adjust-points** are icon buttons that reveal on row hover (pointer-coarse shows them always). | `GET /api/admin/members` |
 | **Family wallets** | Each shared pool (head + up to 6 phones) with per-member status (`active` / `pending`); operator can **Dissolve** a wallet. | `GET /api/admin/wallets`, `DELETE /api/admin/wallets` |
 | **Redemptions** | The burn log — when, which customer, solo or wallet, which reward, points spent. | `GET /api/admin/wallet-redemptions` |
 | **Win-back** | The auto-retention worklist (Phase 2) — at-risk regulars ranked by value-at-risk, each a prescribed, approvable action. Loads lazily (heavier — scans all orders). | `GET/POST /api/admin/retention` |
 
+A serif **intro banner** (`.intro` — the reusable Core surface header)
+opens the view with the programme one-liner and the `/admin/growth` link.
+
 The KPI strip (`.loy-kpis` of `.bk` cards) reads from the same data:
-total members (+ repeat-buyer count), Platinum count, Gold count,
-lifetime spend.
+**Members** (phone-enrolled count), **Points outstanding** (Σ member
+points, with a `≈ X zł liability` sub at the 100 pts ≈ 1 zł headline
+rate), **Redemptions · 30d** (burn-log entries in the trailing 30 days),
+and **Family wallets** (shared-pool count).
+
+Under the Members table, a **shared-balances** strip (`.loy-balances` of
+`.loy-balance` cards) gives a quick-glance read of each family wallet —
+its head-member label, member count, spendable-pool points and the
+`≈ X zł to redeem` estimate. Each card jumps to the Family-wallets tab.
 
 ## Tiers
 

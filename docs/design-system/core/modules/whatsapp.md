@@ -15,6 +15,13 @@ in `src/core/guest/whatsapp/`.
 
 ## Layout — three-pane Inbox
 
+> Mockup-aligned: the KPI strip is now mockup `.kpis.k5` of `.bk` cards, the
+> stage filter is a top `.filters` row of `.fchip`s (not in-column tabs), and
+> the three panes are mockup-style cards (`.conv` rows, `.thread`, `.ctx`) on a
+> gutter — keeping the live 3rd order-context column ("mockup look, keep
+> richness"). Bubbles use the mockup tones: `.in` surface-3, `.out` brand-soft,
+> `.bot` platinum-soft.
+
 ```
 +------------------+-------------------------------+-----------------+
 | Conversations    | Transcript                    | Live order +    |

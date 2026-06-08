@@ -20,14 +20,14 @@ interface Crumb {
 
 function buildCrumbs(pathname: string): Crumb[] {
   // Role-prefix aware: under /manager or /franchisee the path is canonicalised
-  // to its /admin-v3 form for label lookup, while crumb hrefs are re-rooted back
+  // to its /admin form for label lookup, while crumb hrefs are re-rooted back
   // onto the URL's base so a manager's breadcrumbs stay in /manager.
   const base = adminV3BaseForPath(pathname);
   const canon = canonicalAdminV3Path(pathname);
-  if (canon === "/admin-v3") return [{ label: "Dashboard" }];
-  const segments = canon.split("/").filter(Boolean); // ["admin-v3", ...]
-  const crumbs: Crumb[] = [{ label: "Admin", href: withAdminV3Base(base, "/admin-v3") }];
-  let acc = "/admin-v3";
+  if (canon === "/admin") return [{ label: "Dashboard" }];
+  const segments = canon.split("/").filter(Boolean); // ["admin", ...]
+  const crumbs: Crumb[] = [{ label: "Admin", href: withAdminV3Base(base, "/admin") }];
+  let acc = "/admin";
   for (let i = 1; i < segments.length; i++) {
     acc += "/" + segments[i];
     const hit = ALL_NAV_ITEMS_V3.find((n) => n.href === acc);

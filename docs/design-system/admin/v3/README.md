@@ -38,7 +38,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
 | JS token mirror| `src/components/admin/v2/theme.ts`          | `src/admin-v3/theme.ts`             |
 | Components      | `src/components/admin/v2/*`                 | `src/admin-v3/*`                     |
-| Mount route    | `/admin/*` → 307s to v3 (`src/proxy.ts`); still serves manager/franchisee + `/admin/capabilities` | `/admin-v3/*` (**LIVE for owner** — cutover done; owner lands here) |
+| Mount route    | (retired) | **`/admin/*`** — the canonical route (no `/admin-v3` URL; `src/app/admin/(shell)/*`). `src/proxy.ts` only folds legacy detail URLs + redirects `/admin/capabilities`. Managers/franchisees rewrite onto `/admin/*`. |
 
 **The one shared dependency v3 keeps:** the framework-level libs that are
 *not* part of either theme — `@/lib/permissions`, `@/lib/admin-roles`,
@@ -335,7 +335,7 @@ refetches every 30s.
   network** comparison `Table` (revenue/orders/AOV/margin/cancel per site) — all
   from `/api/admin/analytics` (`dailyStats`/`topItems`) + `/api/admin/insights`
   (`locationComparison`) + `/api/admin/labor-ratio`, refetched on period change.
-- [x] Ops Agent (`/admin-v3/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
+- [x] Ops Agent (`/admin/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
   (`AgentV3`). Claude with role-gated read+write tools over
   `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,
   **human-in-the-loop tool approval** (mutating tools render a pending card with
@@ -343,7 +343,7 @@ refetches every 30s.
   executed/error tool cards with expandable input/output, recent-conversation
   list, session-cost readout, and the API-key-not-configured empty state. CSS
   §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
-- [x] Boardroom (`/admin-v3/boardroom`) — the AI C-suite team (`BoardroomV3`,
+- [x] Boardroom (`/admin/boardroom`) — the AI C-suite team (`BoardroomV3`,
   with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Four persona
   agents (CEO/COO/CFO/CMO) over the live store. **Tabs** (`.av3-filterchips`):
   Overview — a calm, grouped layout: section labels (`SecLabel`) over two KPI
@@ -370,13 +370,13 @@ refetches every 30s.
   owning persona's composer for an operator-approved, audit-logged action.
   Degrades to live-KPIs-only when `ANTHROPIC_API_KEY` is unset. Nav: Intelligence
   section (icon `Crown`).
-- [x] Alerts (`/admin-v3/alerts`) — the v3 home for the v2 `MobileAlerts` action
+- [x] Alerts (`/admin/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/
   Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
   and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
   §14 (`.av3-alert-*`). Nav: Overview section.
-- [x] Orders (`/admin-v3/orders`) — live Kanban + table + detail dialog over
+- [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the
   detail dialog opens a `RefundDialogV3` (full/partial via `ChipRow`, reason
@@ -384,11 +384,11 @@ refetches every 30s.
   `POST /api/admin/orders/:id/refund` with a live `evaluateRefundGuard` preview
   (per-refund cap + daily comp budget → owner-approval gate); a refunded order
   shows the amount + reason in the detail.
-- [x] Inventory (`/admin-v3/inventory`) — stock table (value / low-out / 7d
+- [x] Inventory (`/admin/inventory`) — stock table (value / low-out / 7d
   waste KPIs, status chips) + movements view + edit dialog (par/reorder/on-hand
   via `PUT /api/admin/stock`, log receive/waste/adjust via
   `POST /api/admin/stock-movements`). Aggregates across trucks when scope = all
-- [x] Menu (`/admin-v3/menu`) — chain-wide product board, **one row per dish**
+- [x] Menu (`/admin/menu`) — chain-wide product board, **one row per dish**
   (deduped by `getBaseSlug`, rule #10): price range + "varies" badge when sites
   diverge, margin, availability, plus recipe/custom/hidden/edited/delivery/mods
   flags. **Full v2 parity (PR #138 follow-up):** multi-select with a sticky bulk
@@ -431,7 +431,7 @@ refetches every 30s.
   sites / Currently 86'd from the per-site switches). It's the same dish the
   customer sees, updating from the same edit state — so you frame the card while
   you edit it.
-- [x] Recipes (`/admin-v3/recipes`) — chain-wide formula board + ingredient
+- [x] Recipes (`/admin/recipes`) — chain-wide formula board + ingredient
   catalog, **one recipe per dish** (keyed by base slug, rule #10). **Full v2
   parity (PR #138 follow-up):** two tabs — **Recipes** (board with food cost /
   cost-% / kcal) and **Ingredients** (the catalog). The recipe editor now shows
@@ -466,7 +466,7 @@ refetches every 30s.
   **per-portion macros** grid (kcal + protein/carbs/sugar/fiber/fat) — so the
   cost/health/nutrition consequences of every ingredient edit are visible without
   switching tabs.
-- [x] HACCP log (`/admin-v3/haccp`) — per-location temperature checks with
+- [x] HACCP log (`/admin/haccp`) — per-location temperature checks with
   live in/out-of-range verdict (`@/lib/haccp`); record + today's log table.
   **Workbench pass (Operations interactivity):** a **KPI rail** (readings ·
   compliance % · out-of-range) with five-section ⓘ explainers on compliance +
@@ -476,7 +476,7 @@ refetches every 30s.
   default board of reading cards (big temp, per-sensor gauge, OK/breach); and a
   **row → detail popup** (large temp, gauge, safe range, recorded time, +
   corrective-action reminder when flagged).
-- [x] Waste log (`/admin-v3/waste`) — reason-coded write-offs; record + today's
+- [x] Waste log (`/admin/waste`) — reason-coded write-offs; record + today's
   entries + write-off cost KPI (`POST /api/admin/waste`).
   **Workbench pass (Operations interactivity):** a **KPI rail** (entries ·
   write-off today · top reason) with a five-section ⓘ on write-off; a **live
@@ -485,7 +485,7 @@ refetches every 30s.
   with a default board of waste cards (cost, qty, share-of-today); and a
   **row → detail popup** (qty/reason/cost/share/time + an "uncosted = invisible"
   nudge when no cost was recorded).
-- [x] Shift handover (`/admin-v3/handover`) — end-of-shift sign-off (shift, cash
+- [x] Shift handover (`/admin/handover`) — end-of-shift sign-off (shift, cash
   counted → variance, temp/waste/equipment checks, managers, comment) + the
   week's log (`POST /api/admin/handover`). A **KPI rail** (this-week count /
   issues flagged / net cash variance / last sign-off) sits above the form.
@@ -496,26 +496,26 @@ refetches every 30s.
   default board of handover cards (manager, shift, check pills, variance); and a
   **row → detail popup** (both managers, cash counted + variance, all three
   checks, the manager comment).
-- [x] Suppliers (`/admin-v3/suppliers`) — chain-wide distributor directory with
+- [x] Suppliers (`/admin/suppliers`) — chain-wide distributor directory with
   add/edit/delete dialog (`POST/PUT/DELETE /api/admin/suppliers`). **Visual
   upgrade:** a **KPI rail** (suppliers / avg lead / fastest lead / with-contact)
   + a **search** box; the table splits email/phone columns and colour-codes the
   lead-time badge.
-- [x] Purchase orders (`/admin-v3/purchase-orders`) — per-location restock
+- [x] Purchase orders (`/admin/purchase-orders`) — per-location restock
   orders with status chips, a create dialog (supplier + ingredient lines +
   expected date, `POST`), and a detail dialog driving the draft→sent→received
   flow (`PUT`, receiving auto-credits stock) + cancel/delete. **Visual upgrade:**
   a **KPI rail** (open POs / on-order value / awaiting delivery / received).
-- [x] People — Staff (`/admin-v3/staff`): directory + clock in/out
+- [x] People — Staff (`/admin/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs, **search** (name / role / email). Schedule (`/admin-v3/schedule`): this week's shifts with
+  active KPIs, **search** (name / role / email). Schedule (`/admin/schedule`): this week's shifts with
   add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
   (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
   days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
   columns (horizontal-scroll on narrow, today highlighted) of role-coloured shift
   cards (time, name, role + status badge, hover-delete), per-column add. The shift
   dialog gained the missing **Notes** field. CSS §20 (`.av3-week`, `.av3-shiftcard`).
-- [x] Customers (`/admin-v3/customers`) — phone-based directory (search,
+- [x] Customers (`/admin/customers`) — phone-based directory (search,
   repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
   restored:** a **"Send today"** outreach card (today's birthdays + first-order
   anniversaries from `/api/admin/campaigns/triggers`, tap-to-call `tel:` links,
@@ -529,20 +529,20 @@ refetches every 30s.
   `/api/admin/customer-notes`) and **GDPR controls** — Art. 15 export
   (`/api/admin/gdpr/export`) + Art. 17 erasure (`POST /api/admin/gdpr/delete`,
   confirm-gated). CSS §16 (`.av3-detail-*`).
-- [x] Feedback (`/admin-v3/feedback`) — guest-review board with status chips +
+- [x] Feedback (`/admin/feedback`) — guest-review board with status chips +
   avg-rating KPIs, status flow new→reviewed→responded (`PUT /api/admin/feedback`)
   and AI sentiment (`POST /api/admin/feedback/analyze`). **Charts restored (flag
   #4):** a rating-distribution `BarChart` + a sentiment `Donut` + legend, both
   derived from the loaded reviews.
-- [x] Corporate (`/admin-v3/corporate`) — B2B wallet-backed accounts: members /
+- [x] Corporate (`/admin/corporate`) — B2B wallet-backed accounts: members /
   pool / head-bonus KPIs + edit dialog (billing, bonus %, min staff, home site,
   auto-preorder) via `PUT /api/admin/corporate`
-- [x] Pulse surveys (`/admin-v3/surveys`) — NPS-style pulse + avg-rating KPIs
+- [x] Pulse surveys (`/admin/surveys`) — NPS-style pulse + avg-rating KPIs
   (shared `@/lib/surveys`), survey catalogue with active toggles
   (`PUT /api/admin/surveys`), and a responses table. **Rule #12:** the
   Pulse-score KPI and a page-title "How Pulse surveys work" trigger now carry
   full five-section `InfoButton`/`MetricExplainer` blocks (restored from v2)
-- [x] Reports (`/admin-v3/reports`) — range presets, revenue/profit/margin/
+- [x] Reports (`/admin/reports`) — range presets, revenue/profit/margin/
   orders/AOV/tips KPIs, revenue-by-category bars, tips summary, top items, JPK
   export (`/api/admin/analytics` + `/reports/tips` + `/reports/jpk`). **Chart
   parity restored (flag #4):** a **Revenue-trend** `AreaChart`, a **Channel-mix**
@@ -550,13 +550,13 @@ refetches every 30s.
   — all from the same `dailyStats` + channel counts the analytics payload
   already returns — plus the **CSV export** (per-day revenue/cost/profit/margin/
   orders/items/AOV/channels) alongside JPK.
-- [x] Business costs (`/admin-v3/business-costs`) — operating-expense register
+- [x] Business costs (`/admin/business-costs`) — operating-expense register
   with monthly-recurring / annualised / payroll / one-off KPIs (shared
   `monthlyGrosze`), category chips, add/edit/delete dialog (`/api/admin/business-costs`)
-- [x] Cash (`/admin-v3/cash`) — till session lifecycle: open float, record
+- [x] Cash (`/admin/cash`) — till session lifecycle: open float, record
   cash-sale/drop/payout entries, expected-drawer KPI, close with counted-cash →
   live variance, and a closed-session history (`/api/admin/cash` + `?action=drop|close`)
-- [x] Growth (partial) — Scheduled bundles (`/admin-v3/scheduled-bundles`):
+- [x] Growth (partial) — Scheduled bundles (`/admin/scheduled-bundles`):
   standing-pre-order status board (approve/pause/resume/cancel via
   `PATCH /api/admin/scheduled-bundles/:id`), rows sorted by weekday → ready-time
   so the list mirrors the operator's fulfilment order (v2 parity). **Workbench
@@ -566,14 +566,14 @@ refetches every 30s.
   **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
   the full standing-cart line items + the status actions, so the operator can
   see *what's in* a recurring order, not just its item count. Truck ops
-  (`/admin-v3/truck`): events + routes CRUD (incl. route-stops editor) over
+  (`/admin/truck`): events + routes CRUD (incl. route-stops editor) over
   `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
   (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
   five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table
   view toggle** for events with a default **Board** of event cards (status dot,
   date, revenue, expected guests; upcoming-first sort) that open the editor on
   click.
-- [x] Growth complete — Campaigns (`/admin-v3/growth`): loyalty levers
+- [x] Growth complete — Campaigns (`/admin/growth`): loyalty levers
   (referral config + challenge/seasonal toggle = saved, `PUT /api/admin/growth`).
   **Restored to v2 parity (flag #5):** the **Loyalty tiers** editor
   (bronze/silver/gold/platinum — label / threshold / multiplier / perks, saved
@@ -583,7 +583,7 @@ refetches every 30s.
   add/edit/delete + toggle via `RewardDialogV3`, not toggle-only), and the
   **Referral codes** table (in-circulation codes with owner / phone / uses /
   earned-pts + remove, `GET`/`DELETE /api/admin/referrals`).
-  Cross-sell (`/admin-v3/crosssell`) — **full v2 parity (PR #139 follow-up):**
+  Cross-sell (`/admin/crosssell`) — **full v2 parity (PR #139 follow-up):**
   four tabs over the per-location selling config (`PUT /api/admin/upsell`, full
   config round-tripped so nothing is lost): **Cart pairings** (Coffee/Dessert/
   Side/Drink item slots), **Combo deals** (add/edit/toggle/delete), **Time-of-day**
@@ -603,7 +603,7 @@ refetches every 30s.
   items × discount = subtotal/saving/pay) on the right that recompute as you type.
   The Time-of-day editor gained the same split with a **live cart-banner preview**
   and a "showing now / parked" indicator; the windows table flags the window live
-  at the current hour. Upsell (`/admin-v3/upsell`) — **full
+  at the current hour. Upsell (`/admin/upsell`) — **full
   v2 parity (PR #139 follow-up):** two tabs. **Bundles** restores the full
   bundle-ladder editor (CRUD with composition slots, fixed/dynamic pricing,
   anchor/decoy/default flags, loyalty gate, channel, members-only, scarcity
@@ -628,27 +628,27 @@ refetches every 30s.
   fixed price + strikethrough/save or dynamic %) + this bundle's **live 30-day
   performance** grid (sold/ticket/saving/eff-discount/revenue/👍👎 + refund rate)
   on the right.
-- [x] Intelligence (partial) — Multi-location (`/admin-v3/locations`):
+- [x] Intelligence (partial) — Multi-location (`/admin/locations`):
   cross-site comparison table + chain KPIs (`/api/admin/insights`), plus a
   **revenue-share `Donut`** + **orders-by-site `BarChart`** (flag #4, restored
   cross-site viz). Menu
-  engineering (`/admin-v3/menu-engineering`): star/puzzle/plowhorse/dog
+  engineering (`/admin/menu-engineering`): star/puzzle/plowhorse/dog
   classification with window select, quadrant chips + per-dish verdict
   (`/api/admin/menu-engineering`); **Rule #12:** all four quadrant KPIs now
   carry full five-section `InfoButton`/`MetricExplainer` blocks (restored from
-  v2). Expansion (`/admin-v3/expansion`):
+  v2). Expansion (`/admin/expansion`):
   new-site readiness checklists (toggle items, add planned site,
   `PUT /api/admin/expansion`).
-- [x] Intelligence complete — Manage locations (`/admin-v3/locations/manage`):
+- [x] Intelligence complete — Manage locations (`/admin/locations/manage`):
   site CRUD (hours editor, coordinates, active/alcohol) round-tripping the full
-  record + re-seed (`/api/admin/locations`). Insights (`/admin-v3/ai`): **five
+  record + re-seed (`/api/admin/locations`). Insights (`/admin/ai`): **five
   tabs restored to v2 parity (flag #5)** — **Forecast** bars
   (`/api/admin/ai/forecast`), **Anomalies** (today vs trailing 28-day avg from
   `/api/admin/analytics`), **Reorder** (SKUs ≤ reorder point from
   `/api/admin/stock`, suggested qty + est cost), **Staffing** (peak-hour
   headcount from `/api/admin/insights`), and the **Chatbot FAQ** manager
   (`/api/admin/chatbot-faq`).
-- [x] System (partial) — Audit log (`/admin-v3/audit-log`, filtered read +
+- [x] System (partial) — Audit log (`/admin/audit-log`, filtered read +
   **field-level diff restored**: a row click opens a detail dialog with a
   v3-native `DiffRenderer` — added/removed/changed keys, before↔after blocks,
   pretty-JSON nested shapes — over the API's `before`/`after` snapshots; CSS
@@ -658,17 +658,17 @@ refetches every 30s.
   Delete all, each behind a destructive confirm `Dialog`; calls
   `DELETE /api/admin/audit-log` with `{ ids }` or `{ all: true }`, then the
   purge is itself logged as `audit.purge`), SOC 2
-  (`/admin-v3/soc2`, owner-only, real `buildSoc2Register` introspection,
+  (`/admin/soc2`, owner-only, real `buildSoc2Register` introspection,
   **status filter chips** All/Met/Partial/Gap above the category groups),
-  Currency (`/admin-v3/currency`) + Languages (`/admin-v3/languages`) settings,
-  Capabilities (`/admin-v3/capabilities` → canonical `/admin/capabilities`).
+  Currency (`/admin/currency`) + Languages (`/admin/languages`) settings,
+  Capabilities (`/admin/capabilities` → canonical `/admin/capabilities`).
   **Visual upgrade:** Currency + Languages each gained a summary **KPI rail**
   (Currency: default / enabled / FX-rates-set / charges-in-PLN; Languages:
   default / enabled / translations-live) above their toggle editors. **Search
   added** to the two densest list surfaces that lacked it — **Inventory** stock
   (by ingredient/category, in a toolbar beside the status chips) and **Feedback**
   (by guest name / comment text, beside the status chips).
-- [x] Users (`/admin-v3/users`, owner-only): account directory + add/edit/delete
+- [x] Users (`/admin/users`, owner-only): account directory + add/edit/delete
   dialog (role / status / site / optional password) over `/api/admin/users`.
   **Security surface restored to v2 parity (flag #2):** auth-posture KPIs
   (secured-2FA / no-2FA / passkeys), a per-user **Sign-in** column (posture +
@@ -678,7 +678,7 @@ refetches every 30s.
   `…/mfa`, self-confirm + owner force-disable) and **Passkeys** (WebAuthn enrol
   via `@simplewebauthn/browser` + remove, `…/webauthn`). Granular permissions
   stay on the **Permission matrix** page (no duplication).
-- [x] Permissions (`/admin-v3/permissions`, owner-only): action-level RBAC matrix —
+- [x] Permissions (`/admin/permissions`, owner-only): action-level RBAC matrix —
   per-user capability toggles from the shared `PERMISSION_GROUPS` catalog,
   persisting custom grants (`PUT /api/admin/users`). **Visual upgrade:** a **KPI
   rail** (capabilities / roles / user accounts / custom grants) and a
@@ -686,17 +686,17 @@ refetches every 30s.
   `Grid3x3` / `Users`; defaults to **By-role**) — the **By-role cross-tab**
   (`ROLE_DEFAULT_PERMISSIONS`, owner = all) is a read-only capability×role matrix
   grouped by permission group. CSS §21 (`.av3-matrix`).
-- [x] Compliance (`/admin-v3/compliance`): expiry calendar (licenses/inspections/
+- [x] Compliance (`/admin/compliance`): expiry calendar (licenses/inspections/
   insurance) with expired/≤7d/≤30d KPIs + add/edit/delete (`/api/admin/compliance`).
   **Search** added (by item / type / site).
-- [x] Regulatory disclosures (`/admin-v3/regulatory-compliance`, owner-only):
+- [x] Regulatory disclosures (`/admin/regulatory-compliance`, owner-only):
   default pack + per-site EU/NYC/SG zone + disclosure toggles
   (`PUT /api/admin/regulatory-compliance`). **Toggle = saved (rule #7)** — the
   zone select + disclosure toggles persist on change (no Save button); same
   consistency fix applied to Currency + Languages (enable/default persist
   immediately; FX rates save on blur). **Visual upgrade:** a summary **KPI rail**
   (sites / default pack / zones in use / disclosures active).
-- [x] Settings (`/admin-v3/settings`, owner-only): five tabs — **General**
+- [x] Settings (`/admin/settings`, owner-only): five tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles + feature flags, toggle = saved),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
@@ -704,9 +704,9 @@ refetches every 30s.
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**
   (restored: read-only three-theme inspector from `design-system.json`) and
   **Advanced** (restored: seed demo data). The v2 Audit tab is intentionally
-  **not** duplicated — it has its own `/admin-v3/audit-log` page. All over
+  **not** duplicated — it has its own `/admin/audit-log` page. All over
   `PUT /api/admin/settings`.
-- [~] Calculator (`/admin-v3/simulation`) — **Part 1 shipped**: the real P&L
+- [~] Calculator (`/admin/simulation`) — **Part 1 shipped**: the real P&L
   simulator. The compute engine was **extracted to a shared lib**
   (`src/lib/simulation-engine.ts`, pure `computeScenario` + `computeTornado`) so
   v3 runs the exact same math without importing from v2. Live input levers

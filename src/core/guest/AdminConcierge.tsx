@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
+import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
 import { useToast } from "@/ui/Toast";
 
 type CapId =
@@ -144,7 +145,8 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
     <CoreShell
       eyebrow="Guest Engagement"
       viewnav={<GuestViewNav current="concierge" />}
-      right={
+      right={<GuestHeaderActions />}
+      subRight={
         <>
           <div className="seg">
             <button type="button" className={view === "mcp" ? "on" : ""} onClick={() => setView("mcp")}>
@@ -168,6 +170,14 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
         </>
       }
     >
+      <div className="intro">
+        <h1>Guest · Concierge — the auditable agent layer</h1>
+        <p>
+          One capability layer exposed over MCP/HTTP <em>and</em> the WhatsApp bot — the agent never
+          guesses; every answer is auditable. Toggle capabilities live, test them against the real read
+          endpoint, and see exactly what the agent sees.
+        </p>
+      </div>
       <div className="conc">
         <section className="cap-side" aria-label="Capabilities">
           <div className="cap-statline">
@@ -178,7 +188,7 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
             </span>
           </div>
 
-          <div className="card" style={{ overflow: "hidden" }}>
+          <div className="caps">
             {meta.map((c) => {
               const on = exposure[c.id] ?? true;
               return (

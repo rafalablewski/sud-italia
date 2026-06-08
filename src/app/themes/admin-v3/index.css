@@ -1100,7 +1100,7 @@
 .av3-recipe-summary .v { font-family: var(--av3-mono); font-size: 18px; font-weight: 600; }
 
 /* ==========================================================================
-   14. Alerts inbox (/admin-v3/alerts) — bucketed action queue
+   14. Alerts inbox (/admin/alerts) — bucketed action queue
    ========================================================================== */
 .av3-alert-sect-h { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--av3-subtle); padding: 13px 14px 3px; }
 .av3-alert-list { display: flex; flex-direction: column; }
@@ -1126,7 +1126,7 @@
 @media (pointer: coarse) { .av3-alert-row { min-height: 44px; } }
 
 /* ==========================================================================
-   15. Audit-log field-level diff (/admin-v3/audit-log detail dialog)
+   15. Audit-log field-level diff (/admin/audit-log detail dialog)
    ========================================================================== */
 .av3-diff { background: var(--av3-s2); border: 1px solid var(--av3-line); border-radius: var(--av3-r-md); padding: 6px 10px; font-family: var(--av3-mono); font-size: 12px; }
 .av3-diff-row { display: flex; flex-direction: column; gap: 3px; padding: 6px 0; border-bottom: 1px solid var(--av3-line); }
@@ -1143,7 +1143,7 @@
 @media (max-width: 720px) { .av3-diff-2 { grid-template-columns: 1fr; } }
 
 /* ==========================================================================
-   16. Customer detail dialog (/admin-v3/customers detail) — history + notes
+   16. Customer detail dialog (/admin/customers detail) — history + notes
    ========================================================================== */
 .av3-detail-sect { margin-bottom: 4px; }
 .av3-detail-sect-label { margin-top: 16px; margin-bottom: 8px; }
@@ -1152,7 +1152,7 @@
 @media (max-width: 720px) { .av3-formrow-note { grid-template-columns: 1fr; } }
 
 /* ==========================================================================
-   17. Ops Agent chat (/admin-v3/ai/agent) — conversation + tool approval
+   17. Ops Agent chat (/admin/ai/agent) — conversation + tool approval
    ========================================================================== */
 .av3-conv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 7px 9px; border: none; background: none; border-radius: var(--av3-r-sm); color: var(--av3-fg); font-size: 13px; cursor: pointer; }
 .av3-conv-row:hover { background: var(--av3-hover); }

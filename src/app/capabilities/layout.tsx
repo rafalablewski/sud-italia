@@ -9,7 +9,7 @@ import { themeBootScript } from "@/shared/theme";
  * truth for what's deployed). It used to live under `/admin` inside the v2
  * AdminShell; re-homed here so it survives the v2 deletion. It renders with the
  * shared base CSS (`.v2-card` / `.admin-text` / `PageHero`) on `.admin-bg`,
- * gates auth itself, and is linked from the v3 nav (`/admin-v3/capabilities`
+ * gates auth itself, and is linked from the admin nav (`/admin/capabilities`
  * → here). Like the other shell-less portals, it loads the base theme CSS +
  * admin fonts directly and pins PLN.
  */

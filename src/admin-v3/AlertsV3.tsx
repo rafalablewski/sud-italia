@@ -49,13 +49,13 @@ function relTime(iso: string): string {
   return `${Math.round(h / 24)}d`;
 }
 
-// Tap-to-jump — same routing intent as v2 MobileAlerts, re-pointed at the v3 tree.
+// Tap-to-jump — routes into the canonical /admin HQ.
 function hrefFor(n: NotificationItem): string {
-  if (n.orderId) return `/admin-v3/orders`;
+  if (n.orderId) return `/admin/orders`;
   if (n.type === "slot_full" || n.type === "low_slots") return "/core/service/slots";
-  if (n.type === "daily_summary") return "/admin-v3/reports";
-  if (n.type === "low_stock") return "/admin-v3/inventory";
-  return "/admin-v3";
+  if (n.type === "daily_summary") return "/admin/reports";
+  if (n.type === "low_stock") return "/admin/inventory";
+  return "/admin";
 }
 
 function IconFor({ type }: { type: string }) {
