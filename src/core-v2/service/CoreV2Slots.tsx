@@ -2,10 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
+import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
-import type { TimeSlot } from "@/data/types";
+import type { FulfillmentType, TimeSlot } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
+
+const FULFIL: { key: FulfillmentType; label: string }[] = [
+  { key: "dine-in", label: "Dine-in" },
+  { key: "takeout", label: "Takeaway" },
+  { key: "delivery", label: "Delivery" },
+];
 
 interface DemandSlotRow {
   slotId: string;
@@ -49,6 +56,12 @@ export function CoreV2Slots() {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
   const [acting, setActing] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [cStart, setCStart] = useState("18:00");
+  const [cEnd, setCEnd] = useState("21:00");
+  const [cInterval, setCInterval] = useState("30");
+  const [cMax, setCMax] = useState("16");
+  const [cFulfil, setCFulfil] = useState<Set<FulfillmentType>>(new Set(["dine-in"]));
 
   const loadSlots = useCallback(async () => {
     const r = await fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`);
@@ -95,6 +108,53 @@ export function CoreV2Slots() {
       if (r.ok) {
         setSlots((xs) => xs.map((x) => (x.id === slot.id ? { ...x, status: next } : x)));
       } else toast("Could not update slot", "danger");
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const createSlots = async () => {
+    const fulfil = [...cFulfil];
+    const interval = parseInt(cInterval, 10);
+    const maxOrders = parseInt(cMax, 10);
+    if (fulfil.length === 0 || !Number.isFinite(interval) || !Number.isFinite(maxOrders)) {
+      toast("Pick a channel + valid interval/capacity", "danger");
+      return;
+    }
+    setActing(true);
+    try {
+      const r = await fetch("/api/admin/slots?bulk=1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locationSlug: loc,
+          date,
+          fulfillmentTypes: fulfil,
+          bulk: { startTime: cStart, endTime: cEnd, interval },
+          maxOrders,
+          status: "active",
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) {
+        const n = Array.isArray(d) ? d.length : 1;
+        toast(`Created ${n} slot${n === 1 ? "" : "s"}`, "success");
+        setCreateOpen(false);
+        await loadSlots();
+      } else toast((d as { error?: string }).error || "Could not create slots", "danger");
+    } finally {
+      setActing(false);
+    }
+  };
+  const deleteSlot = async (slot: TimeSlot) => {
+    if (acting) return;
+    setActing(true);
+    try {
+      const r = await fetch(`/api/admin/slots?id=${encodeURIComponent(slot.id)}`, { method: "DELETE" });
+      if (r.ok) {
+        setSlots((xs) => xs.filter((x) => x.id !== slot.id));
+        toast(`${slot.time} slot deleted`, "success");
+      } else toast("Could not delete", "danger");
     } finally {
       setActing(false);
     }
@@ -148,6 +208,9 @@ export function CoreV2Slots() {
             <button className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
             <button className={tab === "demand" ? "on" : ""} onClick={() => setTab("demand")}>Demand</button>
           </div>
+          {tab === "manage" && (
+            <button type="button" className="cv-chip" style={{ height: 32 }} onClick={() => setCreateOpen(true)}>+ New</button>
+          )}
           <input className="cv-inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 32 }} />
         </>
       }
@@ -174,6 +237,7 @@ export function CoreV2Slots() {
                         <span className="cap mono">{s.currentOrders}/{s.maxOrders}</span>
                         <span className="ch">{s.fulfillmentTypes.join(" · ")}</span>
                         <button className={`cv-pill-btn ${s.status}`} onClick={() => void toggleSlot(s)}>{s.status}</button>
+                        <button className="cv-slot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
                       </div>
                     );
                   })}
@@ -221,6 +285,48 @@ export function CoreV2Slots() {
           </>
         )}
       </div>
+
+      <CoreV2Dialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title={`New slots · ${date}`}
+        footer={
+          <>
+            <button className="cv-btn ghost" onClick={() => setCreateOpen(false)}>Cancel</button>
+            <button className="cv-btn primary" disabled={acting} onClick={() => void createSlots()}>Create</button>
+          </>
+        }
+      >
+        <div className="cv-slot-create">
+          <label>Channels
+            <div className="cv-segs" style={{ marginTop: 6 }}>
+              {FULFIL.map((f) => (
+                <button
+                  key={f.key}
+                  className={cFulfil.has(f.key) ? "on" : ""}
+                  onClick={() =>
+                    setCFulfil((s) => {
+                      const n = new Set(s);
+                      if (n.has(f.key)) n.delete(f.key);
+                      else n.add(f.key);
+                      return n;
+                    })
+                  }
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </label>
+          <div className="cv-slot-create-grid">
+            <label>Start<input className="cv-inp" type="time" value={cStart} onChange={(e) => setCStart(e.target.value)} /></label>
+            <label>End<input className="cv-inp" type="time" value={cEnd} onChange={(e) => setCEnd(e.target.value)} /></label>
+            <label>Every (min)<input className="cv-inp" value={cInterval} onChange={(e) => setCInterval(e.target.value)} /></label>
+            <label>Capacity<input className="cv-inp" value={cMax} onChange={(e) => setCMax(e.target.value)} /></label>
+          </div>
+          <p className="cv-cust-sub">Generates active slots from {cStart} to {cEnd} every {cInterval} min, {cMax} covers each.</p>
+        </div>
+      </CoreV2Dialog>
     </CoreV2Shell>
   );
 }

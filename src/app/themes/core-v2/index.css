@@ -563,7 +563,11 @@
 
 /* slots */
 .cv2 .cv-slot-list { display: flex; flex-direction: column; gap: 8px; }
-.cv2 .cv-slot { display: grid; grid-template-columns: 52px 1fr 64px 120px 70px; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 13px; }
+.cv2 .cv-slot { display: grid; grid-template-columns: 52px 1fr 64px 110px 64px 26px; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 13px; }
+.cv2 .cv-slot-x { color: var(--ink-3); font-size: 12px; } .cv2 .cv-slot-x:hover { color: var(--danger); }
+.cv2 .cv-slot-create label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 12px; }
+.cv2 .cv-slot-create .cv-inp { width: 100%; margin-top: 6px; }
+.cv2 .cv-slot-create-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
 .cv2 .cv-slot.draft { opacity: .6; }
 .cv2 .cv-slot .st { font-weight: 600; font-size: 13px; }
 .cv2 .cv-slot .bar { height: 8px; border-radius: 4px; background: var(--panel-3); overflow: hidden; }
