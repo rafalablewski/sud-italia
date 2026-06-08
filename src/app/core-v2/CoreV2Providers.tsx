@@ -47,7 +47,7 @@ export function CoreV2Providers({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!gate || !gate.custom) return;
+    if (!gate || !gate.custom || !pathname) return;
     // Map /core-v2/* onto the same permission keys the current Core uses.
     const need = permissionForAdminPage(pathname.replace("/core-v2", "/core"));
     if (need && !gate.keys.has(need)) {

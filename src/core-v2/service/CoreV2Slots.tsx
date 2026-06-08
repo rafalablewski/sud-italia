@@ -51,7 +51,12 @@ export function CoreV2Slots() {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
-  const [date, setDate] = useState(todayLocal());
+  // Seed the date on the client only (local timezone) so SSR (UTC) doesn't
+  // mismatch and trip a hydration warning.
+  const [date, setDate] = useState("");
+  useEffect(() => {
+    setDate(todayLocal());
+  }, []);
   const [tab, setTab] = useState<"manage" | "demand">("manage");
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
@@ -64,11 +69,13 @@ export function CoreV2Slots() {
   const [cFulfil, setCFulfil] = useState<Set<FulfillmentType>>(new Set(["dine-in"]));
 
   const loadSlots = useCallback(async () => {
+    if (!date) return;
     const r = await fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`);
     const d = r.ok ? await r.json() : [];
     setSlots(Array.isArray(d) ? d : d.slots ?? []);
   }, [loc, date]);
   const loadBoard = useCallback(async () => {
+    if (!date) return;
     const r = await fetch(`/api/admin/demand-exchange?location=${encodeURIComponent(loc)}&date=${date}`);
     const d = r.ok ? await r.json() : null;
     setBoard(d?.board ?? null);

@@ -153,18 +153,16 @@ export function CoreV2Pos({
 
   const mutateActive = useCallback(
     (mutator: (t: PosTab) => PosTab) => {
-      setTabs((prev) => {
-        let changed: PosTab | null = null;
-        const next = prev.map((t) => {
-          if (t.id !== activeTabId) return t;
-          changed = { ...mutator(t), updatedAt: new Date().toISOString() };
-          return changed;
-        });
-        if (changed) persistTab(changed);
-        return next;
-      });
+      // Compute the next tab outside setTabs so the state updater stays pure —
+      // persisting (a fetch) inside it would double-fire under StrictMode /
+      // concurrent rendering. The functional update applies the precomputed value.
+      const current = tabs.find((t) => t.id === activeTabId);
+      if (!current) return;
+      const changed = { ...mutator(current), updatedAt: new Date().toISOString() };
+      setTabs((prev) => prev.map((t) => (t.id === activeTabId ? changed : t)));
+      persistTab(changed);
     },
-    [activeTabId, persistTab],
+    [tabs, activeTabId, persistTab],
   );
 
   const addLine = useCallback(

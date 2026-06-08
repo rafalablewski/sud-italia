@@ -26,7 +26,12 @@ export function CoreV2Book() {
   const toast = useCoreToast();
   const { location, activeLocations } = useLocation();
   const loc = location || activeLocations[0]?.slug || "krakow";
-  const [date, setDate] = useState(todayLocal());
+  // Seed the date on the client only — todayLocal() reads the local timezone,
+  // which would mismatch the server's SSR (UTC) and trip a hydration warning.
+  const [date, setDate] = useState("");
+  useEffect(() => {
+    setDate(todayLocal());
+  }, []);
 
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [tables, setTables] = useState<FloorTable[]>([]);
@@ -43,6 +48,7 @@ export function CoreV2Book() {
   const [booking, setBooking] = useState(false);
 
   const load = useCallback(async () => {
+    if (!date) return;
     setLoading(true);
     try {
       const [s, t, r] = await Promise.all([
