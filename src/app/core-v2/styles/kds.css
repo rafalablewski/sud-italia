@@ -1,0 +1,325 @@
+/* ============================================================
+   CORE v2 — KDS surface styles
+   A 1:1 port of the three core-suite KDS mockups:
+     • public/mockups/core-suite/kds-fleet.html  (Fleet command wall)
+     • public/mockups/core-suite/kds.html        (Floor board)
+     • public/mockups/core-suite/kds-chef.html   (Chef line)
+   Every rule is scoped under `.corev2` so the theme can never leak.
+
+   KDS is NOT inside the sidebar shell — it is a dedicated full-bleed
+   kiosk wall with its own dark token set. The dark-wall token overrides
+   (the `body.kds { --canvas/--panel/--raised/... }` block, identical
+   across the three mockups) live on `.corev2.kds`. Each view's component
+   rules are scoped under a per-view class (`.corev2.kds.floor`,
+   `.corev2.kds.fleet`, `.corev2.kds.chef`) because Fleet and Chef both
+   define `.wrap`/`.top` with different rules. Generic primitives
+   (`.badge`, `.viewswitch`, `.btn`) come from core.css and are NOT
+   redefined here.
+   ============================================================ */
+
+/* ---- dark-wall token overrides (shared across all three views) ---- */
+.corev2.kds {
+  --canvas: #0a0a0c;
+  --panel: #141318;
+  --raised: #1f1d25;
+  --hair: rgba(255, 255, 255, 0.09);
+  --hair-2: rgba(255, 255, 255, 0.16);
+  --t: #f4f2ee;
+  --dim: #b6afa6;
+  --faint: #8d847b;
+  --warn: #e0a93f;
+  --late: #e5484d;
+  --ready: #4ea882;
+  /* fleet-only extras (harmless to floor/chef) */
+  --queued: #6a655f;
+  --firing: #4d90e8;
+  --risk: #e0a93f;
+  background: var(--canvas);
+  color: var(--t);
+}
+
+/* ============================================================
+   FLOOR  (kds.html)
+   ============================================================ */
+.corev2.kds.floor .kds-wrap { min-height: 100vh; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
+.corev2.kds.floor .kds-top { display: flex; align-items: center; gap: 14px; flex: none; position: sticky; top: 0; z-index: 10; background: var(--canvas); padding: 14px 18px 12px; margin: -14px -18px 0; }
+.corev2.kds.floor .kds-id { display: flex; align-items: center; gap: 11px; }
+.corev2.kds.floor .kds-id .brand-mark { width: 28px; height: 28px; }
+.corev2.kds.floor .kds-id .nm { font-family: var(--display); font-size: 17px; font-weight: 600; }
+.corev2.kds.floor .kds-id .loc { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.floor .stage { margin: 0 auto; display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
+.corev2.kds.floor .stage button { height: 30px; padding: 0 15px; border: 0; background: transparent; color: var(--dim); font: 600 13px var(--ui); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; letter-spacing: -.005em; }
+.corev2.kds.floor .stage button.on { background: var(--raised); color: var(--t); }
+.corev2.kds.floor .stage .n { font: 600 11px var(--mono); color: var(--faint); }
+.corev2.kds.floor .clock { font: 600 19px var(--mono); padding: 5px 13px; border-radius: 8px; background: var(--panel); border: 1px solid var(--hair); color: var(--t); letter-spacing: .02em; }
+.corev2.kds.floor .ctrl { width: 34px; height: 34px; border-radius: 7px; border: 1px solid var(--hair); background: var(--panel); color: var(--dim); display: grid; place-items: center; cursor: pointer; transition: color .12s, border-color .12s; }
+.corev2.kds.floor .ctrl:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.floor .ctrl.on { color: var(--t); border-color: var(--hair-2); background: var(--raised); }
+.corev2.kds.floor .ctrl .icn { width: 16px; height: 16px; }
+
+/* manager ops header: SLA roll-up + 86 management */
+.corev2.kds.floor .ops { display: flex; align-items: center; gap: 8px; flex: none; }
+.corev2.kds.floor .ops-stats { display: flex; gap: 7px; }
+.corev2.kds.floor .ostat { background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 13px; min-width: 80px; }
+.corev2.kds.floor .ostat .l { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.floor .ostat .v { font: 600 16px var(--mono); margin-top: 3px; color: var(--t); }
+.corev2.kds.floor .ostat.alert .v { color: var(--late); }
+.corev2.kds.floor .ostat.warn .v { color: var(--warn); }
+.corev2.kds.floor .ostat.good .v { color: var(--ready); }
+.corev2.kds.floor .eighty-six { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.corev2.kds.floor .eighty-six .lbl { font: 600 9.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.floor .restore { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 7px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--ui); cursor: pointer; }
+.corev2.kds.floor .restore .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--late); }
+.corev2.kds.floor .restore .x { color: var(--faint); font-size: 11px; }
+.corev2.kds.floor .restore:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.floor .btn86 { height: 30px; padding: 0 13px; border-radius: 7px; border: 1px solid var(--hair-2); background: var(--panel); color: var(--dim); font: 600 12.5px var(--ui); cursor: pointer; }
+.corev2.kds.floor .btn86:hover { color: var(--t); border-color: var(--t); }
+
+.corev2.kds.floor .board { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.corev2.kds.floor .col { display: flex; flex-direction: column; }
+.corev2.kds.floor .col-head { display: flex; align-items: center; gap: 10px; padding: 0 2px 10px; }
+.corev2.kds.floor .col-head .lbl { font: 600 12px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.corev2.kds.floor .col-head .cnt { font: 600 12px var(--mono); color: var(--faint); }
+.corev2.kds.floor .col-head .rule { flex: 1; height: 1px; background: var(--hair); }
+.corev2.kds.floor .col.active .col-head .lbl { color: var(--t); }
+.corev2.kds.floor .col.active .col-head .rule { background: rgba(203, 180, 138, .35); }
+.corev2.kds.floor .col-body { display: flex; flex-direction: column; gap: 11px; padding: 1px; }
+
+/* ticket: neutral by default; left accent + timer escalate with SLA */
+.corev2.kds.floor .tk { flex: none; background: var(--panel); border: 1px solid var(--hair); border-left: 3px solid transparent; border-radius: 10px; overflow: hidden; }
+.corev2.kds.floor .tk.warn, .corev2.kds.floor .tk.risk { border-left-color: var(--warn); }
+.corev2.kds.floor .tk.late { border-left-color: var(--late); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
+.corev2.kds.floor .tk.ready { border-left-color: color-mix(in oklab, var(--ready) 55%, transparent); opacity: .9; }
+.corev2.kds.floor .tk-h { display: flex; align-items: center; gap: 9px; padding: 11px 13px 7px; }
+.corev2.kds.floor .tk-id { font: 600 15px var(--ui); letter-spacing: -.01em; color: var(--t); }
+.corev2.kds.floor .tk-type { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: var(--raised); color: var(--dim); }
+.corev2.kds.floor .tk-course { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--hair-2); color: var(--dim); }
+.corev2.kds.floor .tk-course.together { border-color: color-mix(in oklab, var(--platinum) 45%, var(--hair-2)); color: var(--platinum); }
+.corev2.kds.floor .tk-coursehint { padding: 0 13px 7px; font: 500 11px var(--ui); color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.corev2.kds.floor .tk-coursehint svg { opacity: .7; flex: none; }
+.corev2.kds.floor .tk-risk { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--warn); border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent); border-radius: 4px; padding: 1px 6px; }
+.corev2.kds.floor .tk-timer { margin-left: auto; font: 600 20px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.corev2.kds.floor .tk.warn .tk-timer, .corev2.kds.floor .tk.risk .tk-timer { color: var(--warn); }
+.corev2.kds.floor .tk.late .tk-timer { color: var(--late); }
+.corev2.kds.floor .tk.ready .tk-timer { color: var(--ready); font-size: 13px; font-family: var(--ui); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.corev2.kds.floor .tk-items { padding: 1px 13px 7px; min-width: 0; }
+.corev2.kds.floor .tk-grp { font: 600 9px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 5px 0 3px; }
+.corev2.kds.floor .tk-it { display: flex; gap: 11px; padding: 4px 0; min-width: 0; }
+.corev2.kds.floor .tk-it > div { min-width: 0; }
+.corev2.kds.floor .tk-q { font: 600 15px var(--mono); min-width: 26px; flex: none; color: var(--dim); }
+.corev2.kds.floor .tk-nm { font-family: var(--display); font-weight: 500; font-size: 16.5px; letter-spacing: .005em; color: var(--t); overflow-wrap: anywhere; }
+.corev2.kds.floor .tk-mod { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 14px; color: var(--warn); margin-top: 2px; }
+.corev2.kds.floor .tk-alrg { margin: 1px 13px 7px; padding: 5px 9px; border-radius: 6px; background: color-mix(in oklab, var(--late) 12%, transparent); color: var(--late); font: 600 11.5px var(--ui); display: flex; gap: 7px; align-items: center; }
+.corev2.kds.floor .tk-notes { margin: 0 13px 8px; padding: 6px 9px; border-radius: 6px; background: var(--raised); font-size: 12px; color: var(--dim); }
+.corev2.kds.floor .tk-notes b { color: var(--t); font-weight: 600; }
+.corev2.kds.floor .tk-f { display: flex; flex-direction: column; gap: 9px; padding: 8px 13px 12px; }
+.corev2.kds.floor .tk-eta { display: flex; align-items: center; gap: 10px; }
+.corev2.kds.floor .tk-eta .lbl { font: 500 11.5px var(--ui); color: var(--faint); white-space: nowrap; flex: none; }
+.corev2.kds.floor .tk.warn .tk-eta .lbl, .corev2.kds.floor .tk.risk .tk-eta .lbl { color: var(--warn); }
+.corev2.kds.floor .tk.late .tk-eta .lbl { color: var(--late); }
+.corev2.kds.floor .tk.ready .tk-eta .lbl { color: var(--ready); }
+.corev2.kds.floor .sla { flex: 1; height: 4px; border-radius: 99px; background: var(--raised); overflow: hidden; }
+.corev2.kds.floor .sla i { display: block; height: 100%; background: var(--dim); }
+.corev2.kds.floor .tk.warn .sla i, .corev2.kds.floor .tk.risk .sla i { background: var(--warn); }
+.corev2.kds.floor .tk.late .sla i { background: var(--late); }
+.corev2.kds.floor .tk.ready .sla i { background: var(--ready); }
+/* bump: refined neutral action; late ticket gets a red-tinted edge */
+.corev2.kds.floor .bump { width: 100%; height: 38px; padding: 0 18px; border: 1px solid var(--hair-2); border-radius: 7px; font: 600 13px var(--ui); letter-spacing: -.005em; cursor: pointer; background: var(--raised); color: var(--t); transition: border-color .12s, background .12s; }
+.corev2.kds.floor .bump:hover { border-color: var(--t); }
+.corev2.kds.floor .bump:disabled { opacity: .5; cursor: not-allowed; }
+.corev2.kds.floor .tk.late .bump { border-color: color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
+
+/* recall tray + legend */
+.corev2.kds.floor .footrow { flex: none; display: flex; align-items: center; gap: 16px; }
+.corev2.kds.floor .recall { display: flex; align-items: center; gap: 9px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 7px 5px 13px; }
+.corev2.kds.floor .recall .lbl { font: 600 9.5px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.floor .recall .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 6px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--mono); cursor: pointer; }
+.corev2.kds.floor .recall .chip:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.floor .recall .chip:disabled { opacity: .5; cursor: not-allowed; }
+.corev2.kds.floor .legend { margin-left: auto; display: flex; gap: 18px; align-items: center; font: 500 11px var(--ui); color: var(--faint); }
+.corev2.kds.floor .legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.corev2.kds.floor .legend .sw { width: 8px; height: 8px; border-radius: 2px; background: var(--dim); }
+.corev2.kds.floor .legend b { color: var(--dim); font-weight: 600; }
+
+.corev2.kds.floor .kds-empty,
+.corev2.kds.floor .ka-empty { padding: 40px; text-align: center; color: var(--faint); font: 500 14px var(--ui); }
+
+/* ============================================================
+   FLEET  (kds-fleet.html)
+   ============================================================ */
+.corev2.kds.fleet .cstat,
+.corev2.kds.fleet .truck,
+.corev2.kds.fleet .bench { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+.corev2.kds.fleet .ctrl .icn { width: 16px; height: 16px; }
+.corev2.kds.fleet .wrap { min-height: 100vh; padding: 16px 20px 28px; }
+.corev2.kds.fleet .top { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+.corev2.kds.fleet .id { display: flex; align-items: center; gap: 11px; }
+.corev2.kds.fleet .id .nm { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.corev2.kds.fleet .id .loc { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.fleet .top .clock { margin-left: auto; font: 700 22px var(--mono); padding: 5px 14px; border-radius: var(--r-pill); background: var(--panel); border: 1px solid var(--hair-2); color: var(--t); }
+.corev2.kds.fleet .ctrl { width: 38px; height: 38px; border-radius: var(--r-md); border: 1px solid var(--hair); background: var(--panel); color: var(--dim); display: grid; place-items: center; cursor: pointer; transition: color .12s, border-color .12s; }
+.corev2.kds.fleet .ctrl:hover { color: var(--t); border-color: var(--hair-2); }
+
+/* fleet command bar */
+.corev2.kds.fleet .cmdbar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 14px; }
+.corev2.kds.fleet .cstat { background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 12px 14px; }
+.corev2.kds.fleet .cstat .l { font-size: 11px; color: var(--faint); letter-spacing: .04em; }
+.corev2.kds.fleet .cstat .v { font-family: var(--display); font-size: 25px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.corev2.kds.fleet .cstat .v .u { font-size: 13px; color: var(--faint); }
+.corev2.kds.fleet .cstat .s { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.corev2.kds.fleet .cstat.risk .v { color: var(--risk); }
+.corev2.kds.fleet .cstat.late .v { color: var(--late); }
+.corev2.kds.fleet .cstat.ready .v { color: var(--ready); }
+
+/* promise-accuracy benchmark */
+.corev2.kds.fleet .bench { background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 16px; }
+.corev2.kds.fleet .bench .h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.corev2.kds.fleet .bench .h .ttl { font: 700 12px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.corev2.kds.fleet .bench .h .sub { font-size: 12px; color: var(--faint); margin-left: auto; }
+.corev2.kds.fleet .bench .h .sub b { color: var(--platinum); }
+.corev2.kds.fleet .brow { display: grid; grid-template-columns: 120px 1fr 84px; align-items: center; gap: 14px; padding: 6px 0; }
+.corev2.kds.fleet .brow .city { font-size: 13px; font-weight: 500; }
+.corev2.kds.fleet .btrack { height: 8px; border-radius: 99px; background: var(--raised); position: relative; overflow: hidden; }
+.corev2.kds.fleet .btrack i { display: block; height: 100%; border-radius: 99px; }
+.corev2.kds.fleet .btrack .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--platinum); }
+.corev2.kds.fleet .brow .pct { font: 600 13px var(--mono); text-align: right; color: var(--t); }
+.corev2.kds.fleet .lead { font: 600 10px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--ready); margin-left: 7px; }
+
+/* trucks */
+.corev2.kds.fleet .trucks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.corev2.kds.fleet .truck { background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-xl); overflow: hidden; }
+.corev2.kds.fleet .thead { display: flex; align-items: center; gap: 14px; padding: 15px 17px; border-bottom: 1px solid var(--hair); cursor: pointer; }
+.corev2.kds.fleet .thead:hover { background: var(--raised); }
+.corev2.kds.fleet .thead .city { font-family: var(--display); font-size: 19px; font-weight: 600; }
+.corev2.kds.fleet .thead .open { font-size: 11px; color: var(--faint); }
+.corev2.kds.fleet .thead .drill { margin-left: auto; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+.corev2.kds.fleet .thead:hover .drill { color: var(--t); }
+/* the drill-in row is a borderless button in the live port — keep it inline */
+.corev2.kds.fleet .thead-open { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; background: transparent; border: 0; padding: 0; margin: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.corev2.kds.fleet .drill-chef { display: inline-flex; align-items: center; gap: 5px; flex: none; background: transparent; border: 1px solid var(--hair); border-radius: var(--r-md); height: 30px; padding: 0 11px; color: var(--dim); font: 600 12px var(--ui); cursor: pointer; transition: color .12s, border-color .12s; }
+.corev2.kds.fleet .drill-chef:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.fleet .ring { position: relative; width: 54px; height: 54px; flex: none; }
+.corev2.kds.fleet .ring svg { width: 54px; height: 54px; }
+.corev2.kds.fleet .ring .sc { position: absolute; inset: 0; display: grid; place-items: center; }
+.corev2.kds.fleet .ring .sc b { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.corev2.kds.fleet .health-state { font: 600 10px var(--ui); letter-spacing: .06em; text-transform: uppercase; }
+
+.corev2.kds.fleet .trow2 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--hair); border-bottom: 1px solid var(--hair); }
+.corev2.kds.fleet .tcell { background: var(--panel); padding: 11px 14px; }
+.corev2.kds.fleet .tcell .l { font-size: 10.5px; color: var(--faint); letter-spacing: .04em; }
+.corev2.kds.fleet .tcell .v { font-family: var(--mono); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.corev2.kds.fleet .tcell.risk .v { color: var(--risk); }
+.corev2.kds.fleet .tcell.late .v { color: var(--late); }
+.corev2.kds.fleet .tcell.ready .v { color: var(--ready); }
+
+.corev2.kds.fleet .pacehead { display: flex; align-items: center; gap: 18px; padding: 12px 17px; border-bottom: 1px solid var(--hair); }
+.corev2.kds.fleet .pacehead .met .l { font-size: 10.5px; color: var(--faint); }
+.corev2.kds.fleet .pacehead .met .v { font: 600 15px var(--mono); margin-top: 3px; color: var(--t); }
+.corev2.kds.fleet .capmeter { flex: 1; margin-left: auto; }
+.corev2.kds.fleet .capmeter .lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 5px; }
+.corev2.kds.fleet .capmeter .lbl .hint { color: var(--warn); }
+.corev2.kds.fleet .cmtrack { height: 7px; border-radius: 99px; background: var(--raised); overflow: hidden; position: relative; }
+.corev2.kds.fleet .cmtrack i { display: block; height: 100%; }
+.corev2.kds.fleet .cmtrack .m100 { position: absolute; top: -2px; bottom: -2px; left: 100%; width: 1px; background: var(--faint); }
+
+.corev2.kds.fleet .gauges { padding: 13px 17px; border-bottom: 1px solid var(--hair); }
+.corev2.kds.fleet .gauges .gh { font: 700 11px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.corev2.kds.fleet .grow { display: grid; grid-template-columns: 88px 1fr 96px; align-items: center; gap: 12px; padding: 5px 0; }
+.corev2.kds.fleet .grow .gn { font-size: 12.5px; }
+.corev2.kds.fleet .gtrack { height: 6px; border-radius: 99px; background: var(--raised); overflow: hidden; position: relative; }
+.corev2.kds.fleet .gtrack i { display: block; height: 100%; }
+.corev2.kds.fleet .gtrack .m100 { position: absolute; top: -2px; bottom: -2px; left: 100%; width: 1px; background: var(--faint); }
+.corev2.kds.fleet .grow .gf { font: 600 11px var(--mono); color: var(--dim); text-align: right; }
+.corev2.kds.fleet .calm i { background: var(--ready); }
+.corev2.kds.fleet .warnp i { background: var(--warn); }
+.corev2.kds.fleet .riskp i { background: var(--late); }
+
+.corev2.kds.fleet .stack { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.corev2.kds.fleet .mt { display: flex; align-items: center; gap: 11px; background: var(--raised); border-left: 3px solid transparent; border-radius: var(--r-md); padding: 9px 12px; }
+.corev2.kds.fleet .mt.firing { border-left-color: transparent; }
+.corev2.kds.fleet .mt.warn { border-left-color: var(--warn); }
+.corev2.kds.fleet .mt.late { border-left-color: var(--late); }
+.corev2.kds.fleet .mt.risk { border-left-color: var(--warn); }
+.corev2.kds.fleet .mt .mid { font: 700 14px var(--ui); }
+.corev2.kds.fleet .mt .mty { font: 600 10px var(--ui); padding: 2px 7px; border-radius: 99px; background: var(--panel); color: var(--dim); }
+.corev2.kds.fleet .mt .mnm { font-size: 12.5px; color: var(--dim); }
+.corev2.kds.fleet .mt .mtimer { margin-left: auto; font: 700 16px var(--mono); color: var(--dim); }
+.corev2.kds.fleet .mt.warn .mtimer { color: var(--warn); }
+.corev2.kds.fleet .mt.late .mtimer { color: var(--late); }
+.corev2.kds.fleet .mt.risk .mtimer { color: var(--risk); }
+.corev2.kds.fleet .mt .riskpill { font: 600 9.5px var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--risk); border: 1px solid var(--risk); border-radius: 99px; padding: 1px 6px; }
+.corev2.kds.fleet .sparkbox { width: 64px; height: 26px; flex: none; }
+
+.corev2.kds.fleet .fleet-empty { padding: 40px; text-align: center; color: var(--faint); font: 500 14px var(--ui); }
+
+/* ============================================================
+   CHEF  (kds-chef.html)
+   ============================================================ */
+.corev2.kds.chef .wrap { height: 100vh; display: flex; flex-direction: column; padding: 14px 18px; gap: 12px; }
+.corev2.kds.chef .top { display: flex; align-items: center; gap: 14px; flex: none; }
+.corev2.kds.chef .id { display: flex; align-items: center; gap: 11px; }
+.corev2.kds.chef .id .nm { font-family: var(--display); font-size: 17px; font-weight: 600; }
+.corev2.kds.chef .id .loc { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.chef .id .brand-mark { width: 28px; height: 28px; }
+.corev2.kds.chef .clock { font: 600 19px var(--mono); padding: 5px 13px; border-radius: 8px; background: var(--panel); border: 1px solid var(--hair); color: var(--t); }
+.corev2.kds.chef .stage { margin: 0 auto; display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--hair); border-radius: 8px; padding: 3px; }
+.corev2.kds.chef .stage button { height: 30px; padding: 0 15px; border: 0; background: transparent; color: var(--dim); font: 600 13px var(--ui); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; letter-spacing: -.005em; }
+.corev2.kds.chef .stage button.on { background: var(--raised); color: var(--t); }
+.corev2.kds.chef .stage .n { font: 600 11px var(--mono); color: var(--faint); }
+.corev2.kds.chef .ctrl { width: 34px; height: 34px; border-radius: 7px; border: 1px solid var(--hair); background: var(--panel); color: var(--dim); display: grid; place-items: center; cursor: pointer; transition: color .12s, border-color .12s; }
+.corev2.kds.chef .ctrl:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.chef .ctrl.on { color: var(--t); border-color: var(--hair-2); background: var(--raised); }
+.corev2.kds.chef .ctrl .icn { width: 16px; height: 16px; }
+
+/* chef line strip: station focus + queue depth + 86 */
+.corev2.kds.chef .chefstrip { display: flex; align-items: center; gap: 18px; flex: none; background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 13px 16px; }
+.corev2.kds.chef .stations { display: flex; gap: 6px; flex-wrap: wrap; }
+.corev2.kds.chef .station { height: 38px; padding: 0 17px; border-radius: 8px; border: 1px solid var(--hair); background: transparent; color: var(--dim); font: 600 14px var(--ui); cursor: pointer; display: flex; align-items: center; gap: 9px; letter-spacing: -.005em; }
+.corev2.kds.chef .station:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.chef .station.on { background: var(--raised); color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.chef .station .n { font: 600 12px var(--mono); color: var(--faint); }
+.corev2.kds.chef .station.on .n { color: var(--dim); }
+.corev2.kds.chef .qdepth { display: flex; gap: 24px; margin-left: 8px; }
+.corev2.kds.chef .qd .l { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.corev2.kds.chef .qd .v { font: 600 20px var(--mono); margin-top: 3px; color: var(--t); }
+.corev2.kds.chef .qd.warn .v { color: var(--warn); }
+.corev2.kds.chef .chef-86 { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+.corev2.kds.chef .restore { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 7px; background: var(--raised); color: var(--dim); border: 1px solid var(--hair); font: 500 12px var(--ui); cursor: pointer; }
+.corev2.kds.chef .restore .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--late); }
+.corev2.kds.chef .restore .x { color: var(--faint); }
+.corev2.kds.chef .restore:hover { color: var(--t); border-color: var(--hair-2); }
+.corev2.kds.chef .btn86 { height: 32px; padding: 0 14px; border-radius: 7px; border: 1px solid var(--hair-2); background: var(--raised); color: var(--t); font: 600 13px var(--ui); cursor: pointer; }
+
+/* dense station queue */
+.corev2.kds.chef .queue { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-content: start; }
+.corev2.kds.chef .ct { background: var(--panel); border: 1px solid var(--hair); border-left: 3px solid transparent; border-radius: 10px; padding: 14px 16px; }
+.corev2.kds.chef .ct.warn { border-left-color: var(--warn); }
+.corev2.kds.chef .ct.risk { border-left-color: var(--warn); }
+.corev2.kds.chef .ct.late { border-left-color: var(--late); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--late) 45%, transparent); }
+.corev2.kds.chef .ct.ready { border-left-color: color-mix(in oklab, var(--ready) 55%, transparent); opacity: .9; }
+.corev2.kds.chef .ct-sim { font: 600 11px var(--ui); color: var(--platinum); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.corev2.kds.chef .ct-h { display: flex; align-items: center; gap: 10px; }
+.corev2.kds.chef .ct-id { font: 600 16px var(--ui); letter-spacing: -.01em; color: var(--t); }
+.corev2.kds.chef .ct-type { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; background: var(--raised); color: var(--dim); }
+.corev2.kds.chef .ct-course { font: 600 10px var(--ui); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--hair-2); color: var(--dim); }
+.corev2.kds.chef .ct-coursehint { font: 500 11px var(--ui); color: var(--faint); display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+.corev2.kds.chef .ct-timer { margin-left: auto; font: 600 22px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.corev2.kds.chef .ct.warn .ct-timer, .corev2.kds.chef .ct.risk .ct-timer { color: var(--warn); }
+.corev2.kds.chef .ct.late .ct-timer { color: var(--late); }
+.corev2.kds.chef .ct-it { display: flex; gap: 12px; padding: 9px 0 4px; min-width: 0; }
+.corev2.kds.chef .ct-it > div { min-width: 0; }
+.corev2.kds.chef .ct-q { font: 600 22px var(--mono); min-width: 38px; flex: none; color: var(--dim); }
+.corev2.kds.chef .ct-nm { font-family: var(--display); font-weight: 500; font-size: 21px; letter-spacing: .005em; color: var(--t); overflow-wrap: anywhere; }
+.corev2.kds.chef .ct-mod { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 15px; color: var(--warn); margin-top: 2px; }
+.corev2.kds.chef .ct-alrg { margin-top: 7px; padding: 5px 9px; border-radius: 6px; background: color-mix(in oklab, var(--late) 12%, transparent); color: var(--late); font: 600 11.5px var(--ui); display: flex; gap: 7px; align-items: center; }
+.corev2.kds.chef .ct-notes { margin-top: 7px; padding: 6px 9px; border-radius: 6px; background: var(--raised); font-size: 12px; color: var(--dim); }
+.corev2.kds.chef .ct-notes b { color: var(--t); font-weight: 600; }
+.corev2.kds.chef .ct-f { margin-top: 11px; }
+.corev2.kds.chef .ct-f .bump { width: 100%; height: 46px; border: 1px solid var(--hair-2); border-radius: 8px; font: 600 15px var(--ui); letter-spacing: -.005em; cursor: pointer; background: var(--raised); color: var(--t); transition: border-color .12s; }
+.corev2.kds.chef .ct-f .bump:hover { border-color: var(--t); }
+.corev2.kds.chef .ct-f .bump:disabled { opacity: .5; cursor: not-allowed; }
+.corev2.kds.chef .ct.late .ct-f .bump { border-color: color-mix(in oklab, var(--late) 55%, var(--hair-2)); }
+.corev2.kds.chef .legend { flex: none; font: 500 11px var(--ui); color: var(--faint); }
+.corev2.kds.chef .legend b { color: var(--dim); }
+
+.corev2.kds.chef .kds-empty { padding: 40px; text-align: center; color: var(--faint); font: 500 14px var(--ui); grid-column: 1 / -1; }
