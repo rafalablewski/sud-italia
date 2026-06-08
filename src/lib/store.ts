@@ -140,10 +140,28 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
       INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
       ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
     `;
+    invalidateKvCache(key);
     return;
   }
   await ensureDataDir();
   await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
+  invalidateKvCache(key);
+}
+
+// --- Short-TTL read cache for hot, rarely-written blobs --------------------
+// Every authenticated API request resolves its caller through getAdminUsers()
+// (auth), so under the live-board polling load the *same* admin-users blob is
+// read many times a second. A few-second process cache collapses that to one
+// read per window; writeJSON invalidates it on any mutation so a role /
+// permission / status change is visible within the TTL at worst. This is a
+// per-instance cache — on serverless each warm instance keeps its own, which is
+// exactly the right scope for a 5s freshness budget.
+const ADMIN_USERS_KEY = "admin-users.json";
+const ADMIN_USERS_TTL_MS = 5_000;
+let adminUsersCache: { data: AdminUser[]; at: number } | null = null;
+
+function invalidateKvCache(key: string): void {
+  if (key === ADMIN_USERS_KEY) adminUsersCache = null;
 }
 
 // --- Time Slots (m1_1: normalized table with dual-write) ----------------
@@ -7669,7 +7687,15 @@ export async function getActorCompTotalToday(
 // --- Admin users ---
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
-  return readJSON<AdminUser[]>("admin-users.json", []);
+  const now = Date.now();
+  if (adminUsersCache && now - adminUsersCache.at < ADMIN_USERS_TTL_MS) {
+    // Hand back a shallow copy so a caller that sorts/splices the list in place
+    // can't poison the cached reference.
+    return [...adminUsersCache.data];
+  }
+  const data = await readJSON<AdminUser[]>(ADMIN_USERS_KEY, []);
+  adminUsersCache = { data, at: now };
+  return [...data];
 }
 
 export async function saveAdminUser(
