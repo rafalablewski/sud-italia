@@ -10,7 +10,15 @@ The till. `/core-v2/pos`.
 
 ## Layout
 
-A three-column grid inside the shell body: **rail · menu · ticket**.
+A full-width **open-check bar** (`.cv-checkbar`) over a three-column grid
+inside the shell body: **rail · menu · ticket**.
+
+- **`.cv-checkbar`** — spans the whole width above the panes (so it sits
+  over the menu's steering banner): the `.cv-tabrail-sum` rollup
+  (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
+  `.cv-tabrail` of `.cv-ttab` open-check chips + `+ New`. The active check
+  gets a brand outline; the rail wraps (capped height + scroll) so a busy
+  till's checks stay browsable without a horizontal hunt.
 
 - **`.cv-rail`** — the category rail. An **All** chip (stacks every
   category as `.cv-menu-sec` blocks with `.cv-menu-sec-h` headers) over
@@ -36,11 +44,10 @@ A three-column grid inside the shell body: **rail · menu · ticket**.
 Wired 1:1 to the same server engine as today's `/core/pos` — fresh `cv-`
 UI, identical contract.
 
-- **`.cv-tabrail-sum`** — rollup line above the tabs (`N tabs · R ready to
-  pay · P parked · VALUE open`).
-- **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`. The
-  rail **wraps** (self-contained chip tabs, capped height + scroll) so a
-  busy till's checks stay browsable without a horizontal-scroll hunt.
+The open-check selector (`.cv-tabrail-sum` + `.cv-tabrail`) lives in the
+top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
+**active** check only:
+
 - **`.cv-thead`** — `.cv-th-name` (the check name is an **inline editable
   input** — click to rename, persisted via the same debounced `PUT`) ·
   channel/order tag · a `.cv-tabpromise` per-check ETA (max

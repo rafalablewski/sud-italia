@@ -622,6 +622,27 @@ export function CoreV2Pos({
         </>
       }
     >
+      {/* open-check bar — spans the full width, above the panes */}
+      <div className="cv-checkbar">
+        {tabs.length > 0 && (
+          <div className="cv-tabrail-sum">
+            {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
+            <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
+          </div>
+        )}
+        <div className="cv-tabrail">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" className={t.id === activeTabId ? "cv-ttab on" : "cv-ttab"} onClick={() => setActiveTabId(t.id)}>
+              <span className="tt">{t.name}</span>
+              <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
+            </button>
+          ))}
+          <button type="button" className="cv-ttab cv-ttab-new" onClick={() => void newTab()}>
+            <span className="tt">+ New</span>
+            <span className="ts">open check</span>
+          </button>
+        </div>
+      </div>
       <div className="cv-pos">
         {/* category rail */}
         <aside className="cv-rail">
@@ -702,25 +723,6 @@ export function CoreV2Pos({
 
         {/* ticket */}
         <aside className="cv-ticket">
-          {tabs.length > 0 && (
-            <div className="cv-tabrail-sum">
-              {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
-              <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
-            </div>
-          )}
-          <div className="cv-tabrail">
-            {tabs.map((t) => (
-              <button key={t.id} type="button" className={t.id === activeTabId ? "cv-ttab on" : "cv-ttab"} onClick={() => setActiveTabId(t.id)}>
-                <span className="tt">{t.name}</span>
-                <span className="ts">{t.items.reduce((s, l) => s + l.quantity, 0)} items</span>
-              </button>
-            ))}
-            <button type="button" className="cv-ttab cv-ttab-new" onClick={() => void newTab()}>
-              <span className="tt">+ New</span>
-              <span className="ts">open check</span>
-            </button>
-          </div>
-
           {!active ? (
             <div className="cv-ticket-empty">
               {!hydrated ? (

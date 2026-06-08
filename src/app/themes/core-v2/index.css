@@ -144,9 +144,11 @@
 .cv2 .cv-ticket-empty p { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; line-height: 1.5; }
 
 /* ---------- ticket: tabs ---------- */
+/* full-width open-check bar, above the three panes */
+.cv2 .cv-checkbar { flex: none; background: var(--panel); border-bottom: 1px solid var(--line); }
 .cv2 .cv-tabrail-sum { padding: 9px 16px 0; font-size: 11px; color: var(--ink-3); letter-spacing: .01em; flex: none; }
 .cv2 .cv-tabrail-sum b { color: var(--ink-2); font-weight: 600; }
-.cv2 .cv-tabrail { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; flex: none; max-height: 132px; overflow-y: auto; border-bottom: 1px solid var(--line); }
+.cv2 .cv-tabrail { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; flex: none; max-height: 116px; overflow-y: auto; }
 .cv2 .cv-ttab { flex: none; display: flex; flex-direction: column; gap: 1px; padding: 7px 12px; border-radius: 9px;
   border: 1px solid var(--line); background: var(--panel-2); min-width: 78px; text-align: left; }
 .cv2 .cv-ttab:hover { border-color: var(--line-2); }
