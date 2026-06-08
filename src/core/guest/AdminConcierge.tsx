@@ -188,7 +188,7 @@ export function AdminConcierge({ meta, settings, byLocation, waConfigured }: Pro
             </span>
           </div>
 
-          <div className="card" style={{ overflow: "hidden" }}>
+          <div className="caps">
             {meta.map((c) => {
               const on = exposure[c.id] ?? true;
               return (
