@@ -55,8 +55,8 @@ mockup** design (`public/mockups/core-suite/`):
   a separate entity from `/admin`: the shell renders none of the admin
   shell (no `.app-sidebar`, no `nav.config`, no `/admin` links). Its header
   is two rows — row 1 = brand + the primary `<CoreNav>` switcher
-  (POS · KDS · Guest · Service, with emoji glyphs — 🧾 · 🍳 · 🙋 · 🍽️ — the
-  same emoji language as the POS category rail) + global
+  (POS · KDS · Guest · Service, with the mockup's own inlined line glyphs —
+  POS terminal · KDS screen · guest · service cloche — not lucide/emoji) + global
   actions; on the Guest hub those actions are `<GuestHeaderActions>`
   (WhatsApp live/off status badge + Funnel · Settings · Broadcast, routing to
   the Inbox where the dialogs live); row 2 = an eyebrow + the

@@ -1111,6 +1111,21 @@
 
 /* ---- Service › Floor view ---- */
 .core-suite .flr { padding: 16px 18px 22px; }
+/* Floor tables — mockup .tcard tiles: centered table number, status below,
+   coloured by state, with the seat/clear action kept. */
+.core-suite .tables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.core-suite .tcard { position: relative; min-height: 148px; border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 16px; text-align: center; }
+.core-suite .tcard.seated { border-color: var(--brand); background: var(--brand-soft); }
+.core-suite .tcard.freeing { border-color: var(--warning); background: var(--warning-soft); }
+.core-suite .tcard.booked { border-color: var(--platinum); background: var(--platinum-soft); }
+.core-suite .tcard.oos { opacity: .5; }
+.core-suite .tcard .tn { font-family: var(--display); font-size: 34px; font-weight: 600; line-height: 1; }
+.core-suite .tcard .ts { font-size: 10px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .06em; }
+.core-suite .tcard-meta { font-size: 11px; color: var(--fg-subtle); }
+.core-suite .tcard-edit { position: absolute; top: 8px; right: 10px; background: transparent; border: 0; color: var(--fg-subtle); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; }
+.core-suite .tcard-actions { margin-top: 6px; }
+@media (max-width: 1100px) { .core-suite .tables { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 720px) { .core-suite .tables { grid-template-columns: repeat(2, 1fr); } }
 .core-suite .flr-kitchen { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-md); margin-bottom: 14px; flex-wrap: wrap; border: 1px solid var(--warning); background: var(--warning-soft); color: var(--fg); }
 .core-suite .flr-kitchen.risk { border-color: var(--danger); background: var(--danger-soft); }
 .core-suite .flr-kitchen svg { color: var(--warning); flex: none; }
@@ -1136,12 +1151,15 @@
 
 /* ---- Service › Slots view ---- */
 .core-suite .slt { padding: 16px 18px 22px; }
+.core-suite .slt-kpis { margin-bottom: 16px; }
+.core-suite .slt-svc-name { font-size: 13px; font-weight: 500; color: var(--fg); }
+.core-suite .slt-frac { font-size: 12px; color: var(--fg-subtle); white-space: nowrap; min-width: 96px; text-align: right; }
 .core-suite .slt-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 .core-suite .slt-bar-actions { display: flex; align-items: center; gap: 8px; }
 .core-suite .slt-list { display: flex; flex-direction: column; gap: 8px; }
 .core-suite .slt-row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); }
 .core-suite .slt-time { font: 600 15px var(--mono); width: 56px; flex: none; }
-.core-suite .slt-cap-col { flex: 1; min-width: 120px; }
+.core-suite .slt-cap-col { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 6px; }
 .core-suite .slt-cap { font-size: 12px; color: var(--fg-muted); }
 .core-suite .captrack { height: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; margin-top: 5px; }
 .core-suite .capfill { height: 100%; background: var(--info); border-radius: 99px; }

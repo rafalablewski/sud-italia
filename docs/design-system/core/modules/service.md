@@ -16,6 +16,14 @@ Each view opens with the mockup `.intro` banner (Floor "the live room twin",
 Slots "capacity & demand"); the `.core-suite .svc > .intro` rule aligns it to
 the 18px gutter.
 
+- **Floor** tables render as the mockup's `.tcard` tiles — centered table
+  number + status, coloured by state (`.seated` brand / `.freeing` warning /
+  `.booked` platinum), with the seat/clear action kept on the tile.
+- **Slots** (Manage) opens with the mockup KPI strip (`.kpis` of `.bk` —
+  Slots today / Booked of N covers / Fill rate / Demand price, computed from
+  the live slot caps + bookings); each row carries a service-name label, the
+  `.captrack` fill bar, and the `current/cap · %` fraction.
+
 **Booking moved out:** the Book console is now a Guest-hub view at
 `/core/guest/book` (`<GuestBook>` → `BookView`) — Service is Floor + Slots only.
 The old `/admin/floor` and `/admin/slots` stub pages were **deleted**; the bare

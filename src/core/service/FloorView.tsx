@@ -140,41 +140,47 @@ export function FloorView({ loc }: { loc: string }) {
       {!twin || twin.tables.length === 0 ? (
         <div className="pane-msg">No tables yet — add one to start modelling the floor.</div>
       ) : (
-        <div className="flr-grid">
-          {twin.tables.map((t) => (
-            <div key={t.id} className={`flr-card${t.occupied ? " seated" : ""}${t.status === "out-of-service" ? " oos" : ""}`}>
-              <div className="flr-card-head">
-                <button type="button" className="flr-num" onClick={() => setEditing(t)} title="Edit table">
-                  {t.number}
+        <div className="tables">
+          {twin.tables.map((t) => {
+            const freeing =
+              t.occupied && t.predictedFreeInMin != null && t.predictedFreeInMin <= 15;
+            const stateClass =
+              t.status === "out-of-service" ? "oos" : freeing ? "freeing" : t.occupied ? "seated" : "";
+            const status =
+              t.status === "out-of-service"
+                ? "Out of service"
+                : freeing
+                  ? `Freeing ~${Math.max(0, t.predictedFreeInMin ?? 0)}m`
+                  : t.occupied
+                    ? `Seated${t.medianDwellMin != null ? ` · ${t.medianDwellMin}m` : ""}`
+                    : "Open";
+            return (
+              <div key={t.id} className={`tcard ${stateClass}`}>
+                <button type="button" className="tcard-edit" onClick={() => setEditing(t)} title="Edit table">
+                  ⋯
                 </button>
-                <span className={`badge ${t.status === "out-of-service" ? "neutral" : t.occupied ? "warning" : "success"}`}>
-                  <i className="d" />
-                  {t.status === "out-of-service" ? "out" : t.occupied ? `seated${t.party ? ` ${t.party}p` : ""}` : "open"}
-                </span>
-              </div>
-              <div className="flr-live">
-                <span>{t.seats} seats{t.zone ? ` · ${t.zone}` : ""}</span>
-                {t.predictedFreeInMin != null && (
-                  <span>{t.predictedFreeInMin <= 0 ? "finishing" : `frees ~${t.predictedFreeInMin}m`}</span>
-                )}
-                {t.medianDwellMin != null && <span className="muted">{t.medianDwellMin}m turn{t.dwellSource === "measured" ? " ✓" : ""}</span>}
-                {t.spendVelocityPerHourGrosze != null && <span className="muted">{zl(t.spendVelocityPerHourGrosze)}/h</span>}
-              </div>
-              {t.status !== "out-of-service" && (
-                <div className="flr-actions">
-                  {t.occupied ? (
-                    <button type="button" className="btn ghost" disabled={acting === t.id} onClick={() => void seatClear(t.id, "clear")}>
-                      Clear
-                    </button>
-                  ) : (
-                    <button type="button" className="btn primary" disabled={acting === t.id} onClick={() => void seatClear(t.id, "seat")}>
-                      Seat
-                    </button>
-                  )}
+                <div className="tn">{t.number}</div>
+                <div className="ts">{status}</div>
+                <div className="tcard-meta">
+                  {t.seats} seats{t.zone ? ` · ${t.zone}` : ""}
+                  {t.occupied && t.party ? ` · ${t.party}p` : ""}
                 </div>
-              )}
-            </div>
-          ))}
+                {t.status !== "out-of-service" && (
+                  <div className="tcard-actions">
+                    {t.occupied ? (
+                      <button type="button" className="btn ghost" disabled={acting === t.id} onClick={() => void seatClear(t.id, "clear")}>
+                        Clear
+                      </button>
+                    ) : (
+                      <button type="button" className="btn primary" disabled={acting === t.id} onClick={() => void seatClear(t.id, "seat")}>
+                        Seat
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

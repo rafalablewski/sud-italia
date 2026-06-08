@@ -140,11 +140,14 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
     <div key={s.id} className="slt-row">
       <span className="slt-time mono">{s.time}</span>
       <div className="slt-cap-col">
-        <span className="tnum slt-cap">{s.currentOrders}/{s.maxOrders}</span>
+        <span className="slt-svc-name">{s.time < "16:00" ? "Lunch service" : "Dinner service"}</span>
         <div className="captrack">
           <div className={`capfill${fill >= 85 ? " hot" : ""}`} style={{ width: `${fill}%` }} />
         </div>
       </div>
+      <span className="slt-frac tnum">
+        {s.currentOrders}/{s.maxOrders} · {Math.round(fill)}%
+      </span>
       <div className="slt-types">
         {s.fulfillmentTypes.map((f) => (
           <span key={f} className="slt-type">{f}</span>
@@ -198,6 +201,46 @@ export function SlotsView({ loc, date }: { loc: string; date: string }) {
           )}
         </div>
       </div>
+
+      {tab === "manage" &&
+        !loading &&
+        (() => {
+          const today = range === "week" ? slots : slots.filter((s) => s.date === date);
+          const booked = today.reduce((a, s) => a + s.currentOrders, 0);
+          const cap = today.reduce((a, s) => a + s.maxOrders, 0);
+          const fill = cap > 0 ? Math.round((booked / cap) * 100) : 0;
+          const peak = [...today].sort(
+            (a, b) =>
+              (b.maxOrders ? b.currentOrders / b.maxOrders : 0) -
+              (a.maxOrders ? a.currentOrders / a.maxOrders : 0),
+          )[0];
+          const peakFill = peak && peak.maxOrders ? peak.currentOrders / peak.maxOrders : 0;
+          const mult = peakFill >= 0.85 ? 1.2 : peakFill >= 0.7 ? 1.1 : 1;
+          return (
+            <div className="kpis slt-kpis">
+              <div className="bk">
+                <div className="l">Slots today</div>
+                <div className="v tnum">{today.length}</div>
+                <div className="s">dine-in windows</div>
+              </div>
+              <div className="bk">
+                <div className="l">Booked</div>
+                <div className="v tnum">{booked}</div>
+                <div className="s">of {cap} covers</div>
+              </div>
+              <div className="bk">
+                <div className="l">Fill rate</div>
+                <div className={`v tnum${fill >= 70 ? " good" : ""}`}>{fill}%</div>
+                <div className="s">today</div>
+              </div>
+              <div className="bk">
+                <div className="l">Demand price</div>
+                <div className={`v tnum${mult > 1 ? " warn" : ""}`}>{mult.toFixed(1)}×</div>
+                <div className="s">{peak && mult > 1 ? `${peak.time} running hot` : "flat"}</div>
+              </div>
+            </div>
+          );
+        })()}
 
       {tab === "manage" ? (
         loading ? (
