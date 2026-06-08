@@ -752,7 +752,7 @@ export function CoreV2Pos({
                 <div className="th-id">
                   <input
                     className="cv-th-name"
-                    value={active.name}
+                    value={active.name ?? ""}
                     maxLength={40}
                     onChange={(e) => setName(e.target.value)}
                     aria-label="Check name"

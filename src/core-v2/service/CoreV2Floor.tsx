@@ -248,36 +248,46 @@ function TableDialog({
   const save = async () => {
     if (!number.trim() || busy) return;
     setBusy(true);
-    const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: row?.id,
-        number: number.trim(),
-        seats: Math.max(1, Math.min(50, Math.round(Number(seats) || 1))),
-        zone: zone.trim() || undefined,
-        status,
-      }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      toast(isNew ? "Table added" : "Table saved", "success");
-      onSaved();
-    } else toast("Could not save table", "danger");
+    try {
+      const res = await fetch(`/api/admin/floor/tables?location=${encodeURIComponent(loc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: row?.id,
+          number: number.trim(),
+          seats: Math.max(1, Math.min(50, Math.round(Number(seats) || 1))),
+          zone: zone.trim() || undefined,
+          status,
+        }),
+      });
+      if (res.ok) {
+        toast(isNew ? "Table added" : "Table saved", "success");
+        onSaved();
+      } else toast("Could not save table", "danger");
+    } catch {
+      toast("Network error — try again", "danger");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const del = async () => {
     if (!row || busy) return;
     setBusy(true);
-    const res = await fetch(
-      `/api/admin/floor/tables?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(row.id)}`,
-      { method: "DELETE" },
-    );
-    setBusy(false);
-    if (res.ok) {
-      toast("Table deleted", "success");
-      onSaved();
-    } else toast("Could not delete", "danger");
+    try {
+      const res = await fetch(
+        `/api/admin/floor/tables?location=${encodeURIComponent(loc)}&id=${encodeURIComponent(row.id)}`,
+        { method: "DELETE" },
+      );
+      if (res.ok) {
+        toast("Table deleted", "success");
+        onSaved();
+      } else toast("Could not delete", "danger");
+    } catch {
+      toast("Network error — try again", "danger");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

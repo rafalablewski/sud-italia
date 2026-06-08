@@ -55,7 +55,7 @@ export function CoreV2Concierge({ meta, settings, byLocation, waConfigured }: Pr
     setTest(null);
     const startedAt = performance.now();
     try {
-      const res = await fetch(`/api/agent/${selected}?location=${loc}`);
+      const res = await fetch(`/api/agent/${encodeURIComponent(selected)}?location=${encodeURIComponent(loc)}`);
       const body = await res.json().catch(() => ({}));
       setTest({ status: res.status, ms: Math.round(performance.now() - startedAt), body: JSON.stringify(body, null, 2) });
     } catch {

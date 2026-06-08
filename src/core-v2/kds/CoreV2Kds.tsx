@@ -46,11 +46,16 @@ function groupItems(items: KdsTicketItem[]): [string, KdsTicketItem[]][] {
 }
 
 // Short synthesised beep (no asset files) — the new-ticket bell + breach alarm.
+// One shared AudioContext, lazily created + resumed; a fresh context per beep
+// quickly hits the browser's hardware-context cap (~6) and then fails silently.
+let sharedAudioCtx: AudioContext | null = null;
 function playTone(freq: number, dur: number, gain = 0.2): void {
   try {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
-    const ctx = new Ctx();
+    sharedAudioCtx ??= new Ctx();
+    const ctx = sharedAudioCtx;
+    if (ctx.state === "suspended") void ctx.resume();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.frequency.value = freq;
@@ -342,6 +347,7 @@ export function CoreV2Kds() {
   // Already-late tickets are seeded silently so toggling sound on (or a refresh)
   // never triggers a back-catalogue of alarms; only fresh breaches sound.
   const breached = useRef<Set<string>>(new Set());
+  const breachSeeded = useRef(false);
   useEffect(() => {
     const present = new Set<string>();
     for (const t of allTickets) {
@@ -349,10 +355,13 @@ export function CoreV2Kds() {
       const late = t.status !== "ready" && t.promisedReadyAtMs !== null && t.promisedReadyAtMs < now;
       if (late && !breached.current.has(t.id)) {
         breached.current.add(t.id);
-        if (soundOn) playTone(320, 0.4, 0.22);
+        // Seed already-late tickets silently on the first populated pass so a
+        // refresh (or sound toggled on) never replays a back-catalogue of alarms.
+        if (soundOn && breachSeeded.current) playTone(320, 0.4, 0.22);
       }
     }
     for (const id of breached.current) if (!present.has(id)) breached.current.delete(id);
+    if (allTickets.length > 0) breachSeeded.current = true;
   }, [allTickets, now, soundOn]);
 
   const isOwner = role === "owner";

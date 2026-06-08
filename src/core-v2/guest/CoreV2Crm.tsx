@@ -69,7 +69,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: "WhatsApp",
   web: "Web",
 };
-const chanLabel = (k: string) => CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1);
+const chanLabel = (k: string) => (k ? CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1) : "");
 
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const seen = (d: number | null) => (d == null ? "never" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`);
@@ -157,7 +157,10 @@ export function CoreV2Crm() {
   }, [selected]);
 
   // Channels actually present in the book — drives the channel filter chips.
-  const channelKeys = useMemo(() => Array.from(new Set(data.flatMap((c) => c.channels))).sort(), [data]);
+  const channelKeys = useMemo(
+    () => Array.from(new Set(data.flatMap((c) => c.channels ?? []))).filter((k): k is string => typeof k === "string" && !!k).sort(),
+    [data],
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
