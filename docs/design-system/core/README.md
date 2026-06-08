@@ -38,6 +38,12 @@ core/
 
 ## What ships today
 
+> **Core v2 rebuild:** a clean, fully separated rebuild of this suite
+> onto the same mockup lives at `/core-v2/*` (own scoped theme + sidebar
+> shell, no admin inheritance) — see [`v2.md`](./v2.md). POS is live there
+> at parity; KDS / Guest / Service follow. The surfaces below are the
+> current production `/core/*`.
+
 The live Core surfaces are being rebuilt 1:1 onto the **core-suite
 mockup** design (`public/mockups/core-suite/`):
 
