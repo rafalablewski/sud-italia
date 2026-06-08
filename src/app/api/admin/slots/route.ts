@@ -50,7 +50,10 @@ export const POST = withAdmin(
   async (req) => {
     const parsed = await parseBody(req, slotCreateSchema);
     if ("error" in parsed) return parsed.error;
-    const { locationSlug, date, time, maxOrders, fulfillmentTypes, bulk } = parsed.data;
+    const { locationSlug, date, time, maxOrders, fulfillmentTypes, bulk, status } = parsed.data;
+    // Honour an explicit status from the caller (v2 creates slots "active");
+    // default to draft so legacy callers keep the staged-then-publish flow.
+    const slotStatus: SlotStatus = status ?? "draft";
 
     if (!(await hasLocationAccess(locationSlug))) {
       return NextResponse.json(
@@ -79,7 +82,7 @@ export const POST = withAdmin(
           maxOrders: max,
           currentOrders: 0,
           fulfillmentTypes,
-          status: "draft" as SlotStatus,
+          status: slotStatus,
         });
         startMin += bulk.interval;
       }
@@ -98,7 +101,7 @@ export const POST = withAdmin(
       maxOrders: maxOrders as number,
       currentOrders: 0,
       fulfillmentTypes,
-      status: "draft",
+      status: slotStatus,
     });
 
     return NextResponse.json(slot, { status: 201 });

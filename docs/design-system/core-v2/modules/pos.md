@@ -61,13 +61,18 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.
-- **`.cv-lines`** — `.cv-line` rows, each led by a `.cv-grip` drag handle
-  (`⠿`, brightens + bobs on hover) then a `.cv-qstep` −/＋ counter and a
-  mono line price. Dine-in coursed checks group lines into `.cv-course`
-  blocks with a `.cv-course-h` header and a per-course **Fire** button;
-  fired courses dim (`.cv-course.fired`) and show `✓ Fired`. Dragging a
-  line over a course tints it with a brand **left-accent** drop cue
-  (`.cv-course.drop` — not a full ring).
+- **`.cv-lines`** — `.cv-line` rows. The row body is `.cv-line-main`: a
+  `.cv-grip` handle (`⠿`) then a `.cv-qstep` −/＋ counter and a mono line
+  price. Dine-in coursed checks group lines into `.cv-course` blocks with a
+  `.cv-course-h` header and a per-course **Fire** button; fired courses dim
+  (`.cv-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
+  a coursed line the grip is a `<button>` that toggles `.cv-line.picking`,
+  revealing an inline `.cv-recourse` chooser (`.cv-recourse-opt` per course,
+  current one `.on`) — one tap moves the line. Native drag stays as a
+  mouse-only enhancement (`.cv-line[draggable="true"]` shows the grab cursor +
+  grip bob; dragging onto a course tints it via `.cv-course.drop`). Flat
+  (non-coursed) lines render the grip as an inert `<span>` and aren't
+  draggable.
 - **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`), plus a
   `.cv-offer.combo` **combo-completion** prompt when a deal is one or two
   items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
@@ -114,7 +119,8 @@ over-capacity table.
 ## At parity
 
 Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
-drag-to-recourse (drop a line on a course header), kitchen-timing toggle,
+tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
+or drop a line on a course header), kitchen-timing toggle,
 inline check rename, double-seat / over-capacity guards, the tab-rail
 rollup, a hydration-aware empty state, and the fullscreen kiosk are all
 wired — feature-for-feature with today's `/core/pos`.

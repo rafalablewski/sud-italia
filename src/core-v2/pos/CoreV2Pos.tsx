@@ -13,9 +13,10 @@ import {
   type MenuItem,
   type PosCourse,
   type PosTab,
+  type PosTabLine,
 } from "@/data/types";
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
-import { POS_COURSE_LABELS, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
+import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
@@ -80,6 +81,27 @@ export function CoreV2Pos({
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Count of PUTs currently on the wire. The cross-till poll must skip while a
+  // save is in flight — the debounce timer clears itself *before* the fetch
+  // resolves, so guarding on `persistTimers` alone leaves a window where a poll
+  // reads the pre-write server state and reverts the local edit (the line
+  // "disappears, then reappears" a few seconds later on the next poll).
+  const pendingSaves = useRef(0);
+
+  // Reconcile a polled tab list against local state: incoming defines
+  // membership (tabs added/closed on other tills), but a locally-edited tab
+  // with a newer updatedAt wins, so a poll that was already in flight when we
+  // wrote can't clobber the fresher edit.
+  const mergeTabs = useCallback((incoming: PosTab[]) => {
+    setTabs((local) => {
+      const byId = new Map(local.map((t) => [t.id, t] as const));
+      return incoming.map((inc) => {
+        const mine = byId.get(inc.id);
+        if (mine && mine.updatedAt && inc.updatedAt && mine.updatedAt > inc.updatedAt) return mine;
+        return inc;
+      });
+    });
+  }, []);
 
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
@@ -107,20 +129,22 @@ export function CoreV2Pos({
   useEffect(() => {
     if (!pageLoc) return;
     const id = setInterval(async () => {
-      if (persistTimers.current.size > 0) return;
+      // Skip while a local edit is mid-debounce or its save is still on the
+      // wire — otherwise the poll reverts the just-made change.
+      if (persistTimers.current.size > 0 || pendingSaves.current > 0) return;
       try {
         const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
         if (!res.ok) return;
         const data: { tabs?: PosTab[] } = await res.json();
         const list = Array.isArray(data.tabs) ? data.tabs : [];
-        setTabs(list);
+        mergeTabs(list);
         setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
       } catch {
         /* non-fatal */
       }
     }, 5000);
     return () => clearInterval(id);
-  }, [pageLoc]);
+  }, [pageLoc, mergeTabs]);
 
   useEffect(() => {
     const timers = persistTimers.current;
@@ -138,6 +162,9 @@ export function CoreV2Pos({
       tab.id,
       setTimeout(() => {
         timers.delete(tab.id);
+        // Mark the save in flight until the PUT settles so the cross-till poll
+        // can't read a stale list in the gap between debounce-clear and commit.
+        pendingSaves.current += 1;
         void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(tab.locationSlug)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -153,7 +180,11 @@ export function CoreV2Pos({
             sentKds: tab.sentKds,
             coursed: tab.coursed ?? null,
           }),
-        }).catch(() => {});
+        })
+          .catch(() => {})
+          .finally(() => {
+            pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+          });
       }, 350),
     );
   }, []);
@@ -502,6 +533,10 @@ export function CoreV2Pos({
   // --- Drag-to-recourse + fullscreen kiosk --------------------------------
   const dragItem = useRef<string | null>(null);
   const [dropCourse, setDropCourse] = useState<PosCourse | null>(null);
+  // Tap-to-move course picker. A POS till is a touchscreen and HTML5 drag never
+  // fires from a finger, so the grip doubles as a tap target that reveals an
+  // inline course chooser; native drag stays as a mouse-only enhancement.
+  const [recourseFor, setRecourseFor] = useState<string | null>(null);
   const [kiosk, setKiosk] = useState(false);
   const toggleKiosk = useCallback(() => {
     setKiosk((k) => {
@@ -571,33 +606,70 @@ export function CoreV2Pos({
     </button>
   );
 
-  const lineRow = (menuItemId: string, quantity: number) => {
+  const lineRow = (l: PosTabLine, coursed: boolean) => {
+    const menuItemId = l.menuItemId;
     const m = byId(menuItemId);
     if (!m) return null;
+    const picking = recourseFor === menuItemId;
     return (
       <div
-        className="cv-line"
+        className={`cv-line${picking ? " picking" : ""}`}
         key={menuItemId}
-        draggable
+        draggable={coursed}
         onDragStart={() => {
-          dragItem.current = menuItemId;
+          if (coursed) dragItem.current = menuItemId;
         }}
         onDragEnd={() => {
           dragItem.current = null;
         }}
       >
-        <span className="cv-grip" aria-hidden title="Drag to re-course">⠿</span>
-        <div className="cv-qstep">
-          <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
-            −
-          </button>
-          <span className="q mono">{quantity}</span>
-          <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
-            +
-          </button>
+        <div className="cv-line-main">
+          {coursed ? (
+            <button
+              type="button"
+              className="cv-grip"
+              title="Move to another course"
+              aria-label={`Move ${m.name} to another course`}
+              aria-expanded={picking}
+              onClick={() => setRecourseFor((cur) => (cur === menuItemId ? null : menuItemId))}
+            >
+              ⠿
+            </button>
+          ) : (
+            <span className="cv-grip" aria-hidden>⠿</span>
+          )}
+          <div className="cv-qstep">
+            <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
+              −
+            </button>
+            <span className="q mono">{l.quantity}</span>
+            <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
+              +
+            </button>
+          </div>
+          <div className="ln">{m.name}</div>
+          <span className="lp mono">{zl(m.price * l.quantity)}</span>
         </div>
-        <div className="ln">{m.name}</div>
-        <span className="lp mono">{zl(m.price * quantity)}</span>
+        {picking && coursed && (
+          <div className="cv-recourse" role="group" aria-label="Move to course">
+            {POS_COURSE_ORDER.map((c) => {
+              const on = courseOf(l) === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  className={`cv-recourse-opt${on ? " on" : ""}`}
+                  onClick={() => {
+                    if (!on) recourse(menuItemId, c);
+                    setRecourseFor(null);
+                  }}
+                >
+                  {POS_COURSE_LABELS[c]}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -860,12 +932,12 @@ export function CoreV2Pos({
                             </button>
                           )}
                         </div>
-                        {g.lines.map((l) => lineRow(l.menuItemId, l.quantity))}
+                        {g.lines.map((l) => lineRow(l, true))}
                       </div>
                     );
                   })
                 ) : (
-                  active.items.map((l) => lineRow(l.menuItemId, l.quantity))
+                  active.items.map((l) => lineRow(l, false))
                 )}
 
                 {/* combo completion */}
