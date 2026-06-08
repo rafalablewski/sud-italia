@@ -30,20 +30,27 @@ Two nested views via `serviceTabs` (`src/core-v2/service/serviceTabs.ts`).
 ## Slots (`/core-v2/service/slots`) — wired
 
 - **Live code:** `src/core-v2/service/CoreV2Slots.tsx`.
-- **Theme:** `.cv-slot-list` / `.cv-slot` (capacity bars) + `.cv-tier-d` /
-  `.cv-act` (the demand board).
-- Two tabs: **Manage** — the slot list with a capacity fill bar
-  (green→amber→red ≥85%), covers, channels, and an active/draft toggle,
-  over a KPI strip (slots · booked · fill rate · demand-price multiplier).
+- **Theme:** `.cv-slot-list` / `.cv-slot` (capacity bars, `.cv-slot-min`
+  min-spend badge) · `.cv-slot-week` / `.cv-slot-day-h` (week grouping) ·
+  `.cv-tier-d` / `.cv-act` (the demand board).
+- Two tabs: **Manage** — a **Day / Week** toggle over the slot list, each
+  row a capacity fill bar (green→amber→red ≥85%), covers, channels, a
+  min-spend badge when set, and an active/draft toggle, over a KPI strip
+  (slots · booked · fill rate · demand-price multiplier; week mode
+  aggregates the seven days, grouped under `.cv-slot-day` headers).
   **Demand** — the Demand Exchange: per-slot forecast vs capacity with a
   **tier** (under · healthy · tight · over · kitchen-capped) and a
-  recommended lever (**raise · trim · protect · hold**); Apply one or
-  Apply-all.
-- **Engine:** `GET /api/admin/slots?location=&date=` (capacity) +
+  recommended lever spelled out in prose (**Raise capacity · Trim /
+  promote · Protect kitchen · Hold**); Apply one or Apply-all.
+- **Create** (`+ New`) opens a `CoreV2Dialog` with a **Single / Bulk**
+  mode toggle: Single posts one slot (time + capacity); Bulk generates a
+  start→end range at an interval.
+- **Engine:** `GET /api/admin/slots?location=[&date=]` (day = date-scoped,
+  week = whole location sliced client-side) +
   `GET /api/admin/demand-exchange?location=&date=` (forecast); toggle =
-  `PUT /api/admin/slots`; create/bulk = `POST /api/admin/slots[?bulk=1]`;
-  delete = `DELETE /api/admin/slots?id=`; apply =
-  `POST /api/admin/demand-exchange`
+  `PUT /api/admin/slots`; create = `POST /api/admin/slots` (single) /
+  `POST /api/admin/slots?bulk=1` (range); delete =
+  `DELETE /api/admin/slots?id=`; apply = `POST /api/admin/demand-exchange`
   (`{ slotId, maxOrders, minSpendGrosze }` single / `{ mode: "apply-all" }`).
 
 Parity target: today's `/core/service`. The booking console (slot + table

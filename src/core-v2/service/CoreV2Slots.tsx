@@ -35,11 +35,37 @@ interface DemandBoard {
   summary: { predictedCovers: number; fillForecastPct: number; missedDemand: number };
 }
 
-function todayLocal(): string {
-  const d = new Date();
+const ACTION_LABEL: Record<DemandSlotRow["action"], string> = {
+  raise: "Raise capacity",
+  trim: "Trim / promote",
+  protect: "Protect kitchen",
+  hold: "Hold",
+};
+
+function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function todayLocal(): string {
+  return isoOf(new Date());
+}
+// Mon→Sun ISO dates of the week containing `d`.
+function weekDates(d: string): string[] {
+  if (!d) return [];
+  const base = new Date(`${d}T00:00:00`);
+  const mondayOffset = (base.getDay() + 6) % 7;
+  const mon = new Date(base);
+  mon.setDate(base.getDate() - mondayOffset);
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(mon);
+    x.setDate(mon.getDate() + i);
+    return isoOf(x);
+  });
+}
+function dayLabel(d: string): string {
+  return new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
 const zl = (g: number) => (g / 100).toFixed(0);
+const zl0 = (g: number) => `${Math.round(g / 100)} zł`;
 
 /**
  * Core v2 · Service · Slots — capacity + the Demand Exchange, wired to today's
@@ -58,10 +84,13 @@ export function CoreV2Slots() {
     setDate(todayLocal());
   }, []);
   const [tab, setTab] = useState<"manage" | "demand">("manage");
+  const [range, setRange] = useState<"day" | "week">("day");
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [board, setBoard] = useState<DemandBoard | null>(null);
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [cMode, setCMode] = useState<"bulk" | "single">("bulk");
+  const [cTime, setCTime] = useState("18:00");
   const [cStart, setCStart] = useState("18:00");
   const [cEnd, setCEnd] = useState("21:00");
   const [cInterval, setCInterval] = useState("30");
@@ -70,10 +99,13 @@ export function CoreV2Slots() {
 
   const loadSlots = useCallback(async () => {
     if (!date) return;
-    const r = await fetch(`/api/admin/slots?location=${encodeURIComponent(loc)}&date=${date}`);
+    // Week view pulls the whole location (all dates) and slices client-side;
+    // day view scopes to the date server-side.
+    const qs = range === "week" ? `?location=${encodeURIComponent(loc)}` : `?location=${encodeURIComponent(loc)}&date=${date}`;
+    const r = await fetch(`/api/admin/slots${qs}`);
     const d = r.ok ? await r.json() : [];
     setSlots(Array.isArray(d) ? d : d.slots ?? []);
-  }, [loc, date]);
+  }, [loc, date, range]);
   const loadBoard = useCallback(async () => {
     if (!date) return;
     const r = await fetch(`/api/admin/demand-exchange?location=${encodeURIComponent(loc)}&date=${date}`);
@@ -88,19 +120,25 @@ export function CoreV2Slots() {
     if (tab === "demand") void loadBoard();
   }, [tab, loadBoard]);
 
-  const ordered = useMemo(() => [...slots].sort((a, b) => a.time.localeCompare(b.time)), [slots]);
+  const week = useMemo(() => weekDates(date), [date]);
+  const scoped = useMemo(
+    () => (range === "week" ? slots.filter((s) => week.includes(s.date)) : slots.filter((s) => s.date === date)),
+    [slots, range, week, date],
+  );
+  const ordered = useMemo(() => [...scoped].sort((a, b) => a.time.localeCompare(b.time)), [scoped]);
+  const byDay = useMemo(() => week.map((d) => [d, ordered.filter((s) => s.date === d)] as const), [week, ordered]);
   const kpis = useMemo(() => {
-    const cap = slots.reduce((s, x) => s + x.maxOrders, 0);
-    const booked = slots.reduce((s, x) => s + x.currentOrders, 0);
-    const peak = Math.max(0, ...slots.map((x) => (x.maxOrders ? x.currentOrders / x.maxOrders : 0)));
+    const cap = scoped.reduce((s, x) => s + x.maxOrders, 0);
+    const booked = scoped.reduce((s, x) => s + x.currentOrders, 0);
+    const peak = Math.max(0, ...scoped.map((x) => (x.maxOrders ? x.currentOrders / x.maxOrders : 0)));
     const mult = peak >= 0.85 ? "1.2×" : peak >= 0.7 ? "1.1×" : "1.0×";
     return [
-      { l: "Slots", v: String(slots.length) },
+      { l: range === "week" ? "Slots / wk" : "Slots", v: String(scoped.length) },
       { l: "Booked", v: String(booked) },
       { l: "Fill rate", v: cap ? `${Math.round((booked / cap) * 100)}%` : "—" },
       { l: "Demand price", v: mult },
     ];
-  }, [slots]);
+  }, [scoped, range]);
 
   const toggleSlot = async (slot: TimeSlot) => {
     if (acting) return;
@@ -122,26 +160,40 @@ export function CoreV2Slots() {
 
   const createSlots = async () => {
     const fulfil = [...cFulfil];
-    const interval = parseInt(cInterval, 10);
     const maxOrders = parseInt(cMax, 10);
-    if (fulfil.length === 0 || !Number.isFinite(interval) || !Number.isFinite(maxOrders)) {
-      toast("Pick a channel + valid interval/capacity", "danger");
+    if (fulfil.length === 0 || !Number.isFinite(maxOrders)) {
+      toast("Pick a channel + valid capacity", "danger");
       return;
     }
     setActing(true);
     try {
-      const r = await fetch("/api/admin/slots?bulk=1", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationSlug: loc,
-          date,
-          fulfillmentTypes: fulfil,
-          bulk: { startTime: cStart, endTime: cEnd, interval },
-          maxOrders,
-          status: "active",
-        }),
-      });
+      let r: Response;
+      if (cMode === "single") {
+        r = await fetch("/api/admin/slots", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationSlug: loc, date, time: cTime, fulfillmentTypes: fulfil, maxOrders, status: "active" }),
+        });
+      } else {
+        const interval = parseInt(cInterval, 10);
+        if (!Number.isFinite(interval)) {
+          toast("Enter a valid interval", "danger");
+          setActing(false);
+          return;
+        }
+        r = await fetch("/api/admin/slots?bulk=1", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locationSlug: loc,
+            date,
+            fulfillmentTypes: fulfil,
+            bulk: { startTime: cStart, endTime: cEnd, interval },
+            maxOrders,
+            status: "active",
+          }),
+        });
+      }
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
         const n = Array.isArray(d) ? d.length : 1;
@@ -205,6 +257,23 @@ export function CoreV2Slots() {
 
   const changeCount = board?.slots.filter((r) => r.recommendedMaxOrders !== r.maxOrders || r.recommendedMinSpendGrosze !== r.minSpendGrosze).length ?? 0;
 
+  const slotRow = (s: TimeSlot) => {
+    const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
+    return (
+      <div key={s.id} className={`cv-slot ${s.status === "draft" ? "draft" : ""}`}>
+        <span className="st mono">{s.time}</span>
+        <div className="bar"><div className="fill" style={{ width: `${Math.min(100, pct)}%`, background: pct >= 85 ? "var(--danger)" : pct >= 70 ? "var(--amber)" : "var(--basil)" }} /></div>
+        <span className="cap mono">{s.currentOrders}/{s.maxOrders}</span>
+        <span className="ch">
+          {s.fulfillmentTypes.join(" · ")}
+          {s.minSpendGrosze ? <span className="cv-slot-min">min {zl0(s.minSpendGrosze)}</span> : null}
+        </span>
+        <button className={`cv-pill-btn ${s.status}`} onClick={() => void toggleSlot(s)}>{s.status}</button>
+        <button className="cv-slot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
+      </div>
+    );
+  };
+
   return (
     <CoreV2Shell
       eyebrow="Service · Floor & Slots"
@@ -215,6 +284,12 @@ export function CoreV2Slots() {
             <button className={tab === "manage" ? "on" : ""} onClick={() => setTab("manage")}>Manage</button>
             <button className={tab === "demand" ? "on" : ""} onClick={() => setTab("demand")}>Demand</button>
           </div>
+          {tab === "manage" && (
+            <div className="cv-seg">
+              <button className={range === "day" ? "on" : ""} onClick={() => setRange("day")}>Day</button>
+              <button className={range === "week" ? "on" : ""} onClick={() => setRange("week")}>Week</button>
+            </div>
+          )}
           {tab === "manage" && (
             <button type="button" className="cv-chip" style={{ height: 32 }} onClick={() => setCreateOpen(true)}>+ New</button>
           )}
@@ -232,23 +307,25 @@ export function CoreV2Slots() {
             </div>
             <div className="cv-crm-table-wrap" style={{ padding: 16 }}>
               {ordered.length === 0 ? (
-                <div className="cv-kds-empty pad">No slots for this day.</div>
-              ) : (
-                <div className="cv-slot-list">
-                  {ordered.map((s) => {
-                    const pct = s.maxOrders ? Math.round((s.currentOrders / s.maxOrders) * 100) : 0;
-                    return (
-                      <div key={s.id} className={`cv-slot ${s.status === "draft" ? "draft" : ""}`}>
-                        <span className="st mono">{s.time}</span>
-                        <div className="bar"><div className="fill" style={{ width: `${Math.min(100, pct)}%`, background: pct >= 85 ? "var(--danger)" : pct >= 70 ? "var(--amber)" : "var(--basil)" }} /></div>
-                        <span className="cap mono">{s.currentOrders}/{s.maxOrders}</span>
-                        <span className="ch">{s.fulfillmentTypes.join(" · ")}</span>
-                        <button className={`cv-pill-btn ${s.status}`} onClick={() => void toggleSlot(s)}>{s.status}</button>
-                        <button className="cv-slot-x" title="Delete slot" onClick={() => void deleteSlot(s)} aria-label="Delete slot">✕</button>
+                <div className="cv-kds-empty pad">No slots for this {range === "week" ? "week" : "day"}.</div>
+              ) : range === "week" ? (
+                <div className="cv-slot-week">
+                  {byDay.map(([d, daySlots]) => (
+                    <div key={d} className="cv-slot-day">
+                      <div className="cv-slot-day-h">
+                        <span>{dayLabel(d)}</span>
+                        <span className="n">{daySlots.length}</span>
                       </div>
-                    );
-                  })}
+                      {daySlots.length === 0 ? (
+                        <div className="cv-slot-day-empty">No slots</div>
+                      ) : (
+                        <div className="cv-slot-list">{daySlots.map(slotRow)}</div>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <div className="cv-slot-list">{ordered.map(slotRow)}</div>
               )}
             </div>
           </>
@@ -280,7 +357,7 @@ export function CoreV2Slots() {
                           <td className="num mono">{r.currentOrders}</td>
                           <td className="num mono">{r.predictedDemand}</td>
                           <td className="num mono">{r.maxOrders}{changed ? ` → ${r.recommendedMaxOrders}` : ""}{r.recommendedMinSpendGrosze > 0 ? ` · min ${zl(r.recommendedMinSpendGrosze)}` : ""}</td>
-                          <td><span className={`cv-act ${r.action}`}>{r.action}</span></td>
+                          <td><span className={`cv-act ${r.action}`}>{ACTION_LABEL[r.action]}</span></td>
                           <td>{changed && <button className="cv-btn sm" disabled={acting} onClick={() => void applyOne(r)}>Apply</button>}</td>
                         </tr>
                       );
@@ -296,9 +373,13 @@ export function CoreV2Slots() {
       <CoreV2Dialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title={`New slots · ${date}`}
+        title={`New ${cMode === "bulk" ? "slots" : "slot"} · ${date}`}
         footer={
           <>
+            <div className="cv-seg" style={{ marginRight: "auto" }}>
+              <button type="button" className={cMode === "single" ? "on" : ""} onClick={() => setCMode("single")}>Single</button>
+              <button type="button" className={cMode === "bulk" ? "on" : ""} onClick={() => setCMode("bulk")}>Bulk</button>
+            </div>
             <button className="cv-btn ghost" onClick={() => setCreateOpen(false)}>Cancel</button>
             <button className="cv-btn primary" disabled={acting} onClick={() => void createSlots()}>Create</button>
           </>
@@ -325,13 +406,24 @@ export function CoreV2Slots() {
               ))}
             </div>
           </label>
-          <div className="cv-slot-create-grid">
-            <label>Start<input className="cv-inp" type="time" value={cStart} onChange={(e) => setCStart(e.target.value)} /></label>
-            <label>End<input className="cv-inp" type="time" value={cEnd} onChange={(e) => setCEnd(e.target.value)} /></label>
-            <label>Every (min)<input className="cv-inp" value={cInterval} onChange={(e) => setCInterval(e.target.value)} /></label>
-            <label>Capacity<input className="cv-inp" value={cMax} onChange={(e) => setCMax(e.target.value)} /></label>
-          </div>
-          <p className="cv-cust-sub">Generates active slots from {cStart} to {cEnd} every {cInterval} min, {cMax} covers each.</p>
+          {cMode === "single" ? (
+            <div className="cv-slot-create-grid two">
+              <label>Time<input className="cv-inp" type="time" value={cTime} onChange={(e) => setCTime(e.target.value)} /></label>
+              <label>Capacity<input className="cv-inp" value={cMax} onChange={(e) => setCMax(e.target.value)} /></label>
+            </div>
+          ) : (
+            <div className="cv-slot-create-grid">
+              <label>Start<input className="cv-inp" type="time" value={cStart} onChange={(e) => setCStart(e.target.value)} /></label>
+              <label>End<input className="cv-inp" type="time" value={cEnd} onChange={(e) => setCEnd(e.target.value)} /></label>
+              <label>Every (min)<input className="cv-inp" value={cInterval} onChange={(e) => setCInterval(e.target.value)} /></label>
+              <label>Capacity<input className="cv-inp" value={cMax} onChange={(e) => setCMax(e.target.value)} /></label>
+            </div>
+          )}
+          <p className="cv-cust-sub">
+            {cMode === "single"
+              ? `Adds one active slot at ${cTime}, ${cMax} covers.`
+              : `Generates active slots from ${cStart} to ${cEnd} every ${cInterval} min, ${cMax} covers each.`}
+          </p>
         </div>
       </CoreV2Dialog>
     </CoreV2Shell>
