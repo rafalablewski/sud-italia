@@ -548,6 +548,7 @@ export function CoreV2Pos({
           dragItem.current = null;
         }}
       >
+        <span className="cv-grip" aria-hidden title="Drag to re-course">⠿</span>
         <div className="cv-qstep">
           <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
             −

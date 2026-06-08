@@ -54,10 +54,13 @@ UI, identical contract.
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.
-- **`.cv-lines`** — `.cv-line` rows with a `.cv-qstep` −/＋ counter and a
+- **`.cv-lines`** — `.cv-line` rows, each led by a `.cv-grip` drag handle
+  (`⠿`, brightens + bobs on hover) then a `.cv-qstep` −/＋ counter and a
   mono line price. Dine-in coursed checks group lines into `.cv-course`
   blocks with a `.cv-course-h` header and a per-course **Fire** button;
-  fired courses dim (`.cv-course.fired`) and show `✓ Fired`.
+  fired courses dim (`.cv-course.fired`) and show `✓ Fired`. Dragging a
+  line over a course tints it with a brand **left-accent** drop cue
+  (`.cv-course.drop` — not a full ring).
 - **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`), plus a
   `.cv-offer.combo` **combo-completion** prompt when a deal is one or two
   items short (`getActiveComboDeals` → `missingItems` / `missingCategories`

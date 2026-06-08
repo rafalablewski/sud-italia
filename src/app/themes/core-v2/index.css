@@ -234,7 +234,12 @@
 /* drag-to-recourse */
 .cv2 .cv-line { cursor: grab; }
 .cv2 .cv-line:active { cursor: grabbing; }
-.cv2 .cv-course.drop { background: var(--brand-wash); box-shadow: inset 0 0 0 2px var(--brand); border-radius: var(--r-md); }
+.cv2 .cv-course.drop { background: var(--brand-wash); box-shadow: inset 3px 0 0 var(--brand); }
+.cv2 .cv-grip { flex: none; color: var(--ink-3); font-size: 13px; line-height: 1; letter-spacing: -2px; opacity: .4; cursor: grab; transition: opacity var(--fast), color var(--fast); }
+.cv2 .cv-line:hover .cv-grip { opacity: 1; color: var(--brand-bright); animation: cv-grip-bob .9s ease-in-out infinite; }
+.cv2 .cv-line:active .cv-grip { cursor: grabbing; }
+@keyframes cv-grip-bob { 0%, 100% { transform: translateY(-1.5px); } 50% { transform: translateY(1.5px); } }
+@media (prefers-reduced-motion: reduce) { .cv2 .cv-line:hover .cv-grip { animation: none; } }
 
 /* ============================================================
    Own UI primitives — Dialog, Toast, Button
