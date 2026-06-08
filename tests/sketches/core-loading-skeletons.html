@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia — Core · loading skeletons (before / after)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Core suite tokens — 1:1 from src/app/themes/core/suite.css
+   ============================================================ */
+:root{
+  --bg:#0c0b0e; --surface-1:#17161c; --surface-2:#1d1b23; --surface-3:#262430;
+  --surface-hover:#2f2c39; --border:rgba(255,255,255,.10); --border-strong:rgba(255,255,255,.16);
+  --fg:#f5f3ee; --fg-muted:#c0b9b0; --fg-subtle:#978e85;
+  --brand:#a62d49; --brand-bright:#c2415f; --platinum:#cbb48a;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --display:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--ui)}
+body{padding:40px 28px 80px;max-width:1080px;margin:0 auto}
+h1{font-family:var(--display);font-weight:600;font-size:30px;letter-spacing:-.01em}
+.lede{color:var(--fg-muted);font-size:14px;margin:10px 0 6px;max-width:70ch;line-height:1.55}
+.lede b{color:var(--fg)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:26px}
+.col h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-subtle);margin-bottom:10px;font-weight:600}
+.col h2.bad{color:#e2504b} .col h2.good{color:#2fa875}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+
+/* the OLD bare loading text */
+.pane-msg{padding:24px 16px;color:var(--fg-subtle);font-size:12.5px;text-align:center}
+
+/* the table header so the after-shape lines up visually */
+.tbl-head{display:grid;gap:12px;align-items:center;height:38px;padding:0 12px;border-bottom:1px solid var(--border)}
+.tbl-head span{font:600 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--fg-subtle)}
+.tbl-head .num{text-align:right}
+
+/* ============================================================
+   Skeleton — copied 1:1 from .core-suite .skel* in suite.css
+   ============================================================ */
+.skel{position:relative;overflow:hidden;border-radius:var(--r-sm);background:var(--surface-2);display:block}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
+  animation:core-skel-sheen 1.25s ease-in-out infinite}
+@keyframes core-skel-sheen{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion: reduce){.skel::after{animation:none}}
+.skel-tbl{width:100%}
+.skel-row{display:grid;gap:12px;align-items:center;height:48px;padding:0 12px;border-bottom:1px solid var(--border)}
+.skel-list{display:flex;flex-direction:column}
+.skel-li{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
+.note{margin-top:34px;font-size:12.5px;color:var(--fg-subtle);border-top:1px solid var(--border);padding-top:18px;line-height:1.6}
+.note code{font-family:var(--mono);color:var(--platinum);font-size:11.5px}
+</style>
+</head>
+<body>
+  <h1>Core · loading skeletons</h1>
+  <p class="lede">The client-fetched Guest &amp; Service surfaces (CRM · Loyalty · Inbox · Slots · Book) fetch their
+  rows in a <code style="font-family:var(--mono);color:var(--platinum)">useEffect</code>, so their first frame has no data.
+  We replaced the dead centered <b>"Loading…"</b> label with a <b>shimmer skeleton shaped like the content arriving</b> —
+  the cheapest way to make a fetch read as <em>fast</em> instead of <em>stalled</em>. One shared primitive
+  (<code style="font-family:var(--mono);color:var(--platinum)">src/core/shared/Skeleton.tsx</code>) drives the whole suite.</p>
+
+  <!-- CRM table -->
+  <div class="row">
+    <div class="col">
+      <h2 class="bad">Before — CRM customer book</h2>
+      <div class="card"><div class="pane-msg">Loading customer book…</div></div>
+    </div>
+    <div class="col">
+      <h2 class="good">After — <code style="font-family:var(--mono)">&lt;SkeletonTable&gt;</code></h2>
+      <div class="card">
+        <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr">
+          <span>Customer</span><span>Channel</span><span class="num">Orders</span><span class="num">Points</span><span class="num">LTV</span><span>Last</span>
+        </div>
+        <div class="skel-tbl" id="crm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inbox list + transcript -->
+  <div class="row">
+    <div class="col">
+      <h2 class="bad">Before — Inbox conversations</h2>
+      <div class="card"><div class="pane-msg">Loading conversations…</div></div>
+    </div>
+    <div class="col">
+      <h2 class="good">After — <code style="font-family:var(--mono)">&lt;SkeletonList avatar&gt;</code></h2>
+      <div class="card"><div class="skel-list" id="inbox"></div></div>
+    </div>
+  </div>
+
+  <!-- transcript bubbles -->
+  <div class="row">
+    <div class="col">
+      <h2 class="bad">Before — Inbox transcript</h2>
+      <div class="card"><div class="pane-msg">Loading transcript…</div></div>
+    </div>
+    <div class="col">
+      <h2 class="good">After — composed <code style="font-family:var(--mono)">&lt;Skeleton&gt;</code> bubbles</h2>
+      <div class="card"><div class="skel-list" id="thread" style="padding:14px;gap:12px"></div></div>
+    </div>
+  </div>
+
+  <p class="note">
+    Surfaces touched: <b>CRM</b>, <b>Loyalty</b> (roster · wallets · redemptions), <b>Inbox</b> (list · transcript),
+    <b>Slots</b>, <b>Book</b> — 8 bare <code>pane-msg</code> "Loading…" blocks replaced.
+    The shimmer + colours are Core-theme tokens (<code>.core-suite .skel*</code>); the sweep stops under
+    <code>prefers-reduced-motion</code>. This is Core's own idiom — it does not borrow the admin
+    <code>.v2-page-loading</code> pill. Each container carries <code>role="status"</code> / <code>aria-busy</code>.
+  </p>
+
+<script>
+  // build the skeletons the same way the React helpers do
+  const blk = (w,h,r,extra='') => `<span class="skel" style="width:${w};height:${h}px;border-radius:${r}px;${extra}"></span>`;
+  // CRM table — 9 rows, 6 cols (first wider)
+  const crm = [];
+  for(let i=0;i<9;i++){
+    const cells=[2,1,1,1,1,1].map((_,j)=>blk(j===0?'62%':'74%',11,6)).join('');
+    crm.push(`<div class="skel-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr">${cells}</div>`);
+  }
+  document.getElementById('crm').innerHTML = crm.join('');
+  // inbox list — 7 rows with avatar
+  const inbox=[];
+  for(let i=0;i<7;i++){
+    inbox.push(`<div class="skel-li">${blk('34px',34,999)}<div style="flex:1;display:grid;gap:7px">${blk('46%',11,6)}${blk('72%',10,6)}</div></div>`);
+  }
+  document.getElementById('inbox').innerHTML = inbox.join('');
+  // transcript — alternating bubbles
+  const thread=[];
+  for(let i=0;i<5;i++){
+    thread.push(blk(i%2?'48%':'62%',34,12, i%2?'margin-left:auto;':''));
+  }
+  document.getElementById('thread').innerHTML = thread.join('');
+</script>
+</body>
+</html>

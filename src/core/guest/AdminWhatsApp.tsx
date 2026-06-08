@@ -21,6 +21,7 @@ import {
   Search,
 } from "lucide-react";
 import { CoreShell } from "@/core/shell/CoreShell";
+import { Skeleton, SkeletonList } from "@/core/shared/Skeleton";
 import { useToast } from "@/ui/Toast";
 import { useWhatsappSimulator } from "@/lib/useWhatsappSimulator";
 
@@ -851,7 +852,7 @@ function AdminWhatsAppDesktop() {
           </div>
           <div className="conv-list">
             {loading ? (
-              <div className="pane-msg">Loading conversations…</div>
+              <SkeletonList rows={7} avatar />
             ) : filtered.length === 0 ? (
               <div className="pane-msg">
                 {conversations.length === 0
@@ -919,7 +920,23 @@ function AdminWhatsAppDesktop() {
 
               <div className="thread-body" ref={msgsRef}>
                 {threadLoading && thread.length === 0 ? (
-                  <div className="pane-msg">Loading transcript…</div>
+                  <div
+                    className="skel-list"
+                    role="status"
+                    aria-busy="true"
+                    aria-label="Loading transcript"
+                    style={{ padding: 14, gap: 12 }}
+                  >
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Skeleton
+                        key={i}
+                        h={34}
+                        r={12}
+                        w={i % 2 ? "48%" : "62%"}
+                        style={{ marginLeft: i % 2 ? "auto" : undefined }}
+                      />
+                    ))}
+                  </div>
                 ) : thread.length === 0 ? (
                   <div className="pane-msg">No messages yet.</div>
                 ) : (

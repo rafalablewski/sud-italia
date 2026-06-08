@@ -21,6 +21,7 @@ import {
 import { CoreShell } from "@/core/shell/CoreShell";
 import { GuestViewNav } from "@/core/guest/GuestViewNav";
 import { GuestHeaderActions } from "@/core/guest/GuestHeaderActions";
+import { SkeletonTable } from "@/core/shared/Skeleton";
 import { Button, Dialog } from "@/ui";
 import { useToast } from "@/ui/Toast";
 
@@ -697,7 +698,7 @@ export function AdminCrm() {
         <div className="crm-grid">
           <div className="card crm-table-card" ref={listRef}>
             {loading ? (
-              <div className="pane-msg">Loading customer book…</div>
+              <SkeletonTable rows={9} cols={[2, 1, 1, 1, 1, 1]} />
             ) : visible.length === 0 ? (
               <div className="pane-msg">No customers match.</div>
             ) : (

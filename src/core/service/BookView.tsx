@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, RefreshCw, Sparkles, Users } from "lucide-react";
 import type { FloorTable, Reservation, TimeSlot } from "@/data/types";
 import { findReservationConflicts } from "@/lib/floor";
+import { SkeletonList } from "@/core/shared/Skeleton";
 import { Switch } from "@/ui";
 import { useToast } from "@/ui/Toast";
 
@@ -299,7 +300,7 @@ export function BookView({ loc, date }: { loc: string; date: string }) {
             </button>
           </div>
           {loading ? (
-            <div className="pane-msg">Loading…</div>
+            <SkeletonList rows={5} />
           ) : todays.length === 0 ? (
             <div className="pane-msg">No bookings yet for this day.</div>
           ) : (

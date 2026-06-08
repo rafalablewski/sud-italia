@@ -1,107 +1,134 @@
 {
-  "_note": "Source of truth for the /admin/settings → Themes inspector. EDIT THIS FILE to change what the tab shows. Per-file `lines` are NOT stored here — they are computed at build by scripts/gen-design-system-manifest.ts, which emits src/generated/design-system.json (the file the tab imports). Keep this in sync with the rest of docs/design-system/ per CLAUDE.md rule #11.",
-  "themes": {
-    "core": {
-      "label": "Core",
-      "blurb": "The productised IP — POS, KDS, and the unified Guest hub (CRM + Concierge + WhatsApp). Operational clarity outranks brand expression.",
-      "files": [
-        {
-          "path": "src/app/themes/core/suite.css",
-          "description": "Current design — 1:1 port of the core-suite mockup (.core-suite scope): .shell / .card / .btn / .stat / .tk / .kds-* rules for POS + Guest + KDS, via CoreShell."
-        },
-        {
-          "path": "src/app/themes/core/index.css",
-          "description": "Legacy --cmd-* palette + .cmd-* / .ka-* / .kds-* kitchen chrome + .wa-console / .wa-fa-* dialog classes (KDS + WhatsApp dialogs). Dead .pos-/.crm-/.cncrg- families pruned."
-        },
-        {
-          "path": "src/app/themes/core/theme.ts",
-          "description": "Typed JS mirror of the --cmd-* palette. Imported into the swatches below."
-        }
-      ],
-      "routes": [
-        "/core/pos",
-        "/core/kds",
-        "/core/guest",
-        "/core/service"
-      ],
-      "fonts": "src/app/core/layout.tsx loads its own next/font instances of --font-admin-body (Inter), --font-admin-display (Fraunces) and --font-admin-mono (JetBrains Mono) — independent from the admin layout's, so a Core-only font tweak can't drift admin. POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
-      "selectorPrefixes": [
-        ".core-suite",
-        ".shell",
-        ".tk",
-        ".cmd-*",
-        ".kds-*",
-        ".ka-*",
-        ".wa-console"
-      ],
-      "docs": "docs/design-system/core/",
-      "sourceDir": "src/app/themes/core/"
+ "_note": "Source of truth for the /admin/settings → Themes inspector. EDIT THIS FILE to change what the tab shows. Per-file `lines` are NOT stored here — they are computed at build by scripts/gen-design-system-manifest.ts, which emits src/generated/design-system.json (the file the tab imports). Keep this in sync with the rest of docs/design-system/ per CLAUDE.md rule #11.",
+ "themes": {
+  "core": {
+   "label": "Core",
+   "blurb": "The productised IP — POS, KDS, and the unified Guest hub (CRM + Concierge + WhatsApp). Operational clarity outranks brand expression.",
+   "files": [
+    {
+     "path": "src/app/themes/core/suite.css",
+     "description": "Current design — 1:1 port of the core-suite mockup (.core-suite scope): .shell / .card / .btn / .stat / .tk / .kds-* rules for POS + Guest + KDS, via CoreShell."
     },
-    "admin": {
-      "label": "Admin",
-      "blurb": "The back-office around the Core modules: Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System. Glassmorphism + warm-neutral dark canvas.",
-      "files": [
-        {
-          "path": "src/app/themes/base/index.css",
-          "description": "Shared base CSS surface (formerly themes/admin): [data-admin-theme=\"dark\"|\"light\"] token blocks + AdminShell + glass-* + v2-* + admin mobile (.v2-m-*). Kept as the base for login + the staff portals + Core; outlives the v2 deletion."
-        },
-        {
-          "path": "src/shared/theme.ts",
-          "description": "Typed mirror of the [data-admin-theme] tokens for Recharts + inline SVG + the boot script that sets the theme attribute before paint."
-        }
-      ],
-      "routes": [
-        "/admin/*",
-        "/manager, /manager/* (→ /admin/* via rewrite)",
-        "/franchisee, /franchisee/* (→ /admin/* via rewrite)",
-        "/login",
-        "/terminal",
-        "/kitchen, /kitchen/*"
-      ],
-      "fonts": "src/app/admin/layout.tsx loads its own Inter + Fraunces as --font-admin-body and --font-admin-display. /manager, /kitchen, /franchisee, /login and /terminal layouts load the same independently (they sit outside the AdminShell but stay admin-themed) so a font change in one wouldn't drift admin.",
-      "selectorPrefixes": [
-        "[data-admin-theme]",
-        ".v2-*",
-        ".glass-*",
-        ".admin-*",
-        ".v2-m-*"
-      ],
-      "docs": "docs/design-system/admin/",
-      "sourceDir": "src/app/themes/admin/"
+    {
+     "path": "src/app/themes/core/index.css",
+     "description": "Legacy --cmd-* palette + .cmd-* / .ka-* / .kds-* kitchen chrome + .wa-console / .wa-fa-* dialog classes (KDS + WhatsApp dialogs). Dead .pos-/.crm-/.cncrg- families pruned."
     },
-    "homepage": {
-      "label": "Homepage",
-      "blurb": "The public storefront — /, /menu, /checkout, /order, /rewards, location pages. Hospitality outranks density; warm cream canvas + deep burgundy brand.",
-      "files": [
-        {
-          "path": "src/app/themes/homepage/tokens.css",
-          "description": "@theme inline block. @import-ed by globals.css so Tailwind v4 generates bg-italia-* / text-italia-* utilities (ships globally)."
-        },
-        {
-          "path": "src/app/themes/homepage/index.css",
-          "description": ".pub-* form classes, body styling, delivery-* keyframes. JS-imported by (public)/layout.tsx, route-scoped."
-        },
-        {
-          "path": "src/app/themes/homepage/theme.ts",
-          "description": "Typed JS mirror of --color-italia-* tokens. Imported into the swatches below."
-        }
-      ],
-      "routes": [
-        "/",
-        "/locations/[slug]",
-        "/order-confirmation",
-        "/review/[orderId]",
-        "/rewards",
-        "/privacy"
-      ],
-      "fonts": "src/app/(public)/layout.tsx loads its own Lora + Cormorant Garamond as --font-homepage-body and --font-homepage-heading (V8 Trattoria editorial-serif duo). Independent next/font instances from admin so weight / subset changes don't drift across themes.",
-      "selectorPrefixes": [
-        "--color-italia-*",
-        ".pub-*",
-        ".delivery-*"
-      ],
-      "docs": "docs/design-system/homepage/",
-      "sourceDir": "src/app/themes/homepage/"
+    {
+     "path": "src/app/themes/core/theme.ts",
+     "description": "Typed JS mirror of the --cmd-* palette. Imported into the swatches below."
     }
+   ],
+   "routes": [
+    "/core/pos",
+    "/core/kds",
+    "/core/guest",
+    "/core/service"
+   ],
+   "fonts": "src/app/core/layout.tsx loads its own next/font instances of --font-admin-body (Inter), --font-admin-display (Fraunces) and --font-admin-mono (JetBrains Mono) — independent from the admin layout's, so a Core-only font tweak can't drift admin. POS + Guest (.core-suite) use Fraunces for display headings; the KDS kitchen wall stays Inter + mono.",
+   "selectorPrefixes": [
+    ".core-suite",
+    ".shell",
+    ".tk",
+    ".cmd-*",
+    ".kds-*",
+    ".ka-*",
+    ".wa-console"
+   ],
+   "docs": "docs/design-system/core/",
+   "sourceDir": "src/app/themes/core/"
+  },
+  "core-v2": {
+   "label": "Core v2",
+   "blurb": "The clean-room /core-v2/ rebuild of Core — dark-first, grotesk display (Bricolage), flat materials, refined Neapolitan burgundy. A separate entity from Admin AND the current /core; replaces /core once every surface is ported.",
+   "files": [
+    {
+     "path": "src/app/themes/core-v2/index.css",
+     "description": "Theme stylesheet — scoped reset + the shell (.cv-bar/.cv-switch/.cv-sub) + global-action primitives (.cv-chip/.cv-iconbtn/.cv-clock/.cv-tabs/.cv-seg) + the scaffold panel (.cv-scaffold) + the POS surface (.cv-pos/.cv-rail/.cv-prod/.cv-ticket). @imports tokens.css."
+    },
+    {
+     "path": "src/app/themes/core-v2/tokens.css",
+     "description": "Design tokens scoped under .cv2[data-theme=dark|light]. Dark is the default; light is the option. Surfaces, ink, lines, brand, semantics, elevation, type, radius, motion."
+    }
+   ],
+   "routes": [
+    "/core-v2/pos",
+    "/core-v2/kds",
+    "/core-v2/guest",
+    "/core-v2/service"
+   ],
+   "fonts": "src/app/core-v2/layout.tsx loads its OWN next/font instances — --font-cv-display (Bricolage Grotesque, opsz axis), --font-cv-ui (Inter), --font-cv-mono (JetBrains Mono). No --font-admin-*; a Core v2 font tweak can't move Admin or the current /core.",
+   "selectorPrefixes": [
+    ".cv2",
+    "cv-"
+   ],
+   "docs": "docs/design-system/core-v2/",
+   "sourceDir": "src/app/themes/core-v2/"
+  },
+  "admin": {
+   "label": "Admin",
+   "blurb": "The back-office around the Core modules: Operations, Inventory, People, Customers, Finance, Growth, Intelligence, System. Glassmorphism + warm-neutral dark canvas.",
+   "files": [
+    {
+     "path": "src/app/themes/base/index.css",
+     "description": "Shared base CSS surface (formerly themes/admin): [data-admin-theme=\"dark\"|\"light\"] token blocks + AdminShell + glass-* + v2-* + admin mobile (.v2-m-*). Kept as the base for login + the staff portals + Core; outlives the v2 deletion."
+    },
+    {
+     "path": "src/shared/theme.ts",
+     "description": "Typed mirror of the [data-admin-theme] tokens for Recharts + inline SVG + the boot script that sets the theme attribute before paint."
+    }
+   ],
+   "routes": [
+    "/admin/*",
+    "/manager, /manager/* (→ /admin/* via rewrite)",
+    "/franchisee, /franchisee/* (→ /admin/* via rewrite)",
+    "/login",
+    "/terminal",
+    "/kitchen, /kitchen/*"
+   ],
+   "fonts": "src/app/admin/layout.tsx loads its own Inter + Fraunces as --font-admin-body and --font-admin-display. /manager, /kitchen, /franchisee, /login and /terminal layouts load the same independently (they sit outside the AdminShell but stay admin-themed) so a font change in one wouldn't drift admin.",
+   "selectorPrefixes": [
+    "[data-admin-theme]",
+    ".v2-*",
+    ".glass-*",
+    ".admin-*",
+    ".v2-m-*"
+   ],
+   "docs": "docs/design-system/admin/",
+   "sourceDir": "src/app/themes/admin/"
+  },
+  "homepage": {
+   "label": "Homepage",
+   "blurb": "The public storefront — /, /menu, /checkout, /order, /rewards, location pages. Hospitality outranks density; warm cream canvas + deep burgundy brand.",
+   "files": [
+    {
+     "path": "src/app/themes/homepage/tokens.css",
+     "description": "@theme inline block. @import-ed by globals.css so Tailwind v4 generates bg-italia-* / text-italia-* utilities (ships globally)."
+    },
+    {
+     "path": "src/app/themes/homepage/index.css",
+     "description": ".pub-* form classes, body styling, delivery-* keyframes. JS-imported by (public)/layout.tsx, route-scoped."
+    },
+    {
+     "path": "src/app/themes/homepage/theme.ts",
+     "description": "Typed JS mirror of --color-italia-* tokens. Imported into the swatches below."
+    }
+   ],
+   "routes": [
+    "/",
+    "/locations/[slug]",
+    "/order-confirmation",
+    "/review/[orderId]",
+    "/rewards",
+    "/privacy"
+   ],
+   "fonts": "src/app/(public)/layout.tsx loads its own Lora + Cormorant Garamond as --font-homepage-body and --font-homepage-heading (V8 Trattoria editorial-serif duo). Independent next/font instances from admin so weight / subset changes don't drift across themes.",
+   "selectorPrefixes": [
+    "--color-italia-*",
+    ".pub-*",
+    ".delivery-*"
+   ],
+   "docs": "docs/design-system/homepage/",
+   "sourceDir": "src/app/themes/homepage/"
   }
+ }
 }

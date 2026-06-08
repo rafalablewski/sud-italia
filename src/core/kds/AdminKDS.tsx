@@ -15,7 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { Order, MenuCategory, OrderStatus } from "@/data/types";
-import { useAdminLocation } from "@/shared/LocationContext";
+import { useLocation } from "@/shared/LocationContext";
 import { useToast } from "@/ui/Toast";
 import { AdminKdsFleet } from "./AdminKdsFleet";
 import { CoreShell } from "@/core/shell/CoreShell";
@@ -100,7 +100,7 @@ function loadBumpHistory(loc: string): BumpEntry[] {
  *   • kitchen/staff → Floor board (the line view they've always had).
  */
 export function AdminKDS() {
-  const { setLocation } = useAdminLocation();
+  const { setLocation } = useLocation();
   const [role, setRole] = useState<AdminRole | null>(null);
   // Owners always land on the fleet; drilling into a truck flips this to that
   // truck's "floor" board, and the header viewswitch lets the owner flip on to
@@ -201,7 +201,7 @@ function AdminKDSDesktop({
   /** Owner-only: jump back to the Atlas fleet wall (the viewswitch "Fleet" tab). */
   onExitFleet?: () => void;
 }) {
-  const { location, activeLocations } = useAdminLocation();
+  const { location, activeLocations } = useLocation();
   const toast = useToast();
 
   // Proper-cased location name for the header (slug → city), so the drilled-in

@@ -17,7 +17,7 @@ The four pages where money is reconciled, accounted for, projected.
    number column lines up at the decimal so eyes can scan totals
    vertically. No exceptions, even for "just one number on the row".
 2. **Currency is operator-pinned to PLN inside `/admin/*`** — the
-   `AdminCurrencyGuard` in the admin layout overrides any cookie /
+   `CurrencyGuard` in the admin layout overrides any cookie /
    storefront preference so a manager auditing cash always sees the
    currency the till was using.
 3. **Exports are first-class actions, not buried.** JPK (Polish tax

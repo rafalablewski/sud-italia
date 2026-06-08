@@ -43,7 +43,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 **The one shared dependency v3 keeps:** the framework-level libs that are
 *not* part of either theme — `@/lib/permissions`, `@/lib/admin-roles`,
 `@/lib/admin-auth`, `@/lib/admin-base`, `@/data/locations`, and the
-PLN-pinning `AdminCurrencyGuard`. These are app infrastructure, not v2, and
+PLN-pinning `CurrencyGuard`. These are app infrastructure, not v2, and
 survive a v2 deletion. v3 imports nothing from `components/admin/v2/`.
 
 **Theme boot reuse, not coupling:** v3 reads the same `[data-admin-theme]`

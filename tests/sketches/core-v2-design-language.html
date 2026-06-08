@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sud Italia — Core v2 · design language (clean-room proposal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CORE v2 — clean-room design language (NOT suite.css)
+   Light-first, all-sans grotesk, flat materials, burgundy brand.
+   This is a PROPOSAL mockup → tokens become themes/core-v2/.
+   ============================================================ */
+:root{
+  /* type — fresh pairing, no Fraunces serif */
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --ui:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  /* brand — Neapolitan San Marzano red, refined */
+  --brand:#bb2a44; --brand-ink:#7c172b; --brand-bright:#d23a55;
+  --brand-wash:#fbe9ec;
+  /* supporting */
+  --basil:#2f7d5b; --basil-wash:#e7f3ed;
+  --amber:#c4831f; --amber-wash:#fbf0db;
+  --info:#3768b0; --info-wash:#e8eff8;
+  --r-sm:7px; --r-md:10px; --r-lg:14px; --r-xl:20px; --pill:999px;
+  --fast:130ms cubic-bezier(.3,.7,0,1);
+}
+/* LIGHT (default) */
+:root[data-theme="light"]{
+  --bg:#f4f2ee; --panel:#ffffff; --panel-2:#faf8f5; --panel-3:#f1eee9;
+  --raise:#ffffff; --hover:#f4f1ec;
+  --ink:#1c1815; --ink-2:#6a625a; --ink-3:#9b9389;
+  --line:rgba(28,24,21,.10); --line-2:rgba(28,24,21,.16);
+  --sh-1:0 1px 2px rgba(28,24,21,.06); --sh-2:0 4px 14px rgba(28,24,21,.10),0 1px 3px rgba(28,24,21,.07);
+  --sh-pop:0 18px 48px rgba(28,24,21,.18);
+}
+/* DARK (kitchen wall / night floor) */
+:root[data-theme="dark"]{
+  --bg:#100f12; --panel:#1a191e; --panel-2:#201e25; --panel-3:#28262e;
+  --raise:#211f27; --hover:#2b2933;
+  --ink:#f4f1ec; --ink-2:#b8b0a6; --ink-3:#857d74;
+  --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.17);
+  --brand:#d23a55; --brand-bright:#e8546e; --brand-wash:rgba(210,58,85,.16);
+  --basil-wash:rgba(47,125,91,.18); --amber-wash:rgba(196,131,31,.18); --info-wash:rgba(55,104,176,.2);
+  --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 6px 18px rgba(0,0,0,.5);
+  --sh-pop:0 20px 50px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:background var(--fast),color var(--fast)}
+button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ============ SHELL — top command bar ============ */
+.bar{display:flex;align-items:center;gap:18px;height:58px;padding:0 18px;background:var(--panel);
+  border-bottom:1px solid var(--line);flex:none;box-shadow:var(--sh-1);z-index:5}
+.brand{display:flex;align-items:center;gap:11px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--brand);color:#fff;display:grid;place-items:center;
+  font-family:var(--display);font-weight:700;font-size:18px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.brand .nm{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.01em;line-height:1}
+.brand .os{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin-top:3px;font-weight:600}
+/* surface switcher — segmented pill */
+.switch{display:flex;gap:3px;margin:0 auto;background:var(--panel-3);padding:4px;border-radius:var(--pill);border:1px solid var(--line)}
+.switch button{display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:var(--pill);
+  font-weight:550;font-size:13.5px;color:var(--ink-2);transition:all var(--fast)}
+.switch button svg{width:17px;height:17px;opacity:.75}
+.switch button:hover{color:var(--ink)}
+.switch button.on{background:var(--panel);color:var(--ink);box-shadow:var(--sh-1);font-weight:600}
+.switch button.on svg{opacity:1;color:var(--brand)}
+.right{display:flex;align-items:center;gap:9px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:var(--pill);
+  background:var(--panel-2);border:1px solid var(--line);font-weight:550;font-size:13px;color:var(--ink)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--basil)}
+.iconbtn{width:34px;height:34px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);
+  display:grid;place-items:center;color:var(--ink-2);transition:all var(--fast)}
+.iconbtn:hover{color:var(--ink);background:var(--hover)}
+.iconbtn svg{width:17px;height:17px}
+.clock{font-family:var(--mono);font-weight:600;font-size:14px;letter-spacing:.02em;color:var(--ink);padding:0 4px}
+
+/* ============ SUBBAR — context row ============ */
+.sub{display:flex;align-items:center;gap:14px;height:46px;padding:0 18px;background:var(--panel-2);
+  border-bottom:1px solid var(--line);flex:none}
+.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.tabs{display:flex;gap:2px}
+.tabs button{height:30px;padding:0 13px;border-radius:8px;font-weight:550;font-size:13px;color:var(--ink-2);transition:all var(--fast)}
+.tabs button:hover{background:var(--hover);color:var(--ink)}
+.tabs button.on{background:var(--brand-wash);color:var(--brand-ink);font-weight:600}
+:root[data-theme="dark"] .tabs button.on{color:var(--brand-bright)}
+.sub .sp{flex:1}
+.steer{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 13px;border-radius:8px;
+  background:var(--amber-wash);color:var(--amber);font-weight:600;font-size:12.5px}
+.steer .pulse{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 var(--amber);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(196,131,31,.4)}70%{box-shadow:0 0 0 7px rgba(196,131,31,0)}}
+
+/* ============ POS BODY ============ */
+.body{flex:1;display:grid;grid-template-columns:200px 1fr 360px;min-height:0}
+.rail{background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.rail .lbl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:6px 10px 4px}
+.cat{display:flex;align-items:center;justify-content:space-between;height:40px;padding:0 12px;border-radius:9px;
+  font-weight:550;font-size:13.5px;color:var(--ink-2);transition:all var(--fast)}
+.cat:hover{background:var(--hover);color:var(--ink)}
+.cat.on{background:var(--ink);color:var(--panel);font-weight:600}
+.cat .n{font-family:var(--mono);font-size:11.5px;opacity:.65}
+
+.menu{overflow-y:auto;padding:18px;background:var(--bg)}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.prod{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;
+  text-align:left;transition:all var(--fast);box-shadow:var(--sh-1)}
+.prod:hover{border-color:var(--line-2);box-shadow:var(--sh-2);transform:translateY(-1px)}
+.prod .pn{font-family:var(--display);font-weight:600;font-size:15.5px;letter-spacing:-.01em;line-height:1.15}
+.prod .pd{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.45;height:32px;overflow:hidden}
+.prod .pf{display:flex;align-items:center;justify-content:space-between;margin-top:11px}
+.prod .pp{font-family:var(--mono);font-weight:600;font-size:14.5px;color:var(--ink)}
+.prod .add{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;
+  font-size:18px;line-height:1;box-shadow:var(--sh-1);transition:all var(--fast)}
+.prod:hover .add{background:var(--brand-bright)}
+.tagrow{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:600;letter-spacing:.03em;padding:3px 7px;border-radius:6px;background:var(--panel-3);color:var(--ink-2)}
+.tag.veg{background:var(--basil-wash);color:var(--basil)} .tag.hot{background:var(--brand-wash);color:var(--brand)}
+.tag.fast{background:var(--info-wash);color:var(--info)}
+
+/* ============ TICKET ============ */
+.ticket{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabrail{display:flex;gap:6px;padding:12px 14px 0;overflow-x:auto}
+.ttab{flex:none;display:flex;flex-direction:column;gap:1px;padding:8px 13px;border-radius:9px 9px 0 0;border:1px solid var(--line);
+  border-bottom:0;background:var(--panel-2);min-width:78px;transition:all var(--fast)}
+.ttab.on{background:var(--panel);box-shadow:0 -2px 0 var(--brand) inset}
+.ttab .tt{font-weight:650;font-size:12.5px}
+.ttab .ts{font-size:10.5px;color:var(--ink-3)}
+.thead{display:flex;align-items:center;justify-content:space-between;padding:13px 16px 10px;border-bottom:1px solid var(--line)}
+.thead .th-t{font-family:var(--display);font-weight:600;font-size:15px}
+.thead .th-s{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.covers{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--pill);background:var(--panel-3);font-size:12px;font-weight:600}
+.lines{flex:1;overflow-y:auto;padding:6px 0}
+.course-h{display:flex;align-items:center;gap:9px;padding:11px 16px 6px}
+.course-h .c-n{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.course-h .fire{margin-left:auto;height:26px;padding:0 11px;border-radius:7px;background:var(--brand-wash);color:var(--brand-ink);font-weight:650;font-size:11.5px}
+:root[data-theme="dark"] .course-h .fire{color:var(--brand-bright)}
+.line{display:flex;align-items:center;gap:11px;padding:9px 16px}
+.line:hover{background:var(--hover)}
+.line .q{width:26px;height:26px;border-radius:7px;background:var(--panel-3);display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:12.5px;flex:none}
+.line .ln{flex:1;min-width:0}
+.line .ln b{font-weight:550;font-size:13.5px}
+.line .ln .mod{font-size:11px;color:var(--ink-3);font-style:italic}
+.line .lp{font-family:var(--mono);font-weight:600;font-size:13px}
+.offer{margin:8px 14px;padding:11px 13px;border-radius:var(--r-md);border:1px dashed var(--line-2);background:var(--panel-2);display:flex;align-items:center;gap:10px}
+.offer .oi{width:30px;height:30px;border-radius:8px;background:var(--amber-wash);color:var(--amber);display:grid;place-items:center;flex:none}
+.offer .ot{flex:1;font-size:12px;color:var(--ink-2)} .offer .ot b{color:var(--ink);font-weight:600}
+.offer .oa{height:28px;padding:0 11px;border-radius:7px;background:var(--ink);color:var(--panel);font-weight:600;font-size:11.5px}
+.foot{border-top:1px solid var(--line);padding:14px 16px;background:var(--panel-2)}
+.frow{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--ink-2);margin-bottom:6px}
+.frow.disc{color:var(--basil);font-weight:600}
+.ftot{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 13px}
+.ftot .tl{font-weight:600;font-size:13px} .ftot .tv{font-family:var(--mono);font-weight:700;font-size:26px;letter-spacing:-.01em}
+.charge{width:100%;height:50px;border-radius:var(--r-md);background:var(--brand);color:#fff;font-weight:700;font-size:15.5px;
+  display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--sh-2);transition:all var(--fast)}
+.charge:hover{background:var(--brand-bright);transform:translateY(-1px)}
+.kbd{display:flex;gap:5px;justify-content:center;margin-top:11px}
+.kbd span{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);background:var(--panel-3);padding:3px 7px;border-radius:5px;border:1px solid var(--line)}
+
+/* note ribbon */
+.ribbon{position:fixed;bottom:0;left:0;right:0;background:var(--ink);color:var(--panel);font-size:12px;padding:9px 18px;
+  display:flex;align-items:center;gap:14px;z-index:50}
+.ribbon b{color:#fff} .ribbon .k{font-family:var(--mono);color:var(--brand-bright)}
+.ribbon .x{margin-left:auto;opacity:.6;cursor:pointer}
+@media (max-width:1080px){.body{grid-template-columns:160px 1fr 320px}.switch button span{display:none}}
+</style>
+</head>
+<body>
+  <!-- ===== command bar ===== -->
+  <header class="bar">
+    <div class="brand">
+      <div class="mark">S</div>
+      <div><div class="nm">Sud Italia</div><div class="os">Core OS</div></div>
+    </div>
+    <nav class="switch">
+      <button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg><span>POS</span></button>
+      <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg><span>KDS</span></button>
+      <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span>Guest</span></button>
+      <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0 1 18 0Z"/><path d="M12 2v3M2 16h20M5 20h14"/></svg><span>Service</span></button>
+    </nav>
+    <div class="right">
+      <span class="chip"><span class="dot"></span>Kraków</span>
+      <span class="clock" id="clk">12:47</span>
+      <button class="iconbtn" id="tt" title="Toggle light / dark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <button class="iconbtn" title="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+    </div>
+  </header>
+
+  <!-- ===== context subbar ===== -->
+  <div class="sub">
+    <span class="eyebrow">Point of Sale · Till 1</span>
+    <div class="tabs"><button class="on">Order</button><button>Tender</button></div>
+    <div class="sp"></div>
+    <div class="steer"><span class="pulse"></span>🍕 Oven 86% — pushing pasta &amp; antipasti</div>
+    <span class="chip" style="height:32px">Dine-in</span>
+  </div>
+
+  <!-- ===== POS body ===== -->
+  <div class="body">
+    <!-- category rail -->
+    <aside class="rail">
+      <div class="lbl">Menu</div>
+      <button class="cat on">Pizza <span class="n">9</span></button>
+      <button class="cat">Pasta <span class="n">6</span></button>
+      <button class="cat">Antipasti <span class="n">5</span></button>
+      <button class="cat">Panini <span class="n">4</span></button>
+      <button class="cat">Dolci <span class="n">3</span></button>
+      <button class="cat">Bibite <span class="n">8</span></button>
+      <button class="cat">Caffè <span class="n">5</span></button>
+      <div class="lbl" style="margin-top:8px">Open checks</div>
+      <button class="cat">Table 7 <span class="n">·4</span></button>
+      <button class="cat">Table 12 <span class="n">·2</span></button>
+      <button class="cat">Takeaway <span class="n">·1</span></button>
+    </aside>
+
+    <!-- menu grid -->
+    <main class="menu">
+      <div class="menu-grid">
+        <button class="prod"><div class="pn">Margherita</div><div class="pd">San Marzano DOP, fior di latte, basilico, EVO</div><div class="tagrow"><span class="tag veg">veg</span><span class="tag fast">3 min</span></div><div class="pf"><span class="pp">27,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Diavola</div><div class="pd">Spianata piccante, fior di latte, San Marzano</div><div class="tagrow"><span class="tag hot">spicy</span></div><div class="pf"><span class="pp">32,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Quattro Formaggi</div><div class="pd">Fior di latte, gorgonzola, fontina, parmigiano</div><div class="tagrow"><span class="tag veg">veg</span></div><div class="pf"><span class="pp">33,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Prosciutto e Rucola</div><div class="pd">Crudo di Parma, rucola, scaglie di grana</div><div class="tagrow"></div><div class="pf"><span class="pp">35,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Ortolana</div><div class="pd">Grilled vegetables, fior di latte, San Marzano</div><div class="tagrow"><span class="tag veg">veg</span></div><div class="pf"><span class="pp">30,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Tartufata Reale</div><div class="pd">Black truffle, burrata, mushroom, fior di latte</div><div class="tagrow"><span class="tag">signature</span></div><div class="pf"><span class="pp">79,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Pizza del Pizzaiolo</div><div class="pd">Chef's daily — ask the line for today's build</div><div class="tagrow"><span class="tag">daily</span></div><div class="pf"><span class="pp">49,90</span><span class="add">+</span></div></button>
+        <button class="prod"><div class="pn">Slice · Margherita</div><div class="pd">Single street slice, reheated to order</div><div class="tagrow"><span class="tag fast">1 min</span></div><div class="pf"><span class="pp">11,90</span><span class="add">+</span></div></button>
+      </div>
+    </main>
+
+    <!-- ticket -->
+    <aside class="ticket">
+      <div class="tabrail">
+        <button class="ttab on"><span class="tt">Table 7</span><span class="ts">4 covers</span></button>
+        <button class="ttab"><span class="tt">Table 12</span><span class="ts">2 covers</span></button>
+        <button class="ttab"><span class="tt">+ New</span><span class="ts">open check</span></button>
+      </div>
+      <div class="thead">
+        <div><div class="th-t">Table 7</div><div class="th-s">Dine-in · opened 12:31 · Anna</div></div>
+        <span class="covers">👤 4</span>
+      </div>
+      <div class="lines">
+        <div class="course-h"><span class="c-n">Course 1 · Antipasti</span><button class="fire">✓ Fired 12:33</button></div>
+        <div class="line"><span class="q">2×</span><div class="ln"><b>Bruschetta Classica</b></div><span class="lp">31,80</span></div>
+        <div class="line"><span class="q">1×</span><div class="ln"><b>Burrata con Pomodorini</b><div class="mod">+ extra basil</div></div><span class="lp">21,95</span></div>
+        <div class="course-h"><span class="c-n">Course 2 · Mains</span><button class="fire" style="background:var(--ink);color:var(--panel)">⚡ Fire now</button></div>
+        <div class="line"><span class="q">2×</span><div class="ln"><b>Margherita</b></div><span class="lp">55,80</span></div>
+        <div class="line"><span class="q">1×</span><div class="ln"><b>Diavola</b></div><span class="lp">32,90</span></div>
+        <div class="line"><span class="q">1×</span><div class="ln"><b>Spaghetti Carbonara</b></div><span class="lp">28,95</span></div>
+        <div class="offer"><span class="oi">☕</span><div class="ot"><b>Add 4× Espresso + Tiramisu?</b> — completes the table, +24,60 zł</div><button class="oa">Add</button></div>
+      </div>
+      <div class="foot">
+        <div class="frow"><span>Subtotal</span><span class="mono">172,40</span></div>
+        <div class="frow disc"><span>Combo · Famiglia (−10%)</span><span class="mono">−17,24</span></div>
+        <div class="ftot"><span class="tl">Total</span><span class="tv">155,16</span></div>
+        <button class="charge">Charge 155,16 zł →</button>
+        <div class="kbd"><span>F2 fire</span><span>F4 split</span><span>⏎ charge</span><span>esc clear</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="ribbon">
+    <b>Core v2 — clean-room design language.</b>
+    Light-first + true dark (toggle <span class="k">☀</span> top-right). Grotesk display · flat materials · no glass — distinct from today's <code style="font-family:var(--mono)">/core</code>.
+    <span>POS shown; KDS · Guest · Service come next.</span>
+    <span class="x" onclick="this.parentElement.remove()">✕ dismiss</span>
+  </div>
+
+<script>
+  const root=document.documentElement, tt=document.getElementById('tt');
+  tt.onclick=()=>root.dataset.theme=root.dataset.theme==='light'?'dark':'light';
+  // surface switcher visual toggle (mockup only)
+  document.querySelectorAll('.switch button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.switch button').forEach(x=>x.classList.remove('on'));b.classList.add('on')});
+  document.querySelectorAll('.tabs button, .cat').forEach(b=>b.onclick=function(){const sib=this.parentElement.querySelectorAll(this.className.includes('cat')?'.cat':'button');});
+  // live clock
+  setInterval(()=>{const d=new Date();document.getElementById('clk').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')},1000);
+</script>
+</body>
+</html>

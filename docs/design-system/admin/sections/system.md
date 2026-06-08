@@ -455,7 +455,7 @@ The chain-wide currency configuration.
   USD / GBP toggleable for customer display); per-currency exchange
   rate source + refresh window; default fallback.
 - **Books currency is always PLN.** Customer-facing display can be
-  toggled; admin reports stay PLN (the `AdminCurrencyGuard` enforces
+  toggled; admin reports stay PLN (the `CurrencyGuard` enforces
   this in the admin layout).
 - **Future:** the toggle that hides currency UI from the storefront
   entirely (the "Layout" tab in Settings) reads from here.
