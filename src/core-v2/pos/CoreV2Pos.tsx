@@ -70,6 +70,7 @@ export function CoreV2Pos({
   // --- Tabs (open checks), server-backed -----------------------------------
   const [tabs, setTabs] = useState<PosTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const renameSeq = useRef(1);
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -85,6 +86,8 @@ export function CoreV2Pos({
       renameSeq.current = list.length + 1;
     } catch {
       /* non-fatal */
+    } finally {
+      setHydrated(true);
     }
   }, [pageLoc]);
 
@@ -213,6 +216,9 @@ export function CoreV2Pos({
     () => mutateActive((t) => ({ ...t, status: t.status === "parked" ? "open" : "parked" })),
     [mutateActive],
   );
+  const setName = useCallback((name: string) => mutateActive((t) => ({ ...t, name: name.slice(0, 40) })), [mutateActive]);
+  // Dine-in kitchen timing — course-by-course firing vs everything at once.
+  const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
   const recourse = useCallback(
     (menuItemId: string, course: PosCourse) =>
@@ -354,6 +360,43 @@ export function CoreV2Pos({
   const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
 
   const active = getActive();
+
+  // Tab-rail rollup: how many checks are in flight, ready to pay, parked, and
+  // the open value across all of them — the at-a-glance "state of the till".
+  const railSummary = useMemo(() => {
+    const ready = tabs.filter((t) => t.status === "pay").length;
+    const parked = tabs.filter((t) => t.status === "parked").length;
+    const openValue = tabs.reduce((s, t) => s + grandG(t), 0);
+    return { count: tabs.length, ready, parked, openValue };
+  }, [tabs, grandG]);
+
+  // Other open, non-parked dine-in checks already seated at a table — the
+  // double-seat guard for the table picker.
+  const tabsOnTable = useCallback(
+    (tableId: string, exceptId?: string) =>
+      tabs.filter((t) => t.id !== exceptId && t.status !== "parked" && t.channel === "dine-in" && t.tableId === tableId),
+    [tabs],
+  );
+  const handlePickTable = (tbl: FloorTable) => {
+    if (!active) return;
+    setTableOpen(false);
+    if (active.tableId === tbl.id) {
+      assignTable(null);
+      return;
+    }
+    assignTable(tbl.id);
+    const conflict = tabsOnTable(tbl.id, active.id).length > 0;
+    const over = tbl.seats < (active.covers ?? 2);
+    if (conflict || over) {
+      const bits: string[] = [];
+      if (conflict) bits.push("also on another open check");
+      if (over) bits.push(`seats ${tbl.seats} for a party of ${active.covers ?? 2}`);
+      toast(`Table ${tbl.number} — ${bits.join(" · ")}`, "danger");
+    } else {
+      toast(`Seated at table ${tbl.number}`, "success");
+    }
+  };
+
   const items = menu.filter(
     (m) => m.available && m.category === activeCat && (active?.channel === "delivery" || !m.deliveryOnly),
   );
@@ -518,6 +561,12 @@ export function CoreV2Pos({
 
         {/* ticket */}
         <aside className="cv-ticket">
+          {tabs.length > 0 && (
+            <div className="cv-tabrail-sum">
+              {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
+              <b className="mono">{fmtPLN(railSummary.openValue)}</b> open
+            </div>
+          )}
           <div className="cv-tabrail">
             {tabs.map((t) => (
               <button key={t.id} type="button" className={t.id === activeTabId ? "cv-ttab on" : "cv-ttab"} onClick={() => setActiveTabId(t.id)}>
@@ -533,22 +582,35 @@ export function CoreV2Pos({
 
           {!active ? (
             <div className="cv-ticket-empty">
-              <div>
-                <div className="ti">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-                    <path d="M5 3h14l-1.5 16.5a1 1 0 0 1-1 .9H7.5a1 1 0 0 1-1-.9L5 3Z" />
-                    <path d="M9 8h6" />
-                  </svg>
+              {!hydrated ? (
+                <div>
+                  <h3>Loading open checks…</h3>
                 </div>
-                <h3>No open check</h3>
-                <p>Start a check with + New, then tap menu items to build the ticket.</p>
-              </div>
+              ) : (
+                <div>
+                  <div className="ti">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+                      <path d="M5 3h14l-1.5 16.5a1 1 0 0 1-1 .9H7.5a1 1 0 0 1-1-.9L5 3Z" />
+                      <path d="M9 8h6" />
+                    </svg>
+                  </div>
+                  <h3>No open check</h3>
+                  <p>Start a check with + New, then tap menu items to build the ticket.</p>
+                </div>
+              )}
             </div>
           ) : (
             <>
               <div className="cv-thead">
-                <div>
-                  <div className="th-t">{active.name}</div>
+                <div className="th-id">
+                  <input
+                    className="cv-th-name"
+                    value={active.name}
+                    maxLength={40}
+                    onChange={(e) => setName(e.target.value)}
+                    aria-label="Check name"
+                    title="Rename this check"
+                  />
                   <div className="th-s">
                     {active.channel ? CHANNELS.find((c) => c.key === active.channel)?.label : "No channel"}
                     {active.orderId ? ` · #${active.orderId.slice(-5)}` : ""}
@@ -597,6 +659,17 @@ export function CoreV2Pos({
                   </button>
                 )}
               </div>
+
+              {/* dine-in kitchen timing — coursed vs all-together */}
+              {active.channel === "dine-in" && (
+                <div className="cv-timing">
+                  <span className="cv-timing-l">Kitchen timing</span>
+                  <div className="cv-seg">
+                    <button type="button" className={isCoursed ? "on" : ""} onClick={() => !isCoursed && toggleCoursed()}>Coursed</button>
+                    <button type="button" className={!isCoursed ? "on" : ""} onClick={() => isCoursed && toggleCoursed()}>All together</button>
+                  </div>
+                </div>
+              )}
 
               {/* lines */}
               <div className="cv-lines">
@@ -723,20 +796,27 @@ export function CoreV2Pos({
       <CoreV2Dialog open={tableOpen} onClose={() => setTableOpen(false)} title="Assign table">
         <div className="cv-tablegrid">
           {tables.length === 0 && <p className="cv-tender-note">No tables configured for this truck.</p>}
-          {tables.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={active?.tableId === t.id ? "cv-tablebtn on" : "cv-tablebtn"}
-              onClick={() => {
-                assignTable(active?.tableId === t.id ? null : t.id);
-                setTableOpen(false);
-              }}
-            >
-              <span className="tn">{t.number}</span>
-              <span className="tc">{t.seats} seats</span>
-            </button>
-          ))}
+          {tables.map((t) => {
+            const inUse = tabsOnTable(t.id, active?.id).length > 0;
+            const under = active ? t.seats < (active.covers ?? 2) : false;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                className={`cv-tablebtn${active?.tableId === t.id ? " on" : ""}${t.status === "out-of-service" ? " oos" : ""}`}
+                onClick={() => handlePickTable(t)}
+              >
+                <span className="tn">{t.number}</span>
+                <span className="tc">{t.seats} seats{t.zone ? ` · ${t.zone}` : ""}</span>
+                <span className="cv-tablebadges">
+                  {inUse && <span className="cv-tbadge warn">In use</span>}
+                  {under && <span className="cv-tbadge warn">Seats {t.seats} &lt; {active?.covers ?? 2}</span>}
+                  {t.status === "reserved" && <span className="cv-tbadge info">Reserved</span>}
+                  {t.status === "out-of-service" && <span className="cv-tbadge">Out of service</span>}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </CoreV2Dialog>
 

@@ -31,12 +31,18 @@ A three-column grid inside the shell body: **rail · menu · ticket**.
 Wired 1:1 to the same server engine as today's `/core/pos` — fresh `cv-`
 UI, identical contract.
 
+- **`.cv-tabrail-sum`** — rollup line above the tabs (`N tabs · R ready to
+  pay · P parked · VALUE open`).
 - **`.cv-tabrail` / `.cv-ttab`** — multi-tab open checks + `+ New`.
-- **`.cv-thead`** — check name · channel/order tag · `.cv-covers` stepper
-  (dine-in).
+- **`.cv-thead`** — `.cv-th-name` (the check name is an **inline editable
+  input** — click to rename, persisted via the same debounced `PUT`) ·
+  channel/order tag · `.cv-covers` stepper (dine-in).
 - **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
   delivery); `.cv-chan-aux` opens the table picker (dine-in) or address
   dialog (delivery).
+- **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
+  (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
+  renderer reads to course or flat-list the ticket.
 - **`.cv-lines`** — `.cv-line` rows with a `.cv-qstep` −/＋ counter and a
   mono line price. Dine-in coursed checks group lines into `.cv-course`
   blocks with a `.cv-course-h` header and a per-course **Fire** button;
@@ -71,8 +77,16 @@ POS uses Core v2's **own** kit (no `src/ui`): `CoreV2Dialog`
 `.cv2` theme root. Classes: `.cv-scrim` / `.cv-modal*` / `.cv-btn` /
 `.cv-toast*`.
 
+The **table picker** (`.cv-tablegrid` / `.cv-tablebtn`) shows each table's
+seats + zone and flags conflicts with `.cv-tbadge` chips — *In use*
+(another open dine-in check is on it), *Seats N < party* (undersized),
+*Reserved*, *Out of service* — and toasts a warning when you seat onto a
+conflicted/over-capacity table.
+
 ## At parity
 
 Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
-drag-to-recourse (drop a line on a course header), and the fullscreen
-kiosk are all wired — feature-for-feature with today's `/core/pos`.
+drag-to-recourse (drop a line on a course header), kitchen-timing toggle,
+inline check rename, double-seat / over-capacity guards, the tab-rail
+rollup, a hydration-aware empty state, and the fullscreen kiosk are all
+wired — feature-for-feature with today's `/core/pos`.
