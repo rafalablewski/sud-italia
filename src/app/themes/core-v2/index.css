@@ -504,6 +504,11 @@
 .cv2 .cv-consent button.on { background: var(--basil-wash); border-color: transparent; color: var(--basil); }
 .cv2 .cv-gdpr { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .cv2 .cv-gdpr:hover { color: var(--ink); }
+.cv2 .cv-gdpr.danger { margin-left: 10px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
+.cv2 .cv-gdpr.danger:hover { color: #fff; }
+/* secondary filter row (channel + recency) */
+.cv2 .cv-crm-filters2 { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.cv2 .cv-filter-l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .cv2 .cv-profile-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 9px; }
 .cv2 .cv-timeline { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .cv2 .cv-tl-row { background: var(--panel-2); padding: 9px 13px; display: grid; grid-template-columns: 80px 130px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
