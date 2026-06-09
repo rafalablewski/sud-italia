@@ -664,6 +664,13 @@ export default async function CapabilitiesPage() {
           summary: "Hosted-checkout session creation with idempotency key. Webhook reconciles to order on success.",
         },
         {
+          name: "QR in-restaurant ordering",
+          status: "live",
+          href: "/qr",
+          summary:
+            "Standalone table-ordering surface at /qr?location=<slug>&table=<n> (the qr.<domain> subdomain until DNS is wired). A seated guest scans the QR, browses the location's real menu (available, non-delivery-exclusive items), and pays. Checkout posts to /api/checkout with channel='qr' — createOrderFromCart runs in immediate dine-in mode: no time-slot booking, synthesises slot fields from now, and seats the order at the scanned table (matched by FloorTable.number, else the Floor Twin's best-fit pick). The order is a real dine-in Order (channel='qr', tableId set, partySize) that flows to KDS and the core-v2 POS QR queue. Pays through the enabled methods (Stripe session driven by /admin/payments) or demo mode. Verified end-to-end: a scan of table 12 creates a dine-in order seated at that table.",
+        },
+        {
           name: "Payment methods manager",
           status: "live",
           href: "/admin/payments",

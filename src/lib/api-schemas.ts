@@ -75,9 +75,15 @@ export const checkoutBodySchema = z
     customerName: z.string().min(1).max(120),
     customerPhone: phoneInput,
     fulfillmentType: z.enum(["takeout", "delivery", "dine-in"]),
-    slotId: stableId,
-    slotDate: isoDate,
-    slotTime: wallTime,
+    /** Booked slot — required for everything except channel "qr" (an
+     *  immediate, already-seated QR table order carries no slot). */
+    slotId: stableId.optional(),
+    slotDate: isoDate.optional(),
+    slotTime: wallTime.optional(),
+    /** "web" (default) or "qr" — in-restaurant QR table ordering. */
+    channel: z.enum(["web", "qr"]).optional(),
+    /** Table label the QR code was scanned at (channel "qr"). */
+    tableNumber: z.string().trim().max(40).optional(),
     deliveryAddress: z.string().max(500).optional(),
     /** Guests for a dine-in reservation. Required (≥1) when
      *  fulfillmentType is "dine-in"; ignored otherwise. */
@@ -118,6 +124,17 @@ export const checkoutBodySchema = z
     {
       message: "Party size is required when fulfillmentType is 'dine-in'",
       path: ["partySize"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.channel === "qr" ||
+      (typeof data.slotId === "string" &&
+        typeof data.slotDate === "string" &&
+        typeof data.slotTime === "string"),
+    {
+      message: "A time slot is required",
+      path: ["slotId"],
     },
   );
 

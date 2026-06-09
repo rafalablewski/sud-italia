@@ -542,8 +542,9 @@ export interface Order {
   /** Origin channel for the order. Defaults to "web" when absent so
    *  legacy rows still resolve. The comms dispatcher uses this to pick
    *  the right outbound transport — WhatsApp replies for whatsapp
-   *  orders, SMS otherwise. */
-  channel?: "web" | "whatsapp";
+   *  orders, SMS otherwise. "qr" = in-restaurant QR-code table ordering
+   *  (a walk-in dine-in order, no time-slot booking). */
+  channel?: "web" | "whatsapp" | "qr";
   /** Synthetic order produced by the KDS live-order simulator. These stream
    *  onto the Kitchen Display board (clearly marked as SIMULATION) so staff
    *  can train against a live rush, but getOrders() filters them out of every
