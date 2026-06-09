@@ -1066,7 +1066,7 @@ export type BusinessCostStatus = "active" | "archived";
 
 export interface BusinessCost {
   id: string;
-  /** Human label, e.g. "Truck rent Kraków", "Pizzaiolo Marco Rossi". */
+  /** Human label, e.g. "Restaurant rent Kraków", "Pizzaiolo Marco Rossi". */
   name: string;
   category: BusinessCostCategory;
   /** Free-form when not payroll; constrained payroll role otherwise. */
@@ -1121,8 +1121,8 @@ export interface SimulationSeasonality {
   /** Optional per-month overrides (length 12, Jan=0..Dec=11). When set,
    *  the per-month value REPLACES the quarterly value for that month —
    *  letting operators decouple Jan from Feb from Dec, which matters for
-   *  an outdoor truck where January is the cliff and December gets the
-   *  Christmas market boost. Undefined entries fall back to the quarter. */
+   *  an indoor restaurant where December books up with festive dinners
+   *  and Jan/Feb soften. Undefined entries fall back to the quarter. */
   monthlyOverrides?: (number | undefined)[];
 }
 
@@ -1262,7 +1262,7 @@ export interface SimulationWeather {
   holidayPeakMultiplier: number;
   /** Lunch volume multiplier in July + August (offices empty). */
   schoolHolidayLunchMultiplier: number;
-  /** Event days per month (street fairs, food-truck rallies). */
+  /** Event days per month (festivals, local events, big match days). */
   eventDaysPerMonth: number;
   /** Volume multiplier on event days. */
   eventDayMultiplier: number;
@@ -1273,7 +1273,7 @@ export interface SimulationScenario {
   ordersPerDay: number;
   /** Average order ticket size in grosze. */
   avgTicketGrosze: number;
-  /** How many days per month the truck is open. */
+  /** How many days per month the restaurant is open. */
   daysOpenPerMonth: number;
   /** Food cost ratio (0–1). 0.30 = ingredients eat 30% of revenue. */
   cogsPct: number;
@@ -1286,7 +1286,7 @@ export interface SimulationScenario {
   ingredientInflationPct?: number;
   /** Card processor blended fee as fraction of revenue (e.g. 0.019 Stripe). */
   paymentProcessorPct?: number;
-  /** Setup cost in grosze (truck buildout, deposits, fit-out) — payback calc. */
+  /** Setup cost in grosze (restaurant fit-out, kitchen build, deposits) — payback calc. */
   setupCostGrosze?: number;
   /** Seasonal multipliers on ordersPerDay across the four quarters. */
   seasonality?: SimulationSeasonality;
@@ -1325,8 +1325,9 @@ export interface SimulationScenario {
    *  19%. Applied to pre-tax net profit; if pre-tax is negative, no tax. */
   citPct?: number;
   /** Channel mix: share of revenue paid in cash (no processor fee).
-   *  Polish food-truck norm ~15-25%. Higher share is more cash-handling
-   *  cost (counted in fixed `other`) but lower processor blend. */
+   *  Polish sit-down-restaurant norm ~10-15% (dine-in pays card at the
+   *  table). Higher share is more cash-handling cost (counted in fixed
+   *  `other`) but lower processor blend. */
   cashSharePct?: number;
   /** Channel mix: share of revenue routed through Glovo. Glovo takes
    *  22-30% commission — wildly different from on-site card 1-2%. */
@@ -1344,7 +1345,7 @@ export interface SimulationScenario {
   /** Variable share of labor that flexes with order volume (0–1). Default
    *  0.40 — about 40% of labor (extra cook on a busy night, more dish-pit
    *  hours) tracks volume; 60% is fixed crew. Set to 0 for fully fixed
-   *  staffing (truck won't add headcount), 1 for fully variable. */
+   *  staffing (restaurant won't add headcount), 1 for fully variable. */
   laborVariablePct?: number;
   /** Reference daily-orders baseline that the current labor mix is sized
    *  for. The flex curve only kicks in when ordersPerDay diverges from
@@ -1353,12 +1354,12 @@ export interface SimulationScenario {
    *  ordersPerDay at scenario-creation time. */
   laborAnchorOrdersPerDay?: number;
   /** Monthly depreciation + amortisation in grosze — straight-line on
-   *  the setup cost (truck + oven + buildout) over its economic life.
-   *  Separated from "vehicle" fixed cost (which is pure maintenance) so
-   *  EBITDA can be computed honestly. Default = setupCost / 60 months
-   *  (5-year food-truck life). */
+   *  the setup cost (fit-out + kitchen + oven + dining-room build) over its
+   *  economic life. Separated from "maintenance" fixed cost so EBITDA can
+   *  be computed honestly. Default = setupCost / 90 months (~7.5-year
+   *  restaurant fit-out life; leasehold improvements outlast a truck). */
   depreciationMonthlyGrosze?: number;
-  /** Monthly interest expense in grosze — non-zero only when the truck
+  /** Monthly interest expense in grosze — non-zero only when the fit-out
    *  was financed. Default 0. Separated so EBIT = EBITDA − D&A and
    *  pre-tax profit = EBIT − interest, the standard institutional cut. */
   interestMonthlyGrosze?: number;
@@ -1388,12 +1389,12 @@ export interface SimulationScenario {
 }
 
 export interface SimulationFleetModel {
-  /** How many trucks the operator is modeling at steady state. 1 = the
-   *  default single-unit simulator, ≥2 activates the fleet panel. */
+  /** How many restaurants the operator is modeling at steady state. 1 =
+   *  the default single-unit simulator, ≥2 activates the fleet panel. */
   unitCount: number;
   /** Monthly HQ overhead in grosze (regional manager, accountant on
    *  retainer, ops director). At unitCount = 1 the entire amount lands
-   *  on the single truck; absorption curve makes it ratio drops as N
+   *  on the single restaurant; absorption curve makes it ratio drops as N
    *  grows. Default 0 — operator opts in when modeling >1 unit. */
   hqOverheadMonthlyGrosze: number;
   /** Supply discount on COGS once the fleet hits the trigger unit count.
@@ -1413,12 +1414,12 @@ export interface SimulationFleetModel {
   royaltyPct: number;
   marketingFundPct: number;
   /** DMA cannibalisation: each additional unit in the same trade area
-   *  takes this share from the prior truck's revenue. 0 means new units
-   *  open new markets cleanly; 0.15 = realistic urban Kraków cluster. */
+   *  takes this share from the prior restaurant's revenue. 0 means new
+   *  units open new markets cleanly; 0.15 = realistic urban Kraków cluster. */
   dmaOverlapPct: number;
   /** Build-out learning curve. Each new unit costs `(1 - learningPct)^
    *  (n-1)` × the original setup, capped at the floor. 0.05 default
-   *  (Y10 truck ~60% of Y1 cost). */
+   *  (Y10 unit ~60% of Y1 cost). */
   buildoutLearningPct: number;
   /** Floor for the build-out learning curve as a fraction of original
    *  setup. 0.55 default — past 50% you're not actually learning faster. */
@@ -1427,7 +1428,7 @@ export interface SimulationFleetModel {
 
 export interface SimulationKitchenCapacity {
   /** Pizzas the line can sustain per hour (single pizzaiolo + one oven).
-   *  60-80 is realistic for a Neapolitan truck; 90+ requires two ovens. */
+   *  60-80 is realistic for one Neapolitan line; 90+ requires two ovens. */
   pizzasPerHour: number;
   /** Hours the kitchen is producing per service day (excl. prep + close). */
   openHoursPerDay: number;
@@ -1440,8 +1441,8 @@ export interface SimulationKitchenCapacity {
   /** Oven cycle time in seconds (Neapolitan dough ~90s). */
   ovenCycleSeconds?: number;
   /** Realistic-to-theoretical efficiency (0-1). Pulls, sweeps, dough
-   *  rebuild, customer-facing time, drink pours, plate-up: real Neapolitan
-   *  truck peak sustains 20-35% of theoretical. Default 0.25. */
+   *  rebuild, customer-facing time, drink pours, plate-up: a real Neapolitan
+   *  kitchen's peak sustains 20-35% of theoretical. Default 0.25. */
   ovenEfficiencyPct?: number;
 }
 

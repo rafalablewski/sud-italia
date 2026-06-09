@@ -32,7 +32,7 @@ import type { ComplianceConfig } from "@/lib/store";
  *     JPK_ADDRESS) and fall back to placeholders so the file validates
  *     syntactically; correct values must be set before submission.
  *   - No reverse-charge / OSS / split-payment markers are emitted —
- *     food trucks don't use them.
+ *     a single-venue restaurant doesn't use them.
  */
 
 const DEFAULT_VAT_BPS = 800; // 8% — Polish prepared food, ustawa o VAT zał. 10 poz. 3.
