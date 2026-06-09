@@ -1313,8 +1313,12 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
+  /* `safe` so a viewport shorter than the column pins it to the TOP (header
+     stays visible) instead of centring and clipping the header off-screen.
+     The plain `center` is the fallback for engines without the safe keyword. */
   place-items: center;
-  padding: 32px;
+  place-items: safe center;
+  padding: 40px 32px;
   overflow: hidden;
   background: var(--av3-bg);
 }

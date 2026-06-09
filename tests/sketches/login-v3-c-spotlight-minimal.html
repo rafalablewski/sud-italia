@@ -29,7 +29,9 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font-smoothing:antialiased; }
 
-  .stage { position:relative; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:32px; overflow:hidden; }
+  /* `safe center` pins the column to the top (header visible) when the viewport
+     is shorter than the content, instead of centring + clipping the header. */
+  .stage { position:relative; min-height:100vh; min-height:100dvh; display:grid; place-items:center; place-items:safe center; padding:40px 32px; overflow:hidden; }
   /* overhead spotlight beam */
   .stage::before {
     content:""; position:absolute; left:50%; top:-30%; width:120vw; height:120vh; transform:translateX(-50%); pointer-events:none;
