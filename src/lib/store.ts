@@ -3279,6 +3279,70 @@ export async function updateIntegrationSettings(
   });
 }
 
+// --- QR in-restaurant ordering (admin/qr-ordering) --------------------
+//
+// Operator control over the /qr table-ordering surface: a master switch, a
+// per-location override, whether a scanned table number is mandatory, and
+// whether prices show on the QR menu. Read server-side by the /qr page so
+// toggling here gates ordering immediately — no deploy.
+
+export interface QrOrderingSettings {
+  /** Master switch for QR table ordering across the chain. */
+  enabled: boolean;
+  /** Per-location override (slug → on/off). Absent = follows `enabled`. */
+  locations: Record<string, boolean>;
+  /** Require a scanned table number (?table=) before a guest can order. */
+  requireTableNumber: boolean;
+  /** Show prices on the QR menu (some operators run price-on-request events). */
+  showPrices: boolean;
+}
+
+export const DEFAULT_QR_ORDERING_SETTINGS: QrOrderingSettings = {
+  enabled: true,
+  locations: {},
+  requireTableNumber: false,
+  showPrices: true,
+};
+
+const QR_ORDERING_KEY = "qr-ordering-settings.json";
+
+function mergeQrOrdering(saved: Partial<QrOrderingSettings>): QrOrderingSettings {
+  const d = DEFAULT_QR_ORDERING_SETTINGS;
+  return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : d.enabled,
+    locations: saved.locations && typeof saved.locations === "object" ? saved.locations : {},
+    requireTableNumber:
+      typeof saved.requireTableNumber === "boolean" ? saved.requireTableNumber : d.requireTableNumber,
+    showPrices: typeof saved.showPrices === "boolean" ? saved.showPrices : d.showPrices,
+  };
+}
+
+export async function getQrOrderingSettings(): Promise<QrOrderingSettings> {
+  return mergeQrOrdering(await readJSON<Partial<QrOrderingSettings>>(QR_ORDERING_KEY, {}));
+}
+
+export async function updateQrOrderingSettings(
+  updates: Partial<QrOrderingSettings>,
+): Promise<QrOrderingSettings> {
+  return withLock(QR_ORDERING_KEY, async () => {
+    const current = mergeQrOrdering(await readJSON<Partial<QrOrderingSettings>>(QR_ORDERING_KEY, {}));
+    const merged = mergeQrOrdering({
+      ...current,
+      ...updates,
+      locations: { ...current.locations, ...(updates.locations ?? {}) },
+    });
+    await writeJSON(QR_ORDERING_KEY, merged);
+    return merged;
+  });
+}
+
+/** Whether QR ordering is live for a given location (master AND per-location). */
+export function isQrOrderingEnabled(settings: QrOrderingSettings, locationSlug: string): boolean {
+  if (!settings.enabled) return false;
+  const loc = settings.locations[locationSlug];
+  return loc === undefined ? true : loc;
+}
+
 // --- Growth & Loyalty Settings ---
 
 /** Built-in widget renderers the customer-site LiveActivityBar knows about. */

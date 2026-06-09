@@ -1,8 +1,19 @@
 import { getActiveLocations } from "@/data/locations";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getPaymentSettings } from "@/lib/store";
+import { getPaymentSettings, getQrOrderingSettings, isQrOrderingEnabled } from "@/lib/store";
 import type { Metadata } from "next";
 import { QrOrder } from "@/components/qr/QrOrder";
+
+function QrClosed({ message }: { message: string }) {
+  return (
+    <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#1a1714", color: "#f4f5f0", fontFamily: "system-ui, sans-serif", padding: 24, textAlign: "center" }}>
+      <div>
+        <h1 style={{ fontSize: 22, margin: "0 0 8px" }}>Ottaviano</h1>
+        <p style={{ opacity: 0.7, maxWidth: 320 }}>{message}</p>
+      </div>
+    </main>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Order at your table | Ottaviano",
@@ -30,18 +41,24 @@ export default async function QrPage({ searchParams }: PageProps) {
     active.find((l) => l.slug === (sp.location ?? "").toLowerCase()) ?? active[0] ?? null;
 
   if (!location) {
-    return (
-      <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", background: "#1a1714", color: "#f4f5f0", fontFamily: "system-ui, sans-serif", padding: 24, textAlign: "center" }}>
-        <div>
-          <h1 style={{ fontSize: 22, margin: "0 0 8px" }}>Ottaviano</h1>
-          <p style={{ opacity: 0.7 }}>No location is open for ordering right now. Please ask a member of staff.</p>
-        </div>
-      </main>
-    );
+    return <QrClosed message="No location is open for ordering right now. Please ask a member of staff." />;
   }
 
   const table = (sp.table ?? "").trim().slice(0, 40);
-  const [menu, payment] = await Promise.all([getMenuWithOverrides(location.slug), getPaymentSettings()]);
+  const [menu, payment, qr] = await Promise.all([
+    getMenuWithOverrides(location.slug),
+    getPaymentSettings(),
+    getQrOrderingSettings(),
+  ]);
+
+  // Operator controls (admin/qr-ordering) — gate before rendering the menu.
+  if (!isQrOrderingEnabled(qr, location.slug)) {
+    return <QrClosed message="QR ordering isn't available right now. Please order with a member of staff." />;
+  }
+  if (qr.requireTableNumber && !table) {
+    return <QrClosed message="Please scan the QR code on your table to start an order." />;
+  }
+
   // Dine-in board: only available, non-delivery-exclusive items.
   const items = menu
     .filter((i) => i.available && !i.deliveryOnly)
@@ -58,6 +75,7 @@ export default async function QrPage({ searchParams }: PageProps) {
       items={items}
       paymentMethods={methods}
       bitcoinAddress={cryptoOn ? payment.bitcoinAddress || "" : ""}
+      showPrices={qr.showPrices}
     />
   );
 }

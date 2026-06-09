@@ -671,6 +671,13 @@ export default async function CapabilitiesPage() {
             "Standalone table-ordering surface at /qr?location=<slug>&table=<n> (the qr.<domain> subdomain until DNS is wired). A seated guest scans the QR, browses the location's real menu (available, non-delivery-exclusive items), and pays. Checkout posts to /api/checkout with channel='qr' — createOrderFromCart runs in immediate dine-in mode: no time-slot booking, synthesises slot fields from now, and seats the order at the scanned table (matched by FloorTable.number, else the Floor Twin's best-fit pick). The order is a real dine-in Order (channel='qr', tableId set, partySize) that flows to KDS and the core-v2 POS QR queue. Pays through the enabled methods (Stripe session driven by /admin/payments) or demo mode. Verified end-to-end: a scan of table 12 creates a dine-in order seated at that table.",
         },
         {
+          name: "QR ordering controls",
+          status: "live",
+          href: "/admin/qr-ordering",
+          summary:
+            "Operator control over the /qr table-ordering surface (qr-ordering-settings.json, GET/PUT /api/admin/qr-ordering, toggle = saved): a chain-wide master switch, per-location overrides (dark-launch / pause one restaurant), require-a-scanned-table-number, and show-prices. The /qr page reads isQrOrderingEnabled() + these options server-side per request, so a toggle gates ordering on the next scan — when off, guests see an 'order with a member of staff' message instead of the menu.",
+        },
+        {
           name: "POS QR-order queue (core-v2)",
           status: "live",
           href: "/core-v2/pos",

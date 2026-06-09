@@ -21,6 +21,8 @@ interface Props {
   items: QrItem[];
   paymentMethods: PaymentMethodId[];
   bitcoinAddress: string;
+  /** Operator toggle (admin/qr-ordering): show per-item prices on the menu. */
+  showPrices?: boolean;
 }
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "drinks", "desserts"];
@@ -33,7 +35,7 @@ const TAG_LABEL: Record<QrItem["tags"][number], string> = {
 
 const zl = (g: number) => `${(g / 100).toFixed(2)} zł`;
 
-export function QrOrder({ locationSlug, locationName, city, table, items, paymentMethods, bitcoinAddress }: Props) {
+export function QrOrder({ locationSlug, locationName, city, table, items, paymentMethods, bitcoinAddress, showPrices = true }: Props) {
   const [qty, setQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [name, setName] = useState("");
@@ -139,7 +141,7 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
                     {it.tags.map((t) => <span key={t} className="qr-tag">{TAG_LABEL[t]}</span>)}
                   </div>
                   {it.description && <div className="qr-item-desc">{it.description}</div>}
-                  <div className="qr-item-price">{zl(it.price)}</div>
+                  {showPrices && <div className="qr-item-price">{zl(it.price)}</div>}
                 </div>
                 <div className="qr-stepper">
                   {(qty[it.id] ?? 0) > 0 && (
@@ -181,7 +183,7 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
                     <span className="qr-q">{l.q}</span>
                     <button type="button" aria-label={`Add ${l.item.name}`} className="qr-add" onClick={() => inc(l.item.id, 1)}>+</button>
                   </div>
-                  <div className="qr-cl-price">{zl(l.item.price * l.q)}</div>
+                  {showPrices && <div className="qr-cl-price">{zl(l.item.price * l.q)}</div>}
                 </div>
               ))}
 
