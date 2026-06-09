@@ -54,6 +54,25 @@
 .cv2 .cv-iconbtn svg { width: 17px; height: 17px; }
 .cv2 .cv-clock { font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--ink); padding: 0 4px; }
 
+/* notifications bell + panel */
+.cv2 .cv-notif { position: relative; display: flex; }
+.cv2 .cv-notif-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: var(--brand); color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }
+.cv2 .cv-notif-scrim { position: fixed; inset: 0; z-index: 60; }
+.cv2 .cv-notif-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 61; width: 340px; max-height: 70vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2, 0 12px 32px rgba(0,0,0,.4)); overflow: hidden; }
+.cv2 .cv-notif-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.cv2 .cv-notif-all { appearance: none; background: none; border: none; color: var(--brand-bright, var(--brand)); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.cv2 .cv-notif-list { overflow-y: auto; }
+.cv2 .cv-notif-empty { padding: 28px 14px; text-align: center; color: var(--ink-3); font-size: 13px; }
+.cv2 .cv-notif-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; padding: 11px 14px; background: transparent; border: none; border-bottom: 1px solid var(--line); cursor: pointer; }
+.cv2 .cv-notif-item:hover { background: var(--hover); }
+.cv2 .cv-notif-item.unread { background: var(--brand-wash); }
+.cv2 .cv-notif-dot { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--info); }
+.cv2 .cv-notif-dot.brand { background: var(--brand); } .cv2 .cv-notif-dot.amber { background: var(--amber); } .cv2 .cv-notif-dot.basil { background: var(--basil); } .cv2 .cv-notif-dot.info { background: var(--info); }
+.cv2 .cv-notif-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cv2 .cv-notif-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.cv2 .cv-notif-msg { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+.cv2 .cv-notif-time { flex: 0 0 auto; font-size: 11px; color: var(--ink-3); }
+
 /* ---------- context subbar ---------- */
 .cv2 .cv-sub { display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 18px;
   background: var(--panel-2); border-bottom: 1px solid var(--line); flex: none; }

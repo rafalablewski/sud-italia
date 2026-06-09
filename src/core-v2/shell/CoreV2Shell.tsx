@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CoreV2Nav } from "./CoreV2Nav";
 import { CoreV2Clock, CoreV2ThemeToggle, CoreV2LocationChip } from "./CoreV2Chrome";
+import { CoreV2NotificationsBell } from "./CoreV2NotificationsBell";
 
 export interface CoreV2Tab {
   label: string;
@@ -47,6 +48,7 @@ export function CoreV2Shell({
         <div className="cv-right">
           <CoreV2LocationChip />
           <CoreV2Clock />
+          <CoreV2NotificationsBell />
           <CoreV2ThemeToggle />
         </div>
       </header>

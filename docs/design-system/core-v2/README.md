@@ -62,7 +62,7 @@ A deliberately **distinct** look from today's `/core` (dark warm-charcoal
 | **UI / mono** | Inter (UI) · JetBrains Mono (figures) | Neutral, dense, legible at a glance across a busy line. |
 | **Brand** | Neapolitan burgundy, refined (`--brand`) | Same brand DNA, cleaner. One brand red + disciplined semantics. |
 | **Material** | **Flat** — 1px hairlines, crisp small shadows | No glass, no gradient, no glow. Admin owns glass; Core stays crisp. |
-| **Layout** | Top **command bar** + segmented surface switcher + context **subbar** | One chrome shared by all four surfaces; no sidebar. |
+| **Layout** | Top **command bar** + segmented surface switcher + context **subbar** | One chrome shared by every surface; no sidebar. Command-bar right holds location · clock · **notifications bell** · theme. |
 | **Radius** | 7 / 10 / 14 / 20 px | Softer than Admin, tighter than a consumer app. |
 
 ### Tokens (mockup → `themes/core-v2/`)
