@@ -91,9 +91,10 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   guest, with a remove ✕), `.cv-frow` subtotal, `.cv-frow.disc` combo
   discount **and** a `.cv-frow.disc` manual-discount line, `.cv-ftot` total,
   then `.cv-foot-actions` (`.cv-send` Send to KDS + `.cv-charge`) and a
-  secondary `.cv-foot-actions2` row of `.cv-foot-aux` buttons (`data-on`
-  when active): **Park / hold** (the park toggle now lives by Charge, not
-  the top bar), **Add / Edit discount**, **Add membership / Member ✓**.
+  secondary `.cv-foot-actions2` grid of `.cv-foot-aux` buttons (`data-on`
+  when active): **Park / hold** full-width (`.cv-foot-aux-wide`; the park
+  toggle now lives by Charge, not the top bar) over a 2-column row of
+  **Add / Edit discount** | **Add membership / Member ✓**.
 - **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
   optional reason) and `MemberDialog` (phone + optional name) write
   `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal

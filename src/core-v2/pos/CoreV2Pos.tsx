@@ -1052,7 +1052,7 @@ export function CoreV2Pos({
                   </button>
                 </div>
                 <div className="cv-foot-actions2">
-                  <button type="button" className="cv-foot-aux" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
+                  <button type="button" className="cv-foot-aux cv-foot-aux-wide" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
                     {active.status === "parked" ? "▣ Held" : "▢ Park / hold"}
                   </button>
                   <button type="button" className="cv-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
