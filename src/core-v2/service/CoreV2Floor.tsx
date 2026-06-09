@@ -90,7 +90,7 @@ export function CoreV2Floor() {
         const ft = change.table;
         const existing = prev.tables.find((t) => t.id === ft.id);
         const row: TwinTableRow = existing
-          ? { ...existing, number: ft.number, seats: ft.seats, zone: ft.zone, status: ft.status }
+          ? { ...existing, number: ft.number, seats: ft.seats, zone: ft.zone, status: ft.status, occupied: ft.status === "seated" }
           : {
               id: ft.id,
               number: ft.number,
