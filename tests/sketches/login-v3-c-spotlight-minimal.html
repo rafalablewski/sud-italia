@@ -44,8 +44,9 @@
     -webkit-mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 85%); mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 85%);
   }
 
-  .col { position:relative; z-index:1; width:100%; max-width:340px; text-align:center; animation:rise .3s var(--ease) both; }
-  @keyframes rise { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:none;} }
+  .col { position:relative; z-index:1; width:100%; max-width:340px; text-align:center; }
+  /* NB: the live app plays a subtle fade-rise entrance (av3-auth-in). It's
+     omitted here so a static first-frame preview never shows a blank page. */
 
   /* platinum bracket frame */
   .frame { position:relative; padding:40px 30px 34px; }
