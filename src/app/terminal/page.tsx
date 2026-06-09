@@ -70,31 +70,26 @@ export default function TerminalLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm animate-scale-in">
-        <div className="glass-card rounded-3xl p-8">
-          <div className="flex justify-center mb-5">
-            <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-italia-red to-italia-red-dark flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-italia-red/25">
-              SI
-            </span>
+    <div className="av3-auth">
+      <div className="av3-auth-col">
+        <div className="av3-auth-frame">
+          <div className="av3-auth-lockup">
+            <span className="av3-auth-mark">SI</span>
+            <div>
+              <div className="av3-auth-wordmark">Ottaviano</div>
+              <div className="av3-auth-eyebrow">Staff terminal</div>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-center mb-1 font-heading gradient-text">
-            Ottaviano
-          </h1>
-          <p className="admin-text-dim text-center mb-6 text-sm">Staff terminal</p>
 
           {locations.length > 1 && (
-            <div className="flex gap-2 mb-5">
+            <div className="av3-auth-locs">
               {locations.map((l) => (
                 <button
                   key={l.slug}
                   type="button"
                   onClick={() => pickLocation(l.slug)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
-                    slug === l.slug
-                      ? "bg-italia-red text-white"
-                      : "glass-input admin-text-dim"
-                  }`}
+                  className={`av3-auth-loc${slug === l.slug ? " is-active" : ""}`}
+                  aria-pressed={slug === l.slug}
                 >
                   {l.city}
                 </button>
@@ -102,65 +97,46 @@ export default function TerminalLoginPage() {
             </div>
           )}
 
-          <div className="flex justify-center gap-2 mb-5" aria-label="PIN entry">
+          <div className="av3-auth-dots" aria-label="PIN entry">
             {Array.from({ length: Math.max(PIN_MIN_LENGTH, pin.length) }).map((_, i) => (
-              <span
-                key={i}
-                className={`w-3 h-3 rounded-full ${
-                  i < pin.length ? "bg-italia-red" : "bg-white/20"
-                }`}
-              />
+              <span key={i} className={`av3-auth-dot${i < pin.length ? " is-on" : ""}`} />
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="av3-auth-keypad">
             {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => press(d)}
-                className="py-4 glass-input rounded-xl text-xl font-semibold admin-text active:scale-95 transition"
-              >
+              <button key={d} type="button" onClick={() => press(d)} className="av3-auth-key">
                 {d}
               </button>
             ))}
             <button
               type="button"
               onClick={backspace}
-              className="py-4 glass-input rounded-xl flex items-center justify-center admin-text-dim active:scale-95 transition"
+              className="av3-auth-key av3-auth-key-del"
               aria-label="Delete"
             >
-              <Delete className="h-5 w-5" />
+              <Delete />
             </button>
-            <button
-              type="button"
-              onClick={() => press("0")}
-              className="py-4 glass-input rounded-xl text-xl font-semibold admin-text active:scale-95 transition"
-            >
+            <button type="button" onClick={() => press("0")} className="av3-auth-key">
               0
             </button>
             <button
               type="button"
               onClick={submit}
               disabled={loading || pin.length < PIN_MIN_LENGTH}
-              className="py-4 glass-btn text-white rounded-xl flex items-center justify-center disabled:opacity-50 active:scale-95 transition"
+              className="av3-auth-key av3-auth-key-go"
               aria-label="Log in"
             >
-              <LogIn className="h-5 w-5" />
+              <LogIn />
             </button>
           </div>
 
-          {error && (
-            <p className="text-sm text-[var(--danger)] text-center bg-[var(--danger-soft)] rounded-lg py-2 mt-5">
-              {error}
-            </p>
-          )}
+          {error && <p className="av3-auth-error">{error}</p>}
+        </div>
 
-          <p className="admin-text-dim text-center mt-6 text-xs">
-            Manager or owner?{" "}
-            <a href="/login" className="underline">
-              Sign in with email
-            </a>
+        <div className="av3-auth-foot">
+          <p>
+            Manager or owner? <a href="/login">Sign in with email</a>
           </p>
         </div>
       </div>
