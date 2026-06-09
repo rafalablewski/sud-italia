@@ -248,29 +248,39 @@
 .cv2 .cv-offer.combo .op { color: var(--brand-bright); text-transform: uppercase; font-size: 10px; letter-spacing: .05em; }
 
 /* ---------- ticket foot: totals + actions ---------- */
-.cv2 .cv-foot { border-top: 1px solid var(--line); padding: 14px 16px; background: var(--panel-2); flex: none; }
+.cv2 .cv-foot { border-top: 1px solid var(--line); padding: 15px 16px 16px; background: var(--panel-2); flex: none; }
 .cv2 .cv-frow { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; }
 .cv2 .cv-frow.disc { color: var(--basil); font-weight: 600; }
-.cv2 .cv-ftot { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0 13px; }
-.cv2 .cv-ftot .tl { font-weight: 600; font-size: 13px; } .cv2 .cv-ftot .tv { font-weight: 700; font-size: 24px; letter-spacing: -.01em; }
-.cv2 .cv-foot-actions { display: flex; gap: 9px; }
+.cv2 .cv-ftot { display: flex; justify-content: space-between; align-items: baseline; margin: 11px 0 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.cv2 .cv-ftot .tl { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); } .cv2 .cv-ftot .tv { font-weight: 800; font-size: 25px; letter-spacing: -.015em; color: var(--ink); }
+.cv2 .cv-foot-actions { display: flex; gap: 10px; }
+/* shared press / transition feel for the footer actions */
+.cv2 .cv-send, .cv2 .cv-charge, .cv2 .cv-foot-aux { transition: background var(--fast), border-color var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast), filter var(--fast); }
+.cv2 .cv-send:active:not(:disabled), .cv2 .cv-charge:active:not(:disabled), .cv2 .cv-foot-aux:active { transform: translateY(1px); }
 /* member chip + manual-discount line in the ticket footer */
 .cv2 .cv-frow.member { color: var(--ink); font-weight: 600; align-items: center; background: var(--brand-wash); margin: -2px -8px 8px; padding: 6px 8px; border-radius: 8px; }
 .cv2 .cv-frow-x { margin-left: 8px; width: 20px; height: 20px; border-radius: 6px; color: var(--ink-3); font-size: 12px; flex: none; }
 .cv2 .cv-frow-x:hover { background: var(--hover); color: var(--ink); }
 /* secondary actions — Park/hold full-width, then Add discount | Add
    membership in a 2-column row (each full-width of its column) */
-.cv2 .cv-foot-actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+.cv2 .cv-foot-actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .cv2 .cv-foot-aux-wide { grid-column: 1 / -1; }
-.cv2 .cv-foot-aux { height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 550; font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.cv2 .cv-foot-aux { height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-weight: 550; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .cv2 .cv-glyph { flex: none; }
-.cv2 .cv-foot-aux .cv-glyph { opacity: .8; }
-.cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); }
-.cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 40%, transparent); color: var(--brand-bright); font-weight: 600; }
-.cv2 .cv-send { flex: 1; height: 46px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
-.cv2 .cv-send:hover { background: var(--hover); } .cv2 .cv-send:disabled { opacity: .5; cursor: default; }
-.cv2 .cv-charge { flex: 2; height: 46px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; box-shadow: var(--sh-2); display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
-.cv2 .cv-charge:hover { background: var(--brand-bright); } .cv2 .cv-charge:disabled { opacity: .5; cursor: default; box-shadow: none; }
+.cv2 .cv-foot-aux .cv-glyph { opacity: .7; }
+.cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); border-color: var(--line-2); }
+.cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
+.cv2 .cv-foot-aux[data-on="true"] .cv-glyph { opacity: 1; }
+.cv2 .cv-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.cv2 .cv-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .cv2 .cv-send:disabled { opacity: .45; cursor: default; }
+.cv2 .cv-send .cv-glyph { opacity: .75; }
+.cv2 .cv-charge { flex: 2; height: 48px; border-radius: var(--r-md); border: none; color: #fff; font-weight: 700; font-size: 14.5px; letter-spacing: .005em; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(180deg, var(--brand-bright), var(--brand));
+  box-shadow: 0 8px 20px -7px color-mix(in oklab, var(--brand) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .16); }
+.cv2 .cv-charge:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 10px 24px -7px color-mix(in oklab, var(--brand) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .18); }
+.cv2 .cv-charge:active:not(:disabled) { filter: brightness(.97); }
+.cv2 .cv-charge:disabled { opacity: .5; cursor: default; box-shadow: none; filter: saturate(.6); }
+.cv2 .cv-charge .cv-glyph { opacity: .9; }
 
 /* pace-steering banner (sticky atop the menu) */
 .cv2 .cv-steer { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; padding: 11px 14px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); border-radius: var(--r-md); }
