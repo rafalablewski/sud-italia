@@ -271,10 +271,10 @@
 .cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); border-color: var(--line-2); }
 .cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
 .cv2 .cv-foot-aux[data-on="true"] .cv-glyph { opacity: 1; }
-.cv2 .cv-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.cv2 .cv-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .cv2 .cv-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .cv2 .cv-send:disabled { opacity: .45; cursor: default; }
 .cv2 .cv-send .cv-glyph { opacity: .75; }
-.cv2 .cv-charge { flex: 1; height: 48px; border-radius: var(--r-md); border: none; background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.cv2 .cv-charge { flex: 1; height: 48px; border-radius: var(--r-md); border: none; background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .cv2 .cv-charge:hover:not(:disabled) { background: var(--brand-bright); }
 .cv2 .cv-charge:disabled { opacity: .5; cursor: default; }
 .cv2 .cv-charge .cv-glyph { opacity: .9; }

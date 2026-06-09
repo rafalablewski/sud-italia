@@ -1059,7 +1059,7 @@ export function CoreV2Pos({
                     onClick={() => setTenderOpen(true)}
                   >
                     <Gly><rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" /></Gly>
-                    Charge {fmtPLN(grandG(active))} →
+                    Charge {fmtPLN(grandG(active))}
                   </button>
                 </div>
                 <div className="cv-foot-actions2">
