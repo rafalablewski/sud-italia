@@ -12194,97 +12194,174 @@ function sanitizeFiredCourses(input: unknown): PosTab["firedCourses"] {
   return seen.size ? (Array.from(seen) as PosTab["firedCourses"]) : undefined;
 }
 
-export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
-  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-  const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
-  return scoped.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+// --- POS open checks: per-location keys (m3 contention split) -------------
+//
+// Open checks used to live in a single global `pos-tabs.json` blob, so every
+// till at every truck serialized on one withLock — a Kraków keystroke-save
+// blocked a Warszawa one. We now key the blob per location
+// (`pos-tabs.<loc>.json`) and lock per location, so each truck's till has its
+// own lock and tills at different trucks never contend.
+//
+// Migration is lossless and self-draining: a handful of pre-split checks may
+// still sit in the legacy global blob. Reads union it in (per-location wins);
+// any write that touches a legacy check "promotes" it into its per-location key
+// and drops it from legacy. New checks never touch legacy, so the global blob
+// drains to empty within a service and is then never read or written again.
+
+const POS_TABS_LEGACY = "pos-tabs.json";
+const posTabsKey = (loc: string): string => `pos-tabs.${loc}.json`;
+
+// Per-instance latch: the legacy blob can only ever shrink (no code adds to it),
+// so once observed empty we stop reading it.
+let posTabsLegacyDrained = false;
+
+async function readLegacyPosTabs(): Promise<PosTab[]> {
+  if (posTabsLegacyDrained) return [];
+  const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
+  if (list.length === 0) posTabsLegacyDrained = true;
+  return list;
 }
 
-export async function getPosTab(id: string): Promise<PosTab | undefined> {
-  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-  return list.find((t) => t.id === id);
+/** Remove ids from the legacy blob (on promote / pre-split delete). Best-effort
+ *  under the legacy lock; a no-op once drained. Returns how many were removed. */
+async function dropFromLegacyPosTabs(ids: Set<string>): Promise<number> {
+  if (posTabsLegacyDrained || ids.size === 0) return 0;
+  return withLock(POS_TABS_LEGACY, async () => {
+    const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
+    const next = list.filter((t) => !ids.has(t.id));
+    const removed = list.length - next.length;
+    if (removed > 0) await writeJSON(POS_TABS_LEGACY, next);
+    if (next.length === 0) posTabsLegacyDrained = true;
+    return removed;
+  });
+}
+
+/** One location's open checks: the per-location key unioned with any
+ *  not-yet-promoted legacy checks for that location (per-location wins). */
+async function readPosTabsForLocation(loc: string): Promise<PosTab[]> {
+  const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+  const legacy = (await readLegacyPosTabs()).filter((t) => t.locationSlug === loc);
+  if (legacy.length === 0) return own;
+  const byId = new Map<string, PosTab>();
+  for (const t of legacy) byId.set(t.id, t);
+  for (const t of own) byId.set(t.id, t); // per-location wins over legacy
+  return [...byId.values()];
+}
+
+/** Pure merge of an upsert input over the stored record — the validation /
+ *  field-precedence rules, with no I/O so they can be unit-tested. `orderId` and
+ *  `firedCourses` are server-owned (preserved from `existing`, never taken from
+ *  the caller); editing the lines force-clears the `sentKds` flag. */
+export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, existing: PosTab | undefined): PosTab {
+  const id = input.id || newPosTabId();
+  const now = new Date().toISOString();
+  const channel = input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
+  const status =
+    input.status && POS_TAB_STATUSES.includes(input.status) ? input.status : existing?.status ?? "open";
+  const items = input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
+  // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
+  // can never outlive the order it was sent as, even if the client claims it.
+  const itemsChanged =
+    input.items !== undefined &&
+    (!existing ||
+      existing.items.length !== items.length ||
+      existing.items.some(
+        (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
+      ));
+  return {
+    id,
+    locationSlug: input.locationSlug,
+    name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
+    channel: input.channel === undefined ? existing?.channel ?? null : channel,
+    status,
+    items,
+    tableId: input.tableId !== undefined ? input.tableId || undefined : existing?.tableId,
+    covers:
+      input.covers !== undefined
+        ? Math.max(1, Math.min(50, Math.round(Number(input.covers) || 2)))
+        : existing?.covers,
+    address:
+      input.address !== undefined
+        ? (input.address || "").toString().trim().slice(0, 400) || undefined
+        : existing?.address,
+    sentKds: itemsChanged ? false : input.sentKds !== undefined ? !!input.sentKds : existing?.sentKds ?? false,
+    coursed:
+      input.coursed !== undefined ? !!input.coursed : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
+    firedCourses: existing?.firedCourses,
+    orderId: existing?.orderId,
+    createdAt: existing?.createdAt ?? input.createdAt ?? now,
+    updatedAt: now,
+  };
+}
+
+export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
+  if (locationSlug) {
+    const list = await readPosTabsForLocation(locationSlug);
+    return list
+      .filter((t) => t.locationSlug === locationSlug)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+  // "All": every active location's key, plus any legacy checks (any location).
+  const legacy = await readLegacyPosTabs();
+  const active = await getActiveLocationsAsync().catch(() => []);
+  const slugs = new Set<string>([...active.map((l) => l.slug), ...legacy.map((t) => t.locationSlug)]);
+  const own = (await Promise.all([...slugs].map((s) => readJSON<PosTab[]>(posTabsKey(s), [])))).flat();
+  const byId = new Map<string, PosTab>();
+  for (const t of legacy) byId.set(t.id, t);
+  for (const t of own) byId.set(t.id, t); // per-location wins
+  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Resolve which location's blob a bare tab id lives in. Callers that already
+ *  know the location pass it (the common path); this scan is the fallback. */
+async function locationForPosTab(id: string): Promise<string | undefined> {
+  const active = await getActiveLocationsAsync().catch(() => []);
+  for (const l of active) {
+    const own = await readJSON<PosTab[]>(posTabsKey(l.slug), []);
+    if (own.some((t) => t.id === id)) return l.slug;
+  }
+  return (await readLegacyPosTabs()).find((t) => t.id === id)?.locationSlug;
+}
+
+export async function getPosTab(id: string, locationSlug?: string): Promise<PosTab | undefined> {
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (!loc) return undefined;
+  return (await readPosTabsForLocation(loc)).find((t) => t.id === id);
 }
 
 /**
  * Upsert an open check. `orderId` is never taken from the caller — it is
  * minted server-side on send/charge and preserved from the stored record — so
- * a till can't reassign which Order a tab points at.
+ * a till can't reassign which Order a tab points at. Locked per location.
  */
 export async function savePosTab(
   input: Partial<PosTab> & { locationSlug: string },
 ): Promise<PosTab> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const id = input.id || newPosTabId();
-    const existing = list.find((t) => t.id === id);
-    const now = new Date().toISOString();
-    const channel =
-      input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
-    const status =
-      input.status && POS_TAB_STATUSES.includes(input.status)
-        ? input.status
-        : existing?.status ?? "open";
-    const items =
-      input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
-    // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
-    // can never outlive the order it was sent as, even if the client claims it.
-    const itemsChanged =
-      input.items !== undefined &&
-      (!existing ||
-        existing.items.length !== items.length ||
-        existing.items.some(
-          (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
-        ));
-    const tab: PosTab = {
-      id,
-      locationSlug: input.locationSlug,
-      name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
-      channel: input.channel === undefined ? existing?.channel ?? null : channel,
-      status,
-      items,
-      tableId:
-        input.tableId !== undefined
-          ? input.tableId || undefined
-          : existing?.tableId,
-      covers:
-        input.covers !== undefined
-          ? Math.max(1, Math.min(50, Math.round(Number(input.covers) || 2)))
-          : existing?.covers,
-      address:
-        input.address !== undefined
-          ? (input.address || "").toString().trim().slice(0, 400) || undefined
-          : existing?.address,
-      // Editing items forces sentKds false; otherwise honour the input / preserve.
-      sentKds: itemsChanged
-        ? false
-        : input.sentKds !== undefined
-          ? !!input.sentKds
-          : existing?.sentKds ?? false,
-      // Coursed is a user toggle (client may set it); default dine-in tabs to
-      // coursed, everything else to together when unset.
-      coursed:
-        input.coursed !== undefined
-          ? !!input.coursed
-          : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
-      // firedCourses is server-owned — set only by the order actuator via
-      // linkPosTabOrder, never taken from the client PUT.
-      firedCourses: existing?.firedCourses,
-      // orderId is server-owned — never overwritten by the caller.
-      orderId: existing?.orderId,
-      createdAt: existing?.createdAt ?? input.createdAt ?? now,
-      updatedAt: now,
-    };
-    const i = list.findIndex((t) => t.id === id);
-    if (i >= 0) list[i] = tab;
-    else list.push(tab);
-    await writeJSON("pos-tabs.json", list);
+  const loc = input.locationSlug;
+  return withLockScoped("pos-tabs", loc, async () => {
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    let existing = input.id ? own.find((t) => t.id === input.id) : undefined;
+    let fromLegacy = false;
+    if (!existing && input.id) {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === input.id && t.locationSlug === loc);
+      if (legacy) {
+        existing = legacy;
+        fromLegacy = true;
+      }
+    }
+    const tab = mergePosTab(input, existing);
+    const i = own.findIndex((t) => t.id === tab.id);
+    if (i >= 0) own[i] = tab;
+    else own.push(tab);
+    await writeJSON(posTabsKey(loc), own);
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([tab.id])); // promote out of legacy
     return tab;
   });
 }
 
 /** Patch server-owned fields (orderId, sentKds, status) after a send/charge.
  *  Separate from savePosTab so the order-linking path can't be spoofed by the
- *  client PUT route. */
+ *  client PUT route. Locked per location. */
 export async function linkPosTabOrder(
   id: string,
   patch: {
@@ -12293,12 +12370,23 @@ export async function linkPosTabOrder(
     status?: PosTabStatus;
     firedCourses?: PosTab["firedCourses"];
   },
+  locationSlug?: string,
 ): Promise<PosTab | null> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const i = list.findIndex((t) => t.id === id);
-    if (i < 0) return null;
-    const tab = list[i];
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (!loc) return null;
+  return withLockScoped("pos-tabs", loc, async () => {
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    const i = own.findIndex((t) => t.id === id);
+    let tab: PosTab;
+    let fromLegacy = false;
+    if (i >= 0) {
+      tab = own[i];
+    } else {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === id && t.locationSlug === loc);
+      if (!legacy) return null;
+      tab = legacy;
+      fromLegacy = true;
+    }
     if (patch.orderId !== undefined) tab.orderId = patch.orderId;
     if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
     if (patch.firedCourses !== undefined) {
@@ -12308,20 +12396,28 @@ export async function linkPosTabOrder(
       tab.status = patch.status;
     }
     tab.updatedAt = new Date().toISOString();
-    list[i] = tab;
-    await writeJSON("pos-tabs.json", list);
+    if (i >= 0) own[i] = tab;
+    else own.push(tab);
+    await writeJSON(posTabsKey(loc), own);
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([id])); // promote out of legacy
     return tab;
   });
 }
 
-export async function deletePosTab(id: string): Promise<boolean> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const filtered = list.filter((t) => t.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("pos-tabs.json", filtered);
-    return true;
-  });
+export async function deletePosTab(id: string, locationSlug?: string): Promise<boolean> {
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (loc) {
+    const removedOwn = await withLockScoped("pos-tabs", loc, async () => {
+      const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+      const next = own.filter((t) => t.id !== id);
+      if (next.length === own.length) return false;
+      await writeJSON(posTabsKey(loc), next);
+      return true;
+    });
+    if (removedOwn) return true;
+  }
+  // Not in any per-location key — maybe a pre-split check still in legacy.
+  return (await dropFromLegacyPosTabs(new Set([id]))) > 0;
 }
 
 const POS_TAB_ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

@@ -50,7 +50,7 @@ export const PUT = withAdmin(
     }
     // Scope the write to the caller's truck — a till can't hijack or overwrite
     // another location's open check by passing its id.
-    const existing = await getPosTab(body.id);
+    const existing = await getPosTab(body.id, locationSlug);
     if (existing && existing.locationSlug !== locationSlug) {
       return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     }
@@ -80,11 +80,11 @@ export const DELETE = withAdmin(
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     // Scope the delete to the caller's truck — a till can't drop another
     // location's open check by guessing its id.
-    const tab = await getPosTab(id);
+    const tab = await getPosTab(id, locationSlug ?? undefined);
     if (!tab || (locationSlug && tab.locationSlug !== locationSlug)) {
       return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     }
-    const ok = await deletePosTab(id);
+    const ok = await deletePosTab(id, tab.locationSlug);
     if (!ok) return NextResponse.json({ error: "Tab not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   },

@@ -143,7 +143,7 @@ export const POST = withAdmin(
       // Idempotent per click: a re-sent "Send" / "Fire course" with the same key
       // returns the original result instead of firing a second ticket.
       const result = await withIdempotency(idemKey(req), async () => {
-        const tab = await getPosTab(tabId);
+        const tab = await getPosTab(tabId, locationSlug);
         if (!tab || tab.locationSlug !== locationSlug) {
           throw new PosActionError(404, "Tab not found");
         }
@@ -170,12 +170,16 @@ export const POST = withAdmin(
           ? { fired: firedCourses, held: POS_COURSE_ORDER.filter((c) => coursesPresent.has(c) && !firedSet.has(c)) }
           : undefined;
         const order = await persistTabOrder(tab, locationSlug, shape, false, coursing);
-        await linkPosTabOrder(tab.id, {
-          orderId: order.id,
-          sentKds: true,
-          status: "pay",
-          firedCourses,
-        });
+        await linkPosTabOrder(
+          tab.id,
+          {
+            orderId: order.id,
+            sentKds: true,
+            status: "pay",
+            firedCourses,
+          },
+          locationSlug,
+        );
         return { order, orderId: order.id, firedCourses };
       });
       return NextResponse.json(result);
@@ -208,7 +212,7 @@ export const PATCH = withAdmin(
       // under the click's key, so a retry after a lost response returns that —
       // not a 404 (the tab is gone) and never a second payment.
       const result = await withIdempotency(idemKey(req), async () => {
-        const tab = await getPosTab(tabId);
+        const tab = await getPosTab(tabId, locationSlug);
         if (!tab || tab.locationSlug !== locationSlug) {
           throw new PosActionError(404, "Tab not found");
         }
@@ -217,7 +221,7 @@ export const PATCH = withAdmin(
         if ("error" in shape) throw new PosActionError(shape.status, shape.error);
 
         const order = await persistTabOrder(tab, locationSlug, shape, true);
-        await deletePosTab(tab.id);
+        await deletePosTab(tab.id, locationSlug);
         return { ok: true as const, orderId: order.id, totalAmount: order.totalAmount };
       });
       return NextResponse.json(result);

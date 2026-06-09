@@ -172,7 +172,7 @@ under a global lock" cost for the remaining entities.
 `slots` and `orders` already prove the pattern (`src/db/schema.ts`,
 dual-write + indexed reads). Migrate the hot blobs next, in this order:
 
-1. **POS tabs** (`pos_tabs.json`) — written on every keystroke-debounce; the
+1. **POS tabs** (`pos-tabs.json`) — written on every keystroke-debounce; the
    blob + global lock serialize concurrent tills. Highest contention.
 2. **Floor tables** (`tables.json`) — read on every floor-twin build (15 s) and
    POS table picker.
@@ -181,6 +181,32 @@ dual-write + indexed reads). Migrate the hot blobs next, in this order:
 Each migration: add the table + DDL (idempotent, like `SLOTS_DDL`), dual-write,
 switch reads to indexed queries, drop the blob. The `withLock` global serialize
 point disappears as the last blob leaves `kv_store`.
+
+#### 4.0a POS tabs — per-location lock split (shipped)
+
+> **Why not the full DB table first?** The DB path can't be exercised in the
+> CI / sandbox (no `DATABASE_URL` there — it's validated only in the real Neon
+> deploy), so shipping a normalized `pos_tabs` table that flips reads to indexed
+> queries would land partly-unverified. The contention itself, though, is fixable
+> *and fully verifiable* without a DB by splitting the blob key.
+
+The single `pos-tabs.json` blob meant **every till at every truck serialized on
+one `withLock`** — a Kraków keystroke-save blocked a Warszawa one. Open checks
+are now keyed **per location** (`pos-tabs.<loc>.json`) and locked per location
+(`withLockScoped("pos-tabs", loc)`), so different trucks never contend. For the
+two-location chain this removes essentially all practical cross-till
+serialization (`src/lib/store.ts`).
+
+Migration is **lossless and self-draining**: pre-split checks left in the legacy
+global blob are unioned into reads (per-location wins); any write that touches a
+legacy check promotes it into its per-location key and drops it from legacy; new
+checks never touch legacy, so the global blob drains to empty within a service
+and is then never read or written again (a per-instance latch skips it once
+empty). The upsert/validation rules were extracted to a pure `mergePosTab` and
+unit-tested (`pos-tabs.test.ts`), and the legacy promote/drain path was verified
+end-to-end against the FS store. The normalized `pos_tabs` **table** (with
+indexed reads, validated in the real DB) remains the eventual end-state — this
+split removes the contention now without that risk.
 
 ### 4.1 Connection / cold-start
 
@@ -198,6 +224,7 @@ instrumentation so "fast" is a defended number, not a vibe.
 | **1 — delta sync + order cache** | shipped | KDS/Orders re-render only changed tickets; stream payload is diffs; all three consumers green via the one hook |
 | **2a — idempotency + transient retry** | shipped | a re-sent charge replays its result (no double-charge / no 404); transient blips retry invisibly on send/charge/bump |
 | **2b — persisted offline queue** | shipped | POS send/charge made offline survive a reload and replay exactly once (FIFO per tab) on reconnect; a "syncing" pill shows pending writes |
+| **3 — POS tabs per-location lock split** | shipped | open checks keyed/locked per location (`pos-tabs.<loc>.json`); tills at different trucks no longer serialize on one lock; lossless self-draining legacy migration |
 | **3 — normalization** | after | last hot blob (`pos_tabs`) off `kv_store`; floor-twin read is fully indexed; global `withLock` retired |
 
 Phase 1 + 2 deliver the felt "instant like Square" + "never breaks like Toast".
