@@ -6,6 +6,7 @@ import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
+import { idempotentFetch } from "@/lib/idempotentFetch";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket, type KdsTicketItem } from "@/lib/kds-ticket";
 import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
@@ -166,16 +167,17 @@ export function CoreV2Kds() {
       // snaps it back to the old column for a few seconds.
       patchOrder(t.id, { status: next });
       try {
-        const res = await fetch(`/api/admin/orders`, {
+        // Retries transient failures so a WiFi blip doesn't strand the ticket;
+        // a status bump is naturally idempotent, so a retry is always safe.
+        const { res } = await idempotentFetch(`/api/admin/orders`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: t.id, status: next }),
+          body: { orderId: t.id, status: next },
         });
-        if (!res.ok) {
-          const d = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res || !res.ok) {
+          const d = res ? ((await res.json().catch(() => ({}))) as { error?: string }) : {};
           // Roll the optimistic move back to the real status on failure.
           patchOrder(t.id, { status: t.status });
-          toast(d.error || "Could not bump ticket", "danger");
+          toast(d.error || (res ? "Could not bump ticket" : "No connection — ticket not bumped"), "danger");
           return;
         }
         // A bump to "completed" can be recalled within 10 min (mis-tap insurance).

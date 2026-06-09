@@ -11977,6 +11977,43 @@ export async function setCacheJson<T>(key: string, data: T): Promise<void> {
   await writeJSON<T>(key, data);
 }
 
+// --- Idempotency keys (Phase 2: durable write queue) ----------------------
+// See docs/strategy/core-v2-local-first.md §3.2.
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Run `fn` at most once per idempotency `key`. A retry carrying the same key (a
+ * client that didn't hear back and re-sent, or a double-tap) returns the
+ * **stored result** of the first success instead of re-running the mutation —
+ * so a charge can't double-fire and a re-send can't duplicate a ticket across
+ * the lost-response window.
+ *
+ * Correctness details:
+ *  - serialized per key via the distributed lock, so two concurrent retries
+ *    can't both miss the cache and both run `fn`;
+ *  - only *successful* results are memoized — a thrown error leaves the key
+ *    unset so a genuine failure stays retryable;
+ *  - each result is its own kv row / file (`idemp:<key>`) with a 24 h read TTL,
+ *    which comfortably covers any retry burst;
+ *  - a falsy key (caller opted out) just runs `fn` directly.
+ */
+export async function withIdempotency<T>(
+  key: string | null | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!key) return fn();
+  const slot = `idemp:${key}`;
+  return withLockScoped("idemp", key, async () => {
+    const existing = await readJSON<{ at: number; result: T } | null>(slot, null);
+    if (existing && Date.now() - existing.at < IDEMPOTENCY_TTL_MS) {
+      return existing.result;
+    }
+    const result = await fn();
+    await writeJSON(slot, { at: Date.now(), result });
+    return result;
+  });
+}
+
 // --- Floor: tables + reservations (per location) -------------------------
 // JSON-backed list entities (mirrors the supplier / purchase-order pattern):
 // withLock + readJSON/writeJSON, upsert by id. Per-location filtering happens

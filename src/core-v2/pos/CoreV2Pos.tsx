@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
+import { idempotentFetch } from "@/lib/idempotentFetch";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
@@ -327,11 +328,11 @@ export function CoreV2Pos({
     if (!t.channel) return toast("Pick a channel first", "danger");
     setBusyTabId(t.id);
     try {
-      const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+      const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tabId: t.id }),
+        body: { tabId: t.id },
       });
+      if (!res) return toast("No connection — couldn't reach the kitchen", "danger");
       const data = (await res.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
       if (!res.ok) return toast(data.error || "Could not send to KDS", "danger");
       setTabs((prev) =>
@@ -350,11 +351,11 @@ export function CoreV2Pos({
       if (!t.channel) return toast("Pick a channel first", "danger");
       setBusyTabId(t.id);
       try {
-        const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+        const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tabId: t.id, courses: [course] }),
+          body: { tabId: t.id, courses: [course] },
         });
+        if (!res) return toast("No connection — couldn't fire the course", "danger");
         const data = (await res.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
         if (!res.ok) return toast(data.error || "Could not fire course", "danger");
         setTabs((prev) =>
@@ -376,11 +377,11 @@ export function CoreV2Pos({
       setBusyTabId(t.id);
       setTenderOpen(false);
       try {
-        const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+        const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tabId: t.id }),
+          body: { tabId: t.id },
         });
+        if (!res) return toast("No connection — payment not taken, try again", "danger");
         const data = (await res.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
         if (!res.ok) return toast(data.error || "Could not take payment", "danger");
         const amt = data.totalAmount ?? grandG(t);

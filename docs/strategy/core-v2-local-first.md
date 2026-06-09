@@ -99,7 +99,23 @@ re-serializing and re-rendering 60 tickets every time one of them advances.
 
 **Goal:** a WiFi blip mid-service never loses a ticket or double-charges.
 
-### 3.1 Client write queue
+### 3.0 Status
+
+- **2a — idempotency + transient retry — DONE.** Server `withIdempotency(key, fn)`
+  (`src/lib/store.ts`): runs a mutation at most once per `Idempotency-Key`,
+  serialized per key by the distributed lock, memoizing only successes (a 24 h
+  read TTL covers any retry burst). Applied to the POS money routes
+  (`POST` send / `PATCH` charge in `pos/orders/route.ts`) — a re-sent charge
+  after a lost response now replays `{ ok, orderId, totalAmount }` instead of
+  404-ing on the deleted tab, and never takes a second payment. Client
+  `idempotentFetch` (`src/lib/idempotentFetch.ts`) attaches the key and retries
+  transient failures (dropped connection / 5xx) with backoff; wired into POS
+  send / fire / charge and the KDS bump. Covered by `idempotency.test.ts`.
+- **2b — persisted offline queue — NEXT** (described below). 2a makes an
+  *in-session* retry safe; 2b is what lets a write survive a **reload / app
+  restart** while offline and reconcile when connectivity returns.
+
+### 3.1 Client write queue (2b)
 
 A small persisted queue (Zustand + `localStorage`, mirroring `src/store/cart.ts`):
 
@@ -162,8 +178,9 @@ instrumentation so "fast" is a defended number, not a vibe.
 
 | Phase | Lands | Exit criteria |
 |---|---|---|
-| **1 — delta sync + order cache** | now (this PR) | KDS/Orders re-render only changed tickets; stream payload is diffs; all three consumers green via the one hook |
-| **2 — durable write queue** | next | POS send/charge survive a reload + offline blip with no loss / no double-charge (idempotency key proven) |
+| **1 — delta sync + order cache** | shipped | KDS/Orders re-render only changed tickets; stream payload is diffs; all three consumers green via the one hook |
+| **2a — idempotency + transient retry** | shipped | a re-sent charge replays its result (no double-charge / no 404); transient blips retry invisibly on send/charge/bump |
+| **2b — persisted offline queue** | next | a write queued offline survives a reload and drains + reconciles on reconnect |
 | **3 — normalization** | after | last hot blob (`pos_tabs`) off `kv_store`; floor-twin read is fully indexed; global `withLock` retired |
 
 Phase 1 + 2 deliver the felt "instant like Square" + "never breaks like Toast".

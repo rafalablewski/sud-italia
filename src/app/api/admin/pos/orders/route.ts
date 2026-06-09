@@ -8,6 +8,7 @@ import {
   linkPosTabOrder,
   deletePosTab,
   getUpsellSettings,
+  withIdempotency,
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveComboDeals } from "@/lib/upsell";
@@ -44,6 +45,22 @@ const ACTIVE = new Set(["confirmed", "preparing", "ready"]);
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
+}
+
+/** A handled, status-bearing failure inside an idempotent block. Thrown (not
+ *  returned) so `withIdempotency` doesn't memoize it — a genuine failure stays
+ *  retryable while only successful results are cached. */
+class PosActionError extends Error {
+  constructor(public readonly httpStatus: number, message: string) {
+    super(message);
+  }
+}
+
+/** The standard idempotency header (`Idempotency-Key`). A POS click sends a
+ *  fresh key; a network retry of that same click reuses it, so the mutation
+ *  runs at most once. */
+function idemKey(req: Request): string | null {
+  return req.headers.get("idempotency-key");
 }
 
 /** Resolve a tab's lines against the real menu and price them server-side,
@@ -122,42 +139,50 @@ export const POST = withAdmin(
     const tabId = body && typeof body.tabId === "string" ? body.tabId : "";
     if (!tabId) return NextResponse.json({ error: "tabId required" }, { status: 400 });
 
-    const tab = await getPosTab(tabId);
-    if (!tab || tab.locationSlug !== locationSlug) {
-      return NextResponse.json({ error: "Tab not found" }, { status: 404 });
+    try {
+      // Idempotent per click: a re-sent "Send" / "Fire course" with the same key
+      // returns the original result instead of firing a second ticket.
+      const result = await withIdempotency(idemKey(req), async () => {
+        const tab = await getPosTab(tabId);
+        if (!tab || tab.locationSlug !== locationSlug) {
+          throw new PosActionError(404, "Tab not found");
+        }
+
+        // Coursing: the body may name the courses to fire now. We accumulate them
+        // onto whatever's already been fired and rebuild the order from the union,
+        // so each "Fire course" grows the kitchen ticket and held courses stay off
+        // the line. A bare send (no courses, or a non-coursed tab) fires everything.
+        const coursesPresent = new Set<PosCourse>(tab.items.map((l) => courseOf(l)));
+        const requested = parseCourses(body?.courses);
+        const fireAll = !tab.coursed || body?.fireAll === true || requested.length === 0;
+        const firedSet = fireAll
+          ? coursesPresent
+          : new Set<PosCourse>([...(tab.firedCourses ?? []), ...requested].filter((c) => coursesPresent.has(c)));
+
+        const linesToFire = tab.items.filter((l) => firedSet.has(courseOf(l)));
+        const shape = await buildOrderShape(tab, locationSlug, linesToFire);
+        if ("error" in shape) throw new PosActionError(shape.status, shape.error);
+
+        const firedCourses = POS_COURSE_ORDER.filter((c) => firedSet.has(c));
+        // Coursing metadata for the KDS: which courses are away vs still held.
+        // Only meaningful for a coursed check; the kitchen hint shows held courses.
+        const coursing = tab.coursed
+          ? { fired: firedCourses, held: POS_COURSE_ORDER.filter((c) => coursesPresent.has(c) && !firedSet.has(c)) }
+          : undefined;
+        const order = await persistTabOrder(tab, locationSlug, shape, false, coursing);
+        await linkPosTabOrder(tab.id, {
+          orderId: order.id,
+          sentKds: true,
+          status: "pay",
+          firedCourses,
+        });
+        return { order, orderId: order.id, firedCourses };
+      });
+      return NextResponse.json(result);
+    } catch (e) {
+      if (e instanceof PosActionError) return NextResponse.json({ error: e.message }, { status: e.httpStatus });
+      throw e;
     }
-
-    // Coursing: the body may name the courses to fire now. We accumulate them
-    // onto whatever's already been fired and rebuild the order from the union,
-    // so each "Fire course" grows the kitchen ticket and held courses stay off
-    // the line. A bare send (no courses, or a non-coursed tab) fires everything.
-    const coursesPresent = new Set<PosCourse>(tab.items.map((l) => courseOf(l)));
-    const requested = parseCourses(body?.courses);
-    const fireAll = !tab.coursed || body?.fireAll === true || requested.length === 0;
-    const firedSet = fireAll
-      ? coursesPresent
-      : new Set<PosCourse>([...(tab.firedCourses ?? []), ...requested].filter((c) => coursesPresent.has(c)));
-
-    const linesToFire = tab.items.filter((l) => firedSet.has(courseOf(l)));
-    const shape = await buildOrderShape(tab, locationSlug, linesToFire);
-    if ("error" in shape) {
-      return NextResponse.json({ error: shape.error }, { status: shape.status });
-    }
-
-    const firedCourses = POS_COURSE_ORDER.filter((c) => firedSet.has(c));
-    // Coursing metadata for the KDS: which courses are away vs still held.
-    // Only meaningful for a coursed check; the kitchen hint shows held courses.
-    const coursing = tab.coursed
-      ? { fired: firedCourses, held: POS_COURSE_ORDER.filter((c) => coursesPresent.has(c) && !firedSet.has(c)) }
-      : undefined;
-    const order = await persistTabOrder(tab, locationSlug, shape, false, coursing);
-    await linkPosTabOrder(tab.id, {
-      orderId: order.id,
-      sentKds: true,
-      status: "pay",
-      firedCourses,
-    });
-    return NextResponse.json({ order, orderId: order.id, firedCourses });
   },
 );
 
@@ -178,19 +203,28 @@ export const PATCH = withAdmin(
     const tabId = body && typeof body.tabId === "string" ? body.tabId : "";
     if (!tabId) return NextResponse.json({ error: "tabId required" }, { status: 400 });
 
-    const tab = await getPosTab(tabId);
-    if (!tab || tab.locationSlug !== locationSlug) {
-      return NextResponse.json({ error: "Tab not found" }, { status: 404 });
-    }
+    try {
+      // Idempotent charge: the first success memoizes { ok, orderId, totalAmount }
+      // under the click's key, so a retry after a lost response returns that —
+      // not a 404 (the tab is gone) and never a second payment.
+      const result = await withIdempotency(idemKey(req), async () => {
+        const tab = await getPosTab(tabId);
+        if (!tab || tab.locationSlug !== locationSlug) {
+          throw new PosActionError(404, "Tab not found");
+        }
 
-    const shape = await buildOrderShape(tab, locationSlug);
-    if ("error" in shape) {
-      return NextResponse.json({ error: shape.error }, { status: shape.status });
-    }
+        const shape = await buildOrderShape(tab, locationSlug);
+        if ("error" in shape) throw new PosActionError(shape.status, shape.error);
 
-    const order = await persistTabOrder(tab, locationSlug, shape, true);
-    await deletePosTab(tab.id);
-    return NextResponse.json({ ok: true, orderId: order.id, totalAmount: order.totalAmount });
+        const order = await persistTabOrder(tab, locationSlug, shape, true);
+        await deletePosTab(tab.id);
+        return { ok: true as const, orderId: order.id, totalAmount: order.totalAmount };
+      });
+      return NextResponse.json(result);
+    } catch (e) {
+      if (e instanceof PosActionError) return NextResponse.json({ error: e.message }, { status: e.httpStatus });
+      throw e;
+    }
   },
 );
 
