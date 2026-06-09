@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en" data-admin-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login · Version B — Split Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  Login · Version B — "Split Console".
+  Two panels: a left brand panel (deep canvas, ambient brand aurora, wordmark + a
+  live "system status" ticker for a dashboard/cockpit feel) and a right sign-in
+  column. More expansive than A; reads like the front door to an ops cockpit.
+  On a phone the brand panel collapses to a slim header. Tokens mirror av3.
+  Static mockup — figures illustrative.
+-->
+<style>
+  :root {
+    --bg:#0a0a0c; --s1:#141417; --s2:#1b1b1f; --s3:#24242a;
+    --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.13);
+    --fg:#f4f3f1; --muted:#a6a099; --subtle:#8a837b;
+    --brand:#c2384f; --platinum:#cbb48a; --ok:#34b27b;
+    --r-sm:5px; --r-md:8px; --r-lg:11px; --r-pill:999px;
+    --ui:"Inter",system-ui,sans-serif; --display:"Fraunces",Georgia,serif; --mono:"JetBrains Mono",monospace;
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font-smoothing:antialiased; }
+
+  .shell { min-height:100vh; display:grid; grid-template-columns:1.05fr .95fr; }
+
+  /* ---- Left brand panel ---- */
+  .brand { position:relative; overflow:hidden; padding:48px; display:flex; flex-direction:column; justify-content:space-between; border-right:1px solid var(--line); }
+  .brand::before { /* aurora */
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(60% 50% at 25% 18%,color-mix(in oklab,var(--brand) 34%,transparent),transparent 70%),
+      radial-gradient(55% 45% at 80% 75%,color-mix(in oklab,var(--platinum) 16%,transparent),transparent 72%);
+    animation:drift 16s var(--ease) infinite alternate;
+  }
+  .brand::after { /* grid */
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:52px 52px;
+    -webkit-mask-image:linear-gradient(160deg,#000,transparent 75%); mask-image:linear-gradient(160deg,#000,transparent 75%);
+  }
+  @keyframes drift { to { transform:translate3d(2%,-2%,0) scale(1.05); } }
+  @media (prefers-reduced-motion:reduce){ .brand::before{ animation:none; } }
+  .brand-inner { position:relative; z-index:1; }
+
+  .lockup { display:flex; align-items:center; gap:12px; }
+  .mark { display:grid; place-items:center; width:40px; height:40px; border-radius:var(--r-md); background:var(--brand); color:#fff; font-family:var(--display); font-size:16px; font-weight:600;
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--platinum) 50%,transparent); }
+  .wordmark { font-family:var(--display); font-size:18px; font-weight:600; }
+  .eyebrow { font-size:9.5px; text-transform:uppercase; letter-spacing:.16em; color:var(--subtle); }
+
+  .pitch { position:relative; z-index:1; max-width:420px; }
+  .pitch h1 { font-family:var(--display); font-size:40px; line-height:1.05; font-weight:600; letter-spacing:-.015em; margin:0 0 14px; }
+  .pitch p { color:var(--muted); font-size:14px; line-height:1.6; margin:0; }
+
+  .status { position:relative; z-index:1; display:flex; flex-direction:column; gap:9px; }
+  .stat { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px color-mix(in oklab,var(--ok) 70%,transparent); }
+  .stat b { font-family:var(--mono); font-weight:500; color:var(--fg); font-variant-numeric:tabular-nums; margin-left:auto; }
+
+  /* ---- Right sign-in column ---- */
+  .signin { display:grid; place-items:center; padding:40px 24px; }
+  .col { width:100%; max-width:340px; }
+  .col-head { margin-bottom:22px; }
+  .col-head h2 { font-family:var(--display); font-size:22px; font-weight:600; margin:0; }
+  .col-head .sub { margin-top:4px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--subtle); }
+
+  form { display:flex; flex-direction:column; gap:14px; }
+  .field { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--subtle); }
+  .input { width:100%; height:40px; padding:0 12px; border:1px solid var(--line-strong); border-radius:var(--r-sm); background:var(--s1); color:var(--fg); font:inherit; font-size:13px; transition:border-color .11s var(--ease),box-shadow .11s var(--ease); }
+  .input::placeholder { color:var(--subtle); }
+  .input:hover { border-color:var(--muted); }
+  .input:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px color-mix(in oklab,var(--brand) 18%,var(--s1)); }
+
+  .btn { width:100%; height:42px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--line-strong); border-radius:var(--r-sm); background:var(--s2); color:var(--fg); font:inherit; font-size:13px; font-weight:500; cursor:pointer; transition:background .11s var(--ease); }
+  .btn:hover { background:var(--s3); }
+  .btn-primary { background:var(--brand); border-color:transparent; color:#fff; }
+  .btn-primary:hover { background:color-mix(in oklab,var(--brand) 88%,#fff); }
+  .btn svg { width:14px; height:14px; }
+  .or { display:flex; align-items:center; gap:12px; font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--subtle); }
+  .or::before,.or::after { content:""; flex:1; height:1px; background:var(--line); }
+  .foot { margin-top:22px; text-align:center; font-size:11.5px; color:var(--muted); }
+  .foot a { color:var(--fg); text-decoration:none; border-bottom:1px solid var(--line-strong); }
+
+  @media (max-width:860px){
+    .shell { grid-template-columns:1fr; }
+    .brand { padding:28px 24px; flex-direction:row; align-items:center; justify-content:space-between; border-right:none; border-bottom:1px solid var(--line); }
+    .pitch,.status { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <!-- Brand panel -->
+    <aside class="brand">
+      <div class="brand-inner lockup">
+        <span class="mark">SI</span>
+        <div>
+          <div class="wordmark">Ottaviano</div>
+          <div class="eyebrow">Operations cockpit</div>
+        </div>
+      </div>
+      <div class="pitch">
+        <h1>Run both trucks from one console.</h1>
+        <p>Orders, kitchen, inventory, loyalty and finance — Kraków and Warszawa, live, in one place. Sign in to take the wheel.</p>
+      </div>
+      <div class="status">
+        <div class="stat"><span class="dot"></span> Kraków · service online <b>42 covers</b></div>
+        <div class="stat"><span class="dot"></span> Warszawa · service online <b>37 covers</b></div>
+        <div class="stat"><span class="dot" style="background:var(--platinum);box-shadow:0 0 8px color-mix(in oklab,var(--platinum) 70%,transparent)"></span> Systems nominal <b>99.98%</b></div>
+      </div>
+    </aside>
+
+    <!-- Sign-in -->
+    <main class="signin">
+      <div class="col">
+        <div class="col-head">
+          <h2>Sign in</h2>
+          <div class="sub">Owner console</div>
+        </div>
+        <form onsubmit="return false">
+          <div class="field">
+            <label class="label" for="b-email">Email (optional)</label>
+            <input id="b-email" class="input" type="email" placeholder="Leave blank for shared owner session" />
+          </div>
+          <div class="field">
+            <label class="label" for="b-pass">Password</label>
+            <input id="b-pass" class="input" type="password" placeholder="••••••••" autofocus />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign in
+          </button>
+          <div class="or">or</div>
+          <button class="btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            Passkey / security key
+          </button>
+        </form>
+        <div class="foot"><p>Manager or staff? <a href="#">Sign in here</a></p></div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -17,7 +17,8 @@ RETIRED.** Owner, managers and franchisees all run on v3 (`/admin`→`/admin`;
 (`src/components/admin/`), the legacy `Admin*.tsx`, and the `src/app/admin/*`
 routes (except `/admin/login`) are **deleted**. The capabilities ledger moved to
 `/capabilities`. The shared base stylesheet (`src/app/themes/base/index.css`) is
-**kept** — it backs login + the staff portals + Core, so it outlived v2.
+**kept** — it backs the staff/kitchen/terminal portals + Core, so it outlived
+v2 (the login door itself moved to av3 — see README → Auth door).
 
 ## Mobile UI 📱 — foundation shipped, refinements remain
 

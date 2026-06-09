@@ -1298,3 +1298,186 @@
 .av3-scn-line:first-of-type { border-top: none; margin-top: 8px; }
 .av3-scn-line .v { font-family: var(--av3-mono); color: var(--av3-muted); }
 @media (max-width: 720px) { .av3-scn { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   23. Auth — the login door (/login + /admin/login)
+   The one av3 surface that renders OUTSIDE the shell. "Spotlight minimal": a
+   single column centred on both axes on the bare canvas, lit by one overhead
+   brand spotlight + a slow scanline, framed by a thin platinum corner bracket.
+   No card chrome; underline-only fields. The header is the brand lockup (mark +
+   wordmark + portal eyebrow). av3 tokens only — no new hue, no raw hex.
+   See docs/design-system/admin/v3/README.md → "Auth door".
+   ========================================================================== */
+.av3-auth {
+  position: relative;
+  /* flex-fill the (flex-col) #admin-portal-root so the canvas always covers the
+     viewport even when min-height:100dvh under-resolves; min-height is the floor. */
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  /* `safe` so a viewport shorter than the column pins it to the TOP (header
+     stays visible) instead of centring and clipping the header off-screen.
+     The plain `center` is the fallback for engines without the safe keyword. */
+  place-items: center;
+  place-items: safe center;
+  padding: 40px 32px;
+  overflow: hidden;
+  background: var(--av3-bg);
+}
+/* one overhead brand spotlight — the only colour on the canvas */
+.av3-auth::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -30%;
+  width: 120vw;
+  height: 120vh;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(38% 46% at 50% 0%, color-mix(in oklab, var(--av3-brand) 22%, transparent), transparent 70%);
+}
+/* a slow scanline, masked to a soft central pool so it never reaches the edges */
+.av3-auth::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, 0.012) 3px 4px);
+  -webkit-mask-image: radial-gradient(60% 60% at 50% 40%, #000, transparent 85%);
+  mask-image: radial-gradient(60% 60% at 50% 40%, #000, transparent 85%);
+}
+
+.av3-auth-col {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 344px;
+  text-align: center;
+  animation: av3-auth-in var(--av3-t-slow) var(--av3-ease) both;
+}
+@keyframes av3-auth-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .av3-auth-col { animation: none; } }
+
+/* platinum bracket — top-left + bottom-right corners only, frames the column */
+.av3-auth-frame { position: relative; padding: 40px 30px 34px; }
+.av3-auth-frame::before,
+.av3-auth-frame::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  border-color: color-mix(in oklab, var(--av3-platinum) 60%, transparent);
+  border-style: solid;
+}
+.av3-auth-frame::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+.av3-auth-frame::after { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+
+/* header — the brand lockup (mark + wordmark + portal eyebrow), centred */
+.av3-auth-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+.av3-auth-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--av3-r-md);
+  background: var(--av3-brand);
+  color: #fff;
+  font-family: var(--av3-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--av3-platinum) 50%, transparent),
+    0 12px 30px -12px color-mix(in oklab, var(--av3-brand) 80%, transparent);
+}
+.av3-auth-wordmark { font-family: var(--av3-display); font-size: 20px; font-weight: 600; line-height: 1.1; }
+.av3-auth-eyebrow { margin-top: 2px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: var(--av3-subtle); }
+
+.av3-auth-form { display: flex; flex-direction: column; gap: 18px; text-align: left; }
+.av3-auth-form .av3-field { gap: 6px; }
+/* underline-only field for the minimal door — overrides the boxed .av3-input */
+.av3-auth-form .av3-field-label { font-family: var(--av3-mono); font-size: 9.5px; letter-spacing: 0.18em; }
+.av3-auth-form .av3-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 2px;
+  border: none;
+  border-bottom: 1px solid var(--av3-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--av3-fg);
+  font-family: var(--av3-ui);
+  font-size: 15px;
+  transition: border-color var(--av3-t-base) var(--av3-ease), box-shadow var(--av3-t-base) var(--av3-ease);
+}
+.av3-auth-form .av3-input::placeholder { color: var(--av3-subtle); }
+.av3-auth-form .av3-input:hover { border-bottom-color: var(--av3-muted); }
+.av3-auth-form .av3-input:focus { outline: none; border-bottom-color: var(--av3-brand); box-shadow: 0 1px 0 0 var(--av3-brand); }
+.av3-auth-otp { text-align: center; letter-spacing: 0.42em; font-family: var(--av3-mono) !important; }
+
+.av3-auth-error {
+  font-size: 12px;
+  text-align: center;
+  color: color-mix(in oklab, var(--av3-bad) 78%, var(--av3-fg));
+  background: var(--av3-bad-soft);
+  border: 1px solid color-mix(in oklab, var(--av3-bad) 30%, transparent);
+  border-radius: var(--av3-r-sm);
+  padding: 8px 10px;
+}
+
+/* primary CTA — solid brand, full-width, lifted on a soft brand shadow */
+.av3-auth-form .av3-btn-primary {
+  margin-top: 6px;
+  width: 100%;
+  height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 26px -12px color-mix(in oklab, var(--av3-brand) 85%, transparent);
+}
+/* passkey — a quiet text action beneath the CTA (no "or" divider) */
+.av3-auth-passkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background: none;
+  color: var(--av3-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--av3-t-fast) var(--av3-ease);
+}
+.av3-auth-passkey:hover { color: var(--av3-fg); }
+.av3-auth-passkey:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; border-radius: var(--av3-r-sm); }
+.av3-auth-passkey:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-passkey svg { width: 14px; height: 14px; }
+
+.av3-auth-foot {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--av3-muted);
+}
+.av3-auth-foot a { color: var(--av3-platinum); text-decoration: none; }
+.av3-auth-foot a:hover { text-decoration: underline; }
+
+@media (max-width: 420px) { .av3-auth-frame { padding: 32px 18px 28px; } }

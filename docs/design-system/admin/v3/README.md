@@ -5,8 +5,10 @@
 > the v2 system (`src/components/admin/v2/`, the top-level `Admin*.tsx` page
 > bodies, the `src/app/admin/*` routes) can be deleted without touching v3.
 > The shared base stylesheet (`src/app/themes/base/index.css`, formerly
-> `themes/admin`) is **kept** — it backs login + the staff portals + Core, so
-> it outlives v2. **This doc grows with the code** per design-system Rule #11.
+> `themes/admin`) is **kept** — it backs the staff/kitchen/terminal portals +
+> Core, so it outlives v2 (the login door itself now runs on av3 — see
+> [Auth door](#auth-door--the-login-surface)). **This doc grows with the code**
+> per design-system Rule #11.
 
 ## Why a v3
 
@@ -33,7 +35,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 
 | Concern        | v2 (to be deleted)                          | v3 (the rebuild)                               |
 | -------------- | ------------------------------------------- | ---------------------------------------------- |
-| Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs login/portals/Core) | `src/app/themes/admin-v3/index.css` |
+| Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs the staff/kitchen/terminal portals + Core — login moved to av3 §23) | `src/app/themes/admin-v3/index.css` (incl. the login door, §23) |
 | Class prefix   | `.v2-*`, `.glass-*`, `.admin-*`, `.app-sidebar` | `.av3-*` (single prefix, no legacy aliases) |
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
 | JS token mirror| `src/components/admin/v2/theme.ts`          | `src/admin-v3/theme.ts`             |
@@ -310,6 +312,54 @@ CSS for these lives in `themes/admin-v3/index.css` §10 (`.av3-goalbar`,
 `.av3-tiles`, `.av3-levers`, `.av3-move`, `.av3-station`, `.av3-truck`,
 `.av3-flow`, `.av3-feedcard`). Scope is the shell-level switcher; all data
 refetches every 30s.
+
+## Auth door — the login surface
+
+The sign-in surface (`src/components/auth/LoginForm.tsx`, shared by the universal
+team door **`/login`** and the owner-only **`/admin/login`**) is the one av3
+surface that renders **outside** `AdminShellV3`. Both route layouts
+(`src/app/login/layout.tsx`, `src/app/admin/login/layout.tsx`) load
+`themes/admin-v3/index.css` and the three `--font-admin-*` typefaces, then wrap
+the form in `#admin-portal-root.av3-root` (with `flex flex-col flex-1`, matching
+the shell, so the canvas fills the `flex-col` body) — so the door inherits the
+exact tokens, fonts and focus rings as the rest of admin, with no `AdminShellV3`
+chrome. Unlike the shell it ships **no `themeBootScriptV3`**: the door renders
+the av3 **dark canonical** theme (it's intentionally dark + pre-auth), which also
+means no `<html>` attribute mutation and therefore no hydration mismatch.
+
+CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-auth*`). The chosen
+direction is **"spotlight minimal"** — clean + futuristic **inside the token
+system**, no new hue, no raw hex, no card chrome:
+
+- **`.av3-auth`** — the bare canvas, the column centred on **both axes**
+  (`place-items: center`, `min-height: 100dvh`). Its restrained lighting is two
+  token-built layers: one overhead **brand spotlight** (`::before`, a single
+  `--av3-brand` radial from the top — the only colour on the canvas) and a slow
+  **scanline** (`::after`, a 1px repeating line, radially **masked** to a soft
+  central pool so it never reaches the edges).
+- **`.av3-auth-col`** — the centred column (no card border/background), entering
+  with `av3-auth-in` (fade-rise, `prefers-reduced-motion`-guarded).
+- **`.av3-auth-frame`** — a thin **platinum corner bracket** (top-left +
+  bottom-right `::before`/`::after`) that frames the column without boxing it in.
+- **`.av3-auth-lockup`** — the header is the **brand lockup** (`.av3-auth-mark`
+  brand chip with the platinum inset + brand glow, beside `.av3-auth-wordmark`
+  Fraunces + `.av3-auth-eyebrow`, the portal label in mono-tracked caps), centred
+  as one inline unit.
+- **`.av3-auth-form`** — composes the existing `.av3-field` / `.av3-field-label`
+  controls but restyles `.av3-input` to **underline-only** (transparent box, a
+  `--av3-line-strong` bottom rule going brand on focus) and the label to mono
+  micro-caps; `.av3-auth-otp` keeps mono + wide tracking for the 6-digit TOTP.
+  The CTA is the shared `.av3-btn-primary` (full-width, lifted on a soft brand
+  shadow); the passkey is a quiet `.av3-auth-passkey` text action beneath it (no
+  "or" divider). Plus `.av3-auth-error` (the `bad`-soft alert) and
+  `.av3-auth-foot` (the cross-door links, in `--av3-platinum`).
+
+It does **not** introduce a new button/input primitive — it reuses the §4/§14
+`.av3-field` / `.av3-input` / `.av3-btn-primary` controls (restyled in scope) and
+adds only the auth-specific scaffold (canvas, column, bracket, lockup). The
+behaviour (email + password, optional TOTP reveal on `mfaRequired`, the
+passwordless passkey path, the owner-only portal gate) is unchanged — see
+[`../sections/system.md`](../sections/system.md) → sign-in & credentials.
 
 ## What v3 is not
 
