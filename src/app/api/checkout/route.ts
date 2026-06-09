@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getUpsellSettings } from "@/lib/store";
+import { getEnabledStripeMethods, getUpsellSettings } from "@/lib/store";
 import { findBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -127,6 +127,9 @@ export async function POST(req: NextRequest) {
     if (process.env.STRIPE_SECRET_KEY) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
+      // Methods the operator enabled in /admin/payments drive the Stripe
+      // session (Apple/Google Pay ride the "card" type automatically).
+      const paymentMethodTypes = await getEnabledStripeMethods();
 
       const bundleStripeLines: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] | null =
         bundleSubtotal !== null && appliedBundleId
@@ -217,7 +220,7 @@ export async function POST(req: NextRequest) {
 
       const session = await stripeClient.checkout.sessions.create(
         {
-          payment_method_types: ["card", "p24", "blik"],
+          payment_method_types: paymentMethodTypes as ("card" | "p24" | "blik")[],
           ...(sessionDiscounts ? { discounts: sessionDiscounts } : {}),
           line_items: [
             ...(bundleStripeLines ??

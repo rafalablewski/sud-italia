@@ -664,6 +664,13 @@ export default async function CapabilitiesPage() {
           summary: "Hosted-checkout session creation with idempotency key. Webhook reconciles to order on success.",
         },
         {
+          name: "Payment methods manager",
+          status: "live",
+          href: "/admin/payments",
+          summary:
+            "Operator toggles which tender methods guests see at web checkout + QR ordering — Card (Visa/Mastercard), Apple Pay, Google Pay, BLIK, Przelewy24 (all settled through Stripe) and Bitcoin (off-Stripe pay-to-address). Persisted to payment-settings.json (GET/PUT /api/admin/payments, toggle = saved). The enabled set drives the Stripe session's payment_method_types (getEnabledStripeMethods — Apple/Google Pay fold into the card rail), and is exposed to the storefront/QR via /api/settings/public. Bitcoin shows the operator's receiving address and leaves the order unpaid until confirmed in POS.",
+        },
+        {
           name: "Customer identity (phone-based)",
           status: "live",
           summary: "Auto-enrolment on checkout via the sud-italia-customer cookie + /api/customer/identify. No password.",
@@ -1561,6 +1568,13 @@ export default async function CapabilitiesPage() {
       id: "aggregator",
       title: "Aggregators",
       items: [
+        {
+          name: "Marketplace integrations manager",
+          status: "live",
+          href: "/admin/integrations",
+          summary:
+            "Operator-managed connection registry for delivery marketplaces (Uber Eats, Wolt, Glovo, Pyszne.pl, Bolt Food, Grab). Per-provider enable / connect / disconnect, store id, public order link, commission % (feeds the Calculator's channel economics) and auto-accept — persisted to integration-settings.json (GET/PUT /api/admin/integrations, toggle = saved). Enabled connections that carry a public order link surface as the storefront footer's 'also order on …' strip via /api/settings/public. Connection management only; live order ingestion still needs each marketplace's partner API (the Wolt+Glovo webhook scaffold below).",
+        },
         {
           name: "Wolt + Glovo webhook intake (scaffold)",
           status: "needs-config",

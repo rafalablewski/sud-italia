@@ -12,7 +12,8 @@ the events & bookings run-sheet planner.
 | `/admin/upsell`               | `src/components/admin/AdminUpsell.tsx`            | manager+  |
 | `/admin/crosssell`            | `src/components/admin/AdminCrossSell.tsx`         | manager+  |
 | `/admin/scheduled-bundles`    | `src/components/admin/AdminScheduledBundles.tsx`  | manager+  |
-| `/admin/truck`                | `src/components/admin/AdminTruck.tsx`             | manager+  |
+| `/admin/truck`                | `src/admin-v3/TruckV3.tsx`                        | manager+  |
+| `/admin/integrations`         | `src/admin-v3/IntegrationsV3.tsx`                 | manager+  |
 
 ## Common rules across the section
 
@@ -208,3 +209,23 @@ Private bookings, catering & special events, plus reusable **run sheets**
 
 Growth is the **deliberate revenue levers** — every page is a control
 the operator can pull this week to move next week's number.
+
+## Integrations — `/admin/integrations`
+
+Live code: `src/admin-v3/IntegrationsV3.tsx` · API `src/app/api/admin/integrations/route.ts` · store `getIntegrationSettings`/`updateIntegrationSettings` (`integration-settings.json`).
+
+The delivery-marketplace connection registry — Uber Eats, Wolt, Glovo,
+Pyszne.pl, Bolt Food, Grab.
+
+- **KPI rail:** Connected, Live channels, Blended commission, Shown to
+  guests — the first carries a five-section ⓘ explainer (Rule #12).
+- **Marketplace rows:** status badge (`connected`/`disconnected`/`error`),
+  a `Configure` button (Dialog: store id, public order link, commission %,
+  auto-accept, plus `Connect`/`Disconnect`/`Test`), and an enable Switch
+  that persists immediately (Rule #7).
+- **Honest scope:** connection management only. `Connect` flips status to
+  `connected` once a store id is present; live order ingestion needs each
+  marketplace's partner API (the Aggregators webhook scaffold). Enabled
+  connections that carry a public order link surface as the storefront
+  footer's "also order on …" strip via `/api/settings/public`, and the
+  per-connection commission feeds the Calculator's channel economics.

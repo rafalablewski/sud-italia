@@ -40,9 +40,9 @@ What this doc covers (the admin back-office):
 | People        | Staff, Schedule                                                        |
 | Customers     | Customers, Corporate, Feedback, Pulse surveys                          |
 | Finance       | Reports, Cash, Business costs, Calculator                              |
-| Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Events & bookings            |
+| Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Events & bookings, Integrations |
 | Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
-| System        | Users & roles, Permission matrix, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Currency, Languages, Settings |
+| System        | Users & roles, Permission matrix, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Payments, Currency, Languages, Settings |
 
 What this doc does **not** cover:
 

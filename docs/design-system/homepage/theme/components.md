@@ -419,6 +419,13 @@ render so operator edits surface without a redeploy.
     tiktok}`. Same hide-on-empty rule per link.
   All four operator-editable fields live at /admin/settings →
   General → Business contact / Social links.
+- **"Also order on …" channel strip** (`.v8-pfoot-channels`) — a row of
+  pill links to the delivery marketplaces the operator has enabled in
+  /admin/integrations (each connection that is `enabled` and carries a
+  public order link). Driven server-side via `getIntegrationSettings()`;
+  the whole strip is hidden when none are live, so nothing placeholder
+  ships. Sits between the link columns and the bottom bar, separated by a
+  parchment-12% top border.
 - **Bottom bar** — italic Cormorant 12.5px at parchment-50%
   opacity, copyright paired with the Italian tagline (`Mangia bene,
   ridi spesso, ama molto.`) and the "Made with passion in Napoli ·

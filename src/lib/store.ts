@@ -3042,6 +3042,233 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
   });
 }
 
+// --- Payment methods (admin/payments) ----------------------------------
+//
+// Which tender methods the storefront + QR ordering offer the guest, and
+// how the Stripe checkout session is configured. Card / Apple Pay / Google
+// Pay / BLIK / Przelewy24 all settle through Stripe (the processor); the
+// enabled set drives the `payment_method_types` the checkout route asks
+// Stripe for, plus the customer-facing method badges. Apple/Google Pay are
+// wallet UIs that ride the `card` rail (Stripe surfaces them automatically),
+// so they map onto "card" rather than their own Stripe type. Bitcoin is an
+// off-Stripe method — the guest pays to a displayed wallet address and the
+// order stays unpaid until the operator confirms receipt in POS. Secrets
+// (Stripe keys) live in env vars, never here.
+
+export type PaymentMethodId =
+  | "card"
+  | "apple_pay"
+  | "google_pay"
+  | "blik"
+  | "p24"
+  | "bitcoin";
+
+export interface PaymentMethodConfig {
+  id: PaymentMethodId;
+  enabled: boolean;
+}
+
+export interface PaymentSettings {
+  methods: PaymentMethodConfig[];
+  /** Receiving BTC address shown to the guest when the Bitcoin method is on. */
+  bitcoinAddress?: string;
+}
+
+export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
+  // Order here is the canonical method order shown to guests.
+  methods: [
+    { id: "card", enabled: true },
+    { id: "apple_pay", enabled: true },
+    { id: "google_pay", enabled: true },
+    { id: "blik", enabled: true },
+    { id: "p24", enabled: false },
+    { id: "bitcoin", enabled: false },
+  ],
+  bitcoinAddress: "",
+};
+
+const PAYMENT_SETTINGS_KEY = "payment-settings.json";
+
+function mergePaymentSettings(saved: Partial<PaymentSettings>): PaymentSettings {
+  const savedById = new Map((saved.methods ?? []).map((m) => [m.id, m]));
+  // Defaults define the canonical method set + order; saved flags win so a
+  // newly-added method appears (default-off) without an operator migration.
+  const methods = DEFAULT_PAYMENT_SETTINGS.methods.map((d) => ({
+    id: d.id,
+    enabled: typeof savedById.get(d.id)?.enabled === "boolean" ? savedById.get(d.id)!.enabled : d.enabled,
+  }));
+  return {
+    methods,
+    bitcoinAddress:
+      typeof saved.bitcoinAddress === "string" ? saved.bitcoinAddress : DEFAULT_PAYMENT_SETTINGS.bitcoinAddress,
+  };
+}
+
+export async function getPaymentSettings(): Promise<PaymentSettings> {
+  return mergePaymentSettings(await readJSON<Partial<PaymentSettings>>(PAYMENT_SETTINGS_KEY, {}));
+}
+
+export async function updatePaymentSettings(updates: Partial<PaymentSettings>): Promise<PaymentSettings> {
+  return withLock(PAYMENT_SETTINGS_KEY, async () => {
+    const current = mergePaymentSettings(await readJSON<Partial<PaymentSettings>>(PAYMENT_SETTINGS_KEY, {}));
+    const merged: PaymentSettings = {
+      methods: updates.methods ? mergePaymentSettings({ methods: updates.methods }).methods : current.methods,
+      bitcoinAddress:
+        typeof updates.bitcoinAddress === "string" ? updates.bitcoinAddress.trim() : current.bitcoinAddress,
+    };
+    await writeJSON(PAYMENT_SETTINGS_KEY, merged);
+    return merged;
+  });
+}
+
+/** The enabled Stripe `payment_method_types` for a checkout session, in
+ *  Stripe's preferred order. Apple/Google Pay fold into "card" (Stripe shows
+ *  the wallet sheet automatically). Always falls back to ["card"] so checkout
+ *  never breaks even if every method was toggled off. */
+export async function getEnabledStripeMethods(): Promise<string[]> {
+  const s = await getPaymentSettings();
+  const on = (id: PaymentMethodId) => s.methods.some((m) => m.id === id && m.enabled);
+  const types: string[] = [];
+  if (on("card") || on("apple_pay") || on("google_pay")) types.push("card");
+  if (on("blik")) types.push("blik");
+  if (on("p24")) types.push("p24");
+  return types.length > 0 ? types : ["card"];
+}
+
+// --- Delivery-marketplace integrations (admin/integrations) ------------
+//
+// Operator-managed connections to third-party ordering marketplaces. Each
+// connection persists its enable flag, connection status, the operator's
+// store id on that marketplace, the public deep-link guests can order
+// through, the marketplace commission (feeds channel economics in the
+// Calculator), and an auto-accept flag. Live order ingestion needs each
+// marketplace's partner API + webhook — out of scope here; this layer owns
+// the connection registry, the customer-facing "also order on …" links, and
+// the per-channel economics. Marketplace API keys live in the provider's own
+// dashboard / env vars, never here.
+
+export type IntegrationProviderId =
+  | "uber_eats"
+  | "bolt_food"
+  | "wolt"
+  | "glovo"
+  | "pyszne_pl"
+  | "grab";
+
+export type IntegrationStatus = "connected" | "disconnected" | "error";
+
+export interface IntegrationConnection {
+  provider: IntegrationProviderId;
+  enabled: boolean;
+  status: IntegrationStatus;
+  /** Operator's store/merchant id on the marketplace (non-secret). */
+  storeId?: string;
+  /** Public deep-link where guests can order on this marketplace. */
+  orderUrl?: string;
+  /** Commission the marketplace charges (0–1). Feeds channel economics. */
+  commissionPct?: number;
+  /** Auto-accept incoming orders without manual confirmation. */
+  autoAccept?: boolean;
+  /** ISO timestamp of the last successful connection check. */
+  lastConnectedAt?: string;
+}
+
+export interface IntegrationSettings {
+  connections: IntegrationConnection[];
+}
+
+/** Typical 2026 PL marketplace commissions — the operator overrides per
+ *  connection once their real contract rate is known. */
+export const DEFAULT_INTEGRATION_COMMISSION: Record<IntegrationProviderId, number> = {
+  uber_eats: 0.3,
+  bolt_food: 0.25,
+  wolt: 0.28,
+  glovo: 0.27,
+  pyszne_pl: 0.13,
+  grab: 0.3,
+};
+
+const INTEGRATION_PROVIDER_ORDER: IntegrationProviderId[] = [
+  "uber_eats",
+  "wolt",
+  "glovo",
+  "pyszne_pl",
+  "bolt_food",
+  "grab",
+];
+
+export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
+  connections: INTEGRATION_PROVIDER_ORDER.map((provider) => ({
+    provider,
+    enabled: false,
+    status: "disconnected" as IntegrationStatus,
+    commissionPct: DEFAULT_INTEGRATION_COMMISSION[provider],
+    autoAccept: false,
+  })),
+};
+
+const INTEGRATION_SETTINGS_KEY = "integration-settings.json";
+
+const INTEGRATION_STATUSES: IntegrationStatus[] = ["connected", "disconnected", "error"];
+
+function sanitizeConnection(
+  base: IntegrationConnection,
+  patch: Partial<IntegrationConnection>,
+): IntegrationConnection {
+  const clampPct = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : undefined;
+  return {
+    provider: base.provider,
+    enabled: typeof patch.enabled === "boolean" ? patch.enabled : base.enabled,
+    status:
+      typeof patch.status === "string" && INTEGRATION_STATUSES.includes(patch.status)
+        ? patch.status
+        : base.status,
+    storeId: typeof patch.storeId === "string" ? patch.storeId.trim() : base.storeId,
+    orderUrl: typeof patch.orderUrl === "string" ? patch.orderUrl.trim() : base.orderUrl,
+    commissionPct: clampPct(patch.commissionPct) ?? base.commissionPct,
+    autoAccept: typeof patch.autoAccept === "boolean" ? patch.autoAccept : base.autoAccept,
+    lastConnectedAt:
+      typeof patch.lastConnectedAt === "string" ? patch.lastConnectedAt : base.lastConnectedAt,
+  };
+}
+
+function mergeIntegrationSettings(saved: Partial<IntegrationSettings>): IntegrationSettings {
+  const savedByProvider = new Map((saved.connections ?? []).map((c) => [c.provider, c]));
+  // Defaults define the canonical provider set + order; saved values win.
+  const connections = DEFAULT_INTEGRATION_SETTINGS.connections.map((d) => {
+    const s = savedByProvider.get(d.provider);
+    return s ? sanitizeConnection(d, s) : d;
+  });
+  return { connections };
+}
+
+export async function getIntegrationSettings(): Promise<IntegrationSettings> {
+  return mergeIntegrationSettings(
+    await readJSON<Partial<IntegrationSettings>>(INTEGRATION_SETTINGS_KEY, {}),
+  );
+}
+
+export async function updateIntegrationSettings(
+  updates: Partial<IntegrationSettings>,
+): Promise<IntegrationSettings> {
+  return withLock(INTEGRATION_SETTINGS_KEY, async () => {
+    const current = mergeIntegrationSettings(
+      await readJSON<Partial<IntegrationSettings>>(INTEGRATION_SETTINGS_KEY, {}),
+    );
+    // Patch each supplied connection over the current value (supports both a
+    // single-connection "connect" action and a full-list save).
+    const byProvider = new Map(current.connections.map((c) => [c.provider, c]));
+    for (const u of updates.connections ?? []) {
+      const cur = byProvider.get(u.provider);
+      if (cur) byProvider.set(u.provider, sanitizeConnection(cur, u));
+    }
+    const merged = mergeIntegrationSettings({ connections: [...byProvider.values()] });
+    await writeJSON(INTEGRATION_SETTINGS_KEY, merged);
+    return merged;
+  });
+}
+
 // --- Growth & Loyalty Settings ---
 
 /** Built-in widget renderers the customer-site LiveActivityBar knows about. */

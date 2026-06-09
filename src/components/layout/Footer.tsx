@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { SITE_NAME, COMPANY_NAME } from "@/lib/constants";
 import { getActiveLocations } from "@/data/locations";
-import { getSettings } from "@/lib/store";
+import { getIntegrationSettings, getSettings, type IntegrationProviderId } from "@/lib/store";
+
+const MARKETPLACE_LABEL: Record<IntegrationProviderId, string> = {
+  uber_eats: "Uber Eats",
+  bolt_food: "Bolt Food",
+  wolt: "Wolt",
+  glovo: "Glovo",
+  pyszne_pl: "Pyszne.pl",
+  grab: "Grab",
+};
 
 // V8 Trattoria footer — espresso canvas that picks up the Soci rail's
 // palette so the close→footer transition reads as one visual block
@@ -21,8 +30,11 @@ import { getSettings } from "@/lib/store";
 
 export async function Footer() {
   const locations = getActiveLocations();
-  const settings = await getSettings();
+  const [settings, integrations] = await Promise.all([getSettings(), getIntegrationSettings()]);
   const year = new Date().getFullYear();
+  // Enabled marketplaces with a public order link — a real "also order on …"
+  // strip driven by /admin/integrations (hidden entirely when none are live).
+  const marketplaces = integrations.connections.filter((c) => c.enabled && c.orderUrl);
   // Defensive guards: a legacy saved row may pre-date a field, in which
   // case `mergeSettings` does fill in the DEFAULT, but a partial
   // socialLinks object (e.g. saved as `{}` before this shape existed)
@@ -114,6 +126,17 @@ export async function Footer() {
             </ul>
           </div>
         </div>
+
+        {marketplaces.length > 0 && (
+          <div className="v8-pfoot-channels">
+            <span className="v8-pfoot-channels-label">Also order on · ordina anche su</span>
+            {marketplaces.map((c) => (
+              <a key={c.provider} href={c.orderUrl} target="_blank" rel="noopener noreferrer">
+                {MARKETPLACE_LABEL[c.provider]}
+              </a>
+            ))}
+          </div>
+        )}
 
         <div className="v8-pfoot-bottom">
           <span>
