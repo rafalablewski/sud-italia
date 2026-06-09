@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
 import { idempotentFetch } from "@/lib/idempotentFetch";
+import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
@@ -328,13 +329,22 @@ export function CoreV2Pos({
     if (!t.channel) return toast("Pick a channel first", "danger");
     setBusyTabId(t.id);
     try {
-      const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+      const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
+      const { res, queued } = await durableMutate({
+        url,
         method: "POST",
         body: { tabId: t.id },
+        entity: `tab:${t.id}`,
+        desc: `Send · #${t.id}`,
+        onReject: (s) => toast(`Send for #${t.id} was rejected (${s})`, "danger"),
       });
-      if (!res) return toast("No connection — couldn't reach the kitchen", "danger");
-      const data = (await res.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
-      if (!res.ok) return toast(data.error || "Could not send to KDS", "danger");
+      if (queued) {
+        // Offline: optimistically mark the tab sent; the outbox fires it on reconnect.
+        setTabs((prev) => prev.map((x) => (x.id === t.id ? { ...x, sentKds: true, status: "pay" } : x)));
+        return toast(`Saved offline — sends to KDS on reconnect · #${t.id}`, "default");
+      }
+      const data = (await res!.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
+      if (!res!.ok) return toast(data.error || "Could not send to KDS", "danger");
       setTabs((prev) =>
         prev.map((x) => (x.id === t.id ? { ...x, sentKds: true, status: "pay", orderId: data.orderId, firedCourses: data.firedCourses } : x)),
       );
@@ -377,17 +387,30 @@ export function CoreV2Pos({
       setBusyTabId(t.id);
       setTenderOpen(false);
       try {
-        const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+        const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
+        const { res, queued } = await durableMutate({
+          url,
           method: "PATCH",
           body: { tabId: t.id },
+          entity: `tab:${t.id}`,
+          desc: `Charge · #${t.id}`,
+          onReject: (s) => toast(`Charge for #${t.id} was rejected (${s})`, "danger"),
         });
-        if (!res) return toast("No connection — payment not taken, try again", "danger");
-        const data = (await res.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
-        if (!res.ok) return toast(data.error || "Could not take payment", "danger");
+        const closeTab = () => {
+          const left = tabs.filter((x) => x.id !== t.id);
+          setTabs(left);
+          setActiveTabId(left[0]?.id ?? null);
+        };
+        if (queued) {
+          // Offline: close the check optimistically; the outbox charges it (once,
+          // under its idempotency key) when the network returns.
+          closeTab();
+          return toast(`Saved offline — charges ${method} on reconnect · #${t.id}`, "default");
+        }
+        const data = (await res!.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
+        if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
         const amt = data.totalAmount ?? grandG(t);
-        const left = tabs.filter((x) => x.id !== t.id);
-        setTabs(left);
-        setActiveTabId(left[0]?.id ?? null);
+        closeTab();
         toast(`Paid ✓ #${t.id} · ${method} · ${fmtPLN(amt)}`, "success");
       } finally {
         setBusyTabId(null);
@@ -412,6 +435,9 @@ export function CoreV2Pos({
   const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
 
   const active = getActive();
+  // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
+  // staff know a send/charge is saved and will land on reconnect.
+  const pendingWrites = usePendingWriteCount();
 
   // Tab-rail rollup: how many checks are in flight, ready to pay, parked, and
   // the open value across all of them — the at-a-glance "state of the till".
@@ -695,6 +721,11 @@ export function CoreV2Pos({
     >
       {/* open-check bar — spans the full width, above the panes */}
       <div className="cv-checkbar">
+        {pendingWrites > 0 && (
+          <div className="cv-sync-pill" role="status" title="Saved locally — will sync when the connection returns">
+            ↻ {pendingWrites} {pendingWrites === 1 ? "write" : "writes"} syncing
+          </div>
+        )}
         {tabs.length > 0 && (
           <div className="cv-tabrail-sum">
             {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}

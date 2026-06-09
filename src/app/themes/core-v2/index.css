@@ -146,6 +146,8 @@
 /* ---------- ticket: tabs ---------- */
 /* full-width open-check bar, above the three panes */
 .cv2 .cv-checkbar { flex: none; background: var(--panel); border-bottom: 1px solid var(--line); }
+.cv2 .cv-sync-pill { margin: 8px 14px 0; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: var(--amber); background: var(--amber-wash); display: inline-flex; align-items: center; gap: 6px; flex: none; align-self: flex-start; }
 .cv2 .cv-tabrail-sum { padding: 9px 16px 0; font-size: 11px; color: var(--ink-3); letter-spacing: .01em; flex: none; }
 .cv2 .cv-tabrail-sum b { color: var(--ink-2); font-weight: 600; }
 .cv2 .cv-tabrail { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; flex: none; max-height: 116px; overflow-y: auto; }

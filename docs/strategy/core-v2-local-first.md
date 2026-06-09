@@ -111,39 +111,56 @@ re-serializing and re-rendering 60 tickets every time one of them advances.
   `idempotentFetch` (`src/lib/idempotentFetch.ts`) attaches the key and retries
   transient failures (dropped connection / 5xx) with backoff; wired into POS
   send / fire / charge and the KDS bump. Covered by `idempotency.test.ts`.
-- **2b — persisted offline queue — NEXT** (described below). 2a makes an
-  *in-session* retry safe; 2b is what lets a write survive a **reload / app
-  restart** while offline and reconcile when connectivity returns.
+- **2b — persisted offline queue — DONE.** A localStorage outbox
+  (`src/store/writeQueue.ts` over the pure logic in
+  `src/lib/writeQueue.core.ts`) survives a reload and drains on reconnect.
+  Callers go through `durableMutate`, which keeps the **online** path identical
+  to a plain idempotent fetch (so validation errors stay crisp and nothing is
+  applied prematurely) and only parks a write in the queue when the network is
+  **genuinely down** (`navigator.onLine === false`, or the fetch never lands).
+  Parked writes replay **exactly once** under their idempotency key, **FIFO per
+  entity** (`tab:<id>`) and parallel across entities, with capped exponential
+  backoff. POS **send** and **charge** close the check optimistically when
+  offline; a `↻ N writes syncing` pill on the check-bar shows pending writes.
+  Covered by `writeQueue.core.test.ts` (ordering / backoff / terminal rules).
 
-### 3.1 Client write queue (2b)
+### 3.1 Client write queue (2b) — as shipped
 
-A small persisted queue (Zustand + `localStorage`, mirroring `src/store/cart.ts`):
+A small persisted outbox (Zustand + `localStorage`, mirroring `src/store/cart.ts`):
 
 ```
-enqueue({ key: uuid(), entity, op, payload, attempts: 0 })
+enqueue({ key: uuid(), entity, url, method, body, attempts: 0, nextAt: 0 })
 ```
 
-- Every mutation gets a **client-generated idempotency key** and is applied
-  **optimistically** to the client cache before the network call.
-- The queue drains in the background with exponential backoff; entries survive a
-  reload. On success the optimistic state is confirmed; on terminal failure it
-  rolls back with a toast.
-- The queue is **ordered per entity** (a tab's edits apply in sequence) but
-  parallel across entities.
+- Every mutation carries a **client-generated idempotency key**; the caller
+  applies its **optimistic** update (e.g. close the check) when the write is
+  parked offline.
+- The outbox drains in the background with exponential backoff; entries survive a
+  reload. On success it drops the entry (the server is now truth and the next
+  data sync reconciles the UI); a terminal 4xx fires the caller's `onReject`
+  toast.
+- The outbox is **ordered per entity** (a tab's writes apply in sequence — the
+  FIFO head of each entity group is the only one in flight) but parallel across
+  entities.
 
 ### 3.2 Server idempotency
 
-Mutation routes accept an `Idempotency-Key` header. A small `idempotency_keys`
-table (key → result hash, TTL) makes a retried `POST /pos/orders` return the
-**original** order instead of creating a second one. This is the single most
-important correctness guarantee for money-handling on an unreliable network and
-is what separates a toy POS from a real one.
+Mutation routes accept an `Idempotency-Key` header. `withIdempotency(key, fn)`
+(`src/lib/store.ts`) stores each successful result under its own kv slot
+(`idemp:<key>` — a Postgres `kv_store` row when `DATABASE_URL` is set, a file
+in local dev, so no bespoke table or migration) with a 24h read TTL, and
+serializes per key via the distributed lock. A retried `POST`/`PATCH /pos/orders`
+returns the **original** result instead of creating a second order or taking a
+second payment. This is the single most important correctness guarantee for
+money-handling on an unreliable network and is what separates a toy POS from a
+real one.
 
 ### 3.3 Scope / risk
 
 Touches every mutation handler, so it lands **after** Phase 1 proves the cache
-shape. Start with the two money paths — POS send-to-KDS and charge — then
-generalize.
+shape. Shipped on the two money paths first — POS send-to-KDS and charge (plus
+the naturally-idempotent KDS bump) — then generalizes to the rest by reusing
+`durableMutate` / `withIdempotency`.
 
 ---
 
@@ -180,7 +197,7 @@ instrumentation so "fast" is a defended number, not a vibe.
 |---|---|---|
 | **1 — delta sync + order cache** | shipped | KDS/Orders re-render only changed tickets; stream payload is diffs; all three consumers green via the one hook |
 | **2a — idempotency + transient retry** | shipped | a re-sent charge replays its result (no double-charge / no 404); transient blips retry invisibly on send/charge/bump |
-| **2b — persisted offline queue** | next | a write queued offline survives a reload and drains + reconciles on reconnect |
+| **2b — persisted offline queue** | shipped | POS send/charge made offline survive a reload and replay exactly once (FIFO per tab) on reconnect; a "syncing" pill shows pending writes |
 | **3 — normalization** | after | last hot blob (`pos_tabs`) off `kv_store`; floor-twin read is fully indexed; global `withLock` retired |
 
 Phase 1 + 2 deliver the felt "instant like Square" + "never breaks like Toast".

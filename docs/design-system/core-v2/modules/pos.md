@@ -14,11 +14,17 @@ A full-width **open-check bar** (`.cv-checkbar`) over a three-column grid
 inside the shell body: **rail · menu · ticket**.
 
 - **`.cv-checkbar`** — spans the whole width above the panes (so it sits
-  over the menu's steering banner): the `.cv-tabrail-sum` rollup
+  over the menu's steering banner): an optional `.cv-sync-pill`, then the
+  `.cv-tabrail-sum` rollup
   (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
   `.cv-tabrail` of `.cv-ttab` open-check chips + `+ New`. The active check
   gets a brand outline; the rail wraps (capped height + scroll) so a busy
   till's checks stay browsable without a horizontal hunt.
+- **`.cv-sync-pill`** — amber rounded status chip (`--amber` on
+  `--amber-wash`), shown only when the durable write outbox
+  (`src/store/writeQueue.ts`) holds unsent writes: `↻ N writes syncing`. It
+  tells staff a send/charge made offline is saved and will land on
+  reconnect — the visible end of the Phase 2b durable-queue path.
 
 - **`.cv-rail`** — the category rail. An **All** chip (stacks every
   category as `.cv-menu-sec` blocks with `.cv-menu-sec-h` headers) over
