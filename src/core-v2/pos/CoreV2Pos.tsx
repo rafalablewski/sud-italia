@@ -102,6 +102,11 @@ export function CoreV2Pos({
   // reads the pre-write server state and reverts the local edit (the line
   // "disappears, then reappears" a few seconds later on the next poll).
   const pendingSaves = useRef(0);
+  // Real ids of optimistic checks that just reconciled from a `tmp-` id. We
+  // can't persist any items rung up during the round-trip from inside the
+  // `setTabs` updater (its return value isn't readable synchronously), so we
+  // record the id and flush it from an effect once the swap has committed.
+  const reconciledTabsRef = useRef<string[]>([]);
 
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
@@ -344,18 +349,15 @@ export function CoreV2Pos({
         return;
       }
       // Swap temp → real id, keeping anything rung onto the optimistic check.
-      let merged: PosTab | null = null;
       setTabs((prev) =>
-        prev.map((t) => {
-          if (t.id !== tempId) return t;
-          merged = { ...t, id: real.id, createdAt: real.createdAt ?? t.createdAt, updatedAt: new Date().toISOString() };
-          return merged;
-        }),
+        prev.map((t) =>
+          t.id === tempId ? { ...t, id: real.id, createdAt: real.createdAt ?? t.createdAt, updatedAt: new Date().toISOString() } : t,
+        ),
       );
       setActiveTabId((cur) => (cur === tempId ? real.id : cur));
-      // If items/channel were added during the round-trip, flush them once under
-      // the real id (the POST created the check empty).
-      if (merged && ((merged as PosTab).items.length > 0 || (merged as PosTab).channel)) persistTab(merged);
+      // Items/channel rung during the round-trip get flushed under the real id
+      // by the reconcile effect, once the swap above has committed to state.
+      reconciledTabsRef.current.push(real.id);
     } catch {
       // Offline / network error — drop the optimistic check.
       setTabs((prev) => prev.filter((t) => t.id !== tempId));
@@ -363,7 +365,20 @@ export function CoreV2Pos({
     } finally {
       pendingSaves.current = Math.max(0, pendingSaves.current - 1);
     }
-  }, [pageLoc, tabs, persistTab]);
+  }, [pageLoc, tabs]);
+
+  // Flush any just-reconciled optimistic checks: once the temp→real id swap has
+  // committed to `tabs`, persist them under the real id if anything was rung up
+  // during the POST round-trip (the POST created the check empty).
+  useEffect(() => {
+    if (reconciledTabsRef.current.length === 0) return;
+    const ids = reconciledTabsRef.current;
+    reconciledTabsRef.current = [];
+    for (const id of ids) {
+      const tab = tabs.find((t) => t.id === id);
+      if (tab && (tab.items.length > 0 || tab.channel)) persistTab(tab);
+    }
+  }, [tabs, persistTab]);
 
   // --- Tables (dine-in picker) --------------------------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
