@@ -8,6 +8,7 @@ import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
+import { CoreV2QrQueue } from "@/core-v2/pos/CoreV2QrQueue";
 import {
   MENU_CATEGORY_LABELS,
   type FloorTable,
@@ -707,6 +708,7 @@ export function CoreV2Pos({
       ]}
       subRight={
         <>
+          <CoreV2QrQueue location={pageLoc} />
           {active?.channel && <span className="cv-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
           {active && (
             <button type="button" className={active.status === "parked" ? "cv-chip on" : "cv-chip"} style={{ height: 32 }} onClick={togglePark} title="Park / resume this check">

@@ -132,3 +132,19 @@ or drop a line on a course header), kitchen-timing toggle,
 inline check rename, double-seat / over-capacity guards, the tab-rail
 rollup, a hydration-aware empty state, and the fullscreen kiosk are all
 wired — feature-for-feature with today's `/core/pos`.
+
+## QR table-order queue
+
+Live code: `src/core-v2/pos/CoreV2QrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
+
+A **QR pill** in the POS sub-header (`subRight`, beside the channel chip +
+Park) surfaces the dine-in orders guests placed by scanning a table QR
+(`channel: "qr"`, from `/qr`). It polls `GET /api/admin/pos/qr-orders?location=`
+every 8s; the pill goes `on` and shows an "N to pay" count when any are
+unpaid. Opening it lists each order in a `CoreV2Dialog` — table number,
+guest, party size, line items, elapsed time, total and a paid/unpaid·status
+chip. **Mark paid** (`.cv-charge`) posts `{ orderId, action: "settle" }`,
+which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
+(status → `confirmed`). The order stays the single source of truth — no
+duplicate tab is created, mirroring how the POS already owns totals
+server-side.
