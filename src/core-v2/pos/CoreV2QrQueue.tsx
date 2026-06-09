@@ -45,14 +45,20 @@ export function CoreV2QrQueue({ location }: { location: string }) {
   const printQr = () => {
     const w = window.open("", "_blank", "width=420,height=580");
     if (!w) { toast("Allow pop-ups to print", "danger"); return; }
+    // Escape every interpolated value written into the print document — the
+    // table label is staff free-text, so treat it as untrusted (no DOM XSS).
+    const esc = (s: string) => s.replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c] ?? c));
+    const t = esc(qrTable);
+    const loc = esc(location);
+    const src = esc(qrSrc);
     w.document.write(
-      `<!doctype html><html><head><title>QR · ${qrTable ? `Table ${qrTable}` : location}</title>` +
+      `<!doctype html><html><head><title>QR · ${t ? `Table ${t}` : loc}</title>` +
         `<style>body{margin:0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}` +
         `.c{text-align:center;padding:28px}.c h1{margin:0 0 4px;font-size:26px;letter-spacing:.5px}` +
         `.c p{margin:0 0 16px;color:#555;font-size:14px}.c img{width:300px;height:300px}` +
         `.c h2{margin:14px 0 0;font-size:20px}</style></head><body>` +
         `<div class="c"><h1>Ottaviano</h1><p>Scan to order &amp; pay at your table</p>` +
-        `<img src="${qrSrc}" alt="QR"/>${qrTable ? `<h2>Table ${qrTable}</h2>` : ""}</div>` +
+        `<img src="${src}" alt="QR"/>${t ? `<h2>Table ${t}</h2>` : ""}</div>` +
         `<script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`,
     );
     w.document.close();

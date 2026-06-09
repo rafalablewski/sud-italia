@@ -64,6 +64,9 @@ export const POST = withAdmin(
       // to the kitchen. A Stripe-paid order is already confirmed — leave it.
       status: order.status === "pending" ? "confirmed" : order.status,
     });
+    if (!updated) {
+      return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
+    }
     await appendAuditLog({
       actor: user.email || user.id,
       action: "pos.qr_settle",

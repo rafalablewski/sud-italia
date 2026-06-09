@@ -45,7 +45,7 @@ export default async function QrPage({ searchParams }: PageProps) {
   // Dine-in board: only available, non-delivery-exclusive items.
   const items = menu
     .filter((i) => i.available && !i.deliveryOnly)
-    .map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, category: i.category, tags: i.tags }));
+    .map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price, category: i.category, tags: i.tags ?? [] }));
   const methods = payment.methods.filter((m) => m.enabled).map((m) => m.id);
   const cryptoOn = payment.methods.some((m) => m.id === "bitcoin" && m.enabled);
 

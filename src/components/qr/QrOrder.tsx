@@ -41,7 +41,14 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
   const [covers, setCovers] = useState(2);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const idemKey = useRef<string>(typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `qr-${Date.now()}`);
+  // Lazily minted so we never call an impure function during render. One key
+  // per checkout attempt; rotated on a rejected attempt so a corrected retry
+  // isn't deduped against the rejected one.
+  const idemKey = useRef<string | null>(null);
+  const freshKey = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `qr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const byCategory = useMemo(() => {
@@ -69,6 +76,7 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 9) { setError("Please add a valid phone number."); return; }
     setPlacing(true);
+    if (!idemKey.current) idemKey.current = freshKey();
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -85,7 +93,14 @@ export function QrOrder({ locationSlug, locationName, city, table, items, paymen
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data?.error ?? "Could not place the order. Please try again."); setPlacing(false); return; }
+      if (!res.ok) {
+        // Server rejected (pre-payment, e.g. validation) — rotate the key so
+        // a corrected retry is processed instead of deduped.
+        setError(data?.error ?? "Could not place the order. Please try again.");
+        idemKey.current = freshKey();
+        setPlacing(false);
+        return;
+      }
       if (data.url) { window.location.href = data.url; return; }
       if (data.orderId) { window.location.href = `/order-confirmation?orderId=${encodeURIComponent(data.orderId)}&location=${locationSlug}`; return; }
       setError("Could not start payment. Please ask a member of staff.");

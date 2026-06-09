@@ -362,12 +362,16 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   const orderId = generateOrderId();
 
   // Slot fields: real for a booked order; synthesised from "now" for an
-  // immediate QR walk-in (which never touches slot capacity).
+  // immediate QR walk-in (which never touches slot capacity). Formatted in
+  // Europe/Warsaw — serverless runs in UTC, so a late-night PL order must not
+  // record the wrong local date/time.
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
   const effectiveSlotId = input.slotId ?? "qr-walkin";
-  const effectiveSlotDate = input.slotDate ?? now.toISOString().slice(0, 10);
-  const effectiveSlotTime = input.slotTime ?? `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const effectiveSlotDate =
+    input.slotDate ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(now);
+  const effectiveSlotTime =
+    input.slotTime ??
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
 
   if (!immediate) {
     if (!(await incrementSlotOrders(input.slotId!))) {
@@ -403,12 +407,15 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   if (input.fulfillmentType === "dine-in") {
     try {
       const tables = await getTables(input.locationSlug);
-      // QR orders carry the table they were scanned at — seat them there;
-      // fall back to the Floor Twin's best-fit pick when there's no match.
-      const byNumber = input.tableNumber
+      // QR orders carry the table they were scanned at — seat them there, and
+      // only there. If the scanned table isn't a registered FloorTable, leave
+      // the order unseated (the guest IS at that table; staff can seat) rather
+      // than auto-picking a *different* table and sending food to the wrong
+      // seat. The Floor Twin's best-fit pick is only for the slot-booked
+      // dine-in flow, which never supplies a table number.
+      const pick = input.tableNumber
         ? tables.find((t) => t.number === input.tableNumber)
-        : undefined;
-      const pick = byNumber ?? pickOpenTable(tables, dineInParty ?? 1);
+        : pickOpenTable(tables, dineInParty ?? 1);
       if (pick) {
         assignedTableId = pick.id;
         void saveTable({ ...pick, status: "seated" }).catch(() => {}); // logs the seat transition

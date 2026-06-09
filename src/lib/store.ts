@@ -3111,8 +3111,18 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
 export async function updatePaymentSettings(updates: Partial<PaymentSettings>): Promise<PaymentSettings> {
   return withLock(PAYMENT_SETTINGS_KEY, async () => {
     const current = mergePaymentSettings(await readJSON<Partial<PaymentSettings>>(PAYMENT_SETTINGS_KEY, {}));
+    // Patch the supplied method flags over the CURRENT set (not the defaults),
+    // so a partial update never silently resets the methods it omitted.
+    let methods = current.methods;
+    if (updates.methods) {
+      const upById = new Map(updates.methods.map((m) => [m.id, m]));
+      methods = current.methods.map((m) => {
+        const up = upById.get(m.id);
+        return up && typeof up.enabled === "boolean" ? { ...m, enabled: up.enabled } : m;
+      });
+    }
     const merged: PaymentSettings = {
-      methods: updates.methods ? mergePaymentSettings({ methods: updates.methods }).methods : current.methods,
+      methods,
       bitcoinAddress:
         typeof updates.bitcoinAddress === "string" ? updates.bitcoinAddress.trim() : current.bitcoinAddress,
     };
