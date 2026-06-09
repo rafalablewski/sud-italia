@@ -1374,7 +1374,7 @@ body {
 }
 
 /* Brand block — basil-sprig SVG (ochre-light strokes + basil leaves)
-   + Sud Italia wordmark in parchment Cormorant. */
+   + Ottaviano wordmark in parchment Cormorant. */
 .v8-pfoot-brand {
   display: flex;
   align-items: center;
@@ -3747,7 +3747,7 @@ body.v8-cart-open { overflow: hidden; }
 }
 
 /* ------------------------------------------------------------------
-   CorporateOrderBanner — Sud Italia per le aziende ochre paper card.
+   CorporateOrderBanner — Ottaviano per le aziende ochre paper card.
    ------------------------------------------------------------------ */
 .v8-cart-corp {
   margin: 14px 20px 0;

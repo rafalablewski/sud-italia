@@ -28,7 +28,7 @@ export interface CustomerWallet {
   memberRedeemCap: number;
   members: CustomerWalletMember[];
   /** Audit §3.4 — present when this wallet has been productised as a
-   *  Sud Italia Corporate account. */
+   *  Ottaviano Corporate account. */
   corporate?: CustomerWalletCorporate;
 }
 

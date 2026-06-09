@@ -62,7 +62,7 @@ export const CAPABILITY_META: Record<ConciergeCapabilityId, CapabilityMeta> = {
     id: "locate_truck",
     kind: "tool",
     label: "locate_truck",
-    desc: "Where the truck is now + today's schedule per city.",
+    desc: "Our locations, addresses & today's opening hours per city.",
     transport: "public",
   },
 };
@@ -218,9 +218,9 @@ export async function buildCapabilityResponse(
     return {
       city: here?.city ?? slug,
       now_at: here
-        ? { pitch: here.address, hours_today: todayHours(here), coordinates: here.coordinates }
+        ? { address: here.address, hours_today: todayHours(here), coordinates: here.coordinates }
         : null,
-      locations: locs.map((l) => ({ slug: l.slug, city: l.city, pitch: l.address })),
+      locations: locs.map((l) => ({ slug: l.slug, city: l.city, address: l.address })),
     };
   }
 

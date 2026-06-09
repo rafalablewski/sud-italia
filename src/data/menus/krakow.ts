@@ -436,7 +436,7 @@ export const krakowMenu: MenuItem[] = [
   },
   {
     id: "krk-pantry-olive-oil",
-    name: "Sud Italia Extra Virgin Olive Oil 250ml",
+    name: "Ottaviano Extra Virgin Olive Oil 250ml",
     description:
       "Single-estate Sicilian EVOO, hand-pressed. Branded bottle. Delivery only.",
     price: 3500,

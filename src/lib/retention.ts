@@ -93,7 +93,7 @@ function draftMessage(name: string | null | undefined, topDish: string | null, b
   const first = (name ?? "").trim().split(/\s+/)[0];
   const hi = first ? `Hi ${first}` : "Hi there";
   const dish = topDish ? `Your usual ${topDish} is waiting — ` : "";
-  return `${hi}! We miss you at Sud Italia. ${dish}enjoy ${bonus} bonus points on us when you come back this week. 🍕`;
+  return `${hi}! We miss you at Ottaviano. ${dish}enjoy ${bonus} bonus points on us when you come back this week. 🍕`;
 }
 
 export function buildWinBackQueue(input: WinBackInput): WinBackQueue {

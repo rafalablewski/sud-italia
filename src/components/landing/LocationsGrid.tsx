@@ -164,7 +164,7 @@ function VespaIllus() {
       <path d="M10 122 L210 122" stroke="#B85C38" strokeWidth="1.5" strokeLinecap="round" />
       <rect x="32" y="48" width="46" height="26" rx="2" stroke="#7A2B2B" strokeWidth="1.6" fill="#E8D6B5" />
       <path d="M32 56 L78 56" stroke="#7A2B2B" strokeWidth="1" opacity="0.6" />
-      <text x="55" y="68" textAnchor="middle" fontFamily="Georgia" fontSize="9" fontStyle="italic" fill="#7A2B2B">Sud Italia</text>
+      <text x="55" y="68" textAnchor="middle" fontFamily="Georgia" fontSize="9" fontStyle="italic" fill="#7A2B2B">Ottaviano</text>
       <path d="M68 100 C 60 100, 56 92, 60 82 C 64 72, 78 70, 92 72 L120 78 C 134 80, 148 82, 156 92 L162 102 C 158 110, 76 110, 68 100 Z" stroke="#7A2B2B" strokeWidth="1.8" fill="#B85C38" fillOpacity="0.4" strokeLinejoin="round" />
       <path d="M82 78 L120 78 L122 70 L88 70 Z" stroke="#3D2817" strokeWidth="1.6" fill="#3D2817" />
       <path d="M152 86 L168 64" stroke="#3D2817" strokeWidth="1.8" strokeLinecap="round" />

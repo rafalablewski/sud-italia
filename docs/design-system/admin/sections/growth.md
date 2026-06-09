@@ -4,7 +4,7 @@
 
 The five pages where the operator deliberately moves revenue: live-widget
 campaigns, AOV upsells, cart cross-sells, time-scheduled bundles, and
-the truck-stop route plan.
+the events & bookings run-sheet planner.
 
 | Page                          | Code                                              | Role-gate |
 | ----------------------------- | ------------------------------------------------- | --------- |
@@ -178,18 +178,19 @@ Time-windowed bundle activation — "Lunch combo, weekdays 11–14".
 - **Expiry handling** — schedules past their end date show as
   `expired` with a one-click `Extend` action.
 
-## Truck — `/admin/truck`
+## Events & bookings — `/admin/truck`
 
-The route + stop plan — where the truck physically goes when.
+Private bookings, catering & special events, plus reusable **run sheets**
+— timed segments for an event (setup, service, teardown).
 
-- **Header:** `Truck ops` (h1), location switcher,
-  `+ New route` primary.
-- **Routes list:** route name, stops (chips), days-of-week, total
-  duration estimate, observed revenue rank per stop.
-- **Stop-revenue ranking** — for each route, the per-stop attribution
-  is approximate (matches events whose route includes the stop name,
-  splits revenue evenly across stops). Frame it as "rough" in the UI —
-  GPS event matching is the next improvement.
+- **Header:** `Events & bookings` (h1), location switcher,
+  `+ New run sheet` primary.
+- **Run-sheets list:** run-sheet name, segments (chips), total
+  duration estimate, observed revenue rank per event.
+- **Segment-revenue ranking** — for each run sheet, the per-segment
+  attribution is approximate (matches events whose run sheet includes the
+  segment name, splits revenue evenly across segments). Frame it as
+  "rough" in the UI — finer event matching is the next improvement.
 - **Route editor:** stops in order, drag-or-arrow reorder, per-stop
   arrival / departure window, optional notes.
 

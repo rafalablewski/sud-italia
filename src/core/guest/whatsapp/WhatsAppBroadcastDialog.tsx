@@ -152,7 +152,7 @@ export function WhatsAppBroadcastDialog({
             <Input
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
-              placeholder="sud_italia_weekend_promo"
+              placeholder="ottaviano_weekend_promo"
             />
           </label>
           <Button

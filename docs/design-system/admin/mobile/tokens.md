@@ -1,4 +1,4 @@
-# Sud Italia — Mobile Admin Design System
+# Ottaviano — Mobile Admin Design System
 
 > **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
 > document describes is no longer served; phones now render the responsive

@@ -70,5 +70,5 @@ test("totpUri is a scannable otpauth URI", () => {
   const uri = totpUri(RFC_SECRET, "owner@sud-italia.pl");
   assert.match(uri, /^otpauth:\/\/totp\//);
   assert.match(uri, /secret=/);
-  assert.match(uri, /issuer=Sud(\+|%20)Italia/);
+  assert.match(uri, /issuer=Ottaviano/);
 });

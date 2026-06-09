@@ -2981,11 +2981,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
   businessPhone: "+48 123 456 789",
-  businessEmail: "hello@suditalia.pl",
+  businessEmail: "hello@ottaviano.pl",
   socialLinks: {
-    instagram: "https://instagram.com/suditalia.pl",
-    facebook: "https://facebook.com/suditalia.pl",
-    tiktok: "https://tiktok.com/@suditalia.pl",
+    instagram: "https://instagram.com/ottaviano.pl",
+    facebook: "https://facebook.com/ottaviano.pl",
+    tiktok: "https://tiktok.com/@ottaviano.pl",
   },
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
@@ -4306,7 +4306,7 @@ export interface FamilyWallet {
   createdAt: string;
   members: WalletMemberEntry[];
   /**
-   * When set, productises this wallet as a "Sud Italia Corporate" account
+   * When set, productises this wallet as a "Ottaviano Corporate" account
    * (audit §3.4) — adds a public corporate URL, billing email for the
    * admin's monthly invoice, and a head-bonus accrual rate so the
    * company contact earns a slice of the corporate pool. Members continue
@@ -4553,7 +4553,7 @@ export async function leaveFamilyWallet(
   });
 }
 
-// --- Sud Italia Corporate (audit §3.4) ---------------------------------
+// --- Ottaviano Corporate (audit §3.4) ---------------------------------
 //
 // Productises the existing FamilyWallet as a corporate-bulk-ordering
 // primitive. A corporate account is just a wallet with a `corporate` config
@@ -4976,7 +4976,7 @@ export interface CustomerWalletPayload {
   members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
   /**
    * Corporate config (audit §3.4). Populated when this wallet has been
-   * productised as a Sud Italia Corporate account. Lets the cart drawer
+   * productised as a Ottaviano Corporate account. Lets the cart drawer
    * surface the "Ordering with [company]" banner without an extra fetch.
    */
   corporate?: {
@@ -8999,7 +8999,7 @@ async function ensureDefaultBrand(): Promise<void> {
   try {
     await db
       .insert(brandsTable)
-      .values({ id: "sud-italia", name: "Sud Italia", slug: "sud-italia" })
+      .values({ id: "sud-italia", name: "Ottaviano", slug: "sud-italia" })
       .onConflictDoNothing();
   } catch (err) {
     logger.warn("ensureDefaultBrand failed", { layer: "store.brands" }, err);
@@ -9883,7 +9883,7 @@ const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
 const DEFAULT_WA_SETTINGS: WaSettings = {
   enabled: true,
   welcomeMessage:
-    "Cześć! Tu Sud Italia 🍕 Napisz, co masz ochotę zjeść albo z jakiego miasta jesteś (Kraków / Warszawa).",
+    "Cześć! Tu Ottaviano 🍕 Napisz, co masz ochotę zjeść albo z jakiego miasta jesteś (Kraków / Warszawa).",
   optOutPhrases: ["STOP", "NIE", "UNSUBSCRIBE"],
   defaultLocation: null,
   dailyMessageCap: 60,

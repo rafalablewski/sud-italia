@@ -18,7 +18,7 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-admin-display",
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Capabilities | Sud Italia",
+  title: "Capabilities | Ottaviano",
   robots: "noindex, nofollow",
 };
 

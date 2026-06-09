@@ -14,7 +14,7 @@ components **self-gate**: they fetch `/api/admin/settings` and render
 `ltvCacSimulationEnabled`, `menuEngineeringSimulationEnabled` — all **off by
 default**, toggled in Settings → General → Simulator card). They are also
 **self-seeding**: when there is no live data yet they fall back to a worked
-Sud Italia example, badged `Example data`, so the sandbox is never empty.
+Ottaviano example, badged `Example data`, so the sandbox is never empty.
 Read-only on live data — nothing they do writes back.
 
 Every **KPI card carries its own `InfoButton` (ⓘ)** in the card label
@@ -220,7 +220,7 @@ The four-quadrant analysis: every item sorted by margin × popularity.
 
 Rendered at the foot of the matrix. Self-gates on
 `menuEngineeringSimulationEnabled`; self-seeds (`EXAMPLE_MENU`, a worked
-10-dish Sud Italia menu).
+10-dish Ottaviano menu).
 
 - **Seed:** `GET /api/admin/menu-engineering?days=` — per-item units,
   revenue, cost, quadrant. Carries its own `aria-label="Window"` selector

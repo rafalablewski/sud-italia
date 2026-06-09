@@ -18,7 +18,7 @@ export function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Ciao! I'm the Sud Italia assistant. Ask me about our menu, locations, hours, delivery, or loyalty program.",
+        "Ciao! I'm the Ottaviano assistant. Ask me about our menu, locations, hours, delivery, or loyalty program.",
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -78,7 +78,7 @@ export function ChatWidget() {
       )}
 
       {open && (
-        <div className="v8-chat-sheet" role="dialog" aria-label="Sud Italia assistant">
+        <div className="v8-chat-sheet" role="dialog" aria-label="Ottaviano assistant">
           <div className="v8-chat-head">
             <div className="v8-chat-head-mark" aria-hidden>
               <BasilSprigIcon />

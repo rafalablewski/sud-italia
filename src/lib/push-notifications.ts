@@ -42,7 +42,7 @@ async function configureVapid(): Promise<typeof import("web-push") | null> {
   if (!privateKey || !publicKey) return null;
   const webpush = (await import("web-push")).default;
   if (!vapidConfigured) {
-    const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:hello@suditalia.pl";
+    const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:hello@ottaviano.pl";
     webpush.setVapidDetails(subject, publicKey, privateKey);
     vapidConfigured = true;
   }

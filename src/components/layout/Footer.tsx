@@ -42,8 +42,8 @@ export async function Footer() {
               <span>{SITE_NAME}</span>
             </div>
             <p>
-              Authentic Italian street food by {COMPANY_NAME}. Bringing the
-              flavours of Southern Italy to Poland, one food truck at a time.
+              Authentic Italian dining by {COMPANY_NAME}. Bringing the
+              flavours of Southern Italy to Poland, one plate at a time.
             </p>
             <div className="v8-tricolore v8-pfoot-trico" aria-hidden />
           </div>

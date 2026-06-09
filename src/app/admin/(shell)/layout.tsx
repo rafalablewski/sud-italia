@@ -12,7 +12,7 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-admin-display",
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Admin v3 | Sud Italia",
+  title: "Admin v3 | Ottaviano",
   robots: "noindex, nofollow",
 };
 

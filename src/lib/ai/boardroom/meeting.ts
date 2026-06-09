@@ -147,7 +147,7 @@ async function synthesizeDecisions(
     .map((c) => `${BOARDROOM_PERSONAS[c.persona].title}: ${c.text}`)
     .join("\n\n");
 
-  const system = `You are the chair of the Sud Italia leadership board. Convert a board discussion into a concise, prioritised decision list. Reply with ONLY a JSON object — no prose, no markdown fences.
+  const system = `You are the chair of the Ottaviano leadership board. Convert a board discussion into a concise, prioritised decision list. Reply with ONLY a JSON object — no prose, no markdown fences.
 
 Schema:
 {"decisions":[{"title":"short imperative","owner":"ceo|coo|cfo|cmo","rationale":"one sentence tied to a figure","proposedTool":"optional: ${KNOWN_TOOLS.join(" | ")}","proposedInput":{}}]}

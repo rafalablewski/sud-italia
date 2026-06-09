@@ -119,7 +119,7 @@ export function verifyTotp(
 export function totpUri(
   secretBase32: string,
   accountName: string,
-  issuer = "Sud Italia",
+  issuer = "Ottaviano",
 ): string {
   const label = encodeURIComponent(`${issuer}:${accountName}`);
   const params = new URLSearchParams({

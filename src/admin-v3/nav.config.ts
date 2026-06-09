@@ -26,7 +26,7 @@ import {
   TrendingUp,
   Sparkles,
   Calendar,
-  Truck,
+  CalendarDays,
   Map,
   MapPin,
   Brain,
@@ -143,7 +143,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}/upsell`, label: "Upsell", icon: TrendingUp, requiredRole: "manager" },
       { href: `${P}/crosssell`, label: "Cross-sell", icon: Sparkles, requiredRole: "manager" },
       { href: `${P}/scheduled-bundles`, label: "Scheduled bundles", icon: Calendar, requiredRole: "manager" },
-      { href: `${P}/truck`, label: "Truck ops", icon: Truck, requiredRole: "manager" },
+      { href: `${P}/truck`, label: "Events & bookings", icon: CalendarDays, requiredRole: "manager" },
     ],
   },
   {

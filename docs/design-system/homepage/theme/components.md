@@ -261,7 +261,7 @@ The V8 Trattoria top nav.
   layout in a way that affects its rendered height, update
   `--v8-nav-height` to match — otherwise anchor scrolls regress.**
 - **Brand block (left):** basil-sprig SVG mark that rotates `-8°` on
-  hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Sud Italia"
+  hover (`.v8-brand:hover .v8-brand-mark`) + the wordmark "Ottaviano"
   (Cormorant Garamond 600, 24px, espresso) + the italic sublabel
   "Pizza napoletana · est. 2019" (Cormorant 11.5px italic muted,
   ≥768px only). The sublabel was previously the longer
@@ -403,7 +403,7 @@ render so operator edits surface without a redeploy.
   stacks to a single column on mobile.
 - **Brand block** — `<FooterBasilMark />` SVG (ochre-light strokes
   with translucent basil leaves, V8's footer variant of the nav
-  brand mark) + "Sud Italia" wordmark in parchment Cormorant 26px,
+  brand mark) + "Ottaviano" wordmark in parchment Cormorant 26px,
   a body paragraph at parchment-75% opacity, then a 90×3px
   `.v8-tricolore` hairline as the footer accent. `SITE_NAME` +
   `COMPANY_NAME` are code-managed (brand identity + legal entity).
@@ -1077,11 +1077,11 @@ and is intentionally cosmetic.
 
 ### `<CorporateOrderBanner />` — `src/components/cart/CorporateOrderBanner.tsx`
 
-"Sud Italia per le aziende" rollup card (audit §3.4) — shown when the
+"Ottaviano per le aziende" rollup card (audit §3.4) — shown when the
 active wallet is a productised corporate account.
 
 - `.v8-cart-corp` ochre paper card with the building-block SVG on the
-  left + Cormorant kicker ("Sud Italia for businesses · per le
+  left + Cormorant kicker ("Ottaviano for businesses · per le
   aziende") + italic Cormorant headline "Ordering with [name]" +
   italic Lora rollup line (employee count, optional auto-preorder
   copy, optional head-of-wallet bonus).

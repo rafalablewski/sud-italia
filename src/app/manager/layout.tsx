@@ -20,7 +20,7 @@ const managerDisplay = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Manager | Sud Italia",
+  title: "Manager | Ottaviano",
   robots: "noindex, nofollow",
 };
 

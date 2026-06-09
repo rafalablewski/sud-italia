@@ -237,7 +237,7 @@ visit anyway (the menu + the rewards page).
 ### Share / referral
 
 - `.v8-order-review-link` — small italic Lora "Review later:
-  suditalia.pl/review/{id}" line with the link in terracotta italic
+  ottaviano.pl/review/{id}" line with the link in terracotta italic
   (tabular).
 - `.v8-order-actions` — flex row (column on mobile) of
   `.v8-order-action` buttons: terracotta primary "Order again ·

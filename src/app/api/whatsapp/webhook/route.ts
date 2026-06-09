@@ -111,7 +111,7 @@ async function processOne(message: {
     const provider = getWhatsAppProvider();
     await provider.sendText(
       message.from,
-      "Hi! Sud Italia takes orders only from Polish numbers for now. Cześć!",
+      "Hi! Ottaviano takes orders only from Polish numbers for now. Cześć!",
     );
     return;
   }
@@ -189,7 +189,7 @@ async function processOne(message: {
     await provider.sendText(
       phone,
       settings.awayMessage?.trim() ||
-        "Dziękujemy za wiadomość! Jesteśmy teraz zamknięci — napisz w godzinach otwarcia albo zamów online: https://sudita.lia 🍕",
+        "Dziękujemy za wiadomość! Jesteśmy teraz zamknięci — napisz w godzinach otwarcia albo zamów online: https://ottaviano.pl 🍕",
     );
     incrCounter("whatsapp.afterhours.skipped");
     return;

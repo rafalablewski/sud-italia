@@ -26,7 +26,7 @@ const cvDisplay = Bricolage_Grotesque({
 const cvMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-cv-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Core v2 | Sud Italia",
+  title: "Core v2 | Ottaviano",
   robots: "noindex, nofollow",
 };
 

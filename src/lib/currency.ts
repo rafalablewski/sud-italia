@@ -1,4 +1,4 @@
-// Currency system for Sud Italia.
+// Currency system for Ottaviano.
 //
 // All prices in the database are stored as PLN grosze (1/100 PLN). When a
 // customer picks a non-PLN display currency we convert at render time

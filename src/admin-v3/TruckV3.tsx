@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Banknote, LayoutGrid, MapPin, Plus, Radio, Rows3, Truck, Users, X } from "lucide-react";
+import { Banknote, CalendarDays, LayoutGrid, ListChecks, Plus, Radio, Rows3, Users, X } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import type { TruckEvent, TruckEventStatus, TruckRoute, TruckStop } from "@/data/types";
@@ -49,9 +49,9 @@ export function TruckV3() {
     { key: "del", header: "", render: (e) => <button type="button" className="av3-iconbtn-sm" aria-label="Delete" onClick={(ev) => { ev.stopPropagation(); delEvent(e.id); }}><X /></button> },
   ];
   const routeCols: ColumnV3<TruckRoute>[] = [
-    { key: "name", header: "Route", render: (r) => <span style={{ fontWeight: 600 }}>{r.name}</span> },
+    { key: "name", header: "Run sheet", render: (r) => <span style={{ fontWeight: 600 }}>{r.name}</span> },
     { key: "desc", header: "Description", render: (r) => <span className="av3-cell-muted">{r.description || "—"}</span> },
-    { key: "stops", header: "Stops", num: true, render: (r) => `${r.stops?.length ?? 0}` },
+    { key: "stops", header: "Segments", num: true, render: (r) => `${r.stops?.length ?? 0}` },
     { key: "del", header: "", render: (r) => <button type="button" className="av3-iconbtn-sm" aria-label="Delete" onClick={(ev) => { ev.stopPropagation(); delRoute(r.id); }}><X /></button> },
   ];
 
@@ -59,38 +59,38 @@ export function TruckV3() {
     <>
       <div className="av3-pagehead">
         <div>
-          <h1>Truck ops</h1>
-          <div className="av3-pagehead-sub">Events &amp; routes · {city}{!location ? " (pick a location to switch)" : ""}</div>
+          <h1>Events &amp; bookings</h1>
+          <div className="av3-pagehead-sub">Private bookings, catering &amp; special events · {city}{!location ? " (pick a location to switch)" : ""}</div>
         </div>
         <div className="av3-pagehead-actions">
           {tab === "events" ? (
             <Button variant="primary" size="sm" onClick={() => setEventDialog("new")}><Plus className="av3-btn-ico" /> Add event</Button>
           ) : (
-            <Button variant="primary" size="sm" onClick={() => setRouteDialog("new")}><Plus className="av3-btn-ico" /> Add route</Button>
+            <Button variant="primary" size="sm" onClick={() => setRouteDialog("new")}><Plus className="av3-btn-ico" /> Add run sheet</Button>
           )}
         </div>
       </div>
 
       <div className="av3-kpi-rail">
-        <Kpi label="Events" icon={Truck} value={`${events.length}`} accentVar="--av3-c3" />
+        <Kpi label="Events" icon={CalendarDays} value={`${events.length}`} accentVar="--av3-c3" />
         <Kpi label="Revenue" icon={Banknote} value={formatPrice(events.reduce((s, e) => s + (e.actualRevenueGrosze ?? 0), 0))} accentVar="--av3-c1"
-          info={<InfoButton title="Truck event revenue" description="Total recorded takings across this location's truck events (pop-ups, markets, private bookings)."
-            institutional="Off-premise events are a capacity-light growth channel: they borrow the brand and the kitchen without a second lease. The discipline is yield per event — revenue ÷ events should clear the marginal cost of staffing and stock for the day, and ideally beat an average in-store day. A long tail of low-revenue events is brand exposure, not a P&L line; treat those as marketing, not revenue."
-            plain="If eight events brought in 24,000 zł, that's ~3,000 zł a day the truck earned away from its usual spot. One strong market can be worth a slow weekday on the regular pitch."
+          info={<InfoButton title="Event revenue" description="Total recorded takings across this location's events — private bookings, catering and special events."
+            institutional="Events are a capacity-light growth channel: they borrow the brand and the kitchen without a second lease. The discipline is yield per event — revenue ÷ events should clear the marginal cost of staffing and stock for the day, and ideally beat an average in-store day. A long tail of low-revenue events is brand exposure, not a P&L line; treat those as marketing, not revenue."
+            plain="If eight events brought in 24,000 zł, that's ~3,000 zł a day the kitchen earned on top of the dining room. One strong private booking can be worth a slow weekday of covers."
             tips="Record actual revenue on every 'done' event so this stays real; double down on the event types with the best per-event yield; pair high-expected-guest events with extra stock and a second pair of hands; cancel rather than under-staff a thin booking."
-            methodology="Sum of actualRevenueGrosze over the location's truck events (/api/admin/truck-events). Events without recorded revenue contribute zero — fill it in on the event editor when the day closes." />} />
+            methodology="Sum of actualRevenueGrosze over the location's events (/api/admin/truck-events). Events without recorded revenue contribute zero — fill it in on the event editor when the day closes." />} />
         <Kpi label="Expected guests" icon={Users} value={events.reduce((s, e) => s + (e.expectedAttendance ?? 0), 0).toLocaleString("pl-PL")} accentVar="--av3-c4"
-          info={<InfoButton title="Expected guests" description="Sum of expected attendance across the location's scheduled and upcoming truck events — your demand-planning number."
-            institutional="Expected attendance is the input to prep, stock and staffing for off-premise days. The institutional value is in the gap between expected and actual: a persistent over-estimate wastes stock and labour, a persistent under-estimate sells out early and leaves money (and goodwill) on the table. Calibrate it against recorded revenue to turn guesses into a forecast."
+          info={<InfoButton title="Expected guests" description="Sum of expected attendance across the location's scheduled and upcoming events — your demand-planning number."
+            institutional="Expected attendance is the input to prep, stock and staffing for event days. The institutional value is in the gap between expected and actual: a persistent over-estimate wastes stock and labour, a persistent under-estimate sells out early and leaves money (and goodwill) on the table. Calibrate it against recorded revenue to turn guesses into a forecast."
             plain="If three weekend events expect 1,200 guests between them, you know roughly how much dough to prep and how many people to roster — instead of finding out at 13:00 that you're short."
             tips="Set a realistic expected count on every event from the organiser's figure or last year's; after the event, compare to actual revenue and adjust your conversion assumption; flag big events early so purchasing and rota can react."
-            methodology="Sum of expectedAttendance over the location's truck events. Used for prep/stock planning; compare against the Revenue tile to sanity-check your spend-per-guest assumption." />} />
+            methodology="Sum of expectedAttendance over the location's events. Used for prep/stock planning; compare against the Revenue tile to sanity-check your spend-per-guest assumption." />} />
         <Kpi label="Live / upcoming" icon={Radio} value={`${events.filter((e) => e.status === "live" || e.status === "scheduled").length}`} accentVar="--av3-c5" />
       </div>
 
       <div className="av3-filterchips">
         <button type="button" className={`av3-fchip ${tab === "events" ? "is-active" : ""}`} onClick={() => setTab("events")}>Events<span className="av3-fchip-count">{events.length}</span></button>
-        <button type="button" className={`av3-fchip ${tab === "routes" ? "is-active" : ""}`} onClick={() => setTab("routes")}>Routes<span className="av3-fchip-count">{routes.length}</span></button>
+        <button type="button" className={`av3-fchip ${tab === "routes" ? "is-active" : ""}`} onClick={() => setTab("routes")}>Run sheets<span className="av3-fchip-count">{routes.length}</span></button>
       </div>
 
       {tab === "events" && !loading && events.length > 0 && (
@@ -108,7 +108,7 @@ export function TruckV3() {
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
       ) : tab === "events" ? (
         events.length === 0 ? (
-          <div className="av3-card" style={{ padding: 0 }}><div className="av3-empty"><div className="av3-empty-title">No events</div><div className="av3-empty-text">Schedule a pop-up, market or private booking.</div></div></div>
+          <div className="av3-card" style={{ padding: 0 }}><div className="av3-empty"><div className="av3-empty-title">No events</div><div className="av3-empty-text">Schedule a private booking, catering job or special event.</div></div></div>
         ) : view === "table" ? (
           <div className="av3-card" style={{ padding: 0 }}>
             <Table columns={eventCols} rows={events} rowKey={(e) => e.id} onRowClick={(e) => setEventDialog(e)} />
@@ -119,7 +119,7 @@ export function TruckV3() {
       ) : (
         <div className="av3-card" style={{ padding: 0 }}>
           {routes.length === 0 ? (
-            <div className="av3-empty"><div className="av3-empty-title">No routes</div><div className="av3-empty-text">Define a route with stops the truck runs.</div></div>
+            <div className="av3-empty"><div className="av3-empty-title">No run sheets</div><div className="av3-empty-text">Build a run sheet — timed segments for an event (setup, service, teardown).</div></div>
           ) : (
             <Table columns={routeCols} rows={routes} rowKey={(r) => r.id} onRowClick={(r) => setRouteDialog(r)} />
           )}
@@ -192,8 +192,8 @@ function EventDialog({ event, routes, locationSlug, onClose, onSaved }: { event:
         <label className="av3-field"><span className="av3-field-label">Status</span><select className="av3-select" value={status} onChange={(e) => setStatus(e.target.value as TruckEventStatus)}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</select></label>
         <label className="av3-field"><span className="av3-field-label">Expected</span><input className="av3-input" type="number" value={expected} onChange={(e) => setExpected(e.target.value)} /></label>
       </div>
-      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Route (optional)</span><select className="av3-select" value={routeId} onChange={(e) => setRouteId(e.target.value)}><option value="">—</option>{routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
-      <label className="av3-field"><span className="av3-field-label">Notes</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="weather, road closures…" /></label>
+      <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Run sheet (optional)</span><select className="av3-select" value={routeId} onChange={(e) => setRouteId(e.target.value)}><option value="">—</option>{routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+      <label className="av3-field"><span className="av3-field-label">Notes</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="dietary needs, setup notes…" /></label>
     </Dialog>
   );
 }
@@ -221,20 +221,20 @@ function RouteDialog({ route, locationSlug, onClose, onSaved }: { route: TruckRo
   };
 
   return (
-    <Dialog open onClose={onClose} title={route ? route.name : "New route"} headerExtra={<Badge tone="neutral"><MapPin style={{ width: 11, height: 11 }} /> route</Badge>} width={560}
+    <Dialog open onClose={onClose} title={route ? route.name : "New run sheet"} headerExtra={<Badge tone="neutral"><ListChecks style={{ width: 11, height: 11 }} /> run sheet</Badge>} width={560}
       footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button><Button variant="primary" size="sm" loading={saving} disabled={!name.trim()} onClick={save}>Save</Button></>}>
       <div className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Name</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={name} onChange={(e) => setName(e.target.value)} /></div>
       <label className="av3-field" style={{ marginBottom: 10 }}><span className="av3-field-label">Description</span><input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
-      <div className="av3-subhead">Stops</div>
-      {stops.length === 0 ? <div className="av3-empty-text" style={{ padding: "6px 0", color: "var(--av3-subtle)" }}>No stops yet.</div> : stops.map((s, i) => (
+      <div className="av3-subhead">Segments</div>
+      {stops.length === 0 ? <div className="av3-empty-text" style={{ padding: "6px 0", color: "var(--av3-subtle)" }}>No segments yet.</div> : stops.map((s, i) => (
         <div key={i} className="av3-cfgrow" style={{ gridTemplateColumns: "1fr 90px 90px 30px", gap: 8, padding: "5px 0" }}>
-          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={s.name} onChange={(e) => setStop(i, { name: e.target.value })} placeholder="Stop name" aria-label="Stop name" title="Stop name" />
+          <input className="av3-input" style={{ fontFamily: "var(--av3-ui)" }} value={s.name} onChange={(e) => setStop(i, { name: e.target.value })} placeholder="Segment name" aria-label="Segment name" title="Segment name" />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.startTime ?? ""} onChange={(e) => setStop(i, { startTime: e.target.value })} aria-label="Start time" title="Start time" />
           <input className="av3-input" type="time" style={{ fontFamily: "var(--av3-ui)" }} value={s.endTime ?? ""} onChange={(e) => setStop(i, { endTime: e.target.value })} aria-label="End time" title="End time" />
-          <button type="button" className="av3-iconbtn-sm" aria-label="Remove stop" onClick={() => removeStop(i)}><X /></button>
+          <button type="button" className="av3-iconbtn-sm" aria-label="Remove segment" onClick={() => removeStop(i)}><X /></button>
         </div>
       ))}
-      <div style={{ marginTop: 10 }}><Button variant="secondary" size="sm" onClick={addStop}><Plus className="av3-btn-ico" /> Add stop</Button></div>
+      <div style={{ marginTop: 10 }}><Button variant="secondary" size="sm" onClick={addStop}><Plus className="av3-btn-ico" /> Add segment</Button></div>
     </Dialog>
   );
 }

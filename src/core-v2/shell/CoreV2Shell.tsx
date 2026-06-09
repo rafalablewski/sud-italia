@@ -39,7 +39,7 @@ export function CoreV2Shell({
         <div className="cv-brand">
           <div className="cv-mark">S</div>
           <div>
-            <div className="nm">Sud Italia</div>
+            <div className="nm">Ottaviano</div>
             <div className="os">Core OS</div>
           </div>
         </div>

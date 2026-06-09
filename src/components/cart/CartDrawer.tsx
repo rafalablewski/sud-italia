@@ -734,7 +734,7 @@ export function CartDrawer() {
                 </div>
               )}
 
-              {/* Audit §3.4 — Sud Italia Corporate. Surfaces above everything so
+              {/* Audit §3.4 — Ottaviano Corporate. Surfaces above everything so
                   the customer sees who's paying before they scan their cart. */}
               <CorporateOrderBanner />
 
@@ -1140,7 +1140,7 @@ export function CartDrawer() {
 
               <div className="v8-cart-foot">
                 <em>&ldquo;Mangia bene, ridi spesso, ama molto.&rdquo;</em>
-                <small>Sud Italia · Kraków · Warszawa</small>
+                <small>Ottaviano · Kraków · Warszawa</small>
               </div>
 
               {/* Sticky pay bar */}

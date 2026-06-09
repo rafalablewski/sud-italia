@@ -1,4 +1,4 @@
-// Lightweight i18n system for Sud Italia.
+// Lightweight i18n system for Ottaviano.
 //
 // Supported locales:
 //   - pl    Polish (default — Krakow / Warsaw operations)
@@ -28,10 +28,10 @@ const translations: Record<string, Record<Locale, string>> = {
 
   // Hero
   "hero.tagline": {
-    pl: "Autentyczne Włoskie Street Food",
-    en: "Authentic Italian Street Food",
-    de: "Authentisches italienisches Street Food",
-    "en-SG": "Authentic Italian Street Food",
+    pl: "Autentyczna Włoska Kuchnia",
+    en: "Authentic Italian Dining",
+    de: "Authentische italienische Küche",
+    "en-SG": "Authentic Italian Dining",
   },
   "hero.title.taste": { pl: "Smak", en: "A Taste of", de: "Ein Geschmack von", "en-SG": "A Taste of" },
   "hero.title.southern": {
@@ -41,18 +41,18 @@ const translations: Record<string, Record<Locale, string>> = {
     "en-SG": "Southern Italy",
   },
   "hero.title.streets": {
-    pl: "na ulicach",
-    en: "on the Streets of",
-    de: "auf den Straßen von",
-    "en-SG": "on the streets of",
+    pl: "w sercu",
+    en: "in the Heart of",
+    de: "im Herzen von",
+    "en-SG": "in the heart of",
   },
   "hero.title.poland": { pl: "Polski", en: "Poland", de: "Polen", "en-SG": "Poland" },
   "hero.subtitle": {
-    pl: "Neapolitańska pizza, świeży makaron i klasyczne włoskie street food — przygotowane z miłością.",
-    en: "Neapolitan pizza, fresh handmade pasta, and classic Italian street food — crafted with love.",
-    de: "Neapolitanische Pizza, frische handgemachte Pasta und klassisches italienisches Street Food — mit Liebe zubereitet.",
+    pl: "Neapolitańska pizza, świeży makaron i klasyczna włoska kuchnia — przygotowane z miłością.",
+    en: "Neapolitan pizza, fresh handmade pasta, and classic Italian cuisine — crafted with love.",
+    de: "Neapolitanische Pizza, frische handgemachte Pasta und klassische italienische Küche — mit Liebe zubereitet.",
     "en-SG":
-      "Neapolitan pizza, fresh handmade pasta, and classic Italian street food — made with love, shiok!",
+      "Neapolitan pizza, fresh handmade pasta, and classic Italian cuisine — made with love, shiok!",
   },
   "hero.order_in": { pl: "Zamów w", en: "Order in", de: "Bestellen in", "en-SG": "Order in" },
   "hero.our_story": { pl: "Nasza Historia", en: "Our Story", de: "Unsere Geschichte", "en-SG": "Our Story" },
@@ -279,10 +279,10 @@ const translations: Record<string, Record<Locale, string>> = {
 
   // Footer
   "footer.tagline": {
-    pl: "Autentyczne włoskie street food na ulicach Polski.",
-    en: "Authentic Italian street food on the streets of Poland.",
-    de: "Authentisches italienisches Street Food auf den Straßen Polens.",
-    "en-SG": "Authentic Italian street food on the streets of Poland.",
+    pl: "Autentyczna włoska kuchnia w sercu Polski.",
+    en: "Authentic Italian dining in the heart of Poland.",
+    de: "Authentische italienische Küche im Herzen Polens.",
+    "en-SG": "Authentic Italian dining in the heart of Poland.",
   },
   "footer.follow": { pl: "Obserwuj nas", en: "Follow us", de: "Folgen Sie uns", "en-SG": "Follow us" },
   "footer.locations": { pl: "Lokalizacje", en: "Locations", de: "Standorte", "en-SG": "Outlets" },

@@ -103,7 +103,7 @@ function buildConversation(
   };
   const messages: WaMessage[] = [
     { at: step(), direction: "in", kind: "text", body: "Cześć, chciałbym coś zamówić 🍕", actor: "customer" },
-    { at: step(), direction: "out", kind: "text", body: `Cześć ${name}! Tu Sud Italia. Z którego miasta? Kraków czy Warszawa?`, actor: "bot" },
+    { at: step(), direction: "out", kind: "text", body: `Cześć ${name}! Tu Ottaviano. Z którego miasta? Kraków czy Warszawa?`, actor: "bot" },
     { at: step(), direction: "in", kind: "text", body: cityLabel, actor: "customer" },
   ];
 
