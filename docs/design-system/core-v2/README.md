@@ -86,14 +86,19 @@ the app theme (the `.kds` scope in the mockup).
 ## Surfaces (parity target — keep ALL functionality)
 
 Core v2 must keep every functionality + data wire of today's Core. The
-four surfaces and their views:
+the surfaces and their views:
 
 - **POS** (`/core-v2/pos`) — category rail · text-forward menu cards ·
   multi-tab open checks · dine-in coursing (Fire per course) · combo +
-  cross-sell offers · capacity-true pace steering · Charge → Tender.
+  cross-sell offers · capacity-true pace steering · Charge → Tender · a
+  **QR pill** surfacing QR table orders + Print-table-QR.
 - **KDS** (`/core-v2/kds`) — Fleet · **Floor** (New → Firing → Ready·Expo
   lanes, SLA tiers, cook-meters, bump) · Chef. Always-dark wall;
   fullscreen kiosk drops the chrome.
+- **Orders** (`/core-v2/orders`) — every order at the location, live &
+  history: scope tabs (Current · Paid · All), channel filter, search
+  (id / guest / phone / table), KPI strip, and a detail dialog with the
+  full ticket + Mark paid. See `modules/orders.md`.
 - **Guest** (`/core-v2/guest`) — Inbox (WhatsApp 3-pane + live order
   context + NBA) · Guests (CRM) · Loyalty · Concierge · Book.
 - **Service** (`/core-v2/service`) — **Floor** (zoned table tiles, status,

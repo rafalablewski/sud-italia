@@ -798,6 +798,26 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-lookup-results { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; }
 .cv2 .cv-lookup-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); }
 .cv2 .cv-tbl-orders { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.cv2 .cv-tpay.info { background: var(--info-wash); color: var(--info); }
+.cv2 .cv-tpay.muted { background: var(--panel-3); color: var(--ink-3); }
+/* Orders surface (core-v2) */
+.cv2 .cv-switch.sm { display: inline-flex; gap: 2px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--pill); padding: 2px; }
+.cv2 .cv-switch.sm button { appearance: none; border: none; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 13px; border-radius: var(--pill); cursor: pointer; }
+.cv2 .cv-switch.sm button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); }
+.cv2 .cv-orders-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 18px; }
+.cv2 .cv-order-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 13px; cursor: pointer; transition: border-color var(--fast), box-shadow var(--fast); }
+.cv2 .cv-order-row:hover { border-color: var(--line-2); box-shadow: var(--sh-1); }
+.cv2 .cv-or-time { font-size: 13px; color: var(--ink); display: flex; flex-direction: column; min-width: 52px; }
+.cv2 .cv-or-time .cv-or-date { font-size: 10px; color: var(--ink-3); }
+.cv2 .cv-or-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cv2 .cv-or-who { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv2 .cv-or-items { font-size: 11.5px; color: var(--ink-3); }
+.cv2 .cv-or-total { font-size: 14px; font-weight: 700; min-width: 78px; text-align: right; }
+.cv2 .cv-od-head { padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.cv2 .cv-od-lines { display: flex; flex-direction: column; gap: 8px; }
+.cv2 .cv-od-line { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; }
+.cv2 .cv-od-q { color: var(--ink-3); min-width: 28px; }
+.cv2 .cv-od-total { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 16px; }
 /* tile wrapper so the edit affordance isn't a button nested in a button */
 .cv2 .cv-tbl2-wrap { position: relative; display: flex; }
 .cv2 .cv-tbl2-wrap .cv-tbl2 { width: 100%; }

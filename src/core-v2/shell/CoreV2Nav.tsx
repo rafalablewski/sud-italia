@@ -25,6 +25,12 @@ const ICON: Record<string, ReactNode> = {
       <path d="M7 9h10M7 13h6" />
     </>
   ),
+  orders: (
+    <>
+      <path d="M6 3h12a1 1 0 0 1 1 1v16l-3-2-2 2-2-2-2 2-2-2-2 2V4a1 1 0 0 1 1-1Z" />
+      <path d="M9 8h6M9 12h6" />
+    </>
+  ),
   guest: (
     <>
       <circle cx="12" cy="8" r="3.2" />
@@ -42,6 +48,7 @@ const ICON: Record<string, ReactNode> = {
 const SURFACES: { key: keyof typeof ICON; href: string; label: string }[] = [
   { key: "pos", href: "/core-v2/pos", label: "POS" },
   { key: "kds", href: "/core-v2/kds", label: "KDS" },
+  { key: "orders", href: "/core-v2/orders", label: "Orders" },
   { key: "guest", href: "/core-v2/guest", label: "Guest" },
   { key: "service", href: "/core-v2/service", label: "Service" },
 ];
