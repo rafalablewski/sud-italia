@@ -125,6 +125,10 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 className="av3-input"
+                disabled={loading || keyLoading}
+                // Staff need an email; the owner door doesn't — so land the
+                // caret where the user actually types first (MFA steals it below).
+                autoFocus={!isAdmin && !mfaRequired}
               />
             </div>
 
@@ -138,7 +142,8 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 className="av3-input"
-                autoFocus
+                disabled={loading || keyLoading}
+                autoFocus={isAdmin && !mfaRequired}
               />
             </div>
 
@@ -156,6 +161,7 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
                   onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   autoComplete="one-time-code"
                   className="av3-input av3-auth-otp"
+                  disabled={loading || keyLoading}
                   autoFocus
                 />
               </div>
@@ -163,11 +169,11 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
 
             {error && <p className="av3-auth-error">{error}</p>}
 
-            <button type="submit" disabled={loading || !password} className="av3-btn av3-btn-primary">
+            <button type="submit" disabled={loading || keyLoading || !password} className="av3-btn av3-btn-primary">
               {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> {isAdmin ? "Enter console" : "Sign in"}</>)}
             </button>
 
-            <button type="button" onClick={handleSecurityKey} disabled={keyLoading} className="av3-auth-passkey">
+            <button type="button" onClick={handleSecurityKey} disabled={loading || keyLoading} className="av3-auth-passkey">
               <KeyRound />
               {keyLoading ? "Waiting for key…" : "Use passkey / security key"}
             </button>

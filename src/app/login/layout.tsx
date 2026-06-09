@@ -23,7 +23,7 @@ export default function LoginLayout({ children }: { children: React.ReactNode })
   return (
     // `#admin-portal-root` carries the --font-admin-* next/font vars that av3's
     // --av3-ui/-display/-mono read, and is the trap-free portal mount (rule #4).
-    // `.av3-root` scopes the --av3-* tokens; the boot script sets the theme attr.
+    // `.av3-root` scopes the --av3-* tokens (renders dark canonical by default).
     <div
       id="admin-portal-root"
       className={`${loginBody.variable} ${loginDisplay.variable} ${loginMono.variable} av3-root flex flex-col flex-1`}
