@@ -102,6 +102,11 @@ export function CoreV2Pos({
   // reads the pre-write server state and reverts the local edit (the line
   // "disappears, then reappears" a few seconds later on the next poll).
   const pendingSaves = useRef(0);
+  // Real ids of optimistic checks that just reconciled from a `tmp-` id. We
+  // can't persist any items rung up during the round-trip from inside the
+  // `setTabs` updater (its return value isn't readable synchronously), so we
+  // record the id and flush it from an effect once the swap has committed.
+  const reconciledTabsRef = useRef<string[]>([]);
 
   // Reconcile a polled tab list against local state: incoming defines
   // membership (tabs added/closed on other tills), but a locally-edited tab
@@ -169,6 +174,12 @@ export function CoreV2Pos({
   }, []);
 
   const persistTab = useCallback((tab: PosTab) => {
+    // Optimistic checks carry a client `tmp-` id until the POST that creates
+    // them server-side returns the real one. Never PUT under a temp id — it
+    // would mint a phantom server tab that the cross-till poll then resurrects.
+    // Edits made in that sub-second window stay local and are flushed once,
+    // under the real id, at reconcile time (see `newTab`).
+    if (tab.id.startsWith("tmp-")) return;
     const timers = persistTimers.current;
     const existing = timers.get(tab.id);
     if (existing) clearTimeout(existing);
@@ -296,22 +307,78 @@ export function CoreV2Pos({
       return m ? Math.max(max, parseInt(m[1], 10)) : max;
     }, 0);
     const name = `Tab ${maxNum + 1}`;
+    // Optimistic open: show the check instantly with a temp id and switch to it
+    // so staff can start ringing items the moment they tap "+ New" — the till
+    // must not block on a server round-trip (which on a slow link made opening a
+    // check feel like it took "ages"). The POST runs in the background and we
+    // reconcile the temp id to the real one when it returns, carrying over any
+    // lines/channel rung in the meantime. `pendingSaves` is held up for the
+    // whole round-trip so the cross-till poll can't drop the not-yet-saved tab.
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+    const optimistic: PosTab = {
+      id: tempId,
+      locationSlug: pageLoc,
+      name,
+      channel: null,
+      status: "open",
+      items: [],
+      sentKds: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setTabs((prev) => [...prev, optimistic]);
+    setActiveTabId(tempId);
+    pendingSaves.current += 1;
     try {
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      if (!res.ok) return;
-      const data: { tab?: PosTab } = await res.json();
-      if (data.tab) {
-        setTabs((prev) => [...prev, data.tab!]);
-        setActiveTabId(data.tab.id);
+      if (!res.ok) {
+        setTabs((prev) => prev.filter((t) => t.id !== tempId));
+        setActiveTabId((cur) => (cur === tempId ? null : cur));
+        return;
       }
+      const data: { tab?: PosTab } = await res.json();
+      const real = data.tab;
+      if (!real) {
+        setTabs((prev) => prev.filter((t) => t.id !== tempId));
+        setActiveTabId((cur) => (cur === tempId ? null : cur));
+        return;
+      }
+      // Swap temp → real id, keeping anything rung onto the optimistic check.
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === tempId ? { ...t, id: real.id, createdAt: real.createdAt ?? t.createdAt, updatedAt: new Date().toISOString() } : t,
+        ),
+      );
+      setActiveTabId((cur) => (cur === tempId ? real.id : cur));
+      // Items/channel rung during the round-trip get flushed under the real id
+      // by the reconcile effect, once the swap above has committed to state.
+      reconciledTabsRef.current.push(real.id);
     } catch {
-      /* offline — no-op */
+      // Offline / network error — drop the optimistic check.
+      setTabs((prev) => prev.filter((t) => t.id !== tempId));
+      setActiveTabId((cur) => (cur === tempId ? null : cur));
+    } finally {
+      pendingSaves.current = Math.max(0, pendingSaves.current - 1);
     }
   }, [pageLoc, tabs]);
+
+  // Flush any just-reconciled optimistic checks: once the temp→real id swap has
+  // committed to `tabs`, persist them under the real id if anything was rung up
+  // during the POST round-trip (the POST created the check empty).
+  useEffect(() => {
+    if (reconciledTabsRef.current.length === 0) return;
+    const ids = reconciledTabsRef.current;
+    reconciledTabsRef.current = [];
+    for (const id of ids) {
+      const tab = tabs.find((t) => t.id === id);
+      if (tab && (tab.items.length > 0 || tab.channel)) persistTab(tab);
+    }
+  }, [tabs, persistTab]);
 
   // --- Tables (dine-in picker) --------------------------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
@@ -441,6 +508,71 @@ export function CoreV2Pos({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [getActive, busyTabId, pageLoc, tabs, toast],
   );
+
+  // --- Void (delete an open check) -----------------------------------------
+  const [voidOpen, setVoidOpen] = useState(false);
+  // Drop an open check entirely: removes it from the rail and deletes it
+  // server-side (`DELETE /api/admin/pos/tabs?id=`). Optimistic — the row
+  // disappears at once; `pendingSaves` is held for the round-trip so the
+  // cross-till poll can't resurrect it before the delete commits. An empty,
+  // never-saved optimistic check (`tmp-` id) is removed locally only.
+  const deleteTab = useCallback(
+    async (id: string) => {
+      // Optimistic, **functional** removal — robust to rapid consecutive voids
+      // that would otherwise read a stale `tabs` closure and re-add a check
+      // already voided a tap earlier. Capture the name + the post-removal
+      // fallback active id from inside the updater.
+      let name = "check";
+      let found = false;
+      let nextActive: string | null = null;
+      setTabs((prev) => {
+        const hit = prev.find((x) => x.id === id);
+        if (hit) {
+          found = true;
+          name = hit.name;
+        }
+        const left = prev.filter((x) => x.id !== id);
+        nextActive = left[0]?.id ?? null;
+        return left;
+      });
+      if (!found) return;
+      setActiveTabId((cur) => (cur === id ? nextActive : cur));
+      // Cancel any debounced PUT still queued for this check.
+      const timer = persistTimers.current.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        persistTimers.current.delete(id);
+      }
+      if (id.startsWith("tmp-")) return; // never hit the server
+      // Confirm to the operator **immediately** — the row is already gone, so
+      // the toast must not wait on the DELETE round-trip. Server deletes
+      // serialize on the per-location tab lock, so voiding several in a row
+      // stacked the later toasts seconds behind the taps; only an actual
+      // failure surfaces a toast now.
+      toast(`Voided ${name}`, "default");
+      pendingSaves.current += 1;
+      try {
+        const res = await fetch(
+          `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        // 404 = already gone (a double-fire / cross-till void); not an error.
+        if (!res.ok && res.status !== 404) toast(`Couldn't void ${name} — it may reappear`, "danger");
+      } catch {
+        /* offline — best effort; the poll reconciles when the link returns */
+      } finally {
+        pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+      }
+    },
+    [pageLoc, toast],
+  );
+  // Empty checks vanish on tap; a check with rung items asks first.
+  const requestVoid = useCallback(() => {
+    const t = tabs.find((x) => x.id === activeTabId);
+    if (!t || busyTabId) return;
+    if (t.items.length === 0) void deleteTab(t.id);
+    else setVoidOpen(true);
+  }, [tabs, activeTabId, busyTabId, deleteTab]);
 
   // --- Pricing (real menu + real combo discount) ---------------------------
   const cartOf = useCallback(
@@ -1075,6 +1207,10 @@ export function CoreV2Pos({
                     <Gly><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Gly>
                     {active.customerPhone ? "Member ✓" : "Add membership"}
                   </button>
+                  <button type="button" className="cv-foot-aux danger cv-foot-aux-wide" disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
+                    <Gly><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" /></Gly>
+                    Void check
+                  </button>
                 </div>
               </div>
             </>
@@ -1123,6 +1259,40 @@ export function CoreV2Pos({
               </button>
             </div>
           </div>
+        )}
+      </CoreV2Dialog>
+
+      {/* Void confirmation — only when the check has rung items */}
+      <CoreV2Dialog
+        open={voidOpen && !!active}
+        onClose={() => setVoidOpen(false)}
+        title="Void this check?"
+        footer={
+          <>
+            <button type="button" className="cv-btn ghost" onClick={() => setVoidOpen(false)}>
+              Keep check
+            </button>
+            <button
+              type="button"
+              className="cv-btn danger"
+              disabled={!!busyTabId}
+              onClick={() => {
+                const id = active?.id;
+                setVoidOpen(false);
+                if (id) void deleteTab(id);
+              }}
+            >
+              Void check
+            </button>
+          </>
+        }
+      >
+        {active && (
+          <p className="cv-tender-note">
+            <b>{active.name}</b> has {active.items.reduce((s, l) => s + l.quantity, 0)} item
+            {active.items.reduce((s, l) => s + l.quantity, 0) === 1 ? "" : "s"} ({fmtPLN(grandG(active))}). This deletes the
+            open check for good — it can&apos;t be undone.
+          </p>
         )}
       </CoreV2Dialog>
 

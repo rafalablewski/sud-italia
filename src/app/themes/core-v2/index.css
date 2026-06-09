@@ -96,6 +96,28 @@
 .cv2 .cv-seg { display: flex; background: var(--panel-3); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; }
 .cv2 .cv-seg button { height: 26px; padding: 0 11px; border-radius: 6px; font-size: 12px; font-weight: 550; color: var(--ink-2); }
 .cv2 .cv-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); font-weight: 600; }
+/* icon-only segmented (e.g. Loyalty view-switcher) — square cells, centred glyph */
+.cv2 .cv-seg.icons button { width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.cv2 .cv-seg.icons button:hover { color: var(--ink-2); }
+.cv2 .cv-seg.icons button.on { color: var(--ink); }
+.cv2 .cv-seg.icons button svg { width: 16px; height: 16px; }
+
+/* ---------- Loyalty unified filter bar — one row, all 34px, glyph-only ---------- */
+.cv2 .cv-gfilters { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.cv2 .cv-gfilters .cv-seg { height: 34px; padding: 3px; align-items: center; }
+.cv2 .cv-gfilters .cv-seg button { height: 28px; }
+/* search grows to fill the gap between the pods, same height as them */
+.cv2 .cv-gfilters .cv-search { height: 34px; flex: 1 1 200px; min-width: 160px; max-width: 460px; gap: 8px; }
+.cv2 .cv-gfilters .cv-search svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
+/* tier gems tinted by metal; selected gets a ring in its own colour. Prefixed
+   with .cv-gfilters so the tint out-ranks the generic .cv-seg.icons .on rule
+   and the selected gem keeps its metal colour. */
+.cv2 .cv-gfilters .cv-tierseg button.t-all { color: var(--ink-3); }
+.cv2 .cv-gfilters .cv-tierseg button.t-platinum { color: #aab4cc; }
+.cv2 .cv-gfilters .cv-tierseg button.t-gold { color: var(--amber); }
+.cv2 .cv-gfilters .cv-tierseg button.t-silver { color: #9aa0ad; }
+.cv2 .cv-gfilters .cv-tierseg button.t-bronze { color: #c08a5e; }
+.cv2 .cv-gfilters .cv-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* ---------- body shell ---------- */
 .cv2 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -271,6 +293,9 @@
 .cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); border-color: var(--line-2); }
 .cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 38%, transparent); color: var(--brand-bright); font-weight: 600; }
 .cv2 .cv-foot-aux[data-on="true"] .cv-glyph { opacity: 1; }
+.cv2 .cv-foot-aux.danger { color: var(--danger); }
+.cv2 .cv-foot-aux.danger:hover { background: var(--danger); border-color: transparent; color: #fff; }
+.cv2 .cv-foot-aux:disabled { opacity: .45; cursor: default; }
 .cv2 .cv-send { flex: 1; height: 48px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--panel-3); color: var(--ink); font-weight: 600; font-size: 13.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .cv2 .cv-send:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } .cv2 .cv-send:disabled { opacity: .45; cursor: default; }
 .cv2 .cv-send .cv-glyph { opacity: .75; }
@@ -361,17 +386,28 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 @keyframes cv-toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* ============================================================
-   KDS — the always-dark kitchen wall. Re-declares the surface/ink
-   tokens to a fixed dark palette so the wall stays dark even when
-   the rest of Core v2 is in light mode. Tones: queued · firing ·
-   warn · risk · late · ready.
+   KDS — kitchen board. Dark by default (the always-dark wall, kept
+   for the fullscreen kiosk + night trucks). The IN-SHELL board
+   (`.cv-body .cv-kds`) follows the app theme, so a light Core v2 gets
+   a light KDS too — see the [data-theme="light"] override below.
+   Tones: queued · firing · warn · risk · late · ready.
    ============================================================ */
 .cv2 .cv-kds {
   --bg: #0b0a0d; --panel: #141318; --panel-2: #1c1a22; --panel-3: #28262e;
   --ink: #f4f1ec; --ink-2: #b8b0a6; --ink-3: #857d74;
   --line: rgba(255, 255, 255, .09); --line-2: rgba(255, 255, 255, .16);
+  --kds-veil: rgba(255, 255, 255, .07); --kds-track: rgba(255, 255, 255, .10);
   --t-firing: #5b8bd0; --t-warn: #d99a3c; --t-risk: #9b7fd6; --t-late: #e2574f; --t-ready: #3aa978; --t-queued: #857d74;
   flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); overflow: hidden;
+}
+/* light KDS — only the in-shell board (not the fullscreen kiosk, which stays a
+   dark wall). Light surfaces + tones tuned for contrast on a pale board. */
+.cv2[data-theme="light"] .cv-body .cv-kds {
+  --bg: #f4f2ee; --panel: #ffffff; --panel-2: #faf8f5; --panel-3: #f1eee9;
+  --ink: #1c1815; --ink-2: #6a625a; --ink-3: #9b9389;
+  --line: rgba(28, 24, 21, .10); --line-2: rgba(28, 24, 21, .16);
+  --kds-veil: rgba(28, 24, 21, .06); --kds-track: rgba(28, 24, 21, .10);
+  --t-firing: #3768b0; --t-warn: #c4831f; --t-risk: #6f51c0; --t-late: #cf3b33; --t-ready: #2f7d5b; --t-queued: #9b9389;
 }
 .cv2 .cv-kds-empty { color: var(--ink-3); font-size: 12.5px; text-align: center; padding: 14px; }
 .cv2 .cv-kds-empty.pad { padding: 60px; }
@@ -412,7 +448,7 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-tk.t-ready { border-left-color: var(--t-ready); }
 .cv2 .cv-tk-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cv2 .cv-tk-h .id { font-family: var(--mono); font-weight: 600; font-size: 13px; }
-.cv2 .cv-tk-h .chiplet { font-size: 10.5px; color: var(--ink-2); background: rgba(255,255,255,.06); padding: 2px 7px; border-radius: 5px; margin-left: 6px; font-family: var(--ui); }
+.cv2 .cv-tk-h .chiplet { font-size: 10.5px; color: var(--ink-2); background: var(--kds-veil); padding: 2px 7px; border-radius: 5px; margin-left: 6px; font-family: var(--ui); }
 .cv2 .cv-tk-h .due { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--t-queued); }
 .cv2 .cv-tk-h .due.t-firing { color: var(--t-firing); } .cv2 .cv-tk-h .due.t-warn { color: var(--t-warn); }
 .cv2 .cv-tk-h .due.t-risk { color: var(--t-risk); } .cv2 .cv-tk-h .due.t-late { color: var(--t-late); } .cv2 .cv-tk-h .due.t-ready { color: var(--t-ready); }
@@ -434,12 +470,12 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-tk-alrg { margin-top: 8px; font-size: 11.5px; color: var(--t-warn); background: rgba(217,154,60,.12); border: 1px solid rgba(217,154,60,.32); border-radius: 6px; padding: 5px 8px; }
 .cv2 .cv-tk-note { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
 .cv2 .cv-tk-note b { color: var(--ink); font-weight: 600; margin-right: 4px; }
-.cv2 .cv-meter { height: 5px; border-radius: 3px; background: rgba(255,255,255,.09); margin: 10px 0 0; overflow: hidden; }
+.cv2 .cv-meter { height: 5px; border-radius: 3px; background: var(--kds-track); margin: 10px 0 0; overflow: hidden; }
 .cv2 .cv-meter i { display: block; height: 100%; border-radius: 3px; background: var(--t-firing); }
 .cv2 .cv-meter i.t-warn { background: var(--t-warn); } .cv2 .cv-meter i.t-risk { background: var(--t-risk); }
 .cv2 .cv-meter i.t-late { background: var(--t-late); } .cv2 .cv-meter i.t-ready { background: var(--t-ready); } .cv2 .cv-meter i.t-queued { background: var(--t-queued); }
 .cv2 .cv-bump { margin-top: 10px; width: 100%; height: 34px; border-radius: 8px; background: var(--t-ready); color: #06140d; font-weight: 700; font-size: 12.5px; }
-.cv2 .cv-tk.t-firing .cv-bump, .cv2 .cv-tk.t-warn .cv-bump, .cv2 .cv-tk.t-queued .cv-bump { background: rgba(255,255,255,.08); color: var(--ink); }
+.cv2 .cv-tk.t-firing .cv-bump, .cv2 .cv-tk.t-warn .cv-bump, .cv2 .cv-tk.t-queued .cv-bump { background: var(--kds-veil); color: var(--ink); }
 .cv2 .cv-bump:hover { filter: brightness(1.08); } .cv2 .cv-bump:disabled { opacity: .5; cursor: default; }
 
 /* fleet */
@@ -499,7 +535,7 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-prow.tone-firing { border-left-color: var(--t-firing); } .cv2 .cv-prow.tone-warn { border-left-color: var(--t-warn); }
 .cv2 .cv-prow.tone-risk { border-left-color: var(--t-risk); } .cv2 .cv-prow.tone-late { border-left-color: var(--t-late); } .cv2 .cv-prow.tone-ready { border-left-color: var(--t-ready); }
 .cv2 .cv-prow .pid { font-family: var(--mono); font-weight: 600; }
-.cv2 .cv-prow .chip { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: rgba(255,255,255,.06); border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+.cv2 .cv-prow .chip { font: 600 9px var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: var(--kds-veil); border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
 .cv2 .cv-prow .dish { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cv2 .cv-prow .t { margin-left: auto; font: 600 13px var(--mono); color: var(--t-queued); }
 .cv2 .cv-prow .t.tone-firing { color: var(--t-firing); } .cv2 .cv-prow .t.tone-warn { color: var(--t-warn); } .cv2 .cv-prow .t.tone-risk { color: var(--t-risk); } .cv2 .cv-prow .t.tone-late { color: var(--t-late); } .cv2 .cv-prow .t.tone-ready { color: var(--t-ready); }
@@ -544,10 +580,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-search { height: 36px; border-radius: 9px; background: var(--panel-3); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; }
 .cv2 .cv-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--ink); font: inherit; font-size: 12.5px; }
 .cv2 .cv-search input::placeholder { color: var(--ink-3); }
-.cv2 .cv-convfilters { display: flex; gap: 4px; margin-top: 9px; }
-.cv2 .cv-convfilters button { flex: 1; height: 26px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
-.cv2 .cv-convfilters button:hover { background: var(--hover); color: var(--ink); }
-.cv2 .cv-convfilters button.on { background: var(--brand-wash); color: var(--brand-bright); }
 .cv2 .cv-conv-list { overflow-y: auto; flex: 1; }
 .cv2 .cv-conv { display: flex; gap: 11px; padding: 11px 14px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; align-items: center; }
 .cv2 .cv-conv:hover { background: var(--hover); } .cv2 .cv-conv.on { background: var(--brand-wash); }
@@ -642,7 +674,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 /* ============================================================
    Guest · Guests (CRM) — roster + profile drawer
    ============================================================ */
-.cv2 .cv-crm-filters { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .cv2 .cv-segs { display: flex; gap: 4px; flex-wrap: wrap; }
 .cv2 .cv-segs button { height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-weight: 550; font-size: 12px; }
 .cv2 .cv-segs button:hover { color: var(--ink); }
@@ -677,9 +708,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-gdpr:hover { color: var(--ink); }
 .cv2 .cv-gdpr.danger { margin-left: 10px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
 .cv2 .cv-gdpr.danger:hover { color: #fff; }
-/* secondary filter row (channel + recency) */
-.cv2 .cv-crm-filters2 { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
-.cv2 .cv-filter-l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .cv2 .cv-profile-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 9px; }
 .cv2 .cv-timeline { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .cv2 .cv-tl-row { background: var(--panel-2); padding: 9px 13px; display: grid; grid-template-columns: 80px 130px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }

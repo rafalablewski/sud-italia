@@ -6,6 +6,7 @@ import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { guestTabs } from "./guestTabs";
+import { GuestGlyph, type GuestGlyphName } from "./glyphs";
 
 interface CrmCustomer {
   phone: string;
@@ -38,28 +39,30 @@ interface NoteRow {
   createdAt: string;
 }
 
-const SEGS = [
-  { key: "all", label: "All" },
-  { key: "vip", label: "VIP" },
-  { key: "members", label: "Members" },
-  { key: "active", label: "Active" },
-  { key: "repeat", label: "Repeat" },
-  { key: "new", label: "New" },
-  { key: "lapsed", label: "Lapsed" },
+// Glyph-only filters — every chip carries a glyph; the label survives as the
+// button's title + aria-label so the abstract segments stay readable on hover.
+const SEGS: { key: string; label: string; icon: GuestGlyphName }[] = [
+  { key: "all", label: "All guests", icon: "members" },
+  { key: "vip", label: "VIP", icon: "crown" },
+  { key: "members", label: "Loyalty members", icon: "badge" },
+  { key: "active", label: "Active", icon: "activity" },
+  { key: "repeat", label: "Repeat", icon: "repeat" },
+  { key: "new", label: "New", icon: "sparkle" },
+  { key: "lapsed", label: "Lapsed", icon: "userx" },
 ];
-const SORTS = [
-  { key: "ltv", label: "Value" },
-  { key: "recent", label: "Recency" },
-  { key: "orders", label: "Orders" },
-  { key: "points", label: "Points" },
-  { key: "name", label: "Name" },
+const SORTS: { key: string; label: string; icon: GuestGlyphName }[] = [
+  { key: "ltv", label: "Sort by value", icon: "coins" },
+  { key: "recent", label: "Sort by recency", icon: "clock" },
+  { key: "orders", label: "Sort by orders", icon: "orders" },
+  { key: "points", label: "Sort by points", icon: "points" },
+  { key: "name", label: "Sort by name", icon: "name" },
 ];
 
-const PERIODS = [
-  { key: "all", label: "Any time" },
-  { key: "1", label: "24h" },
-  { key: "7", label: "7d" },
-  { key: "30", label: "30d" },
+const PERIODS: { key: string; label: string; icon: GuestGlyphName }[] = [
+  { key: "all", label: "Any time", icon: "anytime" },
+  { key: "1", label: "Seen in 24h", icon: "clock" },
+  { key: "7", label: "Seen in 7 days", icon: "calWeek" },
+  { key: "30", label: "Seen in 30 days", icon: "calMonth" },
 ];
 const CHANNEL_LABEL: Record<string, string> = {
   "dine-in": "Dine-in",
@@ -69,7 +72,16 @@ const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: "WhatsApp",
   web: "Web",
 };
+const CHANNEL_GLYPH: Record<string, GuestGlyphName> = {
+  "dine-in": "utensils",
+  takeout: "takeout",
+  takeaway: "takeout",
+  delivery: "truck",
+  whatsapp: "chat",
+  web: "globe",
+};
 const chanLabel = (k: string) => (k ? CHANNEL_LABEL[k.toLowerCase()] ?? k.charAt(0).toUpperCase() + k.slice(1) : "");
+const chanGlyph = (k: string): GuestGlyphName => CHANNEL_GLYPH[k.toLowerCase()] ?? "globe";
 
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const seen = (d: number | null) => (d == null ? "never" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`);
@@ -300,43 +312,45 @@ export function CoreV2Crm() {
           ))}
         </div>
 
-        <div className="cv-crm-filters">
-          <div className="cv-search" style={{ maxWidth: 260 }}>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone, email…" />
+        {/* one unified, glyph-only filter bar — search grows to fill, the rest
+            are equal-height glyph pods (segment · sort · channel · recency) */}
+        <div className="cv-gfilters">
+          <div className="cv-search">
+            <GuestGlyph name="search" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, phone, email…" aria-label="Search customers" />
           </div>
-          <div className="cv-segs">
+          <div className="cv-seg icons" role="group" aria-label="Segment">
             {SEGS.map((s) => (
-              <button key={s.key} className={seg === s.key ? "on" : ""} onClick={() => setSeg(s.key)}>
-                {s.label}
+              <button key={s.key} className={seg === s.key ? "on" : ""} onClick={() => setSeg(s.key)} title={s.label} aria-label={s.label} aria-pressed={seg === s.key}>
+                <GuestGlyph name={s.icon} />
               </button>
             ))}
           </div>
-          <div className="cv-sp" />
-          <div className="cv-seg">
+          <div className="cv-seg icons" role="group" aria-label="Channel">
+            <button className={chan === "all" ? "on" : ""} onClick={() => setChan("all")} title="All channels" aria-label="All channels" aria-pressed={chan === "all"}>
+              <GuestGlyph name="asterisk" />
+            </button>
+            {channelKeys.map((k) => (
+              <button key={k} className={chan === k ? "on" : ""} onClick={() => setChan(k)} title={chanLabel(k)} aria-label={chanLabel(k)} aria-pressed={chan === k}>
+                <GuestGlyph name={chanGlyph(k)} />
+              </button>
+            ))}
+          </div>
+          <div className="cv-seg icons" role="group" aria-label="Last seen">
+            {PERIODS.map((p) => (
+              <button key={p.key} className={recency === p.key ? "on" : ""} onClick={() => setRecency(p.key)} title={p.label} aria-label={p.label} aria-pressed={recency === p.key}>
+                <GuestGlyph name={p.icon} />
+              </button>
+            ))}
+          </div>
+          <div className="cv-seg icons" role="group" aria-label="Sort by">
             {SORTS.map((s) => (
-              <button key={s.key} className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key)}>
-                {s.label}
+              <button key={s.key} className={sort === s.key ? "on" : ""} onClick={() => setSort(s.key)} title={s.label} aria-label={s.label} aria-pressed={sort === s.key}>
+                <GuestGlyph name={s.icon} />
               </button>
             ))}
           </div>
         </div>
-
-        <div className="cv-crm-filters2">
-            <span className="cv-filter-l">Channel</span>
-            <div className="cv-segs">
-              <button className={chan === "all" ? "on" : ""} onClick={() => setChan("all")}>All</button>
-              {channelKeys.map((k) => (
-                <button key={k} className={chan === k ? "on" : ""} onClick={() => setChan(k)}>{chanLabel(k)}</button>
-              ))}
-            </div>
-            <div className="cv-sp" />
-            <span className="cv-filter-l">Seen</span>
-            <div className="cv-seg">
-              {PERIODS.map((p) => (
-                <button key={p.key} className={recency === p.key ? "on" : ""} onClick={() => setRecency(p.key)}>{p.label}</button>
-              ))}
-            </div>
-          </div>
 
         <div className="cv-crm-table-wrap">
           {loading ? (

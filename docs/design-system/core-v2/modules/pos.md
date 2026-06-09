@@ -19,7 +19,11 @@ inside the shell body: **rail · menu · ticket**.
   (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
   `.cv-tabrail` of `.cv-ttab` open-check chips + `+ New`. The active check
   gets a brand outline; the rail wraps (capped height + scroll) so a busy
-  till's checks stay browsable without a horizontal hunt.
+  till's checks stay browsable without a horizontal hunt. **`+ New` opens
+  optimistically** — the check appears and goes active instantly under a
+  client `tmp-` id, then reconciles to the server id when the background
+  `POST` returns (carrying over anything rung in the meantime), so the till
+  never blocks on a round-trip.
 - **`.cv-sync-pill`** — amber rounded status chip (`--amber` on
   `--amber-wash`), shown only when the durable write outbox
   (`src/store/writeQueue.ts`) holds unsent writes: `↻ N writes syncing`. It
@@ -92,11 +96,12 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   discount **and** a `.cv-frow.disc` manual-discount line, `.cv-ftot` total,
   then `.cv-foot-actions` (`.cv-send` Send to KDS + `.cv-charge`) and a
   -- each button carries an inline `.cv-glyph` line-SVG (send · card ·
-  park-bars · tag · person, core-v2's own glyphs, not lucide) --
+  park-bars · tag · person · trash, core-v2's own glyphs, not lucide) --
   secondary `.cv-foot-actions2` grid of `.cv-foot-aux` buttons (`data-on`
   when active): **Park / hold** full-width (`.cv-foot-aux-wide`; the park
   toggle now lives by Charge, not the top bar) over a 2-column row of
-  **Add / Edit discount** | **Add membership / Member ✓**.
+  **Add / Edit discount** | **Add membership / Member ✓**, then a
+  full-width **Void check** (`.cv-foot-aux.danger.cv-foot-aux-wide`).
 - **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
   optional reason) and `MemberDialog` (phone + optional name) write
   `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal
@@ -106,6 +111,12 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   order's `customerPhone` (normalised) so loyalty points accrue on payment
   (Rule #6). Verified: a 10% discount on a 27.90 zł pizza charges 25.11 zł
   to `+48…`.
+- **Void** — the footer's **Void check** button deletes the active open
+  check (`DELETE /api/admin/pos/tabs?id=`). Optimistic: the row vanishes at
+  once. An **empty** check is dropped on tap; a check with rung items
+  confirms via a `CoreV2Dialog` first (its danger button is
+  `.cv-btn.danger`). An unsaved optimistic (`tmp-`) check is removed locally
+  only.
 
 ## Engine + API contract
 
@@ -115,11 +126,15 @@ total and the `orderId` — the till only ever sends item ids + quantities.
 - `page.tsx` resolves `menusByLocation` (`getMenuWithOverrides`) +
   `upsellByLocation` (`getUpsellSettings`). The surface picks the menu for
   the `LocationContext` truck (shell chip), falling back to the first.
-- **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. Local
-  edits debounce 350ms to `PUT`; a visibility-aware 5s poll (`usePolling`)
-  syncs other tills — skipped while an edit is mid-debounce **or** its save
-  is still on the wire, and reconciled by `updatedAt` so an already-in-flight
-  poll can't revert a fresher local edit.
+- **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. `POST`
+  opens a check (fired in the background behind the optimistic chip); local
+  edits debounce 350ms to `PUT` (temp `tmp-` ids are never PUT — their edits
+  flush once under the real id at reconcile); `DELETE` voids a check. A
+  visibility-aware 5s poll (`usePolling`) syncs other tills — skipped while an
+  edit is mid-debounce **or** any save/open/void is still on the wire
+  (`pendingSaves`, so an in-flight open or void can't be resurrected), and
+  reconciled by `updatedAt` so an already-in-flight poll can't revert a
+  fresher local edit.
 - **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
 - **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
   returns the authoritative `totalAmount`, closes the tab.
@@ -149,9 +164,10 @@ over-capacity table.
 Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
 tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
 or drop a line on a course header), kitchen-timing toggle,
-inline check rename, double-seat / over-capacity guards, the tab-rail
-rollup, a hydration-aware empty state, and the fullscreen kiosk are all
-wired — feature-for-feature with today's `/core/pos`.
+inline check rename, optimistic check open + void/delete, double-seat /
+over-capacity guards, the tab-rail rollup, a hydration-aware empty state,
+and the fullscreen kiosk are all wired — feature-for-feature with today's
+`/core/pos`.
 
 ## QR table-order queue
 

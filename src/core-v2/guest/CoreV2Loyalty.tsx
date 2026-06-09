@@ -6,6 +6,7 @@ import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
 import { guestTabs } from "./guestTabs";
+import { GuestGlyph, type GuestGlyphName } from "./glyphs";
 
 interface MemberRow {
   phone: string;
@@ -44,13 +45,29 @@ interface WinBack {
 }
 
 type Tab = "members" | "wallets" | "redemptions" | "winback";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "members", label: "Members" },
-  { key: "wallets", label: "Wallets" },
-  { key: "redemptions", label: "Redemptions" },
-  { key: "winback", label: "Win-back" },
+const TABS: { key: Tab; label: string; icon: GuestGlyphName }[] = [
+  { key: "members", label: "Members", icon: "members" },
+  { key: "wallets", label: "Wallets", icon: "wallets" },
+  { key: "redemptions", label: "Redemptions", icon: "redemptions" },
+  { key: "winback", label: "Win-back", icon: "winback" },
 ];
-const TIERS = ["all", "platinum", "gold", "silver", "bronze"];
+const TIERS = ["all", "platinum", "gold", "silver", "bronze"] as const;
+// Glyph-only tier filter — "All" gets a layer-stack, each tier a gem tinted by
+// its metal (`.t-<tier>`); the label survives as a tooltip + aria-label.
+const TIER_META: Record<(typeof TIERS)[number], { label: string; icon: GuestGlyphName }> = {
+  all: { label: "All tiers", icon: "tierAll" },
+  platinum: { label: "Platinum", icon: "gem" },
+  gold: { label: "Gold", icon: "gem" },
+  silver: { label: "Silver", icon: "gem" },
+  bronze: { label: "Bronze", icon: "gem" },
+};
+type SortKey = "points" | "spent" | "orders" | "name";
+const SORTS: { key: SortKey; label: string; icon: GuestGlyphName }[] = [
+  { key: "points", label: "Sort by points", icon: "points" },
+  { key: "spent", label: "Sort by lifetime spend", icon: "spent" },
+  { key: "orders", label: "Sort by orders", icon: "orders" },
+  { key: "name", label: "Sort by name", icon: "name" },
+];
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 });
 const CHANNEL_LABEL: Record<string, string> = { "dine-in": "Dine-in", takeout: "Takeaway", delivery: "Delivery", whatsapp: "WhatsApp", web: "Web" };
 const chanLabel = (k: string) => CHANNEL_LABEL[k] ?? (k ? k[0].toUpperCase() + k.slice(1) : "—");
@@ -194,19 +211,7 @@ export function CoreV2Loyalty() {
   };
 
   return (
-    <CoreV2Shell
-      eyebrow="Guest Engagement"
-      tabs={guestTabs("loyalty")}
-      subRight={
-        <div className="cv-seg">
-          {TABS.map((t) => (
-            <button key={t.key} className={tab === t.key ? "on" : ""} onClick={() => setTab(t.key)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      }
-    >
+    <CoreV2Shell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="cv-guest-inbox">
         <div className="cv-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
           {kpis.map((k) => (
@@ -218,28 +223,65 @@ export function CoreV2Loyalty() {
           ))}
         </div>
 
+        <div className="cv-gfilters">
+          {/* view switcher */}
+          <div className="cv-seg icons" role="group" aria-label="View">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                className={tab === t.key ? "on" : ""}
+                onClick={() => setTab(t.key)}
+                title={t.label}
+                aria-label={t.label}
+                aria-pressed={tab === t.key}
+              >
+                <GuestGlyph name={t.icon} />
+              </button>
+            ))}
+          </div>
+          {tab === "members" && (
+            <>
+              {/* search — grows to fill the bar */}
+              <div className="cv-search">
+                <GuestGlyph name="search" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or phone…" aria-label="Search members" />
+              </div>
+              {/* tier filter — glyph-only, gem tinted per metal */}
+              <div className="cv-seg icons cv-tierseg" role="group" aria-label="Tier">
+                {TIERS.map((t) => (
+                  <button
+                    key={t}
+                    className={`t-${t}${tier === t ? " on" : ""}`}
+                    onClick={() => setTier(t)}
+                    title={TIER_META[t].label}
+                    aria-label={TIER_META[t].label}
+                    aria-pressed={tier === t}
+                  >
+                    <GuestGlyph name={TIER_META[t].icon} />
+                  </button>
+                ))}
+              </div>
+              {/* sort */}
+              <div className="cv-seg icons" role="group" aria-label="Sort by">
+                {SORTS.map((s) => (
+                  <button
+                    key={s.key}
+                    className={sort === s.key ? "on" : ""}
+                    onClick={() => setSort(s.key)}
+                    title={s.label}
+                    aria-label={s.label}
+                    aria-pressed={sort === s.key}
+                  >
+                    <GuestGlyph name={s.icon} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         {tab === "members" && (
           <>
-            <div className="cv-crm-filters">
-              <div className="cv-search" style={{ maxWidth: 240 }}>
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or phone…" />
-              </div>
-              <div className="cv-segs">
-                {TIERS.map((t) => (
-                  <button key={t} className={tier === t ? "on" : ""} onClick={() => setTier(t)}>
-                    {t[0].toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="cv-sp" />
-              <div className="cv-seg">
-                {(["points", "spent", "orders", "name"] as const).map((s) => (
-                  <button key={s} className={sort === s ? "on" : ""} onClick={() => setSort(s)}>
-                    {s[0].toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div className="cv-crm-table-wrap">
               <table className="cv-tbl">
                 <thead>

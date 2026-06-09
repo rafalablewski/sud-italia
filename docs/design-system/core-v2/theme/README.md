@@ -34,8 +34,10 @@ the saved choice without a flash.
 | Radius | `--r-sm` 7 · `--r-md` 10 · `--r-lg` 14 · `--r-xl` 20 · `--pill` |
 | Motion | `--fast` · `--base` |
 
-KDS will override the surface/ink tokens to a fixed dark wall regardless
-of `data-theme` (its own scope, landing in Step 4).
+KDS re-declares the surface/ink + tone tokens in its own `.cv-kds` scope —
+dark by default, but the **in-shell board** follows `data-theme` (a light
+override on `.cv-body .cv-kds`). Only the **fullscreen kiosk** stays a fixed
+dark wall.
 
 ## Material
 
@@ -64,11 +66,20 @@ surface lives in [`../modules/`](../modules/).
 ### Global-action primitives
 
 - **`.cv-chip`** — pill (location chip, status, a `Dine-in` flag).
-  `.dot` = a small status dot.
+  `.dot` = a small status dot. `.on` = filled brand (active toggle).
 - **`.cv-iconbtn`** — 34px square icon button (theme toggle, fullscreen).
 - **`.cv-clock`** — the mono HH:MM clock.
 - **`.cv-tabs a/button`** — subbar view tabs; `.on` = active.
 - **`.cv-seg button`** — a segmented filter (KDS stage filter, etc.).
+  `.cv-seg.icons` = square icon-only cells (centred 16px glyph) for an
+  icon-only switcher / filter pod; pair each button with a `title` /
+  `aria-label` so the dropped text stays accessible.
+- **`.cv-gfilters`** — the shared **glyph-only filter bar** for the guest
+  surfaces (Inbox / Loyalty / CRM): one flex-wrap row where every control is a
+  uniform 34px, a `.cv-search` (leading magnifier glyph) flex-grows to fill,
+  and the filters are `.cv-seg.icons` pods. Loyalty's tier pod adds
+  `.cv-tierseg` (gems tinted per metal). Glyphs come from
+  `src/core-v2/guest/glyphs.tsx`.
 
 ### Scaffold
 
@@ -149,5 +160,6 @@ Core runs on iPads and phones, not only desktop. Breakpoints at the end of
 
 The POS ticket is **never hidden** on small screens (the old behaviour) —
 it's always reachable as the drawer, so a phone can take and settle a check.
-KDS stays a fixed dark wall (its own `≤1000` lane collapse); Guest/Service
-keep their existing `≤1000–1100` two-pane collapses.
+KDS keeps its own `≤1000` lane collapse (the board follows the theme; the
+kiosk stays dark); Guest/Service keep their existing `≤1000–1100` two-pane
+collapses.

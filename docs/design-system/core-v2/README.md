@@ -57,7 +57,7 @@ A deliberately **distinct** look from today's `/core` (dark warm-charcoal
 
 | Axis | Decision | Why |
 | --- | --- | --- |
-| **Mode** | **Dark-first**, light optional. KDS is **always** dark. | Night trucks + kitchen glare. Light is there for bright daytime POS. |
+| **Mode** | **Dark-first**, light optional. KDS board follows the theme; the fullscreen kiosk stays dark. | Night trucks + kitchen glare. Light is there for bright daytime POS. |
 | **Display type** | **Bricolage Grotesque** (all-sans, optical size) | Drops the Fraunces serif — reads as an *operating system*, not a menu. |
 | **UI / mono** | Inter (UI) · JetBrains Mono (figures) | Neutral, dense, legible at a glance across a busy line. |
 | **Brand** | Neapolitan burgundy, refined (`--brand`) | Same brand DNA, cleaner. One brand red + disciplined semantics. |
@@ -80,8 +80,9 @@ Defined per-mode on `:root[data-theme="dark|light"]`. Canonical names:
 - **Radius** — `--r-sm` · `--r-md` · `--r-lg` · `--r-xl` · `--pill`
 - **Motion** — `--fast`
 
-KDS overrides the surface/ink tokens to a fixed dark wall regardless of
-the app theme (the `.kds` scope in the mockup).
+KDS re-declares the surface/ink + tone tokens to a dark wall by default; the
+**in-shell board** follows the app theme (a light override on
+`.cv-body .cv-kds`), while the **fullscreen kiosk** stays dark regardless.
 
 ## Surfaces (parity target — keep ALL functionality)
 
@@ -93,8 +94,9 @@ the surfaces and their views:
   cross-sell offers · capacity-true pace steering · Charge → Tender · a
   **QR pill** surfacing QR table orders + Print-table-QR.
 - **KDS** (`/core-v2/kds`) — Fleet · **Floor** (New → Firing → Ready·Expo
-  lanes, SLA tiers, cook-meters, bump) · Chef. Always-dark wall;
-  fullscreen kiosk drops the chrome.
+  lanes, SLA tiers, cook-meters, bump) · Chef. Board follows the theme
+  (dark by default, light in light mode); fullscreen kiosk drops the chrome
+  and stays a dark wall.
 - **Orders** (`/core-v2/orders`) — every order at the location, live &
   history: scope tabs (Current · Paid · All), channel filter, search
   (id / guest / phone / table), KPI strip, and a detail dialog with the
@@ -111,8 +113,8 @@ the surfaces and their views:
    `/core-v2` route + layout — rendering live.
 3. ✅ **POS** ported, wired to the real store/APIs (multi-tab checks,
    coursing, combos, cross-sell, Charge→Tender).
-4. ✅ **KDS** (always-dark wall) — Floor lanes + Chef + Fleet, live order
-   stream + bump.
+4. ✅ **KDS** (theme-aware board, dark kiosk) — Floor lanes + Chef + Fleet,
+   live order stream + bump.
 5. ✅ **Guest** hub — Inbox · CRM · Loyalty · Concierge · Book all wired.
 6. ✅ **Service** — Floor (live room) + Slots (capacity + Demand Exchange).
 7. **Swap** — delete `/core`, promote `/core-v2` → `/core`, retire
