@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
 import { idempotentFetch } from "@/lib/idempotentFetch";
@@ -47,6 +47,15 @@ const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.r
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
+
+/** Inline line-glyph (core-v2 uses its own SVGs, not lucide). */
+function Gly({ children }: { children: ReactNode }) {
+  return (
+    <svg className="cv-glyph" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  );
+}
 
 /**
  * Core v2 · POS — the till, wired to the real engine 1:1. Multi-tab open checks
@@ -1039,6 +1048,7 @@ export function CoreV2Pos({
                 <div className="cv-foot-actions">
                   {!active.sentKds && (
                     <button type="button" className="cv-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
+                      <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
                       Send to KDS
                     </button>
                   )}
@@ -1048,17 +1058,21 @@ export function CoreV2Pos({
                     disabled={!active.items.length || !!busyTabId}
                     onClick={() => setTenderOpen(true)}
                   >
+                    <Gly><rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" /></Gly>
                     Charge {fmtPLN(grandG(active))} →
                   </button>
                 </div>
                 <div className="cv-foot-actions2">
                   <button type="button" className="cv-foot-aux cv-foot-aux-wide" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
-                    {active.status === "parked" ? "▣ Held" : "▢ Park / hold"}
+                    <Gly><rect width="6" height="14" x="6" y="5" rx="1" /><rect width="6" height="14" x="12" y="5" rx="1" /></Gly>
+                    {active.status === "parked" ? "Held" : "Park / hold"}
                   </button>
                   <button type="button" className="cv-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
+                    <Gly><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".6" fill="currentColor" /></Gly>
                     {manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}
                   </button>
                   <button type="button" className="cv-foot-aux" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)}>
+                    <Gly><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Gly>
                     {active.customerPhone ? "Member ✓" : "Add membership"}
                   </button>
                 </div>

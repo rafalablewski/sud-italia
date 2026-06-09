@@ -91,6 +91,8 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   guest, with a remove ✕), `.cv-frow` subtotal, `.cv-frow.disc` combo
   discount **and** a `.cv-frow.disc` manual-discount line, `.cv-ftot` total,
   then `.cv-foot-actions` (`.cv-send` Send to KDS + `.cv-charge`) and a
+  -- each button carries an inline `.cv-glyph` line-SVG (send · card ·
+  park-bars · tag · person, core-v2's own glyphs, not lucide) --
   secondary `.cv-foot-actions2` grid of `.cv-foot-aux` buttons (`data-on`
   when active): **Park / hold** full-width (`.cv-foot-aux-wide`; the park
   toggle now lives by Charge, not the top bar) over a 2-column row of

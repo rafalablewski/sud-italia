@@ -262,12 +262,14 @@
    membership in a 2-column row (each full-width of its column) */
 .cv2 .cv-foot-actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
 .cv2 .cv-foot-aux-wide { grid-column: 1 / -1; }
-.cv2 .cv-foot-aux { height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 550; font-size: 12px; white-space: nowrap; }
+.cv2 .cv-foot-aux { height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 550; font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.cv2 .cv-glyph { flex: none; }
+.cv2 .cv-foot-aux .cv-glyph { opacity: .8; }
 .cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); }
 .cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 40%, transparent); color: var(--brand-bright); font-weight: 600; }
-.cv2 .cv-send { flex: 1; height: 46px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; }
+.cv2 .cv-send { flex: 1; height: 46px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .cv2 .cv-send:hover { background: var(--hover); } .cv2 .cv-send:disabled { opacity: .5; cursor: default; }
-.cv2 .cv-charge { flex: 2; height: 46px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; box-shadow: var(--sh-2); }
+.cv2 .cv-charge { flex: 2; height: 46px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; box-shadow: var(--sh-2); display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .cv2 .cv-charge:hover { background: var(--brand-bright); } .cv2 .cv-charge:disabled { opacity: .5; cursor: default; box-shadow: none; }
 
 /* pace-steering banner (sticky atop the menu) */
