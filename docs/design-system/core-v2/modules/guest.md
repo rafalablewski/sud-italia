@@ -5,6 +5,9 @@ The guest engagement hub. `/core-v2/guest`.
 - **Routes:** five nested views under `/core-v2/guest/*`; the bare hub
   redirects to **Inbox**. The view switcher is `guestTabs(active)`
   (`src/core-v2/guest/guestTabs.ts`) on the CoreV2Shell subbar.
+- **Header glyphs:** `src/core-v2/guest/glyphs.tsx` — `GuestGlyph`, Core v2's
+  own 24-grid line icons (no lucide) for the compact icon-only header
+  controls (Inbox actions, Loyalty view-switcher).
 - **Status:** **Inbox wired** (Step 5a). Guests · Loyalty · Concierge ·
   Book render the shell + scaffold panel (their tabs live) until 5b–5e.
 
@@ -23,17 +26,20 @@ The guest engagement hub. `/core-v2/guest`.
   row of starters (Menu · Payment link
   [injects the live pay URL] · Reservation · Comp dessert) over the
   composer · context (`.cv-ctx`: live cart + guest rollup + tier).
-- **Funnel:** a subbar **Funnel** button opens a `CoreV2Dialog` with a
+  The three subbar actions are **icon-only `.cv-iconbtn` glyphs** (funnel ·
+  megaphone · sliders, from `./glyphs.tsx`) to keep the header uncluttered —
+  each keeps its label as a `title` + `aria-label`.
+- **Funnel:** a subbar **funnel** glyph button opens a `CoreV2Dialog` with a
   7d/30d/all window switch — `GET /api/admin/whatsapp/funnel?window=` →
   Started/Paid/Conversion/Unique KPIs over per-stage `.cv-funnel-stage`
   bars (count · % of start · drop-from-previous).
-- **Broadcast:** a subbar **Broadcast** button opens `WaBroadcastDialog`
+- **Broadcast:** a subbar **broadcast** glyph button opens `WaBroadcastDialog`
   (`GET /api/admin/whatsapp/broadcasts` → audiences + campaigns) — pick an
   audience snapshot (All / Active / Lapsed / VIP / New, with live counts)
   + a Meta template, `POST` to queue, then **Drive send →** loops
   `POST …/broadcasts/{id}/send` in batches (updating the `.cv-bc` progress
   bar) until the campaign hits a terminal status.
-- **Settings:** a subbar **Settings** button opens `WaSettingsDialog`
+- **Settings:** a subbar **settings** glyph button opens `WaSettingsDialog`
   (`.cv-wa-settings`) — bot enable, welcome message, AI toggle +
   instructions, away message, daily cap, auto-archive, re-open template,
   opt-out phrases, **keyword auto-replies** (add/remove), **business
@@ -58,7 +64,7 @@ The guest engagement hub. `/core-v2/guest`.
 
 ## Loyalty (`/core-v2/guest/loyalty`) — wired
 
-`src/core-v2/guest/CoreV2Loyalty.tsx`. Four tabs (Members · Wallets · Redemptions · Win-back) over a KPI strip (the **Points out** card carries a `.cv-kpi-sub` ≈zł **liability** line, 100 pts = 1 zł). Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog; a `◆` action opens the **customer-intelligence** modal — `GET /api/admin/customer-intelligence?phone=` → next-order headline + confidence, churn-risk + reason, cadence, channel-mix bars, favourite dishes, attach patterns). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all **behind a confirm dialog**). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention,customer-intelligence}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
+`src/core-v2/guest/CoreV2Loyalty.tsx`. Four view tabs (Members · Wallets · Redemptions · Win-back) — an **icon-only `.cv-seg.icons` switcher** in the subbar (glyphs from `./glyphs.tsx`; each `<button>` keeps its label as `title` + `aria-label` + `aria-pressed`) — over a KPI strip (the **Points out** card carries a `.cv-kpi-sub` ≈zł **liability** line, 100 pts = 1 zł). Members table (tier badges Bronze→Platinum, tier filter + search + sort; row → points-adjust dialog; a `◆` action opens the **customer-intelligence** modal — `GET /api/admin/customer-intelligence?phone=` → next-order headline + confidence, churn-risk + reason, cadence, channel-mix bars, favourite dishes, attach patterns). Wallets cards (dissolve). Redemptions log. Win-back pulls the retention queue (per-candidate Send + Send-all **behind a confirm dialog**). Engine: `GET /api/admin/{members,wallets,wallet-redemptions,retention,customer-intelligence}`; `members/points` POST; `wallets` DELETE; `retention` POST (single / `{mode:"all"}`).
 
 ## Concierge (`/core-v2/guest/concierge`) — wired
 

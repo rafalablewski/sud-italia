@@ -96,6 +96,11 @@
 .cv2 .cv-seg { display: flex; background: var(--panel-3); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; }
 .cv2 .cv-seg button { height: 26px; padding: 0 11px; border-radius: 6px; font-size: 12px; font-weight: 550; color: var(--ink-2); }
 .cv2 .cv-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--sh-1); font-weight: 600; }
+/* icon-only segmented (e.g. Loyalty view-switcher) — square cells, centred glyph */
+.cv2 .cv-seg.icons button { width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.cv2 .cv-seg.icons button:hover { color: var(--ink-2); }
+.cv2 .cv-seg.icons button.on { color: var(--ink); }
+.cv2 .cv-seg.icons button svg { width: 16px; height: 16px; }
 
 /* ---------- body shell ---------- */
 .cv2 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }

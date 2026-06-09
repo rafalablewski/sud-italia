@@ -6,6 +6,7 @@ import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { guestTabs } from "./guestTabs";
+import { GuestGlyph } from "./glyphs";
 
 interface WaSessionRow {
   phone: string;
@@ -803,9 +804,15 @@ export function CoreV2Inbox() {
       tabs={guestTabs("inbox")}
       subRight={
         <>
-          <button type="button" className="cv-btn ghost sm" onClick={() => setFunnelOpen(true)}>Funnel</button>
-          <button type="button" className="cv-btn ghost sm" onClick={() => setBroadcastOpen(true)}>Broadcast</button>
-          <button type="button" className="cv-btn ghost sm" onClick={() => setSettingsOpen(true)}>Settings</button>
+          <button type="button" className="cv-iconbtn" title="Conversion funnel" aria-label="Conversion funnel" onClick={() => setFunnelOpen(true)}>
+            <GuestGlyph name="funnel" />
+          </button>
+          <button type="button" className="cv-iconbtn" title="Broadcast campaign" aria-label="Broadcast campaign" onClick={() => setBroadcastOpen(true)}>
+            <GuestGlyph name="broadcast" />
+          </button>
+          <button type="button" className="cv-iconbtn" title="WhatsApp settings" aria-label="WhatsApp settings" onClick={() => setSettingsOpen(true)}>
+            <GuestGlyph name="settings" />
+          </button>
           <span className="cv-chip" style={{ height: 32 }}><span className="dot" />WhatsApp live</span>
         </>
       }

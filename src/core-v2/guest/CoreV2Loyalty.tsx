@@ -6,6 +6,7 @@ import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import type { CustomerIntelligence } from "@/lib/customer-intelligence";
 import { guestTabs } from "./guestTabs";
+import { GuestGlyph, type GuestGlyphName } from "./glyphs";
 
 interface MemberRow {
   phone: string;
@@ -44,11 +45,11 @@ interface WinBack {
 }
 
 type Tab = "members" | "wallets" | "redemptions" | "winback";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "members", label: "Members" },
-  { key: "wallets", label: "Wallets" },
-  { key: "redemptions", label: "Redemptions" },
-  { key: "winback", label: "Win-back" },
+const TABS: { key: Tab; label: string; icon: GuestGlyphName }[] = [
+  { key: "members", label: "Members", icon: "members" },
+  { key: "wallets", label: "Wallets", icon: "wallets" },
+  { key: "redemptions", label: "Redemptions", icon: "redemptions" },
+  { key: "winback", label: "Win-back", icon: "winback" },
 ];
 const TIERS = ["all", "platinum", "gold", "silver", "bronze"];
 const zl = (g: number) => (g / 100).toLocaleString("pl-PL", { maximumFractionDigits: 0 });
@@ -198,10 +199,17 @@ export function CoreV2Loyalty() {
       eyebrow="Guest Engagement"
       tabs={guestTabs("loyalty")}
       subRight={
-        <div className="cv-seg">
+        <div className="cv-seg icons">
           {TABS.map((t) => (
-            <button key={t.key} className={tab === t.key ? "on" : ""} onClick={() => setTab(t.key)}>
-              {t.label}
+            <button
+              key={t.key}
+              className={tab === t.key ? "on" : ""}
+              onClick={() => setTab(t.key)}
+              title={t.label}
+              aria-label={t.label}
+              aria-pressed={tab === t.key}
+            >
+              <GuestGlyph name={t.icon} />
             </button>
           ))}
         </div>

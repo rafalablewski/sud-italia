@@ -69,6 +69,9 @@ surface lives in [`../modules/`](../modules/).
 - **`.cv-clock`** — the mono HH:MM clock.
 - **`.cv-tabs a/button`** — subbar view tabs; `.on` = active.
 - **`.cv-seg button`** — a segmented filter (KDS stage filter, etc.).
+  `.cv-seg.icons` = square icon-only cells (32px, centred 16px glyph) for an
+  icon-only switcher (e.g. the Loyalty view-switcher); pair each button with a
+  `title` / `aria-label` so the dropped text stays accessible.
 
 ### Scaffold
 
