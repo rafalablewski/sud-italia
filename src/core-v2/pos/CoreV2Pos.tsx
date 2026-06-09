@@ -503,11 +503,25 @@ export function CoreV2Pos({
   // never-saved optimistic check (`tmp-` id) is removed locally only.
   const deleteTab = useCallback(
     async (id: string) => {
-      const t = tabs.find((x) => x.id === id);
-      if (!t) return;
-      const left = tabs.filter((x) => x.id !== id);
-      setTabs(left);
-      setActiveTabId((cur) => (cur === id ? left[0]?.id ?? null : cur));
+      // Optimistic, **functional** removal — robust to rapid consecutive voids
+      // that would otherwise read a stale `tabs` closure and re-add a check
+      // already voided a tap earlier. Capture the name + the post-removal
+      // fallback active id from inside the updater.
+      let name = "check";
+      let found = false;
+      let nextActive: string | null = null;
+      setTabs((prev) => {
+        const hit = prev.find((x) => x.id === id);
+        if (hit) {
+          found = true;
+          name = hit.name;
+        }
+        const left = prev.filter((x) => x.id !== id);
+        nextActive = left[0]?.id ?? null;
+        return left;
+      });
+      if (!found) return;
+      setActiveTabId((cur) => (cur === id ? nextActive : cur));
       // Cancel any debounced PUT still queued for this check.
       const timer = persistTimers.current.get(id);
       if (timer) {
@@ -515,20 +529,27 @@ export function CoreV2Pos({
         persistTimers.current.delete(id);
       }
       if (id.startsWith("tmp-")) return; // never hit the server
+      // Confirm to the operator **immediately** — the row is already gone, so
+      // the toast must not wait on the DELETE round-trip. Server deletes
+      // serialize on the per-location tab lock, so voiding several in a row
+      // stacked the later toasts seconds behind the taps; only an actual
+      // failure surfaces a toast now.
+      toast(`Voided ${name}`, "default");
       pendingSaves.current += 1;
       try {
-        await fetch(
-          `/api/admin/pos/tabs?location=${encodeURIComponent(t.locationSlug)}&id=${encodeURIComponent(id)}`,
+        const res = await fetch(
+          `/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}&id=${encodeURIComponent(id)}`,
           { method: "DELETE" },
         );
-        toast(`Voided ${t.name}`, "default");
+        // 404 = already gone (a double-fire / cross-till void); not an error.
+        if (!res.ok && res.status !== 404) toast(`Couldn't void ${name} — it may reappear`, "danger");
       } catch {
         /* offline — best effort; the poll reconciles when the link returns */
       } finally {
         pendingSaves.current = Math.max(0, pendingSaves.current - 1);
       }
     },
-    [tabs, toast],
+    [pageLoc, toast],
   );
   // Empty checks vanish on tap; a check with rung items asks first.
   const requestVoid = useCallback(() => {
