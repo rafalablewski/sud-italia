@@ -324,31 +324,37 @@ surface that renders **outside** `AdminShellV3`. Both route layouts
 door inherits the exact tokens, fonts, theme (dark canonical / light opt-in) and
 focus rings as the rest of admin, with no `AdminShellV3` chrome.
 
-CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-auth*`). The brief was
-"clean + futuristic **inside the token system**" — no new hue, no raw hex:
+CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-auth*`). The chosen
+direction is **"spotlight minimal"** — clean + futuristic **inside the token
+system**, no new hue, no raw hex, no card chrome:
 
-- **`.av3-auth`** — the full-bleed centred canvas. Its restrained backdrop is two
-  token-built layers: a faint structural grid (`::before`, `--av3-line` lines on a
-  46px cell, radially **masked** to a soft pool so it never reaches the edges) and
-  a single brand glow (`::after`, one `--av3-brand` radial above the card — the
-  only colour on the canvas).
-- **`.av3-auth-card`** — a translucent `--av3-s1` panel (`backdrop-filter` blur so
-  the glow reads through its edge) on `--av3-line-strong` + `--av3-sh-2`, entering
-  with `av3-auth-in` (fade-rise, `prefers-reduced-motion`-guarded). Its signature
-  is a **brand→platinum hairline** along the top edge (`::before`) — the same
-  brand-then-platinum accent grammar the shell uses for "active / premium".
-- **`.av3-auth-head`** (`-mark` brand logo chip with the platinum inset + brand
-  glow, `-title` Fraunces wordmark, `-sub` mono-tracked eyebrow).
-- **`.av3-auth-form`** — composes the existing `.av3-field` / `.av3-field-label` /
-  `.av3-input` controls and the `.av3-btn` / `.av3-btn-primary` buttons, only
-  widening them to full-bleed and switching the input face from mono to
-  `--av3-ui` for free-text fields (`.av3-auth-otp` keeps mono + wide tracking for
-  the 6-digit TOTP). Plus `.av3-auth-error` (the `bad`-soft alert), `.av3-auth-or`
-  (the hairline "or" divider) and `.av3-auth-foot` (the cross-door links).
+- **`.av3-auth`** — the bare canvas, the column centred on **both axes**
+  (`place-items: center`, `min-height: 100dvh`). Its restrained lighting is two
+  token-built layers: one overhead **brand spotlight** (`::before`, a single
+  `--av3-brand` radial from the top — the only colour on the canvas) and a slow
+  **scanline** (`::after`, a 1px repeating line, radially **masked** to a soft
+  central pool so it never reaches the edges).
+- **`.av3-auth-col`** — the centred column (no card border/background), entering
+  with `av3-auth-in` (fade-rise, `prefers-reduced-motion`-guarded).
+- **`.av3-auth-frame`** — a thin **platinum corner bracket** (top-left +
+  bottom-right `::before`/`::after`) that frames the column without boxing it in.
+- **`.av3-auth-lockup`** — the header is the **brand lockup** (`.av3-auth-mark`
+  brand chip with the platinum inset + brand glow, beside `.av3-auth-wordmark`
+  Fraunces + `.av3-auth-eyebrow`, the portal label in mono-tracked caps), centred
+  as one inline unit.
+- **`.av3-auth-form`** — composes the existing `.av3-field` / `.av3-field-label`
+  controls but restyles `.av3-input` to **underline-only** (transparent box, a
+  `--av3-line-strong` bottom rule going brand on focus) and the label to mono
+  micro-caps; `.av3-auth-otp` keeps mono + wide tracking for the 6-digit TOTP.
+  The CTA is the shared `.av3-btn-primary` (full-width, lifted on a soft brand
+  shadow); the passkey is a quiet `.av3-auth-passkey` text action beneath it (no
+  "or" divider). Plus `.av3-auth-error` (the `bad`-soft alert) and
+  `.av3-auth-foot` (the cross-door links, in `--av3-platinum`).
 
-It does **not** introduce a new button/input/card primitive — it reuses §4/§14
-controls and adds only the auth-specific scaffold (canvas, card, head, dividers).
-The behaviour (email + password, optional TOTP reveal on `mfaRequired`, the
+It does **not** introduce a new button/input primitive — it reuses the §4/§14
+`.av3-field` / `.av3-input` / `.av3-btn-primary` controls (restyled in scope) and
+adds only the auth-specific scaffold (canvas, column, bracket, lockup). The
+behaviour (email + password, optional TOTP reveal on `mfaRequired`, the
 passwordless passkey path, the owner-only portal gate) is unchanged — see
 [`../sections/system.md`](../sections/system.md) → sign-in & credentials.
 

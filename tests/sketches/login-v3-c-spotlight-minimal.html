@@ -8,12 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <!--
-  Login · Version C — "Spotlight Minimal".
-  No card chrome: a single centered column on the bare canvas, framed only by a
-  thin platinum bracket and lit by one overhead spotlight beam + a slow scanline.
-  Big Fraunces wordmark, monospace micro-labels, hairline-underline inputs. The
-  most editorial / restrained-futuristic of the three. Tokens mirror av3.
-  Static mockup — figures illustrative.
+  Login · Version C — "Spotlight Minimal" — THE CHOSEN / SHIPPED direction.
+  No card chrome: a single column centered on both axes on the bare canvas,
+  framed only by a thin platinum bracket and lit by one overhead spotlight beam +
+  a slow scanline. Header is Version B's brand lockup (mark + wordmark + portal
+  eyebrow). Monospace micro-labels, hairline-underline inputs. This mirrors the
+  live app — src/components/auth/LoginForm.tsx + .av3-auth* (§23) in
+  src/app/themes/admin-v3/index.css. Static mockup — figures illustrative.
 -->
 <style>
   :root {
@@ -28,7 +29,7 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font-smoothing:antialiased; }
 
-  .stage { position:relative; min-height:100vh; display:grid; place-items:center; padding:32px; overflow:hidden; }
+  .stage { position:relative; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:32px; overflow:hidden; }
   /* overhead spotlight beam */
   .stage::before {
     content:""; position:absolute; left:50%; top:-30%; width:120vw; height:120vh; transform:translateX(-50%); pointer-events:none;
@@ -53,10 +54,12 @@
   .frame::before { top:0; left:0; border-width:1px 0 0 1px; }
   .frame::after  { bottom:0; right:0; border-width:0 1px 1px 0; }
 
-  .mark { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:var(--r-md); background:var(--brand); color:#fff; font-family:var(--display); font-size:18px; font-weight:600; margin-bottom:18px;
+  /* header — the brand lockup (from Version B), centred as one inline unit */
+  .lockup { display:inline-flex; align-items:center; gap:12px; margin-bottom:30px; text-align:left; }
+  .mark { display:grid; place-items:center; width:44px; height:44px; flex-shrink:0; border-radius:var(--r-md); background:var(--brand); color:#fff; font-family:var(--display); font-size:17px; font-weight:600; letter-spacing:.02em;
     box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--platinum) 50%,transparent),0 12px 30px -12px color-mix(in oklab,var(--brand) 80%,transparent); }
-  .title { font-family:var(--display); font-size:34px; font-weight:700; letter-spacing:-.02em; line-height:1; }
-  .sub { margin:6px 0 26px; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.26em; color:var(--subtle); }
+  .wordmark { font-family:var(--display); font-size:20px; font-weight:600; line-height:1.1; }
+  .eyebrow { margin-top:2px; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.16em; color:var(--subtle); }
 
   form { display:flex; flex-direction:column; gap:18px; text-align:left; }
   .field { display:flex; flex-direction:column; gap:6px; }
@@ -85,9 +88,13 @@
   <div class="stage">
     <div class="col">
       <div class="frame">
-        <span class="mark">SI</span>
-        <div class="title">Ottaviano</div>
-        <div class="sub">Owner&nbsp;·&nbsp;Sign&nbsp;in</div>
+        <div class="lockup">
+          <span class="mark">SI</span>
+          <div>
+            <div class="wordmark">Ottaviano</div>
+            <div class="eyebrow">Owner console</div>
+          </div>
+        </div>
 
         <form onsubmit="return false">
           <div class="field">

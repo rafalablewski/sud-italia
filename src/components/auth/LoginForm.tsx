@@ -102,77 +102,77 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
 
   return (
     <div className="av3-auth">
-      <div className="av3-auth-card">
-        <div className="av3-auth-head">
-          <span className="av3-auth-mark">SI</span>
-          <div>
-            <h1 className="av3-auth-title">Ottaviano</h1>
-            <p className="av3-auth-sub">{isAdmin ? "Owner console" : "Team sign-in"}</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="av3-auth-form">
-          <div className="av3-field">
-            <label className="av3-field-label" htmlFor="login-email">
-              {isAdmin ? "Email (optional)" : "Email"}
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              placeholder={isAdmin ? "Leave blank for the shared owner session" : "you@ottaviano.pl"}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              className="av3-input"
-            />
+      <div className="av3-auth-col">
+        <div className="av3-auth-frame">
+          <div className="av3-auth-lockup">
+            <span className="av3-auth-mark">SI</span>
+            <div>
+              <div className="av3-auth-wordmark">Ottaviano</div>
+              <div className="av3-auth-eyebrow">{isAdmin ? "Owner console" : "Team sign-in"}</div>
+            </div>
           </div>
 
-          <div className="av3-field">
-            <label className="av3-field-label" htmlFor="login-password">Password</label>
-            <input
-              id="login-password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              className="av3-input"
-              autoFocus
-            />
-          </div>
-
-          {mfaRequired && (
+          <form onSubmit={handleSubmit} className="av3-auth-form">
             <div className="av3-field">
-              <label className="av3-field-label" htmlFor="login-totp">Authenticator code</label>
+              <label className="av3-field-label" htmlFor="login-email">
+                {isAdmin ? "Email · optional" : "Email"}
+              </label>
               <input
-                id="login-totp"
-                type="text"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="000000"
-                value={totp}
-                onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                autoComplete="one-time-code"
-                className="av3-input av3-auth-otp"
+                id="login-email"
+                type="email"
+                placeholder={isAdmin ? "shared owner session if blank" : "you@ottaviano.pl"}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                className="av3-input"
+              />
+            </div>
+
+            <div className="av3-field">
+              <label className="av3-field-label" htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className="av3-input"
                 autoFocus
               />
             </div>
-          )}
 
-          {error && <p className="av3-auth-error">{error}</p>}
+            {mfaRequired && (
+              <div className="av3-field">
+                <label className="av3-field-label" htmlFor="login-totp">Authenticator code</label>
+                <input
+                  id="login-totp"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={totp}
+                  onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  autoComplete="one-time-code"
+                  className="av3-input av3-auth-otp"
+                  autoFocus
+                />
+              </div>
+            )}
 
-          <button type="submit" disabled={loading || !password} className="av3-btn av3-btn-primary">
-            {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> Sign in</>)}
-          </button>
+            {error && <p className="av3-auth-error">{error}</p>}
 
-          <div className="av3-auth-or">or</div>
+            <button type="submit" disabled={loading || !password} className="av3-btn av3-btn-primary">
+              {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> {isAdmin ? "Enter console" : "Sign in"}</>)}
+            </button>
 
-          <button type="button" onClick={handleSecurityKey} disabled={keyLoading} className="av3-btn">
-            <KeyRound className="av3-btn-ico" />
-            {keyLoading ? "Waiting for key…" : "Passkey / security key"}
-          </button>
-        </form>
+            <button type="button" onClick={handleSecurityKey} disabled={keyLoading} className="av3-auth-passkey">
+              <KeyRound />
+              {keyLoading ? "Waiting for key…" : "Use passkey / security key"}
+            </button>
+          </form>
+        </div>
 
         <div className="av3-auth-foot">
           {isAdmin ? (

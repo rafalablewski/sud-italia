@@ -1301,114 +1301,126 @@
 
 /* ==========================================================================
    23. Auth — the login door (/login + /admin/login)
-   The one av3 surface that renders OUTSIDE the shell: a single centred card on
-   the deep canvas. "Clean + futuristic" inside the token system — a restrained
-   backdrop (one brand glow + a faint grid, both fading to the canvas) and the
-   card's signature brand→platinum hairline. No new hue, no raw hex.
+   The one av3 surface that renders OUTSIDE the shell. "Spotlight minimal": a
+   single column centred on both axes on the bare canvas, lit by one overhead
+   brand spotlight + a slow scanline, framed by a thin platinum corner bracket.
+   No card chrome; underline-only fields. The header is the brand lockup (mark +
+   wordmark + portal eyebrow). av3 tokens only — no new hue, no raw hex.
    See docs/design-system/admin/v3/README.md → "Auth door".
    ========================================================================== */
 .av3-auth {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 32px;
   overflow: hidden;
   background: var(--av3-bg);
 }
-/* faint structural grid — geometry without noise; masked to a soft pool so the
-   lines never reach the edges (they read as canvas, not chrome). */
+/* one overhead brand spotlight — the only colour on the canvas */
 .av3-auth::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--av3-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--av3-line) 1px, transparent 1px);
-  background-size: 46px 46px;
-  -webkit-mask-image: radial-gradient(ellipse 72% 64% at 50% 36%, #000 30%, transparent 80%);
-  mask-image: radial-gradient(ellipse 72% 64% at 50% 36%, #000 30%, transparent 80%);
-  opacity: 0.7;
+  left: 50%;
+  top: -30%;
+  width: 120vw;
+  height: 120vh;
+  transform: translateX(-50%);
   pointer-events: none;
+  background: radial-gradient(38% 46% at 50% 0%, color-mix(in oklab, var(--av3-brand) 22%, transparent), transparent 70%);
 }
-/* the single spot of colour on the canvas — one brand glow above the card */
+/* a slow scanline, masked to a soft central pool so it never reaches the edges */
 .av3-auth::after {
   content: "";
   position: absolute;
-  left: 50%;
-  top: -12%;
-  width: 640px;
-  height: 640px;
-  max-width: 130vw;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, color-mix(in oklab, var(--av3-brand) 30%, transparent), transparent 62%);
+  inset: 0;
   pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, 0.012) 3px 4px);
+  -webkit-mask-image: radial-gradient(60% 60% at 50% 40%, #000, transparent 85%);
+  mask-image: radial-gradient(60% 60% at 50% 40%, #000, transparent 85%);
 }
 
-.av3-auth-card {
+.av3-auth-col {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 384px;
-  padding: 32px;
-  /* translucent s1 + blur so the backdrop glow reads through the panel edge */
-  background: color-mix(in oklab, var(--av3-s1) 84%, transparent);
-  border: 1px solid var(--av3-line-strong);
-  border-radius: var(--av3-r-lg);
-  box-shadow: var(--av3-sh-2);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  max-width: 344px;
+  text-align: center;
   animation: av3-auth-in var(--av3-t-slow) var(--av3-ease) both;
 }
-/* the futuristic signature: a brand→platinum hairline along the top edge */
-.av3-auth-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  border-radius: var(--av3-r-lg) var(--av3-r-lg) 0 0;
-  background: linear-gradient(90deg, transparent, var(--av3-brand) 28%, var(--av3-platinum) 72%, transparent);
-}
 @keyframes av3-auth-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-@media (prefers-reduced-motion: reduce) { .av3-auth-card { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .av3-auth-col { animation: none; } }
 
-.av3-auth-head {
-  display: flex;
-  flex-direction: column;
+/* platinum bracket — top-left + bottom-right corners only, frames the column */
+.av3-auth-frame { position: relative; padding: 40px 30px 34px; }
+.av3-auth-frame::before,
+.av3-auth-frame::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  border-color: color-mix(in oklab, var(--av3-platinum) 60%, transparent);
+  border-style: solid;
+}
+.av3-auth-frame::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+.av3-auth-frame::after { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+
+/* header — the brand lockup (mark + wordmark + portal eyebrow), centred */
+.av3-auth-lockup {
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
-  text-align: center;
+  margin-bottom: 30px;
+  text-align: left;
 }
 .av3-auth-mark {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border-radius: var(--av3-r-md);
   background: var(--av3-brand);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--av3-platinum) 50%, transparent),
-    0 10px 26px -10px color-mix(in oklab, var(--av3-brand) 75%, transparent);
   color: #fff;
   font-family: var(--av3-display);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.02em;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--av3-platinum) 50%, transparent),
+    0 12px 30px -12px color-mix(in oklab, var(--av3-brand) 80%, transparent);
 }
-.av3-auth-title { font-family: var(--av3-display); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
-.av3-auth-sub { margin-top: 4px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--av3-subtle); }
+.av3-auth-wordmark { font-family: var(--av3-display); font-size: 20px; font-weight: 600; line-height: 1.1; }
+.av3-auth-eyebrow { margin-top: 2px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: var(--av3-subtle); }
 
-.av3-auth-form { display: flex; flex-direction: column; gap: 14px; }
-/* Full-width, slightly taller controls for the login context. Override the
-   default mono input face to UI for free-text fields (email/password); the OTP
-   keeps mono via .av3-auth-otp below. */
-.av3-auth-form .av3-input { width: 100%; height: 38px; font-family: var(--av3-ui); }
-.av3-auth-form .av3-btn { width: 100%; height: 40px; font-size: 13px; }
+.av3-auth-form { display: flex; flex-direction: column; gap: 18px; text-align: left; }
+.av3-auth-form .av3-field { gap: 6px; }
+/* underline-only field for the minimal door — overrides the boxed .av3-input */
+.av3-auth-form .av3-field-label { font-family: var(--av3-mono); font-size: 9.5px; letter-spacing: 0.18em; }
+.av3-auth-form .av3-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 2px;
+  border: none;
+  border-bottom: 1px solid var(--av3-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--av3-fg);
+  font-family: var(--av3-ui);
+  font-size: 15px;
+  transition: border-color var(--av3-t-base) var(--av3-ease), box-shadow var(--av3-t-base) var(--av3-ease);
+}
+.av3-auth-form .av3-input::placeholder { color: var(--av3-subtle); }
+.av3-auth-form .av3-input:hover { border-bottom-color: var(--av3-muted); }
+.av3-auth-form .av3-input:focus { outline: none; border-bottom-color: var(--av3-brand); box-shadow: 0 1px 0 0 var(--av3-brand); }
 .av3-auth-otp { text-align: center; letter-spacing: 0.42em; font-family: var(--av3-mono) !important; }
+
 .av3-auth-error {
   font-size: 12px;
   text-align: center;
@@ -1418,32 +1430,47 @@
   border-radius: var(--av3-r-sm);
   padding: 8px 10px;
 }
-.av3-auth-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--av3-subtle);
+
+/* primary CTA — solid brand, full-width, lifted on a soft brand shadow */
+.av3-auth-form .av3-btn-primary {
+  margin-top: 6px;
+  width: 100%;
+  height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 26px -12px color-mix(in oklab, var(--av3-brand) 85%, transparent);
 }
-.av3-auth-or::before, .av3-auth-or::after { content: ""; flex: 1; height: 1px; background: var(--av3-line); }
+/* passkey — a quiet text action beneath the CTA (no "or" divider) */
+.av3-auth-passkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background: none;
+  color: var(--av3-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--av3-t-fast) var(--av3-ease);
+}
+.av3-auth-passkey:hover { color: var(--av3-fg); }
+.av3-auth-passkey:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; border-radius: var(--av3-r-sm); }
+.av3-auth-passkey:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-passkey svg { width: 14px; height: 14px; }
 
 .av3-auth-foot {
-  margin-top: 22px;
+  margin-top: 26px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   text-align: center;
   font-size: 11.5px;
   color: var(--av3-muted);
 }
-.av3-auth-foot a {
-  color: var(--av3-fg);
-  text-decoration: none;
-  border-bottom: 1px solid var(--av3-line-strong);
-  transition: border-color var(--av3-t-fast) var(--av3-ease);
-}
-.av3-auth-foot a:hover { border-color: var(--av3-brand); }
+.av3-auth-foot a { color: var(--av3-platinum); text-decoration: none; }
+.av3-auth-foot a:hover { text-decoration: underline; }
 
-@media (max-width: 420px) { .av3-auth-card { padding: 24px; } }
+@media (max-width: 420px) { .av3-auth-frame { padding: 32px 18px 28px; } }
