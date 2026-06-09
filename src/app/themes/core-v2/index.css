@@ -146,6 +146,8 @@
 /* ---------- ticket: tabs ---------- */
 /* full-width open-check bar, above the three panes */
 .cv2 .cv-checkbar { flex: none; background: var(--panel); border-bottom: 1px solid var(--line); }
+.cv2 .cv-sync-pill { margin: 8px 14px 0; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: var(--amber); background: var(--amber-wash); display: inline-flex; align-items: center; gap: 6px; flex: none; align-self: flex-start; }
 .cv2 .cv-tabrail-sum { padding: 9px 16px 0; font-size: 11px; color: var(--ink-3); letter-spacing: .01em; flex: none; }
 .cv2 .cv-tabrail-sum b { color: var(--ink-2); font-weight: 600; }
 .cv2 .cv-tabrail { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; flex: none; max-height: 116px; overflow-y: auto; }
@@ -193,8 +195,10 @@
 .cv2 .cv-course-h .fire:hover { background: var(--brand-bright); }
 .cv2 .cv-course-h .fire:disabled { opacity: .5; cursor: default; }
 .cv2 .cv-course-h .fire.done { background: var(--basil-wash); color: var(--basil); }
-.cv2 .cv-line { display: flex; align-items: center; gap: 11px; padding: 8px 16px; }
-.cv2 .cv-line:hover { background: var(--hover); }
+.cv2 .cv-line { display: flex; flex-direction: column; }
+.cv2 .cv-line-main { display: flex; align-items: center; gap: 11px; padding: 8px 16px; }
+.cv2 .cv-line-main:hover { background: var(--hover); }
+.cv2 .cv-line.picking .cv-line-main { background: var(--brand-wash); }
 .cv2 .cv-line .ln { flex: 1; min-width: 0; font-weight: 500; font-size: 13.5px; }
 .cv2 .cv-line .lp { font-family: var(--mono); font-weight: 600; font-size: 13px; }
 .cv2 .cv-qstep { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-3); border: 1px solid var(--line); border-radius: 7px; padding: 1px; flex: none; }
@@ -233,15 +237,23 @@
 .cv2 .cv-steer.warn { background: var(--amber-wash); color: var(--amber); }
 .cv2 .cv-steer.risk { background: var(--danger-wash); color: var(--danger); }
 .cv2 .cv-chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
-/* drag-to-recourse */
-.cv2 .cv-line { cursor: grab; }
-.cv2 .cv-line:active { cursor: grabbing; }
+/* re-course — tap the grip (touch) or drag a line onto a course (mouse) */
+.cv2 .cv-line[draggable="true"] .cv-line-main { cursor: grab; }
+.cv2 .cv-line[draggable="true"]:active .cv-line-main { cursor: grabbing; }
 .cv2 .cv-course.drop { background: var(--brand-wash); box-shadow: inset 3px 0 0 var(--brand); }
-.cv2 .cv-grip { flex: none; color: var(--ink-3); font-size: 13px; line-height: 1; letter-spacing: -2px; opacity: .4; cursor: grab; transition: opacity var(--fast), color var(--fast); }
-.cv2 .cv-line:hover .cv-grip { opacity: 1; color: var(--brand-bright); animation: cv-grip-bob .9s ease-in-out infinite; }
-.cv2 .cv-line:active .cv-grip { cursor: grabbing; }
+/* grip is a real tap target on touch (button) yet still a hint on flat lines (span) */
+.cv2 .cv-grip { flex: none; appearance: none; border: 0; background: none; padding: 2px 1px; color: var(--ink-3); font-size: 13px; line-height: 1; letter-spacing: -2px; opacity: .4; cursor: pointer; transition: opacity var(--fast), color var(--fast); }
+button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
+.cv2 .cv-line:hover .cv-grip { opacity: 1; color: var(--brand-bright); }
+.cv2 .cv-line[draggable="true"]:hover .cv-grip { animation: cv-grip-bob .9s ease-in-out infinite; }
+.cv2 .cv-line.picking .cv-grip { opacity: 1; color: var(--brand); }
 @keyframes cv-grip-bob { 0%, 100% { transform: translateY(-1.5px); } 50% { transform: translateY(1.5px); } }
-@media (prefers-reduced-motion: reduce) { .cv2 .cv-line:hover .cv-grip { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .cv2 .cv-line[draggable="true"]:hover .cv-grip { animation: none; } }
+/* inline course chooser revealed under a line on grip-tap */
+.cv2 .cv-recourse { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 16px 10px 49px; }
+.cv2 .cv-recourse-opt { appearance: none; height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background var(--fast), border-color var(--fast), color var(--fast); }
+.cv2 .cv-recourse-opt:hover { border-color: var(--brand); color: var(--brand); }
+.cv2 .cv-recourse-opt.on { background: var(--brand); border-color: var(--brand); color: #fff; cursor: default; }
 
 /* ============================================================
    Own UI primitives — Dialog, Toast, Button

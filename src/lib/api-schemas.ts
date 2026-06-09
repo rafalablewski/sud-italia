@@ -181,6 +181,9 @@ export const slotCreateSchema = z
     locationSlug,
     date: isoDate,
     fulfillmentTypes: z.array(fulfillmentTypeSchema).min(1).max(3),
+    // Optional — callers that want a slot live immediately (the v2 Slots
+    // creator) pass "active"; omitting it preserves the legacy draft default.
+    status: z.enum(["draft", "active"]).optional(),
     time: wallTime.optional(),
     maxOrders: z.number().int().positive().max(500).optional(),
     bulk: z

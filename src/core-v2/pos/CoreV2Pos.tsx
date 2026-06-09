@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "@/shared/LocationContext";
+import { usePolling } from "@/lib/usePolling";
+import { idempotentFetch } from "@/lib/idempotentFetch";
+import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
@@ -13,9 +16,10 @@ import {
   type MenuItem,
   type PosCourse,
   type PosTab,
+  type PosTabLine,
 } from "@/data/types";
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
-import { POS_COURSE_LABELS, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
+import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
 const CHANNELS: { key: FulfillmentType; label: string }[] = [
@@ -80,6 +84,27 @@ export function CoreV2Pos({
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const persistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Count of PUTs currently on the wire. The cross-till poll must skip while a
+  // save is in flight — the debounce timer clears itself *before* the fetch
+  // resolves, so guarding on `persistTimers` alone leaves a window where a poll
+  // reads the pre-write server state and reverts the local edit (the line
+  // "disappears, then reappears" a few seconds later on the next poll).
+  const pendingSaves = useRef(0);
+
+  // Reconcile a polled tab list against local state: incoming defines
+  // membership (tabs added/closed on other tills), but a locally-edited tab
+  // with a newer updatedAt wins, so a poll that was already in flight when we
+  // wrote can't clobber the fresher edit.
+  const mergeTabs = useCallback((incoming: PosTab[]) => {
+    setTabs((local) => {
+      const byId = new Map(local.map((t) => [t.id, t] as const));
+      return incoming.map((inc) => {
+        const mine = byId.get(inc.id);
+        if (mine && mine.updatedAt && inc.updatedAt && mine.updatedAt > inc.updatedAt) return mine;
+        return inc;
+      });
+    });
+  }, []);
 
   const loadTabs = useCallback(async () => {
     if (!pageLoc) return;
@@ -103,24 +128,25 @@ export function CoreV2Pos({
     void loadTabs();
   }, [loadTabs]);
 
-  // Live cross-till sync — skipped while a local edit is mid-debounce.
-  useEffect(() => {
-    if (!pageLoc) return;
-    const id = setInterval(async () => {
-      if (persistTimers.current.size > 0) return;
+  // Live cross-till sync — visibility-aware poll, skipped while a local edit is
+  // mid-debounce or its save is still on the wire (else the poll reverts it).
+  usePolling(
+    async () => {
+      if (!pageLoc || persistTimers.current.size > 0 || pendingSaves.current > 0) return;
       try {
         const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`);
         if (!res.ok) return;
         const data: { tabs?: PosTab[] } = await res.json();
         const list = Array.isArray(data.tabs) ? data.tabs : [];
-        setTabs(list);
+        mergeTabs(list);
         setActiveTabId((cur) => (cur && list.some((t) => t.id === cur) ? cur : list[0]?.id ?? null));
       } catch {
         /* non-fatal */
       }
-    }, 5000);
-    return () => clearInterval(id);
-  }, [pageLoc]);
+    },
+    5000,
+    { enabled: !!pageLoc },
+  );
 
   useEffect(() => {
     const timers = persistTimers.current;
@@ -138,6 +164,9 @@ export function CoreV2Pos({
       tab.id,
       setTimeout(() => {
         timers.delete(tab.id);
+        // Mark the save in flight until the PUT settles so the cross-till poll
+        // can't read a stale list in the gap between debounce-clear and commit.
+        pendingSaves.current += 1;
         void fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(tab.locationSlug)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -153,7 +182,11 @@ export function CoreV2Pos({
             sentKds: tab.sentKds,
             coursed: tab.coursed ?? null,
           }),
-        }).catch(() => {});
+        })
+          .catch(() => {})
+          .finally(() => {
+            pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+          });
       }, 350),
     );
   }, []);
@@ -296,13 +329,22 @@ export function CoreV2Pos({
     if (!t.channel) return toast("Pick a channel first", "danger");
     setBusyTabId(t.id);
     try {
-      const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+      const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
+      const { res, queued } = await durableMutate({
+        url,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tabId: t.id }),
+        body: { tabId: t.id },
+        entity: `tab:${t.id}`,
+        desc: `Send · #${t.id}`,
+        onReject: (s) => toast(`Send for #${t.id} was rejected (${s})`, "danger"),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
-      if (!res.ok) return toast(data.error || "Could not send to KDS", "danger");
+      if (queued) {
+        // Offline: optimistically mark the tab sent; the outbox fires it on reconnect.
+        setTabs((prev) => prev.map((x) => (x.id === t.id ? { ...x, sentKds: true, status: "pay" } : x)));
+        return toast(`Saved offline — sends to KDS on reconnect · #${t.id}`, "default");
+      }
+      const data = (await res!.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
+      if (!res!.ok) return toast(data.error || "Could not send to KDS", "danger");
       setTabs((prev) =>
         prev.map((x) => (x.id === t.id ? { ...x, sentKds: true, status: "pay", orderId: data.orderId, firedCourses: data.firedCourses } : x)),
       );
@@ -319,11 +361,11 @@ export function CoreV2Pos({
       if (!t.channel) return toast("Pick a channel first", "danger");
       setBusyTabId(t.id);
       try {
-        const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+        const { res } = await idempotentFetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tabId: t.id, courses: [course] }),
+          body: { tabId: t.id, courses: [course] },
         });
+        if (!res) return toast("No connection — couldn't fire the course", "danger");
         const data = (await res.json().catch(() => ({}))) as { error?: string; orderId?: string; firedCourses?: PosCourse[] };
         if (!res.ok) return toast(data.error || "Could not fire course", "danger");
         setTabs((prev) =>
@@ -345,17 +387,30 @@ export function CoreV2Pos({
       setBusyTabId(t.id);
       setTenderOpen(false);
       try {
-        const res = await fetch(`/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`, {
+        const url = `/api/admin/pos/orders?location=${encodeURIComponent(pageLoc)}`;
+        const { res, queued } = await durableMutate({
+          url,
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tabId: t.id }),
+          body: { tabId: t.id },
+          entity: `tab:${t.id}`,
+          desc: `Charge · #${t.id}`,
+          onReject: (s) => toast(`Charge for #${t.id} was rejected (${s})`, "danger"),
         });
-        const data = (await res.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
-        if (!res.ok) return toast(data.error || "Could not take payment", "danger");
+        const closeTab = () => {
+          const left = tabs.filter((x) => x.id !== t.id);
+          setTabs(left);
+          setActiveTabId(left[0]?.id ?? null);
+        };
+        if (queued) {
+          // Offline: close the check optimistically; the outbox charges it (once,
+          // under its idempotency key) when the network returns.
+          closeTab();
+          return toast(`Saved offline — charges ${method} on reconnect · #${t.id}`, "default");
+        }
+        const data = (await res!.json().catch(() => ({}))) as { error?: string; totalAmount?: number };
+        if (!res!.ok) return toast(data.error || "Could not take payment", "danger");
         const amt = data.totalAmount ?? grandG(t);
-        const left = tabs.filter((x) => x.id !== t.id);
-        setTabs(left);
-        setActiveTabId(left[0]?.id ?? null);
+        closeTab();
         toast(`Paid ✓ #${t.id} · ${method} · ${fmtPLN(amt)}`, "success");
       } finally {
         setBusyTabId(null);
@@ -380,6 +435,9 @@ export function CoreV2Pos({
   const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
 
   const active = getActive();
+  // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
+  // staff know a send/charge is saved and will land on reconnect.
+  const pendingWrites = usePendingWriteCount();
 
   // Tab-rail rollup: how many checks are in flight, ready to pay, parked, and
   // the open value across all of them — the at-a-glance "state of the till".
@@ -476,32 +534,30 @@ export function CoreV2Pos({
     return Math.max(0, ...active.items.map((l) => steer.promiseSecondsByCategory[byId(l.menuItemId)?.category ?? ""] ?? 0));
   }, [active, steer, byId]);
   const deliveryPaused = !!(steer?.active && active?.channel === "delivery" && steer.deliveryCapNextWindow === 0);
-  useEffect(() => {
+  const loadSteer = useCallback(async () => {
     if (!pageLoc) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/admin/pace/steering?location=${encodeURIComponent(pageLoc)}`);
-        if (!res.ok) return;
-        const d = await res.json();
-        if (cancelled) return;
-        setSteer(d.plan ?? null);
-        if (d.paceWindowMin) setWindowMin(d.paceWindowMin);
-      } catch {
-        /* non-fatal — the till just shows no steering hint */
-      }
-    };
-    void load();
-    const id = setInterval(load, 15000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    try {
+      const res = await fetch(`/api/admin/pace/steering?location=${encodeURIComponent(pageLoc)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setSteer(d.plan ?? null);
+      if (d.paceWindowMin) setWindowMin(d.paceWindowMin);
+    } catch {
+      /* non-fatal — the till just shows no steering hint */
+    }
   }, [pageLoc]);
+  useEffect(() => {
+    void loadSteer();
+  }, [loadSteer]);
+  usePolling(loadSteer, 15000, { enabled: !!pageLoc });
 
   // --- Drag-to-recourse + fullscreen kiosk --------------------------------
   const dragItem = useRef<string | null>(null);
   const [dropCourse, setDropCourse] = useState<PosCourse | null>(null);
+  // Tap-to-move course picker. A POS till is a touchscreen and HTML5 drag never
+  // fires from a finger, so the grip doubles as a tap target that reveals an
+  // inline course chooser; native drag stays as a mouse-only enhancement.
+  const [recourseFor, setRecourseFor] = useState<string | null>(null);
   const [kiosk, setKiosk] = useState(false);
   const toggleKiosk = useCallback(() => {
     setKiosk((k) => {
@@ -571,33 +627,70 @@ export function CoreV2Pos({
     </button>
   );
 
-  const lineRow = (menuItemId: string, quantity: number) => {
+  const lineRow = (l: PosTabLine, coursed: boolean) => {
+    const menuItemId = l.menuItemId;
     const m = byId(menuItemId);
     if (!m) return null;
+    const picking = recourseFor === menuItemId;
     return (
       <div
-        className="cv-line"
+        className={`cv-line${picking ? " picking" : ""}`}
         key={menuItemId}
-        draggable
+        draggable={coursed}
         onDragStart={() => {
-          dragItem.current = menuItemId;
+          if (coursed) dragItem.current = menuItemId;
         }}
         onDragEnd={() => {
           dragItem.current = null;
         }}
       >
-        <span className="cv-grip" aria-hidden title="Drag to re-course">⠿</span>
-        <div className="cv-qstep">
-          <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
-            −
-          </button>
-          <span className="q mono">{quantity}</span>
-          <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
-            +
-          </button>
+        <div className="cv-line-main">
+          {coursed ? (
+            <button
+              type="button"
+              className="cv-grip"
+              title="Move to another course"
+              aria-label={`Move ${m.name} to another course`}
+              aria-expanded={picking}
+              onClick={() => setRecourseFor((cur) => (cur === menuItemId ? null : menuItemId))}
+            >
+              ⠿
+            </button>
+          ) : (
+            <span className="cv-grip" aria-hidden>⠿</span>
+          )}
+          <div className="cv-qstep">
+            <button type="button" onClick={() => changeQty(menuItemId, -1)} aria-label="Remove one">
+              −
+            </button>
+            <span className="q mono">{l.quantity}</span>
+            <button type="button" onClick={() => changeQty(menuItemId, 1)} aria-label="Add one">
+              +
+            </button>
+          </div>
+          <div className="ln">{m.name}</div>
+          <span className="lp mono">{zl(m.price * l.quantity)}</span>
         </div>
-        <div className="ln">{m.name}</div>
-        <span className="lp mono">{zl(m.price * quantity)}</span>
+        {picking && coursed && (
+          <div className="cv-recourse" role="group" aria-label="Move to course">
+            {POS_COURSE_ORDER.map((c) => {
+              const on = courseOf(l) === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  className={`cv-recourse-opt${on ? " on" : ""}`}
+                  onClick={() => {
+                    if (!on) recourse(menuItemId, c);
+                    setRecourseFor(null);
+                  }}
+                >
+                  {POS_COURSE_LABELS[c]}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -628,6 +721,11 @@ export function CoreV2Pos({
     >
       {/* open-check bar — spans the full width, above the panes */}
       <div className="cv-checkbar">
+        {pendingWrites > 0 && (
+          <div className="cv-sync-pill" role="status" title="Saved locally — will sync when the connection returns">
+            ↻ {pendingWrites} {pendingWrites === 1 ? "write" : "writes"} syncing
+          </div>
+        )}
         {tabs.length > 0 && (
           <div className="cv-tabrail-sum">
             {railSummary.count} {railSummary.count === 1 ? "tab" : "tabs"} · {railSummary.ready} ready to pay · {railSummary.parked} parked ·{" "}
@@ -860,12 +958,12 @@ export function CoreV2Pos({
                             </button>
                           )}
                         </div>
-                        {g.lines.map((l) => lineRow(l.menuItemId, l.quantity))}
+                        {g.lines.map((l) => lineRow(l, true))}
                       </div>
                     );
                   })
                 ) : (
-                  active.items.map((l) => lineRow(l.menuItemId, l.quantity))
+                  active.items.map((l) => lineRow(l, false))
                 )}
 
                 {/* combo completion */}

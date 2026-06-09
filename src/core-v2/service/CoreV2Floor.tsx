@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePolling } from "@/lib/usePolling";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useLocation } from "@/shared/LocationContext";
 import { recommendSeating, type FloorTwin, type TwinTableRow } from "@/lib/floor-twin";
-import type { TableStatus } from "@/data/types";
+import type { FloorTable, TableStatus } from "@/data/types";
 import { serviceTabs } from "./serviceTabs";
 
 interface Kitchen {
@@ -47,11 +48,12 @@ export function CoreV2Floor() {
       /* non-fatal */
     }
   }, [loc]);
+  // Initial load + on location change; the recurring refresh is a
+  // visibility-aware poll so a backgrounded floor board stops polling.
   useEffect(() => {
     void load();
-    const id = setInterval(load, 15000);
-    return () => clearInterval(id);
   }, [load]);
+  usePolling(load, 15000);
 
   const post = async (action: "seat" | "clear", tableId: string, number: string) => {
     if (acting) return;
@@ -74,6 +76,46 @@ export function CoreV2Floor() {
     if (t.status === "out-of-service") return;
     void post(t.occupied ? "clear" : "seat", t.id, t.number);
   };
+
+  // Optimistic merge so a created/edited/deleted table reflects instantly in
+  // the twin instead of vanishing until the (heavy) refetch returns. load()
+  // still runs afterwards to reconcile the derived KPIs/physics.
+  const applyTableChange = useCallback((change: { table?: FloorTable; deletedId?: string }) => {
+    setTwin((prev) => {
+      if (!prev) return prev;
+      let tables = prev.tables;
+      if (change.deletedId) {
+        tables = tables.filter((t) => t.id !== change.deletedId);
+      } else if (change.table) {
+        const ft = change.table;
+        const existing = prev.tables.find((t) => t.id === ft.id);
+        const row: TwinTableRow = existing
+          ? { ...existing, number: ft.number, seats: ft.seats, zone: ft.zone, status: ft.status, occupied: ft.status === "seated" }
+          : {
+              id: ft.id,
+              number: ft.number,
+              seats: ft.seats,
+              zone: ft.zone,
+              status: ft.status,
+              turns: 0,
+              medianDwellMin: null,
+              dwellSource: null,
+              avgSpendGrosze: null,
+              spendVelocityPerHourGrosze: null,
+              occupied: ft.status === "seated",
+              occupiedSince: null,
+              elapsedMin: null,
+              predictedFreeInMin: null,
+              party: null,
+              openCheckGrosze: null,
+            };
+        tables = existing
+          ? prev.tables.map((t) => (t.id === ft.id ? row : t))
+          : [...prev.tables, row];
+      }
+      return { ...prev, tables };
+    });
+  }, []);
 
   const partyN = Math.max(1, Math.min(50, Math.round(Number(party) || 0)));
   const recs = useMemo(() => (twin ? recommendSeating(twin, partyN) : []), [twin, partyN]);
@@ -206,8 +248,9 @@ export function CoreV2Floor() {
         loc={loc}
         table={editing}
         onClose={() => setEditing(null)}
-        onSaved={() => {
+        onSaved={(change) => {
           setEditing(null);
+          applyTableChange(change);
           void load();
         }}
       />
@@ -224,7 +267,7 @@ function TableDialog({
   loc: string;
   table: TwinTableRow | "new" | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (change: { table?: FloorTable; deletedId?: string }) => void;
 }) {
   const toast = useCoreToast();
   const isNew = table === "new";
@@ -261,8 +304,9 @@ function TableDialog({
         }),
       });
       if (res.ok) {
+        const saved = (await res.json().catch(() => null)) as FloorTable | null;
         toast(isNew ? "Table added" : "Table saved", "success");
-        onSaved();
+        onSaved(saved ? { table: saved } : {});
       } else toast("Could not save table", "danger");
     } catch {
       toast("Network error — try again", "danger");
@@ -281,7 +325,7 @@ function TableDialog({
       );
       if (res.ok) {
         toast("Table deleted", "success");
-        onSaved();
+        onSaved({ deletedId: row.id });
       } else toast("Could not delete", "danger");
     } catch {
       toast("Network error — try again", "danger");

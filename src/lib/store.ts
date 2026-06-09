@@ -140,10 +140,28 @@ async function writeJSON<T>(key: string, data: T): Promise<void> {
       INSERT INTO kv_store (key, value) VALUES (${key}, ${JSON.stringify(data)}::jsonb)
       ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(data)}::jsonb
     `;
+    invalidateKvCache(key);
     return;
   }
   await ensureDataDir();
   await writeFile(join(DATA_DIR, key), JSON.stringify(data, null, 2));
+  invalidateKvCache(key);
+}
+
+// --- Short-TTL read cache for hot, rarely-written blobs --------------------
+// Every authenticated API request resolves its caller through getAdminUsers()
+// (auth), so under the live-board polling load the *same* admin-users blob is
+// read many times a second. A few-second process cache collapses that to one
+// read per window; writeJSON invalidates it on any mutation so a role /
+// permission / status change is visible within the TTL at worst. This is a
+// per-instance cache — on serverless each warm instance keeps its own, which is
+// exactly the right scope for a 5s freshness budget.
+const ADMIN_USERS_KEY = "admin-users.json";
+const ADMIN_USERS_TTL_MS = 5_000;
+let adminUsersCache: { data: AdminUser[]; at: number } | null = null;
+
+function invalidateKvCache(key: string): void {
+  if (key === ADMIN_USERS_KEY) adminUsersCache = null;
 }
 
 // --- Time Slots (m1_1: normalized table with dual-write) ----------------
@@ -7669,7 +7687,15 @@ export async function getActorCompTotalToday(
 // --- Admin users ---
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
-  return readJSON<AdminUser[]>("admin-users.json", []);
+  const now = Date.now();
+  if (adminUsersCache && now - adminUsersCache.at < ADMIN_USERS_TTL_MS) {
+    // Hand back a shallow copy so a caller that sorts/splices the list in place
+    // can't poison the cached reference.
+    return [...adminUsersCache.data];
+  }
+  const data = await readJSON<AdminUser[]>(ADMIN_USERS_KEY, []);
+  adminUsersCache = { data, at: now };
+  return [...data];
 }
 
 export async function saveAdminUser(
@@ -11951,13 +11977,174 @@ export async function setCacheJson<T>(key: string, data: T): Promise<void> {
   await writeJSON<T>(key, data);
 }
 
+// --- Idempotency keys (Phase 2: durable write queue) ----------------------
+// See docs/strategy/core-v2-local-first.md §3.2.
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Run `fn` at most once per idempotency `key`. A retry carrying the same key (a
+ * client that didn't hear back and re-sent, or a double-tap) returns the
+ * **stored result** of the first success instead of re-running the mutation —
+ * so a charge can't double-fire and a re-send can't duplicate a ticket across
+ * the lost-response window.
+ *
+ * Correctness details:
+ *  - serialized per key via the distributed lock, so two concurrent retries
+ *    can't both miss the cache and both run `fn`;
+ *  - only *successful* results are memoized — a thrown error leaves the key
+ *    unset so a genuine failure stays retryable;
+ *  - each result is its own kv row / file (`idemp:<key>`) with a 24 h read TTL,
+ *    which comfortably covers any retry burst;
+ *  - a falsy key (caller opted out) just runs `fn` directly.
+ */
+export async function withIdempotency<T>(
+  key: string | null | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!key) return fn();
+  const slot = `idemp:${key}`;
+  return withLockScoped("idemp", key, async () => {
+    const existing = await readJSON<{ at: number; result: T } | null>(slot, null);
+    if (existing && Date.now() - existing.at < IDEMPOTENCY_TTL_MS) {
+      return existing.result;
+    }
+    const result = await fn();
+    await writeJSON(slot, { at: Date.now(), result });
+    return result;
+  });
+}
+
 // --- Floor: tables + reservations (per location) -------------------------
 // JSON-backed list entities (mirrors the supplier / purchase-order pattern):
 // withLock + readJSON/writeJSON, upsert by id. Per-location filtering happens
 // on read so the API can scope to the caller's location.
 
+// --- Per-location JSON-list store (m3 contention split) -------------------
+//
+// Generalises the POS-tabs split to the floor data layer. A single global
+// `<base>.json` blob means every location serializes on one withLock — a Kraków
+// seat/clear blocked a Warszawa one. These helpers key the data per location
+// (`<base>.<loc>.json`) and lock per location, so writes at different trucks
+// never contend. A draining legacy union keeps any pre-split rows visible and
+// promotes them into their per-location key on the first write for that
+// location; new rows never touch legacy, so it empties and is then skipped via
+// a per-instance latch. For row types shaped { id, locationSlug }.
+
+interface PerLocationBlob<T extends { id: string; locationSlug: string }> {
+  /** Rows for one location (per-location key ∪ not-yet-promoted legacy rows). */
+  readForLocation(loc: string): Promise<T[]>;
+  /** Rows across every active location + any legacy rows (admin "all" view). */
+  readAll(): Promise<T[]>;
+  /** Find one row by id; pass the location to skip the active-location scan. */
+  find(id: string, loc?: string): Promise<T | undefined>;
+  /** Upsert a fully-built row, locked to its location. */
+  upsert(row: T): Promise<T>;
+  /** Per-location locked read-modify-write — for writes that need the prior
+   *  rows (a status transition, an append). `fn` returns the next rows + a
+   *  result; any legacy rows seeded in are promoted out of the legacy blob. */
+  mutate<R>(loc: string, fn: (rows: T[]) => Promise<{ rows: T[]; result: R }>): Promise<R>;
+  /** Delete by id; pass the location to skip the scan. */
+  remove(id: string, loc?: string): Promise<boolean>;
+}
+
+function makePerLocationBlob<T extends { id: string; locationSlug: string }>(base: string): PerLocationBlob<T> {
+  const legacyKey = `${base}.json`;
+  const keyFor = (loc: string) => `${base}.${loc}.json`;
+  let legacyDrained = false;
+
+  const readLegacy = async (): Promise<T[]> => {
+    if (legacyDrained) return [];
+    const list = await readJSON<T[]>(legacyKey, []);
+    if (list.length === 0) legacyDrained = true;
+    return list;
+  };
+  const dropFromLegacy = async (ids: Set<string>): Promise<number> => {
+    if (legacyDrained || ids.size === 0) return 0;
+    return withLock(legacyKey, async () => {
+      const list = await readJSON<T[]>(legacyKey, []);
+      const next = list.filter((r) => !ids.has(r.id));
+      const removed = list.length - next.length;
+      if (removed > 0) await writeJSON(legacyKey, next);
+      if (next.length === 0) legacyDrained = true;
+      return removed;
+    });
+  };
+  const readForLocation = async (loc: string): Promise<T[]> => {
+    const own = await readJSON<T[]>(keyFor(loc), []);
+    const legacy = (await readLegacy()).filter((r) => r.locationSlug === loc);
+    if (legacy.length === 0) return own;
+    const byId = new Map<string, T>();
+    for (const r of legacy) byId.set(r.id, r);
+    for (const r of own) byId.set(r.id, r); // per-location wins over legacy
+    return [...byId.values()];
+  };
+  const readAll = async (): Promise<T[]> => {
+    const legacy = await readLegacy();
+    const active = await getActiveLocationsAsync().catch(() => []);
+    const slugs = new Set<string>([...active.map((l) => l.slug), ...legacy.map((r) => r.locationSlug)]);
+    const own = (await Promise.all([...slugs].map((s) => readJSON<T[]>(keyFor(s), [])))).flat();
+    const byId = new Map<string, T>();
+    for (const r of legacy) byId.set(r.id, r);
+    for (const r of own) byId.set(r.id, r);
+    return [...byId.values()];
+  };
+  const locationOf = async (id: string): Promise<string | undefined> => {
+    const active = await getActiveLocationsAsync().catch(() => []);
+    for (const l of active) {
+      const own = await readJSON<T[]>(keyFor(l.slug), []);
+      if (own.some((r) => r.id === id)) return l.slug;
+    }
+    return (await readLegacy()).find((r) => r.id === id)?.locationSlug;
+  };
+  const find = async (id: string, loc?: string): Promise<T | undefined> => {
+    const at = loc ?? (await locationOf(id));
+    if (!at) return undefined;
+    return (await readForLocation(at)).find((r) => r.id === id);
+  };
+  const mutate = async <R>(loc: string, fn: (rows: T[]) => Promise<{ rows: T[]; result: R }>): Promise<R> => {
+    return withLockScoped(base, loc, async () => {
+      // Seed with this location's per-key rows plus any legacy rows for it, so a
+      // read-modify-write sees pre-split rows too. Everything written lands in
+      // the per-location key, so seeded legacy rows are promoted (dropped from
+      // legacy) on the way out.
+      const own = await readJSON<T[]>(keyFor(loc), []);
+      const ownIds = new Set(own.map((r) => r.id));
+      const legacyForLoc = (await readLegacy()).filter((r) => r.locationSlug === loc && !ownIds.has(r.id));
+      const { rows, result } = await fn([...own, ...legacyForLoc]);
+      await writeJSON(keyFor(loc), rows);
+      if (legacyForLoc.length) await dropFromLegacy(new Set(legacyForLoc.map((r) => r.id)));
+      return result;
+    });
+  };
+  const upsert = (row: T): Promise<T> =>
+    mutate<T>(row.locationSlug, async (rows) => {
+      const i = rows.findIndex((r) => r.id === row.id);
+      if (i >= 0) rows[i] = row;
+      else rows.push(row);
+      return { rows, result: row };
+    });
+  const remove = async (id: string, loc?: string): Promise<boolean> => {
+    const at = loc ?? (await locationOf(id));
+    if (at) {
+      const removed = await withLockScoped(base, at, async () => {
+        const own = await readJSON<T[]>(keyFor(at), []);
+        const next = own.filter((r) => r.id !== id);
+        if (next.length === own.length) return false;
+        await writeJSON(keyFor(at), next);
+        return true;
+      });
+      if (removed) return true;
+    }
+    // Not in any per-location key — maybe a pre-split row still in legacy.
+    return (await dropFromLegacy(new Set([id]))) > 0;
+  };
+  return { readForLocation, readAll, find, upsert, mutate, remove };
+}
+
+const tablesBlob = makePerLocationBlob<FloorTable>("floor-tables");
+
 export async function getTables(locationSlug?: string): Promise<FloorTable[]> {
-  const list = await readJSON<FloorTable[]>("floor-tables.json", []);
+  const list = locationSlug ? await tablesBlob.readForLocation(locationSlug) : await tablesBlob.readAll();
   const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
   // Stable order: zone, then numeric-aware label.
   return scoped.sort(
@@ -11983,71 +12170,69 @@ export interface FloorEvent {
   at: string;
 }
 
+const eventsBlob = makePerLocationBlob<FloorEvent>("floor-events");
+
 export async function getFloorEvents(locationSlug?: string, sinceIso?: string): Promise<FloorEvent[]> {
-  const all = await readJSON<FloorEvent[]>("floor-events.json", []);
+  const all = locationSlug ? await eventsBlob.readForLocation(locationSlug) : await eventsBlob.readAll();
   return all.filter(
     (e) => (!locationSlug || e.locationSlug === locationSlug) && (!sinceIso || e.at >= sinceIso),
   );
 }
 
 export async function recordFloorEvent(event: FloorEvent): Promise<void> {
-  await withLock("floor-events.json", async () => {
-    const list = await readJSON<FloorEvent[]>("floor-events.json", []);
-    list.push(event);
-    await writeJSON("floor-events.json", list);
+  // Append-only: write to the event's per-location key under its own lock.
+  await eventsBlob.mutate<void>(event.locationSlug, async (rows) => {
+    rows.push(event);
+    return { rows, result: undefined };
   });
 }
 
 export async function saveTable(
   input: Omit<FloorTable, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<FloorTable> {
-  return withLock("floor-tables.json", async () => {
-    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
-    const table: FloorTable = {
-      id: input.id || `tbl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      locationSlug: input.locationSlug,
-      number: input.number,
-      seats: input.seats,
-      zone: input.zone,
-      status: input.status,
-      createdAt: input.createdAt ?? new Date().toISOString(),
-    };
-    const i = list.findIndex((t) => t.id === table.id);
-    const prevStatus = i >= 0 ? list[i].status : null;
-    if (i >= 0) list[i] = table;
-    else list.push(table);
-    await writeJSON("floor-tables.json", list);
-    // Instrument the status transition for the Floor Twin's measured dwell.
-    // Fire-and-forget: a logging failure must never fail the table save.
-    if (prevStatus && prevStatus !== table.status) {
-      void recordFloorEvent({
-        id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        locationSlug: table.locationSlug,
-        tableId: table.id,
-        from: prevStatus,
-        to: table.status,
-        at: new Date().toISOString(),
-      }).catch(() => {});
-    }
-    return table;
+  const table: FloorTable = {
+    id: input.id || `tbl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    locationSlug: input.locationSlug,
+    number: input.number,
+    seats: input.seats,
+    zone: input.zone,
+    status: input.status,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+  let prevStatus: string | null = null;
+  await tablesBlob.mutate<void>(table.locationSlug, async (rows) => {
+    const i = rows.findIndex((t) => t.id === table.id);
+    prevStatus = i >= 0 ? rows[i].status : null;
+    if (i >= 0) rows[i] = table;
+    else rows.push(table);
+    return { rows, result: undefined };
   });
+  // Instrument the status transition for the Floor Twin's measured dwell.
+  // Fire-and-forget: a logging failure must never fail the table save.
+  if (prevStatus && prevStatus !== table.status) {
+    void recordFloorEvent({
+      id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: table.locationSlug,
+      tableId: table.id,
+      from: prevStatus,
+      to: table.status,
+      at: new Date().toISOString(),
+    }).catch(() => {});
+  }
+  return table;
 }
 
-export async function deleteTable(id: string): Promise<boolean> {
-  return withLock("floor-tables.json", async () => {
-    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
-    const filtered = list.filter((t) => t.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("floor-tables.json", filtered);
-    return true;
-  });
+export async function deleteTable(id: string, locationSlug?: string): Promise<boolean> {
+  return tablesBlob.remove(id, locationSlug);
 }
+
+const reservationsBlob = makePerLocationBlob<Reservation>("reservations");
 
 export async function getReservations(
   locationSlug?: string,
   date?: string,
 ): Promise<Reservation[]> {
-  const list = await readJSON<Reservation[]>("reservations.json", []);
+  const list = locationSlug ? await reservationsBlob.readForLocation(locationSlug) : await reservationsBlob.readAll();
   let scoped = locationSlug ? list.filter((r) => r.locationSlug === locationSlug) : list;
   if (date) scoped = scoped.filter((r) => r.date === date);
   return scoped.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -12056,39 +12241,26 @@ export async function getReservations(
 export async function saveReservation(
   input: Omit<Reservation, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<Reservation> {
-  return withLock("reservations.json", async () => {
-    const list = await readJSON<Reservation[]>("reservations.json", []);
-    const res: Reservation = {
-      id: input.id || `res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      locationSlug: input.locationSlug,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      partySize: input.partySize,
-      date: input.date,
-      time: input.time,
-      durationMin: input.durationMin,
-      tableId: input.tableId,
-      slotId: input.slotId,
-      status: input.status,
-      notes: input.notes,
-      createdAt: input.createdAt ?? new Date().toISOString(),
-    };
-    const i = list.findIndex((r) => r.id === res.id);
-    if (i >= 0) list[i] = res;
-    else list.push(res);
-    await writeJSON("reservations.json", list);
-    return res;
-  });
+  const res: Reservation = {
+    id: input.id || `res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    locationSlug: input.locationSlug,
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
+    partySize: input.partySize,
+    date: input.date,
+    time: input.time,
+    durationMin: input.durationMin,
+    tableId: input.tableId,
+    slotId: input.slotId,
+    status: input.status,
+    notes: input.notes,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+  return reservationsBlob.upsert(res);
 }
 
-export async function deleteReservation(id: string): Promise<boolean> {
-  return withLock("reservations.json", async () => {
-    const list = await readJSON<Reservation[]>("reservations.json", []);
-    const filtered = list.filter((r) => r.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("reservations.json", filtered);
-    return true;
-  });
+export async function deleteReservation(id: string, locationSlug?: string): Promise<boolean> {
+  return reservationsBlob.remove(id, locationSlug);
 }
 
 // --- POS open checks (tabs) ----------------------------------------------
@@ -12131,97 +12303,174 @@ function sanitizeFiredCourses(input: unknown): PosTab["firedCourses"] {
   return seen.size ? (Array.from(seen) as PosTab["firedCourses"]) : undefined;
 }
 
-export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
-  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-  const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
-  return scoped.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+// --- POS open checks: per-location keys (m3 contention split) -------------
+//
+// Open checks used to live in a single global `pos-tabs.json` blob, so every
+// till at every truck serialized on one withLock — a Kraków keystroke-save
+// blocked a Warszawa one. We now key the blob per location
+// (`pos-tabs.<loc>.json`) and lock per location, so each truck's till has its
+// own lock and tills at different trucks never contend.
+//
+// Migration is lossless and self-draining: a handful of pre-split checks may
+// still sit in the legacy global blob. Reads union it in (per-location wins);
+// any write that touches a legacy check "promotes" it into its per-location key
+// and drops it from legacy. New checks never touch legacy, so the global blob
+// drains to empty within a service and is then never read or written again.
+
+const POS_TABS_LEGACY = "pos-tabs.json";
+const posTabsKey = (loc: string): string => `pos-tabs.${loc}.json`;
+
+// Per-instance latch: the legacy blob can only ever shrink (no code adds to it),
+// so once observed empty we stop reading it.
+let posTabsLegacyDrained = false;
+
+async function readLegacyPosTabs(): Promise<PosTab[]> {
+  if (posTabsLegacyDrained) return [];
+  const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
+  if (list.length === 0) posTabsLegacyDrained = true;
+  return list;
 }
 
-export async function getPosTab(id: string): Promise<PosTab | undefined> {
-  const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-  return list.find((t) => t.id === id);
+/** Remove ids from the legacy blob (on promote / pre-split delete). Best-effort
+ *  under the legacy lock; a no-op once drained. Returns how many were removed. */
+async function dropFromLegacyPosTabs(ids: Set<string>): Promise<number> {
+  if (posTabsLegacyDrained || ids.size === 0) return 0;
+  return withLock(POS_TABS_LEGACY, async () => {
+    const list = await readJSON<PosTab[]>(POS_TABS_LEGACY, []);
+    const next = list.filter((t) => !ids.has(t.id));
+    const removed = list.length - next.length;
+    if (removed > 0) await writeJSON(POS_TABS_LEGACY, next);
+    if (next.length === 0) posTabsLegacyDrained = true;
+    return removed;
+  });
+}
+
+/** One location's open checks: the per-location key unioned with any
+ *  not-yet-promoted legacy checks for that location (per-location wins). */
+async function readPosTabsForLocation(loc: string): Promise<PosTab[]> {
+  const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+  const legacy = (await readLegacyPosTabs()).filter((t) => t.locationSlug === loc);
+  if (legacy.length === 0) return own;
+  const byId = new Map<string, PosTab>();
+  for (const t of legacy) byId.set(t.id, t);
+  for (const t of own) byId.set(t.id, t); // per-location wins over legacy
+  return [...byId.values()];
+}
+
+/** Pure merge of an upsert input over the stored record — the validation /
+ *  field-precedence rules, with no I/O so they can be unit-tested. `orderId` and
+ *  `firedCourses` are server-owned (preserved from `existing`, never taken from
+ *  the caller); editing the lines force-clears the `sentKds` flag. */
+export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, existing: PosTab | undefined): PosTab {
+  const id = input.id || newPosTabId();
+  const now = new Date().toISOString();
+  const channel = input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
+  const status =
+    input.status && POS_TAB_STATUSES.includes(input.status) ? input.status : existing?.status ?? "open";
+  const items = input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
+  // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
+  // can never outlive the order it was sent as, even if the client claims it.
+  const itemsChanged =
+    input.items !== undefined &&
+    (!existing ||
+      existing.items.length !== items.length ||
+      existing.items.some(
+        (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
+      ));
+  return {
+    id,
+    locationSlug: input.locationSlug,
+    name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
+    channel: input.channel === undefined ? existing?.channel ?? null : channel,
+    status,
+    items,
+    tableId: input.tableId !== undefined ? input.tableId || undefined : existing?.tableId,
+    covers:
+      input.covers !== undefined
+        ? Math.max(1, Math.min(50, Math.round(Number(input.covers) || 2)))
+        : existing?.covers,
+    address:
+      input.address !== undefined
+        ? (input.address || "").toString().trim().slice(0, 400) || undefined
+        : existing?.address,
+    sentKds: itemsChanged ? false : input.sentKds !== undefined ? !!input.sentKds : existing?.sentKds ?? false,
+    coursed:
+      input.coursed !== undefined ? !!input.coursed : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
+    firedCourses: existing?.firedCourses,
+    orderId: existing?.orderId,
+    createdAt: existing?.createdAt ?? input.createdAt ?? now,
+    updatedAt: now,
+  };
+}
+
+export async function getPosTabs(locationSlug?: string): Promise<PosTab[]> {
+  if (locationSlug) {
+    const list = await readPosTabsForLocation(locationSlug);
+    return list
+      .filter((t) => t.locationSlug === locationSlug)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+  // "All": every active location's key, plus any legacy checks (any location).
+  const legacy = await readLegacyPosTabs();
+  const active = await getActiveLocationsAsync().catch(() => []);
+  const slugs = new Set<string>([...active.map((l) => l.slug), ...legacy.map((t) => t.locationSlug)]);
+  const own = (await Promise.all([...slugs].map((s) => readJSON<PosTab[]>(posTabsKey(s), [])))).flat();
+  const byId = new Map<string, PosTab>();
+  for (const t of legacy) byId.set(t.id, t);
+  for (const t of own) byId.set(t.id, t); // per-location wins
+  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Resolve which location's blob a bare tab id lives in. Callers that already
+ *  know the location pass it (the common path); this scan is the fallback. */
+async function locationForPosTab(id: string): Promise<string | undefined> {
+  const active = await getActiveLocationsAsync().catch(() => []);
+  for (const l of active) {
+    const own = await readJSON<PosTab[]>(posTabsKey(l.slug), []);
+    if (own.some((t) => t.id === id)) return l.slug;
+  }
+  return (await readLegacyPosTabs()).find((t) => t.id === id)?.locationSlug;
+}
+
+export async function getPosTab(id: string, locationSlug?: string): Promise<PosTab | undefined> {
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (!loc) return undefined;
+  return (await readPosTabsForLocation(loc)).find((t) => t.id === id);
 }
 
 /**
  * Upsert an open check. `orderId` is never taken from the caller — it is
  * minted server-side on send/charge and preserved from the stored record — so
- * a till can't reassign which Order a tab points at.
+ * a till can't reassign which Order a tab points at. Locked per location.
  */
 export async function savePosTab(
   input: Partial<PosTab> & { locationSlug: string },
 ): Promise<PosTab> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const id = input.id || newPosTabId();
-    const existing = list.find((t) => t.id === id);
-    const now = new Date().toISOString();
-    const channel =
-      input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
-    const status =
-      input.status && POS_TAB_STATUSES.includes(input.status)
-        ? input.status
-        : existing?.status ?? "open";
-    const items =
-      input.items !== undefined ? sanitizePosTabLines(input.items) : existing?.items ?? [];
-    // Changing the lines un-sends the check server-side — so the "Sent ✓" flag
-    // can never outlive the order it was sent as, even if the client claims it.
-    const itemsChanged =
-      input.items !== undefined &&
-      (!existing ||
-        existing.items.length !== items.length ||
-        existing.items.some(
-          (l, idx) => l.menuItemId !== items[idx]?.menuItemId || l.quantity !== items[idx]?.quantity,
-        ));
-    const tab: PosTab = {
-      id,
-      locationSlug: input.locationSlug,
-      name: (input.name ?? existing?.name ?? "Tab").toString().slice(0, 40),
-      channel: input.channel === undefined ? existing?.channel ?? null : channel,
-      status,
-      items,
-      tableId:
-        input.tableId !== undefined
-          ? input.tableId || undefined
-          : existing?.tableId,
-      covers:
-        input.covers !== undefined
-          ? Math.max(1, Math.min(50, Math.round(Number(input.covers) || 2)))
-          : existing?.covers,
-      address:
-        input.address !== undefined
-          ? (input.address || "").toString().trim().slice(0, 400) || undefined
-          : existing?.address,
-      // Editing items forces sentKds false; otherwise honour the input / preserve.
-      sentKds: itemsChanged
-        ? false
-        : input.sentKds !== undefined
-          ? !!input.sentKds
-          : existing?.sentKds ?? false,
-      // Coursed is a user toggle (client may set it); default dine-in tabs to
-      // coursed, everything else to together when unset.
-      coursed:
-        input.coursed !== undefined
-          ? !!input.coursed
-          : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
-      // firedCourses is server-owned — set only by the order actuator via
-      // linkPosTabOrder, never taken from the client PUT.
-      firedCourses: existing?.firedCourses,
-      // orderId is server-owned — never overwritten by the caller.
-      orderId: existing?.orderId,
-      createdAt: existing?.createdAt ?? input.createdAt ?? now,
-      updatedAt: now,
-    };
-    const i = list.findIndex((t) => t.id === id);
-    if (i >= 0) list[i] = tab;
-    else list.push(tab);
-    await writeJSON("pos-tabs.json", list);
+  const loc = input.locationSlug;
+  return withLockScoped("pos-tabs", loc, async () => {
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    let existing = input.id ? own.find((t) => t.id === input.id) : undefined;
+    let fromLegacy = false;
+    if (!existing && input.id) {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === input.id && t.locationSlug === loc);
+      if (legacy) {
+        existing = legacy;
+        fromLegacy = true;
+      }
+    }
+    const tab = mergePosTab(input, existing);
+    const i = own.findIndex((t) => t.id === tab.id);
+    if (i >= 0) own[i] = tab;
+    else own.push(tab);
+    await writeJSON(posTabsKey(loc), own);
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([tab.id])); // promote out of legacy
     return tab;
   });
 }
 
 /** Patch server-owned fields (orderId, sentKds, status) after a send/charge.
  *  Separate from savePosTab so the order-linking path can't be spoofed by the
- *  client PUT route. */
+ *  client PUT route. Locked per location. */
 export async function linkPosTabOrder(
   id: string,
   patch: {
@@ -12230,12 +12479,23 @@ export async function linkPosTabOrder(
     status?: PosTabStatus;
     firedCourses?: PosTab["firedCourses"];
   },
+  locationSlug?: string,
 ): Promise<PosTab | null> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const i = list.findIndex((t) => t.id === id);
-    if (i < 0) return null;
-    const tab = list[i];
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (!loc) return null;
+  return withLockScoped("pos-tabs", loc, async () => {
+    const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+    const i = own.findIndex((t) => t.id === id);
+    let tab: PosTab;
+    let fromLegacy = false;
+    if (i >= 0) {
+      tab = own[i];
+    } else {
+      const legacy = (await readLegacyPosTabs()).find((t) => t.id === id && t.locationSlug === loc);
+      if (!legacy) return null;
+      tab = legacy;
+      fromLegacy = true;
+    }
     if (patch.orderId !== undefined) tab.orderId = patch.orderId;
     if (patch.sentKds !== undefined) tab.sentKds = patch.sentKds;
     if (patch.firedCourses !== undefined) {
@@ -12245,20 +12505,28 @@ export async function linkPosTabOrder(
       tab.status = patch.status;
     }
     tab.updatedAt = new Date().toISOString();
-    list[i] = tab;
-    await writeJSON("pos-tabs.json", list);
+    if (i >= 0) own[i] = tab;
+    else own.push(tab);
+    await writeJSON(posTabsKey(loc), own);
+    if (fromLegacy) await dropFromLegacyPosTabs(new Set([id])); // promote out of legacy
     return tab;
   });
 }
 
-export async function deletePosTab(id: string): Promise<boolean> {
-  return withLock("pos-tabs.json", async () => {
-    const list = await readJSON<PosTab[]>("pos-tabs.json", []);
-    const filtered = list.filter((t) => t.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("pos-tabs.json", filtered);
-    return true;
-  });
+export async function deletePosTab(id: string, locationSlug?: string): Promise<boolean> {
+  const loc = locationSlug ?? (await locationForPosTab(id));
+  if (loc) {
+    const removedOwn = await withLockScoped("pos-tabs", loc, async () => {
+      const own = await readJSON<PosTab[]>(posTabsKey(loc), []);
+      const next = own.filter((t) => t.id !== id);
+      if (next.length === own.length) return false;
+      await writeJSON(posTabsKey(loc), next);
+      return true;
+    });
+    if (removedOwn) return true;
+  }
+  // Not in any per-location key — maybe a pre-split check still in legacy.
+  return (await dropFromLegacyPosTabs(new Set([id]))) > 0;
 }
 
 const POS_TAB_ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

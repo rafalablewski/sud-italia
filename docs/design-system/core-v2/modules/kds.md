@@ -74,7 +74,10 @@ Wired 1:1 to the same engine as today's `/core/kds`:
   `buildKdsTicket` → `groupTicketsByColumn(tickets, station)`, all from
   `@/lib/*` + `@/core/kds/kds-board`. Tones via `toneForTicket`.
 - **Bump** — `PUT /api/admin/orders` `{ orderId, status: nextStatus(...) }`
-  (confirmed → preparing → ready → completed), then `refresh()`.
+  (confirmed → preparing → ready → completed). The ticket moves **optimistically**
+  via `useAdminOrdersStream.patchOrder` and is pinned in its new column until the
+  stream echoes the status (or the patch ages out / rolls back on failure), so a
+  pre-commit stream frame can't snap it backward; then `refresh()`.
 - **Fleet** — `GET /api/admin/kds/fleet?includeSimulated=1` (owner), polled 6s.
 
 ## At parity

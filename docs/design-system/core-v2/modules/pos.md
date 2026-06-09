@@ -14,11 +14,17 @@ A full-width **open-check bar** (`.cv-checkbar`) over a three-column grid
 inside the shell body: **rail · menu · ticket**.
 
 - **`.cv-checkbar`** — spans the whole width above the panes (so it sits
-  over the menu's steering banner): the `.cv-tabrail-sum` rollup
+  over the menu's steering banner): an optional `.cv-sync-pill`, then the
+  `.cv-tabrail-sum` rollup
   (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
   `.cv-tabrail` of `.cv-ttab` open-check chips + `+ New`. The active check
   gets a brand outline; the rail wraps (capped height + scroll) so a busy
   till's checks stay browsable without a horizontal hunt.
+- **`.cv-sync-pill`** — amber rounded status chip (`--amber` on
+  `--amber-wash`), shown only when the durable write outbox
+  (`src/store/writeQueue.ts`) holds unsent writes: `↻ N writes syncing`. It
+  tells staff a send/charge made offline is saved and will land on
+  reconnect — the visible end of the Phase 2b durable-queue path.
 
 - **`.cv-rail`** — the category rail. An **All** chip (stacks every
   category as `.cv-menu-sec` blocks with `.cv-menu-sec-h` headers) over
@@ -61,13 +67,18 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.
-- **`.cv-lines`** — `.cv-line` rows, each led by a `.cv-grip` drag handle
-  (`⠿`, brightens + bobs on hover) then a `.cv-qstep` −/＋ counter and a
-  mono line price. Dine-in coursed checks group lines into `.cv-course`
-  blocks with a `.cv-course-h` header and a per-course **Fire** button;
-  fired courses dim (`.cv-course.fired`) and show `✓ Fired`. Dragging a
-  line over a course tints it with a brand **left-accent** drop cue
-  (`.cv-course.drop` — not a full ring).
+- **`.cv-lines`** — `.cv-line` rows. The row body is `.cv-line-main`: a
+  `.cv-grip` handle (`⠿`) then a `.cv-qstep` −/＋ counter and a mono line
+  price. Dine-in coursed checks group lines into `.cv-course` blocks with a
+  `.cv-course-h` header and a per-course **Fire** button; fired courses dim
+  (`.cv-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
+  a coursed line the grip is a `<button>` that toggles `.cv-line.picking`,
+  revealing an inline `.cv-recourse` chooser (`.cv-recourse-opt` per course,
+  current one `.on`) — one tap moves the line. Native drag stays as a
+  mouse-only enhancement (`.cv-line[draggable="true"]` shows the grab cursor +
+  grip bob; dragging onto a course tints it via `.cv-course.drop`). Flat
+  (non-coursed) lines render the grip as an inert `<span>` and aren't
+  draggable.
 - **`.cv-offer`** — cross-sell suggestions (`getCartSuggestions`), plus a
   `.cv-offer.combo` **combo-completion** prompt when a deal is one or two
   items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
@@ -85,8 +96,10 @@ total and the `orderId` — the till only ever sends item ids + quantities.
   `upsellByLocation` (`getUpsellSettings`). The surface picks the menu for
   the `LocationContext` truck (shell chip), falling back to the first.
 - **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. Local
-  edits debounce 350ms to `PUT`; a 5s poll syncs other tills (skipped
-  mid-debounce).
+  edits debounce 350ms to `PUT`; a visibility-aware 5s poll (`usePolling`)
+  syncs other tills — skipped while an edit is mid-debounce **or** its save
+  is still on the wire, and reconciled by `updatedAt` so an already-in-flight
+  poll can't revert a fresher local edit.
 - **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
 - **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
   returns the authoritative `totalAmount`, closes the tab.
@@ -114,7 +127,8 @@ over-capacity table.
 ## At parity
 
 Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
-drag-to-recourse (drop a line on a course header), kitchen-timing toggle,
+tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
+or drop a line on a course header), kitchen-timing toggle,
 inline check rename, double-seat / over-capacity guards, the tab-rail
 rollup, a hydration-aware empty state, and the fullscreen kiosk are all
 wired — feature-for-feature with today's `/core/pos`.

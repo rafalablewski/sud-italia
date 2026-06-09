@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { useAdminOrdersStream } from "@/lib/useAdminOrdersStream";
+import { idempotentFetch } from "@/lib/idempotentFetch";
 import { analyzeTruck } from "@/lib/kds-prediction";
 import { buildKdsTicket, type KdsTicket, type KdsTicketItem } from "@/lib/kds-ticket";
 import { POS_COURSE_LABELS } from "@/lib/pos-coursing";
@@ -101,6 +102,127 @@ function dueLabel(t: KdsTicket, now: number): { text: string; tone: string } {
 }
 
 /**
+ * Shared 1-second kitchen clock. A single module-level interval fans a tick out
+ * to every subscribed leaf via useSyncExternalStore — so the per-second elapsed
+ * / countdown updates re-render only the small <TicketCard> timer nodes, never
+ * the whole board. The expensive board work (analyzeTruck + buildKdsTicket +
+ * grouping) is driven off the parent's *coarse* clock instead (see KDS_COARSE_MS),
+ * which is what made the 1 s tick lag the fleet / floor / chef views.
+ */
+let clockNow = Date.now();
+const clockSubs = new Set<() => void>();
+let clockTimer: ReturnType<typeof setInterval> | null = null;
+function subscribeClock(cb: () => void): () => void {
+  clockSubs.add(cb);
+  if (!clockTimer) {
+    clockTimer = setInterval(() => {
+      clockNow = Date.now();
+      for (const f of clockSubs) f();
+    }, 1000);
+  }
+  return () => {
+    clockSubs.delete(cb);
+    if (clockSubs.size === 0 && clockTimer) {
+      clearInterval(clockTimer);
+      clockTimer = null;
+    }
+  };
+}
+function useKitchenClock(): number {
+  return useSyncExternalStore(subscribeClock, () => clockNow, () => clockNow);
+}
+
+/** Parent recompute cadence for the heavy ticket pipeline + KPI aggregates.
+ *  Card countdowns stay 1 s-smooth via useKitchenClock; predictions / risk /
+ *  late / age tiles refreshing every few seconds is imperceptible. */
+const KDS_COARSE_MS = 5000;
+
+/**
+ * One kitchen ticket. Memoised so it only re-renders when its own ticket data
+ * changes or the shared clock ticks — and the structural parts (item grouping,
+ * allergen dedupe) are memoised on the items, so a clock tick costs just the
+ * countdown/meter math, not a re-group of every card.
+ */
+const TicketCard = memo(function TicketCard({
+  t,
+  station,
+  updating,
+  onAdvance,
+}: {
+  t: KdsTicket;
+  station: MenuCategory | "all";
+  updating: boolean;
+  onAdvance: (t: KdsTicket) => void;
+}) {
+  const now = useKitchenClock();
+  const due = dueLabel(t, now);
+  const pct = slaPct(t, now);
+  const atRisk = t.atRisk && t.status !== "ready";
+  const groups = useMemo(() => groupItems(t.items), [t.items]);
+  const allergens = useMemo(
+    () => Array.from(new Set(t.items.flatMap((i) => i.allergens))).filter(Boolean),
+    [t.items],
+  );
+  const grouped = station === "all" && groups.length > 1;
+  const held = t.coursing?.held ?? [];
+  const next = nextStatus(t.status);
+  return (
+    <div className={`cv-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
+      <div className="cv-tk-h">
+        <span className="id">
+          #{t.shortId}
+          <span className="chiplet">{channelTag(t)}</span>
+        </span>
+        <span className="cv-tk-hend">
+          {atRisk && <span className="cv-tk-risk">At risk</span>}
+          <span className={`due t-${due.tone}`}>{due.text}</span>
+        </span>
+      </div>
+      {t.simulated && <div className="cv-tk-sim">Simulation — not a real order</div>}
+      {held.length > 0 && (
+        <div className="cv-tk-course">Coursed · {held.map((c) => POS_COURSE_LABELS[c]).join(", ")} held</div>
+      )}
+      <div className="cv-tk-items">
+        {groups.map(([label, items]) => (
+          <div key={label} className="cv-tk-grp-block">
+            {grouped && <div className="cv-tk-grp">{label}</div>}
+            {items.map((it, i) => {
+              const dim = station !== "all" && it.category !== station;
+              return (
+                <div key={i} className={dim ? "it dim" : "it"}>
+                  <span className="q">{it.quantity}×</span>
+                  <div className="it-body">
+                    <div className="nm">{it.name}</div>
+                    {it.modifiers.map((m, mi) => (
+                      <div key={mi} className={m.flag ? "mod flag" : "mod"}>{m.label}</div>
+                    ))}
+                    {it.notes && <div className="mod">{it.notes}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {allergens.length > 0 && <div className="cv-tk-alrg">Allergens · {allergens.join(" · ")}</div>}
+      {t.specialInstructions && (
+        <div className="cv-tk-note">
+          <b>Note</b> {t.specialInstructions}
+        </div>
+      )}
+      <div className="cv-meter">
+        <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
+      </div>
+      {next && (
+        <button type="button" className="cv-bump" disabled={updating} onClick={() => onAdvance(t)}>
+          {BUMP_LABEL[t.status]}
+        </button>
+      )}
+    </div>
+  );
+});
+
+/**
  * Core v2 · KDS — the always-dark kitchen wall, wired to the live order stream.
  * Floor (New → Firing → Ready·Expo lanes) + Chef (station make-queue) run off
  * the same engine as today's /core/kds: useAdminOrdersStream → analyzeTruck →
@@ -122,10 +244,14 @@ export function CoreV2Kds() {
   const [eightySixOpen, setEightySixOpen] = useState(false);
   const [recalls, setRecalls] = useState<{ orderId: string; label: string; at: number }[]>([]);
 
-  const { orders, refresh } = useAdminOrdersStream(location, { paused, includeSimulated: true });
+  const { orders, refresh, patchOrder } = useAdminOrdersStream(location, { paused, includeSimulated: true });
 
+  // Coarse tick: drives the heavy ticket pipeline + KPI aggregates only. The
+  // per-second countdowns live in <TicketCard> via the shared kitchen clock, so
+  // this no longer re-runs analyzeTruck/buildKdsTicket for the whole board every
+  // second (the cause of the fleet/floor/chef lag).
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), KDS_COARSE_MS);
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
@@ -161,15 +287,22 @@ export function CoreV2Kds() {
       const next = nextStatus(t.status);
       if (!next || updatingId) return;
       setUpdatingId(t.id);
+      // Move the ticket instantly and pin it there until the server echoes the
+      // new status — otherwise a stream frame computed before the write commits
+      // snaps it back to the old column for a few seconds.
+      patchOrder(t.id, { status: next });
       try {
-        const res = await fetch(`/api/admin/orders`, {
+        // Retries transient failures so a WiFi blip doesn't strand the ticket;
+        // a status bump is naturally idempotent, so a retry is always safe.
+        const { res } = await idempotentFetch(`/api/admin/orders`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: t.id, status: next }),
+          body: { orderId: t.id, status: next },
         });
-        if (!res.ok) {
-          const d = (await res.json().catch(() => ({}))) as { error?: string };
-          toast(d.error || "Could not bump ticket", "danger");
+        if (!res || !res.ok) {
+          const d = res ? ((await res.json().catch(() => ({}))) as { error?: string }) : {};
+          // Roll the optimistic move back to the real status on failure.
+          patchOrder(t.id, { status: t.status });
+          toast(d.error || (res ? "Could not bump ticket" : "No connection — ticket not bumped"), "danger");
           return;
         }
         // A bump to "completed" can be recalled within 10 min (mis-tap insurance).
@@ -181,7 +314,7 @@ export function CoreV2Kds() {
         setUpdatingId(null);
       }
     },
-    [updatingId, refresh, toast],
+    [updatingId, refresh, toast, patchOrder],
   );
 
   // Recall the last bump (completed → ready), the mis-tap undo.
@@ -189,12 +322,15 @@ export function CoreV2Kds() {
     async (orderId: string) => {
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/recall`, { method: "POST" });
       if (res.ok) {
+        // Recall un-completes a ticket (completed → ready); pin it so the stream
+        // can't briefly re-show it as done.
+        patchOrder(orderId, { status: "ready" });
         setRecalls((r) => r.filter((x) => x.orderId !== orderId));
         toast("Ticket recalled to Expo", "success");
         refresh();
       } else toast("Could not recall", "danger");
     },
-    [refresh, toast],
+    [refresh, toast, patchOrder],
   );
   // Expire recall entries after 10 min.
   useEffect(() => {
@@ -371,69 +507,9 @@ export function CoreV2Kds() {
     { label: "Chef", active: view === "chef", onClick: () => setView("chef") },
   ];
 
-  const ticketCard = (t: KdsTicket) => {
-    const due = dueLabel(t, now);
-    const pct = slaPct(t, now);
-    const atRisk = t.atRisk && t.status !== "ready";
-    const groups = groupItems(t.items);
-    const grouped = station === "all" && groups.length > 1;
-    const allergens = Array.from(new Set(t.items.flatMap((i) => i.allergens))).filter(Boolean);
-    const held = t.coursing?.held ?? [];
-    return (
-      <div key={t.id} className={`cv-tk t-${due.tone}${t.simulated ? " sim" : ""}`}>
-        <div className="cv-tk-h">
-          <span className="id">
-            #{t.shortId}
-            <span className="chiplet">{channelTag(t)}</span>
-          </span>
-          <span className="cv-tk-hend">
-            {atRisk && <span className="cv-tk-risk">At risk</span>}
-            <span className={`due t-${due.tone}`}>{due.text}</span>
-          </span>
-        </div>
-        {t.simulated && <div className="cv-tk-sim">Simulation — not a real order</div>}
-        {held.length > 0 && (
-          <div className="cv-tk-course">Coursed · {held.map((c) => POS_COURSE_LABELS[c]).join(", ")} held</div>
-        )}
-        <div className="cv-tk-items">
-          {groups.map(([label, items]) => (
-            <div key={label} className="cv-tk-grp-block">
-              {grouped && <div className="cv-tk-grp">{label}</div>}
-              {items.map((it, i) => {
-                const dim = station !== "all" && it.category !== station;
-                return (
-                  <div key={i} className={dim ? "it dim" : "it"}>
-                    <span className="q">{it.quantity}×</span>
-                    <div className="it-body">
-                      <div className="nm">{it.name}</div>
-                      {it.modifiers.map((m, mi) => (
-                        <div key={mi} className={m.flag ? "mod flag" : "mod"}>{m.label}</div>
-                      ))}
-                      {it.notes && <div className="mod">{it.notes}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-        {allergens.length > 0 && <div className="cv-tk-alrg">Allergens · {allergens.join(" · ")}</div>}
-        {t.specialInstructions && (
-          <div className="cv-tk-note">
-            <b>Note</b> {t.specialInstructions}
-          </div>
-        )}
-        <div className="cv-meter">
-          <i style={{ width: `${pct}%` }} className={`t-${due.tone}`} />
-        </div>
-        {nextStatus(t.status) && (
-          <button type="button" className="cv-bump" disabled={updatingId === t.id} onClick={() => void advance(t)}>
-            {BUMP_LABEL[t.status]}
-          </button>
-        )}
-      </div>
-    );
-  };
+  const renderTicket = (t: KdsTicket) => (
+    <TicketCard key={t.id} t={t} station={station} updating={updatingId === t.id} onAdvance={advance} />
+  );
 
   const controls =
     view === "fleet" ? null : (
@@ -512,7 +588,7 @@ export function CoreV2Kds() {
                   {allTickets.length === 0 ? (
                     <div className="cv-kds-empty">No active tickets.</div>
                   ) : (
-                    allTickets.map(ticketCard)
+                    allTickets.map(renderTicket)
                   )}
                 </div>
               </>
@@ -527,7 +603,7 @@ export function CoreV2Kds() {
                         <span className="lc">{ts.length}</span>
                       </div>
                       <div className="cv-lane-b">
-                        {ts.length === 0 ? <div className="cv-kds-empty">—</div> : ts.map(ticketCard)}
+                        {ts.length === 0 ? <div className="cv-kds-empty">—</div> : ts.map(renderTicket)}
                       </div>
                     </div>
                   );
@@ -535,7 +611,7 @@ export function CoreV2Kds() {
               </div>
             ) : (
               <div className="cv-chefq">
-                {(visibleByStatus.get(lane) ?? []).map(ticketCard)}
+                {(visibleByStatus.get(lane) ?? []).map(renderTicket)}
               </div>
             )}
           </>

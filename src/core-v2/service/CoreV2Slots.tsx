@@ -196,10 +196,18 @@ export function CoreV2Slots() {
       }
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
-        const n = Array.isArray(d) ? d.length : 1;
+        // Optimistic insert from the authoritative server response — the new
+        // slot(s) appear instantly instead of vanishing until a refetch lands.
+        const created = (Array.isArray(d) ? d : [d]).filter(
+          (s): s is TimeSlot => !!s && typeof (s as TimeSlot).id === "string",
+        );
+        setSlots((xs) => {
+          const have = new Set(xs.map((x) => x.id));
+          return [...xs, ...created.filter((c) => !have.has(c.id))];
+        });
+        const n = created.length || (Array.isArray(d) ? d.length : 1);
         toast(`Created ${n} slot${n === 1 ? "" : "s"}`, "success");
         setCreateOpen(false);
-        await loadSlots();
       } else toast((d as { error?: string }).error || "Could not create slots", "danger");
     } finally {
       setActing(false);

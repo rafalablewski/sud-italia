@@ -23,7 +23,9 @@ Two nested views via `serviceTabs` (`src/core-v2/service/serviceTabs.ts`).
 - The **kitchen-bottleneck banner** (`.cv-bottleneck`) fires when the KDS
   engine reports a strained station.
 - **Engine:** `GET /api/admin/floor-twin?location=` → `{ twin, kitchen }`
-  (15s poll); seat/clear = `POST /api/admin/floor-twin { action, tableId }`;
+  (visibility-aware 15s `usePolling`; create/edit/delete merge optimistically
+  into the twin so a tile never blanks until the refetch lands); seat/clear =
+  `POST /api/admin/floor-twin { action, tableId }`;
   table create/update = `POST /api/admin/floor/tables?location=`, delete =
   `DELETE /api/admin/floor/tables?location=&id=`.
 
