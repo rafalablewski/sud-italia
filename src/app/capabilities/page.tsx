@@ -675,7 +675,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/core-v2/pos",
           summary:
-            "The core-v2 POS sub-header carries a QR pill that surfaces incoming QR table orders (channel='qr') for the location — table number, guest, party size, line items, total and paid/unpaid status — polling /api/admin/pos/qr-orders every 8s. 'Mark paid' settles an order (POST … action=settle → updateOrder sets paidAt and fires a demo-mode pending order to the kitchen by flipping it to confirmed; audited pos.qr_settle). Keeps the single Order as the source of truth — no duplicate tab. Verified end-to-end: a QR order listed unpaid/pending settled to paid/confirmed.",
+            "The core-v2 POS sub-header carries a QR pill that surfaces incoming QR table orders (channel='qr') for the location — table number, guest, party size, line items, total and paid/unpaid status — polling /api/admin/pos/qr-orders every 8s. 'Mark paid' settles an order (POST … action=settle → updateOrder sets paidAt and fires a demo-mode pending order to the kitchen by flipping it to confirmed; audited pos.qr_settle). The dialog's 'Print table QR' tab generates a printable per-table QR (SVG from /api/admin/qr-code, encoding <origin>/qr?location=&table=). Keeps the single Order as the source of truth — no duplicate tab. Verified end-to-end: a QR order listed unpaid/pending settled to paid/confirmed.",
         },
         {
           name: "Payment methods manager",

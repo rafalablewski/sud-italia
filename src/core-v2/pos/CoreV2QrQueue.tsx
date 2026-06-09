@@ -35,7 +35,28 @@ export function CoreV2QrQueue({ location }: { location: string }) {
   const [orders, setOrders] = useState<QrOrderRow[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [view, setView] = useState<"orders" | "qr">("orders");
+  const [tableInput, setTableInput] = useState("");
   const toast = useCoreToast();
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const qrTable = tableInput.trim();
+  const qrSrc = `/api/admin/qr-code?location=${encodeURIComponent(location)}&table=${encodeURIComponent(qrTable)}&base=${encodeURIComponent(origin)}`;
+  const printQr = () => {
+    const w = window.open("", "_blank", "width=420,height=580");
+    if (!w) { toast("Allow pop-ups to print", "danger"); return; }
+    w.document.write(
+      `<!doctype html><html><head><title>QR · ${qrTable ? `Table ${qrTable}` : location}</title>` +
+        `<style>body{margin:0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}` +
+        `.c{text-align:center;padding:28px}.c h1{margin:0 0 4px;font-size:26px;letter-spacing:.5px}` +
+        `.c p{margin:0 0 16px;color:#555;font-size:14px}.c img{width:300px;height:300px}` +
+        `.c h2{margin:14px 0 0;font-size:20px}</style></head><body>` +
+        `<div class="c"><h1>Ottaviano</h1><p>Scan to order &amp; pay at your table</p>` +
+        `<img src="${qrSrc}" alt="QR"/>${qrTable ? `<h2>Table ${qrTable}</h2>` : ""}</div>` +
+        `<script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`,
+    );
+    w.document.close();
+  };
 
   const load = useCallback(async () => {
     if (!location) return;
@@ -88,7 +109,38 @@ export function CoreV2QrQueue({ location }: { location: string }) {
 
       {open && (
         <CoreV2Dialog open onClose={() => setOpen(false)} title="QR table orders" width={520}>
-          {orders.length === 0 ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <button type="button" className={view === "orders" ? "cv-chip on" : "cv-chip"} onClick={() => setView("orders")}>
+              Orders{orders.length > 0 ? ` · ${orders.length}` : ""}
+            </button>
+            <button type="button" className={view === "qr" ? "cv-chip on" : "cv-chip"} onClick={() => setView("qr")}>
+              Print table QR
+            </button>
+          </div>
+
+          {view === "qr" ? (
+            <div style={{ display: "grid", gap: 14, justifyItems: "center", paddingBottom: 6 }}>
+              <label style={{ width: "100%", display: "grid", gap: 6, fontSize: 12.5, color: "var(--ink-2, #b9b4ae)" }}>
+                Table number / label
+                <input
+                  value={tableInput}
+                  onChange={(e) => setTableInput(e.target.value)}
+                  placeholder="e.g. 12"
+                  style={{ background: "var(--panel, #241f1b)", border: "1px solid var(--line, rgba(255,255,255,.12))", borderRadius: 10, padding: "11px 13px", color: "inherit", fontSize: 16 }}
+                />
+              </label>
+              <div style={{ background: "#fff", padding: 12, borderRadius: 12, lineHeight: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrSrc} alt="Table QR code" width={240} height={240} />
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3, #8a857f)", textAlign: "center", wordBreak: "break-all" }}>
+                {origin}/qr?location={location}{qrTable ? `&table=${qrTable}` : ""}
+              </div>
+              <button type="button" className="cv-charge" style={{ height: 40, padding: "0 22px" }} onClick={printQr}>
+                Print QR
+              </button>
+            </div>
+          ) : orders.length === 0 ? (
             <div style={{ padding: "28px 6px", textAlign: "center", color: "var(--ink-3, #8a857f)", fontSize: 14 }}>
               No QR orders yet. Guests who scan a table QR appear here to take payment.
             </div>

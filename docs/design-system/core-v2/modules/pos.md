@@ -148,3 +148,8 @@ which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
 (status → `confirmed`). The order stays the single source of truth — no
 duplicate tab is created, mirroring how the POS already owns totals
 server-side.
+
+The same dialog's **Print table QR** tab generates a printable per-table QR
+(an SVG from `GET /api/admin/qr-code?location=&table=&base=`, encoding
+`<origin>/qr?location=&table=`) and opens a clean print window — so staff
+can produce the codes guests scan, closing the QR loop.
