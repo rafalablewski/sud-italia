@@ -788,6 +788,16 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-tbl2 .tst { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--basil-wash); color: var(--basil); }
 .cv2 .cv-tbl2 .tst.seated { background: var(--brand-wash); color: var(--brand-bright); } .cv2 .cv-tbl2 .tst.freeing { background: var(--amber-wash); color: var(--amber); } .cv2 .cv-tbl2 .tst.booked { background: var(--info-wash); color: var(--info); } .cv2 .cv-tbl2 .tst.oos { background: var(--panel-3); color: var(--ink-3); }
 .cv2 .cv-tbl2 .tinfo { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+/* per-table QR / payment status (Service → Floor live orders) */
+.cv2 .cv-tbl2 .cv-tpay,
+.cv2 .cv-tpay { margin-top: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.cv2 .cv-tpay.due { background: var(--brand-wash); color: var(--brand-bright); }
+.cv2 .cv-tpay.paid { background: var(--basil-wash); color: var(--basil); }
+.cv2 .cv-tbl2 .tnum .cv-tnote { font-size: 12px; }
+/* order lookup results + table-detail order list */
+.cv2 .cv-lookup-results { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; }
+.cv2 .cv-lookup-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); }
+.cv2 .cv-tbl-orders { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 /* tile wrapper so the edit affordance isn't a button nested in a button */
 .cv2 .cv-tbl2-wrap { position: relative; display: flex; }
 .cv2 .cv-tbl2-wrap .cv-tbl2 { width: 100%; }

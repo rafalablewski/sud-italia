@@ -12506,6 +12506,7 @@ export async function saveTable(
     seats: input.seats,
     zone: input.zone,
     status: input.status,
+    notes: input.notes,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   let prevStatus: string | null = null;

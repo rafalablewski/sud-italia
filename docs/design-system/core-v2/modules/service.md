@@ -57,3 +57,24 @@ Two nested views via `serviceTabs` (`src/core-v2/service/serviceTabs.ts`).
 
 Parity target: today's `/core/service`. The booking console (slot + table
 in one move) lives in the Guest hub's **Book** view (`CoreV2Book`), shared.
+
+## Floor — live orders, lookup & notes
+
+Live code: `src/core-v2/service/CoreV2Floor.tsx` · API `src/app/api/admin/floor/orders/route.ts` (orders) + `/api/admin/floor/tables` (CRUD, now incl. `notes`) + `/api/admin/floor-twin`.
+
+The Floor board pairs the predictive twin with the table's **live orders**:
+
+- **Per-table status chip** — each tile shows what the table owes, driven by
+  `GET /api/admin/floor/orders` (today's active orders, grouped by `tableId`,
+  tagged with channel + paid/unpaid). Unpaid → a brand `… to pay` chip
+  (prefixed `QR ·` for QR-channel orders); fully paid → a basil `✓ paid` chip.
+  A `📝` glyph on the table number flags a service note. Polls every 10s.
+- **To pay KPI** — count of unpaid active orders across the floor.
+- **Order lookup** — a `⌕ Find order` box filters active orders by id, guest
+  name or table number; each result shows channel + paid status with a
+  **Mark paid** action (`POST /api/admin/floor/orders {action:"settle"}` →
+  `updateOrder` sets `paidAt`, fires a still-pending order to the kitchen).
+- **Table detail** (the `⋯` editor) — adds a **Service note** textarea
+  (persisted on `FloorTable.notes`, threaded through `buildFloorTwin` →
+  `TwinTableRow.notes`) and an **Orders at this table** list with the same
+  settle action.

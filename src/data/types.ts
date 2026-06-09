@@ -567,6 +567,9 @@ export interface FloorTable {
   seats: number;
   zone?: string;
   status: TableStatus;
+  /** Free-text service note for the table (allergy, VIP, high-chair, …),
+   *  edited live from the Service → Floor table detail. */
+  notes?: string;
   createdAt: string;
 }
 
