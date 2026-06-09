@@ -118,3 +118,20 @@ Add a component class? Prefix it `cv-`, build it from tokens (never
 hard-coded hex), and add it to the reference here in the same commit
 (Rule #11). Never reach into admin or suite.css classes — Core v2 owns
 its whole surface.
+
+## Responsive — tablet & phone
+
+Core runs on iPads and phones, not only desktop. The desktop layouts above
+progressively collapse via the breakpoints at the end of `index.css`:
+
+| Width | What changes |
+| ----- | ------------ |
+| **≤1100** (tablet landscape) | POS panes narrow (`160 · 1fr · 320`); surface-switcher labels hide (icons only); menu cards shrink. |
+| **≤900** (tablet portrait) | Command bar drops the brand wordmark + tightens; `.cv-sub` scrolls horizontally; POS panes `148 · 1fr · 296`. |
+| **≤820** (phone / iPad portrait) | Command bar keeps only mark + switcher + bell + theme (location chip & clock hide). **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.cv-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CoreV2Pos` `mobileTicket` state + `.cv-ticket.is-open`). Dialogs become bottom sheets (`.cv-scrim` → `align-items:flex-end`); KPI strips → 2-col. |
+| **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
+
+The POS ticket is **never hidden** on small screens (the old behaviour) —
+it's always reachable as the drawer, so a phone can take and settle a check.
+KDS stays a fixed dark wall (its own `≤1000` lane collapse); Guest/Service
+keep their existing `≤1000–1100` two-pane collapses.

@@ -579,6 +579,8 @@ export function CoreV2Pos({
   // --- Dialogs -------------------------------------------------------------
   const [tableOpen, setTableOpen] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false);
+  // On phones/narrow tablets the ticket pane becomes a bottom drawer.
+  const [mobileTicket, setMobileTicket] = useState(false);
   // Leaving a check (or its dine-in channel) drops back to the menu.
   useEffect(() => {
     setTableOpen(false);
@@ -825,8 +827,8 @@ export function CoreV2Pos({
           )}
         </main>
 
-        {/* ticket */}
-        <aside className="cv-ticket">
+        {/* ticket — a bottom drawer on small screens (cv-ticket.is-open) */}
+        <aside className={mobileTicket ? "cv-ticket is-open" : "cv-ticket"}>
           {!active ? (
             <div className="cv-ticket-empty">
               {!hydrated ? (
@@ -1026,6 +1028,17 @@ export function CoreV2Pos({
             </>
           )}
         </aside>
+
+        {/* small-screen ticket controls: a backdrop while open, and a
+            bottom "view ticket" bar when there's an active check */}
+        {mobileTicket && <button type="button" className="cv-ticket-backdrop" aria-label="Close ticket" onClick={() => setMobileTicket(false)} />}
+        {active && active.items.length > 0 && (
+          <button type="button" className={mobileTicket ? "cv-ticket-fab is-open" : "cv-ticket-fab"} onClick={() => setMobileTicket((v) => !v)}>
+            <span className="cv-ticket-fab-c">{active.items.reduce((s, l) => s + l.quantity, 0)}</span>
+            <span>{mobileTicket ? "Hide ticket" : "View ticket"}</span>
+            <span className="cv-ticket-fab-t mono">{fmtPLN(grandG(active))}</span>
+          </button>
+        )}
       </div>
 
       {/* Tender */}
