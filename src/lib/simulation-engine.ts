@@ -315,7 +315,7 @@ export interface ProjectionRow {
  * Jul/Aug) land in the right months; labor flexes with seasonal volume via
  * `LABOR_SEASONAL_FLEX`; wages + fixed costs inflate at wage CPI and COGS at
  * ingredient CPI, compounded monthly. `rampMonths` applies a linear volume
- * ramp in months [0..rampMonths) so a fresh truck doesn't hit 100% in month 1
+ * ramp in months [0..rampMonths) so a fresh restaurant doesn't hit 100% in month 1
  * (institutional reality is ~50-70-85-100% over the first ~4 months) — set to
  * 0 for the steady-state operational chart.
  */
@@ -347,7 +347,7 @@ export function projectMonths(
     const monthIndex = (startMonth + i) % 12;
     const season = MONTH_TO_SEASON[monthIndex];
     // Per-month override beats the quarterly multiplier when set — matters for
-    // outdoor trucks where Jan/Feb/Dec behave nothing like each other.
+    // restaurants where Jan/Feb/Dec behave nothing like each other.
     const override = seasonality.monthlyOverrides?.[monthIndex];
     const seasonMult = typeof override === "number" ? override : seasonality[season];
     const weatherMult = monthVolumeMult(monthIndex, w);

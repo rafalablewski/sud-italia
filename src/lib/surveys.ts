@@ -203,7 +203,7 @@ export const DEFAULT_SURVEYS: SurveyDefinition[] = [
     id: "repeat-recommend",
     trigger: "repeat-visit",
     active: false,
-    question: "Welcome back! How likely are you to recommend Sud Italia?",
+    question: "Welcome back! How likely are you to recommend Ottaviano?",
     subtext: "Bentornato — your loyalty means everything.",
     scaleLow: "Not likely",
     scaleHigh: "Already do",

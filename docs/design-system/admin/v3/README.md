@@ -299,7 +299,7 @@ bottom, then a 2-column split):
 - **What moves it most** — ranked from real signals (goal gap in zł, late
   tickets, hottest KDS bottleneck, labour ratio, attach) — never fabricated
   impact figures.
-- **Kitchen pace + Trucks** — per-truck bottleneck/util + open/closed
+- **Kitchen pace + Locations** — per-location bottleneck/util + open/closed
   (`isLocationOpenNow`) + on-line/on-shift + revenue-today, all from the fleet
   endpoint.
 - **Order flow** — orders/min last 60 min, bucketed from `/api/admin/orders`.
@@ -565,8 +565,8 @@ refetches every 30s.
   explainers on the two levers (pending approval · standing weekly units), and a
   **drill-in detail dialog** on row click — cadence/ready-at/units/updated +
   the full standing-cart line items + the status actions, so the operator can
-  see *what's in* a recurring order, not just its item count. Truck ops
-  (`/admin/truck`): events + routes CRUD (incl. route-stops editor) over
+  see *what's in* a recurring order, not just its item count. Events & bookings
+  (`/admin/truck`): events + run-sheets CRUD (incl. segment editor) over
   `/api/admin/truck-events` + `/api/admin/truck-routes`, plus the **KPI rail**
   (events / revenue / expected guests / live-upcoming). **Workbench upgrade:**
   five-section ⓘ explainers on Revenue + Expected guests, and a **Board⇄Table

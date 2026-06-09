@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CoreV2Nav } from "./CoreV2Nav";
 import { CoreV2Clock, CoreV2ThemeToggle, CoreV2LocationChip } from "./CoreV2Chrome";
+import { CoreV2NotificationsBell } from "./CoreV2NotificationsBell";
 
 export interface CoreV2Tab {
   label: string;
@@ -35,44 +36,53 @@ export function CoreV2Shell({
 }) {
   return (
     <>
+      {/* Single optimised command bar: brand · context (eyebrow + view tabs)
+          · the surface's own controls · global controls. The primary surface
+          switcher moved to the bottom nav (CoreV2Nav, below). */}
       <header className="cv-bar">
         <div className="cv-brand">
           <div className="cv-mark">S</div>
           <div>
-            <div className="nm">Sud Italia</div>
+            <div className="nm">Ottaviano</div>
             <div className="os">Core OS</div>
           </div>
         </div>
-        <CoreV2Nav />
+        {/* contextual strip — pinned brand (left) + global controls (right)
+            stay put; this middle scrolls horizontally if it can't all fit */}
+        <div className="cv-bar-ctx">
+          <span className="cv-eyebrow">{eyebrow}</span>
+          {tabs && tabs.length > 0 && (
+            <div className="cv-tabs">
+              {tabs.map((t) =>
+                t.href ? (
+                  <Link key={t.label} href={t.href} className={t.active ? "on" : undefined}>
+                    {t.label}
+                  </Link>
+                ) : (
+                  <button key={t.label} type="button" className={t.active ? "on" : undefined} onClick={t.onClick}>
+                    {t.label}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
+          <div className="cv-sp" />
+          {subRight}
+        </div>
         <div className="cv-right">
           <CoreV2LocationChip />
           <CoreV2Clock />
+          <CoreV2NotificationsBell />
           <CoreV2ThemeToggle />
         </div>
       </header>
 
-      <div className="cv-sub">
-        <span className="cv-eyebrow">{eyebrow}</span>
-        {tabs && tabs.length > 0 && (
-          <div className="cv-tabs">
-            {tabs.map((t) =>
-              t.href ? (
-                <Link key={t.label} href={t.href} className={t.active ? "on" : undefined}>
-                  {t.label}
-                </Link>
-              ) : (
-                <button key={t.label} type="button" className={t.active ? "on" : undefined} onClick={t.onClick}>
-                  {t.label}
-                </button>
-              ),
-            )}
-          </div>
-        )}
-        <div className="cv-sp" />
-        {subRight}
-      </div>
-
       <div className={bleed ? "cv-body bleed" : "cv-body"}>{children}</div>
+
+      {/* Primary surface switcher — centred at the very bottom (thumb-reach). */}
+      <div className="cv-bottomnav">
+        <CoreV2Nav />
+      </div>
     </>
   );
 }

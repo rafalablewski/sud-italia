@@ -129,7 +129,7 @@ those stay oxblood. Treat terracotta as the page's warm-action layer.
 parchment. Why:
 
 - A pure-white storefront reads as Stripe / Shopify / generic SaaS.
-  Sud Italia is a Neapolitan pizza brand — the surface needs to feel
+  Ottaviano is a Neapolitan pizza brand — the surface needs to feel
   like the menu paper at a real café, with the same warm tooth.
 - Cards on parchment use either the same parchment (no border, just
   hairline `--color-line-soft` separation), parchment-deep for

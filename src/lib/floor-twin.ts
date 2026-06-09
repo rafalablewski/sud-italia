@@ -29,6 +29,7 @@ export interface TwinTableInput {
   seats: number;
   zone?: string;
   status: TableStatus;
+  notes?: string;
 }
 
 export interface TwinOrderInput {
@@ -83,6 +84,8 @@ export interface TwinTableRow {
   predictedFreeInMin: number | null;
   party: number | null;
   openCheckGrosze: number | null;
+  /** Free-text service note carried through from the FloorTable. */
+  notes?: string;
 }
 
 export interface SeatingSuggestion {
@@ -227,6 +230,7 @@ export function buildFloorTwin(input: FloorTwinInput): FloorTwin {
       seats: t.seats,
       zone: t.zone,
       status: t.status,
+      notes: t.notes,
       turns: samples.length,
       medianDwellMin: medianDwellMin != null ? Math.round(medianDwellMin) : null,
       dwellSource,

@@ -43,6 +43,7 @@ export const POST = withAdmin(
       seats: Math.round(seats),
       zone: body.zone ? String(body.zone).trim() : undefined,
       status,
+      notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 280) || undefined : undefined,
     });
     return NextResponse.json(table);
   },

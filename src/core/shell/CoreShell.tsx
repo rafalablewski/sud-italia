@@ -51,10 +51,10 @@ export function CoreShell({
     <div className="core-suite">
       <div className="core-shell">
         <header className="core-head">
-          <Link href="/core/pos" className="brand" aria-label="Sud Italia Core">
+          <Link href="/core/pos" className="brand" aria-label="Ottaviano Core">
             <div className="brand-mark">SI</div>
             <div>
-              <div className="brand-name">Sud Italia</div>
+              <div className="brand-name">Ottaviano</div>
               <div className="brand-sub">Core</div>
             </div>
           </Link>

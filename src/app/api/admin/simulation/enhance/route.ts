@@ -118,7 +118,7 @@ export const POST = withAdmin(
     const c = body.computed;
 
     const system =
-      "You are a restaurant operations analyst advising a Neapolitan pizza truck " +
+      "You are a restaurant operations analyst advising a Neapolitan pizza restaurant " +
       "operator in Warsaw, Poland. The operator has built a what-if monthly P&L " +
       "scenario. Your job is to spot the 4–6 most actionable enhancements to net " +
       "profit, margin, or operational risk — grounded in the actual numbers below. " +

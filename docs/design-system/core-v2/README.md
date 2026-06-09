@@ -62,7 +62,7 @@ A deliberately **distinct** look from today's `/core` (dark warm-charcoal
 | **UI / mono** | Inter (UI) · JetBrains Mono (figures) | Neutral, dense, legible at a glance across a busy line. |
 | **Brand** | Neapolitan burgundy, refined (`--brand`) | Same brand DNA, cleaner. One brand red + disciplined semantics. |
 | **Material** | **Flat** — 1px hairlines, crisp small shadows | No glass, no gradient, no glow. Admin owns glass; Core stays crisp. |
-| **Layout** | Top **command bar** + segmented surface switcher + context **subbar** | One chrome shared by all four surfaces; no sidebar. |
+| **Layout** | A single **command bar** on top + a centred **bottom surface-switcher** nav | One chrome shared by every surface; no sidebar. The command bar holds brand · a horizontally-scrolling context strip (eyebrow + the surface's view tabs + its own controls) · global controls (location · clock · **notifications bell** · theme). The primary surface switcher (POS · KDS · Orders · Guest · Service) sits as a centred pill at the very bottom (thumb-reach). |
 | **Radius** | 7 / 10 / 14 / 20 px | Softer than Admin, tighter than a consumer app. |
 
 ### Tokens (mockup → `themes/core-v2/`)
@@ -86,14 +86,19 @@ the app theme (the `.kds` scope in the mockup).
 ## Surfaces (parity target — keep ALL functionality)
 
 Core v2 must keep every functionality + data wire of today's Core. The
-four surfaces and their views:
+the surfaces and their views:
 
 - **POS** (`/core-v2/pos`) — category rail · text-forward menu cards ·
   multi-tab open checks · dine-in coursing (Fire per course) · combo +
-  cross-sell offers · capacity-true pace steering · Charge → Tender.
+  cross-sell offers · capacity-true pace steering · Charge → Tender · a
+  **QR pill** surfacing QR table orders + Print-table-QR.
 - **KDS** (`/core-v2/kds`) — Fleet · **Floor** (New → Firing → Ready·Expo
   lanes, SLA tiers, cook-meters, bump) · Chef. Always-dark wall;
   fullscreen kiosk drops the chrome.
+- **Orders** (`/core-v2/orders`) — every order at the location, live &
+  history: scope tabs (Current · Paid · All), channel filter, search
+  (id / guest / phone / table), KPI strip, and a detail dialog with the
+  full ticket + Mark paid. See `modules/orders.md`.
 - **Guest** (`/core-v2/guest`) — Inbox (WhatsApp 3-pane + live order
   context + NBA) · Guests (CRM) · Loyalty · Concierge · Book.
 - **Service** (`/core-v2/service`) — **Floor** (zoned table tiles, status,

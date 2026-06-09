@@ -32,7 +32,7 @@ import type { ComplianceConfig } from "@/lib/store";
  *     JPK_ADDRESS) and fall back to placeholders so the file validates
  *     syntactically; correct values must be set before submission.
  *   - No reverse-charge / OSS / split-payment markers are emitted —
- *     food trucks don't use them.
+ *     a single-venue restaurant doesn't use them.
  */
 
 const DEFAULT_VAT_BPS = 800; // 8% — Polish prepared food, ustawa o VAT zał. 10 poz. 3.
@@ -71,7 +71,7 @@ interface JpkSettings {
 function loadSettings(): JpkSettings {
   return {
     nip: process.env.JPK_NIP || "0000000000",
-    name: process.env.JPK_NAME || "SUD ITALIA SP. Z O.O. (placeholder)",
+    name: process.env.JPK_NAME || "OTTAVIANO SP. Z O.O. (placeholder)",
     regon: process.env.JPK_REGON,
     email: process.env.JPK_EMAIL,
   };
@@ -153,7 +153,7 @@ export async function buildJpkV7m(
     `    <DataWytworzeniaJPK>${new Date().toISOString()}</DataWytworzeniaJPK>\n` +
     `    <DataOd>${fromDay}</DataOd>\n` +
     `    <DataDo>${toDay}</DataDo>\n` +
-    `    <NazwaSystemu>Sud Italia Admin</NazwaSystemu>\n` +
+    `    <NazwaSystemu>Ottaviano Admin</NazwaSystemu>\n` +
     `    <CelZlozenia>1</CelZlozenia>\n` +
     `    <KodUrzedu>${escapeXml(process.env.JPK_OFFICE_CODE || "0000")}</KodUrzedu>\n` +
     `  </Naglowek>`;

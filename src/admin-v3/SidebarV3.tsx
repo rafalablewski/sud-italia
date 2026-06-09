@@ -64,7 +64,7 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
       <Link href={withAdminV3Base(base, "/admin")} className="av3-brand" onClick={onNavigate}>
         <span className="av3-brand-mark" aria-hidden>SI</span>
         <span className="av3-brand-text">
-          <span className="av3-brand-name">Sud Italia</span>
+          <span className="av3-brand-name">Ottaviano</span>
           <span className="av3-brand-sub">Operations · v3</span>
         </span>
       </Link>

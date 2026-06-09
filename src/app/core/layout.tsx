@@ -37,7 +37,7 @@ const adminMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Core | Sud Italia",
+  title: "Core | Ottaviano",
   robots: "noindex, nofollow",
 };
 

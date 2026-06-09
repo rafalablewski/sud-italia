@@ -1,6 +1,6 @@
-# Sud Italia
+# Ottaviano
 
-Neapolitan pizza-truck chain ordering platform. Two active locations:
+Neapolitan restaurant chain ordering platform. Two active locations:
 **Kraków** and **Warszawa**. Customer ordering, admin operations, kitchen
 display, and a mobile-native admin shell — all in one Next.js app on
 serverless infrastructure.

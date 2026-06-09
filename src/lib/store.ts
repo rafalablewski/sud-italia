@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -2981,11 +2981,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   deliveryFee: 700, // 7.00 PLN
   minOrderAmount: 3000, // 30.00 PLN
   businessPhone: "+48 123 456 789",
-  businessEmail: "hello@suditalia.pl",
+  businessEmail: "hello@ottaviano.pl",
   socialLinks: {
-    instagram: "https://instagram.com/suditalia.pl",
-    facebook: "https://facebook.com/suditalia.pl",
-    tiktok: "https://tiktok.com/@suditalia.pl",
+    instagram: "https://instagram.com/ottaviano.pl",
+    facebook: "https://facebook.com/ottaviano.pl",
+    tiktok: "https://tiktok.com/@ottaviano.pl",
   },
   currency: DEFAULT_CURRENCY_CONFIG,
   locale: DEFAULT_LOCALE_CONFIG,
@@ -3040,6 +3040,307 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
     await writeJSON("settings.json", merged);
     return merged;
   });
+}
+
+// --- Payment methods (admin/payments) ----------------------------------
+//
+// Which tender methods the storefront + QR ordering offer the guest, and
+// how the Stripe checkout session is configured. Card / Apple Pay / Google
+// Pay / BLIK / Przelewy24 all settle through Stripe (the processor); the
+// enabled set drives the `payment_method_types` the checkout route asks
+// Stripe for, plus the customer-facing method badges. Apple/Google Pay are
+// wallet UIs that ride the `card` rail (Stripe surfaces them automatically),
+// so they map onto "card" rather than their own Stripe type. Bitcoin is an
+// off-Stripe method — the guest pays to a displayed wallet address and the
+// order stays unpaid until the operator confirms receipt in POS. Secrets
+// (Stripe keys) live in env vars, never here.
+
+export type PaymentMethodId =
+  | "card"
+  | "apple_pay"
+  | "google_pay"
+  | "blik"
+  | "p24"
+  | "bitcoin";
+
+export interface PaymentMethodConfig {
+  id: PaymentMethodId;
+  enabled: boolean;
+}
+
+export interface PaymentSettings {
+  methods: PaymentMethodConfig[];
+  /** Receiving BTC address shown to the guest when the Bitcoin method is on. */
+  bitcoinAddress?: string;
+}
+
+export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
+  // Order here is the canonical method order shown to guests.
+  methods: [
+    { id: "card", enabled: true },
+    { id: "apple_pay", enabled: true },
+    { id: "google_pay", enabled: true },
+    { id: "blik", enabled: true },
+    { id: "p24", enabled: false },
+    { id: "bitcoin", enabled: false },
+  ],
+  bitcoinAddress: "",
+};
+
+const PAYMENT_SETTINGS_KEY = "payment-settings.json";
+
+function mergePaymentSettings(saved: Partial<PaymentSettings>): PaymentSettings {
+  const savedById = new Map((saved.methods ?? []).map((m) => [m.id, m]));
+  // Defaults define the canonical method set + order; saved flags win so a
+  // newly-added method appears (default-off) without an operator migration.
+  const methods = DEFAULT_PAYMENT_SETTINGS.methods.map((d) => ({
+    id: d.id,
+    enabled: typeof savedById.get(d.id)?.enabled === "boolean" ? savedById.get(d.id)!.enabled : d.enabled,
+  }));
+  return {
+    methods,
+    bitcoinAddress:
+      typeof saved.bitcoinAddress === "string" ? saved.bitcoinAddress : DEFAULT_PAYMENT_SETTINGS.bitcoinAddress,
+  };
+}
+
+export async function getPaymentSettings(): Promise<PaymentSettings> {
+  return mergePaymentSettings(await readJSON<Partial<PaymentSettings>>(PAYMENT_SETTINGS_KEY, {}));
+}
+
+export async function updatePaymentSettings(updates: Partial<PaymentSettings>): Promise<PaymentSettings> {
+  return withLock(PAYMENT_SETTINGS_KEY, async () => {
+    const current = mergePaymentSettings(await readJSON<Partial<PaymentSettings>>(PAYMENT_SETTINGS_KEY, {}));
+    // Patch the supplied method flags over the CURRENT set (not the defaults),
+    // so a partial update never silently resets the methods it omitted.
+    let methods = current.methods;
+    if (updates.methods) {
+      const upById = new Map(updates.methods.map((m) => [m.id, m]));
+      methods = current.methods.map((m) => {
+        const up = upById.get(m.id);
+        return up && typeof up.enabled === "boolean" ? { ...m, enabled: up.enabled } : m;
+      });
+    }
+    const merged: PaymentSettings = {
+      methods,
+      bitcoinAddress:
+        typeof updates.bitcoinAddress === "string" ? updates.bitcoinAddress.trim() : current.bitcoinAddress,
+    };
+    await writeJSON(PAYMENT_SETTINGS_KEY, merged);
+    return merged;
+  });
+}
+
+/** The enabled Stripe `payment_method_types` for a checkout session, in
+ *  Stripe's preferred order. Apple/Google Pay fold into "card" (Stripe shows
+ *  the wallet sheet automatically). Always falls back to ["card"] so checkout
+ *  never breaks even if every method was toggled off. */
+export async function getEnabledStripeMethods(): Promise<string[]> {
+  const s = await getPaymentSettings();
+  const on = (id: PaymentMethodId) => s.methods.some((m) => m.id === id && m.enabled);
+  const types: string[] = [];
+  if (on("card") || on("apple_pay") || on("google_pay")) types.push("card");
+  if (on("blik")) types.push("blik");
+  if (on("p24")) types.push("p24");
+  return types.length > 0 ? types : ["card"];
+}
+
+// --- Delivery-marketplace integrations (admin/integrations) ------------
+//
+// Operator-managed connections to third-party ordering marketplaces. Each
+// connection persists its enable flag, connection status, the operator's
+// store id on that marketplace, the public deep-link guests can order
+// through, the marketplace commission (feeds channel economics in the
+// Calculator), and an auto-accept flag. Live order ingestion needs each
+// marketplace's partner API + webhook — out of scope here; this layer owns
+// the connection registry, the customer-facing "also order on …" links, and
+// the per-channel economics. Marketplace API keys live in the provider's own
+// dashboard / env vars, never here.
+
+export type IntegrationProviderId =
+  | "uber_eats"
+  | "bolt_food"
+  | "wolt"
+  | "glovo"
+  | "pyszne_pl"
+  | "grab";
+
+export type IntegrationStatus = "connected" | "disconnected" | "error";
+
+export interface IntegrationConnection {
+  provider: IntegrationProviderId;
+  enabled: boolean;
+  status: IntegrationStatus;
+  /** Operator's store/merchant id on the marketplace (non-secret). */
+  storeId?: string;
+  /** Public deep-link where guests can order on this marketplace. */
+  orderUrl?: string;
+  /** Commission the marketplace charges (0–1). Feeds channel economics. */
+  commissionPct?: number;
+  /** Auto-accept incoming orders without manual confirmation. */
+  autoAccept?: boolean;
+  /** ISO timestamp of the last successful connection check. */
+  lastConnectedAt?: string;
+}
+
+export interface IntegrationSettings {
+  connections: IntegrationConnection[];
+}
+
+/** Typical 2026 PL marketplace commissions — the operator overrides per
+ *  connection once their real contract rate is known. */
+export const DEFAULT_INTEGRATION_COMMISSION: Record<IntegrationProviderId, number> = {
+  uber_eats: 0.3,
+  bolt_food: 0.25,
+  wolt: 0.28,
+  glovo: 0.27,
+  pyszne_pl: 0.13,
+  grab: 0.3,
+};
+
+const INTEGRATION_PROVIDER_ORDER: IntegrationProviderId[] = [
+  "uber_eats",
+  "wolt",
+  "glovo",
+  "pyszne_pl",
+  "bolt_food",
+  "grab",
+];
+
+export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
+  connections: INTEGRATION_PROVIDER_ORDER.map((provider) => ({
+    provider,
+    enabled: false,
+    status: "disconnected" as IntegrationStatus,
+    commissionPct: DEFAULT_INTEGRATION_COMMISSION[provider],
+    autoAccept: false,
+  })),
+};
+
+const INTEGRATION_SETTINGS_KEY = "integration-settings.json";
+
+const INTEGRATION_STATUSES: IntegrationStatus[] = ["connected", "disconnected", "error"];
+
+function sanitizeConnection(
+  base: IntegrationConnection,
+  patch: Partial<IntegrationConnection>,
+): IntegrationConnection {
+  const clampPct = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : undefined;
+  return {
+    provider: base.provider,
+    enabled: typeof patch.enabled === "boolean" ? patch.enabled : base.enabled,
+    status:
+      typeof patch.status === "string" && INTEGRATION_STATUSES.includes(patch.status)
+        ? patch.status
+        : base.status,
+    storeId: typeof patch.storeId === "string" ? patch.storeId.trim() : base.storeId,
+    orderUrl: typeof patch.orderUrl === "string" ? patch.orderUrl.trim() : base.orderUrl,
+    commissionPct: clampPct(patch.commissionPct) ?? base.commissionPct,
+    autoAccept: typeof patch.autoAccept === "boolean" ? patch.autoAccept : base.autoAccept,
+    lastConnectedAt:
+      typeof patch.lastConnectedAt === "string" ? patch.lastConnectedAt : base.lastConnectedAt,
+  };
+}
+
+function mergeIntegrationSettings(saved: Partial<IntegrationSettings>): IntegrationSettings {
+  const savedByProvider = new Map((saved.connections ?? []).map((c) => [c.provider, c]));
+  // Defaults define the canonical provider set + order; saved values win.
+  const connections = DEFAULT_INTEGRATION_SETTINGS.connections.map((d) => {
+    const s = savedByProvider.get(d.provider);
+    return s ? sanitizeConnection(d, s) : d;
+  });
+  return { connections };
+}
+
+export async function getIntegrationSettings(): Promise<IntegrationSettings> {
+  return mergeIntegrationSettings(
+    await readJSON<Partial<IntegrationSettings>>(INTEGRATION_SETTINGS_KEY, {}),
+  );
+}
+
+export async function updateIntegrationSettings(
+  updates: Partial<IntegrationSettings>,
+): Promise<IntegrationSettings> {
+  return withLock(INTEGRATION_SETTINGS_KEY, async () => {
+    const current = mergeIntegrationSettings(
+      await readJSON<Partial<IntegrationSettings>>(INTEGRATION_SETTINGS_KEY, {}),
+    );
+    // Patch each supplied connection over the current value (supports both a
+    // single-connection "connect" action and a full-list save).
+    const byProvider = new Map(current.connections.map((c) => [c.provider, c]));
+    for (const u of updates.connections ?? []) {
+      const cur = byProvider.get(u.provider);
+      if (cur) byProvider.set(u.provider, sanitizeConnection(cur, u));
+    }
+    const merged = mergeIntegrationSettings({ connections: [...byProvider.values()] });
+    await writeJSON(INTEGRATION_SETTINGS_KEY, merged);
+    return merged;
+  });
+}
+
+// --- QR in-restaurant ordering (admin/qr-ordering) --------------------
+//
+// Operator control over the /qr table-ordering surface: a master switch, a
+// per-location override, whether a scanned table number is mandatory, and
+// whether prices show on the QR menu. Read server-side by the /qr page so
+// toggling here gates ordering immediately — no deploy.
+
+export interface QrOrderingSettings {
+  /** Master switch for QR table ordering across the chain. */
+  enabled: boolean;
+  /** Per-location override (slug → on/off). Absent = follows `enabled`. */
+  locations: Record<string, boolean>;
+  /** Require a scanned table number (?table=) before a guest can order. */
+  requireTableNumber: boolean;
+  /** Show prices on the QR menu (some operators run price-on-request events). */
+  showPrices: boolean;
+}
+
+export const DEFAULT_QR_ORDERING_SETTINGS: QrOrderingSettings = {
+  enabled: true,
+  locations: {},
+  requireTableNumber: false,
+  showPrices: true,
+};
+
+const QR_ORDERING_KEY = "qr-ordering-settings.json";
+
+function mergeQrOrdering(saved: Partial<QrOrderingSettings>): QrOrderingSettings {
+  const d = DEFAULT_QR_ORDERING_SETTINGS;
+  return {
+    enabled: typeof saved.enabled === "boolean" ? saved.enabled : d.enabled,
+    locations: saved.locations && typeof saved.locations === "object" ? saved.locations : {},
+    requireTableNumber:
+      typeof saved.requireTableNumber === "boolean" ? saved.requireTableNumber : d.requireTableNumber,
+    showPrices: typeof saved.showPrices === "boolean" ? saved.showPrices : d.showPrices,
+  };
+}
+
+export async function getQrOrderingSettings(): Promise<QrOrderingSettings> {
+  return mergeQrOrdering(await readJSON<Partial<QrOrderingSettings>>(QR_ORDERING_KEY, {}));
+}
+
+export async function updateQrOrderingSettings(
+  updates: Partial<QrOrderingSettings>,
+): Promise<QrOrderingSettings> {
+  return withLock(QR_ORDERING_KEY, async () => {
+    const current = mergeQrOrdering(await readJSON<Partial<QrOrderingSettings>>(QR_ORDERING_KEY, {}));
+    const merged = mergeQrOrdering({
+      ...current,
+      ...updates,
+      locations: { ...current.locations, ...(updates.locations ?? {}) },
+    });
+    await writeJSON(QR_ORDERING_KEY, merged);
+    return merged;
+  });
+}
+
+/** Whether QR ordering is live for a given location (master AND per-location). */
+export function isQrOrderingEnabled(settings: QrOrderingSettings, locationSlug: string): boolean {
+  if (!settings.enabled) return false;
+  const loc = settings.locations[locationSlug];
+  return loc === undefined ? true : loc;
 }
 
 // --- Growth & Loyalty Settings ---
@@ -4306,7 +4607,7 @@ export interface FamilyWallet {
   createdAt: string;
   members: WalletMemberEntry[];
   /**
-   * When set, productises this wallet as a "Sud Italia Corporate" account
+   * When set, productises this wallet as a "Ottaviano Corporate" account
    * (audit §3.4) — adds a public corporate URL, billing email for the
    * admin's monthly invoice, and a head-bonus accrual rate so the
    * company contact earns a slice of the corporate pool. Members continue
@@ -4553,7 +4854,7 @@ export async function leaveFamilyWallet(
   });
 }
 
-// --- Sud Italia Corporate (audit §3.4) ---------------------------------
+// --- Ottaviano Corporate (audit §3.4) ---------------------------------
 //
 // Productises the existing FamilyWallet as a corporate-bulk-ordering
 // primitive. A corporate account is just a wallet with a `corporate` config
@@ -4976,7 +5277,7 @@ export interface CustomerWalletPayload {
   members: { phone: string; status: WalletMemberStatus; isHead: boolean; contributedPoints: number }[];
   /**
    * Corporate config (audit §3.4). Populated when this wallet has been
-   * productised as a Sud Italia Corporate account. Lets the cart drawer
+   * productised as a Ottaviano Corporate account. Lets the cart drawer
    * surface the "Ordering with [company]" banner without an extra fetch.
    */
   corporate?: {
@@ -8999,7 +9300,7 @@ async function ensureDefaultBrand(): Promise<void> {
   try {
     await db
       .insert(brandsTable)
-      .values({ id: "sud-italia", name: "Sud Italia", slug: "sud-italia" })
+      .values({ id: "sud-italia", name: "Ottaviano", slug: "sud-italia" })
       .onConflictDoNothing();
   } catch (err) {
     logger.warn("ensureDefaultBrand failed", { layer: "store.brands" }, err);
@@ -9883,7 +10184,7 @@ const DEFAULT_BUSINESS_DAYS = Array.from({ length: 7 }, () => ({
 const DEFAULT_WA_SETTINGS: WaSettings = {
   enabled: true,
   welcomeMessage:
-    "Cześć! Tu Sud Italia 🍕 Napisz, co masz ochotę zjeść albo z jakiego miasta jesteś (Kraków / Warszawa).",
+    "Cześć! Tu Ottaviano 🍕 Napisz, co masz ochotę zjeść albo z jakiego miasta jesteś (Kraków / Warszawa).",
   optOutPhrases: ["STOP", "NIE", "UNSUBSCRIBE"],
   defaultLocation: null,
   dailyMessageCap: 60,
@@ -10611,12 +10912,12 @@ export async function deleteBusinessCost(id: string): Promise<boolean> {
 // --- Finance simulation (sandbox monthly P&L) ----------------------------
 //
 // Pure projection sandbox — never touches business-costs.json. Defaults
-// are tuned to a Neapolitan pizza truck operating in Warsaw 2026, with
-// labor schedules anchored to a 12:00–22:00 service window plus ~1 h
-// prep and ~1 h close-down (≈ 11 h staff day, 6 days/week). Hourly
-// rates bake in the ~22% Polish employer narzut (ZUS social + Labour
-// Fund) so a "rate × hours" multiplication lands at FULL employer
-// cost — same convention the business-costs ledger uses.
+// are tuned to a Neapolitan pizza restaurant operating in central Warsaw
+// 2026 — a ~90-seat dine-in pizzeria on a prime street, open 12:00–23:00
+// (lunch + dinner) seven days a week. Hourly rates bake in the ~22%
+// Polish employer narzut (ZUS social + Labour Fund) so a "rate × hours"
+// multiplication lands at FULL employer cost — same convention the
+// business-costs ledger uses.
 
 const SIMULATION_KEY = "simulation-scenarios.json";
 
@@ -10625,34 +10926,36 @@ export function defaultSimulationScenario(): SimulationScenario {
   // to the nearest 50 grosze. Operators who'd rather think in pure
   // brutto can divide by 1.22.
   const labor: SimulationLaborLine[] = [
-    // Right-sized for a food-truck doing ~70 orders/day: one
-    // pizzaiolo + one chef on the line, one waiter, one cashier, and
-    // the owner-manager part-time. No sous-chef or kitchen porter —
-    // trucks don't have either; line cooks handle prep + cleanup.
-    { id: "pizzaiolo", role: "pizzaiolo", headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4300 },
-    { id: "chef",      role: "chef",      headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 3700 },
-    { id: "waiter",    role: "waiter",    headcount: 1, hoursPerWeek: 60, hourlyRateGrosze: 4000 },
-    { id: "barista",   role: "barista",   headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
-    { id: "manager",   role: "manager",   headcount: 1, hoursPerWeek: 40, hourlyRateGrosze: 5500 },
+    // Sized for a ~90-seat full-service restaurant doing ~110 checks/day
+    // across lunch + dinner, seven days. Unlike a food truck, a dining
+    // room carries floor staff (several waiters), a sous-chef and a
+    // kitchen porter / dish-pit — roles a truck line never has.
+    { id: "pizzaiolo",      role: "pizzaiolo",      headcount: 2, hoursPerWeek: 48, hourlyRateGrosze: 4500 },
+    { id: "chef",           role: "chef",           headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
+    { id: "sous-chef",      role: "sous-chef",      headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 4500 },
+    { id: "kitchen-porter", role: "kitchen-porter", headcount: 1, hoursPerWeek: 42, hourlyRateGrosze: 3200 },
+    { id: "waiter",         role: "waiter",         headcount: 3, hoursPerWeek: 42, hourlyRateGrosze: 3600 },
+    { id: "barista",        role: "barista",        headcount: 1, hoursPerWeek: 48, hourlyRateGrosze: 3900 },
+    { id: "manager",        role: "manager",        headcount: 1, hoursPerWeek: 45, hourlyRateGrosze: 6000 },
   ];
   const fixedCosts: SimulationScenario["fixedCosts"] = {
-    rent: 250_000,         // 2 500 zł — Warsaw food-truck pitch (1 200–3 000 zł range)
-    utilities: 120_000,    // 1 200 zł — electric + water + gas (lower than full restaurant)
-    fuel: 80_000,          //   800 zł — vehicle + generator
-    vehicle: 70_000,       //   700 zł — maintenance + amortyzacja
-    insurance: 60_000,     //   600 zł — OC działalności + truck OC/AC blended (400–1 000)
-    licenses: 25_000,      //   250 zł — SANEPID + permits, annual fees / 12
-    marketing: 150_000,    // 1 500 zł — moderate organic + paid social
-    software: 25_000,      //   250 zł — GoPOS Pro (~100) + KDS + analytics
-    professional: 40_000,  //   400 zł — biuro rachunkowe ryczałt
-    tax: 180_000,          // 1 800 zł — ZUS właściciel + lokalne opłaty (excl. CIT)
-    maintenance: 40_000,   //   400 zł — equipment service
-    other: 30_000,         //   300 zł — buffer
+    rent: 2_200_000,       // 22 000 zł — prime central lease (Rynek / Nowy Świat), ~150 m²
+    utilities: 500_000,    //  5 000 zł — full kitchen + dining-room HVAC, water, gas
+    fuel: 0,               //      0 zł — dine-in restaurant; no vehicle / generator
+    vehicle: 0,            //      0 zł — no truck; add a line if you run delivery wheels
+    insurance: 150_000,    //  1 500 zł — OC działalności + premises / public-liability
+    licenses: 90_000,      //    900 zł — SANEPID + koncesja alkoholowa + ZAiKS, annual / 12
+    marketing: 250_000,    //  2 500 zł — organic + paid social for a destination venue
+    software: 60_000,      //    600 zł — POS + KDS + reservations + analytics
+    professional: 80_000,  //    800 zł — biuro rachunkowe (pełna księgowość)
+    tax: 280_000,          //  2 800 zł — ZUS właściciel + podatek od nieruchomości + opłaty
+    maintenance: 100_000,  //  1 000 zł — kitchen-equipment service + premises upkeep
+    other: 60_000,         //    600 zł — buffer + cash handling
   };
   return {
-    ordersPerDay: 70,
-    avgTicketGrosze: 6500,
-    daysOpenPerMonth: 28,
+    ordersPerDay: 110,
+    avgTicketGrosze: 8500,
+    daysOpenPerMonth: 30,
     cogsPct: 0.30,
     labor,
     fixedCosts,
@@ -10663,29 +10966,30 @@ export function defaultSimulationScenario(): SimulationScenario {
     // - waste 1-3% of revenue (spoilage, recipe over-portioning)
     // - refunds/comps/theft 1-2% of revenue
     // - loyalty point burn ~50% redemption × ~5% effective value
-    // CIT default to the 9% Polish small-CIT rate (truck Y1 profits fit
-    // the 2 M EUR turnover cap); 19% applies once you scale past that.
+    // CIT default to the 9% Polish small-CIT rate (Y1 profits fit the
+    // 2 M EUR turnover cap); 19% applies once you scale past that.
     wastePct: 0.02,
     refundPct: 0.015,
     loyaltyBurnPct: 0.012,
     citPct: 0.09,
     // Channel mix — defaults to 100% on-site (cash + card) with the
-    // marketplaces off. Turning Glovo/Wolt on materially compresses
-    // margin because the marketplace fee replaces (not adds to) the
-    // on-site processor rate on that share of revenue.
-    cashSharePct: 0.20,
+    // marketplaces off. Dine-in skews heavily to card at the table, so
+    // the cash share is lower than a takeaway truck. Turning Glovo/Wolt
+    // on materially compresses margin because the marketplace fee
+    // replaces (not adds to) the on-site processor rate on that share.
+    cashSharePct: 0.12,
     glovoSharePct: 0.00,
     glovoFeePct: 0.27,
     woltSharePct: 0.00,
     woltFeePct: 0.28,
     // One pizzaiolo + one Ferrara oven sustains ~70 pizzas/hour. Over
-    // 10 service hours that's 700 theoretical, but ~35% of orders hit
+    // 11 service hours that's 770 theoretical, but ~35% of orders hit
     // in the peak hour-equivalents, so the binding ceiling is
     // 70 / 0.35 ≈ 200 orders/day before the line breaks. A second
     // pizzaiolo + second oven roughly doubles it.
     kitchenCapacity: {
       pizzasPerHour: 70,
-      openHoursPerDay: 10,
+      openHoursPerDay: 11,
       peakHourSharePct: 0.35,
       // Oven physics — Stefano Ferrara 8-pizza bake × 90s cycle gives
       // 320 pizzas/hour theoretical. Realistic peak with pulls / sweeps /
@@ -10697,17 +11001,17 @@ export function defaultSimulationScenario(): SimulationScenario {
       ovenEfficiencyPct: 0.22,
     },
     // Labor flex — at default 40% variable, doubling orders/day pulls in
-    // 40% more labor cost (real-world: extra cook on a Saturday rush
-    // does happen). At 0 the truck is fully fixed-staffed; at 1 a 2×
-    // volume move would double the wage bill. Anchor defaults to the
-    // ordersPerDay the labor mix was sized for (70).
+    // 40% more labor cost (real-world: extra cook + extra waiter on a
+    // Saturday rush does happen). At 0 the restaurant is fully
+    // fixed-staffed; at 1 a 2× volume move would double the wage bill.
+    // Anchor defaults to the ordersPerDay the labor mix was sized for (110).
     laborVariablePct: 0.40,
-    laborAnchorOrdersPerDay: 70,
-    // 5-year straight-line on the 380k setup cost ⇒ 6,333 PLN / mo.
-    // The previous model implicitly buried D&A inside "vehicle" at
-    // 700 PLN / mo, an order-of-magnitude understatement that
-    // overstated EBITDA. Operator can override; 0 disables it.
-    depreciationMonthlyGrosze: 633_000,
+    laborAnchorOrdersPerDay: 110,
+    // ~7.5-year straight-line on the 900k restaurant fit-out ⇒
+    // 90,000,000 / 90 months = 10,000 PLN / mo. Leasehold improvements +
+    // dining-room build amortise slower than a truck's 5-year life.
+    // Kept separate from "maintenance" so EBITDA is honest; 0 disables it.
+    depreciationMonthlyGrosze: 1_000_000,
     interestMonthlyGrosze: 0,
     // Every order incurs real packaging — even dine-in (napkins,
     // plates wash). Audit §6: previously buried inside delivery-share
@@ -10739,21 +11043,22 @@ export function defaultSimulationScenario(): SimulationScenario {
       buildoutLearningPct: 0.05,
       buildoutFloorPct: 0.55,
     },
-    // Honest all-in: Stefano Ferrara oven + truck buildout + refrigeration +
-    // generator + livery + SANEPID compliance + 3 mo working capital lands
-    // 350-400k PLN. The previous 250k floor was a buildout-only number that
-    // ignored opening cash and made payback look ~30% rosier than reality.
-    setupCostGrosze: 38_000_000,
+    // Honest all-in: full restaurant fit-out — kitchen + Stefano Ferrara
+    // oven + refrigeration + dining-room build + furniture + bar + bathrooms
+    // + signage + deposits + 3 mo working capital lands 800-1,000k PLN for a
+    // prime-street venue. An order of magnitude above a truck buildout, and
+    // the number payback / IRR are computed against.
+    setupCostGrosze: 90_000_000,
     seasonality: {
-      // Outdoor-truck winter in Warsaw is brutal — January can collapse to
-      // 0.30-0.40 of summer volume (snow, -10°C evenings, customers won't
-      // queue). The previous 0.70 floor was a brick-and-mortar number and
-      // hid winter cash risk. Spring/autumn are honest shoulders; summer
-      // 1.30 is conservative vs heat-wave 1.40 peaks already in weather.
-      winter: 0.50,
+      // Indoor dining is far less weather-elastic than an outdoor truck.
+      // Winter holds up — a warm room is a draw when it's cold out, and
+      // December books up with festive dinners — so the floor sits ~0.85,
+      // not the 0.30-0.50 cliff a truck faces. Summer gets a mild terrace +
+      // tourist lift; spring/autumn are the steady baseline.
+      winter: 0.85,
       spring: 1.00,
-      summer: 1.30,
-      autumn: 0.95,
+      summer: 1.10,
+      autumn: 1.00,
     },
     menuScenario: "balanced",
     assumptions: defaultSimulationAssumptions(),
@@ -10762,7 +11067,7 @@ export function defaultSimulationScenario(): SimulationScenario {
   };
 }
 
-/** Behavioral levers tuned to a Neapolitan pizza truck in Warsaw 2026. */
+/** Behavioral levers tuned to a Neapolitan pizza restaurant in Warsaw 2026. */
 export function defaultSimulationAssumptions(): SimulationAssumptions {
   // Every lever ships DISABLED by default. The operator opts in
   // explicitly per lever — including after loading a Menu Scenario
@@ -10823,11 +11128,15 @@ export function defaultSimulationAssumptions(): SimulationAssumptions {
 export function defaultSimulationWeather(): SimulationWeather {
   // Ships disabled — matches the "off by default, operator opts in
   // explicitly" contract used for every Behaviour Assumption lever.
+  // Indoor dining barely moves with the weather: rain is close to
+  // neutral (a dry table beats a soaked queue), and an indoor/AC room
+  // with a terrace gets only a mild heatwave lift — nothing like the
+  // ±25-40% swings an exposed truck rides.
   return {
     enabled: false,
-    rainyDayMultiplier: 0.75,
+    rainyDayMultiplier: 0.95,
     rainyShare: 0.30,
-    heatwaveMultiplier: 1.40,
+    heatwaveMultiplier: 1.10,
     heatwaveShare: 0.10,
     holidayClosedDaysPerMonth: 1.0,
     holidayPeakDaysPerMonth: 1.0,
@@ -12197,6 +12506,7 @@ export async function saveTable(
     seats: input.seats,
     zone: input.zone,
     status: input.status,
+    notes: input.notes,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
   let prevStatus: string | null = null;
@@ -12361,7 +12671,22 @@ async function readPosTabsForLocation(loc: string): Promise<PosTab[]> {
  *  field-precedence rules, with no I/O so they can be unit-tested. `orderId` and
  *  `firedCourses` are server-owned (preserved from `existing`, never taken from
  *  the caller); editing the lines force-clears the `sentKds` flag. */
-export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, existing: PosTab | undefined): PosTab {
+function sanitizePosTabDiscount(input: unknown): PosTabDiscount | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const d = input as Partial<PosTabDiscount>;
+  if (d.type !== "amount" && d.type !== "percent") return undefined;
+  const raw = Number(d.value);
+  if (!Number.isFinite(raw) || raw <= 0) return undefined;
+  const value = d.type === "percent" ? Math.max(0, Math.min(100, Math.round(raw))) : Math.max(0, Math.round(raw));
+  if (value <= 0) return undefined;
+  const reason = typeof d.reason === "string" ? d.reason.trim().slice(0, 80) || undefined : undefined;
+  return { type: d.type, value, ...(reason ? { reason } : {}) };
+}
+
+export function mergePosTab(
+  input: Partial<PosTab> & { locationSlug: string; discount?: PosTabDiscount | null },
+  existing: PosTab | undefined,
+): PosTab {
   const id = input.id || newPosTabId();
   const now = new Date().toISOString();
   const channel = input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
@@ -12393,6 +12718,20 @@ export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, e
       input.address !== undefined
         ? (input.address || "").toString().trim().slice(0, 400) || undefined
         : existing?.address,
+    customerPhone:
+      input.customerPhone !== undefined
+        ? (input.customerPhone || "").toString().trim().slice(0, 25) || undefined
+        : existing?.customerPhone,
+    customerName:
+      input.customerName !== undefined
+        ? (input.customerName || "").toString().trim().slice(0, 60) || undefined
+        : existing?.customerName,
+    discount:
+      input.discount === null
+        ? undefined
+        : input.discount !== undefined
+          ? sanitizePosTabDiscount(input.discount)
+          : existing?.discount,
     sentKds: itemsChanged ? false : input.sentKds !== undefined ? !!input.sentKds : existing?.sentKds ?? false,
     coursed:
       input.coursed !== undefined ? !!input.coursed : existing?.coursed ?? (channel === "dine-in" ? true : undefined),

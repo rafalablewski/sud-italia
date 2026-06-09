@@ -130,7 +130,7 @@ function renderWidget(
         <>
           <MapPin className="h-3.5 w-3.5 text-italia-red" />
           <span className="text-white/80 whitespace-nowrap">
-            {widget.label ?? "Truck is at"}: <strong>{address}</strong>
+            {widget.label ?? "Find us at"}: <strong>{address}</strong>
           </span>
         </>
       );

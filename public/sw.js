@@ -1,5 +1,5 @@
 /**
- * Sud Italia service worker (m5_1 + m5_2 + m5_3).
+ * Ottaviano service worker (m5_1 + m5_2 + m5_3).
  *
  * Caching strategy:
  *   - HTML navigations: NETWORK-FIRST with a cached fallback. The page
@@ -179,11 +179,11 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: "Sud Italia", body: event.data.text() };
+    payload = { title: "Ottaviano", body: event.data.text() };
   }
   const { title, body, icon, url, tag } = payload;
   event.waitUntil(
-    self.registration.showNotification(title || "Sud Italia", {
+    self.registration.showNotification(title || "Ottaviano", {
       body: body || "",
       icon: icon || "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

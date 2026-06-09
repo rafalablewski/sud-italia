@@ -1,4 +1,4 @@
-# Sud Italia — Mobile Navigation Architecture
+# Ottaviano — Mobile Navigation Architecture
 
 > **⚠️ RETIRED — historical record.** The separate mobile-admin shell this
 > document describes is no longer served; phones now render the responsive
@@ -325,7 +325,7 @@ Per-page mapping of how each route is reached on mobile:
 | `/admin/upsell` | More → Growth → Upsell |
 | `/admin/crosssell` | More → Growth → Cross-sell |
 | `/admin/scheduled-bundles` | More → Growth → Scheduled bundles |
-| `/admin/truck` | More → Growth → Truck ops |
+| `/admin/truck` | More → Growth → Events & bookings |
 | `/admin/locations` | More → Intelligence → Multi-location |
 | `/admin/locations/manage` | More → Intelligence → Manage locations |
 | `/admin/reports/cohort` | More → Intelligence → Cohort |

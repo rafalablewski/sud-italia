@@ -580,10 +580,10 @@ export function DashboardV3() {
               </div>
             </div>
             <div className="av3-card">
-              <div className="av3-card-head"><div className="av3-card-title">Trucks</div></div>
+              <div className="av3-card-head"><div className="av3-card-title">Locations</div></div>
               <div className="av3-card-body" style={{ paddingTop: 6, paddingBottom: 6 }}>
                 {trucks.length === 0 ? (
-                  <div className="av3-empty"><div className="av3-empty-text">No truck data.</div></div>
+                  <div className="av3-empty"><div className="av3-empty-text">No location data.</div></div>
                 ) : (
                   trucks.map((t) => (
                     <div className="av3-truck" key={t.slug}>

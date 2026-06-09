@@ -64,9 +64,7 @@ surface lives in [`../modules/`](../modules/).
 ### Global-action primitives
 
 - **`.cv-chip`** — pill (location chip, status, a `Dine-in` flag).
-  `.dot` = a small status dot. `.on` = filled brand (active toggle);
-  `.danger` = destructive variant (red wash → solid red on hover, e.g. POS
-  *Void*); `:disabled` dims it.
+  `.dot` = a small status dot. `.on` = filled brand (active toggle).
 - **`.cv-iconbtn`** — 34px square icon button (theme toggle, fullscreen).
 - **`.cv-clock`** — the mono HH:MM clock.
 - **`.cv-tabs a/button`** — subbar view tabs; `.on` = active.
@@ -120,3 +118,36 @@ Add a component class? Prefix it `cv-`, build it from tokens (never
 hard-coded hex), and add it to the reference here in the same commit
 (Rule #11). Never reach into admin or suite.css classes — Core v2 owns
 its whole surface.
+
+## Chrome — command bar + bottom switcher
+
+`CoreV2Shell` renders a **single command bar** on top and a **centred bottom
+surface-switcher** (no second subbar row):
+
+- **`.cv-bar`** — `.cv-brand` (pinned left) · `.cv-bar-ctx` (the contextual
+  strip: `.cv-eyebrow` + the surface's view `.cv-tabs` + its own `subRight`
+  controls — scrolls horizontally, `scrollbar-width:none`, when it can't all
+  fit) · `.cv-right` (pinned right: location · clock · notifications bell ·
+  theme). Brand + controls never scroll; only the middle does.
+- **`.cv-bottomnav`** — a layout row (`flex:none`, reserves its own height
+  `--cv-navh`) that centres the `CoreV2Nav` `.cv-switch` pill at the very
+  bottom. Because it's a real row, body content never hides behind it; only
+  the POS fixed ticket drawer + FAB offset above it via `--cv-navh`.
+
+## Responsive — tablet & phone
+
+Core runs on iPads and phones, not only desktop. Breakpoints at the end of
+`index.css`:
+
+| Width | What changes |
+| ----- | ------------ |
+| **≤1100** (tablet landscape) | POS panes narrow (`160 · 1fr · 320`); menu cards shrink. |
+| **≤900** (tablet portrait) | Command bar drops the brand wordmark + the `.cv-eyebrow`; POS panes `148 · 1fr · 296`. |
+| **≤820** (phone / iPad portrait) | Location chip + clock hide from the bar. **POS → single column**: the category rail becomes a horizontal scroll strip, the menu fills, and the **ticket becomes a bottom drawer** — slid up by the fixed `.cv-ticket-fab` bar ("View ticket · N · total"), dismissed by tap-backdrop (`CoreV2Pos` `mobileTicket` state + `.cv-ticket.is-open`), offset above the bottom nav via `--cv-navh`. Dialogs become bottom sheets; KPI strips → 2-col. |
+| **≤560** (phone) | Bottom switcher → compact **icon-only** pill so all surfaces fit. |
+| **≤480** (phone) | Menu grid 2-col; table tiles shrink; the notifications panel goes full-width fixed. |
+
+The POS ticket is **never hidden** on small screens (the old behaviour) —
+it's always reachable as the drawer, so a phone can take and settle a check.
+KDS stays a fixed dark wall (its own `≤1000` lane collapse); Guest/Service
+keep their existing `≤1000–1100` two-pane collapses.

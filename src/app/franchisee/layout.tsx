@@ -19,7 +19,7 @@ const franchiseeDisplay = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Franchisee | Sud Italia",
+  title: "Franchisee | Ottaviano",
   robots: "noindex, nofollow",
 };
 

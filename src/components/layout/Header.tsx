@@ -59,7 +59,7 @@ export function Header() {
           </span>
           <div>
             <div className="font-heading font-semibold text-[24px] leading-none tracking-[0.3px] text-espresso">
-              Sud Italia
+              Ottaviano
             </div>
             <div className="v8-brand-sub font-heading italic text-[11.5px] text-muted tracking-[0.8px] mt-[1px] hidden md:block">
               <span className="it">Pizza napoletana</span> · est. 2019

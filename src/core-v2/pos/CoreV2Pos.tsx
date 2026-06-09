@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "@/shared/LocationContext";
 import { usePolling } from "@/lib/usePolling";
 import { idempotentFetch } from "@/lib/idempotentFetch";
@@ -8,6 +8,7 @@ import { durableMutate, usePendingWriteCount } from "@/store/writeQueue";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
+import { CoreV2QrQueue } from "@/core-v2/pos/CoreV2QrQueue";
 import {
   MENU_CATEGORY_LABELS,
   type FloorTable,
@@ -16,9 +17,11 @@ import {
   type MenuItem,
   type PosCourse,
   type PosTab,
+  type PosTabDiscount,
   type PosTabLine,
 } from "@/data/types";
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
+import { manualDiscountGrosze } from "@/lib/pos-discount";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
@@ -44,6 +47,15 @@ const promiseMin = (sec?: number): string | null => (sec && sec > 0 ? `~${Math.r
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 const fmtPLN = (g: number) => `${zl(g)} zł`;
+
+/** Inline line-glyph (core-v2 uses its own SVGs, not lucide). */
+function Gly({ children }: { children: ReactNode }) {
+  return (
+    <svg className="cv-glyph" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  );
+}
 
 /**
  * Core v2 · POS — the till, wired to the real engine 1:1. Multi-tab open checks
@@ -185,6 +197,9 @@ export function CoreV2Pos({
             tableId: tab.tableId ?? null,
             covers: tab.covers,
             address: tab.address ?? null,
+            customerPhone: tab.customerPhone ?? null,
+            customerName: tab.customerName ?? null,
+            discount: tab.discount ?? null,
             sentKds: tab.sentKds,
             coursed: tab.coursed ?? null,
           }),
@@ -262,6 +277,13 @@ export function CoreV2Pos({
     [mutateActive],
   );
   const setName = useCallback((name: string) => mutateActive((t) => ({ ...t, name: name.slice(0, 40) })), [mutateActive]);
+  const applyDiscount = useCallback((d: PosTabDiscount) => mutateActive((t) => ({ ...t, discount: d })), [mutateActive]);
+  const removeDiscount = useCallback(() => mutateActive((t) => ({ ...t, discount: undefined })), [mutateActive]);
+  const applyMember = useCallback(
+    (phone: string, name: string) => mutateActive((t) => ({ ...t, customerPhone: phone.trim() || undefined, customerName: name.trim() || undefined })),
+    [mutateActive],
+  );
+  const removeMember = useCallback(() => mutateActive((t) => ({ ...t, customerPhone: undefined, customerName: undefined })), [mutateActive]);
   // Dine-in kitchen timing — course-by-course firing vs everything at once.
   const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
@@ -528,7 +550,9 @@ export function CoreV2Pos({
   const comboOf = useCallback((t: PosTab) => getActiveComboDeals(cartOf(t), config, t.channel ?? undefined), [cartOf, config]);
   const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0), [cartOf]);
   const discountG = useCallback((t: PosTab) => (comboOf(t).isComplete ? comboOf(t).savings : 0), [comboOf]);
-  const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
+  // Manual operator discount, on top of the auto combo (same pure helper as the server).
+  const manualDiscountG = useCallback((t: PosTab) => manualDiscountGrosze(Math.max(0, subtotalG(t) - discountG(t)), t.discount), [subtotalG, discountG]);
+  const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t) - manualDiscountG(t)), [subtotalG, discountG, manualDiscountG]);
 
   const active = getActive();
   // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
@@ -674,6 +698,10 @@ export function CoreV2Pos({
   // --- Dialogs -------------------------------------------------------------
   const [tableOpen, setTableOpen] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false);
+  // On phones/narrow tablets the ticket pane becomes a bottom drawer.
+  const [mobileTicket, setMobileTicket] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
   // Leaving a check (or its dine-in channel) drops back to the menu.
   useEffect(() => {
     setTableOpen(false);
@@ -803,17 +831,9 @@ export function CoreV2Pos({
       ]}
       subRight={
         <>
+          <CoreV2QrQueue location={pageLoc} />
           {active?.channel && <span className="cv-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
-          {active && (
-            <button type="button" className={active.status === "parked" ? "cv-chip on" : "cv-chip"} style={{ height: 32 }} onClick={togglePark} title="Park / resume this check">
-              {active.status === "parked" ? "▣ Parked" : "▢ Park"}
-            </button>
-          )}
-          {active && (
-            <button type="button" className="cv-chip danger" style={{ height: 32 }} disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
-              🗑 Void
-            </button>
-          )}
+          {active?.status === "parked" && <span className="cv-chip on" style={{ height: 32 }}>▣ Held</span>}
           <button type="button" className="cv-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
             {kiosk ? "✕" : "⛶"}
           </button>
@@ -924,8 +944,8 @@ export function CoreV2Pos({
           )}
         </main>
 
-        {/* ticket */}
-        <aside className="cv-ticket">
+        {/* ticket — a bottom drawer on small screens (cv-ticket.is-open) */}
+        <aside className={mobileTicket ? "cv-ticket is-open" : "cv-ticket"}>
           {!active ? (
             <div className="cv-ticket-empty">
               {!hydrated ? (
@@ -978,20 +998,6 @@ export function CoreV2Pos({
                     </button>
                   </div>
                 )}
-              </div>
-
-              {/* channel + per-channel controls */}
-              <div className="cv-chanrow">
-                {CHANNELS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={active.channel === c.key ? "cv-chan on" : "cv-chan"}
-                    onClick={() => setChannel(c.key)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
                 {active.channel === "dine-in" && (
                   <button type="button" className="cv-chan-aux" onClick={() => setTableOpen(true)}>
                     {active.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : "Assign table"}
@@ -1009,6 +1015,20 @@ export function CoreV2Pos({
                     {active.address ? "Edit address" : "Add address"}
                   </button>
                 )}
+              </div>
+
+              {/* channel selector */}
+              <div className="cv-chanrow">
+                {CHANNELS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    className={active.channel === c.key ? "cv-chan on" : "cv-chan"}
+                    onClick={() => setChannel(c.key)}
+                  >
+                    {c.label}
+                  </button>
+                ))}
               </div>
 
               {deliveryPaused && (
@@ -1092,6 +1112,12 @@ export function CoreV2Pos({
 
               {/* totals + actions */}
               <div className="cv-foot">
+                {active.customerPhone && (
+                  <div className="cv-frow member">
+                    <span>👤 {active.customerName || "Member"} · {active.customerPhone}</span>
+                    <button type="button" className="cv-frow-x" onClick={() => removeMember()} aria-label="Remove member">✕</button>
+                  </div>
+                )}
                 <div className="cv-frow">
                   <span>Subtotal</span>
                   <span className="mono">{zl(subtotalG(active))}</span>
@@ -1102,6 +1128,15 @@ export function CoreV2Pos({
                     <span className="mono">−{zl(discountG(active))}</span>
                   </div>
                 )}
+                {manualDiscountG(active) > 0 && (
+                  <div className="cv-frow disc">
+                    <span>
+                      − Discount{active.discount?.type === "percent" ? ` (${active.discount.value}%)` : ""}
+                      {active.discount?.reason ? ` · ${active.discount.reason}` : ""}
+                    </span>
+                    <span className="mono">−{zl(manualDiscountG(active))}</span>
+                  </div>
+                )}
                 <div className="cv-ftot">
                   <span className="tl">Total</span>
                   <span className="tv mono">{zl(grandG(active))}</span>
@@ -1109,6 +1144,7 @@ export function CoreV2Pos({
                 <div className="cv-foot-actions">
                   {!active.sentKds && (
                     <button type="button" className="cv-send" disabled={!active.items.length || !!busyTabId} onClick={() => void sendKds()}>
+                      <Gly><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></Gly>
                       Send to KDS
                     </button>
                   )}
@@ -1118,13 +1154,43 @@ export function CoreV2Pos({
                     disabled={!active.items.length || !!busyTabId}
                     onClick={() => setTenderOpen(true)}
                   >
-                    Charge {fmtPLN(grandG(active))} →
+                    <Gly><rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" /></Gly>
+                    Charge {fmtPLN(grandG(active))}
+                  </button>
+                </div>
+                <div className="cv-foot-actions2">
+                  <button type="button" className="cv-foot-aux cv-foot-aux-wide" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
+                    <Gly><rect width="6" height="14" x="6" y="5" rx="1" /><rect width="6" height="14" x="12" y="5" rx="1" /></Gly>
+                    {active.status === "parked" ? "Held" : "Park / hold"}
+                  </button>
+                  <button type="button" className="cv-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
+                    <Gly><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".6" fill="currentColor" /></Gly>
+                    {manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}
+                  </button>
+                  <button type="button" className="cv-foot-aux" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)}>
+                    <Gly><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Gly>
+                    {active.customerPhone ? "Member ✓" : "Add membership"}
+                  </button>
+                  <button type="button" className="cv-foot-aux danger cv-foot-aux-wide" disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
+                    <Gly><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" /></Gly>
+                    Void check
                   </button>
                 </div>
               </div>
             </>
           )}
         </aside>
+
+        {/* small-screen ticket controls: a backdrop while open, and a
+            bottom "view ticket" bar when there's an active check */}
+        {mobileTicket && <button type="button" className="cv-ticket-backdrop" aria-label="Close ticket" onClick={() => setMobileTicket(false)} />}
+        {active && active.items.length > 0 && (
+          <button type="button" className={mobileTicket ? "cv-ticket-fab is-open" : "cv-ticket-fab"} onClick={() => setMobileTicket((v) => !v)}>
+            <span className="cv-ticket-fab-c">{active.items.reduce((s, l) => s + l.quantity, 0)}</span>
+            <span>{mobileTicket ? "Hide ticket" : "View ticket"}</span>
+            <span className="cv-ticket-fab-t mono">{fmtPLN(grandG(active))}</span>
+          </button>
+        )}
       </div>
 
       {/* Tender */}
@@ -1225,6 +1291,138 @@ export function CoreV2Pos({
           placeholder="Street & number, flat / buzzer, city — plus any note for the driver"
         />
       </CoreV2Dialog>
+
+      {discountOpen && (
+        <DiscountDialog
+          current={active?.discount}
+          onClose={() => setDiscountOpen(false)}
+          onApply={(d) => { applyDiscount(d); setDiscountOpen(false); }}
+          onRemove={() => { removeDiscount(); setDiscountOpen(false); }}
+        />
+      )}
+      {memberOpen && (
+        <MemberDialog
+          phone={active?.customerPhone ?? ""}
+          name={active?.customerName ?? ""}
+          onClose={() => setMemberOpen(false)}
+          onApply={(p, n) => { applyMember(p, n); setMemberOpen(false); }}
+          onRemove={() => { removeMember(); setMemberOpen(false); }}
+        />
+      )}
     </CoreV2Shell>
+  );
+}
+
+/* ── manual discount dialog ─────────────────────────────────────────────── */
+function DiscountDialog({
+  current,
+  onClose,
+  onApply,
+  onRemove,
+}: {
+  current: PosTabDiscount | undefined;
+  onClose: () => void;
+  onApply: (d: PosTabDiscount) => void;
+  onRemove: () => void;
+}) {
+  const [type, setType] = useState<"amount" | "percent">(current?.type ?? "amount");
+  const [value, setValue] = useState(
+    current ? (current.type === "amount" ? (current.value / 100).toString() : String(current.value)) : "",
+  );
+  const [reason, setReason] = useState(current?.reason ?? "");
+  const n = Number(value);
+  const valid = Number.isFinite(n) && n > 0 && (type === "percent" ? n <= 100 : true);
+  const apply = () => {
+    if (!valid) return;
+    onApply({ type, value: type === "amount" ? Math.round(n * 100) : Math.round(n), reason: reason.trim() || undefined });
+  };
+  return (
+    <CoreV2Dialog
+      open
+      onClose={onClose}
+      title={current ? "Edit discount" : "Add discount"}
+      footer={
+        <>
+          {current && (
+            <button type="button" className="cv-btn danger" style={{ marginRight: "auto" }} onClick={onRemove}>
+              Remove
+            </button>
+          )}
+          <button type="button" className="cv-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="cv-btn primary" disabled={!valid} onClick={apply}>Apply</button>
+        </>
+      }
+    >
+      <div className="cv-seg" style={{ marginBottom: 14, width: "fit-content" }}>
+        <button type="button" className={type === "amount" ? "on" : undefined} onClick={() => setType("amount")}>Amount (zł)</button>
+        <button type="button" className={type === "percent" ? "on" : undefined} onClick={() => setType("percent")}>Percent (%)</button>
+      </div>
+      <label className="cv-tbl-field">
+        <span>{type === "amount" ? "Discount amount (zł)" : "Discount percent (%)"}</span>
+        <input
+          className="cv-inp"
+          type="number"
+          min={0}
+          max={type === "percent" ? 100 : undefined}
+          step={type === "amount" ? "0.01" : "1"}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          autoFocus
+        />
+      </label>
+      <label className="cv-tbl-field" style={{ marginTop: 10 }}>
+        <span>Reason (optional)</span>
+        <input className="cv-inp" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="staff, regular, comp…" maxLength={80} />
+      </label>
+    </CoreV2Dialog>
+  );
+}
+
+/* ── membership (loyalty) dialog ────────────────────────────────────────── */
+function MemberDialog({
+  phone,
+  name,
+  onClose,
+  onApply,
+  onRemove,
+}: {
+  phone: string;
+  name: string;
+  onClose: () => void;
+  onApply: (phone: string, name: string) => void;
+  onRemove: () => void;
+}) {
+  const [p, setP] = useState(phone);
+  const [n, setN] = useState(name);
+  const valid = p.replace(/\D/g, "").length >= 9;
+  return (
+    <CoreV2Dialog
+      open
+      onClose={onClose}
+      title={phone ? "Membership" : "Add membership"}
+      footer={
+        <>
+          {phone && (
+            <button type="button" className="cv-btn danger" style={{ marginRight: "auto" }} onClick={onRemove}>
+              Remove
+            </button>
+          )}
+          <button type="button" className="cv-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="cv-btn primary" disabled={!valid} onClick={() => onApply(p, n)}>Attach</button>
+        </>
+      }
+    >
+      <p className="cv-cust-sub" style={{ marginBottom: 12 }}>
+        Attach a guest&rsquo;s phone to earn loyalty points on this check — phone-based, no signup.
+      </p>
+      <label className="cv-tbl-field">
+        <span>Phone</span>
+        <input className="cv-inp" inputMode="tel" value={p} onChange={(e) => setP(e.target.value)} placeholder="+48 600 000 000" autoFocus />
+      </label>
+      <label className="cv-tbl-field" style={{ marginTop: 10 }}>
+        <span>Name (optional)</span>
+        <input className="cv-inp" value={n} onChange={(e) => setN(e.target.value)} placeholder="Guest name" maxLength={60} />
+      </label>
+    </CoreV2Dialog>
   );
 }

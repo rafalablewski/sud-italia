@@ -40,9 +40,9 @@ What this doc covers (the admin back-office):
 | People        | Staff, Schedule                                                        |
 | Customers     | Customers, Corporate, Feedback, Pulse surveys                          |
 | Finance       | Reports, Cash, Business costs, Calculator                              |
-| Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Truck ops            |
+| Growth        | Campaigns, Upsell, Cross-sell, Scheduled bundles, Events & bookings, Integrations |
 | Intelligence  | Multi-location, Manage locations, Cohort & CLTV (+ sandbox), LTV / CAC (+ sandbox), Menu engineering (+ sandbox), Insights, Expansion |
-| System        | Users & roles, Permission matrix, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Currency, Languages, Settings |
+| System        | Users & roles, Permission matrix, Compliance, Regulatory disclosures, SOC 2 controls, Audit log, Capabilities, Payments, Currency, Languages, Settings |
 
 What this doc does **not** cover:
 
@@ -217,7 +217,7 @@ Progress:
 - [`sections/people.md`](./sections/people.md) — staff, schedule, role-gated visibility
 - [`sections/customers.md`](./sections/customers.md) — customers, corporate, feedback, Pulse surveys (NPS board) (loyalty moved to the Core Guest hub — see `../core/modules/loyalty.md`)
 - [`sections/finance.md`](./sections/finance.md) — reports, cash, business costs, calculator
-- [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, truck ops
+- [`sections/growth.md`](./sections/growth.md) — campaigns, upsell, cross-sell, scheduled bundles, events & bookings
 - [`sections/intelligence.md`](./sections/intelligence.md) — multi-location, manage-locations, cohort/CLTV, menu engineering, AI insights, expansion
 - [`sections/system.md`](./sections/system.md) — users & roles, compliance, regulatory disclosures, audit log, capabilities, currency, languages, settings
 

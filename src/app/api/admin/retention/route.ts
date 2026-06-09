@@ -38,7 +38,7 @@ import {
  *        depends on Twilio/Mailgun creds being present.
  */
 
-const WINBACK_SUBJECT = "We miss you at Sud Italia 🍕";
+const WINBACK_SUBJECT = "We miss you at Ottaviano 🍕";
 
 interface DeliveryResult {
   sent: boolean;

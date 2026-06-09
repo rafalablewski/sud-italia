@@ -62,12 +62,15 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   input** — click to rename, persisted via the same debounced `PUT`) ·
   channel/order tag · a `.cv-tabpromise` per-check ETA (max
   `promiseSecondsByCategory` across the lines, toned by the bottleneck
-  tier) · `.cv-covers` stepper (dine-in). A `.cv-delivery-paused` banner
-  shows when steering has capped the next delivery window
+  tier) · the `.cv-covers` stepper (dine-in) and, right beside it, the
+  `.cv-chan-aux` button — **Assign table / Table N** (dine-in, opens the
+  in-pane table picker) or **Add / Edit address** (delivery, opens the
+  address dialog). Both sit next to the covers count so the seating /
+  destination control lives with the party size. A `.cv-delivery-paused`
+  banner shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
-- **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
-  delivery); `.cv-chan-aux` opens the in-pane table picker (dine-in) or
-  the address dialog (delivery).
+- **`.cv-chanrow` / `.cv-chan`** — the channel selector (dine-in /
+  takeaway / delivery), now just the three channel buttons.
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.
@@ -88,14 +91,32 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
   / `missingQuantity`); tapping it adds exactly the missing items so the
   real discount fires.
-- **`.cv-foot`** — `.cv-frow` subtotal, `.cv-frow.disc` combo discount,
-  `.cv-ftot` total, then `.cv-send` (Send to KDS) + `.cv-charge`.
-- **Void** — a `.cv-chip.danger` (🗑 Void) in the shell's `subRight`
-  toolbar, beside Park, deletes the active open check
-  (`DELETE /api/admin/pos/tabs?id=`). Optimistic: the chip vanishes at once.
-  An **empty** check is dropped on tap; a check with rung items confirms via
-  a `CoreV2Dialog` first (its danger button is `.cv-btn.danger`). An
-  unsaved optimistic (`tmp-`) check is removed locally only.
+- **`.cv-foot`** — an optional `.cv-frow.member` chip (attached loyalty
+  guest, with a remove ✕), `.cv-frow` subtotal, `.cv-frow.disc` combo
+  discount **and** a `.cv-frow.disc` manual-discount line, `.cv-ftot` total,
+  then `.cv-foot-actions` (`.cv-send` Send to KDS + `.cv-charge`) and a
+  -- each button carries an inline `.cv-glyph` line-SVG (send · card ·
+  park-bars · tag · person · trash, core-v2's own glyphs, not lucide) --
+  secondary `.cv-foot-actions2` grid of `.cv-foot-aux` buttons (`data-on`
+  when active): **Park / hold** full-width (`.cv-foot-aux-wide`; the park
+  toggle now lives by Charge, not the top bar) over a 2-column row of
+  **Add / Edit discount** | **Add membership / Member ✓**, then a
+  full-width **Void check** (`.cv-foot-aux.danger.cv-foot-aux-wide`).
+- **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
+  optional reason) and `MemberDialog` (phone + optional name) write
+  `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal
+  debounced tab PUT. The charged total is recomputed **server-side**
+  (`buildOrderShape` → `manualDiscountGrosze`, the shared `@/lib/pos-discount`
+  helper the footer preview also uses), and the member phone becomes the
+  order's `customerPhone` (normalised) so loyalty points accrue on payment
+  (Rule #6). Verified: a 10% discount on a 27.90 zł pizza charges 25.11 zł
+  to `+48…`.
+- **Void** — the footer's **Void check** button deletes the active open
+  check (`DELETE /api/admin/pos/tabs?id=`). Optimistic: the row vanishes at
+  once. An **empty** check is dropped on tap; a check with rung items
+  confirms via a `CoreV2Dialog` first (its danger button is
+  `.cv-btn.danger`). An unsaved optimistic (`tmp-`) check is removed locally
+  only.
 
 ## Engine + API contract
 
@@ -147,3 +168,24 @@ inline check rename, optimistic check open + void/delete, double-seat /
 over-capacity guards, the tab-rail rollup, a hydration-aware empty state,
 and the fullscreen kiosk are all wired — feature-for-feature with today's
 `/core/pos`.
+
+## QR table-order queue
+
+Live code: `src/core-v2/pos/CoreV2QrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
+
+A **QR pill** in the POS sub-header (`subRight`, beside the channel chip +
+Park) surfaces the dine-in orders guests placed by scanning a table QR
+(`channel: "qr"`, from `/qr`). It polls `GET /api/admin/pos/qr-orders?location=`
+every 8s; the pill goes `on` and shows an "N to pay" count when any are
+unpaid. Opening it lists each order in a `CoreV2Dialog` — table number,
+guest, party size, line items, elapsed time, total and a paid/unpaid·status
+chip. **Mark paid** (`.cv-charge`) posts `{ orderId, action: "settle" }`,
+which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
+(status → `confirmed`). The order stays the single source of truth — no
+duplicate tab is created, mirroring how the POS already owns totals
+server-side.
+
+The same dialog's **Print table QR** tab generates a printable per-table QR
+(an SVG from `GET /api/admin/qr-code?location=&table=&base=`, encoding
+`<origin>/qr?location=&table=`) and opens a clean print window — so staff
+can produce the codes guests scan, closing the QR loop.

@@ -12,6 +12,8 @@ import {
 } from "@/lib/store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getActiveComboDeals } from "@/lib/upsell";
+import { manualDiscountGrosze } from "@/lib/pos-discount";
+import { normalizePlPhoneE164 } from "@/lib/phone";
 import { POS_COURSE_ORDER, courseOf } from "@/lib/pos-coursing";
 import type {
   CartItem,
@@ -96,12 +98,16 @@ async function buildOrderShape(
   const itemsTotal = items.reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0);
   const config = (await getUpsellSettings())[locationSlug];
   const combo = getActiveComboDeals(items, config ?? null, tab.channel);
-  const discount = combo.isComplete ? combo.savings : 0;
+  const comboDiscount = combo.isComplete ? combo.savings : 0;
+  // Operator manual discount applies on top of the auto combo deal. Computed
+  // server-side from tab.discount (never a client-supplied total).
+  const afterCombo = Math.max(0, itemsTotal - comboDiscount);
+  const manual = manualDiscountGrosze(afterCombo, tab.discount);
 
   return {
     items,
     fulfillmentType: tab.channel,
-    totalAmount: Math.max(0, itemsTotal - discount),
+    totalAmount: Math.max(0, afterCombo - manual),
   };
 }
 
@@ -245,6 +251,8 @@ async function persistTabOrder(
   const partySize = tab.channel === "dine-in" ? tab.covers ?? 2 : undefined;
   const tableId = tab.channel === "dine-in" ? tab.tableId : undefined;
   const deliveryAddress = tab.channel === "delivery" ? tab.address : undefined;
+  const customerName = tab.customerName?.trim() || tab.name?.trim() || "Walk-in";
+  const customerPhone = tab.customerPhone ? normalizePlPhoneE164(tab.customerPhone) ?? "" : "";
 
   if (tab.orderId) {
     const patched = await updateOrder(tab.orderId, {
@@ -254,6 +262,8 @@ async function persistTabOrder(
       partySize,
       tableId,
       deliveryAddress,
+      customerName,
+      customerPhone,
       ...(coursing !== undefined ? { coursing } : {}),
       ...(paid ? { paidAt: now.toISOString() } : {}),
     });
@@ -267,8 +277,9 @@ async function persistTabOrder(
     items: shape.items,
     totalAmount: shape.totalAmount,
     status: "confirmed",
-    customerName: tab.name?.trim() || "Walk-in",
-    customerPhone: "",
+    customerName,
+    // A member attached to the check → points accrue to this phone on payment.
+    customerPhone,
     fulfillmentType: shape.fulfillmentType,
     partySize,
     tableId,

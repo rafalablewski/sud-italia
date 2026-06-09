@@ -20,7 +20,7 @@ const terminalDisplay = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Terminal | Sud Italia",
+  title: "Terminal | Ottaviano",
   robots: "noindex, nofollow",
 };
 

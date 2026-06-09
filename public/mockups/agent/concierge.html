@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sud Italia Agent Commerce — Concierge</title>
+<title>Ottaviano Agent Commerce — Concierge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -257,7 +257,7 @@
 <body>
   <header>
     <div class="brand">
-      <span class="wordmark">SUD ITALIA</span>
+      <span class="wordmark">OTTAVIANO</span>
       <span class="kd-label">Agent Commerce</span>
     </div>
     <span class="design-tag">Agent · Concierge</span>
@@ -375,7 +375,7 @@ function capSample(id){
   if(id==="place_order") return {order_id:"KRK-4821",location:loc,channel:"takeout",
     items:[{id:"margherita",qty:2}],total_grosze:5580,eta_minutes:12,status:"awaiting_payment"};
   if(id==="create_payment") return {order_id:"KRK-4821",amount_grosze:5580,currency:"PLN",provider:"stripe",
-    payment_url:"https://pay.suditalia.pl/krk-4821",expires_in_s:900};
+    payment_url:"https://pay.ottaviano.pl/krk-4821",expires_in_s:900};
   if(id==="locate_truck") return {city:loc,now_at:{pitch:"Rynek Główny",until:"14:00"},next:{pitch:"Kazimierz",from:"17:00"}};
   return {};
 }
@@ -399,7 +399,7 @@ const LOG=[
    The same capabilities, in a human channel. Each agent turn can carry tool calls,
    making it explicit that WhatsApp and the AI assistants share one capability layer. */
 const CONVO={
-  start:{ bot:[{t:"Ciao! 👋 Sud Italia Kraków here. I can show the menu, check what's available, flag allergens, take your order and send a payment link — all in this chat. What are you after?"}],
+  start:{ bot:[{t:"Ciao! 👋 Ottaviano Kraków here. I can show the menu, check what's available, flag allergens, take your order and send a payment link — all in this chat. What are you after?"}],
     replies:[{t:"What vegan options do you have?",to:"vegan"},{t:"Is the pesto pasta nut-free?",to:"allergen"},{t:"2 Margheritas for takeout",to:"order"}] },
   vegan:{ bot:[
       {tools:[{name:"get_menu",arg:"diet=vegan",res:"4 items"}]},
@@ -423,7 +423,7 @@ const CONVO={
     replies:[{t:"Pay now",to:"pay"}] },
   pay:{ bot:[
       {tools:[{name:"place_order",arg:"takeout · Kraków",res:"#KRK-4821 · ETA 12m"},{name:"create_payment",arg:"#KRK-4821",res:"Stripe link"}]},
-      {t:"Order #KRK-4821 is in 🎟️ — secure payment here:",pay:{label:"Pay 55,80 zł · Stripe",link:"pay.suditalia.pl/krk-4821"}}],
+      {t:"Order #KRK-4821 is in 🎟️ — secure payment here:",pay:{label:"Pay 55,80 zł · Stripe",link:"pay.ottaviano.pl/krk-4821"}}],
     replies:[{t:"(tap to pay ✓)",to:"paid"}] },
   paid:{ bot:[
       {t:"Paid — dziękujemy! 🍕 Firing now, ready in ~12 min at Rynek Główny."},
@@ -577,7 +577,7 @@ function renderWhatsApp(){
     <div class="wa">
       <div class="wa-head">
         <span class="wa-av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5Z"/></svg></span>
-        <span class="wa-id"><span class="wa-name">${WA_PHONE?"Guest · "+WA_PHONE:"Sud Italia · Kraków"}</span><span class="wa-status"><i></i>${WA_PHONE?"thread opened from CRM · demo":"online · WhatsApp Business"}</span></span>
+        <span class="wa-id"><span class="wa-name">${WA_PHONE?"Guest · "+WA_PHONE:"Ottaviano · Kraków"}</span><span class="wa-status"><i></i>${WA_PHONE?"thread opened from CRM · demo":"online · WhatsApp Business"}</span></span>
         <span class="wa-tag">AI agent</span>
       </div>
       <div class="wa-body" id="waBody">${msgs}</div>

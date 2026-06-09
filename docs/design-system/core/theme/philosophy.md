@@ -71,7 +71,7 @@ rule wins. That's the boundary.
 ## What this philosophy is not
 
 - It is **not** "Core is ugly." Core is *quiet*. The discipline is
-  itself the brand statement — a Sud Italia line reads as confident
+  itself the brand statement — a Ottaviano line reads as confident
   because nothing on the surface is fighting the operator.
 - It is **not** "anything goes if it's fast." Every Core change still
   has to justify itself against the shared three above. The override

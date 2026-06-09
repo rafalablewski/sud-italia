@@ -95,5 +95,5 @@ token set in `suite.css`. Neither leaks into Admin.
   honest answer for both.
 
 The Core palette is **the visual contract** between every Core
-module — the reason a Sud Italia POS reads as part of the same product
-as a Sud Italia KDS.
+module — the reason a Ottaviano POS reads as part of the same product
+as a Ottaviano KDS.

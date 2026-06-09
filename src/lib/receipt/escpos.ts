@@ -95,8 +95,8 @@ function row(left: string, right: string): string {
 /** Plain-text receipt — the simulator preview + the browser-print fallback. */
 export function renderPlainText(m: ReceiptModel): string {
   const out: string[] = [];
-  out.push(center("SUD ITALIA"));
-  out.push(center("Neapolitan pizza truck"));
+  out.push(center("OTTAVIANO"));
+  out.push(center("Neapolitan restaurant"));
   out.push(center(m.locationSlug.toUpperCase()));
   out.push("");
   out.push(`Order #${m.orderShortId}`);
@@ -148,9 +148,9 @@ export function renderEscPos(m: ReceiptModel): Uint8Array {
   const a: number[] = [];
   a.push(...INIT);
   a.push(...ALIGN_CENTER, ...BOLD_ON, ...SIZE_DOUBLE);
-  line(a, "SUD ITALIA");
+  line(a, "OTTAVIANO");
   a.push(...SIZE_NORMAL, ...BOLD_OFF);
-  line(a, "Neapolitan pizza truck");
+  line(a, "Neapolitan restaurant");
   line(a, m.locationSlug.toUpperCase());
   a.push(...ALIGN_LEFT);
   line(a);

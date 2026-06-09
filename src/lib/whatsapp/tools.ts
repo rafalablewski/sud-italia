@@ -148,7 +148,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "set_location",
     description:
-      "Pin the customer's chosen Sud Italia location for the rest of the conversation. Must be called before searching the menu.",
+      "Pin the customer's chosen Ottaviano location for the rest of the conversation. Must be called before searching the menu.",
     input_schema: {
       type: "object",
       properties: {

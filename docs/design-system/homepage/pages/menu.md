@@ -28,7 +28,7 @@ This means:
 - The first thing visible (after the hero) is the **menu**, not
   marketing copy. No "About this location" between hero and items.
 - Categories are tabbed at the top of the menu — pizza first
-  (Sud Italia is pizza-led), then pasta, then sides / drinks /
+  (Ottaviano is pizza-led), then pasta, then sides / drinks /
   desserts.
 - Every item card has an `Add` button. No item is "request only".
 
@@ -70,7 +70,7 @@ keeps V8's hospitality voice.
   more detailed than the 220×140 LocationsGrid card sketches):
   - `krakow` — wood-fired oven with Kraków-style rooftops, flames,
     chimney, peel, a floating tomato + basil garnish.
-  - `warszawa` — Vespa with the "Sud Italia" pizza box on the back +
+  - `warszawa` — Vespa with the "Ottaviano" pizza box on the back +
     Warszawa-style flat skyline + basil garnish.
   - Generic fallback — market awning + crates of tomatoes / basil,
     used until a new city's dedicated illustration lands.

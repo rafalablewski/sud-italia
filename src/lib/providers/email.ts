@@ -20,7 +20,7 @@ export interface EmailMessage {
   text: string;
   /** Optional HTML body. When present, providers send a multipart message. */
   html?: string;
-  /** Optional Reply-To header (e.g. "support@suditalia.pl"). */
+  /** Optional Reply-To header (e.g. "support@ottaviano.pl"). */
   replyTo?: string;
 }
 

@@ -137,7 +137,7 @@ export async function generateDemandForecast(
   const lastDate = trimmed[trimmed.length - 1]?.date ?? new Date().toISOString().slice(0, 10);
 
   const system =
-    "You are a demand forecaster for a Polish Neapolitan pizza truck chain. " +
+    "You are a demand forecaster for a Polish Neapolitan pizza restaurant chain. " +
     "Given a daily series of order counts and revenue, output a STRICT JSON object — " +
     "no prose outside JSON, no markdown — with this shape:\n" +
     "{ \"days\": [{ \"date\": \"YYYY-MM-DD\", \"predicted_orders\": int, " +

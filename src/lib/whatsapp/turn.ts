@@ -49,7 +49,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   if (!settings.enabled) {
     await provider.sendText(
       phone,
-      "Cześć! Zamówienia przez WhatsApp są tymczasowo wyłączone. Zapraszamy na https://sudita.lia 🍕",
+      "Cześć! Zamówienia przez WhatsApp są tymczasowo wyłączone. Zapraszamy na https://ottaviano.pl 🍕",
     );
     return;
   }
@@ -61,7 +61,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
     await provider.sendText(
       phone,
       settings.awayMessage?.trim() ||
-        "Dziękujemy za wiadomość! Nasz asystent jest teraz offline. Zamów online: https://sudita.lia 🍕",
+        "Dziękujemy za wiadomość! Nasz asystent jest teraz offline. Zamów online: https://ottaviano.pl 🍕",
     );
     return;
   }
@@ -72,7 +72,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   if (!gatewayConfigured()) {
     await provider.sendText(
       phone,
-      "Bot jest w trakcie konfiguracji. Zamów online: https://sudita.lia 🍕",
+      "Bot jest w trakcie konfiguracji. Zamów online: https://ottaviano.pl 🍕",
     );
     return;
   }
@@ -80,7 +80,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   if (dailyBudget <= 0) {
     await provider.sendText(
       phone,
-      "Bot zamówień śpi. Zamów online: https://sudita.lia 🍕",
+      "Bot zamówień śpi. Zamów online: https://ottaviano.pl 🍕",
     );
     return;
   }
@@ -133,7 +133,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
   // instructions leave the prompt byte-identical to the default.
   const extra = settings.aiInstructions?.trim();
   const systemPrompt = extra
-    ? `${WHATSAPP_SYSTEM_PROMPT}\n\n# Additional operator instructions\n\nThese are set by the Sud Italia operator. Follow them unless they conflict with the Hard rules above (the Hard rules always win).\n\n${extra}`
+    ? `${WHATSAPP_SYSTEM_PROMPT}\n\n# Additional operator instructions\n\nThese are set by the Ottaviano operator. Follow them unless they conflict with the Hard rules above (the Hard rules always win).\n\n${extra}`
     : WHATSAPP_SYSTEM_PROMPT;
 
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
@@ -153,7 +153,7 @@ export async function handleInboundTurn(input: HandleTurnInput): Promise<void> {
       incrCounter("whatsapp.gateway.error");
       await provider.sendText(
         phone,
-        "Mam problem techniczny. Spróbuj jeszcze raz za chwilę albo zamów na https://sudita.lia 🍕",
+        "Mam problem techniczny. Spróbuj jeszcze raz za chwilę albo zamów na https://ottaviano.pl 🍕",
       );
       // Even when the gateway errors, persist whatever progress the
       // customer made so the next turn picks up where they left off.

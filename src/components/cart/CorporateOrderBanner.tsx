@@ -28,12 +28,12 @@ const DAY_NAMES = [
 
 /**
  * "Ordering with [company]" banner (audit §3.4) — shown in the V8 cart
- * drawer when the active wallet is productised as a Sud Italia Corporate
+ * drawer when the active wallet is productised as a Ottaviano Corporate
  * account. Self-hides for solo customers and family wallets without a
  * corporate config.
  *
  * V8 styling: ochre paper card (.v8-cart-corp) — italic Cormorant
- * "Sud Italia per le aziende" eyebrow, italic "Ordering with [name]"
+ * "Ottaviano per le aziende" eyebrow, italic "Ordering with [name]"
  * headline in Cormorant 17px, italic Lora rollup line.
  */
 export function CorporateOrderBanner() {
@@ -76,7 +76,7 @@ export function CorporateOrderBanner() {
       </span>
       <div className="v8-cart-corp-body">
         <div className="v8-cart-corp-kicker">
-          Sud Italia for businesses <span className="v8-cart-corp-it">· per le aziende</span>
+          Ottaviano for businesses <span className="v8-cart-corp-it">· per le aziende</span>
         </div>
         <div className="v8-cart-corp-title">
           Ordering with <em>{rollup.name}</em>

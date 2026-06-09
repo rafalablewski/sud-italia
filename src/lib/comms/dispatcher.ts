@@ -228,7 +228,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
       return;
     }
 
-    // --- Sud Italia Corporate (audit §3.4) ----------------------------
+    // --- Ottaviano Corporate (audit §3.4) ----------------------------
     // Monthly VAT-compliant invoice to the corporate billing email.
     // Payload: { slug, name, billingEmail, periodStart, periodEnd,
     //            totalGrosze, lines: [{ phone, ordersCount, totalGrosze }] }
@@ -256,9 +256,9 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
             `<tr><td>${l.phone}</td><td>${l.ordersCount}</td><td style="text-align:right">${formatPrice(l.totalGrosze)}</td></tr>`,
         )
         .join("");
-      const subject = `Sud Italia Corporate — invoice for ${p.name} (${periodLabel})`;
+      const subject = `Ottaviano Corporate — invoice for ${p.name} (${periodLabel})`;
       const html = `
-        <h2 style="font-family: Georgia, serif;">Sud Italia Corporate</h2>
+        <h2 style="font-family: Georgia, serif;">Ottaviano Corporate</h2>
         <p>Monthly billing summary for <strong>${p.name}</strong> (${periodLabel}).</p>
         <table style="border-collapse: collapse; width: 100%; font-family: system-ui, sans-serif;">
           <thead><tr><th>Employee</th><th>Orders</th><th style="text-align:right">Total</th></tr></thead>
@@ -269,7 +269,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
           VAT-compliant invoice attached separately by your accountant. This message confirms the captured period.
         </p>`;
       const text = [
-        `Sud Italia Corporate — monthly invoice for ${p.name}`,
+        `Ottaviano Corporate — monthly invoice for ${p.name}`,
         periodLabel,
         ...(p.lines ?? []).map(
           (l) => `${l.phone}: ${l.ordersCount} orders · ${formatPrice(l.totalGrosze)}`,
@@ -310,7 +310,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         return;
       }
       const dayLabel = p.dayName ? `${p.dayName} ${p.time ?? ""}` : "today's";
-      const body = `Sud Italia — ${p.name} ${dayLabel} lunch. ${p.alreadyOrdered ?? 0}/${p.totalMembers ?? 0} teammates ordered. Pick your meal: sudita.lia/corporate/${(event.payload as { slug?: string }).slug ?? ""}`.slice(0, 300);
+      const body = `Ottaviano — ${p.name} ${dayLabel} lunch. ${p.alreadyOrdered ?? 0}/${p.totalMembers ?? 0} teammates ordered. Pick your meal: ottaviano.pl/corporate/${(event.payload as { slug?: string }).slug ?? ""}`.slice(0, 300);
       await getSmsProvider().send(p.phone, body);
       return;
     }
@@ -346,7 +346,7 @@ export async function commsDispatcher(event: OutboxRow): Promise<void> {
         });
         return;
       }
-      const body = `Sud Italia — Grazie! Your friend's first order landed. ${p.rewardPoints} points (~${(p.rewardPoints / 10).toFixed(0)} zł) just hit your wallet. Buon appetito!`.slice(0, 300);
+      const body = `Ottaviano — Grazie! Your friend's first order landed. ${p.rewardPoints} points (~${(p.rewardPoints / 10).toFixed(0)} zł) just hit your wallet. Buon appetito!`.slice(0, 300);
       await getSmsProvider().send(p.ownerPhone, body);
       return;
     }

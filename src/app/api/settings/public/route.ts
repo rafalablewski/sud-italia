@@ -3,7 +3,9 @@ import { isCartPresenceEnabled } from "@/lib/cart-presence-config";
 import {
   DEFAULT_LAYOUT_SETTINGS,
   getActiveSurveys,
+  getIntegrationSettings,
   getLoyaltySettings,
+  getPaymentSettings,
   getSettings,
   LIVE_WIDGET_LIMIT,
   resolveLocationCompliance,
@@ -11,10 +13,13 @@ import {
 
 // Public endpoint — returns only non-sensitive settings needed by the frontend
 export async function GET(req: NextRequest) {
-  const [settings, appSettings] = await Promise.all([
+  const [settings, appSettings, paymentSettings, integrationSettings] = await Promise.all([
     getLoyaltySettings(),
     getSettings(),
+    getPaymentSettings(),
+    getIntegrationSettings(),
   ]);
+  const cryptoOn = paymentSettings.methods.some((m) => m.id === "bitcoin" && m.enabled);
   // Merge over the defaults so every flag is a guaranteed boolean even for
   // installs whose persisted layout predates a newer toggle (getSettings
   // doesn't inject DEFAULT_LAYOUT_SETTINGS into a saved partial).
@@ -136,5 +141,15 @@ export async function GET(req: NextRequest) {
     businessPhone: appSettings.businessPhone,
     businessEmail: appSettings.businessEmail,
     socialLinks: appSettings.socialLinks,
+    /** Enabled tender methods (ids), for the checkout + QR payment picker.
+     *  Non-secret — just which rails to show; settlement config stays server-side. */
+    paymentMethods: paymentSettings.methods.filter((m) => m.enabled).map((m) => m.id),
+    /** Receiving BTC address, only when the Bitcoin method is enabled. */
+    bitcoinAddress: cryptoOn ? paymentSettings.bitcoinAddress || "" : "",
+    /** Enabled marketplaces that carry a public order link — for the footer
+     *  "also order on …" strip and any storefront channel CTA. */
+    marketplaces: integrationSettings.connections
+      .filter((c) => c.enabled && c.orderUrl)
+      .map((c) => ({ provider: c.provider, url: c.orderUrl as string })),
   });
 }

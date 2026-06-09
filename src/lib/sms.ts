@@ -41,22 +41,22 @@ async function sendSMS(message: SMSMessage): Promise<boolean> {
 
 export function getDormantCustomerMessage(customerName: string): string {
   const firstName = customerName.split(" ")[0];
-  return `Hey ${firstName}! We miss you at Sud Italia 🍕 Order this week and get a free drink — just show this SMS. suditalia.pl`;
+  return `Hey ${firstName}! We miss you at Ottaviano 🍕 Order this week and get a free drink — just show this SMS. ottaviano.pl`;
 }
 
 export function getStreakReminderMessage(customerName: string, streakWeeks: number): string {
   const firstName = customerName.split(" ")[0];
-  return `${firstName}, you're on a ${streakWeeks}-week streak! 🔥 Don't break it — order today and keep earning bonus points. suditalia.pl`;
+  return `${firstName}, you're on a ${streakWeeks}-week streak! 🔥 Don't break it — order today and keep earning bonus points. ottaviano.pl`;
 }
 
 export function getPointsMilestoneMessage(customerName: string, points: number, nextReward: string): string {
   const firstName = customerName.split(" ")[0];
-  return `${firstName}, you have ${points} points! You're close to a ${nextReward}. Order now to unlock it → suditalia.pl`;
+  return `${firstName}, you have ${points} points! You're close to a ${nextReward}. Order now to unlock it → ottaviano.pl`;
 }
 
 export function getWelcomeMessage(customerName: string): string {
   const firstName = customerName.split(" ")[0];
-  return `Welcome to Sud Italia, ${firstName}! 🇮🇹 You earned points on your first order. Check your rewards → suditalia.pl/rewards`;
+  return `Welcome to Ottaviano, ${firstName}! 🇮🇹 You earned points on your first order. Check your rewards → ottaviano.pl/rewards`;
 }
 
 /**

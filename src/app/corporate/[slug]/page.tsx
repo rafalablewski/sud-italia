@@ -4,7 +4,7 @@ import { CorporateJoinForm } from "./CorporateJoinForm";
 import { Building2 } from "lucide-react";
 
 /**
- * Sud Italia Corporate — public landing page (audit §3.4).
+ * Ottaviano Corporate — public landing page (audit §3.4).
  *
  * URL companies share with their employees (e.g. /corporate/acme). Renders
  * the company hero stats and the join intake form. Members earn personal
@@ -46,7 +46,7 @@ export default async function CorporateLandingPage({
           </span>
 
           <p className="text-[11px] font-bold uppercase tracking-widest text-italia-gold-dark mt-4">
-            Sud Italia Corporate
+            Ottaviano Corporate
           </p>
           <h1 className="font-heading text-3xl font-semibold mt-1 leading-tight text-italia-dark">
             Bulk lunch for {rollup.name},<br />

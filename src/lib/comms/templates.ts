@@ -84,11 +84,11 @@ export function orderPlacedSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Sud Italia: thanks ${p.customerName}! Order ${p.orderId} (${p.totalDisplay} PLN) received. ${p.fulfillmentType === "delivery" ? "We'll text again when it's on the way." : p.slotDisplay ? `Ready at ${p.slotDisplay}.` : "We'll text when ready."}`,
+      body: `Ottaviano: thanks ${p.customerName}! Order ${p.orderId} (${p.totalDisplay} PLN) received. ${p.fulfillmentType === "delivery" ? "We'll text again when it's on the way." : p.slotDisplay ? `Ready at ${p.slotDisplay}.` : "We'll text when ready."}`,
     };
   }
   return {
-    body: `Sud Italia: dziękujemy, ${p.customerName}! Zamówienie ${p.orderId} (${p.totalDisplay} PLN) przyjęte. ${p.fulfillmentType === "delivery" ? "Damy znać, gdy ruszy do Ciebie." : p.slotDisplay ? `Gotowe o ${p.slotDisplay}.` : "Damy znać, gdy będzie gotowe."}`,
+    body: `Ottaviano: dziękujemy, ${p.customerName}! Zamówienie ${p.orderId} (${p.totalDisplay} PLN) przyjęte. ${p.fulfillmentType === "delivery" ? "Damy znać, gdy ruszy do Ciebie." : p.slotDisplay ? `Gotowe o ${p.slotDisplay}.` : "Damy znać, gdy będzie gotowe."}`,
   };
 }
 
@@ -102,19 +102,19 @@ export function orderReadySms(
     return {
       body:
         p.fulfillmentType === "delivery"
-          ? `Sud Italia: ${p.customerName}, your order ${p.orderId} is on the way!`
+          ? `Ottaviano: ${p.customerName}, your order ${p.orderId} is on the way!`
           : p.fulfillmentType === "dine-in"
-            ? `Sud Italia: ${p.customerName}, your table at ${p.locationName} is ready and order ${p.orderId} is being served.`
-            : `Sud Italia: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
+            ? `Ottaviano: ${p.customerName}, your table at ${p.locationName} is ready and order ${p.orderId} is being served.`
+            : `Ottaviano: ${p.customerName}, your order ${p.orderId} is ready for pickup at ${p.locationName}.`,
     };
   }
   return {
     body:
       p.fulfillmentType === "delivery"
-        ? `Sud Italia: ${p.customerName}, zamówienie ${p.orderId} jest w drodze!`
+        ? `Ottaviano: ${p.customerName}, zamówienie ${p.orderId} jest w drodze!`
         : p.fulfillmentType === "dine-in"
-          ? `Sud Italia: ${p.customerName}, Twój stolik w ${p.locationName} jest gotowy, a zamówienie ${p.orderId} jest podawane.`
-          : `Sud Italia: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
+          ? `Ottaviano: ${p.customerName}, Twój stolik w ${p.locationName} jest gotowy, a zamówienie ${p.orderId} jest podawane.`
+          : `Ottaviano: ${p.customerName}, zamówienie ${p.orderId} czeka do odbioru w ${p.locationName}.`,
   };
 }
 
@@ -126,11 +126,11 @@ export function orderCancelledSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Sud Italia: ${p.customerName}, we had to cancel order ${p.orderId}. If you were charged, the refund is on the way. Sorry for the trouble.`,
+      body: `Ottaviano: ${p.customerName}, we had to cancel order ${p.orderId}. If you were charged, the refund is on the way. Sorry for the trouble.`,
     };
   }
   return {
-    body: `Sud Italia: ${p.customerName}, musieliśmy anulować zamówienie ${p.orderId}. Jeśli było pobrane, zwrot w drodze. Przepraszamy.`,
+    body: `Ottaviano: ${p.customerName}, musieliśmy anulować zamówienie ${p.orderId}. Jeśli było pobrane, zwrot w drodze. Przepraszamy.`,
   };
 }
 
@@ -142,11 +142,11 @@ export function orderRefundedSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Sud Italia: ${p.customerName}, your refund of ${p.amountDisplay} for order ${p.orderId} is on the way. Reason: ${p.reasonLabel}.`,
+      body: `Ottaviano: ${p.customerName}, your refund of ${p.amountDisplay} for order ${p.orderId} is on the way. Reason: ${p.reasonLabel}.`,
     };
   }
   return {
-    body: `Sud Italia: ${p.customerName}, zwrot ${p.amountDisplay} za zamówienie ${p.orderId} został zlecony. Powód: ${p.reasonLabel}.`,
+    body: `Ottaviano: ${p.customerName}, zwrot ${p.amountDisplay} za zamówienie ${p.orderId} został zlecony. Powód: ${p.reasonLabel}.`,
   };
 }
 
@@ -169,7 +169,7 @@ export function orderConfirmedReceiptEmail(
 
   const labels = isEnglish
     ? {
-        subject: `Sud Italia receipt — order ${p.orderId}`,
+        subject: `Ottaviano receipt — order ${p.orderId}`,
         hi: `Hi ${p.customerName},`,
         thanks: `Thanks for your order at ${p.locationName}!`,
         orderL: "Order",
@@ -179,11 +179,11 @@ export function orderConfirmedReceiptEmail(
         pointsEarned: "Loyalty points earned",
         footer:
           "A copy of this receipt is on your account. Reply to this email if anything's off.",
-        sign: "— The Sud Italia team",
-        referralCta: "Share Sud Italia, earn points",
+        sign: "— The Ottaviano team",
+        referralCta: "Share Ottaviano, earn points",
       }
     : {
-        subject: `Paragon Sud Italia — zamówienie ${p.orderId}`,
+        subject: `Paragon Ottaviano — zamówienie ${p.orderId}`,
         hi: `Cześć ${p.customerName},`,
         thanks: `Dziękujemy za zamówienie w ${p.locationName}!`,
         orderL: "Zamówienie",
@@ -193,8 +193,8 @@ export function orderConfirmedReceiptEmail(
         pointsEarned: "Punkty zdobyte",
         footer:
           "Kopia paragonu jest na Twoim koncie. Odpowiedz na tę wiadomość, jeśli coś się nie zgadza.",
-        sign: "— Zespół Sud Italia",
-        referralCta: "Poleć Sud Italia, zdobądź punkty",
+        sign: "— Zespół Ottaviano",
+        referralCta: "Poleć Ottaviano, zdobądź punkty",
       };
 
   const text = `${labels.hi}
@@ -234,7 +234,7 @@ ${labels.sign}`;
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f4;margin:0;padding:24px;color:#222;">
   <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5;">
     <tr><td style="padding:24px 24px 0;">
-      <h1 style="font-size:18px;margin:0 0 4px;color:#9A2742;">Sud Italia</h1>
+      <h1 style="font-size:18px;margin:0 0 4px;color:#9A2742;">Ottaviano</h1>
       <p style="margin:0 0 20px;color:#666;font-size:13px;">${escapeHtml(p.locationName)}</p>
       <p style="margin:0 0 12px;">${escapeHtml(labels.hi)}</p>
       <p style="margin:0 0 16px;">${escapeHtml(labels.thanks)}</p>
@@ -285,10 +285,10 @@ export function feedbackRequestSms(
 ): RenderedSms {
   if (locale === "en") {
     return {
-      body: `Sud Italia: ${p.customerName}, how was order ${p.orderId}? 30 seconds of feedback helps a lot: ${p.feedbackUrl}`,
+      body: `Ottaviano: ${p.customerName}, how was order ${p.orderId}? 30 seconds of feedback helps a lot: ${p.feedbackUrl}`,
     };
   }
   return {
-    body: `Sud Italia: ${p.customerName}, jak było z zamówieniem ${p.orderId}? Wystarczy 30 sekund opinii: ${p.feedbackUrl}`,
+    body: `Ottaviano: ${p.customerName}, jak było z zamówieniem ${p.orderId}? Wystarczy 30 sekund opinii: ${p.feedbackUrl}`,
   };
 }

@@ -24,9 +24,9 @@ import { logger } from "@/lib/logger";
 
 const MAX_HOPS = 8;
 
-const SYSTEM_PROMPT = `You are the Sud Italia operations agent.
+const SYSTEM_PROMPT = `You are the Ottaviano operations agent.
 
-You assist managers, staff, and kitchen leads at a multi-location Neapolitan pizza truck chain (Kraków, Warszawa, expanding). You can query and modify the system on the operator's behalf using the available tools.
+You assist managers, staff, and kitchen leads at a multi-location Neapolitan pizza restaurant chain (Kraków, Warszawa, expanding). You can query and modify the system on the operator's behalf using the available tools.
 
 Rules:
 - Be concise. One short paragraph or a tight bullet list. Operators are mid-service — they don't have time for prose.
@@ -51,7 +51,7 @@ export interface AgentTurnInput {
    * Optional Boardroom persona (CEO/COO/CFO/CMO). When set, the loop
    * swaps in that persona's system prompt and narrows the tool set to
    * the persona's allowlist ∩ the role gate. Unset = the default
-   * Sud Italia ops agent (unchanged behaviour).
+   * Ottaviano ops agent (unchanged behaviour).
    */
   personaId?: BoardroomPersonaId;
 }

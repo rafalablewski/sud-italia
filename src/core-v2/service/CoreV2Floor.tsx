@@ -18,6 +18,25 @@ interface Kitchen {
 
 const STATUSES: TableStatus[] = ["available", "seated", "reserved", "out-of-service"];
 const zl0 = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
+const zl2 = (g: number) => `${(g / 100).toFixed(2)} zł`;
+
+export interface FloorOrderRow {
+  id: string;
+  status: string;
+  paid: boolean;
+  channel: "web" | "whatsapp" | "qr" | string;
+  fulfillmentType: string;
+  customerName: string;
+  partySize: number | null;
+  tableId: string | null;
+  tableNumber: string | null;
+  totalAmount: number;
+  itemCount: number;
+  lines: { name: string; quantity: number }[];
+  createdAt: string;
+}
+
+const CHANNEL_LABEL: Record<string, string> = { web: "Web", whatsapp: "WhatsApp", qr: "QR", pos: "POS" };
 
 /**
  * Core v2 · Service · Floor — the live room, wired to the same engine as today's
@@ -36,6 +55,9 @@ export function CoreV2Floor() {
   const [acting, setActing] = useState<string | null>(null);
   const [party, setParty] = useState("2");
   const [editing, setEditing] = useState<TwinTableRow | "new" | null>(null);
+  const [orders, setOrders] = useState<FloorOrderRow[]>([]);
+  const [lookup, setLookup] = useState("");
+  const [settling, setSettling] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +76,58 @@ export function CoreV2Floor() {
     void load();
   }, [load]);
   usePolling(load, 15000);
+
+  // Live orders on the floor — table mapping, channel, paid/unpaid status.
+  const loadOrders = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/floor/orders?location=${encodeURIComponent(loc)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      setOrders(Array.isArray(d.orders) ? d.orders : []);
+    } catch {
+      /* non-fatal */
+    }
+  }, [loc]);
+  useEffect(() => { void loadOrders(); }, [loadOrders]);
+  usePolling(loadOrders, 10000);
+
+  const ordersByTable = useMemo(() => {
+    const m = new Map<string, FloorOrderRow[]>();
+    for (const o of orders) {
+      if (!o.tableId) continue;
+      (m.get(o.tableId) ?? m.set(o.tableId, []).get(o.tableId)!).push(o);
+    }
+    return m;
+  }, [orders]);
+
+  const settle = async (orderId: string) => {
+    if (settling) return;
+    setSettling(orderId);
+    try {
+      const res = await fetch(`/api/admin/floor/orders?location=${encodeURIComponent(loc)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, action: "settle" }),
+      });
+      if (res.ok) { toast("Order settled", "success"); await loadOrders(); }
+      else toast("Could not settle order", "danger");
+    } finally {
+      setSettling(null);
+    }
+  };
+
+  const lookupResults = useMemo(() => {
+    const q = lookup.trim().toLowerCase();
+    if (!q) return [];
+    return orders.filter(
+      (o) =>
+        o.id.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        (o.tableNumber ?? "").toLowerCase().includes(q),
+    ).slice(0, 8);
+  }, [lookup, orders]);
+
+  const unpaidCount = useMemo(() => orders.filter((o) => !o.paid).length, [orders]);
 
   const post = async (action: "seat" | "clear", tableId: string, number: string) => {
     if (acting) return;
@@ -90,13 +164,14 @@ export function CoreV2Floor() {
         const ft = change.table;
         const existing = prev.tables.find((t) => t.id === ft.id);
         const row: TwinTableRow = existing
-          ? { ...existing, number: ft.number, seats: ft.seats, zone: ft.zone, status: ft.status, occupied: ft.status === "seated" }
+          ? { ...existing, number: ft.number, seats: ft.seats, zone: ft.zone, status: ft.status, notes: ft.notes, occupied: ft.status === "seated" }
           : {
               id: ft.id,
               number: ft.number,
               seats: ft.seats,
               zone: ft.zone,
               status: ft.status,
+              notes: ft.notes,
               turns: 0,
               medianDwellMin: null,
               dwellSource: null,
@@ -157,7 +232,44 @@ export function CoreV2Floor() {
           <div className="k"><div className="kl">Turn time</div><div className="kv mono">{s?.medianTurnMin != null ? `${s.medianTurnMin}m` : "—"}</div></div>
           <div className="k"><div className="kl">Spend / hr</div><div className="kv mono">{s?.spendVelocityPerHourGrosze != null ? zl0(s.spendVelocityPerHourGrosze) : "—"}</div></div>
           <div className="k"><div className="kl">Freeing ≤15m</div><div className="kv mono">{s?.freeingSoon15 ?? "—"}</div></div>
+          <div className="k"><div className="kl">To pay</div><div className="kv mono" style={unpaidCount > 0 ? { color: "var(--brand-bright, #e0564b)" } : undefined}>{unpaidCount || "—"}</div></div>
         </div>
+
+        <div className="cv-floor-bar">
+          <span className="cv-rec-lbl">⌕ Find order</span>
+          <input
+            className="cv-inp"
+            style={{ flex: 1, minWidth: 0 }}
+            value={lookup}
+            onChange={(e) => setLookup(e.target.value)}
+            placeholder="order id, guest name or table…"
+          />
+        </div>
+        {lookup.trim() && (
+          <div className="cv-lookup-results">
+            {lookupResults.length === 0 ? (
+              <div className="cv-ctx-empty pad">No active order matches &ldquo;{lookup.trim()}&rdquo;.</div>
+            ) : (
+              lookupResults.map((o) => (
+                <div key={o.id} className="cv-lookup-row">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {o.tableNumber ? `Table ${o.tableNumber}` : o.fulfillmentType} · {o.customerName}
+                      <span className="cv-chip" style={{ marginLeft: 8, height: 20, fontSize: 10.5 }}>{CHANNEL_LABEL[o.channel] ?? o.channel}</span>
+                    </div>
+                    <div className="cv-cust-sub" style={{ fontSize: 11.5 }}>{o.id} · {o.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}</div>
+                  </div>
+                  <span className={o.paid ? "cv-tpay paid" : "cv-tpay due"} style={{ position: "static" }}>{o.paid ? "✓ paid" : `${zl2(o.totalAmount)} to pay`}</span>
+                  {!o.paid && (
+                    <button type="button" className="cv-btn primary sm" disabled={settling === o.id} onClick={() => void settle(o.id)}>
+                      {settling === o.id ? "…" : "Mark paid"}
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {kitchen && kitchen.tier !== "calm" && (
           <div className={`cv-bottleneck ${kitchen.tier}`}>
@@ -212,6 +324,10 @@ export function CoreV2Floor() {
                 <div className="cv-tables">
                   {tbls.map((t) => {
                     const st = stateOf(t);
+                    const tOrders = ordersByTable.get(t.id) ?? [];
+                    const tUnpaid = tOrders.filter((o) => !o.paid);
+                    const tDue = tUnpaid.reduce((a, o) => a + o.totalAmount, 0);
+                    const hasQr = tOrders.some((o) => o.channel === "qr");
                     return (
                       <div key={t.id} className="cv-tbl2-wrap">
                         <button
@@ -220,10 +336,18 @@ export function CoreV2Floor() {
                           disabled={acting === t.id || t.status === "out-of-service"}
                           title={t.status === "out-of-service" ? "Out of service" : t.occupied ? "Clear table" : "Seat table"}
                         >
-                          <span className="tnum">{t.number}</span>
+                          <span className="tnum">{t.number}{t.notes ? <span className="cv-tnote" title={t.notes}> 📝</span> : null}</span>
                           <span className="tcap">{t.party ? `${t.party} / ${t.seats}` : `${t.seats} seats`}</span>
                           <span className={`tst ${st.cls}`}>● {st.label}</span>
-                          {t.openCheckGrosze ? <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span> : null}
+                          {tUnpaid.length > 0 ? (
+                            <span className="cv-tpay due" title={`${tUnpaid.length} order${tUnpaid.length === 1 ? "" : "s"} to pay`}>
+                              {hasQr ? "QR · " : ""}{zl2(tDue)} to pay
+                            </span>
+                          ) : tOrders.length > 0 ? (
+                            <span className="cv-tpay paid">{hasQr ? "QR " : ""}✓ paid</span>
+                          ) : t.openCheckGrosze ? (
+                            <span className="tinfo mono">{zl0(t.openCheckGrosze)} open</span>
+                          ) : null}
                         </button>
                         <button
                           type="button"
@@ -247,6 +371,9 @@ export function CoreV2Floor() {
       <TableDialog
         loc={loc}
         table={editing}
+        tableOrders={editing && editing !== "new" ? ordersByTable.get(editing.id) ?? [] : []}
+        settling={settling}
+        onSettle={settle}
         onClose={() => setEditing(null)}
         onSaved={(change) => {
           setEditing(null);
@@ -261,11 +388,17 @@ export function CoreV2Floor() {
 function TableDialog({
   loc,
   table,
+  tableOrders,
+  settling,
+  onSettle,
   onClose,
   onSaved,
 }: {
   loc: string;
   table: TwinTableRow | "new" | null;
+  tableOrders: FloorOrderRow[];
+  settling: string | null;
+  onSettle: (orderId: string) => void;
   onClose: () => void;
   onSaved: (change: { table?: FloorTable; deletedId?: string }) => void;
 }) {
@@ -276,7 +409,9 @@ function TableDialog({
   const [seats, setSeats] = useState("4");
   const [zone, setZone] = useState("");
   const [status, setStatus] = useState<TableStatus>("available");
+  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const rowNotes = row?.notes ?? "";
 
   useEffect(() => {
     if (table) {
@@ -284,9 +419,10 @@ function TableDialog({
       setSeats(String(row?.seats ?? 4));
       setZone(row?.zone ?? "");
       setStatus(row?.status ?? "available");
+      setNotes(rowNotes);
       setBusy(false);
     }
-  }, [table, row]);
+  }, [table, row, rowNotes]);
 
   const save = async () => {
     if (!number.trim() || busy) return;
@@ -301,6 +437,7 @@ function TableDialog({
           seats: Math.max(1, Math.min(50, Math.round(Number(seats) || 1))),
           zone: zone.trim() || undefined,
           status,
+          notes: notes.trim() || undefined,
         }),
       });
       if (res.ok) {
@@ -373,6 +510,33 @@ function TableDialog({
           ))}
         </select>
       </label>
+      <label className="cv-tbl-field">
+        <span>Service note</span>
+        <textarea className="cv-inp" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="allergy, VIP, high-chair, split bill…" style={{ resize: "vertical", fontFamily: "inherit" }} />
+      </label>
+
+      {!isNew && tableOrders.length > 0 && (
+        <div className="cv-tbl-orders">
+          <div className="cv-zone-h" style={{ marginTop: 6 }}><span className="zt">Orders at this table</span></div>
+          {tableOrders.map((o) => (
+            <div key={o.id} className="cv-lookup-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {o.customerName}
+                  <span className="cv-chip" style={{ marginLeft: 8, height: 20, fontSize: 10.5 }}>{CHANNEL_LABEL[o.channel] ?? o.channel}</span>
+                </div>
+                <div className="cv-cust-sub" style={{ fontSize: 11.5 }}>{o.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}</div>
+              </div>
+              <span className={o.paid ? "cv-tpay paid" : "cv-tpay due"} style={{ position: "static" }}>{o.paid ? "✓ paid" : `${zl2(o.totalAmount)}`}</span>
+              {!o.paid && (
+                <button type="button" className="cv-btn primary sm" disabled={settling === o.id} onClick={() => onSettle(o.id)}>
+                  {settling === o.id ? "…" : "Mark paid"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </CoreV2Dialog>
   );
 }

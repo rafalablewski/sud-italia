@@ -2,7 +2,7 @@
 
 ← back to [Homepage README](../README.md)
 
-Checkout on Sud Italia is **not a separate page**. It's a sequence
+Checkout on Ottaviano is **not a separate page**. It's a sequence
 inside the cart drawer (`src/components/cart/CartDrawer.tsx`) that
 slides over the menu page — the visitor never leaves their context.
 The flow is: cart review → fulfilment → identity → payment →
@@ -289,7 +289,7 @@ vocabulary. Every audit-tied wiring is preserved verbatim:
 | Component                  | V8 selector family            | Audit tie-in                                                  |
 | -------------------------- | ----------------------------- | ------------------------------------------------------------- |
 | `<LoyaltyEarnPreview />`   | `.v8-cart-loyalty-preview-*`  | Ochre star + italic point preview line in the paybar foot     |
-| `<CorporateOrderBanner />` | `.v8-cart-corp-*`             | "Sud Italia per le aziende" rollup card (audit §3.4)          |
+| `<CorporateOrderBanner />` | `.v8-cart-corp-*`             | "Ottaviano per le aziende" rollup card (audit §3.4)          |
 | `<TierPerkBanner />`       | `.v8-cart-perk-*`             | Famiglia Oro complimentary antipasto toggle (audit §2.2 row 6) |
 | `<TodBanner />`            | `.v8-cart-tod-*` (.is-late)   | Time-of-day pairing card; espresso palette for the late window |
 | `<ComboDealBanner />`      | `.v8-cart-combo-*`            | Italian Classic / Pasta Combo paper card with hairline progress |
@@ -446,7 +446,7 @@ il menù` CTA that closes the drawer back to the menu.
 The `.v8-cart-foot` block at the bottom of the scroll region:
 
 > *&ldquo;Mangia bene, ridi spesso, ama molto.&rdquo;*
-> SUD ITALIA · KRAKÓW · WARSZAWA
+> OTTAVIANO · KRAKÓW · WARSZAWA
 
 ### Behaviour contract preserved
 
