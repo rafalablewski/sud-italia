@@ -319,10 +319,13 @@ The sign-in surface (`src/components/auth/LoginForm.tsx`, shared by the universa
 team door **`/login`** and the owner-only **`/admin/login`**) is the one av3
 surface that renders **outside** `AdminShellV3`. Both route layouts
 (`src/app/login/layout.tsx`, `src/app/admin/login/layout.tsx`) load
-`themes/admin-v3/index.css`, the three `--font-admin-*` typefaces, and
-`themeBootScriptV3`, then wrap the form in `#admin-portal-root.av3-root` — so the
-door inherits the exact tokens, fonts, theme (dark canonical / light opt-in) and
-focus rings as the rest of admin, with no `AdminShellV3` chrome.
+`themes/admin-v3/index.css` and the three `--font-admin-*` typefaces, then wrap
+the form in `#admin-portal-root.av3-root` (with `flex flex-col flex-1`, matching
+the shell, so the canvas fills the `flex-col` body) — so the door inherits the
+exact tokens, fonts and focus rings as the rest of admin, with no `AdminShellV3`
+chrome. Unlike the shell it ships **no `themeBootScriptV3`**: the door renders
+the av3 **dark canonical** theme (it's intentionally dark + pre-auth), which also
+means no `<html>` attribute mutation and therefore no hydration mismatch.
 
 CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-auth*`). The chosen
 direction is **"spotlight minimal"** — clean + futuristic **inside the token

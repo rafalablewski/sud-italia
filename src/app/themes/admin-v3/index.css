@@ -1310,6 +1310,9 @@
    ========================================================================== */
 .av3-auth {
   position: relative;
+  /* flex-fill the (flex-col) #admin-portal-root so the canvas always covers the
+     viewport even when min-height:100dvh under-resolves; min-height is the floor. */
+  flex: 1;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;

@@ -1,14 +1,14 @@
 import "../themes/admin-v3/index.css";
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
-import { themeBootScriptV3 } from "@/admin-v3/theme";
 
 // The universal team door shares the LoginForm with /admin/login, both now on
 // the live admin design (v3 "Operator Terminal"). It lives outside the
 // AdminShell, so — exactly like /kitchen and /franchisee — this layout pulls in
 // the av3 stylesheet + the three admin typefaces directly on
-// `#admin-portal-root.av3-root`, and runs the same boot script the shell uses
-// so light/dark matches the rest of admin. Independent next/font instances from
+// `#admin-portal-root.av3-root`. The door renders the av3 **dark canonical**
+// theme (no boot script — no `<html>` mutation, so no hydration mismatch; the
+// door is intentionally dark, pre-auth). Independent next/font instances from
 // /admin/(shell)/layout so a login-only type tweak wouldn't move admin.
 const loginBody = Inter({ subsets: ["latin"], variable: "--font-admin-body", display: "swap" });
 const loginDisplay = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
@@ -26,9 +26,8 @@ export default function LoginLayout({ children }: { children: React.ReactNode })
     // `.av3-root` scopes the --av3-* tokens; the boot script sets the theme attr.
     <div
       id="admin-portal-root"
-      className={`${loginBody.variable} ${loginDisplay.variable} ${loginMono.variable} av3-root`}
+      className={`${loginBody.variable} ${loginDisplay.variable} ${loginMono.variable} av3-root flex flex-col flex-1`}
     >
-      <script dangerouslySetInnerHTML={{ __html: themeBootScriptV3 }} />
       {children}
     </div>
   );
