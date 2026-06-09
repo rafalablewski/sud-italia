@@ -1,12 +1,17 @@
 # Core v2 · KDS
 
-The always-dark kitchen wall. `/core-v2/kds`.
+The kitchen wall. `/core-v2/kds`.
 
 - **Live code:** `src/core-v2/kds/CoreV2Kds.tsx`.
-- **Theme:** `.cv-kds` (+ children) in `themes/core-v2/index.css` — the
-  `.cv-kds` scope **re-declares the surface/ink tokens to a fixed dark
-  palette**, so the wall stays dark even when the rest of Core v2 is in
-  light mode.
+- **Theme:** `.cv-kds` (+ children) in `themes/core-v2/index.css`. The
+  `.cv-kds` scope **re-declares the surface/ink + tone tokens to a dark
+  palette by default** (the wall look). The **in-shell board** follows the
+  app theme: `.cv2[data-theme="light"] .cv-body .cv-kds` re-declares a light
+  palette + light tones, so a light Core v2 gets a light KDS. The
+  **fullscreen kiosk** (`.cv-kiosk`, outside `.cv-body`) stays a dark wall
+  regardless of theme — that's the mounted night-trucks / glare display.
+  Translucent fills use `--kds-veil` / `--kds-track` tokens so they invert
+  with the palette instead of being hard-coded white.
 
 ## Views
 

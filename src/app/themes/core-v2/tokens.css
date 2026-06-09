@@ -2,7 +2,8 @@
    CORE v2 — design tokens (clean-room, NOT suite.css / admin)
    Scoped under `.cv2[data-theme]` so nothing leaks into Admin,
    Homepage, or the current /core. Dark is the default; light is
-   the option. KDS overrides these to a fixed dark wall.
+   the option. The KDS scope re-declares these (dark by default; the
+   in-shell board follows the theme, the kiosk stays dark).
    See docs/design-system/core-v2/theme/.
    ============================================================ */
 
