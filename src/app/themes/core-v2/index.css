@@ -102,6 +102,23 @@
 .cv2 .cv-seg.icons button.on { color: var(--ink); }
 .cv2 .cv-seg.icons button svg { width: 16px; height: 16px; }
 
+/* ---------- Loyalty unified filter bar — one row, all 34px, glyph-only ---------- */
+.cv2 .cv-loy-filters { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.cv2 .cv-loy-filters .cv-seg { height: 34px; padding: 3px; align-items: center; }
+.cv2 .cv-loy-filters .cv-seg button { height: 28px; }
+/* search grows to fill the gap between the pods, same height as them */
+.cv2 .cv-loy-filters .cv-search { height: 34px; flex: 1 1 200px; min-width: 160px; max-width: 460px; gap: 8px; }
+.cv2 .cv-loy-filters .cv-search svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
+/* tier gems tinted by metal; selected gets a ring in its own colour. Prefixed
+   with .cv-loy-filters so the tint out-ranks the generic .cv-seg.icons .on rule
+   and the selected gem keeps its metal colour. */
+.cv2 .cv-loy-filters .cv-tierseg button.t-all { color: var(--ink-3); }
+.cv2 .cv-loy-filters .cv-tierseg button.t-platinum { color: #aab4cc; }
+.cv2 .cv-loy-filters .cv-tierseg button.t-gold { color: var(--amber); }
+.cv2 .cv-loy-filters .cv-tierseg button.t-silver { color: #9aa0ad; }
+.cv2 .cv-loy-filters .cv-tierseg button.t-bronze { color: #c08a5e; }
+.cv2 .cv-loy-filters .cv-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
+
 /* ---------- body shell ---------- */
 .cv2 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 

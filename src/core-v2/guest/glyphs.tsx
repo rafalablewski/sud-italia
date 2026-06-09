@@ -60,6 +60,51 @@ const PATHS: Record<string, ReactNode> = {
       <path d="M3 4v4h4" />
     </>
   ),
+  // Loyalty members filter bar
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-3.6-3.6" />
+    </>
+  ),
+  // tier "All" — a layered stack (distinct from the per-tier gem)
+  tierAll: (
+    <>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </>
+  ),
+  // a faceted gem, tinted per tier by the button's color
+  gem: (
+    <>
+      <path d="M6 4h12l3 5-9 11L3 9 6 4Z" />
+      <path d="M3 9h18" />
+      <path d="M9 4 8 9l4 11 4-11-1-5" />
+    </>
+  ),
+  // sort keys
+  points: <path d="m12 3.5 2.6 5.7 6.2.6-4.7 4.2 1.4 6.1L12 17l-5.5 3.1 1.4-6.1L3.2 9.8l6.2-.6L12 3.5Z" />,
+  spent: (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.6" />
+    </>
+  ),
+  orders: (
+    <>
+      <path d="M6.5 8h11l-1 11.5a1 1 0 0 1-1 .9H8.5a1 1 0 0 1-1-.9L6.5 8Z" />
+      <path d="M9 8a3 3 0 0 1 6 0" />
+    </>
+  ),
+  name: (
+    <>
+      <path d="M4 7h7" />
+      <path d="M4 12h5" />
+      <path d="M4 17h3" />
+      <path d="M15 5v13" />
+      <path d="m12 15 3 3 3-3" />
+    </>
+  ),
 };
 
 export type GuestGlyphName = keyof typeof PATHS;
