@@ -58,12 +58,15 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   input** — click to rename, persisted via the same debounced `PUT`) ·
   channel/order tag · a `.cv-tabpromise` per-check ETA (max
   `promiseSecondsByCategory` across the lines, toned by the bottleneck
-  tier) · `.cv-covers` stepper (dine-in). A `.cv-delivery-paused` banner
-  shows when steering has capped the next delivery window
+  tier) · the `.cv-covers` stepper (dine-in) and, right beside it, the
+  `.cv-chan-aux` button — **Assign table / Table N** (dine-in, opens the
+  in-pane table picker) or **Add / Edit address** (delivery, opens the
+  address dialog). Both sit next to the covers count so the seating /
+  destination control lives with the party size. A `.cv-delivery-paused`
+  banner shows when steering has capped the next delivery window
   (`deliveryCapNextWindow === 0`).
-- **`.cv-chanrow` / `.cv-chan`** — channel (dine-in / takeaway /
-  delivery); `.cv-chan-aux` opens the in-pane table picker (dine-in) or
-  the address dialog (delivery).
+- **`.cv-chanrow` / `.cv-chan`** — the channel selector (dine-in /
+  takeaway / delivery), now just the three channel buttons.
 - **`.cv-timing` / `.cv-seg`** — dine-in **kitchen-timing** toggle
   (Coursed ↔ All together); writes `tab.coursed`, which the `.cv-lines`
   renderer reads to course or flat-list the ticket.

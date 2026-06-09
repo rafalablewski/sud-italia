@@ -881,20 +881,6 @@ export function CoreV2Pos({
                     </button>
                   </div>
                 )}
-              </div>
-
-              {/* channel + per-channel controls */}
-              <div className="cv-chanrow">
-                {CHANNELS.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={active.channel === c.key ? "cv-chan on" : "cv-chan"}
-                    onClick={() => setChannel(c.key)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
                 {active.channel === "dine-in" && (
                   <button type="button" className="cv-chan-aux" onClick={() => setTableOpen(true)}>
                     {active.tableId ? `Table ${tableById(active.tableId)?.number ?? "?"}` : "Assign table"}
@@ -912,6 +898,20 @@ export function CoreV2Pos({
                     {active.address ? "Edit address" : "Add address"}
                   </button>
                 )}
+              </div>
+
+              {/* channel selector */}
+              <div className="cv-chanrow">
+                {CHANNELS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    className={active.channel === c.key ? "cv-chan on" : "cv-chan"}
+                    onClick={() => setChannel(c.key)}
+                  >
+                    {c.label}
+                  </button>
+                ))}
               </div>
 
               {deliveryPaused && (
