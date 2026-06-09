@@ -1,6 +1,7 @@
 import { withAdmin } from "@/lib/api-middleware";
 import { getOrders } from "@/lib/store";
 import { subscribeOrderEvents } from "@/lib/order-events";
+import { diffOrders } from "@/lib/order-delta";
 
 export const dynamic = "force-dynamic";
 
@@ -47,13 +48,26 @@ export const GET = withAdmin(
     // it, so simulated tickets stream onto the KDS (clearly marked) while the
     // Orders list / dashboard stream stays free of demo tickets.
     const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
+    // Opt-in delta protocol (?delta=1): after a first {t:"snap"} frame, emit
+    // {t:"delta",changed,removed} diffs so a busy board re-renders only the
+    // tickets that moved and the wire carries diffs, not the whole list every
+    // frame. Without it, the legacy `data: [<array>]` contract is untouched, so
+    // any other consumer is unaffected. See docs/strategy/core-v2-local-first.md.
+    const wantDelta = req.nextUrl.searchParams.get("delta") === "1";
     const encoder = new TextEncoder();
 
     let lastJson = "";
+    // Per-connection signature index for delta diffing: id → serialized row.
+    let lastSig = new Map<string, string>();
+    let sentSnapshot = false;
     let closed = false;
 
     const stream = new ReadableStream({
       async start(controller) {
+        const emit = (obj: unknown) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        };
+
         const sendIfChanged = async () => {
           if (closed) return;
           try {
@@ -63,10 +77,26 @@ export const GET = withAdmin(
               (a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
             );
-            const payload = JSON.stringify(orders);
-            if (payload !== lastJson) {
-              lastJson = payload;
-              controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+
+            if (!wantDelta) {
+              // Legacy full-snapshot frames.
+              const payload = JSON.stringify(orders);
+              if (payload !== lastJson) {
+                lastJson = payload;
+                controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+              }
+              return;
+            }
+
+            // Delta path: diff this read against the last by per-row signature.
+            const { changed, removed, nextSig } = diffOrders(lastSig, orders);
+            lastSig = nextSig;
+
+            if (!sentSnapshot) {
+              sentSnapshot = true;
+              emit({ t: "snap", orders });
+            } else if (changed.length > 0 || removed.length > 0) {
+              emit({ t: "delta", changed, removed });
             }
           } catch {
             // A single failed read shouldn't kill the stream; the next tick retries.
