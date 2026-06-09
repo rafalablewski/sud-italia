@@ -195,26 +195,7 @@ export function CoreV2Loyalty() {
   };
 
   return (
-    <CoreV2Shell
-      eyebrow="Guest Engagement"
-      tabs={guestTabs("loyalty")}
-      subRight={
-        <div className="cv-seg icons">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              className={tab === t.key ? "on" : ""}
-              onClick={() => setTab(t.key)}
-              title={t.label}
-              aria-label={t.label}
-              aria-pressed={tab === t.key}
-            >
-              <GuestGlyph name={t.icon} />
-            </button>
-          ))}
-        </div>
-      }
-    >
+    <CoreV2Shell eyebrow="Guest Engagement" tabs={guestTabs("loyalty")}>
       <div className="cv-guest-inbox">
         <div className="cv-kpi-strip" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
           {kpis.map((k) => (
@@ -224,6 +205,24 @@ export function CoreV2Loyalty() {
               {k.s && <div className="cv-kpi-sub">{k.s}</div>}
             </div>
           ))}
+        </div>
+
+        <div className="cv-crm-filters">
+          <span className="cv-filter-l">View</span>
+          <div className="cv-seg icons">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                className={tab === t.key ? "on" : ""}
+                onClick={() => setTab(t.key)}
+                title={t.label}
+                aria-label={t.label}
+                aria-pressed={tab === t.key}
+              >
+                <GuestGlyph name={t.icon} />
+              </button>
+            ))}
+          </div>
         </div>
 
         {tab === "members" && (

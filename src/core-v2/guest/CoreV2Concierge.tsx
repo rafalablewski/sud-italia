@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
+import { useLocation } from "@/shared/LocationContext";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { guestTabs } from "./guestTabs";
 
@@ -31,8 +32,13 @@ interface Props {
  */
 export function CoreV2Concierge({ meta, settings, byLocation, waConfigured }: Props) {
   const toast = useCoreToast();
+  // Drive the inspected location from the shell's global location switcher
+  // (CoreV2LocationChip) — no second, page-local switch. The chip can sit on
+  // "All trucks", which has no per-location samples/matrix, so fall back to the
+  // first concrete location in that case.
+  const { location } = useLocation();
   const locations = useMemo(() => Object.keys(byLocation), [byLocation]);
-  const [loc, setLoc] = useState(locations[0] ?? "krakow");
+  const loc = location && byLocation[location] ? location : locations[0] ?? "krakow";
   const [exposure, setExposure] = useState<Record<string, boolean>>(settings.exposure ?? {});
   const [selected, setSelected] = useState(meta[0]?.id ?? "");
   const [test, setTest] = useState<{ status: number; ms: number; body: string } | null>(null);
@@ -86,18 +92,7 @@ export function CoreV2Concierge({ meta, settings, byLocation, waConfigured }: Pr
     <CoreV2Shell
       eyebrow="Guest Engagement"
       tabs={guestTabs("concierge")}
-      subRight={
-        <>
-          <span className="cv-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>
-          <div className="cv-seg">
-            {locations.map((l) => (
-              <button key={l} className={loc === l ? "on" : ""} onClick={() => setLoc(l)}>
-                {l[0].toUpperCase() + l.slice(1)}
-              </button>
-            ))}
-          </div>
-        </>
-      }
+      subRight={<span className="cv-chip" style={{ height: 32 }}>{liveCount}/{meta.length} live</span>}
     >
       <div className="cv-concierge">
         {/* capability inspector */}
