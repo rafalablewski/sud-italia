@@ -48,6 +48,9 @@
 .cv2 .cv-chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: var(--pill);
   background: var(--panel-2); border: 1px solid var(--line); font-weight: 550; font-size: 13px; color: var(--ink); }
 .cv2 .cv-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--basil); }
+.cv2 .cv-chip.danger { color: var(--danger); border-color: transparent; background: var(--danger-wash); }
+.cv2 .cv-chip.danger:hover { background: var(--danger); color: #fff; }
+.cv2 .cv-chip:disabled { opacity: .5; cursor: not-allowed; }
 .cv2 .cv-iconbtn { width: 34px; height: 34px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line);
   display: grid; place-items: center; color: var(--ink-2); transition: all var(--fast); }
 .cv2 .cv-iconbtn:hover { color: var(--ink); background: var(--hover); }

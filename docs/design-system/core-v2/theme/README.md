@@ -64,7 +64,9 @@ surface lives in [`../modules/`](../modules/).
 ### Global-action primitives
 
 - **`.cv-chip`** — pill (location chip, status, a `Dine-in` flag).
-  `.dot` = a small status dot.
+  `.dot` = a small status dot. `.on` = filled brand (active toggle);
+  `.danger` = destructive variant (red wash → solid red on hover, e.g. POS
+  *Void*); `:disabled` dims it.
 - **`.cv-iconbtn`** — 34px square icon button (theme toggle, fullscreen).
 - **`.cv-clock`** — the mono HH:MM clock.
 - **`.cv-tabs a/button`** — subbar view tabs; `.on` = active.

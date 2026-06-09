@@ -157,6 +157,12 @@ export function CoreV2Pos({
   }, []);
 
   const persistTab = useCallback((tab: PosTab) => {
+    // Optimistic checks carry a client `tmp-` id until the POST that creates
+    // them server-side returns the real one. Never PUT under a temp id — it
+    // would mint a phantom server tab that the cross-till poll then resurrects.
+    // Edits made in that sub-second window stay local and are flushed once,
+    // under the real id, at reconcile time (see `newTab`).
+    if (tab.id.startsWith("tmp-")) return;
     const timers = persistTimers.current;
     const existing = timers.get(tab.id);
     if (existing) clearTimeout(existing);
@@ -274,22 +280,68 @@ export function CoreV2Pos({
       return m ? Math.max(max, parseInt(m[1], 10)) : max;
     }, 0);
     const name = `Tab ${maxNum + 1}`;
+    // Optimistic open: show the check instantly with a temp id and switch to it
+    // so staff can start ringing items the moment they tap "+ New" — the till
+    // must not block on a server round-trip (which on a slow link made opening a
+    // check feel like it took "ages"). The POST runs in the background and we
+    // reconcile the temp id to the real one when it returns, carrying over any
+    // lines/channel rung in the meantime. `pendingSaves` is held up for the
+    // whole round-trip so the cross-till poll can't drop the not-yet-saved tab.
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+    const optimistic: PosTab = {
+      id: tempId,
+      locationSlug: pageLoc,
+      name,
+      channel: null,
+      status: "open",
+      items: [],
+      sentKds: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setTabs((prev) => [...prev, optimistic]);
+    setActiveTabId(tempId);
+    pendingSaves.current += 1;
     try {
       const res = await fetch(`/api/admin/pos/tabs?location=${encodeURIComponent(pageLoc)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      if (!res.ok) return;
-      const data: { tab?: PosTab } = await res.json();
-      if (data.tab) {
-        setTabs((prev) => [...prev, data.tab!]);
-        setActiveTabId(data.tab.id);
+      if (!res.ok) {
+        setTabs((prev) => prev.filter((t) => t.id !== tempId));
+        setActiveTabId((cur) => (cur === tempId ? null : cur));
+        return;
       }
+      const data: { tab?: PosTab } = await res.json();
+      const real = data.tab;
+      if (!real) {
+        setTabs((prev) => prev.filter((t) => t.id !== tempId));
+        setActiveTabId((cur) => (cur === tempId ? null : cur));
+        return;
+      }
+      // Swap temp → real id, keeping anything rung onto the optimistic check.
+      let merged: PosTab | null = null;
+      setTabs((prev) =>
+        prev.map((t) => {
+          if (t.id !== tempId) return t;
+          merged = { ...t, id: real.id, createdAt: real.createdAt ?? t.createdAt, updatedAt: new Date().toISOString() };
+          return merged;
+        }),
+      );
+      setActiveTabId((cur) => (cur === tempId ? real.id : cur));
+      // If items/channel were added during the round-trip, flush them once under
+      // the real id (the POST created the check empty).
+      if (merged && ((merged as PosTab).items.length > 0 || (merged as PosTab).channel)) persistTab(merged);
     } catch {
-      /* offline — no-op */
+      // Offline / network error — drop the optimistic check.
+      setTabs((prev) => prev.filter((t) => t.id !== tempId));
+      setActiveTabId((cur) => (cur === tempId ? null : cur));
+    } finally {
+      pendingSaves.current = Math.max(0, pendingSaves.current - 1);
     }
-  }, [pageLoc, tabs]);
+  }, [pageLoc, tabs, persistTab]);
 
   // --- Tables (dine-in picker) --------------------------------------------
   const [tables, setTables] = useState<FloorTable[]>([]);
@@ -419,6 +471,50 @@ export function CoreV2Pos({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [getActive, busyTabId, pageLoc, tabs, toast],
   );
+
+  // --- Void (delete an open check) -----------------------------------------
+  const [voidOpen, setVoidOpen] = useState(false);
+  // Drop an open check entirely: removes it from the rail and deletes it
+  // server-side (`DELETE /api/admin/pos/tabs?id=`). Optimistic — the row
+  // disappears at once; `pendingSaves` is held for the round-trip so the
+  // cross-till poll can't resurrect it before the delete commits. An empty,
+  // never-saved optimistic check (`tmp-` id) is removed locally only.
+  const deleteTab = useCallback(
+    async (id: string) => {
+      const t = tabs.find((x) => x.id === id);
+      if (!t) return;
+      const left = tabs.filter((x) => x.id !== id);
+      setTabs(left);
+      setActiveTabId((cur) => (cur === id ? left[0]?.id ?? null : cur));
+      // Cancel any debounced PUT still queued for this check.
+      const timer = persistTimers.current.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        persistTimers.current.delete(id);
+      }
+      if (id.startsWith("tmp-")) return; // never hit the server
+      pendingSaves.current += 1;
+      try {
+        await fetch(
+          `/api/admin/pos/tabs?location=${encodeURIComponent(t.locationSlug)}&id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        toast(`Voided ${t.name}`, "default");
+      } catch {
+        /* offline — best effort; the poll reconciles when the link returns */
+      } finally {
+        pendingSaves.current = Math.max(0, pendingSaves.current - 1);
+      }
+    },
+    [tabs, toast],
+  );
+  // Empty checks vanish on tap; a check with rung items asks first.
+  const requestVoid = useCallback(() => {
+    const t = tabs.find((x) => x.id === activeTabId);
+    if (!t || busyTabId) return;
+    if (t.items.length === 0) void deleteTab(t.id);
+    else setVoidOpen(true);
+  }, [tabs, activeTabId, busyTabId, deleteTab]);
 
   // --- Pricing (real menu + real combo discount) ---------------------------
   const cartOf = useCallback(
@@ -711,6 +807,11 @@ export function CoreV2Pos({
           {active && (
             <button type="button" className={active.status === "parked" ? "cv-chip on" : "cv-chip"} style={{ height: 32 }} onClick={togglePark} title="Park / resume this check">
               {active.status === "parked" ? "▣ Parked" : "▢ Park"}
+            </button>
+          )}
+          {active && (
+            <button type="button" className="cv-chip danger" style={{ height: 32 }} disabled={!!busyTabId} onClick={requestVoid} title="Void / delete this check">
+              🗑 Void
             </button>
           )}
           <button type="button" className="cv-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
@@ -1056,6 +1157,40 @@ export function CoreV2Pos({
               </button>
             </div>
           </div>
+        )}
+      </CoreV2Dialog>
+
+      {/* Void confirmation — only when the check has rung items */}
+      <CoreV2Dialog
+        open={voidOpen && !!active}
+        onClose={() => setVoidOpen(false)}
+        title="Void this check?"
+        footer={
+          <>
+            <button type="button" className="cv-btn ghost" onClick={() => setVoidOpen(false)}>
+              Keep check
+            </button>
+            <button
+              type="button"
+              className="cv-btn danger"
+              disabled={!!busyTabId}
+              onClick={() => {
+                const id = active?.id;
+                setVoidOpen(false);
+                if (id) void deleteTab(id);
+              }}
+            >
+              Void check
+            </button>
+          </>
+        }
+      >
+        {active && (
+          <p className="cv-tender-note">
+            <b>{active.name}</b> has {active.items.reduce((s, l) => s + l.quantity, 0)} item
+            {active.items.reduce((s, l) => s + l.quantity, 0) === 1 ? "" : "s"} ({fmtPLN(grandG(active))}). This deletes the
+            open check for good — it can&apos;t be undone.
+          </p>
         )}
       </CoreV2Dialog>
 
