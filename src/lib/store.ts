@@ -12019,8 +12019,132 @@ export async function withIdempotency<T>(
 // withLock + readJSON/writeJSON, upsert by id. Per-location filtering happens
 // on read so the API can scope to the caller's location.
 
+// --- Per-location JSON-list store (m3 contention split) -------------------
+//
+// Generalises the POS-tabs split to the floor data layer. A single global
+// `<base>.json` blob means every location serializes on one withLock — a Kraków
+// seat/clear blocked a Warszawa one. These helpers key the data per location
+// (`<base>.<loc>.json`) and lock per location, so writes at different trucks
+// never contend. A draining legacy union keeps any pre-split rows visible and
+// promotes them into their per-location key on the first write for that
+// location; new rows never touch legacy, so it empties and is then skipped via
+// a per-instance latch. For row types shaped { id, locationSlug }.
+
+interface PerLocationBlob<T extends { id: string; locationSlug: string }> {
+  /** Rows for one location (per-location key ∪ not-yet-promoted legacy rows). */
+  readForLocation(loc: string): Promise<T[]>;
+  /** Rows across every active location + any legacy rows (admin "all" view). */
+  readAll(): Promise<T[]>;
+  /** Find one row by id; pass the location to skip the active-location scan. */
+  find(id: string, loc?: string): Promise<T | undefined>;
+  /** Upsert a fully-built row, locked to its location. */
+  upsert(row: T): Promise<T>;
+  /** Per-location locked read-modify-write — for writes that need the prior
+   *  rows (a status transition, an append). `fn` returns the next rows + a
+   *  result; any legacy rows seeded in are promoted out of the legacy blob. */
+  mutate<R>(loc: string, fn: (rows: T[]) => Promise<{ rows: T[]; result: R }>): Promise<R>;
+  /** Delete by id; pass the location to skip the scan. */
+  remove(id: string, loc?: string): Promise<boolean>;
+}
+
+function makePerLocationBlob<T extends { id: string; locationSlug: string }>(base: string): PerLocationBlob<T> {
+  const legacyKey = `${base}.json`;
+  const keyFor = (loc: string) => `${base}.${loc}.json`;
+  let legacyDrained = false;
+
+  const readLegacy = async (): Promise<T[]> => {
+    if (legacyDrained) return [];
+    const list = await readJSON<T[]>(legacyKey, []);
+    if (list.length === 0) legacyDrained = true;
+    return list;
+  };
+  const dropFromLegacy = async (ids: Set<string>): Promise<number> => {
+    if (legacyDrained || ids.size === 0) return 0;
+    return withLock(legacyKey, async () => {
+      const list = await readJSON<T[]>(legacyKey, []);
+      const next = list.filter((r) => !ids.has(r.id));
+      const removed = list.length - next.length;
+      if (removed > 0) await writeJSON(legacyKey, next);
+      if (next.length === 0) legacyDrained = true;
+      return removed;
+    });
+  };
+  const readForLocation = async (loc: string): Promise<T[]> => {
+    const own = await readJSON<T[]>(keyFor(loc), []);
+    const legacy = (await readLegacy()).filter((r) => r.locationSlug === loc);
+    if (legacy.length === 0) return own;
+    const byId = new Map<string, T>();
+    for (const r of legacy) byId.set(r.id, r);
+    for (const r of own) byId.set(r.id, r); // per-location wins over legacy
+    return [...byId.values()];
+  };
+  const readAll = async (): Promise<T[]> => {
+    const legacy = await readLegacy();
+    const active = await getActiveLocationsAsync().catch(() => []);
+    const slugs = new Set<string>([...active.map((l) => l.slug), ...legacy.map((r) => r.locationSlug)]);
+    const own = (await Promise.all([...slugs].map((s) => readJSON<T[]>(keyFor(s), [])))).flat();
+    const byId = new Map<string, T>();
+    for (const r of legacy) byId.set(r.id, r);
+    for (const r of own) byId.set(r.id, r);
+    return [...byId.values()];
+  };
+  const locationOf = async (id: string): Promise<string | undefined> => {
+    const active = await getActiveLocationsAsync().catch(() => []);
+    for (const l of active) {
+      const own = await readJSON<T[]>(keyFor(l.slug), []);
+      if (own.some((r) => r.id === id)) return l.slug;
+    }
+    return (await readLegacy()).find((r) => r.id === id)?.locationSlug;
+  };
+  const find = async (id: string, loc?: string): Promise<T | undefined> => {
+    const at = loc ?? (await locationOf(id));
+    if (!at) return undefined;
+    return (await readForLocation(at)).find((r) => r.id === id);
+  };
+  const mutate = async <R>(loc: string, fn: (rows: T[]) => Promise<{ rows: T[]; result: R }>): Promise<R> => {
+    return withLockScoped(base, loc, async () => {
+      // Seed with this location's per-key rows plus any legacy rows for it, so a
+      // read-modify-write sees pre-split rows too. Everything written lands in
+      // the per-location key, so seeded legacy rows are promoted (dropped from
+      // legacy) on the way out.
+      const own = await readJSON<T[]>(keyFor(loc), []);
+      const ownIds = new Set(own.map((r) => r.id));
+      const legacyForLoc = (await readLegacy()).filter((r) => r.locationSlug === loc && !ownIds.has(r.id));
+      const { rows, result } = await fn([...own, ...legacyForLoc]);
+      await writeJSON(keyFor(loc), rows);
+      if (legacyForLoc.length) await dropFromLegacy(new Set(legacyForLoc.map((r) => r.id)));
+      return result;
+    });
+  };
+  const upsert = (row: T): Promise<T> =>
+    mutate<T>(row.locationSlug, async (rows) => {
+      const i = rows.findIndex((r) => r.id === row.id);
+      if (i >= 0) rows[i] = row;
+      else rows.push(row);
+      return { rows, result: row };
+    });
+  const remove = async (id: string, loc?: string): Promise<boolean> => {
+    const at = loc ?? (await locationOf(id));
+    if (at) {
+      const removed = await withLockScoped(base, at, async () => {
+        const own = await readJSON<T[]>(keyFor(at), []);
+        const next = own.filter((r) => r.id !== id);
+        if (next.length === own.length) return false;
+        await writeJSON(keyFor(at), next);
+        return true;
+      });
+      if (removed) return true;
+    }
+    // Not in any per-location key — maybe a pre-split row still in legacy.
+    return (await dropFromLegacy(new Set([id]))) > 0;
+  };
+  return { readForLocation, readAll, find, upsert, mutate, remove };
+}
+
+const tablesBlob = makePerLocationBlob<FloorTable>("floor-tables");
+
 export async function getTables(locationSlug?: string): Promise<FloorTable[]> {
-  const list = await readJSON<FloorTable[]>("floor-tables.json", []);
+  const list = locationSlug ? await tablesBlob.readForLocation(locationSlug) : await tablesBlob.readAll();
   const scoped = locationSlug ? list.filter((t) => t.locationSlug === locationSlug) : list;
   // Stable order: zone, then numeric-aware label.
   return scoped.sort(
@@ -12046,71 +12170,69 @@ export interface FloorEvent {
   at: string;
 }
 
+const eventsBlob = makePerLocationBlob<FloorEvent>("floor-events");
+
 export async function getFloorEvents(locationSlug?: string, sinceIso?: string): Promise<FloorEvent[]> {
-  const all = await readJSON<FloorEvent[]>("floor-events.json", []);
+  const all = locationSlug ? await eventsBlob.readForLocation(locationSlug) : await eventsBlob.readAll();
   return all.filter(
     (e) => (!locationSlug || e.locationSlug === locationSlug) && (!sinceIso || e.at >= sinceIso),
   );
 }
 
 export async function recordFloorEvent(event: FloorEvent): Promise<void> {
-  await withLock("floor-events.json", async () => {
-    const list = await readJSON<FloorEvent[]>("floor-events.json", []);
-    list.push(event);
-    await writeJSON("floor-events.json", list);
+  // Append-only: write to the event's per-location key under its own lock.
+  await eventsBlob.mutate<void>(event.locationSlug, async (rows) => {
+    rows.push(event);
+    return { rows, result: undefined };
   });
 }
 
 export async function saveTable(
   input: Omit<FloorTable, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<FloorTable> {
-  return withLock("floor-tables.json", async () => {
-    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
-    const table: FloorTable = {
-      id: input.id || `tbl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      locationSlug: input.locationSlug,
-      number: input.number,
-      seats: input.seats,
-      zone: input.zone,
-      status: input.status,
-      createdAt: input.createdAt ?? new Date().toISOString(),
-    };
-    const i = list.findIndex((t) => t.id === table.id);
-    const prevStatus = i >= 0 ? list[i].status : null;
-    if (i >= 0) list[i] = table;
-    else list.push(table);
-    await writeJSON("floor-tables.json", list);
-    // Instrument the status transition for the Floor Twin's measured dwell.
-    // Fire-and-forget: a logging failure must never fail the table save.
-    if (prevStatus && prevStatus !== table.status) {
-      void recordFloorEvent({
-        id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        locationSlug: table.locationSlug,
-        tableId: table.id,
-        from: prevStatus,
-        to: table.status,
-        at: new Date().toISOString(),
-      }).catch(() => {});
-    }
-    return table;
+  const table: FloorTable = {
+    id: input.id || `tbl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    locationSlug: input.locationSlug,
+    number: input.number,
+    seats: input.seats,
+    zone: input.zone,
+    status: input.status,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+  let prevStatus: string | null = null;
+  await tablesBlob.mutate<void>(table.locationSlug, async (rows) => {
+    const i = rows.findIndex((t) => t.id === table.id);
+    prevStatus = i >= 0 ? rows[i].status : null;
+    if (i >= 0) rows[i] = table;
+    else rows.push(table);
+    return { rows, result: undefined };
   });
+  // Instrument the status transition for the Floor Twin's measured dwell.
+  // Fire-and-forget: a logging failure must never fail the table save.
+  if (prevStatus && prevStatus !== table.status) {
+    void recordFloorEvent({
+      id: `fe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      locationSlug: table.locationSlug,
+      tableId: table.id,
+      from: prevStatus,
+      to: table.status,
+      at: new Date().toISOString(),
+    }).catch(() => {});
+  }
+  return table;
 }
 
-export async function deleteTable(id: string): Promise<boolean> {
-  return withLock("floor-tables.json", async () => {
-    const list = await readJSON<FloorTable[]>("floor-tables.json", []);
-    const filtered = list.filter((t) => t.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("floor-tables.json", filtered);
-    return true;
-  });
+export async function deleteTable(id: string, locationSlug?: string): Promise<boolean> {
+  return tablesBlob.remove(id, locationSlug);
 }
+
+const reservationsBlob = makePerLocationBlob<Reservation>("reservations");
 
 export async function getReservations(
   locationSlug?: string,
   date?: string,
 ): Promise<Reservation[]> {
-  const list = await readJSON<Reservation[]>("reservations.json", []);
+  const list = locationSlug ? await reservationsBlob.readForLocation(locationSlug) : await reservationsBlob.readAll();
   let scoped = locationSlug ? list.filter((r) => r.locationSlug === locationSlug) : list;
   if (date) scoped = scoped.filter((r) => r.date === date);
   return scoped.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -12119,39 +12241,26 @@ export async function getReservations(
 export async function saveReservation(
   input: Omit<Reservation, "id" | "createdAt"> & { id?: string; createdAt?: string },
 ): Promise<Reservation> {
-  return withLock("reservations.json", async () => {
-    const list = await readJSON<Reservation[]>("reservations.json", []);
-    const res: Reservation = {
-      id: input.id || `res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      locationSlug: input.locationSlug,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      partySize: input.partySize,
-      date: input.date,
-      time: input.time,
-      durationMin: input.durationMin,
-      tableId: input.tableId,
-      slotId: input.slotId,
-      status: input.status,
-      notes: input.notes,
-      createdAt: input.createdAt ?? new Date().toISOString(),
-    };
-    const i = list.findIndex((r) => r.id === res.id);
-    if (i >= 0) list[i] = res;
-    else list.push(res);
-    await writeJSON("reservations.json", list);
-    return res;
-  });
+  const res: Reservation = {
+    id: input.id || `res-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    locationSlug: input.locationSlug,
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
+    partySize: input.partySize,
+    date: input.date,
+    time: input.time,
+    durationMin: input.durationMin,
+    tableId: input.tableId,
+    slotId: input.slotId,
+    status: input.status,
+    notes: input.notes,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+  return reservationsBlob.upsert(res);
 }
 
-export async function deleteReservation(id: string): Promise<boolean> {
-  return withLock("reservations.json", async () => {
-    const list = await readJSON<Reservation[]>("reservations.json", []);
-    const filtered = list.filter((r) => r.id !== id);
-    if (filtered.length === list.length) return false;
-    await writeJSON("reservations.json", filtered);
-    return true;
-  });
+export async function deleteReservation(id: string, locationSlug?: string): Promise<boolean> {
+  return reservationsBlob.remove(id, locationSlug);
 }
 
 // --- POS open checks (tabs) ----------------------------------------------

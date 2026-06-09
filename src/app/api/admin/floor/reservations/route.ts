@@ -90,10 +90,10 @@ export const POST = withAdmin(
 
 export const DELETE = withAdmin(
   { roles: ["manager"], locationParam: "location" },
-  async (req) => {
+  async (req, _ctx, { locationSlug }) => {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-    const ok = await deleteReservation(id);
+    const ok = await deleteReservation(id, locationSlug ?? undefined);
     return NextResponse.json({ ok });
   },
 );

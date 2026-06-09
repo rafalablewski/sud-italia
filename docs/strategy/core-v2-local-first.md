@@ -208,6 +208,33 @@ end-to-end against the FS store. The normalized `pos_tabs` **table** (with
 indexed reads, validated in the real DB) remains the eventual end-state — this
 split removes the contention now without that risk.
 
+#### 4.0b Floor data layer — per-location lock split (shipped)
+
+The same split applied to the floor's three global blobs — `floor-tables.json`
+(seat/clear status writes during service), `floor-events.json` (appended on
+every status transition), and `reservations.json` — all of which carried
+location-scoped rows but serialized every truck on one lock. The POS-tabs
+pattern was generalized into a reusable `makePerLocationBlob<T>(base)` helper
+(`src/lib/store.ts`): per-location keys (`<base>.<loc>.json`), per-location
+locks, and the same lossless legacy union → promote-on-first-write → drain (one
+mutate promotes **all** of a location's legacy rows at once, since the whole
+working set is rewritten into the per-location key). Tables/events/reservations
+are thin instances over it; `getTables` / `getReservations` / `getFloorEvents`
+read per-location (or union every active location for the admin "all" view),
+`deleteTable` / `deleteReservation` take an optional `locationSlug` (fast path)
+and fall back to an active-location scan. Covered by `floor-store.test.ts`
+(per-location CRUD + scoping + the seat/clear transition event) with the legacy
+promote/drain verified end-to-end against the FS store.
+
+#### 4.0c Remaining blobs — gated on real-DB validation
+
+`WhatsApp flags / sessions` and `settings` are **not** location-scoped (WhatsApp
+is chain-wide / phone-based; settings are loyalty/growth config), so the
+per-location split doesn't apply — their normalization is the **DB-table**
+migration, which can only be validated against the real Neon deploy (no
+`DATABASE_URL` in CI / sandbox). Deferred to an environment where the indexed-read
+path can be exercised, rather than shipped partly-unverified.
+
 ### 4.1 Connection / cold-start
 
 Independently: keep Neon warm and pooled (the serverless HTTP driver cold-starts
@@ -225,6 +252,8 @@ instrumentation so "fast" is a defended number, not a vibe.
 | **2a — idempotency + transient retry** | shipped | a re-sent charge replays its result (no double-charge / no 404); transient blips retry invisibly on send/charge/bump |
 | **2b — persisted offline queue** | shipped | POS send/charge made offline survive a reload and replay exactly once (FIFO per tab) on reconnect; a "syncing" pill shows pending writes |
 | **3 — POS tabs per-location lock split** | shipped | open checks keyed/locked per location (`pos-tabs.<loc>.json`); tills at different trucks no longer serialize on one lock; lossless self-draining legacy migration |
+| **3 — Floor data per-location lock split** | shipped | tables / floor-events / reservations split off their global blobs via a reusable `makePerLocationBlob` helper; seat/clear at one truck no longer blocks another |
+| **3 — WhatsApp + settings normalization** | deferred | not location-scoped → needs the DB-table migration, which requires the real Neon deploy to validate (no `DATABASE_URL` in CI/sandbox) |
 | **3 — normalization** | after | last hot blob (`pos_tabs`) off `kv_store`; floor-twin read is fully indexed; global `withLock` retired |
 
 Phase 1 + 2 deliver the felt "instant like Square" + "never breaks like Toast".
