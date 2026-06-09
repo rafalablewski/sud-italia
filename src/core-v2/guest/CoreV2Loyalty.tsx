@@ -223,12 +223,10 @@ export function CoreV2Loyalty() {
               </button>
             ))}
           </div>
-        </div>
-
-        {tab === "members" && (
-          <>
-            <div className="cv-crm-filters">
-              <div className="cv-search" style={{ maxWidth: 240 }}>
+          {tab === "members" && (
+            <>
+              <div className="cv-sp" />
+              <div className="cv-search" style={{ maxWidth: 220 }}>
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or phone…" />
               </div>
               <div className="cv-segs">
@@ -238,7 +236,6 @@ export function CoreV2Loyalty() {
                   </button>
                 ))}
               </div>
-              <div className="cv-sp" />
               <div className="cv-seg">
                 {(["points", "spent", "orders", "name"] as const).map((s) => (
                   <button key={s} className={sort === s ? "on" : ""} onClick={() => setSort(s)}>
@@ -246,7 +243,12 @@ export function CoreV2Loyalty() {
                   </button>
                 ))}
               </div>
-            </div>
+            </>
+          )}
+        </div>
+
+        {tab === "members" && (
+          <>
             <div className="cv-crm-table-wrap">
               <table className="cv-tbl">
                 <thead>
