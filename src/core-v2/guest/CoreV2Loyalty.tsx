@@ -223,7 +223,7 @@ export function CoreV2Loyalty() {
           ))}
         </div>
 
-        <div className="cv-loy-filters">
+        <div className="cv-gfilters">
           {/* view switcher */}
           <div className="cv-seg icons" role="group" aria-label="View">
             {TABS.map((t) => (

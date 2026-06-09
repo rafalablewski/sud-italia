@@ -6,7 +6,7 @@ import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
 import { useCoreToast } from "@/core-v2/ui/Toast";
 import { guestTabs } from "./guestTabs";
-import { GuestGlyph } from "./glyphs";
+import { GuestGlyph, type GuestGlyphName } from "./glyphs";
 
 interface WaSessionRow {
   phone: string;
@@ -59,6 +59,12 @@ interface Metrics {
   historicConversations: number;
 }
 type Filter = "inbox" | "live" | "awaiting" | "archived";
+const CONV_FILTERS: { key: Filter; label: string; icon: GuestGlyphName }[] = [
+  { key: "inbox", label: "Inbox", icon: "inbox" },
+  { key: "live", label: "Live · window open", icon: "live" },
+  { key: "awaiting", label: "Awaiting reply", icon: "awaiting" },
+  { key: "archived", label: "Archived", icon: "archive" },
+];
 
 const zl = (g: number) => (g / 100).toFixed(2).replace(".", ",");
 function clock(iso: string): string {
@@ -831,14 +837,22 @@ export function CoreV2Inbox() {
         <div className="cv-inbox">
           {/* conversation list */}
           <section className="cv-convs">
-            <div className="cv-convs-h">
+            <div className="cv-convs-h cv-gfilters">
               <div className="cv-search">
+                <GuestGlyph name="search" />
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or phone…" aria-label="Search conversations" />
               </div>
-              <div className="cv-convfilters">
-                {(["inbox", "live", "awaiting", "archived"] as Filter[]).map((f) => (
-                  <button key={f} className={filter === f ? "on" : ""} onClick={() => setFilter(f)}>
-                    {f[0].toUpperCase() + f.slice(1)}
+              <div className="cv-seg icons" role="group" aria-label="Filter conversations">
+                {CONV_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    className={filter === f.key ? "on" : ""}
+                    onClick={() => setFilter(f.key)}
+                    title={f.label}
+                    aria-label={f.label}
+                    aria-pressed={filter === f.key}
+                  >
+                    <GuestGlyph name={f.icon} />
                   </button>
                 ))}
               </div>

@@ -69,9 +69,15 @@ surface lives in [`../modules/`](../modules/).
 - **`.cv-clock`** — the mono HH:MM clock.
 - **`.cv-tabs a/button`** — subbar view tabs; `.on` = active.
 - **`.cv-seg button`** — a segmented filter (KDS stage filter, etc.).
-  `.cv-seg.icons` = square icon-only cells (32px, centred 16px glyph) for an
-  icon-only switcher (e.g. the Loyalty view-switcher); pair each button with a
-  `title` / `aria-label` so the dropped text stays accessible.
+  `.cv-seg.icons` = square icon-only cells (centred 16px glyph) for an
+  icon-only switcher / filter pod; pair each button with a `title` /
+  `aria-label` so the dropped text stays accessible.
+- **`.cv-gfilters`** — the shared **glyph-only filter bar** for the guest
+  surfaces (Inbox / Loyalty / CRM): one flex-wrap row where every control is a
+  uniform 34px, a `.cv-search` (leading magnifier glyph) flex-grows to fill,
+  and the filters are `.cv-seg.icons` pods. Loyalty's tier pod adds
+  `.cv-tierseg` (gems tinted per metal). Glyphs come from
+  `src/core-v2/guest/glyphs.tsx`.
 
 ### Scaffold
 

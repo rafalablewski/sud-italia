@@ -103,21 +103,21 @@
 .cv2 .cv-seg.icons button svg { width: 16px; height: 16px; }
 
 /* ---------- Loyalty unified filter bar — one row, all 34px, glyph-only ---------- */
-.cv2 .cv-loy-filters { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
-.cv2 .cv-loy-filters .cv-seg { height: 34px; padding: 3px; align-items: center; }
-.cv2 .cv-loy-filters .cv-seg button { height: 28px; }
+.cv2 .cv-gfilters { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.cv2 .cv-gfilters .cv-seg { height: 34px; padding: 3px; align-items: center; }
+.cv2 .cv-gfilters .cv-seg button { height: 28px; }
 /* search grows to fill the gap between the pods, same height as them */
-.cv2 .cv-loy-filters .cv-search { height: 34px; flex: 1 1 200px; min-width: 160px; max-width: 460px; gap: 8px; }
-.cv2 .cv-loy-filters .cv-search svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
+.cv2 .cv-gfilters .cv-search { height: 34px; flex: 1 1 200px; min-width: 160px; max-width: 460px; gap: 8px; }
+.cv2 .cv-gfilters .cv-search svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
 /* tier gems tinted by metal; selected gets a ring in its own colour. Prefixed
-   with .cv-loy-filters so the tint out-ranks the generic .cv-seg.icons .on rule
+   with .cv-gfilters so the tint out-ranks the generic .cv-seg.icons .on rule
    and the selected gem keeps its metal colour. */
-.cv2 .cv-loy-filters .cv-tierseg button.t-all { color: var(--ink-3); }
-.cv2 .cv-loy-filters .cv-tierseg button.t-platinum { color: #aab4cc; }
-.cv2 .cv-loy-filters .cv-tierseg button.t-gold { color: var(--amber); }
-.cv2 .cv-loy-filters .cv-tierseg button.t-silver { color: #9aa0ad; }
-.cv2 .cv-loy-filters .cv-tierseg button.t-bronze { color: #c08a5e; }
-.cv2 .cv-loy-filters .cv-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
+.cv2 .cv-gfilters .cv-tierseg button.t-all { color: var(--ink-3); }
+.cv2 .cv-gfilters .cv-tierseg button.t-platinum { color: #aab4cc; }
+.cv2 .cv-gfilters .cv-tierseg button.t-gold { color: var(--amber); }
+.cv2 .cv-gfilters .cv-tierseg button.t-silver { color: #9aa0ad; }
+.cv2 .cv-gfilters .cv-tierseg button.t-bronze { color: #c08a5e; }
+.cv2 .cv-gfilters .cv-tierseg button.on { background: var(--panel); box-shadow: inset 0 0 0 1.5px currentColor; }
 
 /* ---------- body shell ---------- */
 .cv2 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -569,10 +569,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-search { height: 36px; border-radius: 9px; background: var(--panel-3); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; }
 .cv2 .cv-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--ink); font: inherit; font-size: 12.5px; }
 .cv2 .cv-search input::placeholder { color: var(--ink-3); }
-.cv2 .cv-convfilters { display: flex; gap: 4px; margin-top: 9px; }
-.cv2 .cv-convfilters button { flex: 1; height: 26px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
-.cv2 .cv-convfilters button:hover { background: var(--hover); color: var(--ink); }
-.cv2 .cv-convfilters button.on { background: var(--brand-wash); color: var(--brand-bright); }
 .cv2 .cv-conv-list { overflow-y: auto; flex: 1; }
 .cv2 .cv-conv { display: flex; gap: 11px; padding: 11px 14px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; align-items: center; }
 .cv2 .cv-conv:hover { background: var(--hover); } .cv2 .cv-conv.on { background: var(--brand-wash); }
@@ -667,7 +663,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 /* ============================================================
    Guest · Guests (CRM) — roster + profile drawer
    ============================================================ */
-.cv2 .cv-crm-filters { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .cv2 .cv-segs { display: flex; gap: 4px; flex-wrap: wrap; }
 .cv2 .cv-segs button { height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-weight: 550; font-size: 12px; }
 .cv2 .cv-segs button:hover { color: var(--ink); }
@@ -702,9 +697,6 @@ button.cv2 .cv-grip, .cv2 button.cv-grip { min-width: 22px; }
 .cv2 .cv-gdpr:hover { color: var(--ink); }
 .cv2 .cv-gdpr.danger { margin-left: 10px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 0; }
 .cv2 .cv-gdpr.danger:hover { color: #fff; }
-/* secondary filter row (channel + recency) */
-.cv2 .cv-crm-filters2 { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
-.cv2 .cv-filter-l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .cv2 .cv-profile-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin: 0 0 9px; }
 .cv2 .cv-timeline { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
 .cv2 .cv-tl-row { background: var(--panel-2); padding: 9px 13px; display: grid; grid-template-columns: 80px 130px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
