@@ -87,8 +87,22 @@ top `.cv-checkbar` (see Layout) — the `.cv-ticket` column below shows the
   items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
   / `missingQuantity`); tapping it adds exactly the missing items so the
   real discount fires.
-- **`.cv-foot`** — `.cv-frow` subtotal, `.cv-frow.disc` combo discount,
-  `.cv-ftot` total, then `.cv-send` (Send to KDS) + `.cv-charge`.
+- **`.cv-foot`** — an optional `.cv-frow.member` chip (attached loyalty
+  guest, with a remove ✕), `.cv-frow` subtotal, `.cv-frow.disc` combo
+  discount **and** a `.cv-frow.disc` manual-discount line, `.cv-ftot` total,
+  then `.cv-foot-actions` (`.cv-send` Send to KDS + `.cv-charge`) and a
+  secondary `.cv-foot-actions2` row of `.cv-foot-aux` buttons (`data-on`
+  when active): **Park / hold** (the park toggle now lives by Charge, not
+  the top bar), **Add / Edit discount**, **Add membership / Member ✓**.
+- **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
+  optional reason) and `MemberDialog` (phone + optional name) write
+  `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal
+  debounced tab PUT. The charged total is recomputed **server-side**
+  (`buildOrderShape` → `manualDiscountGrosze`, the shared `@/lib/pos-discount`
+  helper the footer preview also uses), and the member phone becomes the
+  order's `customerPhone` (normalised) so loyalty points accrue on payment
+  (Rule #6). Verified: a 10% discount on a 27.90 zł pizza charges 25.11 zł
+  to `+48…`.
 
 ## Engine + API contract
 

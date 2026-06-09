@@ -17,9 +17,11 @@ import {
   type MenuItem,
   type PosCourse,
   type PosTab,
+  type PosTabDiscount,
   type PosTabLine,
 } from "@/data/types";
 import { getActiveComboDeals, getCartSuggestions, type UpsellConfig } from "@/lib/upsell";
+import { manualDiscountGrosze } from "@/lib/pos-discount";
 import { POS_COURSE_LABELS, POS_COURSE_ORDER, courseOf, defaultCourseForCategory, groupLinesByCourse } from "@/lib/pos-coursing";
 
 const CATEGORY_ORDER: MenuCategory[] = ["pizza", "pasta", "antipasti", "panini", "desserts", "drinks"];
@@ -180,6 +182,9 @@ export function CoreV2Pos({
             tableId: tab.tableId ?? null,
             covers: tab.covers,
             address: tab.address ?? null,
+            customerPhone: tab.customerPhone ?? null,
+            customerName: tab.customerName ?? null,
+            discount: tab.discount ?? null,
             sentKds: tab.sentKds,
             coursed: tab.coursed ?? null,
           }),
@@ -257,6 +262,13 @@ export function CoreV2Pos({
     [mutateActive],
   );
   const setName = useCallback((name: string) => mutateActive((t) => ({ ...t, name: name.slice(0, 40) })), [mutateActive]);
+  const applyDiscount = useCallback((d: PosTabDiscount) => mutateActive((t) => ({ ...t, discount: d })), [mutateActive]);
+  const removeDiscount = useCallback(() => mutateActive((t) => ({ ...t, discount: undefined })), [mutateActive]);
+  const applyMember = useCallback(
+    (phone: string, name: string) => mutateActive((t) => ({ ...t, customerPhone: phone.trim() || undefined, customerName: name.trim() || undefined })),
+    [mutateActive],
+  );
+  const removeMember = useCallback(() => mutateActive((t) => ({ ...t, customerPhone: undefined, customerName: undefined })), [mutateActive]);
   // Dine-in kitchen timing — course-by-course firing vs everything at once.
   const toggleCoursed = useCallback(() => mutateActive((t) => ({ ...t, coursed: !(t.coursed ?? true) })), [mutateActive]);
   // Drag-to-recourse — re-pacing a held line shouldn't un-send what's fired.
@@ -433,7 +445,9 @@ export function CoreV2Pos({
   const comboOf = useCallback((t: PosTab) => getActiveComboDeals(cartOf(t), config, t.channel ?? undefined), [cartOf, config]);
   const subtotalG = useCallback((t: PosTab) => cartOf(t).reduce((s, ci) => s + ci.menuItem.price * ci.quantity, 0), [cartOf]);
   const discountG = useCallback((t: PosTab) => (comboOf(t).isComplete ? comboOf(t).savings : 0), [comboOf]);
-  const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t)), [subtotalG, discountG]);
+  // Manual operator discount, on top of the auto combo (same pure helper as the server).
+  const manualDiscountG = useCallback((t: PosTab) => manualDiscountGrosze(Math.max(0, subtotalG(t) - discountG(t)), t.discount), [subtotalG, discountG]);
+  const grandG = useCallback((t: PosTab) => Math.max(0, subtotalG(t) - discountG(t) - manualDiscountG(t)), [subtotalG, discountG, manualDiscountG]);
 
   const active = getActive();
   // Writes parked in the durable outbox (offline). Drives the "syncing" pill so
@@ -581,6 +595,8 @@ export function CoreV2Pos({
   const [addrOpen, setAddrOpen] = useState(false);
   // On phones/narrow tablets the ticket pane becomes a bottom drawer.
   const [mobileTicket, setMobileTicket] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
   // Leaving a check (or its dine-in channel) drops back to the menu.
   useEffect(() => {
     setTableOpen(false);
@@ -712,11 +728,7 @@ export function CoreV2Pos({
         <>
           <CoreV2QrQueue location={pageLoc} />
           {active?.channel && <span className="cv-chip" style={{ height: 32 }}>{CHANNELS.find((c) => c.key === active.channel)?.label}</span>}
-          {active && (
-            <button type="button" className={active.status === "parked" ? "cv-chip on" : "cv-chip"} style={{ height: 32 }} onClick={togglePark} title="Park / resume this check">
-              {active.status === "parked" ? "▣ Parked" : "▢ Park"}
-            </button>
-          )}
+          {active?.status === "parked" && <span className="cv-chip on" style={{ height: 32 }}>▣ Held</span>}
           <button type="button" className="cv-iconbtn" title={kiosk ? "Exit fullscreen" : "Fullscreen"} onClick={toggleKiosk}>
             {kiosk ? "✕" : "⛶"}
           </button>
@@ -995,6 +1007,12 @@ export function CoreV2Pos({
 
               {/* totals + actions */}
               <div className="cv-foot">
+                {active.customerPhone && (
+                  <div className="cv-frow member">
+                    <span>👤 {active.customerName || "Member"} · {active.customerPhone}</span>
+                    <button type="button" className="cv-frow-x" onClick={() => removeMember()} aria-label="Remove member">✕</button>
+                  </div>
+                )}
                 <div className="cv-frow">
                   <span>Subtotal</span>
                   <span className="mono">{zl(subtotalG(active))}</span>
@@ -1003,6 +1021,15 @@ export function CoreV2Pos({
                   <div className="cv-frow disc">
                     <span>✓ {comboOf(active).activeDeal?.name}</span>
                     <span className="mono">−{zl(discountG(active))}</span>
+                  </div>
+                )}
+                {manualDiscountG(active) > 0 && (
+                  <div className="cv-frow disc">
+                    <span>
+                      − Discount{active.discount?.type === "percent" ? ` (${active.discount.value}%)` : ""}
+                      {active.discount?.reason ? ` · ${active.discount.reason}` : ""}
+                    </span>
+                    <span className="mono">−{zl(manualDiscountG(active))}</span>
                   </div>
                 )}
                 <div className="cv-ftot">
@@ -1022,6 +1049,17 @@ export function CoreV2Pos({
                     onClick={() => setTenderOpen(true)}
                   >
                     Charge {fmtPLN(grandG(active))} →
+                  </button>
+                </div>
+                <div className="cv-foot-actions2">
+                  <button type="button" className="cv-foot-aux" data-on={active.status === "parked"} onClick={() => togglePark()} title="Park / hold this check">
+                    {active.status === "parked" ? "▣ Held" : "▢ Park / hold"}
+                  </button>
+                  <button type="button" className="cv-foot-aux" data-on={manualDiscountG(active) > 0} onClick={() => setDiscountOpen(true)}>
+                    {manualDiscountG(active) > 0 ? "Edit discount" : "Add discount"}
+                  </button>
+                  <button type="button" className="cv-foot-aux" data-on={!!active.customerPhone} onClick={() => setMemberOpen(true)}>
+                    {active.customerPhone ? "Member ✓" : "Add membership"}
                   </button>
                 </div>
               </div>
@@ -1105,6 +1143,138 @@ export function CoreV2Pos({
           placeholder="Street & number, flat / buzzer, city — plus any note for the driver"
         />
       </CoreV2Dialog>
+
+      {discountOpen && (
+        <DiscountDialog
+          current={active?.discount}
+          onClose={() => setDiscountOpen(false)}
+          onApply={(d) => { applyDiscount(d); setDiscountOpen(false); }}
+          onRemove={() => { removeDiscount(); setDiscountOpen(false); }}
+        />
+      )}
+      {memberOpen && (
+        <MemberDialog
+          phone={active?.customerPhone ?? ""}
+          name={active?.customerName ?? ""}
+          onClose={() => setMemberOpen(false)}
+          onApply={(p, n) => { applyMember(p, n); setMemberOpen(false); }}
+          onRemove={() => { removeMember(); setMemberOpen(false); }}
+        />
+      )}
     </CoreV2Shell>
+  );
+}
+
+/* ── manual discount dialog ─────────────────────────────────────────────── */
+function DiscountDialog({
+  current,
+  onClose,
+  onApply,
+  onRemove,
+}: {
+  current: PosTabDiscount | undefined;
+  onClose: () => void;
+  onApply: (d: PosTabDiscount) => void;
+  onRemove: () => void;
+}) {
+  const [type, setType] = useState<"amount" | "percent">(current?.type ?? "amount");
+  const [value, setValue] = useState(
+    current ? (current.type === "amount" ? (current.value / 100).toString() : String(current.value)) : "",
+  );
+  const [reason, setReason] = useState(current?.reason ?? "");
+  const n = Number(value);
+  const valid = Number.isFinite(n) && n > 0 && (type === "percent" ? n <= 100 : true);
+  const apply = () => {
+    if (!valid) return;
+    onApply({ type, value: type === "amount" ? Math.round(n * 100) : Math.round(n), reason: reason.trim() || undefined });
+  };
+  return (
+    <CoreV2Dialog
+      open
+      onClose={onClose}
+      title={current ? "Edit discount" : "Add discount"}
+      footer={
+        <>
+          {current && (
+            <button type="button" className="cv-btn danger" style={{ marginRight: "auto" }} onClick={onRemove}>
+              Remove
+            </button>
+          )}
+          <button type="button" className="cv-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="cv-btn primary" disabled={!valid} onClick={apply}>Apply</button>
+        </>
+      }
+    >
+      <div className="cv-seg" style={{ marginBottom: 14, width: "fit-content" }}>
+        <button type="button" className={type === "amount" ? "on" : undefined} onClick={() => setType("amount")}>Amount (zł)</button>
+        <button type="button" className={type === "percent" ? "on" : undefined} onClick={() => setType("percent")}>Percent (%)</button>
+      </div>
+      <label className="cv-tbl-field">
+        <span>{type === "amount" ? "Discount amount (zł)" : "Discount percent (%)"}</span>
+        <input
+          className="cv-inp"
+          type="number"
+          min={0}
+          max={type === "percent" ? 100 : undefined}
+          step={type === "amount" ? "0.01" : "1"}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          autoFocus
+        />
+      </label>
+      <label className="cv-tbl-field" style={{ marginTop: 10 }}>
+        <span>Reason (optional)</span>
+        <input className="cv-inp" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="staff, regular, comp…" maxLength={80} />
+      </label>
+    </CoreV2Dialog>
+  );
+}
+
+/* ── membership (loyalty) dialog ────────────────────────────────────────── */
+function MemberDialog({
+  phone,
+  name,
+  onClose,
+  onApply,
+  onRemove,
+}: {
+  phone: string;
+  name: string;
+  onClose: () => void;
+  onApply: (phone: string, name: string) => void;
+  onRemove: () => void;
+}) {
+  const [p, setP] = useState(phone);
+  const [n, setN] = useState(name);
+  const valid = p.replace(/\D/g, "").length >= 9;
+  return (
+    <CoreV2Dialog
+      open
+      onClose={onClose}
+      title={phone ? "Membership" : "Add membership"}
+      footer={
+        <>
+          {phone && (
+            <button type="button" className="cv-btn danger" style={{ marginRight: "auto" }} onClick={onRemove}>
+              Remove
+            </button>
+          )}
+          <button type="button" className="cv-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="cv-btn primary" disabled={!valid} onClick={() => onApply(p, n)}>Attach</button>
+        </>
+      }
+    >
+      <p className="cv-cust-sub" style={{ marginBottom: 12 }}>
+        Attach a guest&rsquo;s phone to earn loyalty points on this check — phone-based, no signup.
+      </p>
+      <label className="cv-tbl-field">
+        <span>Phone</span>
+        <input className="cv-inp" inputMode="tel" value={p} onChange={(e) => setP(e.target.value)} placeholder="+48 600 000 000" autoFocus />
+      </label>
+      <label className="cv-tbl-field" style={{ marginTop: 10 }}>
+        <span>Name (optional)</span>
+        <input className="cv-inp" value={n} onChange={(e) => setN(e.target.value)} placeholder="Guest name" maxLength={60} />
+      </label>
+    </CoreV2Dialog>
   );
 }

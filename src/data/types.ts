@@ -631,6 +631,15 @@ export interface PosTabLine {
  *  shared across tills. `orderId` is set once the check is sent to the KDS or
  *  charged: from then on the real Order is the source of truth for the kitchen,
  *  and this tab just tracks the till-side editing state until it's paid off. */
+/** Operator-applied manual discount on a POS check (on top of any auto combo
+ *  deal). Server re-computes the charged amount from this — never the client. */
+export interface PosTabDiscount {
+  type: "amount" | "percent";
+  /** Grosze when type === "amount"; whole percent 0–100 when "percent". */
+  value: number;
+  reason?: string;
+}
+
 export interface PosTab {
   id: string;
   locationSlug: string;
@@ -644,6 +653,12 @@ export interface PosTab {
   covers?: number;
   /** Delivery: free-text address + driver note. */
   address?: string;
+  /** Loyalty member attached to the check — points accrue to this phone on
+   *  payment (Rule #6, phone-based). Optional name for the receipt. */
+  customerPhone?: string;
+  customerName?: string;
+  /** Operator-applied manual discount, on top of any auto combo deal. */
+  discount?: PosTabDiscount;
   /** Dine-in: fire course-by-course (true) vs everything together (false).
    *  Defaults to coursed for dine-in, together for takeaway / delivery. */
   coursed?: boolean;

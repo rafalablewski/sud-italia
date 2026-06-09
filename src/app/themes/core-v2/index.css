@@ -254,6 +254,15 @@
 .cv2 .cv-ftot { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0 13px; }
 .cv2 .cv-ftot .tl { font-weight: 600; font-size: 13px; } .cv2 .cv-ftot .tv { font-weight: 700; font-size: 24px; letter-spacing: -.01em; }
 .cv2 .cv-foot-actions { display: flex; gap: 9px; }
+/* member chip + manual-discount line in the ticket footer */
+.cv2 .cv-frow.member { color: var(--ink); font-weight: 600; align-items: center; background: var(--brand-wash); margin: -2px -8px 8px; padding: 6px 8px; border-radius: 8px; }
+.cv2 .cv-frow-x { margin-left: 8px; width: 20px; height: 20px; border-radius: 6px; color: var(--ink-3); font-size: 12px; flex: none; }
+.cv2 .cv-frow-x:hover { background: var(--hover); color: var(--ink); }
+/* secondary actions row — Park/hold · Add discount · Add membership */
+.cv2 .cv-foot-actions2 { display: flex; gap: 8px; margin-top: 9px; }
+.cv2 .cv-foot-aux { flex: 1; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 550; font-size: 12px; white-space: nowrap; }
+.cv2 .cv-foot-aux:hover { color: var(--ink); background: var(--hover); }
+.cv2 .cv-foot-aux[data-on="true"] { background: var(--brand-wash); border-color: color-mix(in oklab, var(--brand) 40%, transparent); color: var(--brand-bright); font-weight: 600; }
 .cv2 .cv-send { flex: 1; height: 46px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; }
 .cv2 .cv-send:hover { background: var(--hover); } .cv2 .cv-send:disabled { opacity: .5; cursor: default; }
 .cv2 .cv-charge { flex: 2; height: 46px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; box-shadow: var(--sh-2); }

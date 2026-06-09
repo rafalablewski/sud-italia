@@ -2,7 +2,7 @@ import { readFile, writeFile, access, mkdir } from "fs/promises";
 import { join } from "path";
 import { createHash } from "crypto";
 import { neon } from "@neondatabase/serverless";
-import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
+import { TimeSlot, Order, Ingredient, IngredientProduct, Recipe, IngredientStock, StockMovement, Supplier, PurchaseOrder, PurchaseOrderStatus, CustomerNote, StaffMember, Shift, TimePunch, TruckRoute, TruckEvent, ExpansionChecklist, AuditLogEntry, AdminUser, WebAuthnCredential, ComplianceItem, CashSession, CashDrop, MenuItem, BusinessCost, BusinessCostCategory, SimulationScenario, SimulationLaborLine, SimulationSeasonality, SimulationAssumptions, SimulationAttachLever, SimulationIngredientLever, SimulationWeather, SimulationKitchenCapacity, SimulationActualsSnapshot, SimulationMenuEngineeringLine, SimulationCohortSnapshot, SimulationDaypartLine, SimulationHourlyThroughputLine, SimulationSssgSnapshot, SimulationFleetModel, SimulationMenuScenarioOverride, FloorTable, Reservation, PosTab, PosTabDiscount, PosTabLine, PosTabStatus, FulfillmentType } from "@/data/types";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getUpstashRedis } from "@/lib/upstash-redis";
 import {
@@ -12671,7 +12671,22 @@ async function readPosTabsForLocation(loc: string): Promise<PosTab[]> {
  *  field-precedence rules, with no I/O so they can be unit-tested. `orderId` and
  *  `firedCourses` are server-owned (preserved from `existing`, never taken from
  *  the caller); editing the lines force-clears the `sentKds` flag. */
-export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, existing: PosTab | undefined): PosTab {
+function sanitizePosTabDiscount(input: unknown): PosTabDiscount | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const d = input as Partial<PosTabDiscount>;
+  if (d.type !== "amount" && d.type !== "percent") return undefined;
+  const raw = Number(d.value);
+  if (!Number.isFinite(raw) || raw <= 0) return undefined;
+  const value = d.type === "percent" ? Math.max(0, Math.min(100, Math.round(raw))) : Math.max(0, Math.round(raw));
+  if (value <= 0) return undefined;
+  const reason = typeof d.reason === "string" ? d.reason.trim().slice(0, 80) || undefined : undefined;
+  return { type: d.type, value, ...(reason ? { reason } : {}) };
+}
+
+export function mergePosTab(
+  input: Partial<PosTab> & { locationSlug: string; discount?: PosTabDiscount | null },
+  existing: PosTab | undefined,
+): PosTab {
   const id = input.id || newPosTabId();
   const now = new Date().toISOString();
   const channel = input.channel && POS_FULFILLMENTS.includes(input.channel) ? input.channel : null;
@@ -12703,6 +12718,20 @@ export function mergePosTab(input: Partial<PosTab> & { locationSlug: string }, e
       input.address !== undefined
         ? (input.address || "").toString().trim().slice(0, 400) || undefined
         : existing?.address,
+    customerPhone:
+      input.customerPhone !== undefined
+        ? (input.customerPhone || "").toString().trim().slice(0, 25) || undefined
+        : existing?.customerPhone,
+    customerName:
+      input.customerName !== undefined
+        ? (input.customerName || "").toString().trim().slice(0, 60) || undefined
+        : existing?.customerName,
+    discount:
+      input.discount === null
+        ? undefined
+        : input.discount !== undefined
+          ? sanitizePosTabDiscount(input.discount)
+          : existing?.discount,
     sentKds: itemsChanged ? false : input.sentKds !== undefined ? !!input.sentKds : existing?.sentKds ?? false,
     coursed:
       input.coursed !== undefined ? !!input.coursed : existing?.coursed ?? (channel === "dine-in" ? true : undefined),
