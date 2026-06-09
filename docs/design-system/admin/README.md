@@ -6,7 +6,8 @@
 > `src/app/admin/(shell)/*` + `src/admin-v3/*`; see [`v3/README.md`](./v3/README.md)).
 > The old v2 component tree (`src/components/admin/`) was
 > deleted. The shared base stylesheet lives on as `src/app/themes/base/index.css`
-> (it backs login + the staff portals + Core). The component/shell sections
+> (it backs the staff/kitchen/terminal portals + Core — the login door moved to
+> av3, see [`v3/README.md`](./v3/README.md) → Auth door). The component/shell sections
 > below describe the **now-deleted v2** set and are pending a cleanup pass —
 > treat them as historical until then.
 

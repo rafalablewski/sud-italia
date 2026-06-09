@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" data-admin-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login · Version C — Spotlight Minimal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  Login · Version C — "Spotlight Minimal".
+  No card chrome: a single centered column on the bare canvas, framed only by a
+  thin platinum bracket and lit by one overhead spotlight beam + a slow scanline.
+  Big Fraunces wordmark, monospace micro-labels, hairline-underline inputs. The
+  most editorial / restrained-futuristic of the three. Tokens mirror av3.
+  Static mockup — figures illustrative.
+-->
+<style>
+  :root {
+    --bg:#0a0a0c; --s1:#141417; --s2:#1b1b1f; --s3:#24242a;
+    --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.13);
+    --fg:#f4f3f1; --muted:#a6a099; --subtle:#8a837b;
+    --brand:#c2384f; --platinum:#cbb48a;
+    --r-sm:5px; --r-md:8px;
+    --ui:"Inter",system-ui,sans-serif; --display:"Fraunces",Georgia,serif; --mono:"JetBrains Mono",monospace;
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font-smoothing:antialiased; }
+
+  .stage { position:relative; min-height:100vh; display:grid; place-items:center; padding:32px; overflow:hidden; }
+  /* overhead spotlight beam */
+  .stage::before {
+    content:""; position:absolute; left:50%; top:-30%; width:120vw; height:120vh; transform:translateX(-50%); pointer-events:none;
+    background:radial-gradient(38% 46% at 50% 0%,color-mix(in oklab,var(--brand) 22%,transparent),transparent 70%);
+  }
+  /* slow scanline sweep */
+  .stage::after {
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.012) 3px 4px);
+    -webkit-mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 85%); mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 85%);
+  }
+
+  .col { position:relative; z-index:1; width:100%; max-width:340px; text-align:center; animation:rise .3s var(--ease) both; }
+  @keyframes rise { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:none;} }
+
+  /* platinum bracket frame */
+  .frame { position:relative; padding:40px 30px 34px; }
+  .frame::before,.frame::after {
+    content:""; position:absolute; width:26px; height:26px; pointer-events:none;
+    border-color:color-mix(in oklab,var(--platinum) 60%,transparent); border-style:solid;
+  }
+  .frame::before { top:0; left:0; border-width:1px 0 0 1px; }
+  .frame::after  { bottom:0; right:0; border-width:0 1px 1px 0; }
+
+  .mark { display:inline-grid; place-items:center; width:46px; height:46px; border-radius:var(--r-md); background:var(--brand); color:#fff; font-family:var(--display); font-size:18px; font-weight:600; margin-bottom:18px;
+    box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--platinum) 50%,transparent),0 12px 30px -12px color-mix(in oklab,var(--brand) 80%,transparent); }
+  .title { font-family:var(--display); font-size:34px; font-weight:700; letter-spacing:-.02em; line-height:1; }
+  .sub { margin:6px 0 26px; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.26em; color:var(--subtle); }
+
+  form { display:flex; flex-direction:column; gap:18px; text-align:left; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .label { font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.18em; color:var(--subtle); }
+  /* underline-only input */
+  .input { width:100%; height:30px; padding:0 2px; border:none; border-bottom:1px solid var(--line-strong); background:transparent; color:var(--fg); font:inherit; font-size:15px; transition:border-color .14s var(--ease); }
+  .input::placeholder { color:var(--subtle); }
+  .input:focus { outline:none; border-bottom-color:var(--brand); box-shadow:0 1px 0 0 var(--brand); }
+
+  .btn { margin-top:6px; width:100%; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:7px; border:none; border-radius:var(--r-sm); background:var(--brand); color:#fff; font:inherit; font-size:13px; font-weight:600; letter-spacing:.01em; cursor:pointer; transition:background .12s var(--ease),transform .12s var(--ease);
+    box-shadow:0 10px 26px -12px color-mix(in oklab,var(--brand) 85%,transparent); }
+  .btn:hover { background:color-mix(in oklab,var(--brand) 88%,#fff); }
+  .btn:active { transform:translateY(1px); }
+  .btn svg { width:15px; height:15px; }
+
+  .passkey { background:none; border:none; color:var(--muted); font:inherit; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px; transition:color .12s var(--ease); }
+  .passkey:hover { color:var(--fg); }
+  .passkey svg { width:14px; height:14px; }
+
+  .foot { margin-top:26px; font-size:11.5px; color:var(--muted); }
+  .foot a { color:var(--platinum); text-decoration:none; }
+  .foot a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="col">
+      <div class="frame">
+        <span class="mark">SI</span>
+        <div class="title">Ottaviano</div>
+        <div class="sub">Owner&nbsp;·&nbsp;Sign&nbsp;in</div>
+
+        <form onsubmit="return false">
+          <div class="field">
+            <label class="label" for="c-email">Email · optional</label>
+            <input id="c-email" class="input" type="email" placeholder="shared owner session if blank" />
+          </div>
+          <div class="field">
+            <label class="label" for="c-pass">Password</label>
+            <input id="c-pass" class="input" type="password" placeholder="••••••••" autofocus />
+          </div>
+          <button class="btn" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Enter console
+          </button>
+          <button class="passkey" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            Use passkey / security key
+          </button>
+        </form>
+      </div>
+      <div class="foot">Manager or staff? <a href="#">Sign in here</a></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,44 +1,34 @@
-import "../themes/base/index.css";
+import "../themes/admin-v3/index.css";
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { themeBootScriptV3 } from "@/admin-v3/theme";
 
-// The universal team door is admin-themed (the shared LoginForm uses
-// .admin-bg, glass-card, glass-input, glass-btn, admin-text, gradient-text),
-// but it lives outside the AdminShell — so, exactly like /kitchen and
-// /franchisee, this layout pulls in the Admin theme CSS + admin font stack
-// directly. Without it the form renders unstyled (invisible glass-btn text),
-// which is what blocked staff from signing in. Independent next/font instances
-// from /admin/layout so a login-only type tweak wouldn't move admin.
-const loginBody = Inter({
-  subsets: ["latin"],
-  variable: "--font-admin-body",
-  display: "swap",
-});
-const loginDisplay = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-admin-display",
-  display: "swap",
-});
+// The universal team door shares the LoginForm with /admin/login, both now on
+// the live admin design (v3 "Operator Terminal"). It lives outside the
+// AdminShell, so — exactly like /kitchen and /franchisee — this layout pulls in
+// the av3 stylesheet + the three admin typefaces directly on
+// `#admin-portal-root.av3-root`, and runs the same boot script the shell uses
+// so light/dark matches the rest of admin. Independent next/font instances from
+// /admin/(shell)/layout so a login-only type tweak wouldn't move admin.
+const loginBody = Inter({ subsets: ["latin"], variable: "--font-admin-body", display: "swap" });
+const loginDisplay = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
+const loginMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Sign in | Ottaviano",
   robots: "noindex, nofollow",
 };
 
-export default function LoginLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (
-    // `id="admin-portal-root"` is required, not cosmetic: these `--font-admin-*`
-    // next/font vars live on THIS element, but `--font-ui` / `--font-display`
-    // (declared on `[data-admin-theme]`) only re-resolve from them on
-    // `#admin-portal-root` (see themes/base/index.css). Without the id, and
-    // with no boot-script setting `data-admin-theme` on <html>, `.admin-bg`
-    // falls back to its generic `var(--font-ui, "Inter", …)` stack — the
-    // bundled Inter / Fraunces never load. Also the portal mount (rule #4).
-    <div id="admin-portal-root" className={`${loginBody.variable} ${loginDisplay.variable} admin-bg`}>
+    // `#admin-portal-root` carries the --font-admin-* next/font vars that av3's
+    // --av3-ui/-display/-mono read, and is the trap-free portal mount (rule #4).
+    // `.av3-root` scopes the --av3-* tokens; the boot script sets the theme attr.
+    <div
+      id="admin-portal-root"
+      className={`${loginBody.variable} ${loginDisplay.variable} ${loginMono.variable} av3-root`}
+    >
+      <script dangerouslySetInnerHTML={{ __html: themeBootScriptV3 }} />
       {children}
     </div>
   );

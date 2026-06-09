@@ -101,103 +101,94 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm animate-scale-in">
-        <div className="glass-card rounded-3xl p-8">
-          <div className="flex justify-center mb-5">
-            <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-italia-red to-italia-red-dark flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-italia-red/25">
-              SI
-            </span>
+    <div className="av3-auth">
+      <div className="av3-auth-card">
+        <div className="av3-auth-head">
+          <span className="av3-auth-mark">SI</span>
+          <div>
+            <h1 className="av3-auth-title">Ottaviano</h1>
+            <p className="av3-auth-sub">{isAdmin ? "Owner console" : "Team sign-in"}</p>
           </div>
-          <h1 className="text-2xl font-bold text-center mb-1 font-heading gradient-text">
-            Ottaviano
-          </h1>
-          <p className="admin-text-dim text-center mb-6 text-sm">
-            {isAdmin ? "Admin sign-in (owner)" : "Team sign-in"}
-          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="av3-auth-form">
+          <div className="av3-field">
+            <label className="av3-field-label" htmlFor="login-email">
+              {isAdmin ? "Email (optional)" : "Email"}
+            </label>
             <input
+              id="login-email"
               type="email"
-              placeholder={isAdmin ? "Email (optional for the shared owner session)" : "Email"}
+              placeholder={isAdmin ? "Leave blank for the shared owner session" : "you@ottaviano.pl"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="w-full px-4 py-3 glass-input rounded-xl text-base"
+              className="av3-input"
             />
+          </div>
+
+          <div className="av3-field">
+            <label className="av3-field-label" htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               type="password"
-              placeholder="Password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full px-4 py-3 glass-input rounded-xl text-base"
+              className="av3-input"
               autoFocus
             />
+          </div>
 
-            {mfaRequired && (
+          {mfaRequired && (
+            <div className="av3-field">
+              <label className="av3-field-label" htmlFor="login-totp">Authenticator code</label>
               <input
+                id="login-totp"
                 type="text"
                 inputMode="numeric"
                 pattern="\d{6}"
                 maxLength={6}
-                placeholder="6-digit authenticator code"
+                placeholder="000000"
                 value={totp}
                 onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 autoComplete="one-time-code"
-                className="w-full px-4 py-3 glass-input rounded-xl text-base tracking-widest text-center"
+                className="av3-input av3-auth-otp"
                 autoFocus
               />
-            )}
-
-            {error && (
-              <p className="text-sm text-[var(--danger)] text-center bg-[var(--danger-soft)] rounded-lg py-2">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !password}
-              className="w-full py-3 glass-btn text-white rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? "Logging in..." : (<><LogIn className="h-4 w-4" /> Log In</>)}
-            </button>
-
-            <div className="flex items-center gap-3 my-1">
-              <span className="flex-1 h-px bg-white/10" />
-              <span className="admin-text-dim text-xs">or</span>
-              <span className="flex-1 h-px bg-white/10" />
             </div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleSecurityKey}
-              disabled={keyLoading}
-              className="w-full py-3 glass-input rounded-xl font-medium admin-text flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <KeyRound className="h-4 w-4" />
-              {keyLoading ? "Waiting for key…" : "Sign in with passkey / security key"}
-            </button>
-          </form>
+          {error && <p className="av3-auth-error">{error}</p>}
 
-          <div className="admin-text-dim text-center mt-6 text-xs space-y-1">
-            {isAdmin ? (
+          <button type="submit" disabled={loading || !password} className="av3-btn av3-btn-primary">
+            {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> Sign in</>)}
+          </button>
+
+          <div className="av3-auth-or">or</div>
+
+          <button type="button" onClick={handleSecurityKey} disabled={keyLoading} className="av3-btn">
+            <KeyRound className="av3-btn-ico" />
+            {keyLoading ? "Waiting for key…" : "Passkey / security key"}
+          </button>
+        </form>
+
+        <div className="av3-auth-foot">
+          {isAdmin ? (
+            <p>
+              Manager or staff? <a href="/login">Sign in here</a>
+            </p>
+          ) : (
+            <>
               <p>
-                Manager or staff?{" "}
-                <a href="/login" className="underline">Sign in here</a>
+                Kitchen or till on a shared device? <a href="/terminal">Use the PIN terminal</a>
               </p>
-            ) : (
-              <>
-                <p>
-                  Kitchen or till on a shared device?{" "}
-                  <a href="/terminal" className="underline">Use the PIN terminal</a>
-                </p>
-                <p>
-                  Owner / admin?{" "}
-                  <a href="/admin/login" className="underline">Admin sign-in</a>
-                </p>
-              </>
-            )}
-          </div>
+              <p>
+                Owner / admin? <a href="/admin/login">Admin sign-in</a>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
