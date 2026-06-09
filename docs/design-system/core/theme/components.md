@@ -192,7 +192,7 @@ at all**. Every Core surface (POS, Guest, Service, and the windowed KDS) shares
 this one chrome, so each surface's controls sit in the same place:
 
 - **`.core-shell`** — the flex column that owns the viewport (`height: 100%`).
-- **`.core-head`** (row 1) — `brand` (the SI mark + "Sud Italia / Core") ·
+- **`.core-head`** (row 1) — `brand` (the SI mark + "Ottaviano / Core") ·
   **`.core-nav`** (the primary switcher: POS · KDS · Guest · Service, a
   pathname-highlighted `<CoreNav>`, `core/shell/CoreNav.tsx`) ·
   **`.core-head-right`** (global actions — location toggle, fullscreen, the

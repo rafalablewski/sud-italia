@@ -15,6 +15,8 @@ chain-wide configuration.
 | `/admin/soc2`                     | `src/components/admin/AdminSoc2.tsx`                      | **owner**   |
 | `/admin/audit-log`                | `src/components/admin/AuditLog.tsx`                  | manager+  |
 | `/admin/capabilities`             | `src/app/admin/capabilities/page.tsx`                     | manager+  |
+| `/admin/payments`                 | `src/admin-v3/PaymentsV3.tsx`                             | manager+  |
+| `/admin/qr-ordering`              | `src/admin-v3/QrOrderingV3.tsx`                           | manager+  |
 | `/admin/currency`                 | `src/components/admin/AdminCurrency.tsx`                  | **owner**   |
 | `/admin/languages`                | `src/components/admin/AdminLanguages.tsx`                 | **owner**   |
 | `/admin/settings`                 | `src/components/admin/AdminSettings.tsx`                  | **owner**   |
@@ -549,3 +551,39 @@ The chain-wide configuration tabs.
 System is the **rules admin runs under** — who has access, what's
 deployed, what's been done, what's regulated, and the chain-wide
 config that every other section reads from.
+
+## Payments — `/admin/payments`
+
+Live code: `src/admin-v3/PaymentsV3.tsx` · API `src/app/api/admin/payments/route.ts` · store `getPaymentSettings`/`updatePaymentSettings`/`getEnabledStripeMethods` (`payment-settings.json`).
+
+Which tender methods guests can use at web checkout + QR ordering.
+
+- **KPI rail:** Methods live (five-section ⓘ explainer, Rule #12),
+  Processor (Stripe), Card rail, Crypto.
+- **Stripe processor card:** live/needs-config chip from `STRIPE_SECRET_KEY`
+  (read server-side via the route, never exposed). Secret keys stay in env.
+- **Method rows:** Card (Visa/Mastercard), Apple Pay, Google Pay, BLIK,
+  Przelewy24 — all settled through Stripe — plus Bitcoin (off-Stripe). Each
+  is an enable Switch that persists immediately (Rule #7); Bitcoin reveals a
+  receiving-address field when on.
+- **Wiring:** the enabled set drives the Stripe session's
+  `payment_method_types` (`getEnabledStripeMethods` — Apple/Google Pay fold
+  into the `card` rail) and is exposed to the storefront/QR via
+  `/api/settings/public`.
+
+## QR ordering — `/admin/qr-ordering`
+
+Live code: `src/admin-v3/QrOrderingV3.tsx` · API `src/app/api/admin/qr-ordering/route.ts` · store `getQrOrderingSettings`/`updateQrOrderingSettings`/`isQrOrderingEnabled` (`qr-ordering-settings.json`).
+
+Operator control over the in-restaurant `/qr` table-ordering surface.
+
+- **KPI rail:** QR ordering (Live/Off, five-section ⓘ explainer per Rule #12),
+  Locations live, Require table, Show prices.
+- **Master switch:** chain-wide on/off. Off → `/qr` shows guests an
+  &ldquo;order with a member of staff&rdquo; message everywhere.
+- **Per-location:** dark-launch or pause QR at a single restaurant (disabled
+  while the master is off).
+- **Options:** require a scanned table number (`?table=`), show prices on the
+  QR menu. All persist immediately (Rule #7).
+- **Wiring:** the `/qr` page reads `isQrOrderingEnabled()` + the options
+  server-side per request, so a toggle gates ordering on the next scan.

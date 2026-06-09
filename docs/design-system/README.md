@@ -1,4 +1,4 @@
-# Sud Italia — Design System
+# Ottaviano — Design System
 
 Three independent themes. **No shared layer.** This is the WordPress
 model: each theme owns its own tokens, components, and rules — change a

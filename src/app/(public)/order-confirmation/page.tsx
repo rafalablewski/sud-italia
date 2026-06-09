@@ -189,7 +189,7 @@ function OrderConfirmationContent() {
         <p className="v8-order-review-link">
           <Link2 className="h-3 w-3" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
           Review later:{" "}
-          <Link href={`/review/${orderId}`}>suditalia.pl/review/{orderId}</Link>
+          <Link href={`/review/${orderId}`}>ottaviano.pl/review/{orderId}</Link>
         </p>
       )}
 
@@ -206,8 +206,8 @@ function OrderConfirmationContent() {
           className="v8-order-action is-ghost"
           onClick={async () => {
             const shareData = {
-              title: "My Sud Italia Order",
-              text: `I just ordered from Sud Italia${location ? ` in ${location.city}` : ""}!`,
+              title: "My Ottaviano Order",
+              text: `I just ordered from Ottaviano${location ? ` in ${location.city}` : ""}!`,
               url: window.location.href,
             };
             if (navigator.share) {

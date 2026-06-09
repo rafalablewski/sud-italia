@@ -745,7 +745,7 @@ export const kdsTickets = pgTable(
 // --- Phase 3: brands + franchisees + location_assignments (m3_1, m3_2) ---
 
 /**
- * Brand entity. One row per brand the platform serves. "Sud Italia" is
+ * Brand entity. One row per brand the platform serves. "Ottaviano" is
  * the only one today; the table opens the door to multi-brand SaaS
  * later (white-label deployments).
  */

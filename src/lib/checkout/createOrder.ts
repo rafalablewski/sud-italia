@@ -16,7 +16,7 @@ import {
 } from "@/lib/store";
 import { pickOpenTable } from "@/lib/floor-twin";
 import { resolveCustomerVariant } from "@/lib/experiments-server";
-import type { CartItem, FulfillmentType, Order } from "@/data/types";
+import type { CartItem, FulfillmentType, Order, TimeSlot } from "@/data/types";
 import { formatPrice } from "@/lib/utils";
 import {
   computeDeliveryFee,
@@ -62,9 +62,19 @@ export interface CreateOrderInput {
   customerName: string;
   customerPhone: string;
   fulfillmentType: FulfillmentType;
-  slotId: string;
-  slotDate: string;
-  slotTime: string;
+  /** Booked time-slot id/date/time. Optional only for `immediate` orders
+   *  (QR walk-in dine-in), which carry no slot booking. */
+  slotId?: string;
+  slotDate?: string;
+  slotTime?: string;
+  /** Immediate (no time-slot) dine-in — the guest is already seated and
+   *  ordering from a QR code at the table. Skips slot lookup, capacity and
+   *  min-spend; synthesises slot fields from "now". */
+  immediate?: boolean;
+  /** Table label the QR code is bound to (e.g. "12"). When present on an
+   *  immediate dine-in order, the order is seated at that table rather than
+   *  the Floor Twin's best-fit pick. */
+  tableNumber?: string;
   deliveryAddress?: string;
   /** Guests for a dine-in reservation. Persisted only when
    *  fulfillmentType === "dine-in". */
@@ -130,19 +140,28 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     return { ok: false, code: "invalid_phone", message: "Invalid Polish phone number" };
   }
 
-  const slot = await getSlotById(input.slotId);
-  if (!slot) {
-    return { ok: false, code: "slot_not_found", message: "Time slot not found" };
-  }
-  if (slot.currentOrders >= slot.maxOrders) {
-    return { ok: false, code: "slot_full", message: "This time slot is full. Please select another." };
-  }
-  if (!slot.fulfillmentTypes.includes(input.fulfillmentType)) {
-    return {
-      ok: false,
-      code: "slot_fulfillment_mismatch",
-      message: `This slot does not support ${input.fulfillmentType}`,
-    };
+  // Immediate (QR walk-in) dine-in carries no slot booking — the guest is
+  // already at the table. Everything else goes through the slot gate.
+  const immediate = !!input.immediate;
+  let slot: TimeSlot | undefined;
+  if (!immediate) {
+    if (!input.slotId) {
+      return { ok: false, code: "slot_not_found", message: "Time slot not found" };
+    }
+    slot = await getSlotById(input.slotId);
+    if (!slot) {
+      return { ok: false, code: "slot_not_found", message: "Time slot not found" };
+    }
+    if (slot.currentOrders >= slot.maxOrders) {
+      return { ok: false, code: "slot_full", message: "This time slot is full. Please select another." };
+    }
+    if (!slot.fulfillmentTypes.includes(input.fulfillmentType)) {
+      return {
+        ok: false,
+        code: "slot_fulfillment_mismatch",
+        message: `This slot does not support ${input.fulfillmentType}`,
+      };
+    }
   }
 
   const menuItems = await getMenuWithOverrides(input.locationSlug);
@@ -277,7 +296,7 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   // Demand Exchange yield lever — a kitchen-capped slot can carry a minimum
   // order value. Enforced here against the food subtotal (before delivery fee
   // / tip), the same number the customer's cart shows.
-  if (slot.minSpendGrosze && calculatedTotal < slot.minSpendGrosze) {
+  if (slot?.minSpendGrosze && calculatedTotal < slot.minSpendGrosze) {
     return {
       ok: false,
       code: "below_min_spend",
@@ -342,25 +361,39 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
 
   const orderId = generateOrderId();
 
-  if (!(await incrementSlotOrders(input.slotId))) {
-    // Rejected demand — a real guest who wanted this slot but it was full.
-    // Logged for the Demand Exchange (demand > supply). Fire-and-forget: a
-    // failure here must never affect the checkout response.
-    void recordDemandSignal({
-      id: `dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      locationSlug: input.locationSlug,
-      date: input.slotDate,
-      time: input.slotTime,
-      fulfillmentType: input.fulfillmentType,
-      slotId: input.slotId,
-      outcome: "slot_full",
-      createdAt: new Date().toISOString(),
-    }).catch(() => {});
-    return {
-      ok: false,
-      code: "slot_capacity_lost",
-      message: "This time slot just filled up. Please select another.",
-    };
+  // Slot fields: real for a booked order; synthesised from "now" for an
+  // immediate QR walk-in (which never touches slot capacity). Formatted in
+  // Europe/Warsaw — serverless runs in UTC, so a late-night PL order must not
+  // record the wrong local date/time.
+  const now = new Date();
+  const effectiveSlotId = input.slotId ?? "qr-walkin";
+  const effectiveSlotDate =
+    input.slotDate ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(now);
+  const effectiveSlotTime =
+    input.slotTime ??
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+
+  if (!immediate) {
+    if (!(await incrementSlotOrders(input.slotId!))) {
+      // Rejected demand — a real guest who wanted this slot but it was full.
+      // Logged for the Demand Exchange (demand > supply). Fire-and-forget: a
+      // failure here must never affect the checkout response.
+      void recordDemandSignal({
+        id: `dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        locationSlug: input.locationSlug,
+        date: effectiveSlotDate,
+        time: effectiveSlotTime,
+        fulfillmentType: input.fulfillmentType,
+        slotId: input.slotId!,
+        outcome: "slot_full",
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+      return {
+        ok: false,
+        code: "slot_capacity_lost",
+        message: "This time slot just filled up. Please select another.",
+      };
+    }
   }
 
   // Dine-in: auto-assign the best-fit open table (the Floor Twin's pick) and
@@ -373,7 +406,16 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
   let assignedTableId: string | undefined;
   if (input.fulfillmentType === "dine-in") {
     try {
-      const pick = pickOpenTable(await getTables(input.locationSlug), dineInParty ?? 1);
+      const tables = await getTables(input.locationSlug);
+      // QR orders carry the table they were scanned at — seat them there, and
+      // only there. If the scanned table isn't a registered FloorTable, leave
+      // the order unseated (the guest IS at that table; staff can seat) rather
+      // than auto-picking a *different* table and sending food to the wrong
+      // seat. The Floor Twin's best-fit pick is only for the slot-booked
+      // dine-in flow, which never supplies a table number.
+      const pick = input.tableNumber
+        ? tables.find((t) => t.number === input.tableNumber)
+        : pickOpenTable(tables, dineInParty ?? 1);
       if (pick) {
         assignedTableId = pick.id;
         void saveTable({ ...pick, status: "seated" }).catch(() => {}); // logs the seat transition
@@ -396,9 +438,9 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
       input.fulfillmentType === "delivery" ? (input.deliveryAddress ?? "").trim() : undefined,
     partySize: dineInParty,
     tableId: assignedTableId,
-    slotId: input.slotId,
-    slotDate: input.slotDate,
-    slotTime: input.slotTime,
+    slotId: effectiveSlotId,
+    slotDate: effectiveSlotDate,
+    slotTime: effectiveSlotTime,
     tipAmount: tipAmount > 0 ? tipAmount : undefined,
     deliveryFee: deliveryFee > 0 ? deliveryFee : undefined,
     createdAt: new Date().toISOString(),
@@ -483,25 +525,25 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
 
   await addNotification({
     type: "new_order",
-    title: "New order received",
-    message: `${order.customerName} — ${formatPrice(calculatedTotal)} — ${input.fulfillmentType} at ${input.slotTime} · ${orderId}`,
+    title: immediate ? "New QR table order" : "New order received",
+    message: `${order.customerName} — ${formatPrice(calculatedTotal)} — ${immediate ? `dine-in${input.tableNumber ? ` · table ${input.tableNumber}` : ""}` : `${input.fulfillmentType} at ${effectiveSlotTime}`} · ${orderId}`,
     locationSlug: input.locationSlug,
     orderId,
     data: {
       customerName: order.customerName,
       totalGrosze: calculatedTotal,
-      slotTime: input.slotTime,
+      slotTime: effectiveSlotTime,
     },
   });
 
-  const updatedSlot = await getSlotById(input.slotId);
+  const updatedSlot = immediate ? null : await getSlotById(input.slotId!);
   if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders) {
     await addNotification({
       type: "slot_full",
       title: "Time slot full",
-      message: `${input.slotDate} ${input.slotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,
+      message: `${effectiveSlotDate} ${effectiveSlotTime} slot is now fully booked (${updatedSlot.maxOrders} orders)`,
       locationSlug: input.locationSlug,
-      data: { slotTime: input.slotTime },
+      data: { slotTime: effectiveSlotTime },
     });
   } else if (updatedSlot && updatedSlot.currentOrders >= updatedSlot.maxOrders - 1) {
     // One spot left → slot pressure ping so the operator can extend or
@@ -511,9 +553,9 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<Crea
     await addNotification({
       type: "low_slots",
       title: "Slot almost full",
-      message: `${input.slotDate} ${input.slotTime} only has 1 spot left.`,
+      message: `${effectiveSlotDate} ${effectiveSlotTime} only has 1 spot left.`,
       locationSlug: input.locationSlug,
-      data: { slotTime: input.slotTime },
+      data: { slotTime: effectiveSlotTime },
     });
   }
 

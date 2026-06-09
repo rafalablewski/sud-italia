@@ -338,7 +338,7 @@ export function WhatsAppSettingsDialog({
                 onChange={(e) => set("welcomeMessage", e.target.value)}
                 rows={3}
                 maxLength={500}
-                placeholder="Cześć! Tu Sud Italia 🍕 Napisz, na co masz ochotę…"
+                placeholder="Cześć! Tu Ottaviano 🍕 Napisz, na co masz ochotę…"
               />
             </Field>
             <div className="grid md:grid-cols-2 gap-3 mt-3">
@@ -353,7 +353,7 @@ export function WhatsAppSettingsDialog({
                 <Input
                   value={draft.reopenTemplate}
                   onChange={(e) => set("reopenTemplate", e.target.value)}
-                  placeholder="sud_italia_order_update"
+                  placeholder="ottaviano_order_update"
                 />
               </Field>
             </div>
@@ -445,7 +445,7 @@ export function WhatsAppSettingsDialog({
                 onChange={(e) => set("awayMessage", e.target.value)}
                 rows={2}
                 maxLength={1000}
-                placeholder="Dziękujemy! Nasz asystent jest teraz offline — zamów online: https://sudita.lia 🍕"
+                placeholder="Dziękujemy! Nasz asystent jest teraz offline — zamów online: https://ottaviano.pl 🍕"
               />
             </Field>
           </Section>

@@ -37,7 +37,7 @@ const CHATBOT_RESPONSES: Record<string, string> = {
   location:
     "We're currently in Kraków (Rynek Główny) and Warsaw (ul. Nowy Świat 15). Wrocław is coming soon!",
   loyalty:
-    "Join our Sud Italia Rewards program! Earn 1 point per PLN spent. Bronze tier starts immediately, and you unlock Silver at 500 points with a 1.5x multiplier!",
+    "Join our Ottaviano Rewards program! Earn 1 point per PLN spent. Bronze tier starts immediately, and you unlock Silver at 500 points with a 1.5x multiplier!",
   default:
     "I'd be happy to help! I can answer questions about our menu, locations, hours, delivery, vegetarian options, allergies, and our loyalty program. What would you like to know?",
 };

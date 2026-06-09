@@ -1,5 +1,5 @@
 /* ============================================================
-   SUD ITALIA — CORE SUITE design system (live port)
+   OTTAVIANO — CORE SUITE design system (live port)
    Ported 1:1 from public/mockups/core-suite/system.css. Scoped under
    `.core-suite` so its generic class names (.card / .btn / .badge / .input)
    never leak into the rest of the admin or homepage themes. Fonts read

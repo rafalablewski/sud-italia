@@ -22,8 +22,8 @@ const DAY_NAMES = [
  * the configured day AND we're within `LEAD_HOURS` of the scheduled time.
  *
  * Body example:
- *   "Sud Italia — Acme Wednesday 12:30 lunch. 4/8 teammates ordered.
- *    Pick your meal: sudita.lia/corporate/acme"
+ *   "Ottaviano — Acme Wednesday 12:30 lunch. 4/8 teammates ordered.
+ *    Pick your meal: ottaviano.pl/corporate/acme"
  *
  * Dedupes per (slug, ISO date, phone) so retries within the same window
  * skip already-queued reminders.

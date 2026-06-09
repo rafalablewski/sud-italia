@@ -42,7 +42,7 @@ const WIDGET_TYPE_OPTIONS: { value: LiveWidgetType; label: string; description: 
   { value: "trendingItem", label: "Trending item", description: "Highlights the most-ordered dish.", defaultLabel: "Trending" },
   { value: "avgPrepTime", label: "Average prep time", description: "Rolling average prep time across recent orders.", defaultLabel: "Avg prep" },
   { value: "happyHour", label: "Happy hour", description: "Time-bound discount banner. Auto-hides once end hour passes.", defaultLabel: "" },
-  { value: "truckLocation", label: "Truck location", description: "Today's address for the food truck.", defaultLabel: "Truck is at" },
+  { value: "truckLocation", label: "Restaurant location", description: "The restaurant's address — a find-us note for guests.", defaultLabel: "Find us at" },
   { value: "freeText", label: "Free text / announcement", description: "Admin-supplied one-liner (tonight's special, weather…).", defaultLabel: "" },
 ];
 function widgetTypeMeta(t: LiveWidgetType) { return WIDGET_TYPE_OPTIONS.find((o) => o.value === t) ?? WIDGET_TYPE_OPTIONS[0]; }

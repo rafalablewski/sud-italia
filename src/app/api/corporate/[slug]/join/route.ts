@@ -65,7 +65,7 @@ export async function POST(
   await storeWalletInviteOtp(phone, wallet.id, code);
   await getSmsProvider().send(
     phone,
-    `Sud Italia Corporate — your code to join ${wallet.corporate.name}: ${code}. Expires in 10 minutes.`,
+    `Ottaviano Corporate — your code to join ${wallet.corporate.name}: ${code}. Expires in 10 minutes.`,
   );
 
   return NextResponse.json({ ok: true, resent: result.resent });

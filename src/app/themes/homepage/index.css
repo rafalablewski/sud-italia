@@ -1374,7 +1374,7 @@ body {
 }
 
 /* Brand block — basil-sprig SVG (ochre-light strokes + basil leaves)
-   + Sud Italia wordmark in parchment Cormorant. */
+   + Ottaviano wordmark in parchment Cormorant. */
 .v8-pfoot-brand {
   display: flex;
   align-items: center;
@@ -1413,6 +1413,38 @@ body {
 .v8-pfoot-bottom em {
   font-style: italic;
   color: rgba(244, 245, 240, 0.6);
+}
+
+/* "Also order on …" marketplace strip — driven by /admin/integrations
+   (enabled connections with a public order link). Hidden when none live. */
+.v8-pfoot-channels {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(244, 245, 240, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.v8-pfoot-channels-label {
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: rgba(244, 245, 240, 0.5);
+  font-size: 12.5px;
+  margin-right: 4px;
+}
+.v8-pfoot-channels a {
+  font-size: 13px;
+  color: rgba(244, 245, 240, 0.78);
+  text-decoration: none;
+  padding: 4px 12px;
+  border: 1px solid rgba(244, 245, 240, 0.18);
+  border-radius: 999px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.v8-pfoot-channels a:hover {
+  color: #f4f5f0;
+  border-color: rgba(244, 245, 240, 0.4);
 }
 
 /* ============================
@@ -3747,7 +3779,7 @@ body.v8-cart-open { overflow: hidden; }
 }
 
 /* ------------------------------------------------------------------
-   CorporateOrderBanner — Sud Italia per le aziende ochre paper card.
+   CorporateOrderBanner — Ottaviano per le aziende ochre paper card.
    ------------------------------------------------------------------ */
 .v8-cart-corp {
   margin: 14px 20px 0;

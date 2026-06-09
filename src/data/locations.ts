@@ -18,13 +18,13 @@ import { Location } from "./types";
 export const locations: Location[] = [
   {
     slug: "krakow",
-    name: "Sud Italia - Kraków",
+    name: "Ottaviano - Kraków",
     city: "Kraków",
     address: "Rynek Główny, 31-042 Kraków",
     coordinates: { lat: 50.0614, lng: 19.9372 },
     heroImage: "/images/locations/krakow-hero.jpg",
     description:
-      "Experience authentic Neapolitan flavors in the heart of Kraków. Our food truck brings the warmth of Southern Italy to the historic Main Square, serving hand-crafted pizza, fresh pasta, and classic Italian street food made with imported ingredients and traditional recipes passed down through generations.",
+      "Experience authentic Neapolitan flavors in the heart of Kraków. Our restaurant brings the warmth of Southern Italy to the historic Main Square, serving hand-crafted pizza, fresh pasta, and classic Italian cuisine made with imported ingredients and traditional recipes passed down through generations.",
     shortDescription:
       "Authentic Neapolitan pizza & pasta at Kraków's Main Square",
     hours: [
@@ -38,13 +38,13 @@ export const locations: Location[] = [
   },
   {
     slug: "warszawa",
-    name: "Sud Italia - Warszawa",
+    name: "Ottaviano - Warszawa",
     city: "Warszawa",
     address: "ul. Nowy Świat 15, 00-029 Warszawa",
     coordinates: { lat: 52.2297, lng: 21.0122 },
     heroImage: "/images/locations/warszawa-hero.jpg",
     description:
-      "Bringing a taste of Naples to Warsaw's vibrant Nowy Świat street. Our Warsaw food truck serves the same beloved recipes with locally-sourced produce and imported Italian specialties. From wood-fired pizza margherita to creamy burrata antipasti — it's a little piece of Southern Italy in the capital.",
+      "Bringing a taste of Naples to Warsaw's vibrant Nowy Świat street. Our Warsaw restaurant serves the same beloved recipes with locally-sourced produce and imported Italian specialties. From wood-fired pizza margherita to creamy burrata antipasti — it's a little piece of Southern Italy in the capital.",
     shortDescription:
       "A taste of Naples on Warsaw's iconic Nowy Świat street",
     hours: [
@@ -58,13 +58,13 @@ export const locations: Location[] = [
   },
   {
     slug: "wroclaw",
-    name: "Sud Italia - Wrocław",
+    name: "Ottaviano - Wrocław",
     city: "Wrocław",
     address: "Rynek 1, 50-106 Wrocław",
     coordinates: { lat: 51.1079, lng: 17.0385 },
     heroImage: "/images/locations/wroclaw-hero.jpg",
     description:
-      "Coming soon to Wrocław's beautiful Market Square. Sud Italia will bring its signature Neapolitan street food to Lower Silesia, offering the same commitment to quality and authenticity that our customers in Kraków and Warsaw have come to love.",
+      "Coming soon to Wrocław's beautiful Market Square. Ottaviano will bring its signature Neapolitan cuisine to Lower Silesia, offering the same commitment to quality and authenticity that our customers in Kraków and Warsaw have come to love.",
     shortDescription: "Coming soon to Wrocław's Market Square",
     hours: [
       { day: "Mon-Sun", open: "11:00", close: "21:00" },
@@ -82,7 +82,7 @@ export function getActiveLocations(): Location[] {
   return locations.filter((l) => l.isActive);
 }
 
-// Day-name → JS Date.getDay() index (Sun=0). Sud Italia's hours strings use
+// Day-name → JS Date.getDay() index (Sun=0). Ottaviano's hours strings use
 // English short names (Mon-Thu, Fri-Sat, Sun, Mon-Sun, etc.) — we parse
 // either a single day token ("Sun") or an inclusive range ("Mon-Thu").
 const DAY_INDEX: Record<string, number> = {

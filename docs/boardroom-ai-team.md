@@ -1,6 +1,6 @@
 # AI Boardroom — CEO / COO / CFO / CMO Team
 
-A four-agent C-suite that reads Sud Italia's **live** data, flags risks against
+A four-agent C-suite that reads Ottaviano's **live** data, flags risks against
 restaurant benchmarks, holds real multi-agent meetings, and proposes actions you
 approve. Built natively on the platform's existing LLM gateway, tool registry,
 approval gate, audit log, and daily budget — not a separate app, and **no mock

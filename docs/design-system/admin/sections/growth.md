@@ -4,7 +4,7 @@
 
 The five pages where the operator deliberately moves revenue: live-widget
 campaigns, AOV upsells, cart cross-sells, time-scheduled bundles, and
-the truck-stop route plan.
+the events & bookings run-sheet planner.
 
 | Page                          | Code                                              | Role-gate |
 | ----------------------------- | ------------------------------------------------- | --------- |
@@ -12,7 +12,8 @@ the truck-stop route plan.
 | `/admin/upsell`               | `src/components/admin/AdminUpsell.tsx`            | manager+  |
 | `/admin/crosssell`            | `src/components/admin/AdminCrossSell.tsx`         | manager+  |
 | `/admin/scheduled-bundles`    | `src/components/admin/AdminScheduledBundles.tsx`  | manager+  |
-| `/admin/truck`                | `src/components/admin/AdminTruck.tsx`             | manager+  |
+| `/admin/truck`                | `src/admin-v3/TruckV3.tsx`                        | manager+  |
+| `/admin/integrations`         | `src/admin-v3/IntegrationsV3.tsx`                 | manager+  |
 
 ## Common rules across the section
 
@@ -178,18 +179,19 @@ Time-windowed bundle activation — "Lunch combo, weekdays 11–14".
 - **Expiry handling** — schedules past their end date show as
   `expired` with a one-click `Extend` action.
 
-## Truck — `/admin/truck`
+## Events & bookings — `/admin/truck`
 
-The route + stop plan — where the truck physically goes when.
+Private bookings, catering & special events, plus reusable **run sheets**
+— timed segments for an event (setup, service, teardown).
 
-- **Header:** `Truck ops` (h1), location switcher,
-  `+ New route` primary.
-- **Routes list:** route name, stops (chips), days-of-week, total
-  duration estimate, observed revenue rank per stop.
-- **Stop-revenue ranking** — for each route, the per-stop attribution
-  is approximate (matches events whose route includes the stop name,
-  splits revenue evenly across stops). Frame it as "rough" in the UI —
-  GPS event matching is the next improvement.
+- **Header:** `Events & bookings` (h1), location switcher,
+  `+ New run sheet` primary.
+- **Run-sheets list:** run-sheet name, segments (chips), total
+  duration estimate, observed revenue rank per event.
+- **Segment-revenue ranking** — for each run sheet, the per-segment
+  attribution is approximate (matches events whose run sheet includes the
+  segment name, splits revenue evenly across segments). Frame it as
+  "rough" in the UI — finer event matching is the next improvement.
 - **Route editor:** stops in order, drag-or-arrow reorder, per-stop
   arrival / departure window, optional notes.
 
@@ -207,3 +209,23 @@ The route + stop plan — where the truck physically goes when.
 
 Growth is the **deliberate revenue levers** — every page is a control
 the operator can pull this week to move next week's number.
+
+## Integrations — `/admin/integrations`
+
+Live code: `src/admin-v3/IntegrationsV3.tsx` · API `src/app/api/admin/integrations/route.ts` · store `getIntegrationSettings`/`updateIntegrationSettings` (`integration-settings.json`).
+
+The delivery-marketplace connection registry — Uber Eats, Wolt, Glovo,
+Pyszne.pl, Bolt Food, Grab.
+
+- **KPI rail:** Connected, Live channels, Blended commission, Shown to
+  guests — the first carries a five-section ⓘ explainer (Rule #12).
+- **Marketplace rows:** status badge (`connected`/`disconnected`/`error`),
+  a `Configure` button (Dialog: store id, public order link, commission %,
+  auto-accept, plus `Connect`/`Disconnect`/`Test`), and an enable Switch
+  that persists immediately (Rule #7).
+- **Honest scope:** connection management only. `Connect` flips status to
+  `connected` once a store id is present; live order ingestion needs each
+  marketplace's partner API (the Aggregators webhook scaffold). Enabled
+  connections that carry a public order link surface as the storefront
+  footer's "also order on …" strip via `/api/settings/public`, and the
+  per-connection commission feeds the Calculator's channel economics.

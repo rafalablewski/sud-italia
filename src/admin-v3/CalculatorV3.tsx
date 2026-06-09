@@ -61,7 +61,7 @@ function AttachRow({ label, lever, onToggle, onChange }: { label: string; lever?
 }
 
 // Modeling assumption (declared, like DEFAULT_SEASONALITY in the engine): a
-// Neapolitan-truck service day is a lunch + (bigger) dinner double-peak. Returns
+// Neapolitan restaurant service day is a lunch + (bigger) dinner double-peak. Returns
 // per-hour weights summing to 1 across `n` service hours.
 function demandWeights(n: number): number[] {
   if (n <= 1) return [1];
@@ -88,12 +88,12 @@ interface MenuScenarioPreset {
 }
 const MENU_SCENARIOS: MenuScenarioPreset[] = [
   { id: "takeaway", name: "Takeaway classic", emoji: "🍕", description: "Quick pizza orders, minimal sides. High volume, low ticket — grab + go.", ordersPerDay: 100, daysOpenPerMonth: 28, avgTicketGrosze: 4500, cogsPct: 0.30, attach: { coffee: 0.15, dessert: 0.05, antipasti: 0.03, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0 } },
-  { id: "balanced", name: "Balanced (default)", emoji: "🍝", description: "Pizza + pasta + drinks + dessert mix. The Warsaw 2026 baseline.", ordersPerDay: 70, daysOpenPerMonth: 28, avgTicketGrosze: 6500, cogsPct: 0.30, attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 } },
-  { id: "premium", name: "Premium / Specialty", emoji: "✨", description: "High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket.", ordersPerDay: 55, daysOpenPerMonth: 26, avgTicketGrosze: 8800, cogsPct: 0.32, attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 } },
+  { id: "balanced", name: "Balanced (default)", emoji: "🍝", description: "Pizza + pasta + drinks + dessert mix, dine-in led. The Warsaw 2026 restaurant baseline.", ordersPerDay: 110, daysOpenPerMonth: 30, avgTicketGrosze: 8500, cogsPct: 0.30, attach: { coffee: 0.25, dessert: 0.12, antipasti: 0.08, aperitivo: 0.10, premiumToppings: 0.15, pastaPrimo: 0.18 } },
+  { id: "premium", name: "Premium / Specialty", emoji: "✨", description: "High-end pizzas + premium toppings + pasta primo. Lower volume, higher ticket.", ordersPerDay: 85, daysOpenPerMonth: 30, avgTicketGrosze: 11000, cogsPct: 0.32, attach: { coffee: 0.30, dessert: 0.25, antipasti: 0.18, aperitivo: 0.20, premiumToppings: 0.35, pastaPrimo: 0.30 } },
   { id: "family", name: "Family / Group", emoji: "👨‍👩‍👧", description: "Multi-pizza orders for groups. Big tickets, fewer orders — weekend / event.", ordersPerDay: 30, daysOpenPerMonth: 26, avgTicketGrosze: 15500, cogsPct: 0.28, attach: { coffee: 0.10, dessert: 0.25, antipasti: 0.20, aperitivo: 0.05, premiumToppings: 0.15, pastaPrimo: 0.15 } },
   { id: "aperitivo", name: "Aperitivo / Dinner", emoji: "🍷", description: "Drinks-led evening service. Best margin — requires alcohol licence.", ordersPerDay: 45, daysOpenPerMonth: 28, avgTicketGrosze: 8200, cogsPct: 0.26, attach: { coffee: 0.20, dessert: 0.20, antipasti: 0.25, aperitivo: 0.45, premiumToppings: 0.20, pastaPrimo: 0.20 } },
 ];
-const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 60, daysOpenPerMonth: 28, avgTicketGrosze: 6000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
+const CUSTOM_PRESET: MenuScenarioPreset = { id: "custom", name: "Custom", emoji: "✏️", description: "Build your own — apply, tweak any field, then Save to persist it here.", ordersPerDay: 90, daysOpenPerMonth: 30, avgTicketGrosze: 8000, cogsPct: 0.30, attach: { coffee: 0.20, dessert: 0.10, antipasti: 0.05, aperitivo: 0, premiumToppings: 0.10, pastaPrimo: 0.10 } };
 const MENU_SCENARIOS_ALL = [...MENU_SCENARIOS, CUSTOM_PRESET];
 const MENU_SCENARIO_BY_ID = new Map(MENU_SCENARIOS_ALL.map((s) => [s.id, s]));
 const ATTACH_OF: Record<keyof MenuScenarioPreset["attach"], AttachKey> = { coffee: "coffeeAttach", dessert: "dessertAttach", antipasti: "antipastiAttach", aperitivo: "aperitivoAttach", premiumToppings: "premiumToppingsAttach", pastaPrimo: "pastaPrimoAttach" };
@@ -350,32 +350,32 @@ export function CalculatorV3() {
         <Kpi label="Net profit / mo" value={formatPrice(c.netProfit)} accentVar={c.netProfit >= 0 ? "--av3-c4" : "--av3-c1"} info={
           <InfoButton title="Net profit / month"
             description="The bottom line — what's left each month after every cost, including tax, is paid."
-            institutional="The single number investors underwrite. For a single Neapolitan truck a healthy steady-state net margin is 10–18% of revenue; below ~6% the unit is fragile to one bad month, above ~20% you're likely under-investing in labour or marketing. The institutional gate: net profit must clear the owner's opportunity cost of capital AND service any debt with headroom."
-            plain="Say the truck does 48 000 zł of revenue this month. After food, labour, rent, fees, waste, D&A and CIT you keep 7 200 zł — that's a 15% net margin. That 7 200 zł is what actually funds your payback, a second truck, or your own salary."
+            institutional="The single number investors underwrite. For a single full-service Neapolitan restaurant a healthy steady-state net margin is 8–15% of revenue; below ~5% the unit is fragile to one bad month, above ~18% you're likely under-investing in labour or marketing. The institutional gate: net profit must clear the owner's opportunity cost of capital AND service any debt with headroom."
+            plain="Say the restaurant does 280 000 zł of revenue this month. After food, labour, rent, fees, waste, D&A and CIT you keep ~40 000 zł — that's a ~14% net margin. That 40 000 zł is what actually funds your payback, a second site, or your own salary."
             tips="Pull the three biggest levers in order of leverage: lift avg ticket (attach a 9 zł espresso to 30% more orders), shave food cost 2–3pp via recipe/portion discipline, and right-size labour to volume (the labour-flex lever). Small ticket + COGS moves compound straight to the bottom line because fixed costs don't move."
             methodology="netProfit = revenue − COGS − labour − fixed − payment fees − waste − refunds − loyalty − packaging − marketing(CAC) − depreciation − interest − CIT. Computed by computeScenario() in src/lib/simulation-engine.ts from the live levers; CIT applies only to positive pre-tax profit." />
         } />
         <Kpi label="Net margin" value={`${(c.margin * 100).toFixed(1)}%`} accentVar="--av3-c4" info={
           <InfoButton title="Net margin"
             description="Net profit as a percentage of revenue — profit quality independent of scale."
-            institutional="Margin is how you compare a 30-order day to a 300-order chain on equal footing. QSR/street-food benchmark for an owner-operated unit is 10–18% net; franchised systems run thinner (6–12%) after royalty + fund. A margin that's high but on tiny revenue isn't a business yet; a thin margin on high revenue can still be a great cash engine."
-            plain="Two trucks each net 7 200 zł. Truck A did it on 48 000 zł (15%), Truck B on 90 000 zł (8%). Truck B is bigger but more fragile per złoty — a 5% cost shock erases more of its thinner margin."
+            institutional="Margin is how you compare a 30-order day to a 300-order chain on equal footing. Full-service benchmark for an owner-operated restaurant is 8–15% net; franchised systems run thinner (5–10%) after royalty + fund. A margin that's high but on tiny revenue isn't a business yet; a thin margin on high revenue can still be a great cash engine."
+            plain="Two restaurants each net 40 000 zł. Restaurant A did it on 280 000 zł (14%), Restaurant B on 500 000 zł (8%). Restaurant B is bigger but more fragile per złoty — a 5% cost shock erases more of its thinner margin."
             tips="Margin moves on mix, not just cost-cutting: shift volume toward high-CM items (the menu-engineering 'stars'), trim the 'dogs', and protect price (avoid blanket discounts — use targeted combos instead). Watch prime cost (below) — it's the fastest margin destroyer."
             methodology="margin = netProfit ÷ monthlyRevenue. Returns 0 when revenue is 0. Same computeScenario() pipeline as net profit." />
         } />
         <Kpi label="EBITDA / mo" value={formatPrice(c.ebitda)} accentVar="--av3-c2" info={
           <InfoButton title="EBITDA / month"
             description="Operating cash generation before financing and accounting choices — earnings before interest, tax, depreciation & amortisation."
-            institutional="EBITDA is the multiple buyers pay on (a single truck might trade at 3–5× annual EBITDA; a proven multi-unit chain higher). It strips out how the truck was financed and how fast it's depreciated, so it compares operating quality across units. The gate for expansion: EBITDA must comfortably cover D&A + interest + a reinvestment buffer."
-            plain="If the truck throws off 9 500 zł of EBITDA a month but 2 300 zł goes to loan interest and equipment depreciation, the operation is healthy even though the after-tax 'net' looks thinner — the business is generating real cash, it's just paying down its build-out."
+            institutional="EBITDA is the multiple buyers pay on (a single restaurant might trade at 3–5× annual EBITDA; a proven multi-unit chain higher). It strips out how the restaurant was financed and how fast it's depreciated, so it compares operating quality across units. The gate for expansion: EBITDA must comfortably cover D&A + interest + a reinvestment buffer."
+            plain="If the restaurant throws off ~54 000 zł of EBITDA a month but ~10 000 zł goes to fit-out depreciation and any loan interest, the operation is healthy even though the after-tax 'net' looks thinner — the business is generating real cash, it's just paying down its build-out."
             tips="EBITDA rises with the same operating levers as net profit (ticket, COGS, labour, fixed) but is blind to interest/D&A — so it's the cleanest scoreboard for operating decisions. To lift it, attack the controllable operating block, not the capital structure."
             methodology="ebitda = revenue − variable costs (COGS + fees + waste + refunds + loyalty + packaging + CAC) − labour − fixed. Excludes depreciation and interest by definition. computeScenario(), src/lib/simulation-engine.ts." />
         } />
         <Kpi label="Break-even / day" value={`${Math.ceil(c.breakEvenOrdersPerDay)}`} accentVar="--av3-c5" info={
           <InfoButton title="Break-even orders / day"
-            description="The number of orders per operating day at which the truck makes exactly zero profit — every order above this is pure contribution."
+            description="The number of orders per operating day at which the restaurant makes exactly zero profit — every order above this is pure contribution."
             institutional="The most important survival number. Institutional view: your actual volume should sit at least 25–30% above break-even (a 'margin of safety') so a rainy week or a sick pizzaiolo doesn't tip you into a loss. If break-even is close to capacity, the model has no room to absorb shocks and shouldn't be financed."
-            plain="If fixed + labour costs are 36 000 zł/month and each order contributes 18 zł after variable costs, you need ~2 000 orders/month ≈ 77/day just to keep the lights on. Order 78 onward is the first złoty of profit."
+            plain="If fixed + labour costs are ~114 000 zł/month and each order contributes ~52 zł after variable costs, you need ~2 200 orders/month ≈ 73/day just to keep the lights on. Order 74 onward is the first złoty of profit."
             tips="Lower break-even two ways: raise contribution per order (higher ticket or lower COGS — each złoty of CM1 drops the threshold), or cut fixed/labour drag (renegotiate rent, flex labour to demand). Converting a fixed cost to a variable one mechanically lowers the break-even line."
             methodology="breakEvenOrdersPerMonth = (labour + fixed) ÷ contributionPerOrder, where contributionPerOrder = avgTicket × (1 − COGS% − fees% − waste% − refund% − loyalty%). Per-day = ÷ daysOpenPerMonth. computeScenario()." />
         } />
@@ -383,23 +383,23 @@ export function CalculatorV3() {
           <InfoButton title="Prime cost %"
             description="Food cost plus labour as a share of revenue — the two biggest controllable lines combined."
             institutional="The number every restaurant operator manages to. Industry rule of thumb: keep prime cost under 60% of revenue; 55% is excellent, above 65% the unit is structurally unprofitable no matter how busy. It's the headline because COGS and labour are where money actually leaks — rent and the rest are comparatively fixed and small."
-            plain="On 48 000 zł revenue, if food is 14 400 zł (30%) and labour 12 000 zł (25%), prime cost is 26 400 zł = 55%. That leaves 45% to cover rent, fees, marketing and profit — comfortable. Let it drift to 65% and there's almost nothing left."
+            plain="On 280 000 zł revenue, if food is 84 000 zł (30%) and labour 83 000 zł (~30%), prime cost is 167 000 zł ≈ 60% — right at the rule-of-thumb ceiling. That leaves ~40% to cover rent, fees, marketing and profit. Let it drift past 65% and there's almost nothing left."
             tips="COGS side: tighten portioning, switch distributor offerings (the Recipes ingredient catalog), engineer the menu toward high-margin items. Labour side: schedule to the demand curve (use the hourly-throughput sandbox), cross-train so one fewer head covers a soft daypart. Track it weekly, not monthly."
             methodology="primeCostPct = (COGS + labour) ÷ revenue. COGS = revenue × cogsPct; labour from the per-role headcount × hours × rate, flexed by volume. computeScenario(), src/lib/simulation-engine.ts." />
         } />
         <Kpi label="Payback" value={c.paybackMonths != null ? `${c.paybackMonths.toFixed(1)} mo` : "—"} accentVar="--av3-c1" info={
           <InfoButton title="Payback period"
             description="How many months of steady net profit it takes to earn back the upfront setup cost."
-            institutional="The headline risk metric for the build-out decision. Street-food / single-truck investors look for payback inside 18–30 months; beyond ~36 months the capital is better deployed elsewhere unless there's a strategic reason. Shorter payback = lower exposure to the unknowns of a young location. Pair it with NPV/IRR (Investor Returns card) for the full picture."
-            plain="If the truck cost 240 000 zł to build and fit out, and it nets 10 000 zł/month, you recover the cash in 24 months — two years before the project is truly 'in the black' on the original cheque."
-            tips="Two ways to shorten it: spend less up front (lease vs buy equipment, phase the fit-out) or net more per month (every lever that lifts net profit shortens payback proportionally). A 10% net-profit improvement turns a 24-month payback into ~21.8 months."
+            institutional="The headline risk metric for the build-out decision. Full-service restaurant investors look for payback inside 30–48 months; beyond ~60 months the capital is better deployed elsewhere unless there's a strategic reason. Shorter payback = lower exposure to the unknowns of a young location. Pair it with NPV/IRR (Investor Returns card) for the full picture."
+            plain="If the restaurant cost 900 000 zł to build and fit out, and it nets 40 000 zł/month, you recover the cash in ~22 months — under two years before the project is truly 'in the black' on the original cheque."
+            tips="Two ways to shorten it: spend less up front (lease vs buy equipment, phase the fit-out) or net more per month (every lever that lifts net profit shortens payback proportionally). A 10% net-profit improvement turns a 22-month payback into ~20 months."
             methodology="paybackMonths = setupCostGrosze ÷ monthlyNetProfit, shown only when setup cost > 0 and net profit > 0. The Investor Returns card adds the discounted view (NPV at 10/15/20% + bisected IRR). computeScenario() + computeReturns()." />
         } />
         <Kpi label="Margin of safety" value={`${(c.marginOfSafetyPct * 100).toFixed(0)}%`} accentVar={c.marginOfSafetyPct >= 0.25 ? "--av3-c4" : c.marginOfSafetyPct >= 0.1 ? "--av3-c5" : "--av3-c1"} info={
           <InfoButton title="Margin of safety"
-            description="How far revenue can fall before the truck hits break-even — your cushion against a bad month."
+            description="How far revenue can fall before the restaurant hits break-even — your cushion against a bad month."
             institutional="The risk buffer investors stress-test. Rule of thumb: a healthy unit runs 25–40% above break-even; below ~15% the model is fragile (one rainy fortnight tips it into a loss) and shouldn't be financed without a plan to widen it. Read it alongside break-even/day — a low margin of safety with break-even near capacity is the danger zone."
-            plain="If you do 48 000 zł and break-even is 36 000 zł, your margin of safety is (48 000 − 36 000) ÷ 48 000 = 25% — revenue could drop a quarter before you stop making money. At 8% you're one slow week from red."
+            plain="If you do 280 000 zł and break-even is ~184 000 zł, your margin of safety is (280 000 − 184 000) ÷ 280 000 ≈ 34% — revenue could drop a third before you stop making money. At 8% you're one slow week from red."
             tips="Widen it the same way you lower break-even: lift contribution per order (ticket, COGS) or trim fixed/labour drag. Converting a fixed cost to a variable one mechanically raises the cushion. Use the orders × ticket heatmap below to see how much room each lever buys."
             methodology="marginOfSafetyPct = (monthlyRevenue − breakEvenRevenue) ÷ monthlyRevenue, where breakEvenRevenue = breakEvenOrdersPerMonth × avgTicket. computeScenario(), src/lib/simulation-engine.ts." />
         } />
@@ -608,9 +608,9 @@ export function CalculatorV3() {
           <Card>
             <CardHead title="Unit economics" actions={
               <InfoButton title="Unit economics"
-                description="The per-order and capacity vital signs — how much each order contributes and how hard the truck is working."
+                description="The per-order and capacity vital signs — how much each order contributes and how hard the restaurant is working."
                 institutional="This is where investors test whether a unit scales. True CM1/order (contribution after ALL variable costs incl. payment fees, waste, loyalty, packaging) must be solidly positive — it's the cash each incremental order generates. Healthy QSR true-CM% sits 55–70%; food cost ≤30% and labour ≤25% keep prime cost in range. Capacity used should run 60–85% at peak: below 50% the asset is under-worked, above 90% you're turning guests away and need a second unit, not more marketing."
-                plain="At 38 zł avg ticket, if food + fees + waste + packaging eat 13 zł, the order's true CM1 is ~25 zł (66%). Do 80 orders a day and that's ~2 000 zł of daily contribution toward fixed costs and profit. If capacity used reads 92%, you're effectively sold out at peak — the next złoty of growth comes from a second truck or a faster line, not discounts."
+                plain="At 85 zł avg ticket, if food + fees + waste + packaging eat ~33 zł, the order's true CM1 is ~52 zł (~63%). Do 110 orders a day and that's ~5 700 zł of daily contribution toward fixed costs and profit. If capacity used reads 92%, you're effectively sold out at peak — the next złoty of growth comes from a second site or a faster line, not discounts."
                 tips="Lift true CM1 by raising ticket (attach) and trimming the variable block (distributor offerings, portioning, lower-fee channels). Pull food% and labour% down toward benchmark before chasing volume. If capacity used is low, fix demand (hours, marketing, slots); if it's pinned near 100%, invest in throughput (oven/prep) or a second unit."
                 methodology="trueCm1PerOrder = avgTicket − (COGS + fees + waste + refunds + loyalty + packaging) per order; trueCM% = that ÷ avgTicket. foodCost% / labour% are those lines ÷ revenue. capacityUtilization = forecast orders ÷ (kitchen pizzas-per-hour × open hours). cash-on-cash = annual net profit ÷ setup cost. All from computeScenario(), src/lib/simulation-engine.ts." />
             } />
@@ -763,7 +763,7 @@ export function CalculatorV3() {
             <InfoButton title="Scenario comparison"
               description="The live scenario re-run under a pessimistic and an optimistic set of assumptions, side by side."
               institutional="Investors never underwrite a single point estimate — they want the band. The institutional test: the business must survive the conservative case (net profit ≥ 0, payback still rational) and the optimistic case must not be the only path to viability. A model that only works in the optimistic column is a red flag."
-              plain="Base nets 7 200 zł/mo. Knock volume −20%, ticket −5% and add 3pp of food cost and you're at the Conservative column — if that's still green you can weather a soft quarter. The Optimistic column shows the upside if attach and footfall both land."
+              plain="Base nets ~40 000 zł/mo. Knock volume −20%, ticket −5% and add 3pp of food cost and you're at the Conservative column — if that's still green you can weather a soft quarter. The Optimistic column shows the upside if attach and footfall both land."
               tips="If Conservative dips negative, widen the margin of safety before scaling: lift contribution per order or cut fixed drag. Use the heatmaps below to find which single lever moves the band most."
               methodology="Each column re-runs computeScenario() on the folded scenario with ordersPerDay, avgTicket and cogsPct scaled — Conservative ×0.8 / ×0.95 / +3pp, Optimistic ×1.2 / ×1.08 / −2pp. src/lib/simulation-engine.ts." />
           } />
@@ -858,7 +858,7 @@ export function CalculatorV3() {
               <InfoButton title="Oven curve & peak saturation"
                 description="Hourly order demand across the service day versus the line's sustainable pizzas-per-hour ceiling."
                 institutional="Daily-average capacity is a vanity number — the binding constraint is the peak hour. If demand spikes above the oven/pizzaiolo ceiling at dinner, orders queue, tickets blow out and guests walk, no matter how slack the average looks. Institutional read: peak utilisation should sit ≤90%; sustained red means you're leaving revenue on the table and need a second oven, a faster line, or demand-shifting (slots/pre-order)."
-                plain="The truck might average 8 orders/hr but slam 22 in the 19:00 hour against a 16/hr line — those 6 extra orders queue ~22 min and about half walk. The bars above the dashed ceiling are the orders you physically can't make in time."
+                plain="The restaurant might average 10 orders/hr but slam 22 in the 20:00 hour against a 16/hr line — those 6 extra orders queue ~22 min and about half walk. The bars above the dashed ceiling are the orders you physically can't make in time."
                 tips="Three fixes: raise the ceiling (second oven, prep-ahead dough, an extra pair of hands at peak — see the shift plan), or flatten demand (timed slots, pre-order, a happy-hour to pull the lunch shoulder), or cap delivery during the dinner rush. Each red hour is direct lost contribution."
                 methodology="Hourly orders = ordersPerDay × a documented double-peak demand shape over kitchenCapacity.openHoursPerDay; ceiling = kitchenCapacity.pizzasPerHour. Peak wait ≈ (peakExcess ÷ ceiling) × 60 min; lost/mo = Σ over-ceiling × 50% balk × daysOpen. Modelling layer in CalculatorV3 over the scenario inputs." />
             } />

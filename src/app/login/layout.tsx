@@ -21,7 +21,7 @@ const loginDisplay = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Sign in | Sud Italia",
+  title: "Sign in | Ottaviano",
   robots: "noindex, nofollow",
 };
 

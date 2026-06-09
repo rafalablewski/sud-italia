@@ -12,7 +12,7 @@ const body = Inter({ subsets: ["latin"], variable: "--font-admin-body", display:
 const displayFont = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Admin sign in | Sud Italia",
+  title: "Admin sign in | Ottaviano",
   robots: "noindex, nofollow",
 };
 

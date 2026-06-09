@@ -66,6 +66,10 @@ export const PUT = withAdmin(
       tableId: body.tableId,
       covers: body.covers,
       address: body.address,
+      customerPhone: body.customerPhone,
+      customerName: body.customerName,
+      // null = explicit clear (a full-tab PUT can't send `undefined`).
+      discount: body.discount,
       sentKds: body.sentKds,
       coursed: body.coursed === null ? undefined : body.coursed,
     });

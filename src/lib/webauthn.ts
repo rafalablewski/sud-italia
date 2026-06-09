@@ -18,7 +18,7 @@ import { getSessionSigningSecret } from "@/lib/session-secret";
  * the already-authenticated user row.
  */
 
-export const WEBAUTHN_RP_NAME = "Sud Italia";
+export const WEBAUTHN_RP_NAME = "Ottaviano";
 const CHALLENGE_COOKIE = "sud-italia-webauthn-chal";
 const CHALLENGE_MAX_AGE = 300; // 5 minutes — long enough to tap a key, short enough to be safe.
 

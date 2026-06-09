@@ -88,7 +88,7 @@ function SignInSection() {
           <em>Soci e amici</em>
         </h1>
         <p className="v8-rewards-signin-sub">
-          Sud Italia Rewards — earn points, unlock perks, share with the famiglia. Enter your phone to sign in or join (free).
+          Ottaviano Rewards — earn points, unlock perks, share with the famiglia. Enter your phone to sign in or join (free).
         </p>
 
         <div className="v8-rewards-signin-row">
@@ -354,9 +354,9 @@ function RewardsDashboard() {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `Get ${refereeDiscountPLN} PLN off at Sud Italia!`,
-        text: `Use my code ${referralCode} for ${refereeDiscountPLN} PLN off your first order at Sud Italia!`,
-        url: `https://suditalia.pl?ref=${referralCode}`,
+        title: `Get ${refereeDiscountPLN} PLN off at Ottaviano!`,
+        text: `Use my code ${referralCode} for ${refereeDiscountPLN} PLN off your first order at Ottaviano!`,
+        url: `https://ottaviano.pl?ref=${referralCode}`,
       }).catch(() => {});
     }
   };

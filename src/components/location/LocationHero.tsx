@@ -181,7 +181,7 @@ function VespaHeroIllus() {
       <path d="M310 120 L310 80 L324 80 L324 120 L340 120" stroke="#7A2B2B" strokeWidth="1" fill="none" opacity="0.45" />
       <rect x="58" y="64" width="68" height="38" rx="3" stroke="#7A2B2B" strokeWidth="1.8" fill="#E8D6B5" />
       <path d="M58 76 L126 76" stroke="#7A2B2B" strokeWidth="1" opacity="0.6" />
-      <text x="92" y="92" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="13" fontStyle="italic" fill="#7A2B2B">Sud Italia</text>
+      <text x="92" y="92" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="13" fontStyle="italic" fill="#7A2B2B">Ottaviano</text>
       <path d="M92 64 L92 102" stroke="#CD212A" strokeWidth="1.2" opacity="0.5" />
       <path d="M108 138 C 96 138, 90 124, 96 110 C 102 96, 122 92, 142 96 L184 104 C 204 108, 224 112, 234 126 L242 140 C 236 152, 116 152, 108 138 Z" stroke="#7A2B2B" strokeWidth="2" fill="#B85C38" fillOpacity="0.45" strokeLinejoin="round" />
       <path d="M128 104 L184 104 L186 92 L132 92 Z" stroke="#3D2817" strokeWidth="1.8" fill="#3D2817" />

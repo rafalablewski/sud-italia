@@ -11,7 +11,7 @@ export const KPI_EXPLAINERS: Record<string, ExplainerProps> = {
   "today-revenue": {
     description: "Total sales booked at this scope so far today, across all channels.",
     institutional:
-      "Intraday revenue is the board's pulse check, not a verdict — judge it against the same weekday's run-rate, not yesterday. Analysts pace it: by 14:00 a lunch-led truck should have ~45–55% of its daily take in. A flat morning is recoverable; a flat evening is a lost day.",
+      "Intraday revenue is the board's pulse check, not a verdict — judge it against the same weekday's run-rate, not yesterday. Analysts pace it: by 14:00 a lunch-led restaurant should have ~45–55% of its daily take in. A flat morning is recoverable; a flat evening is a lost day.",
     plain:
       "It's the till total since midnight. If you've rung up 3 200 PLN by mid-afternoon and a normal Tuesday does 7 000 PLN, you're on pace — the dinner rush does the rest.",
     tips:

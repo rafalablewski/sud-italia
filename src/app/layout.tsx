@@ -20,16 +20,16 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE_NAME} | Authentic Italian Street Food in Poland`,
+    default: `${SITE_NAME} | Authentic Italian Restaurant in Poland`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   keywords: [
-    "Italian food truck",
+    "Italian restaurant",
     "Neapolitan pizza",
-    "food truck Poland",
-    "Italian street food",
-    "Sud Italia",
+    "Italian restaurant Poland",
+    "Italian dining",
+    "Ottaviano",
     "pizza Kraków",
     "pizza Warszawa",
   ],

@@ -18,7 +18,7 @@ const kitchenDisplay = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Kitchen | Sud Italia",
+  title: "Kitchen | Ottaviano",
   robots: "noindex, nofollow",
 };
 

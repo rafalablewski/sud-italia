@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { getMenuWithOverrides } from "@/data/menus";
-import { getUpsellSettings } from "@/lib/store";
+import { getEnabledStripeMethods, getUpsellSettings } from "@/lib/store";
 import { findBundle, computeBundlePrice, type BundleTier } from "@/lib/bundles";
 import { normalizePlPhoneE164 } from "@/lib/phone";
 import { logger } from "@/lib/logger";
@@ -50,7 +50,13 @@ export async function POST(req: NextRequest) {
       appliedBundleId,
       appliedBundlePriceGrosze,
       referralCode,
+      channel: rawChannel,
+      tableNumber,
     } = parsed.data;
+    // QR table ordering: an immediate, already-seated dine-in order with no
+    // slot booking. Everything else is the slot-booked web flow.
+    const isQr = rawChannel === "qr";
+    const effFulfillment = isQr ? "dine-in" : fulfillmentType;
 
     const phoneE164 = normalizePlPhoneE164(customerPhone);
     if (!phoneE164) {
@@ -78,7 +84,8 @@ export async function POST(req: NextRequest) {
       idempotencyHash = computeCheckoutHash(
         idempotencyKey,
         locationSlug,
-        slotId,
+        // QR walk-ins carry no slot — fold the table into the dedup key instead.
+        slotId ?? (isQr ? `qr:${tableNumber ?? ""}` : ""),
         cartHash,
       );
       const cached = await getCachedCheckout(idempotencyHash);
@@ -98,17 +105,19 @@ export async function POST(req: NextRequest) {
       locationSlug,
       customerName,
       customerPhone,
-      fulfillmentType,
+      fulfillmentType: effFulfillment,
       slotId,
       slotDate,
       slotTime,
+      immediate: isQr,
+      tableNumber: isQr ? tableNumber : undefined,
       deliveryAddress,
       partySize,
       tipAmount: typeof rawTip === "number" ? rawTip : undefined,
       appliedBundleId,
       appliedBundlePriceGrosze,
       referralCode,
-      channel: "web",
+      channel: isQr ? "qr" : "web",
     });
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 400 });
@@ -127,6 +136,9 @@ export async function POST(req: NextRequest) {
     if (process.env.STRIPE_SECRET_KEY) {
       const stripe = (await import("stripe")).default;
       const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
+      // Methods the operator enabled in /admin/payments drive the Stripe
+      // session (Apple/Google Pay ride the "card" type automatically).
+      const paymentMethodTypes = await getEnabledStripeMethods();
 
       const bundleStripeLines: { price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number }; quantity: number }[] | null =
         bundleSubtotal !== null && appliedBundleId
@@ -217,7 +229,7 @@ export async function POST(req: NextRequest) {
 
       const session = await stripeClient.checkout.sessions.create(
         {
-          payment_method_types: ["card", "p24", "blik"],
+          payment_method_types: paymentMethodTypes as ("card" | "p24" | "blik")[],
           ...(sessionDiscounts ? { discounts: sessionDiscounts } : {}),
           line_items: [
             ...(bundleStripeLines ??
@@ -289,12 +301,14 @@ export async function POST(req: NextRequest) {
             locationSlug,
             customerName,
             customerPhone: phoneE164,
-            fulfillmentType,
-            slotId,
-            slotTime,
-            slotDate,
+            fulfillmentType: effFulfillment,
+            // Use the order's resolved slot fields (synthesised for QR).
+            slotId: order.slotId,
+            slotTime: order.slotTime,
+            slotDate: order.slotDate,
             ...(order.partySize ? { partySize: String(order.partySize) } : {}),
-            channel: "web",
+            ...(isQr && tableNumber ? { tableNumber } : {}),
+            channel: isQr ? "qr" : "web",
           },
         },
         idempotencyHash ? { idempotencyKey: idempotencyHash } : undefined,

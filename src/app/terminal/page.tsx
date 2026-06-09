@@ -79,7 +79,7 @@ export default function TerminalLoginPage() {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-center mb-1 font-heading gradient-text">
-            Sud Italia
+            Ottaviano
           </h1>
           <p className="admin-text-dim text-center mb-6 text-sm">Staff terminal</p>
 

@@ -42,7 +42,7 @@ loyalty-invite chip.
 - `.v8-rewards-signin-h1` — italic Cormorant 38px *Soci e amici*
   headline (terracotta italic emphasis on the Italian phrase).
 - `.v8-rewards-signin-sub` — italic Cormorant 17px sub-line:
-  "Sud Italia Rewards — earn points, unlock perks, share with the
+  "Ottaviano Rewards — earn points, unlock perks, share with the
   famiglia."
 - `.v8-rewards-signin-row` — phone input row: `.v8-rewards-signin-prefix`
   +48 capsule + parchment-cream `.v8-rewards-signin-input` + terracotta

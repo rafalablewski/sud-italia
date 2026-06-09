@@ -624,7 +624,7 @@ export function CoreV2Kds() {
     return (
       <div className="cv-kiosk">
         <div className="cv-kiosk-top">
-          <span className="cv-kiosk-brand">Sud Italia · KDS · {location || "line"}</span>
+          <span className="cv-kiosk-brand">Ottaviano · KDS · {location || "line"}</span>
           {controls}
           <button type="button" className="cv-iconbtn" title="Exit fullscreen" onClick={toggleKiosk}>✕</button>
         </div>
