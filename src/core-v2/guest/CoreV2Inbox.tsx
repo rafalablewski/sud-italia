@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePolling } from "@/lib/usePolling";
 import { CoreV2Shell } from "@/core-v2/shell/CoreV2Shell";
 import { CoreV2Dialog } from "@/core-v2/ui/Dialog";
@@ -140,6 +140,130 @@ function mergeConversations(sessions: WaSessionRow[], heads: TranscriptHead[]): 
   }
   return [...byPhone.values()].sort((a, b) => +new Date(b.lastAt) - +new Date(a.lastAt));
 }
+
+/**
+ * One conversation-list row. Memoised so the list doesn't re-render every row
+ * when an unrelated bit of inbox state changes (a keystroke in the composer, a
+ * selection on another row) — only rows whose own data or `selected` flag
+ * actually changed re-render. `onSelect` must be a stable callback for the memo
+ * to hold.
+ */
+const ConvRow = memo(function ConvRow({
+  c,
+  selected,
+  onSelect,
+}: {
+  c: ConversationRow;
+  selected: boolean;
+  onSelect: (phone: string) => void;
+}) {
+  return (
+    <button className={selected ? "cv-conv on" : "cv-conv"} onClick={() => onSelect(c.phone)}>
+      <span className="cv-av">{initials(c.customerName, c.phone)}</span>
+      <span className="cm">
+        <span className="cn">
+          {c.customerName || c.phone}
+          <span className="ct">{clock(c.lastAt)}</span>
+        </span>
+        <span className="cp">
+          {c.hasActiveSession && <span className="badge live">LIVE</span>}
+          {c.pendingPaymentUrl && <span className="badge pay">PAY</span>}
+          {c.lastBody || "—"}
+        </span>
+      </span>
+    </button>
+  );
+});
+
+/** One message bubble (+ its day separator). Memoised on the message object —
+ *  the thread reuses message identities when appending, so an arriving message
+ *  mounts one new bubble instead of re-rendering the whole thread. */
+const MessageBubble = memo(function MessageBubble({
+  m,
+  sep,
+  sepLabel,
+}: {
+  m: WaMessage;
+  sep: boolean;
+  sepLabel: string;
+}) {
+  return (
+    <>
+      {sep && <div className="cv-day-sep"><span>{sepLabel}</span></div>}
+      <div className={`cv-bub ${m.actor}`}>
+        {m.kind && m.kind !== "text" && KIND_BADGE[m.kind] && (
+          <span className="cv-bub-kind">{KIND_BADGE[m.kind]}</span>
+        )}
+        {m.body}
+        <span className="t">
+          {m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : m.actor === "system" ? "System" : ""} {clock(m.at)}
+        </span>
+      </div>
+    </>
+  );
+});
+
+/**
+ * The reply composer (quick-replies + textarea + send). Owns its own draft
+ * state so typing re-renders only this subtree, never the conversation list or
+ * the message thread. `onSend` runs the actual send and resolves false on
+ * failure, at which point the draft is restored so nothing is silently lost.
+ */
+const Composer = memo(function Composer({
+  windowOpen,
+  sending,
+  pendingPaymentUrl,
+  onSend,
+  onNeedPayLink,
+}: {
+  windowOpen: boolean;
+  sending: boolean;
+  pendingPaymentUrl: string | null;
+  onSend: (body: string) => Promise<boolean>;
+  onNeedPayLink: () => void;
+}) {
+  const [reply, setReply] = useState("");
+  const insert = (text: string | null) => {
+    if (!text) return onNeedPayLink();
+    setReply((r) => (r.trim() ? `${r.trim()} ${text}` : text));
+  };
+  const submit = async () => {
+    const body = reply.trim();
+    if (!body || sending) return;
+    setReply("");
+    const ok = await onSend(body);
+    // Restore the draft only if the operator hasn't started typing a new one.
+    if (!ok) setReply((cur) => (cur.trim() ? cur : body));
+  };
+  return (
+    <>
+      <div className="cv-quickreplies">
+        {QUICK_REPLIES.map((q) => (
+          <button key={q.label} type="button" onClick={() => insert(q.text(pendingPaymentUrl))}>
+            {q.label}
+          </button>
+        ))}
+      </div>
+      <div className="cv-composer">
+        <textarea
+          value={reply}
+          onChange={(e) => setReply(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void submit();
+            }
+          }}
+          placeholder={windowOpen ? "Type a reply… (Enter to send)" : "24h window closed — a template is needed to reopen"}
+          rows={1}
+        />
+        <button className="cv-send-msg" disabled={!reply.trim() || sending} onClick={() => void submit()}>
+          ➤
+        </button>
+      </div>
+    </>
+  );
+});
 
 interface WaSettings {
   enabled: boolean;
@@ -490,7 +614,6 @@ export function CoreV2Inbox() {
   const [selected, setSelected] = useState<string | null>(null);
   const [thread, setThread] = useState<WaMessage[]>([]);
   const [rollup, setRollup] = useState<GuestRollup | null>(null);
-  const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<Filter>("inbox");
   const [query, setQuery] = useState("");
@@ -585,7 +708,24 @@ export function CoreV2Inbox() {
     });
   }, [conversations, filter, query, archivedSet]);
 
-  const selectedConv = conversations.find((c) => c.phone === selected) ?? null;
+  const selectedConv = useMemo(
+    () => conversations.find((c) => c.phone === selected) ?? null,
+    [conversations, selected],
+  );
+  const onSelect = useCallback((phone: string) => setSelected(phone), []);
+
+  // Day-separated thread rows, derived once per thread change (not re-walked on
+  // every render). Message identities are reused across appends, so a memoised
+  // <MessageBubble> only re-renders the bubble whose message changed.
+  const threadRows = useMemo(() => {
+    let lastDay = "";
+    return thread.map((m, i) => {
+      const dk = new Date(m.at).toDateString();
+      const sep = dk !== lastDay;
+      lastDay = dk;
+      return { m, i, sep, sepLabel: sep ? dayLabel(m.at) : "" };
+    });
+  }, [thread]);
 
   // WhatsApp's 24h customer-service window: free-text replies only land while
   // the last inbound message is < 24h old; otherwise a template must reopen it.
@@ -596,57 +736,56 @@ export function CoreV2Inbox() {
     return false;
   }, [thread]);
 
-  const insertReply = (text: string | null) => {
-    if (!text) {
-      toast("No payment link on this conversation yet", "danger");
-      return;
-    }
-    setReply((r) => (r.trim() ? `${r.trim()} ${text}` : text));
-  };
+  const onNeedPayLink = useCallback(() => toast("No payment link on this conversation yet", "danger"), [toast]);
 
-  const send = async () => {
-    if (!selected || !reply.trim() || sending) return;
-    const body = reply.trim();
-    // Optimistic bubble — the operator sees their reply land instantly instead
-    // of waiting a round-trip for loadThread. The poll is held while `sending`
-    // so a stale frame can't drop it; loadThread reconciles to server truth.
-    const optimistic: WaMessage = { at: new Date().toISOString(), direction: "out", body, actor: "operator", kind: "text" };
-    setSending(true);
-    setThread((t) => [...t, optimistic]);
-    setReply("");
-    try {
-      const res = await fetch(`/api/admin/whatsapp/sessions/${encodeURIComponent(selected)}/message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      });
-      if (res.ok) {
-        await loadThread(selected);
-        toast("Message sent", "success");
-      } else {
+  // Send a reply. Returns false on failure so the Composer can restore its draft.
+  const send = useCallback(
+    async (body: string): Promise<boolean> => {
+      if (!selected || !body || sending) return false;
+      // Optimistic bubble — the operator sees their reply land instantly instead
+      // of waiting a round-trip for loadThread. The poll is held while `sending`
+      // so a stale frame can't drop it; loadThread reconciles to server truth.
+      const optimistic: WaMessage = { at: new Date().toISOString(), direction: "out", body, actor: "operator", kind: "text" };
+      setSending(true);
+      setThread((t) => [...t, optimistic]);
+      try {
+        const res = await fetch(`/api/admin/whatsapp/sessions/${encodeURIComponent(selected)}/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body }),
+        });
+        if (res.ok) {
+          await loadThread(selected);
+          toast("Message sent", "success");
+          return true;
+        }
         const d = await res.json().catch(() => ({}));
-        // Roll the bubble back and restore the draft so nothing is silently lost.
+        // Roll the optimistic bubble back; the Composer restores the draft.
         setThread((t) => t.filter((m) => m !== optimistic));
-        setReply(body);
         toast(d.error || "Outside the 24h window — send a template to reopen", "danger");
+        return false;
+      } finally {
+        setSending(false);
       }
-    } finally {
-      setSending(false);
-    }
-  };
+    },
+    [selected, sending, loadThread, toast],
+  );
 
-  const setFlag = async (phone: string, patch: { archived?: boolean; pinned?: boolean }) => {
-    try {
-      const res = await fetch("/api/admin/whatsapp/flags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, ...patch }),
-      });
-      if (res.ok) await loadAll();
-    } catch {
-      /* non-fatal */
-    }
-  };
+  const setFlag = useCallback(
+    async (phone: string, patch: { archived?: boolean; pinned?: boolean }) => {
+      try {
+        const res = await fetch("/api/admin/whatsapp/flags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, ...patch }),
+        });
+        if (res.ok) await loadAll();
+      } catch {
+        /* non-fatal */
+      }
+    },
+    [loadAll],
+  );
 
   const kpis = metrics
     ? [
@@ -702,20 +841,7 @@ export function CoreV2Inbox() {
                 <div className="cv-kds-empty pad">No conversations.</div>
               ) : (
                 filtered.map((c) => (
-                  <button key={c.phone} className={c.phone === selected ? "cv-conv on" : "cv-conv"} onClick={() => setSelected(c.phone)}>
-                    <span className="cv-av">{initials(c.customerName, c.phone)}</span>
-                    <span className="cm">
-                      <span className="cn">
-                        {c.customerName || c.phone}
-                        <span className="ct">{clock(c.lastAt)}</span>
-                      </span>
-                      <span className="cp">
-                        {c.hasActiveSession && <span className="badge live">LIVE</span>}
-                        {c.pendingPaymentUrl && <span className="badge pay">PAY</span>}
-                        {c.lastBody || "—"}
-                      </span>
-                    </span>
-                  </button>
+                  <ConvRow key={c.phone} c={c} selected={c.phone === selected} onSelect={onSelect} />
                 ))
               )}
             </div>
@@ -742,55 +868,21 @@ export function CoreV2Inbox() {
                   </button>
                 </div>
                 <div className="cv-msgs" ref={msgsRef}>
-                  {thread.length === 0 ? (
+                  {threadRows.length === 0 ? (
                     <div className="cv-kds-empty pad">No messages yet.</div>
                   ) : (
-                    (() => {
-                      let lastDay = "";
-                      return thread.map((m, i) => {
-                        const dk = new Date(m.at).toDateString();
-                        const sep = dk !== lastDay;
-                        lastDay = dk;
-                        return (
-                          <Fragment key={i}>
-                            {sep && <div className="cv-day-sep"><span>{dayLabel(m.at)}</span></div>}
-                            <div className={`cv-bub ${m.actor}`}>
-                              {m.kind && m.kind !== "text" && KIND_BADGE[m.kind] && (
-                                <span className="cv-bub-kind">{KIND_BADGE[m.kind]}</span>
-                              )}
-                              {m.body}
-                              <span className="t">{m.actor === "operator" ? "You" : m.actor === "bot" ? "Bot" : m.actor === "system" ? "System" : ""} {clock(m.at)}</span>
-                            </div>
-                          </Fragment>
-                        );
-                      });
-                    })()
+                    threadRows.map((r) => (
+                      <MessageBubble key={`${r.i}-${r.m.at}`} m={r.m} sep={r.sep} sepLabel={r.sepLabel} />
+                    ))
                   )}
                 </div>
-                <div className="cv-quickreplies">
-                  {QUICK_REPLIES.map((q) => (
-                    <button key={q.label} type="button" onClick={() => insertReply(q.text(selectedConv.pendingPaymentUrl))}>
-                      {q.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="cv-composer">
-                  <textarea
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void send();
-                      }
-                    }}
-                    placeholder={windowOpen ? "Type a reply… (Enter to send)" : "24h window closed — a template is needed to reopen"}
-                    rows={1}
-                  />
-                  <button className="cv-send-msg" disabled={!reply.trim() || sending} onClick={() => void send()}>
-                    ➤
-                  </button>
-                </div>
+                <Composer
+                  windowOpen={windowOpen}
+                  sending={sending}
+                  pendingPaymentUrl={selectedConv.pendingPaymentUrl}
+                  onSend={send}
+                  onNeedPayLink={onNeedPayLink}
+                />
               </>
             )}
           </section>
