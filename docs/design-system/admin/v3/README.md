@@ -505,7 +505,7 @@ auth canvas's signature lighting and the sign-in lockup:
   board. Two tabs (`ChipRow`): **Tasks** (assign a to-do to a person or a whole
   role+location — fans out to one row per assignee, each with its own done-state)
   and **Announcements** (post to everyone / roles / locations / named people,
-  pinnable). Built from the standard primitives (`Card`/`Button`/`Badge`/`Switch`
+  pinnable, with edit-in-place + delete — the POST upserts on `id`). Built from the standard primitives (`Card`/`Button`/`Badge`/`Switch`
   + `.av3-input`/`.av3-select`/`.av3-field`), no new CSS. Gated by `comms.view` /
   `comms.manage` (owner-default, grantable). The receiving half is **`PortalInbox`**
   (`src/components/portal/PortalInbox.tsx`) on the Manager/Franchisee portals —

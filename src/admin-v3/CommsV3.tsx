@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Megaphone, ListTodo, Plus, Trash2, Pin } from "lucide-react";
+import { Megaphone, ListTodo, Plus, Trash2, Pin, Pencil } from "lucide-react";
 import { Card, CardHead, CardBody, Button, Badge, ChipRow, Switch, type BadgeTone } from "./ui";
 import { useAdminLocationV3 } from "./LocationContext";
 import {
@@ -53,11 +53,14 @@ export function CommsV3() {
   const [tPriority, setTPriority] = useState<TaskPriority>("normal");
   const [tDue, setTDue] = useState("");
 
-  // New-announcement form.
+  // New / edit-announcement form. `aEditId` is null for a fresh post, or the
+  // id of the announcement being edited (the POST upserts on id).
+  const [aEditId, setAEditId] = useState<string | null>(null);
   const [aTitle, setATitle] = useState("");
   const [aBody, setABody] = useState("");
   const [aRoles, setARoles] = useState<AdminRole[]>([]);
   const [aLocs, setALocs] = useState<string[]>([]);
+  const [aUsers, setAUsers] = useState<string[]>([]);
   const [aPinned, setAPinned] = useState(false);
 
   const load = useCallback(async () => {
@@ -114,7 +117,12 @@ export function CommsV3() {
     await fetch(`/api/admin/tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   };
 
-  const createAnnouncement = async () => {
+  const resetAnnForm = () => {
+    setAEditId(null); setATitle(""); setABody("");
+    setARoles([]); setALocs([]); setAUsers([]); setAPinned(false);
+  };
+
+  const submitAnnouncement = async () => {
     if (!aTitle.trim() || !aBody.trim()) return;
     setBusy(true);
     try {
@@ -122,26 +130,41 @@ export function CommsV3() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // `id` present ⇒ the store upserts (edit); absent ⇒ a fresh post.
+          id: aEditId ?? undefined,
           title: aTitle.trim(),
           body: aBody.trim(),
           targetRoles: aRoles.length ? aRoles : undefined,
           targetLocationSlugs: aLocs.length ? aLocs : undefined,
+          targetUserIds: aUsers.length ? aUsers : undefined,
           pinned: aPinned || undefined,
         }),
       });
       if (res.ok) {
-        setATitle(""); setABody(""); setARoles([]); setALocs([]); setAPinned(false);
+        resetAnnForm();
         await load();
       } else {
         const e = await res.json().catch(() => null);
-        alert(e?.error ?? "Could not post announcement.");
+        alert(e?.error ?? "Could not save announcement.");
       }
     } finally {
       setBusy(false);
     }
   };
 
+  const editAnnouncement = (a: Announcement) => {
+    setAEditId(a.id);
+    setATitle(a.title);
+    setABody(a.body);
+    setARoles(a.targetRoles ?? []);
+    setALocs(a.targetLocationSlugs ?? []);
+    setAUsers(a.targetUserIds ?? []);
+    setAPinned(!!a.pinned);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const deleteAnnouncement = async (id: string) => {
+    if (aEditId === id) resetAnnForm();
     setAnns((arr) => arr.filter((a) => a.id !== id));
     await fetch(`/api/admin/announcements?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   };
@@ -150,6 +173,10 @@ export function CommsV3() {
     setARoles((s) => (s.includes(r) ? s.filter((x) => x !== r) : [...s, r]));
   const toggleLoc = (slug: string) =>
     setALocs((s) => (s.includes(slug) ? s.filter((x) => x !== slug) : [...s, slug]));
+  const toggleUser = (id: string) =>
+    setAUsers((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const targetableUsers = users.filter((u) => u.status !== "disabled");
 
   const openTasks = tasks.filter((t) => t.status === "open").length;
   const unreadAnns = anns.filter((a) => a.readBy.length === 0).length;
@@ -268,7 +295,10 @@ export function CommsV3() {
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--av3-gap-4)" }}>
           {canManage && (
             <Card>
-              <CardHead title={<><Megaphone style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />New announcement</>} />
+              <CardHead
+                title={<><Megaphone style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />{aEditId ? "Edit announcement" : "New announcement"}</>}
+                actions={aEditId ? <Badge tone="info">editing</Badge> : undefined}
+              />
               <CardBody>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div className="av3-field">
@@ -299,11 +329,28 @@ export function CommsV3() {
                       ))}
                     </div>
                   </div>
+                  {targetableUsers.length > 0 && (
+                    <div className="av3-field">
+                      <label className="av3-field-label">Also notify specific people (optional)</label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {targetableUsers.map((u) => (
+                          <button key={u.id} type="button" className={`av3-chip ${aUsers.includes(u.id) ? "is-active" : ""}`} onClick={() => toggleUser(u.id)}>
+                            {u.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                     <Switch checked={aPinned} onChange={setAPinned} label="Pin to top" />
-                    <Button variant="primary" onClick={createAnnouncement} loading={busy} disabled={!aTitle.trim() || !aBody.trim()}>
-                      <Megaphone style={{ width: 14, height: 14 }} />Post announcement
-                    </Button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {aEditId && (
+                        <Button variant="ghost" onClick={resetAnnForm} disabled={busy}>Cancel</Button>
+                      )}
+                      <Button variant="primary" onClick={submitAnnouncement} loading={busy} disabled={!aTitle.trim() || !aBody.trim()}>
+                        <Megaphone style={{ width: 14, height: 14 }} />{aEditId ? "Save changes" : "Post announcement"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardBody>
@@ -330,9 +377,14 @@ export function CommsV3() {
                         </div>
                       </div>
                       {canManage && (
-                        <Button variant="ghost" size="sm" onClick={() => deleteAnnouncement(a.id)} aria-label="Delete announcement">
-                          <Trash2 style={{ width: 14, height: 14 }} />
-                        </Button>
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => editAnnouncement(a)} aria-label="Edit announcement">
+                            <Pencil style={{ width: 14, height: 14 }} />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => deleteAnnouncement(a.id)} aria-label="Delete announcement">
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </Button>
+                        </>
                       )}
                     </div>
                   ))}
