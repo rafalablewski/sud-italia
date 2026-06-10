@@ -77,8 +77,26 @@ hex in a v3 component — use the token.
 a **232px sidebar that collapses to a 60px icon rail** (state persisted), a
 **44px topbar** with breadcrumb + the single shell-level scope switcher +
 theme toggle + notification bell, and a content well on a tight grid. Nav
-taxonomy + permission gating mirror v2 (`v3/nav.config.ts`, same sections,
-same `requiredRole` model via `@/lib/admin-roles`).
+taxonomy mirrors v2 (`v3/nav.config.ts`, same sections).
+
+**Access gating mirrors v2's two ANDed gates** (this is the UX layer — the
+server still enforces every `/api/admin/*` call). `SidebarV3` reads
+`/api/admin/me` and passes the viewer's role **and** effective permissions
+(`allAccess` / `permissions`) into `filterNavForRoleV3`:
+1. **Role-rank floor** — `requiredRole` via `@/lib/admin-roles`; the only gate
+   for items whose page has no mapped permission (Alerts, Boardroom, Payments,
+   QR ordering, Integrations).
+2. **Granular permission** — each item is shown only when the viewer's effective
+   permissions include the key `permissionForAdminPage(href)` requires, so the
+   admin's **Permission Matrix is the source of truth** for the rail. A
+   role-default user's effective set *is* their preset (no-op, same nav as
+   before); a per-user custom grant shows exactly the pages it permits. Owners
+   (`allAccess`) skip it.
+
+`AdminShellV3` also runs a **client page guard** (parity with `CoreProviders`):
+for a `custom`-grant user it `router.replace`s to their landing when the current
+page maps to a permission they lack, so a typed URL / stale bookmark to a
+forbidden surface bounces home instead of loading a shell the API would 403.
 
 ## Responsive & touch
 
