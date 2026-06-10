@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, LogIn } from "lucide-react";
 import { startAuthentication } from "@simplewebauthn/browser";
+import { AuthShell } from "./AuthShell";
 
 /**
  * Shared sign-in form for both login doors:
@@ -101,102 +102,91 @@ export function LoginForm({ portal }: { portal: "admin" | "staff" }) {
   };
 
   return (
-    <div className="av3-auth">
-      <div className="av3-auth-col">
-        <div className="av3-auth-frame">
-          <div className="av3-auth-lockup">
-            <span className="av3-auth-mark">SI</span>
-            <div>
-              <div className="av3-auth-wordmark">Ottaviano</div>
-              <div className="av3-auth-eyebrow">{isAdmin ? "Owner console" : "Team sign-in"}</div>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="av3-auth-form">
-            <div className="av3-field">
-              <label className="av3-field-label" htmlFor="login-email">
-                {isAdmin ? "Email · optional" : "Email"}
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                placeholder={isAdmin ? "shared owner session if blank" : "you@ottaviano.pl"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className="av3-input"
-                disabled={loading || keyLoading}
-                // Staff need an email; the owner door doesn't — so land the
-                // caret where the user actually types first (MFA steals it below).
-                autoFocus={!isAdmin && !mfaRequired}
-              />
-            </div>
-
-            <div className="av3-field">
-              <label className="av3-field-label" htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                className="av3-input"
-                disabled={loading || keyLoading}
-                autoFocus={isAdmin && !mfaRequired}
-              />
-            </div>
-
-            {mfaRequired && (
-              <div className="av3-field">
-                <label className="av3-field-label" htmlFor="login-totp">Authenticator code</label>
-                <input
-                  id="login-totp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={totp}
-                  onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  autoComplete="one-time-code"
-                  className="av3-input av3-auth-otp"
-                  disabled={loading || keyLoading}
-                  autoFocus
-                />
-              </div>
-            )}
-
-            {error && <p className="av3-auth-error">{error}</p>}
-
-            <button type="submit" disabled={loading || keyLoading || !password} className="av3-btn av3-btn-primary">
-              {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> {isAdmin ? "Enter console" : "Sign in"}</>)}
-            </button>
-
-            <button type="button" onClick={handleSecurityKey} disabled={loading || keyLoading} className="av3-auth-passkey">
-              <KeyRound />
-              {keyLoading ? "Waiting for key…" : "Use passkey / security key"}
-            </button>
-          </form>
-        </div>
-
-        <div className="av3-auth-foot">
-          {isAdmin ? (
+    <AuthShell
+      eyebrow={isAdmin ? "Owner console" : "Team sign-in"}
+      footer={
+        isAdmin ? (
+          <p>
+            Manager or staff? <a href="/login">Sign in here</a>
+          </p>
+        ) : (
+          <>
             <p>
-              Manager or staff? <a href="/login">Sign in here</a>
+              Kitchen or till on a shared device? <a href="/terminal">Use the PIN terminal</a>
             </p>
-          ) : (
-            <>
-              <p>
-                Kitchen or till on a shared device? <a href="/terminal">Use the PIN terminal</a>
-              </p>
-              <p>
-                Owner / admin? <a href="/admin/login">Admin sign-in</a>
-              </p>
-            </>
-          )}
+            <p>
+              Owner / admin? <a href="/admin/login">Admin sign-in</a>
+            </p>
+          </>
+        )
+      }
+    >
+      <form onSubmit={handleSubmit} className="av3-auth-form">
+        <div className="av3-field">
+          <label className="av3-field-label" htmlFor="login-email">
+            {isAdmin ? "Email · optional" : "Email"}
+          </label>
+          <input
+            id="login-email"
+            type="email"
+            placeholder={isAdmin ? "shared owner session if blank" : "you@ottaviano.pl"}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            className="av3-input"
+            disabled={loading || keyLoading}
+            // Staff need an email; the owner door doesn't — so land the
+            // caret where the user actually types first (MFA steals it below).
+            autoFocus={!isAdmin && !mfaRequired}
+          />
         </div>
-      </div>
-    </div>
+
+        <div className="av3-field">
+          <label className="av3-field-label" htmlFor="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            className="av3-input"
+            disabled={loading || keyLoading}
+            autoFocus={isAdmin && !mfaRequired}
+          />
+        </div>
+
+        {mfaRequired && (
+          <div className="av3-field">
+            <label className="av3-field-label" htmlFor="login-totp">Authenticator code</label>
+            <input
+              id="login-totp"
+              type="text"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              placeholder="000000"
+              value={totp}
+              onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              autoComplete="one-time-code"
+              className="av3-input av3-auth-otp"
+              disabled={loading || keyLoading}
+              autoFocus
+            />
+          </div>
+        )}
+
+        {error && <p className="av3-auth-error">{error}</p>}
+
+        <button type="submit" disabled={loading || keyLoading || !password} className="av3-btn av3-btn-primary">
+          {loading ? "Signing in…" : (<><LogIn className="av3-btn-ico" /> {isAdmin ? "Enter console" : "Sign in"}</>)}
+        </button>
+
+        <button type="button" onClick={handleSecurityKey} disabled={loading || keyLoading} className="av3-auth-passkey">
+          <KeyRound />
+          {keyLoading ? "Waiting for key…" : "Use passkey / security key"}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

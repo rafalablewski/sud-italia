@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Delete, LogIn } from "lucide-react";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { getActiveLocations } from "@/data/locations";
 import { PIN_MAX_LENGTH, PIN_MIN_LENGTH } from "@/lib/password";
 
@@ -70,76 +71,65 @@ export default function TerminalLoginPage() {
   };
 
   return (
-    <div className="av3-auth">
-      <div className="av3-auth-col">
-        <div className="av3-auth-frame">
-          <div className="av3-auth-lockup">
-            <span className="av3-auth-mark">SI</span>
-            <div>
-              <div className="av3-auth-wordmark">Ottaviano</div>
-              <div className="av3-auth-eyebrow">Staff terminal</div>
-            </div>
-          </div>
-
-          {locations.length > 1 && (
-            <div className="av3-auth-locs">
-              {locations.map((l) => (
-                <button
-                  key={l.slug}
-                  type="button"
-                  onClick={() => pickLocation(l.slug)}
-                  className={`av3-auth-loc${slug === l.slug ? " is-active" : ""}`}
-                  aria-pressed={slug === l.slug}
-                >
-                  {l.city}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="av3-auth-dots" aria-label="PIN entry">
-            {Array.from({ length: Math.max(PIN_MIN_LENGTH, pin.length) }).map((_, i) => (
-              <span key={i} className={`av3-auth-dot${i < pin.length ? " is-on" : ""}`} />
-            ))}
-          </div>
-
-          <div className="av3-auth-keypad">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-              <button key={d} type="button" onClick={() => press(d)} className="av3-auth-key">
-                {d}
-              </button>
-            ))}
+    <AuthShell
+      eyebrow="Staff terminal"
+      footer={
+        <p>
+          Manager or owner? <a href="/login">Sign in with email</a>
+        </p>
+      }
+    >
+      {locations.length > 1 && (
+        <div className="av3-auth-locs">
+          {locations.map((l) => (
             <button
+              key={l.slug}
               type="button"
-              onClick={backspace}
-              className="av3-auth-key av3-auth-key-del"
-              aria-label="Delete"
+              onClick={() => pickLocation(l.slug)}
+              className={`av3-auth-loc${slug === l.slug ? " is-active" : ""}`}
+              aria-pressed={slug === l.slug}
             >
-              <Delete />
+              {l.city}
             </button>
-            <button type="button" onClick={() => press("0")} className="av3-auth-key">
-              0
-            </button>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={loading || pin.length < PIN_MIN_LENGTH}
-              className="av3-auth-key av3-auth-key-go"
-              aria-label="Log in"
-            >
-              <LogIn />
-            </button>
-          </div>
-
-          {error && <p className="av3-auth-error">{error}</p>}
+          ))}
         </div>
+      )}
 
-        <div className="av3-auth-foot">
-          <p>
-            Manager or owner? <a href="/login">Sign in with email</a>
-          </p>
-        </div>
+      <div className="av3-auth-dots" aria-label="PIN entry">
+        {Array.from({ length: Math.max(PIN_MIN_LENGTH, pin.length) }).map((_, i) => (
+          <span key={i} className={`av3-auth-dot${i < pin.length ? " is-on" : ""}`} />
+        ))}
       </div>
-    </div>
+
+      <div className="av3-auth-keypad">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+          <button key={d} type="button" onClick={() => press(d)} className="av3-auth-key">
+            {d}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={backspace}
+          className="av3-auth-key av3-auth-key-del"
+          aria-label="Delete"
+        >
+          <Delete />
+        </button>
+        <button type="button" onClick={() => press("0")} className="av3-auth-key">
+          0
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={loading || pin.length < PIN_MIN_LENGTH}
+          className="av3-auth-key av3-auth-key-go"
+          aria-label="Log in"
+        >
+          <LogIn />
+        </button>
+      </div>
+
+      {error && <p className="av3-auth-error">{error}</p>}
+    </AuthShell>
   );
 }

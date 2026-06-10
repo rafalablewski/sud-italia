@@ -318,7 +318,13 @@ refetches every 30s.
 The sign-in surface (`src/components/auth/LoginForm.tsx`, shared by the universal
 team door **`/login`** and the owner-only **`/admin/login`**) plus the
 shared-device **PIN terminal** (`src/app/terminal/page.tsx`) are the av3
-surfaces that render **outside** `AdminShellV3`. All three route layouts
+surfaces that render **outside** `AdminShellV3`. Because every door does the same
+job — authenticate, then route — they share the **`AuthShell`** component
+(`src/components/auth/AuthShell.tsx`): it owns the canvas → column → bracket →
+brand-lockup chrome, and each door passes its `eyebrow` (portal label) +
+`footer` (cross-door links) and drops its controls in as `children` (the
+email/password form, or the PIN keypad), so the chrome can never drift between
+doors. All three route layouts
 (`src/app/login/layout.tsx`, `src/app/admin/login/layout.tsx`,
 `src/app/terminal/layout.tsx`) load `themes/admin-v3/index.css` and the three
 `--font-admin-*` typefaces, then wrap their body in `#admin-portal-root.av3-root`
