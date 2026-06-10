@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manager portal — final notifications (av3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  STANDALONE, NON-SHIPPED mockup (lives in /tests). Faithful to the SHIPPED
+  implementation on branch claude/wizardly-rubin-pic8pc. Sample data + vanilla
+  JS only.
+
+  What it mirrors (1:1 with the real code):
+    • CommsBell — an INBOX-icon button (NOT the operational bell) in the portal
+      header, count = unread Inbox announcements + open/overdue to-dos, with a
+      glance dropdown. (In the app it also sits in the admin shell topbar.)
+    • PortalInbox — Gmail-style inbox with three mailbox tabs INBOX / ARCHIVED /
+      DELETED, 3-most-recent-unread + "Load more", per-row Mark read / Archive /
+      Delete, and Restore from Archived/Deleted. Mailbox state is per-recipient.
+    • Every action (open/read · archive · delete · restore) is written to the
+      CENTRAL ADMIN AUDIT LOG as notification.{read,archive,delete,restore} —
+      shown here in the "Admin audit log" panel at the bottom (what an owner
+      sees at /admin/audit-log), updating live as you act. NOT a portal tab.
+
+  Tokens mirror themes/admin-v3/index.css. Faithful to values, not pixel-perfect.
+-->
+<style>
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-brand-line:color-mix(in oklab,var(--av3-brand) 42%,transparent);
+    --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#5f9bd6; --av3-c2:#34b27b; --av3-c3:#cbb48a; --av3-c4:#c2384f;
+    --av3-c5:#9b6dd6; --av3-c6:#d6915f; --av3-c7:#5fc8d6; --av3-c8:#d65f9b;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-gap-1:4px; --av3-gap-2:8px; --av3-gap-3:12px; --av3-gap-4:16px; --av3-gap-5:24px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-ease:cubic-bezier(.4,0,.2,1); --av3-t-fast:110ms;
+    --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif; --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#050506;color:var(--av3-fg);font-family:var(--av3-ui);-webkit-font-smoothing:antialiased}
+  .caption{max-width:1000px;margin:0 auto;padding:22px 24px 0;font-family:var(--av3-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--av3-platinum)}
+  .caption small{display:block;text-transform:none;letter-spacing:0;font-family:var(--av3-ui);font-size:12px;color:var(--av3-muted);margin-top:6px;line-height:1.5}
+  svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .av3-portal{position:relative;padding:40px 24px 64px;overflow:hidden;background:var(--av3-bg)}
+  .av3-portal::before{content:"";position:absolute;left:50%;top:-34%;width:120vw;height:120vh;transform:translateX(-50%);pointer-events:none;background:radial-gradient(36% 42% at 50% 0%,color-mix(in oklab,var(--av3-brand) 20%,transparent),transparent 70%)}
+  .av3-portal::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.012) 3px 4px);-webkit-mask-image:radial-gradient(72% 48% at 50% 0%,#000,transparent 80%);mask-image:radial-gradient(72% 48% at 50% 0%,#000,transparent 80%)}
+  .av3-portal-col{position:relative;z-index:1;width:100%;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:var(--av3-gap-5)}
+  .av3-portal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--av3-gap-4);flex-wrap:wrap}
+  .av3-portal-greet{font-family:var(--av3-display);font-size:27px;font-weight:600;line-height:1.08;margin:14px 0 0}
+  .av3-portal-sub{margin:5px 0 0;font-size:12.5px;color:var(--av3-muted)}
+  .av3-portal-section{display:flex;flex-direction:column;gap:var(--av3-gap-3)}
+  .av3-section-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--av3-subtle);display:flex;align-items:center;gap:8px}
+
+  .av3-auth-lockup{display:inline-flex;align-items:center;gap:12px}
+  .av3-auth-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:var(--av3-r-md);background:var(--av3-brand);color:#fff;font-family:var(--av3-display);font-size:17px;font-weight:600;box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--av3-platinum) 50%,transparent),0 12px 30px -12px color-mix(in oklab,var(--av3-brand) 80%,transparent)}
+  .av3-auth-wordmark{font-family:var(--av3-display);font-size:20px;font-weight:600;line-height:1.1}
+  .av3-auth-eyebrow{margin-top:2px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--av3-subtle)}
+
+  .av3-card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1)}
+  .av3-card-p{padding:var(--av3-gap-4)}
+
+  .av3-kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:var(--av3-gap-3)}
+  .av3-kpi{position:relative;display:flex;flex-direction:column;gap:6px;padding:var(--av3-gap-3) var(--av3-gap-4);background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);overflow:hidden}
+  .av3-kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--av3-kpi-accent,var(--av3-brand));opacity:.55}
+  .av3-kpi-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle)}
+  .av3-kpi-label svg{width:13px;height:13px;color:var(--av3-kpi-accent,var(--av3-subtle))}
+  .av3-kpi-value{font-family:var(--av3-mono);font-size:23px;font-weight:500;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.05}
+
+  .head-right{display:flex;align-items:center;gap:12px;position:relative}
+  .signout{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--av3-muted);background:transparent;border:1px solid transparent;border-radius:var(--av3-r-md);padding:9px 12px;cursor:pointer}
+  .signout:hover{color:var(--av3-fg);background:var(--av3-s2)}
+  .signout svg{width:14px;height:14px}
+
+  /* CommsBell — inbox icon (NOT the operational bell) */
+  .bell-btn{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:var(--av3-r-md);background:var(--av3-s2);border:1px solid var(--av3-line);color:var(--av3-fg);cursor:pointer;transition:border-color var(--av3-t-fast) var(--av3-ease),background var(--av3-t-fast)}
+  .bell-btn:hover{border-color:var(--av3-brand-line);background:var(--av3-s3)}
+  .bell-badge{position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--av3-brand);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--av3-bg);font-variant-numeric:tabular-nums}
+  .bell-badge[hidden]{display:none}
+  .bell-panel{position:absolute;top:50px;right:0;width:340px;z-index:50;background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2);overflow:hidden;display:none}
+  .bell-panel.open{display:block}
+  .bell-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--av3-line);font-size:13px;font-weight:600}
+  .bell-panel-head span{font-size:11px;color:var(--av3-subtle);font-weight:500}
+  .bell-glance{max-height:300px;overflow:auto}
+  .glance-row{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--av3-line);font-size:12.5px;width:100%;background:none;border-left:none;border-right:none;border-bottom:none;color:inherit;text-align:left;cursor:pointer}
+  .glance-row:first-child{border-top:none}
+  .glance-row:hover{background:var(--av3-s2)}
+  .glance-dot{width:7px;height:7px;border-radius:999px;margin-top:5px;flex-shrink:0}
+  .glance-ttl{font-weight:600;color:var(--av3-fg)}
+  .glance-sub{color:var(--av3-muted);font-size:11.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bell-panel-foot{padding:10px 14px;border-top:1px solid var(--av3-line);text-align:center}
+  .bell-panel-foot button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--av3-info);font-size:12.5px;font-weight:600;cursor:pointer}
+  .bell-panel-foot svg{width:14px;height:14px}
+
+  /* mailbox tabs */
+  .tabs{display:flex;gap:3px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-pill);padding:3px}
+  .tab{border:none;background:none;color:var(--av3-muted);font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:var(--av3-r-pill);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .tab.active{background:var(--av3-s3);color:var(--av3-fg)}
+  .tab .cnt{font-size:10px;background:var(--av3-brand);color:#fff;border-radius:999px;padding:1px 6px;font-weight:700}
+  .tab .cntn{font-size:10px;background:var(--av3-s1);color:var(--av3-muted);border:1px solid var(--av3-line);border-radius:999px;padding:1px 6px;font-weight:600}
+
+  .inbox{overflow:hidden;padding:0}
+  .row{display:flex;align-items:flex-start;border-top:1px solid var(--av3-line)}
+  .row:first-child{border-top:none}
+  .row.unread{background:var(--av3-s2)}
+  .row.dim{opacity:.72}
+  .row-open{flex:1;min-width:0;display:flex;align-items:flex-start;gap:12px;padding:11px 14px;background:transparent;border:none;text-align:left;cursor:pointer;color:inherit}
+  .avatar{flex-shrink:0;width:34px;height:34px;border-radius:999px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;margin-top:1px}
+  .row-body{flex:1;min-width:0}
+  .row-top{display:flex;align-items:center;gap:8px}
+  .row-from{flex:1;min-width:0;font-size:13px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.unread .row-from{font-weight:700}
+  .row-time{font-size:11px;color:var(--av3-subtle);flex-shrink:0;font-variant-numeric:tabular-nums}
+  .unread-dot{width:7px;height:7px;border-radius:999px;background:var(--av3-brand);flex-shrink:0}
+  .pin{width:12px;height:12px;color:var(--av3-platinum);flex-shrink:0}
+  .row-subj{display:block;font-size:12.5px;margin-top:2px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.unread .row-subj{font-weight:600}
+  .row-subj .snip{font-weight:400;color:var(--av3-muted)}
+  .row.open .row-subj{white-space:normal}
+  .row-full{display:none;margin-top:8px;font-size:12.5px;color:var(--av3-muted);white-space:pre-wrap}
+  .row.open .row-full{display:block}
+  .row-time2{display:none;font-size:11px;color:var(--av3-subtle);margin-top:8px}
+  .row.open .row-time2{display:block}
+  .row-actions{display:flex;gap:4px;align-self:center;padding:0 12px 0 4px;flex-shrink:0}
+  .act{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--av3-r-md);background:var(--av3-s3);border:1px solid var(--av3-line);color:var(--av3-muted);cursor:pointer}
+  .act:hover{color:var(--av3-fg);border-color:var(--av3-line-strong);background:var(--av3-hover)}
+  .act.danger{color:var(--av3-bad)}
+  .act svg{width:15px;height:15px}
+  .loadmore{width:100%;border:none;border-top:1px solid var(--av3-line);background:var(--av3-s1);color:var(--av3-info);font-size:12.5px;font-weight:600;padding:11px;cursor:pointer;font-family:var(--av3-ui)}
+  .loadmore:hover{background:var(--av3-s2)}
+  .empty{margin:0;padding:16px;font-size:12.5px;color:var(--av3-muted)}
+
+  .todo-row{display:flex;align-items:flex-start;gap:12px}
+  .todo-row + .todo-row{margin-top:12px}
+  .todo-dot{width:7px;height:7px;border-radius:999px;margin-top:6px;flex-shrink:0}
+  .todo-ttl{font-size:13.5px;font-weight:600}
+  .todo-meta{font-size:11.5px;color:var(--av3-subtle);margin-top:3px}
+  .todo-meta .overdue{color:var(--av3-bad);font-weight:600}
+  .btn-sm{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--av3-s3);border:1px solid var(--av3-line);color:var(--av3-fg);border-radius:var(--av3-r-md);padding:6px 11px;cursor:pointer}
+  .btn-sm svg{width:13px;height:13px}
+
+  .cols-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--av3-gap-3)}
+  .loc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--av3-gap-3)}
+  .loc-head b{font-weight:600}
+  .loc-head span{font-size:11.5px;color:var(--av3-muted)}
+  .loc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--av3-gap-3)}
+  .stat-value{font-family:var(--av3-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums}
+  .stat-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle);margin-top:2px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:var(--av3-gap-2)}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:var(--av3-r-pill);background:var(--av3-s2);border:1px solid var(--av3-line);font-size:12px}
+  .chip span{color:var(--av3-subtle)}
+
+  .jump{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--av3-gap-3)}
+  .jcard{display:flex;align-items:center;gap:var(--av3-gap-3);padding:var(--av3-gap-3) var(--av3-gap-4);background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);text-decoration:none;color:inherit;transition:border-color var(--av3-t-fast) var(--av3-ease),transform var(--av3-t-fast) var(--av3-ease)}
+  .jcard:hover{border-color:var(--av3-brand-line);box-shadow:var(--av3-sh-2);transform:translateY(-1px)}
+  .jico{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:var(--av3-r-md);background:var(--av3-s3);color:var(--av3-platinum)}
+  .jbody{min-width:0;flex:1;display:flex;flex-direction:column}
+  .jname{font-size:13.5px;font-weight:600}
+  .jdesc{font-size:11.5px;color:var(--av3-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jcard>svg:last-child{width:15px;height:15px;color:var(--av3-subtle);flex-shrink:0}
+
+  /* admin audit log panel (what an owner sees at /admin/audit-log) */
+  .audit{border:1px dashed var(--av3-line-strong);border-radius:var(--av3-r-lg);background:color-mix(in oklab,var(--av3-info) 5%,var(--av3-s1));overflow:hidden}
+  .audit-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--av3-line);font-size:12px;color:var(--av3-muted)}
+  .audit-head b{color:var(--av3-fg);font-weight:600}
+  .audit-head svg{width:15px;height:15px;color:var(--av3-info)}
+  .log-row{display:flex;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--av3-line);font-size:12px}
+  .log-row:first-child{border-top:none}
+  .log-badge{font-family:var(--av3-mono);font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:var(--av3-r-pill);flex-shrink:0}
+  .log-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .log-actor{color:var(--av3-muted)}
+  .log-time{font-size:11px;color:var(--av3-subtle);flex-shrink:0;font-family:var(--av3-mono)}
+</style>
+</head>
+<body>
+
+<div class="caption">
+  Mockup · Manager portal — final notifications (matches shipped code)
+  <small>Not shipped. Click the <b>inbox icon</b> (top-right) · switch <b>Inbox · Archived · Deleted</b> · <b>Mark read</b> / <b>Archive</b> / <b>Delete</b> a row, or <b>Restore</b> from Archived/Deleted · tap a row to expand · <b>Load more</b>. Every action appends to the <b>Admin audit log</b> at the bottom (what an owner sees), updating live.</small>
+</div>
+
+<div class="av3-portal">
+  <div class="av3-portal-col">
+
+    <!-- ① HEADER -->
+    <div class="av3-portal-head">
+      <div>
+        <div class="av3-auth-lockup">
+          <span class="av3-auth-mark">SI</span>
+          <div>
+            <div class="av3-auth-wordmark">Ottaviano</div>
+            <div class="av3-auth-eyebrow">Manager · Wednesday, 10 June</div>
+          </div>
+        </div>
+        <h1 class="av3-portal-greet">Welcome, Rafał</h1>
+        <p class="av3-portal-sub">2 locations · Kraków, Warszawa</p>
+      </div>
+      <div class="head-right">
+        <button class="bell-btn" id="bellBtn" aria-label="Notifications and to-dos">
+          <svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+          <span class="bell-badge" id="bellBadge">0</span>
+        </button>
+        <button class="signout"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</button>
+        <div class="bell-panel" id="bellPanel">
+          <div class="bell-panel-head">Notifications &amp; to-dos <span id="glanceCount"></span></div>
+          <div class="bell-glance" id="glance"></div>
+          <div class="bell-panel-foot"><button id="viewAll">View all in inbox <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② KPI RAIL -->
+    <div class="av3-kpi-rail">
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-brand)">
+        <div class="av3-kpi-label"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v6"/><path d="M15 7h6"/></svg>Revenue today</div>
+        <div class="av3-kpi-value">12 480 zł</div>
+      </div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-info)">
+        <div class="av3-kpi-label"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4z"/><path d="M4 8v12h16V8"/></svg>Orders today</div>
+        <div class="av3-kpi-value">73</div>
+      </div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-platinum)">
+        <div class="av3-kpi-label"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M22 21a7 7 0 0 0-7-7"/></svg>Covers today</div>
+        <div class="av3-kpi-value">168</div>
+      </div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-ok)">
+        <div class="av3-kpi-label"><svg viewBox="0 0 24 24"><path d="M12 2s5 4 5 10a5 5 0 0 1-10 0c0-2 1-4 1-4"/></svg>On shift now</div>
+        <div class="av3-kpi-value">9</div>
+      </div>
+    </div>
+
+    <!-- ③ NOTIFICATIONS -->
+    <section class="av3-portal-section" id="notifSection">
+      <div class="av3-section-label" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:8px">Notifications
+          <span id="unreadPill" style="font-size:10.5px;font-weight:700;color:#fff;background:var(--av3-brand);border-radius:999px;padding:3px 7px"></span>
+        </span>
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="inbox">Inbox <span class="cnt" id="inboxCnt"></span></button>
+          <button class="tab" data-tab="archived">Archived <span class="cntn" id="archCnt"></span></button>
+          <button class="tab" data-tab="deleted">Deleted <span class="cntn" id="delCnt"></span></button>
+        </div>
+      </div>
+      <div class="av3-card inbox" id="inbox"></div>
+    </section>
+
+    <!-- ④ TO-DO -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Your to-do list</div>
+      <div class="av3-card av3-card-p" id="todoCard"></div>
+    </section>
+
+    <!-- ⑤ BY LOCATION -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">By location</div>
+      <div class="cols-2">
+        <div class="av3-card av3-card-p">
+          <div class="loc-head"><b>Kraków</b><span>5 on shift</span></div>
+          <div class="loc-stats">
+            <div><div class="stat-value">6 740 zł</div><div class="stat-label">Revenue</div></div>
+            <div><div class="stat-value">38</div><div class="stat-label">Orders</div></div>
+            <div><div class="stat-value">86</div><div class="stat-label">Covers</div></div>
+          </div>
+        </div>
+        <div class="av3-card av3-card-p">
+          <div class="loc-head"><b>Warszawa</b><span>4 on shift</span></div>
+          <div class="loc-stats">
+            <div><div class="stat-value">5 740 zł</div><div class="stat-label">Revenue</div></div>
+            <div><div class="stat-value">35</div><div class="stat-label">Orders</div></div>
+            <div><div class="stat-value">82</div><div class="stat-label">Covers</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ ON SHIFT NOW -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">On shift now</div>
+      <div class="av3-card av3-card-p">
+        <div class="chips">
+          <span class="chip">Giulia Romano <span>· Chef</span></span>
+          <span class="chip">Piotr Nowak <span>· Cashier</span></span>
+          <span class="chip">Anna Lewandowska <span>· Server</span></span>
+          <span class="chip">Tomasz Wójcik <span>· Driver</span></span>
+          <span class="chip">Sara Conti <span>· Chef</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑦ JUMP TO -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Jump to</div>
+      <div class="jump">
+        <a class="jcard" href="#"><span class="jico"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4z"/><path d="M4 8v12h16V8"/></svg></span><span class="jbody"><span class="jname">Orders</span><span class="jdesc">Live kitchen + table orders</span></span><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="jcard" href="#"><span class="jico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></span><span class="jbody"><span class="jname">KDS</span><span class="jdesc">Kitchen display screen</span></span><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="jcard" href="#"><span class="jico"><svg viewBox="0 0 24 24"><path d="M3 7h18"/><path d="M6 7v13h12V7"/><path d="M9 11h6"/></svg></span><span class="jbody"><span class="jname">Inventory</span><span class="jdesc">Stock, par, waste</span></span><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="jcard" href="#"><span class="jico"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/></svg></span><span class="jbody"><span class="jname">Schedule</span><span class="jdesc">Shifts & rota</span></span><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </section>
+
+    <!-- ⑧ ADMIN AUDIT LOG (not part of the portal — shown here to demonstrate logging) -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Admin audit log — what an owner sees at /admin/audit-log (demo)</div>
+      <div class="audit">
+        <div class="audit-head">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          Every notification action is recorded centrally as <b>notification.{read,archive,delete,restore}</b> with actor + timestamp.
+        </div>
+        <div id="auditList"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* per-recipient mailbox state: "inbox" | "archived" | "deleted". read independent. */
+let notes = [
+  { id:"n1", from:"Marco Bianchi",  subj:"New winter menu launches Monday", snip:"Brief your floor team on the three new pizzas and the truffle special.", body:"Please brief your floor team on the three new pizzas and the truffle special.\n\nTasting notes + plating photos are in the shared drive.", time:"9 Jun", read:false, state:"inbox", pinned:true,  color:"--av3-c4" },
+  { id:"n2", from:"HQ Operations",  subj:"Stocktake window moved to Thursday", snip:"Inventory count is now Thu 06:00 — adjust the morning shift.", body:"Inventory count is now Thu 06:00 — adjust the morning shift so two people are free for the count.", time:"9 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c1" },
+  { id:"n3", from:"Anna Kowalska",  subj:"POS terminal #2 firmware update", snip:"Reboot terminal 2 before open; it pulls the patch automatically.", body:"Reboot terminal 2 before open; it pulls the patch automatically. Takes ~4 minutes.", time:"8 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c2" },
+  { id:"n4", from:"Finance",        subj:"May royalty statement is ready", snip:"Your statement is available; payment runs Monday 02:00 UTC.", body:"Your May royalty statement is available in Reports. Payment runs Monday 02:00 UTC.", time:"8 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c3" },
+  { id:"n5", from:"Marco Bianchi",  subj:"Reminder: food-safety refresher", snip:"All managers complete the refresher module before end of month.", body:"All managers complete the food-safety refresher module before end of month. ~20 minutes.", time:"7 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c4" },
+  { id:"n6", from:"HQ Operations",  subj:"Supplier change — San Marzano tomatoes", snip:"Switching the tomato supplier; first delivery next week.", body:"We are switching the San Marzano tomato supplier; first delivery lands next week. Recipe unchanged.", time:"6 Jun", read:true,  state:"archived", pinned:false, color:"--av3-c1" },
+  { id:"n7", from:"Giulia Romano",  subj:"Old: Easter opening hours", snip:"Reduced hours over the Easter weekend — now passed.", body:"Reduced hours over the Easter weekend. (Kept for reference.)", time:"28 Mar", read:true, state:"deleted", pinned:false, color:"--av3-c2" },
+];
+
+let todos = [
+  { id:"t1", title:"Approve next week's staff schedule", from:"Marco Bianchi", due:"Due 11 Jun",      overdue:false, prio:"--av3-bad" },
+  { id:"t2", title:"Submit May cash reconciliation",     from:"Finance",       due:"Overdue · 8 Jun", overdue:true,  prio:"--av3-bad" },
+  { id:"t3", title:"Reorder mozzarella (below par)",     from:"System",        due:"Due 12 Jun",      overdue:false, prio:"--av3-warn" },
+];
+
+/* central audit log — pre-seeded with a couple of historical rows */
+let audit = [
+  { action:"archive", subj:"Supplier change — San Marzano tomatoes", when:"6 Jun · 09:14" },
+  { action:"delete",  subj:"Old: Easter opening hours",               when:"2 Apr · 17:02" },
+];
+
+const ACTOR = "Rafał Ablewski";
+let activeTab = "inbox";
+const UNREAD_PAGE = 3;
+let unreadShown = UNREAD_PAGE;
+let openId = null;
+
+const $ = (s)=>document.querySelector(s);
+function initials(n){const p=n.trim().split(/\s+/);return (p.length===1?p[0].slice(0,2):p[0][0]+p[p.length-1][0]).toUpperCase();}
+function nowStamp(){ return new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); }
+function logAction(action, subj){ audit.unshift({action, subj, when:nowStamp()}); }
+
+const byState = (s)=> notes.filter(n=>n.state===s);
+const unreadInbox = ()=> byState("inbox").filter(n=>!n.read);
+function bellCount(){ return unreadInbox().length + todos.length; }
+
+const AUDIT_BADGE = {
+  read:    {bg:"color-mix(in oklab,var(--av3-ok) 18%,transparent)",      fg:"var(--av3-ok)",      verb:"notification.read"},
+  archive: {bg:"color-mix(in oklab,var(--av3-platinum) 20%,transparent)",fg:"var(--av3-platinum)",verb:"notification.archive"},
+  delete:  {bg:"color-mix(in oklab,var(--av3-bad) 20%,transparent)",     fg:"var(--av3-bad)",     verb:"notification.delete"},
+  restore: {bg:"color-mix(in oklab,var(--av3-info) 18%,transparent)",    fg:"var(--av3-info)",    verb:"notification.restore"},
+};
+const ICON = {
+  read:`<path d="M20 6 9 17l-5-5"/>`,
+  archive:`<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>`,
+  delete:`<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/>`,
+  restore:`<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>`,
+};
+
+function render(){
+  const c = bellCount();
+  const badge = $("#bellBadge"); badge.textContent = c>9?"9+":c; badge.hidden = c===0;
+  const u = unreadInbox().length;
+  $("#unreadPill").style.display = u?"inline-block":"none"; $("#unreadPill").textContent = u;
+  $("#inboxCnt").style.display = u?"inline-block":"none";   $("#inboxCnt").textContent = u;
+  $("#archCnt").textContent = byState("archived").length;
+  $("#delCnt").textContent  = byState("deleted").length;
+  renderInbox(); renderTodos(); renderGlance(); renderAudit();
+}
+
+function actionsFor(n){
+  if(n.state==="inbox"){
+    return `${!n.read?`<button class="act" title="Mark read" aria-label="Mark read" onclick="act(event,'${n.id}','read')"><svg viewBox="0 0 24 24">${ICON.read}</svg></button>`:""}
+      <button class="act" title="Archive" aria-label="Archive" onclick="act(event,'${n.id}','archive')"><svg viewBox="0 0 24 24">${ICON.archive}</svg></button>
+      <button class="act danger" title="Delete" aria-label="Delete" onclick="act(event,'${n.id}','delete')"><svg viewBox="0 0 24 24">${ICON.delete}</svg></button>`;
+  }
+  if(n.state==="archived"){
+    return `<button class="act" title="Move back to inbox" aria-label="Restore" onclick="act(event,'${n.id}','restore')"><svg viewBox="0 0 24 24">${ICON.restore}</svg></button>
+      <button class="act danger" title="Delete" aria-label="Delete" onclick="act(event,'${n.id}','delete')"><svg viewBox="0 0 24 24">${ICON.delete}</svg></button>`;
+  }
+  return `<button class="act" title="Restore to inbox" aria-label="Restore" onclick="act(event,'${n.id}','restore')"><svg viewBox="0 0 24 24">${ICON.restore}</svg></button>`;
+}
+
+function rowHTML(n){
+  const inInbox = n.state==="inbox";
+  const isOpen = openId===n.id;
+  const showUnread = inInbox && !n.read;
+  const cls = "row" + (showUnread?" unread":"") + (!inInbox?" dim":"") + (isOpen?" open":"");
+  return `<div class="${cls}">
+    <button class="row-open" onclick="openNote('${n.id}')" aria-expanded="${isOpen}">
+      <span class="avatar" style="background:var(${n.color})">${initials(n.from)}</span>
+      <span class="row-body">
+        <span class="row-top">
+          <span class="row-from">${n.from}</span>
+          ${n.pinned?`<svg class="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l2 3.2H7z"/></svg>`:""}
+          ${showUnread?`<span class="unread-dot"></span>`:""}
+          <span class="row-time">${n.time}</span>
+        </span>
+        <span class="row-subj">${n.subj}${!isOpen?`<span class="snip"> — ${n.snip}</span>`:""}</span>
+        <span class="row-full">${n.body}</span>
+        <span class="row-time2">${n.time} · 2026</span>
+      </span>
+    </button>
+    <span class="row-actions">${actionsFor(n)}</span>
+  </div>`;
+}
+
+function renderInbox(){
+  const box = $("#inbox");
+  if(activeTab!=="inbox"){
+    const list = byState(activeTab);
+    box.innerHTML = list.length ? list.map(rowHTML).join("")
+      : `<p class="empty">${activeTab==="archived"?"Nothing archived.":"Deleted is empty."}</p>`;
+    return;
+  }
+  const active = byState("inbox");
+  const unread = active.filter(n=>!n.read).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  const readKept = active.filter(n=>n.read);
+  const shown = unread.slice(0, unreadShown);
+  const hidden = unread.length - shown.length;
+  let html = "";
+  if(active.length===0){ html = `<p class="empty">No notifications — you’re all caught up.</p>`; }
+  else{
+    html += [...shown, ...readKept].map(rowHTML).join("");
+    if(hidden>0) html += `<button class="loadmore" onclick="loadMore()">Load ${Math.min(UNREAD_PAGE,hidden)} more unread (${hidden} hidden)</button>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderTodos(){
+  $("#todoCard").innerHTML = todos.length ? todos.map(t=>`
+    <div class="todo-row">
+      <span class="todo-dot" style="background:var(${t.prio})"></span>
+      <div style="flex:1;min-width:0">
+        <div class="todo-ttl">${t.title}</div>
+        <div class="todo-meta"><span class="${t.overdue?'overdue':''}">${t.due}</span> · from ${t.from}</div>
+      </div>
+      <button class="btn-sm" onclick="doneTodo('${t.id}')"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Done</button>
+    </div>`).join("")
+    : `<p class="empty" style="padding:0">Nothing on your list — you’re all caught up.</p>`;
+}
+
+function renderGlance(){
+  const items = [
+    ...unreadInbox().map(n=>({dot:"var(--av3-brand)", ttl:n.from, sub:n.subj})),
+    ...todos.map(t=>({dot:t.overdue?"var(--av3-bad)":"var(--av3-warn)", ttl:(t.overdue?"⚠ Overdue to-do":"To-do due soon"), sub:t.title})),
+  ];
+  $("#glanceCount").textContent = items.length?`${items.length} need attention`:"all clear";
+  $("#glance").innerHTML = items.length ? items.map(i=>`
+    <button class="glance-row" onclick="gotoInbox()"><span class="glance-dot" style="background:${i.dot}"></span>
+      <span style="flex:1;min-width:0"><span class="glance-ttl">${i.ttl}</span><span class="glance-sub" style="display:block">${i.sub}</span></span></button>`).join("")
+    : `<p class="empty">You’re all caught up.</p>`;
+}
+
+function renderAudit(){
+  $("#auditList").innerHTML = audit.map(e=>{
+    const b = AUDIT_BADGE[e.action];
+    return `<div class="log-row">
+      <span class="log-badge" style="background:${b.bg};color:${b.fg}">${b.verb}</span>
+      <span class="log-main">“${e.subj}” <span class="log-actor">· ${ACTOR}</span></span>
+      <span class="log-time">${e.when}</span>
+    </div>`;
+  }).join("");
+}
+
+/* one handler — mutates per-recipient state AND writes the central audit log */
+function act(e,id,kind){
+  e.stopPropagation();
+  const n = notes.find(x=>x.id===id); if(!n) return;
+  if(kind==="read"){ n.read=true; logAction("read", n.subj); }
+  if(kind==="archive"){ n.state="archived"; n.read=true; logAction("archive", n.subj); if(openId===id)openId=null; }
+  if(kind==="delete"){ n.state="deleted"; logAction("delete", n.subj); if(openId===id)openId=null; }
+  if(kind==="restore"){ n.state="inbox"; logAction("restore", n.subj); }
+  render();
+}
+function openNote(id){
+  const n = notes.find(x=>x.id===id); if(!n) return;
+  const wasClosed = openId!==id;
+  openId = openId===id?null:id;
+  if(wasClosed && !n.read){ n.read=true; logAction("read", n.subj); }   // opening = read = logged
+  render();
+}
+function loadMore(){ unreadShown += UNREAD_PAGE; render(); }
+function doneTodo(id){ todos = todos.filter(t=>t.id!==id); render(); }
+function gotoInbox(){ $("#bellPanel").classList.remove("open"); $("#notifSection").scrollIntoView({behavior:"smooth"}); }
+
+document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active"); activeTab = btn.dataset.tab; unreadShown = UNREAD_PAGE; openId=null; render();
+}));
+$("#bellBtn").addEventListener("click",(e)=>{ e.stopPropagation(); $("#bellPanel").classList.toggle("open"); });
+document.addEventListener("click",()=>$("#bellPanel").classList.remove("open"));
+$("#bellPanel").addEventListener("click",e=>e.stopPropagation());
+$("#viewAll").addEventListener("click",gotoInbox);
+
+render();
+</script>
+</body>
+</html>

@@ -518,13 +518,34 @@ auth canvas's signature lighting and the sign-in lockup:
   unread bold with a brand dot, pinned flagged; tap a row to open the full
   message and mark it read) above the personal **"Your to-do list"**, over the
   unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
-  user). The inbox is built from tokens + inline styles on the existing
-  `.av3-portal-section` / `.av3-card` scaffold (no new CSS class). Types +
-  recipient rule in `src/lib/comms.ts`. **Distinct from Alerts:** announcements
-  are human-authored broadcasts; the bell + `/admin/alerts` are the *automated*
-  operational `Notification` stream (orders/stock/disputes). Separate stores,
-  separate APIs, no cross-writes — never wire one into the other. Nav: Overview
-  section (two entries).
+  user). The inbox carries three **mailbox tabs — Inbox / Archived / Deleted** —
+  with per-row actions **Mark read · Archive · Delete** (Archived/Deleted offer
+  **Restore**); the Inbox shows only the most-recent 3 *unread* rows with a
+  **"Load more"** beneath (read-but-kept rows follow). Mailbox state is
+  per-recipient (`archivedBy` / `deletedBy` on the announcement, `deleted` wins
+  over `archived`) so one person archiving doesn't hide it for everyone; each
+  action `PUT`s `{id, action}` to `/api/admin/my-announcements`, which moves the
+  state **and writes a `notification.{read,archive,delete,restore}` row to the
+  central Audit log** (so an owner can review the open/archive/delete history —
+  the logging target is the Audit log, not a portal-local feed). The unread +
+  open-to-do count also surfaces in **`CommsBell`**
+  (`src/components/portal/CommsBell.tsx`) — an **inbox**-icon button (count =
+  unread Inbox announcements + open to-dos) rendered in the shell `TopbarV3` and
+  on both portal headers; its glance dropdown is portaled to `document.body`
+  (dodging stacking traps) and links to the portal inbox. The inbox + bell are
+  built from tokens + inline styles on the existing `.av3-portal-section` /
+  `.av3-card` / `.av3-icon-btn` / `.av3-bell-badge` scaffold (no new CSS class).
+  While the two feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
+  (same two-section scaffold, shimmer rows via the shared `Skeleton` primitive)
+  instead of `null`, so the space is reserved and the portal doesn't jump when
+  the data lands. Types + recipient rule + mailbox-state helper
+  (`announcementStateFor`) in `src/lib/comms.ts`. **Distinct from Alerts:**
+  `CommsBell` (inbox icon, personal comms) sits *beside* the operational alerts
+  **bell** in the topbar but never reads it — announcements are human-authored
+  broadcasts; the bell + `/admin/alerts` are the *automated* operational
+  `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
+  no cross-writes — never wire one into the other. Nav: Overview section (two
+  entries).
 - [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the

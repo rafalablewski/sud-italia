@@ -706,7 +706,15 @@ export const announcementCreateSchema = z
   })
   .strict();
 
-export const announcementReadSchema = z.object({ id: stableId }).strict();
+// Personal mailbox actions on /api/admin/my-announcements. `read` (default,
+// back-compat) just marks read; archive/delete/restore move the per-user
+// mailbox state. Each is audit-logged so an admin can see the history.
+export const announcementActionSchema = z
+  .object({
+    id: stableId,
+    action: z.enum(["read", "archive", "delete", "restore"]).default("read"),
+  })
+  .strict();
 
 /**
  * Parse a Next.js request body against a schema. On success returns

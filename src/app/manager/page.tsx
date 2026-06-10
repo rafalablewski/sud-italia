@@ -11,6 +11,7 @@ import { getActiveLocations } from "@/data/locations";
 import { landingPathForRole, STAFF_ROLE_LABEL } from "@/lib/staff-roles";
 import { getDashboardQuickLinks } from "@/lib/dashboard-links";
 import { PortalInbox } from "@/components/portal/PortalInbox";
+import { CommsBell } from "@/components/portal/CommsBell";
 import { formatPricePLN } from "@/lib/utils";
 import { SignOutButton } from "./SignOutButton";
 
@@ -182,7 +183,10 @@ export default async function ManagerPortalPage() {
             <h1 className="av3-portal-greet">Welcome, {user.name.split(" ")[0]}</h1>
             <p className="av3-portal-sub">{locationLine}</p>
           </div>
-          <SignOutButton />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <CommsBell />
+            <SignOutButton />
+          </div>
         </div>
 
         {/* KPI rail */}

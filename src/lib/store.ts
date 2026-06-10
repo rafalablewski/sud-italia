@@ -13,7 +13,7 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import type { Experiment } from "@/lib/experiments";
 import type { MLUpsellModel } from "@/lib/ml-upsell";
-import type { Task, TaskStatus, Announcement } from "@/lib/comms";
+import type { Task, TaskStatus, Announcement, AnnouncementState } from "@/lib/comms";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -2570,6 +2570,9 @@ export async function saveAnnouncement(
       id,
       createdAt: input.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
       readBy: input.readBy ?? existing?.readBy ?? [],
+      // Editing an announcement must not wipe recipients' personal mailbox state.
+      archivedBy: input.archivedBy ?? existing?.archivedBy ?? [],
+      deletedBy: input.deletedBy ?? existing?.deletedBy ?? [],
     };
     const idx = list.findIndex((a) => a.id === id);
     if (idx >= 0) list[idx] = entry;
@@ -2590,6 +2593,35 @@ export async function markAnnouncementReadBy(id: string, userId: string): Promis
       a.readBy.push(userId);
       await writeJSON("announcements.json", list);
     }
+    return true;
+  });
+}
+
+/**
+ * Move announcement `id` into `userId`'s `inbox` / `archived` / `deleted`
+ * mailbox (Gmail-style, per-recipient). Archiving also marks it read (you can't
+ * archive something you haven't seen). Restoring (→ inbox) clears both buckets.
+ * Idempotent; returns false when the announcement no longer exists.
+ */
+export async function setAnnouncementStateFor(
+  id: string,
+  userId: string,
+  state: AnnouncementState,
+): Promise<boolean> {
+  return withLock("announcements.json", async () => {
+    const list = await readJSON<Announcement[]>("announcements.json", []);
+    const a = list.find((x) => x.id === id);
+    if (!a) return false;
+    const without = (arr?: string[]) => (arr ?? []).filter((u) => u !== userId);
+    a.archivedBy = without(a.archivedBy);
+    a.deletedBy = without(a.deletedBy);
+    if (state === "archived") {
+      a.archivedBy.push(userId);
+      if (!a.readBy.includes(userId)) a.readBy.push(userId);
+    } else if (state === "deleted") {
+      a.deletedBy.push(userId);
+    }
+    await writeJSON("announcements.json", list);
     return true;
   });
 }
