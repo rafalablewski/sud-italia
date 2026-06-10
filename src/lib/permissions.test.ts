@@ -54,8 +54,12 @@ test("manager default excludes owner-by-default surfaces but keeps floor tools",
   for (const k of ["cash.view", "compliance.view", "menu_engineering.view"] as const) {
     assert.ok(mgr.includes(k), `manager should keep ${k}`);
   }
-  // Franchisee inherits the same tier-2 exclusions (built on MANAGER_PERMS).
+  // Franchisee inherits most tier-2 exclusions (built on MANAGER_PERMS)…
   assert.ok(!ROLE_DEFAULT_PERMISSIONS.franchisee.includes("growth.view"));
+  assert.ok(!ROLE_DEFAULT_PERMISSIONS.franchisee.includes("boardroom.view"));
+  // …but owns its P&L, so Reports is restored (Cash is in the manager grant).
+  assert.ok(ROLE_DEFAULT_PERMISSIONS.franchisee.includes("reports.view"));
+  assert.ok(ROLE_DEFAULT_PERMISSIONS.franchisee.includes("cash.view"));
 });
 
 test("the four newly-catalogued pages gate on their own permission", () => {

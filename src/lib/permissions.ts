@@ -234,8 +234,12 @@ const MANAGER_PERMS: PermissionKey[] = ALL_PERMISSION_KEYS.filter(
 
 // Franchisee (rank 70) sits above manager: same operational grant plus the
 // cross-location read surfaces, but still no user/settings administration.
+// Unlike a floor manager, a franchisee owns their P&L, so the Finance reads
+// (Reports; Cash is already in the manager grant) are restored on top of the
+// manager preset — the rest of the owner-by-default tier stays owner-only.
 const FRANCHISEE_PERMS: PermissionKey[] = [
   ...MANAGER_PERMS, "locations.view", "expansion.view", "settings.view",
+  "reports.view", "reports.export",
 ];
 
 export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, PermissionKey[]> = {
