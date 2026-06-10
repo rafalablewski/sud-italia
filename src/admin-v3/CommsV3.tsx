@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Megaphone, ListTodo, Plus, Trash2, Pin, Pencil } from "lucide-react";
-import { Card, CardHead, CardBody, Button, Badge, ChipRow, Switch, type BadgeTone } from "./ui";
+import { Card, CardHead, CardBody, Button, Badge, Switch, type BadgeTone } from "./ui";
 import { useAdminLocationV3 } from "./LocationContext";
 import {
   TASK_PRIORITIES,
@@ -36,9 +36,14 @@ function fmtDate(iso?: string) {
   return iso ? new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "short" }) : "—";
 }
 
-export function CommsV3() {
+/**
+ * The internal-comms management board, split into two standalone surfaces — the
+ * `view` prop fixes which one renders (its own nav entry + route:
+ * `/admin/comms/tasks` and `/admin/comms/announcements`). Tasks and
+ * announcements are deliberately separate pages, not tabs of one screen.
+ */
+export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
   const { activeLocations } = useAdminLocationV3();
-  const [tab, setTab] = useState<"tasks" | "announcements">("tasks");
   const [canManage, setCanManage] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [anns, setAnns] = useState<Announcement[]>([]);
@@ -185,23 +190,16 @@ export function CommsV3() {
     <>
       <div className="av3-pagehead">
         <div>
-          <h1>Tasks &amp; announcements</h1>
+          <h1>{view === "tasks" ? "Tasks" : "Announcements"}</h1>
           <div className="av3-pagehead-sub">
-            Assign to-dos to your team and broadcast announcements · {openTasks} open task{openTasks === 1 ? "" : "s"} · {anns.length} announcement{anns.length === 1 ? "" : "s"}
+            {view === "tasks"
+              ? <>Assign to-dos to your team · {openTasks} open task{openTasks === 1 ? "" : "s"}</>
+              : <>Broadcast announcements to your team · {anns.length} announcement{anns.length === 1 ? "" : "s"}</>}
           </div>
         </div>
-        <ChipRow
-          ariaLabel="Comms view"
-          value={tab}
-          onChange={(v) => setTab(v)}
-          options={[
-            { value: "tasks", label: "Tasks" },
-            { value: "announcements", label: "Announcements" },
-          ]}
-        />
       </div>
 
-      {tab === "tasks" && (
+      {view === "tasks" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--av3-gap-4)" }}>
           {canManage && (
             <Card>
@@ -291,7 +289,7 @@ export function CommsV3() {
         </div>
       )}
 
-      {tab === "announcements" && (
+      {view === "announcements" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--av3-gap-4)" }}>
           {canManage && (
             <Card>

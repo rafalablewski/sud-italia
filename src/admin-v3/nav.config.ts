@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ClipboardList,
+  ListTodo,
   Receipt,
   ChefHat,
   Contact,
@@ -80,7 +81,8 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
       { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
       { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
-      { href: `${P}/comms`, label: "Tasks & announcements", icon: Megaphone, requiredRole: "manager" },
+      { href: `${P}/comms/tasks`, label: "Tasks", icon: ListTodo, requiredRole: "manager" },
+      { href: `${P}/comms/announcements`, label: "Announcements", icon: Megaphone, requiredRole: "manager" },
     ],
   },
   {

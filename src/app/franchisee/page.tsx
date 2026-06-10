@@ -95,7 +95,7 @@ export default async function FranchiseePortalPage() {
           <SignOutButton />
         </div>
 
-        {/* Personal comms — to-do tasks assigned to this franchisee + announcements */}
+        {/* Personal comms — announcement notifications inbox + this franchisee's to-do list */}
         <PortalInbox />
 
         {data.length === 0 && (

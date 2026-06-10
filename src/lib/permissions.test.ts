@@ -69,6 +69,9 @@ test("the four newly-catalogued pages gate on their own permission", () => {
   assert.equal(permissionForAdminPage("/admin/qr-ordering"), "qr_ordering.view");
   assert.equal(permissionForAdminPage("/admin/integrations"), "integrations.view");
   assert.equal(permissionForAdminPage("/admin/comms"), "comms.view");
+  // Split into two surfaces — both gate on the same comms permission.
+  assert.equal(permissionForAdminPage("/admin/comms/tasks"), "comms.view");
+  assert.equal(permissionForAdminPage("/admin/comms/announcements"), "comms.view");
   assert.equal(permissionForApiPath("/api/admin/tasks", "POST"), "comms.manage");
   assert.equal(permissionForApiPath("/api/admin/announcements", "GET"), "comms.view");
   // The personal feeds are intentionally unmapped (any authed user reads own).
