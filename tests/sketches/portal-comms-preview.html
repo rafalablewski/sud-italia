@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal + Comms visual preview — av3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  STANDALONE visual preview of the work in this branch — NOT shipped (lives in
+  /tests). It hand-inlines the real av3 tokens + the .av3-portal / .av3-card /
+  .av3-kpi / comms styles so you can eyeball the Manager portal, Franchisee
+  portal and the Tasks & Announcements board without running the app. Sample
+  data only. Faithful to the token values, not pixel-perfect.
+-->
+<style>
+  /* --- av3 tokens (mirror of .av3-root in themes/admin-v3/index.css) --- */
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-brand-line:color-mix(in oklab,var(--av3-brand) 42%,transparent);
+    --av3-brand-soft:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));
+    --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-gap-1:4px; --av3-gap-2:8px; --av3-gap-3:12px; --av3-gap-4:16px; --av3-gap-5:24px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-ease:cubic-bezier(.4,0,.2,1); --av3-t-fast:110ms;
+    --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif; --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#050506;color:var(--av3-fg);font-family:var(--av3-ui);-webkit-font-smoothing:antialiased}
+  .caption{max-width:1000px;margin:0 auto;padding:22px 24px 0;font-family:var(--av3-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--av3-platinum)}
+  .divider{height:1px;background:var(--av3-line);margin:8px 0}
+  svg{width:18px;height:18px}
+
+  /* --- portal canvas (.av3-portal §23) --- */
+  .av3-portal{position:relative;padding:44px 24px 56px;overflow:hidden;background:var(--av3-bg)}
+  .av3-portal::before{content:"";position:absolute;left:50%;top:-34%;width:120vw;height:120vh;transform:translateX(-50%);pointer-events:none;background:radial-gradient(36% 42% at 50% 0%,color-mix(in oklab,var(--av3-brand) 20%,transparent),transparent 70%)}
+  .av3-portal::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.012) 3px 4px);-webkit-mask-image:radial-gradient(72% 48% at 50% 0%,#000,transparent 80%);mask-image:radial-gradient(72% 48% at 50% 0%,#000,transparent 80%)}
+  .av3-portal-col{position:relative;z-index:1;width:100%;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:var(--av3-gap-5)}
+  .av3-portal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--av3-gap-4);flex-wrap:wrap}
+  .av3-portal-greet{font-family:var(--av3-display);font-size:27px;font-weight:600;line-height:1.08;margin:14px 0 0}
+  .av3-portal-sub{margin:5px 0 0;font-size:12.5px;color:var(--av3-muted)}
+  .av3-portal-section{display:flex;flex-direction:column;gap:var(--av3-gap-3)}
+  .av3-portal-jump{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--av3-gap-3)}
+  .av3-portal-jcard{display:flex;align-items:center;gap:var(--av3-gap-3);padding:var(--av3-gap-3) var(--av3-gap-4);background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);text-decoration:none;color:inherit;transition:border-color var(--av3-t-fast) var(--av3-ease),transform var(--av3-t-fast) var(--av3-ease)}
+  .av3-portal-jcard:hover{border-color:var(--av3-brand-line);box-shadow:var(--av3-sh-2);transform:translateY(-1px)}
+  .av3-portal-jico{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:var(--av3-r-md);background:var(--av3-s3);color:var(--av3-platinum)}
+  .av3-portal-jbody{min-width:0;flex:1;display:flex;flex-direction:column}
+  .av3-portal-jname{font-size:13.5px;font-weight:600}
+  .av3-portal-jdesc{font-size:11.5px;color:var(--av3-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .av3-portal-jcard>svg:last-child{width:15px;height:15px;color:var(--av3-subtle);flex-shrink:0}
+  .av3-portal-chips{display:flex;flex-wrap:wrap;gap:var(--av3-gap-2)}
+  .av3-portal-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:var(--av3-r-pill);background:var(--av3-s2);border:1px solid var(--av3-line);font-size:12px}
+  .av3-portal-chip span{color:var(--av3-subtle)}
+  .av3-portal-stat-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle)}
+  .av3-portal-stat-value{font-family:var(--av3-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:3px}
+  .av3-portal-stat-sub{font-size:11.5px;color:var(--av3-muted);margin-top:2px}
+
+  /* --- brand lockup (.av3-auth-*) --- */
+  .av3-auth-lockup{display:inline-flex;align-items:center;gap:12px}
+  .av3-auth-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:var(--av3-r-md);background:var(--av3-brand);color:#fff;font-family:var(--av3-display);font-size:17px;font-weight:600;letter-spacing:.02em;box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--av3-platinum) 50%,transparent),0 12px 30px -12px color-mix(in oklab,var(--av3-brand) 80%,transparent)}
+  .av3-auth-wordmark{font-family:var(--av3-display);font-size:20px;font-weight:600;line-height:1.1}
+  .av3-auth-eyebrow{margin-top:2px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--av3-subtle)}
+
+  /* --- KPI rail --- */
+  .av3-kpi-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:var(--av3-gap-3)}
+  .av3-kpi{position:relative;display:flex;flex-direction:column;gap:6px;padding:var(--av3-gap-3) var(--av3-gap-4);background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1);overflow:hidden}
+  .av3-kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--av3-kpi-accent,var(--av3-brand));opacity:.55}
+  .av3-kpi-label{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--av3-subtle)}
+  .av3-kpi-label svg{width:13px;height:13px;color:var(--av3-kpi-accent,var(--av3-subtle))}
+  .av3-kpi-value{font-family:var(--av3-mono);font-size:23px;font-weight:500;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.05}
+
+  /* --- card --- */
+  .av3-card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1)}
+  .av3-card-p{padding:var(--av3-gap-4)}
+  .av3-card-head{display:flex;align-items:center;justify-content:space-between;gap:var(--av3-gap-3);padding:var(--av3-gap-3) var(--av3-gap-4);border-bottom:1px solid var(--av3-line)}
+  .av3-card-title{font-size:13px;font-weight:600}
+  .av3-card-desc{font-size:11.5px;color:var(--av3-muted);margin-top:1px}
+  .av3-card-body{padding:var(--av3-gap-4)}
+  .av3-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--av3-subtle)}
+  .av3-cols-2{display:grid;grid-template-columns:1fr 1fr}
+
+  /* --- badges --- */
+  .av3-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:var(--av3-r-pill);font-size:11px;font-weight:600;border:1px solid transparent}
+  .av3-badge-dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+  .av3-badge-neutral{background:var(--av3-s3);color:var(--av3-muted)}
+  .av3-badge-ok{background:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));color:var(--av3-ok)}
+  .av3-badge-warn{background:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));color:var(--av3-warn)}
+  .av3-badge-bad{background:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));color:var(--av3-bad)}
+  .av3-badge-info{background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));color:var(--av3-info)}
+
+  /* --- buttons --- */
+  .av3-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--av3-r-md);border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);font-family:var(--av3-ui);font-size:12.5px;font-weight:600;cursor:pointer}
+  .av3-btn:hover{border-color:var(--av3-muted)}
+  .av3-btn-primary{background:var(--av3-brand);border-color:transparent;color:#fff;box-shadow:0 10px 26px -12px color-mix(in oklab,var(--av3-brand) 85%,transparent)}
+  .av3-btn-ghost{background:transparent;border-color:transparent;color:var(--av3-muted)}
+  .av3-btn-ghost:hover{background:var(--av3-s2);color:var(--av3-fg)}
+  .av3-btn-sm{height:26px;padding:0 9px;font-size:12px}
+  .av3-btn-ico{width:14px;height:14px}
+
+  /* --- chips / tabs --- */
+  .av3-chiprow{display:inline-flex;gap:6px}
+  .av3-chip{padding:5px 12px;border-radius:var(--av3-r-pill);background:var(--av3-s2);border:1px solid var(--av3-line);color:var(--av3-muted);font-size:12px;font-weight:600;cursor:pointer}
+  .av3-chip.is-active{background:var(--av3-brand);border-color:var(--av3-brand);color:#fff}
+
+  /* --- form controls --- */
+  .av3-pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--av3-gap-4)}
+  .av3-pagehead h1{margin:0;font-family:var(--av3-display);font-size:21px;font-weight:600;letter-spacing:-.01em}
+  .av3-pagehead-sub{margin-top:2px;font-size:12.5px;color:var(--av3-muted)}
+  .av3-field{display:flex;flex-direction:column;gap:4px}
+  .av3-field-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--av3-subtle)}
+  .av3-formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+  .av3-input,.av3-select{width:100%;height:32px;padding:0 10px;background:var(--av3-s2);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-md);color:var(--av3-fg);font-size:13px}
+  textarea.av3-input{height:auto;padding:8px 10px;font-family:var(--av3-ui);resize:vertical}
+  .av3-input{font-family:var(--av3-mono)}
+  .av3-input:focus,.av3-select:focus{outline:none;border-color:var(--av3-brand);box-shadow:0 0 0 3px var(--av3-brand-soft)}
+  .av3-select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--av3-subtle) 50%),linear-gradient(135deg,var(--av3-subtle) 50%,transparent 50%);background-position:calc(100% - 16px) 14px,calc(100% - 11px) 14px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+
+  /* preview-only helpers */
+  .row{display:flex;align-items:flex-start;gap:12px}
+  .ann-row{display:flex;align-items:flex-start;gap:12px}
+  .tline{padding:10px 0;border-bottom:1px solid var(--av3-line)}
+</style>
+</head>
+<body>
+
+<!-- ============================ MANAGER PORTAL ============================ -->
+<div class="caption">1 · Manager portal — /manager</div>
+<main class="av3-portal">
+  <div class="av3-portal-col">
+    <div class="av3-portal-head">
+      <div>
+        <div class="av3-auth-lockup">
+          <span class="av3-auth-mark">SI</span>
+          <div>
+            <div class="av3-auth-wordmark">Ottaviano</div>
+            <div class="av3-auth-eyebrow">Manager · Wednesday 10 June</div>
+          </div>
+        </div>
+        <h1 class="av3-portal-greet">Welcome, Agata</h1>
+        <p class="av3-portal-sub">Ottaviano — Kraków</p>
+      </div>
+      <button class="av3-btn av3-btn-ghost av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+    </div>
+
+    <div class="av3-kpi-rail">
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-brand)"><div class="av3-kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Revenue today</div><div class="av3-kpi-value">4 280,00 zł</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-info)"><div class="av3-kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1z"/></svg>Orders today</div><div class="av3-kpi-value">63</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-platinum)"><div class="av3-kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Covers today</div><div class="av3-kpi-value">148</div></div>
+      <div class="av3-kpi" style="--av3-kpi-accent:var(--av3-ok)"><div class="av3-kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>On shift now</div><div class="av3-kpi-value">5</div></div>
+    </div>
+
+    <!-- PortalInbox: to-do list -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Your to-do list</div>
+      <div class="av3-card av3-card-p">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="row">
+            <span style="width:7px;height:7px;border-radius:999px;margin-top:6px;flex-shrink:0;background:var(--av3-bad)"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">Recount the walk-in freezer before close</div>
+              <div style="font-size:12px;color:var(--av3-muted);margin-top:2px">Stock-take flagged a 4kg mozzarella variance.</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:3px">Due 11 Jun · from Rafał (owner)</div>
+            </div>
+            <button class="av3-btn av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="av3-btn-ico"><polyline points="20 6 9 17 4 12"/></svg>Done</button>
+          </div>
+          <div class="row">
+            <span style="width:7px;height:7px;border-radius:999px;margin-top:6px;flex-shrink:0;background:var(--av3-info)"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">Confirm Saturday rota with the new pizzaiolo</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:3px">No due date · from Rafał (owner)</div>
+            </div>
+            <button class="av3-btn av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="av3-btn-ico"><polyline points="20 6 9 17 4 12"/></svg>Done</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PortalInbox: announcements -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Announcements</div>
+      <div class="av3-card av3-card-p">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ann-row">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--av3-platinum)"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--av3-brand)"></span>
+                Winter menu launches Monday
+              </div>
+              <div style="font-size:12.5px;color:var(--av3-muted);margin-top:3px">Tartufo pizza + two new primi go live across all sites. Brief your floor team on the allergen sheet.</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:4px">9 Jun · Rafał</div>
+            </div>
+            <button class="av3-btn av3-btn-ghost av3-btn-sm">Mark read</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- on shift -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">On shift now</div>
+      <div class="av3-card av3-card-p">
+        <div class="av3-portal-chips">
+          <span class="av3-portal-chip">Marek <span>· Pizzaiolo</span></span>
+          <span class="av3-portal-chip">Ola <span>· Waiter</span></span>
+          <span class="av3-portal-chip">Piotr <span>· KP</span></span>
+          <span class="av3-portal-chip">Zofia <span>· Waiter</span></span>
+          <span class="av3-portal-chip">Jan <span>· Driver</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- jump to -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Jump to</div>
+      <div class="av3-portal-jump">
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Orders</span><span class="av3-portal-jdesc">Live tickets &amp; history</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Kitchen Display</span><span class="av3-portal-jdesc">The line, by station</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Schedule</span><span class="av3-portal-jdesc">Shifts &amp; rota</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Inventory</span><span class="av3-portal-jdesc">Stock &amp; counts</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1z"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Point of sale</span><span class="av3-portal-jdesc">Take an order</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        <a class="av3-portal-jcard"><span class="av3-portal-jico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span class="av3-portal-jbody"><span class="av3-portal-jname">Team</span><span class="av3-portal-jdesc">Roster &amp; hiring</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="divider"></div>
+
+<!-- ========================== FRANCHISEE PORTAL ========================== -->
+<div class="caption">2 · Franchisee portal — /franchisee</div>
+<main class="av3-portal">
+  <div class="av3-portal-col">
+    <div class="av3-portal-head">
+      <div>
+        <div class="av3-auth-lockup">
+          <span class="av3-auth-mark">SI</span>
+          <div>
+            <div class="av3-auth-wordmark">Ottaviano</div>
+            <div class="av3-auth-eyebrow">Franchisee</div>
+          </div>
+        </div>
+        <h1 class="av3-portal-greet">Welcome, Tomasz</h1>
+        <p class="av3-portal-sub">Royalty statements run every Monday at 02:00 UTC.</p>
+      </div>
+      <button class="av3-btn av3-btn-ghost av3-btn-sm">Sign out</button>
+    </div>
+
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Your to-do list</div>
+      <div class="av3-card av3-card-p">
+        <p style="margin:0;font-size:12.5px;color:var(--av3-muted)">Nothing on your list — you’re all caught up.</p>
+      </div>
+    </section>
+
+    <section class="av3-portal-section">
+      <div class="av3-card">
+        <div class="av3-card-head">
+          <div>
+            <div class="av3-card-title">Sud Italia Małopolska</div>
+            <div class="av3-card-desc">Royalty 6% · Marketing fund 2%</div>
+          </div>
+          <span class="av3-badge av3-badge-neutral">2 locations</span>
+        </div>
+        <div class="av3-card-body">
+          <div class="av3-portal-chips" style="margin-bottom:var(--av3-gap-4)">
+            <span class="av3-portal-chip">Kraków — Kazimierz</span>
+            <span class="av3-portal-chip">Kraków — Podgórze</span>
+          </div>
+          <div class="av3-cols-2" style="gap:var(--av3-gap-4)">
+            <div>
+              <div class="av3-portal-stat-label">Last 7 days</div>
+              <div class="av3-portal-stat-value">38 940 PLN</div>
+              <div class="av3-portal-stat-sub">512 orders</div>
+            </div>
+            <div>
+              <div class="av3-portal-stat-label">Latest statement</div>
+              <div class="av3-portal-stat-value">2 336 PLN</div>
+              <div class="av3-portal-stat-sub">week ending 2026-06-08</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="divider"></div>
+
+<!-- ======================= COMMS BOARD (/admin/comms) ===================== -->
+<div class="caption">3 · Tasks &amp; announcements board — /admin/comms (inside the admin shell)</div>
+<main class="av3-portal" style="padding:32px 24px 56px">
+  <div class="av3-portal-col">
+    <div class="av3-pagehead">
+      <div>
+        <h1>Tasks &amp; announcements</h1>
+        <div class="av3-pagehead-sub">Assign to-dos to your team and broadcast announcements · 2 open tasks · 3 announcements</div>
+      </div>
+      <div class="av3-chiprow">
+        <button class="av3-chip is-active">Tasks</button>
+        <button class="av3-chip">Announcements</button>
+      </div>
+    </div>
+
+    <div class="av3-card">
+      <div class="av3-card-head"><div class="av3-card-title">New task</div></div>
+      <div class="av3-card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="av3-field"><label class="av3-field-label">Task</label><input class="av3-input" value="Recount the walk-in freezer before close" /></div>
+          <div class="av3-field"><label class="av3-field-label">Detail (optional)</label><textarea class="av3-input" rows="2">Stock-take flagged a 4kg mozzarella variance.</textarea></div>
+          <div class="av3-formgrid">
+            <div class="av3-field"><label class="av3-field-label">Assign to</label><select class="av3-select"><option>Agata — Manager</option></select></div>
+            <div class="av3-field"><label class="av3-field-label">Location (optional)</label><select class="av3-select"><option>Kraków</option></select></div>
+            <div class="av3-field"><label class="av3-field-label">Priority</label><select class="av3-select"><option>High</option></select></div>
+            <div class="av3-field"><label class="av3-field-label">Due (optional)</label><input class="av3-input" value="2026-06-11" /></div>
+          </div>
+          <div><button class="av3-btn av3-btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Assign task</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="av3-card">
+      <div class="av3-card-head"><div class="av3-card-title">All tasks</div><span class="av3-badge av3-badge-neutral">2</span></div>
+      <div class="av3-card-body">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="tline" style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">Recount the walk-in freezer before close</div>
+              <div style="font-size:12px;color:var(--av3-muted);margin-top:2px">Stock-take flagged a 4kg mozzarella variance.</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:4px">Agata · due 11 Jun · by Rafał</div>
+            </div>
+            <span class="av3-badge av3-badge-bad">high</span>
+            <span class="av3-badge av3-badge-warn"><span class="av3-badge-dot"></span>open</span>
+            <button class="av3-btn av3-btn-ghost av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          </div>
+          <div class="tline" style="display:flex;align-items:flex-start;gap:12px;border-bottom:none">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">Send June royalty statement to Tomasz</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:4px">Tomasz · no due date · by Rafał</div>
+            </div>
+            <span class="av3-badge av3-badge-info">normal</span>
+            <span class="av3-badge av3-badge-ok"><span class="av3-badge-dot"></span>done</span>
+            <button class="av3-btn av3-btn-ghost av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="av3-card">
+      <div class="av3-card-head"><div class="av3-card-title">New announcement</div></div>
+      <div class="av3-card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="av3-field"><label class="av3-field-label">Title</label><input class="av3-input" value="Winter menu launches Monday" /></div>
+          <div class="av3-field"><label class="av3-field-label">Message</label><textarea class="av3-input" rows="3">Tartufo pizza + two new primi go live across all sites. Brief your floor team on the allergen sheet.</textarea></div>
+          <div class="av3-field"><label class="av3-field-label">Audience — roles (none = everyone)</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="av3-chip is-active">Manager</button><button class="av3-chip is-active">Franchisee</button><button class="av3-chip">Staff</button><button class="av3-chip">Kitchen</button></div>
+          </div>
+          <div class="av3-field"><label class="av3-field-label">Audience — locations (none = all)</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="av3-chip">Kraków</button><button class="av3-chip">Warszawa</button></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--av3-muted)"><span style="width:34px;height:19px;border-radius:999px;background:var(--av3-brand);position:relative;display:inline-block"><span style="position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:999px;background:#fff"></span></span>Pin to top</span>
+            <button class="av3-btn av3-btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>Post announcement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="av3-card">
+      <div class="av3-card-head"><div class="av3-card-title">Posted</div><span class="av3-badge av3-badge-neutral">2 unread by all</span></div>
+      <div class="av3-card-body">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="tline" style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:var(--av3-platinum)"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg>Winter menu launches Monday</div>
+              <div style="font-size:12px;color:var(--av3-muted);margin-top:2px">Tartufo pizza + two new primi go live across all sites.</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:4px">manager, franchisee · 9 Jun · read by 3 · by Rafał</div>
+            </div>
+            <button class="av3-btn av3-btn-ghost av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+          </div>
+          <div class="tline" style="display:flex;align-items:flex-start;gap:12px;border-bottom:none">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">Holiday rota deadline is Friday</div>
+              <div style="font-size:12px;color:var(--av3-muted);margin-top:2px">Submit December availability by EOD Friday.</div>
+              <div style="font-size:11.5px;color:var(--av3-subtle);margin-top:4px">Everyone · 7 Jun · read by 11 · by Rafał</div>
+            </div>
+            <button class="av3-btn av3-btn-ghost av3-btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="av3-btn-ico"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
