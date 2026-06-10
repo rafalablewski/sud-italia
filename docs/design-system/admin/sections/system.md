@@ -210,9 +210,17 @@ actually reach.
   (`src/app/manager/page.tsx`), a scoped overview of the site(s) they run:
   today's revenue / orders / covers and who's on shift, all derived live from
   real `getOrders` + `getShifts`/`getStaff` filtered to the session's location
-  scope (no mock data), plus quick links into the operational pages
-  (Orders, KDS, Schedule, Inventory, POS, Team) their granular permissions
-  grant. The wall is **only** around the `/admin` HQ root — managers keep their
+  scope (no mock data), plus a **"Jump to"** rail into the operational pages
+  (Orders, KDS, Schedule, Inventory, POS, Team). Those cards are **not** rendered
+  unconditionally — they come from `getDashboardQuickLinks(user)`
+  (`src/lib/dashboard-links.ts`), which filters a permission-annotated registry
+  to the cards the viewer's *effective* permissions unlock (each card maps to the
+  same key `permissionForAdminPage()` gates its destination with) and re-roots
+  each href onto the role prefix. So the admin controls exactly what shows here
+  through the Permission Matrix (role default or per-user custom grant): drop
+  `pos.view` from a manager and the POS card disappears — and no card can ever be
+  shown to someone who'd just be bounced on click. The wall is **only** around
+  the `/admin` HQ root — managers keep their
   permission-scoped tools, but navigate them under **their own URL prefix**:
   `/manager/*` (a franchisee `/franchisee/*`, the owner `/admin/*`), via
   rewrites onto the shared `/admin/*` pages so the path reads as their space,

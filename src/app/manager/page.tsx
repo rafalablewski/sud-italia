@@ -1,15 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  ClipboardList,
-  Flame,
-  CalendarDays,
-  Boxes,
-  Receipt,
-  Users,
-  TrendingUp,
-  ArrowRight,
-} from "lucide-react";
+import { Flame, Receipt, Users, TrendingUp, ArrowRight } from "lucide-react";
 import {
   getCurrentAdminUser,
   getCurrentLocationScope,
@@ -18,6 +9,7 @@ import {
 import { getOrders, getShifts, getStaff } from "@/lib/store";
 import { getActiveLocations } from "@/data/locations";
 import { landingPathForRole, STAFF_ROLE_LABEL } from "@/lib/staff-roles";
+import { getDashboardQuickLinks } from "@/lib/dashboard-links";
 import { formatPricePLN } from "@/lib/utils";
 import { SignOutButton } from "./SignOutButton";
 
@@ -152,17 +144,14 @@ export default async function ManagerPortalPage() {
     },
   ];
 
-  // Manager's own prefix for the back-office tools (the KDS / POS live on the
-  // Core suite at /core/*, so they stay there). /manager/* rewrites onto the
-  // shared /admin/* pages — see src/lib/admin-base.ts.
-  const quickLinks = [
-    { href: "/manager/orders", label: "Orders", desc: "Live tickets & history", icon: ClipboardList },
-    { href: "/core/kds", label: "Kitchen Display", desc: "The line, by station", icon: Flame },
-    { href: "/manager/schedule", label: "Schedule", desc: "Shifts & rota", icon: CalendarDays },
-    { href: "/manager/inventory", label: "Inventory", desc: "Stock & counts", icon: Boxes },
-    { href: "/core/pos", label: "Point of sale", desc: "Take an order", icon: Receipt },
-    { href: "/manager/staff", label: "Team", desc: "Roster & hiring", icon: Users },
-  ];
+  // Quick links are derived from the viewer's *effective* permissions, not
+  // hard-coded — the admin controls exactly what shows here via the Permission
+  // Matrix (role default or per-user custom grant). Each card maps to the same
+  // permission `permissionForAdminPage()` gates its destination with, so a card
+  // appears only when the manager could actually open it (no click-then-bounce).
+  // Hrefs come back re-rooted onto the manager's /manager/* prefix; the KDS /
+  // POS cards stay on the shared /core/* suite. See src/lib/dashboard-links.ts.
+  const quickLinks = getDashboardQuickLinks(user);
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 sm:py-10">
