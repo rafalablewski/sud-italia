@@ -76,7 +76,7 @@ The shell owns:
   `filterNavForRole` for role-default users), and the shell runs a client
   page guard that bounces a custom-grant user away from a surface they
   lack. Both read `/api/admin/me` and mirror the server gate in
-  `withAdmin`. The full granular-permission model — the 70-key catalog
+  `withAdmin`. The full granular-permission model — the 75-key catalog
   (`src/lib/permissions.ts`), role-default presets, owner-only granting,
   and the call-site defence-in-depth gates — lives in
   [`sections/system.md`](./sections/system.md#granular-permissions-action-level-rbac).

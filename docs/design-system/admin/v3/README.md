@@ -94,9 +94,12 @@ server still enforces every `/api/admin/*` call). `SidebarV3` reads
    (`allAccess`) skip it.
 
 `AdminShellV3` also runs a **client page guard** (parity with `CoreProviders`):
-for a `custom`-grant user it `router.replace`s to their landing when the current
-page maps to a permission they lack, so a typed URL / stale bookmark to a
-forbidden surface bounces home instead of loading a shell the API would 403.
+for any non-owner (`allAccess` skips) it `router.replace`s to their landing when
+the current page maps to a permission their effective set lacks, so a typed URL
+/ stale bookmark to a forbidden surface bounces home instead of loading a shell
+the API would 403. It gates the whole-preset, not just custom grants — because
+the manager default now excludes the owner-by-default surfaces (see below), a
+role-default manager is bounced from `/manager/reports` too.
 
 ## Responsive & touch
 

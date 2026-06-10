@@ -234,11 +234,25 @@ actually reach.
 ### Granular permissions (action-level RBAC)
 
 The unit of authority is a **permission**, not a role. The catalog —
-**71 action-level keys** grouped by domain (orders, guests, menu,
+**75 action-level keys** grouped by domain (orders, guests, menu,
 inventory, people, finance, growth, intelligence, system) — lives in
 `src/lib/permissions.ts` and is the **single source of truth that gates
 both the UI and the API**. Never hard-code a permission string at a call
 site; add/extend a key in the catalog so a typo fails to compile.
+
+**Manager default is deliberately narrow.** `MANAGER_PERMS` excludes two
+tiers (`MANAGER_EXCLUDE` in `permissions.ts`): (1) structurally owner-only —
+user/role + chain-settings admin and cross-location surfaces; and (2)
+*owner-by-default* head-office surfaces a floor manager shouldn't see in their
+rail out of the box — **Finance** (Reports, Business costs, Calculator; Cash
+stays), **Growth & marketing** (Campaigns, Upsell, Cross-sell, Bundles, Events,
+Integrations), and **Governance & config** (Boardroom, Audit log, Capabilities,
+Payments, QR ordering, AI Insights/Ops Agent). Tier 2 is policy, not a wall:
+because every one of those pages gates on a *permission* (not role rank), an
+owner can hand a single manager `reports.view` in the Permission Matrix and
+Reports reappears for that person only. Kept with the manager on purpose: Cash,
+Compliance (the day-to-day calendar) and Menu engineering. Franchisees inherit
+the same tier-2 exclusions (`FRANCHISEE_PERMS` is built on `MANAGER_PERMS`).
 
 - **Editor** (`PermissionEditor` inside `AdminUsers.tsx`): a `Customize`
   `Switch` per non-owner account. Off = the account **inherits its

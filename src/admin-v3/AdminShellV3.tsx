@@ -15,16 +15,18 @@ export function AdminShellV3({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Page guard — parity with CoreProviders for the /core suite. A user carrying
-  // an explicit custom grant only sees the pages the admin permitted in the
-  // Permission Matrix, so a deep-link / typed URL to a page their grant excludes
-  // bounces home instead of loading a shell whose data the API would 403. Owner
-  // and role-default users keep the server-side rank redirects; the server still
-  // enforces every /api/admin/* call regardless — this is the UX layer.
-  // `permissionForAdminPage` normalises the /manager + /franchisee prefixes.
+  // Page guard. Gates on the viewer's *effective* permissions (role default or
+  // per-user custom grant — the exact set /api/admin/me returns), so a deep-link
+  // / typed URL / stale bookmark to a page they lack bounces home instead of
+  // loading a shell whose data the API would 403. Applies to every non-owner:
+  // because the manager default preset now excludes the owner-by-default
+  // surfaces (Reports, Growth, Boardroom, …), a role-default manager must be
+  // bounced from those too, not just a custom-grant user. Owners (`allAccess`)
+  // skip it; the server still enforces every /api/admin/* call regardless — this
+  // is the UX layer. `permissionForAdminPage` normalises /manager + /franchisee.
   const [gate, setGate] = useState<{
     keys: Set<string>;
-    custom: boolean;
+    allAccess: boolean;
     home: string;
   } | null>(null);
   useEffect(() => {
@@ -35,7 +37,7 @@ export function AdminShellV3({ children }: { children: ReactNode }) {
         if (cancelled || !j?.role) return;
         setGate({
           keys: new Set<string>(Array.isArray(j.permissions) ? j.permissions : []),
-          custom: !!j.custom,
+          allAccess: !!j.allAccess,
           home: typeof j.signIn?.landing === "string" ? j.signIn.landing : "/admin",
         });
       })
@@ -48,7 +50,7 @@ export function AdminShellV3({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!gate || !gate.custom) return;
+    if (!gate || gate.allAccess) return;
     const need = permissionForAdminPage(pathname);
     if (need && !gate.keys.has(need)) {
       router.replace(gate.home);
