@@ -117,6 +117,9 @@
   .row-from{flex:1;min-width:0;font-size:13px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .row.unread .row-from{font-weight:700}
   .row-time{font-size:11px;color:var(--av3-subtle);flex-shrink:0;font-variant-numeric:tabular-nums}
+  /* Collapsed only — the opened body carries the full date+time (row-time2), so
+     showing the short date here too would be redundant. */
+  .row.open .row-time{display:none}
   .unread-dot{width:7px;height:7px;border-radius:999px;background:var(--av3-brand);flex-shrink:0}
   .pin{width:12px;height:12px;color:var(--av3-platinum);flex-shrink:0}
   .row-subj{display:block;font-size:12.5px;margin-top:2px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -127,7 +130,9 @@
   .row.open .row-full{display:block}
   .row-time2{display:none;font-size:11px;color:var(--av3-subtle);margin-top:8px}
   .row.open .row-time2{display:block}
-  .row-actions{display:flex;gap:4px;align-self:center;padding:0 12px 0 4px;flex-shrink:0}
+  /* Pinned to the top so opening a message (which grows the row) leaves the
+     Archive/Delete actions where they were instead of sliding to the centre. */
+  .row-actions{display:flex;gap:4px;align-self:flex-start;padding:13px 12px 0 4px;flex-shrink:0}
   .act{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--av3-r-md);background:var(--av3-s3);border:1px solid var(--av3-line);color:var(--av3-muted);cursor:pointer}
   .act:hover{color:var(--av3-fg);border-color:var(--av3-line-strong);background:var(--av3-hover)}
   .act.danger{color:var(--av3-bad)}

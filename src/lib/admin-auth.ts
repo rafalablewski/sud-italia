@@ -290,8 +290,10 @@ export async function getCurrentAdminUser(): Promise<
   if (claims.userId === "admin") {
     // Legacy session — no per-user binding. Behave like the previous code
     // (everyone is owner) so existing deployments don't lose access on
-    // upgrade.
-    return { id: "admin", name: "Admin (shared)", role: "owner" };
+    // upgrade. The shared session belongs to the owner, so surface it under
+    // their real name (it appears as the author on tasks/announcements) rather
+    // than an anonymous "Admin (shared)" label.
+    return { id: "admin", name: "Rafał Ablewski", role: "owner" };
   }
   const users = await getAdminUsers();
   const hit = users.find((u) => u.id === claims.userId);
