@@ -501,20 +501,30 @@ auth canvas's signature lighting and the sign-in lockup:
   Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
   and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
   §14 (`.av3-alert-*`). Nav: Overview section.
-- [x] Tasks & announcements (`/admin/comms`, `CommsV3`) — the internal comms
-  board. Two tabs (`ChipRow`): **Tasks** (assign a to-do to a person or a whole
-  role+location — fans out to one row per assignee, each with its own done-state)
-  and **Announcements** (post to everyone / roles / locations / named people,
-  pinnable, with edit-in-place + delete — the POST upserts on `id`). Built from the standard primitives (`Card`/`Button`/`Badge`/`Switch`
-  + `.av3-input`/`.av3-select`/`.av3-field`), no new CSS. Gated by `comms.view` /
-  `comms.manage` (owner-default, grantable). The receiving half is **`PortalInbox`**
-  (`src/components/portal/PortalInbox.tsx`) on the Manager/Franchisee portals —
-  "Your to-do list" + "Announcements" over the unmapped `/api/admin/my-tasks` +
-  `/api/admin/my-announcements` (any authed user). Types + recipient rule in
-  `src/lib/comms.ts`. **Distinct from Alerts:** announcements are human-authored
-  broadcasts; the bell + `/admin/alerts` are the *automated* operational
-  `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
-  no cross-writes — never wire one into the other. Nav: Overview section.
+- [x] Tasks & announcements (`CommsV3`) — the internal comms board, split into
+  **two separate Overview nav entries / routes** (no more `ChipRow` tab): **Tasks**
+  (`/admin/comms/tasks`) — assign a to-do to a person or a whole role+location,
+  fans out to one row per assignee, each with its own done-state — and
+  **Announcements** (`/admin/comms/announcements`) — post to everyone / roles /
+  locations / named people, with a **Title (subject) + textarea body**, pinnable,
+  edit-in-place + delete (the POST upserts on `id`). One component takes a
+  `view: "tasks" | "announcements"` prop and renders just that surface; the bare
+  `/admin/comms` index redirects to Tasks. Built from the standard primitives
+  (`Card`/`Button`/`Badge`/`Switch` + `.av3-input`/`.av3-select`/`.av3-field`),
+  no new CSS. Gated by `comms.view` / `comms.manage` (owner-default, grantable).
+  The receiving half is **`PortalInbox`** (`src/components/portal/PortalInbox.tsx`)
+  on the Manager/Franchisee portals: announcements **lead the portal as a
+  Gmail-style notification inbox** (sender avatar + subject + snippet + timestamp,
+  unread bold with a brand dot, pinned flagged; tap a row to open the full
+  message and mark it read) above the personal **"Your to-do list"**, over the
+  unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
+  user). The inbox is built from tokens + inline styles on the existing
+  `.av3-portal-section` / `.av3-card` scaffold (no new CSS class). Types +
+  recipient rule in `src/lib/comms.ts`. **Distinct from Alerts:** announcements
+  are human-authored broadcasts; the bell + `/admin/alerts` are the *automated*
+  operational `Notification` stream (orders/stock/disputes). Separate stores,
+  separate APIs, no cross-writes — never wire one into the other. Nav: Overview
+  section (two entries).
 - [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the

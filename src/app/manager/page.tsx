@@ -205,7 +205,7 @@ export default async function ManagerPortalPage() {
           })}
         </div>
 
-        {/* Personal comms — to-do tasks assigned to this manager + announcements */}
+        {/* Personal comms — announcement notifications inbox + this manager's to-do list */}
         <PortalInbox />
 
         {/* Per-location breakdown — only when the manager runs more than one site */}
