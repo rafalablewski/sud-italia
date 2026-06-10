@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pin } from "lucide-react";
+import { Skeleton } from "@/admin-v3/ui/Skeleton";
 import type { Task, Announcement } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean };
@@ -95,8 +96,13 @@ export function PortalInbox() {
 
   const unread = useMemo(() => (anns ? anns.filter((a) => !a.read).length : 0), [anns]);
 
-  // Avoid a layout flash before the feeds resolve.
-  if (tasks === null || anns === null) return null;
+  // While the feeds resolve, hold the layout with a shimmer stand-in that
+  // mirrors the loaded shape (a Notifications inbox card + a to-do card). The
+  // portal renders these two sections in-place on the server-rendered page, so
+  // returning `null` here would collapse the space and shove everything below
+  // (per-location, on-shift, jump-to) down the moment the data lands — the
+  // "moving suddenly" jump. The skeleton reserves the room so it doesn't.
+  if (tasks === null || anns === null) return <PortalInboxSkeleton />;
 
   const openTasks = tasks.filter((t) => t.status === "open");
 
@@ -239,6 +245,66 @@ export function PortalInbox() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+/**
+ * Loading stand-in for {@link PortalInbox}. Mirrors the loaded shape — a
+ * Notifications inbox card (avatar + two text lines per row) above a to-do
+ * card — so the portal reserves the space and doesn't jump when the feeds land.
+ * Built on the same `.av3-portal-section` / `.av3-card` scaffold and the shared
+ * `Skeleton` shimmer primitive (no new CSS), matching the rest of the av3 suite.
+ */
+function PortalInboxSkeleton() {
+  return (
+    <>
+      {/* Notifications — same padding-0 card, a few inbox-row stand-ins */}
+      <section className="av3-portal-section" aria-busy="true">
+        <div className="av3-section-label">
+          <Skeleton width={92} height={11} radius={999} />
+        </div>
+        <div className="av3-card" style={{ overflow: "hidden", padding: 0 }}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+                padding: "11px 14px",
+                borderTop: i === 0 ? "none" : "1px solid var(--av3-line)",
+              }}
+            >
+              <Skeleton width={34} height={34} radius={999} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                <Skeleton width="40%" height={12} radius={999} />
+                <Skeleton width="85%" height={12} radius={999} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Your to-do list — same padded card, a couple of task-row stand-ins */}
+      <section className="av3-portal-section" aria-busy="true">
+        <div className="av3-section-label">
+          <Skeleton width={108} height={11} radius={999} />
+        </div>
+        <div className="av3-card av3-card-p">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {Array.from({ length: 2 }, (_, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <Skeleton width={7} height={7} radius={999} style={{ marginTop: 6, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Skeleton width="55%" height={13} radius={999} />
+                  <Skeleton width="35%" height={11} radius={999} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </>

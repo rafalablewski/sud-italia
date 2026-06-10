@@ -519,7 +519,10 @@ auth canvas's signature lighting and the sign-in lockup:
   message and mark it read) above the personal **"Your to-do list"**, over the
   unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
   user). The inbox is built from tokens + inline styles on the existing
-  `.av3-portal-section` / `.av3-card` scaffold (no new CSS class). Types +
+  `.av3-portal-section` / `.av3-card` scaffold (no new CSS class). While the two
+  feeds resolve it renders a `PortalInboxSkeleton` (same two-section scaffold,
+  shimmer rows via the shared `Skeleton` primitive) instead of `null`, so the
+  space is reserved and the portal doesn't jump when the data lands. Types +
   recipient rule in `src/lib/comms.ts`. **Distinct from Alerts:** announcements
   are human-authored broadcasts; the bell + `/admin/alerts` are the *automated*
   operational `Notification` stream (orders/stock/disputes). Separate stores,
