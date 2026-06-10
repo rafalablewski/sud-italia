@@ -1,22 +1,17 @@
-import "../themes/base/index.css";
+import "../themes/admin-v3/index.css";
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 
-// Franchisee portal is admin-flavoured (reads getCurrentAdminUser,
-// role-gated to "franchisee" / "owner"). It lives outside the
-// AdminShell so this layout loads the Admin theme CSS + admin fonts
-// directly. Independent next/font instances so a franchisee-only
-// type tweak would not move /admin.
-const franchiseeBody = Inter({
-  subsets: ["latin"],
-  variable: "--font-admin-body",
-  display: "swap",
-});
-const franchiseeDisplay = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-admin-display",
-  display: "swap",
-});
+// Franchisee portal is admin-flavoured (reads getCurrentAdminUser, role-gated to
+// "franchisee" / "owner"). It lives outside the AdminShell, so — like /login,
+// /terminal and /manager — this layout loads the av3 "Operator Terminal"
+// stylesheet + the three admin typefaces directly on `#admin-portal-root
+// .av3-root` and renders the dark canonical theme, so the portal home matches
+// the sign-in door. Independent next/font instances so a franchisee-only type
+// tweak would not move /admin.
+const franchiseeBody = Inter({ subsets: ["latin"], variable: "--font-admin-body", display: "swap" });
+const franchiseeDisplay = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
+const franchiseeMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Franchisee | Ottaviano",
@@ -29,12 +24,13 @@ export default function FranchiseeLayout({
   children: React.ReactNode;
 }) {
   return (
-    // `id="admin-portal-root"` is required, not cosmetic — it's the scope where
-    // `--font-ui` / `--font-display` re-resolve from the `--font-admin-*`
-    // next/font vars on this element, so the bundled Inter / Fraunces actually
-    // load (without it `.admin-bg` falls back to a generic font stack). Also
-    // the portal mount (rule #4). See themes/base/index.css.
-    <div id="admin-portal-root" className={`${franchiseeBody.variable} ${franchiseeDisplay.variable} admin-bg`}>
+    // `#admin-portal-root` carries the --font-admin-* next/font vars that av3's
+    // --av3-ui/-display/-mono read, and is the trap-free portal mount (rule #4).
+    // `.av3-root` scopes the --av3-* tokens (renders dark canonical by default).
+    <div
+      id="admin-portal-root"
+      className={`${franchiseeBody.variable} ${franchiseeDisplay.variable} ${franchiseeMono.variable} av3-root flex flex-col flex-1`}
+    >
       {children}
     </div>
   );

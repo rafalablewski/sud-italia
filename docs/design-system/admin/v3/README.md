@@ -406,6 +406,36 @@ hover/press affordance) so the lock reads visually. Behaviour (location
 remembered in `localStorage`, PIN length gate, `POST /api/terminal/login` →
 role-routed landing) is unchanged.
 
+## Role portal home — Manager & Franchisee
+
+The standalone role dashboards (`src/app/manager/page.tsx`,
+`src/app/franchisee/page.tsx`) are the manager's / franchisee's home — scoped
+overviews that live **outside** `AdminShellV3` (the owner's HQ is `/admin`).
+They render in **av3** so the home reads as the same surface as the sign-in door
+the user just came through: their layouts load `themes/admin-v3/index.css` + the
+three `--font-admin-*` typefaces on `#admin-portal-root.av3-root` (dark
+canonical, no boot script), exactly like the doors. They previously rendered the
+base/v2 `.admin-bg` + `.glass-*` theme — that drift is gone.
+
+CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-portal*`), reusing the
+auth canvas's signature lighting and the sign-in lockup:
+
+- **`.av3-portal`** — the canvas: same overhead **brand spotlight** (`::before`)
+  and masked **scanline** (`::after`) as `.av3-auth`, but **top-aligned** and
+  scrollable (it's an overview, not a centred form).
+- **`.av3-portal-col`** — the max-1000px content column, entering with the same
+  `av3-auth-in` fade-rise.
+- **`.av3-portal-head`** — the header reuses the door's **`.av3-auth-lockup`**
+  (mark + Ottaviano wordmark + role `eyebrow`) beside `.av3-portal-greet`
+  (Fraunces welcome) + `.av3-portal-sub`, with the `.av3-btn-ghost` sign-out.
+- **Body** composes the standard primitives — `.av3-kpi-rail` / `.av3-kpi` for
+  the headline figures (per-tile `--av3-kpi-accent`), `.av3-card` (+ `.av3-card-head`)
+  for the sections, `.av3-cols-2` for the splits — plus three portal helpers:
+  **`.av3-portal-jump`** / **`.av3-portal-jcard`** (the permission-filtered
+  "Jump to" link grid, manager only), **`.av3-portal-chip`** (on-shift people)
+  and **`.av3-portal-stat-*`** (label/value/sub stat blocks). No new button or
+  input primitive — it reuses §4/§14 controls in scope.
+
 ## What v3 is not
 
 - **Not a re-skin of v2.** No `.v2-*` / `.glass-*` class is reused; v3 cannot

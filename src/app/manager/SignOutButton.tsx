@@ -27,9 +27,9 @@ export function SignOutButton() {
       type="button"
       onClick={handle}
       disabled={busy}
-      className="glass-input rounded-xl px-4 py-2 admin-text text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+      className="av3-btn av3-btn-ghost av3-btn-sm"
     >
-      <LogOut className="h-4 w-4" />
+      <LogOut className="av3-btn-ico" />
       {busy ? "Signing out…" : "Sign out"}
     </button>
   );

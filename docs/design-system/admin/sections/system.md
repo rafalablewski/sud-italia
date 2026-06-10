@@ -182,16 +182,16 @@ actually reach.
   `/login`, `/terminal`, `/manager` and `/franchisee` live outside the
   AdminShell, so each ships its own `layout.tsx` (`src/app/login/layout.tsx`,
   `src/app/terminal/layout.tsx`, `src/app/manager/layout.tsx`,
-  `src/app/franchisee/layout.tsx`) that loads the Admin theme CSS + admin fonts
-  and wraps the page in a single
-  `<div id="admin-portal-root" className="… admin-bg">` — the same pattern
-  `/kitchen` uses. The **`id` is load-bearing, not just a portal mount**: these
-  layouts carry no theme-boot script, so the admin font tokens only re-resolve
-  at the `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
-  without it the bundled Inter/Fraunces never load. And without the layout
-  entirely the `glass-*` / `admin-text` utilities have no theme to read from and
-  the forms render unstyled (invisible `glass-btn` text), which previously
-  blocked staff from signing in.
+  `src/app/franchisee/layout.tsx`) that loads the **av3** stylesheet
+  (`themes/admin-v3/index.css`) + the three `--font-admin-*` typefaces and wraps
+  the page in a single `<div id="admin-portal-root" className="… av3-root flex
+  flex-col flex-1">` — so every door **and** both role portals render the same
+  av3 dark-canonical surface (the Manager/Franchisee homes match the sign-in
+  door they follow — see [v3 → Role portal home](../v3/README.md#role-portal-home--manager--franchisee)).
+  The **`id` is load-bearing, not just a portal mount**: these layouts carry no
+  theme-boot script, so the `--av3-*` font tokens only re-resolve at the
+  `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
+  without it the bundled Inter/Fraunces/JetBrains Mono never load.
 
   All mint the *same* signed, location-scoped session and route by role via
   `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/core/kds`,

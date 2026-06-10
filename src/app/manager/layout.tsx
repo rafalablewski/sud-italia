@@ -1,23 +1,18 @@
-import "../themes/base/index.css";
+import "../themes/admin-v3/index.css";
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 
 // The Manager portal is the manager's home — a scoped overview that sits
 // outside the AdminShell (the owner-only HQ dashboard lives at /admin). Like
-// /franchisee, /kitchen and /login, it loads the Admin theme CSS + admin font
-// stack directly and wraps the page in .admin-bg so the glass-* / admin-text
-// utilities resolve. Independent next/font instances from /admin/layout so a
-// manager-only type tweak wouldn't move admin.
-const managerBody = Inter({
-  subsets: ["latin"],
-  variable: "--font-admin-body",
-  display: "swap",
-});
-const managerDisplay = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-admin-display",
-  display: "swap",
-});
+// /login, /terminal and /franchisee, it loads the av3 "Operator Terminal"
+// stylesheet + the three admin typefaces directly on `#admin-portal-root
+// .av3-root` and renders the **dark canonical** theme (no boot script — no
+// `<html>` mutation, so no hydration mismatch), so the portal home matches the
+// sign-in door it follows. Independent next/font instances from /admin/(shell)
+// so a manager-only type tweak wouldn't move admin.
+const managerBody = Inter({ subsets: ["latin"], variable: "--font-admin-body", display: "swap" });
+const managerDisplay = Fraunces({ subsets: ["latin"], variable: "--font-admin-display", display: "swap" });
+const managerMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-admin-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Manager | Ottaviano",
@@ -30,12 +25,13 @@ export default function ManagerLayout({
   children: React.ReactNode;
 }) {
   return (
-    // `id="admin-portal-root"` is required, not cosmetic — it's the scope where
-    // `--font-ui` / `--font-display` re-resolve from the `--font-admin-*`
-    // next/font vars on this element, so the bundled Inter / Fraunces actually
-    // load (without it `.admin-bg` falls back to a generic font stack). Also
-    // the portal mount (rule #4). See themes/base/index.css.
-    <div id="admin-portal-root" className={`${managerBody.variable} ${managerDisplay.variable} admin-bg`}>
+    // `#admin-portal-root` carries the --font-admin-* next/font vars that av3's
+    // --av3-ui/-display/-mono read, and is the trap-free portal mount (rule #4).
+    // `.av3-root` scopes the --av3-* tokens (renders dark canonical by default).
+    <div
+      id="admin-portal-root"
+      className={`${managerBody.variable} ${managerDisplay.variable} ${managerMono.variable} av3-root flex flex-col flex-1`}
+    >
       {children}
     </div>
   );

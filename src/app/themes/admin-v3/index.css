@@ -1480,6 +1480,90 @@
 .av3-auth-foot a { color: var(--av3-platinum); text-decoration: none; }
 .av3-auth-foot a:hover { text-decoration: underline; }
 
+/* Role portal home (Manager / Franchisee). The standalone dashboards that live
+   OUTSIDE the AdminShell share the sign-in canvas's signature look — the
+   overhead brand spotlight + masked scanline on the dark canvas, the same SI
+   mark + Ottaviano wordmark + eyebrow lockup (`.av3-auth-*`, reused) — but
+   top-align their content (they're scrollable overviews, not a centred form)
+   and compose it from the standard `.av3-kpi*` / `.av3-card` primitives. */
+.av3-portal {
+  position: relative;
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 44px 24px 72px;
+  overflow: hidden;
+  background: var(--av3-bg);
+}
+.av3-portal::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -34%;
+  width: 120vw;
+  height: 120vh;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(36% 42% at 50% 0%, color-mix(in oklab, var(--av3-brand) 20%, transparent), transparent 70%);
+}
+.av3-portal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, 0.012) 3px 4px);
+  -webkit-mask-image: radial-gradient(72% 48% at 50% 0%, #000, transparent 80%);
+  mask-image: radial-gradient(72% 48% at 50% 0%, #000, transparent 80%);
+}
+.av3-portal-col {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--av3-gap-5);
+  animation: av3-auth-in var(--av3-t-slow) var(--av3-ease) both;
+}
+@media (prefers-reduced-motion: reduce) { .av3-portal-col { animation: none; } }
+.av3-portal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--av3-gap-4);
+  flex-wrap: wrap;
+}
+.av3-portal-greet { font-family: var(--av3-display); font-size: 27px; font-weight: 600; line-height: 1.08; margin-top: 14px; }
+.av3-portal-sub { margin-top: 5px; font-size: 12.5px; color: var(--av3-muted); }
+.av3-portal-section { display: flex; flex-direction: column; gap: var(--av3-gap-3); }
+.av3-portal-empty { padding: var(--av3-gap-4); font-size: 12.5px; color: var(--av3-muted); }
+/* Jump-to / quick-link grid of link cards. */
+.av3-portal-jump { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--av3-gap-3); }
+.av3-portal-jcard {
+  display: flex; align-items: center; gap: var(--av3-gap-3);
+  padding: var(--av3-gap-3) var(--av3-gap-4);
+  background: var(--av3-s1); border: 1px solid var(--av3-line);
+  border-radius: var(--av3-r-lg); box-shadow: var(--av3-sh-1);
+  text-decoration: none; color: inherit;
+  transition: border-color var(--av3-t-fast) var(--av3-ease), box-shadow var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease);
+}
+.av3-portal-jcard:hover { border-color: var(--av3-brand-line); box-shadow: var(--av3-sh-2); transform: translateY(-1px); }
+.av3-portal-jico { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: var(--av3-r-md); background: var(--av3-s3); color: var(--av3-platinum); }
+.av3-portal-jico svg { width: 18px; height: 18px; }
+.av3-portal-jbody { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.av3-portal-jname { font-size: 13.5px; font-weight: 600; }
+.av3-portal-jdesc { font-size: 11.5px; color: var(--av3-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av3-portal-jcard > svg:last-child { width: 15px; height: 15px; color: var(--av3-subtle); flex-shrink: 0; }
+/* People-on-shift chips + simple two-column stat blocks used on the portals. */
+.av3-portal-chips { display: flex; flex-wrap: wrap; gap: var(--av3-gap-2); }
+.av3-portal-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--av3-r-pill); background: var(--av3-s2); border: 1px solid var(--av3-line); font-size: 12px; }
+.av3-portal-chip span { color: var(--av3-subtle); }
+.av3-portal-stat-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--av3-subtle); }
+.av3-portal-stat-value { font-family: var(--av3-mono); font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 3px; }
+.av3-portal-stat-sub { font-size: 11.5px; color: var(--av3-muted); margin-top: 2px; }
+
 /* PIN terminal — the shared-device keypad door (/terminal). Same canvas, column,
    bracket + lockup as the sign-in form; below the lockup it swaps the form for a
    location segmented control, a PIN-progress dot row and a touch keypad, all
