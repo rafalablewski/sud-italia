@@ -88,6 +88,7 @@ export default function TerminalLoginPage() {
               onClick={() => pickLocation(l.slug)}
               className={`av3-auth-loc${slug === l.slug ? " is-active" : ""}`}
               aria-pressed={slug === l.slug}
+              disabled={loading}
             >
               {l.city}
             </button>
@@ -103,7 +104,7 @@ export default function TerminalLoginPage() {
 
       <div className="av3-auth-keypad">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-          <button key={d} type="button" onClick={() => press(d)} className="av3-auth-key">
+          <button key={d} type="button" onClick={() => press(d)} className="av3-auth-key" disabled={loading}>
             {d}
           </button>
         ))}
@@ -112,10 +113,11 @@ export default function TerminalLoginPage() {
           onClick={backspace}
           className="av3-auth-key av3-auth-key-del"
           aria-label="Delete"
+          disabled={loading}
         >
           <Delete />
         </button>
-        <button type="button" onClick={() => press("0")} className="av3-auth-key">
+        <button type="button" onClick={() => press("0")} className="av3-auth-key" disabled={loading}>
           0
         </button>
         <button

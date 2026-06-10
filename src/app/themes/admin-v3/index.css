@@ -1501,6 +1501,9 @@
 .av3-auth-loc:hover { color: var(--av3-fg); border-color: var(--av3-muted); }
 .av3-auth-loc.is-active { background: var(--av3-brand); border-color: var(--av3-brand); color: #fff; }
 .av3-auth-loc:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+/* locked while a PIN is in flight — dim, no hover affordance */
+.av3-auth-loc:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-loc:disabled:hover { color: var(--av3-muted); border-color: var(--av3-line-strong); }
 
 /* PIN-progress dots — one per entered digit (min PIN_MIN_LENGTH), brand when filled */
 .av3-auth-dots { display: flex; justify-content: center; gap: var(--av3-gap-2); margin-bottom: 20px; }
@@ -1533,6 +1536,11 @@
 .av3-auth-key:hover { background: var(--av3-s2); border-color: var(--av3-muted); }
 .av3-auth-key:active { transform: scale(0.96); }
 .av3-auth-key:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+/* locked while a PIN is in flight — dim, no hover/press affordance. Listed
+   before .av3-auth-key-go so the confirm CTA's own :disabled rules win. */
+.av3-auth-key:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-key:disabled:hover { background: var(--av3-s1); border-color: var(--av3-line-strong); }
+.av3-auth-key:disabled:active { transform: none; }
 .av3-auth-key svg { width: 20px; height: 20px; }
 /* delete reads quieter; confirm is the brand CTA, echoing .av3-btn-primary */
 .av3-auth-key-del { color: var(--av3-muted); }

@@ -379,8 +379,11 @@ fills brand), **`.av3-auth-dots`** / **`.av3-auth-dot`** (PIN-progress dots, one
 per digit down to `PIN_MIN_LENGTH`, brand on `.is-on`) and **`.av3-auth-keypad`**
 / **`.av3-auth-key`** (a 3-col touch keypad of 56px targets; **`.av3-auth-key-del`**
 reads quieter, **`.av3-auth-key-go`** is the brand confirm CTA echoing
-`.av3-btn-primary`). Behaviour (location remembered in `localStorage`, PIN length
-gate, `POST /api/terminal/login` → role-routed landing) is unchanged.
+`.av3-btn-primary`). While a PIN is in flight (`loading`) the location buttons
+and keypad are `disabled` — each has `:disabled` styling (dimmed, no
+hover/press affordance) so the lock reads visually. Behaviour (location
+remembered in `localStorage`, PIN length gate, `POST /api/terminal/login` →
+role-routed landing) is unchanged.
 
 ## What v3 is not
 
