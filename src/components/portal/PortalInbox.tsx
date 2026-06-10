@@ -28,17 +28,18 @@ function fmtDateTime(iso?: string) {
     : "";
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+function initials(name?: string): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 // Deterministic colour per sender so the same person always reads the same.
-function avatarColor(name: string): string {
+function avatarColor(name?: string): string {
+  const safe = name ?? "";
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < safe.length; i++) h = (h * 31 + safe.charCodeAt(i)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
@@ -186,7 +187,7 @@ export function PortalInbox() {
                         {a.title}
                         {!isOpen && (
                           <span style={{ fontWeight: 400, color: "var(--av3-muted)" }}>
-                            {" — "}{a.body.replace(/\s+/g, " ").trim()}
+                            {" — "}{(a.body ?? "").replace(/\s+/g, " ").trim()}
                           </span>
                         )}
                       </span>
