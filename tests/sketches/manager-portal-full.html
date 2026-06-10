@@ -328,13 +328,13 @@
 <script>
 /* per-recipient mailbox state: "inbox" | "archived" | "deleted". read independent. */
 let notes = [
-  { id:"n1", from:"Marco Bianchi",  subj:"New winter menu launches Monday", snip:"Brief your floor team on the three new pizzas and the truffle special.", body:"Please brief your floor team on the three new pizzas and the truffle special.\n\nTasting notes + plating photos are in the shared drive.", time:"9 Jun", read:false, state:"inbox", pinned:true,  color:"--av3-c4" },
-  { id:"n2", from:"HQ Operations",  subj:"Stocktake window moved to Thursday", snip:"Inventory count is now Thu 06:00 — adjust the morning shift.", body:"Inventory count is now Thu 06:00 — adjust the morning shift so two people are free for the count.", time:"9 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c1" },
-  { id:"n3", from:"Anna Kowalska",  subj:"POS terminal #2 firmware update", snip:"Reboot terminal 2 before open; it pulls the patch automatically.", body:"Reboot terminal 2 before open; it pulls the patch automatically. Takes ~4 minutes.", time:"8 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c2" },
-  { id:"n4", from:"Finance",        subj:"May royalty statement is ready", snip:"Your statement is available; payment runs Monday 02:00 UTC.", body:"Your May royalty statement is available in Reports. Payment runs Monday 02:00 UTC.", time:"8 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c3" },
-  { id:"n5", from:"Marco Bianchi",  subj:"Reminder: food-safety refresher", snip:"All managers complete the refresher module before end of month.", body:"All managers complete the food-safety refresher module before end of month. ~20 minutes.", time:"7 Jun", read:false, state:"inbox", pinned:false, color:"--av3-c4" },
-  { id:"n6", from:"HQ Operations",  subj:"Supplier change — San Marzano tomatoes", snip:"Switching the tomato supplier; first delivery next week.", body:"We are switching the San Marzano tomato supplier; first delivery lands next week. Recipe unchanged.", time:"6 Jun", read:true,  state:"archived", pinned:false, color:"--av3-c1" },
-  { id:"n7", from:"Giulia Romano",  subj:"Old: Easter opening hours", snip:"Reduced hours over the Easter weekend — now passed.", body:"Reduced hours over the Easter weekend. (Kept for reference.)", time:"28 Mar", read:true, state:"deleted", pinned:false, color:"--av3-c2" },
+  { id:"n1", from:"Marco Bianchi",  subj:"New winter menu launches Monday", snip:"Brief your floor team on the three new pizzas and the truffle special.", body:"Please brief your floor team on the three new pizzas and the truffle special.\n\nTasting notes + plating photos are in the shared drive.", time:"9 Jun", ago:"Yesterday", read:false, state:"inbox", pinned:true,  color:"--av3-c4" },
+  { id:"n2", from:"HQ Operations",  subj:"Stocktake window moved to Thursday", snip:"Inventory count is now Thu 06:00 — adjust the morning shift.", body:"Inventory count is now Thu 06:00 — adjust the morning shift so two people are free for the count.", time:"9 Jun", ago:"Yesterday", read:false, state:"inbox", pinned:false, color:"--av3-c1" },
+  { id:"n3", from:"Anna Kowalska",  subj:"POS terminal #2 firmware update", snip:"Reboot terminal 2 before open; it pulls the patch automatically.", body:"Reboot terminal 2 before open; it pulls the patch automatically. Takes ~4 minutes.", time:"8 Jun", ago:"Mon", read:false, state:"inbox", pinned:false, color:"--av3-c2" },
+  { id:"n4", from:"Finance",        subj:"May royalty statement is ready", snip:"Your statement is available; payment runs Monday 02:00 UTC.", body:"Your May royalty statement is available in Reports. Payment runs Monday 02:00 UTC.", time:"8 Jun", ago:"Mon", read:false, state:"inbox", pinned:false, color:"--av3-c3" },
+  { id:"n5", from:"Marco Bianchi",  subj:"Reminder: food-safety refresher", snip:"All managers complete the refresher module before end of month.", body:"All managers complete the food-safety refresher module before end of month. ~20 minutes.", time:"7 Jun", ago:"Sun", read:false, state:"inbox", pinned:false, color:"--av3-c4" },
+  { id:"n6", from:"HQ Operations",  subj:"Supplier change — San Marzano tomatoes", snip:"Switching the tomato supplier; first delivery next week.", body:"We are switching the San Marzano tomato supplier; first delivery lands next week. Recipe unchanged.", time:"6 Jun", ago:"Sat", read:true,  state:"archived", pinned:false, color:"--av3-c1" },
+  { id:"n7", from:"Giulia Romano",  subj:"Old: Easter opening hours", snip:"Reduced hours over the Easter weekend — now passed.", body:"Reduced hours over the Easter weekend. (Kept for reference.)", time:"28 Mar", ago:"28 Mar", read:true, state:"deleted", pinned:false, color:"--av3-c2" },
 ];
 
 let todos = [
@@ -414,7 +414,7 @@ function rowHTML(n){
           <span class="row-from">${n.from}</span>
           ${n.pinned?`<svg class="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l2 3.2H7z"/></svg>`:""}
           ${showUnread?`<span class="unread-dot"></span>`:""}
-          <span class="row-time">${n.time}</span>
+          <span class="row-time">${n.ago}</span>
         </span>
         <span class="row-subj">${n.subj}${!isOpen?`<span class="snip"> — ${n.snip}</span>`:""}</span>
         <span class="row-full">${n.body}</span>

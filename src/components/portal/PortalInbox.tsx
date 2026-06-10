@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pin, Archive, Trash2, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
+import { fmtRelative } from "@/lib/relative-time";
 import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
@@ -273,12 +274,13 @@ export function PortalInbox() {
                         {showUnread && (
                           <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: "var(--av3-brand)", flexShrink: 0 }} />
                         )}
-                        {/* Collapsed only: the full date+time lives at the foot of
-                            the opened body, so showing the short date here too
-                            would be redundant. */}
+                        {/* Collapsed only: a scannable relative age ("3h",
+                            "Yesterday"). The full absolute date+time lives at the
+                            foot of the opened body, so repeating it here would be
+                            redundant. */}
                         {!isOpen && (
                           <span style={{ fontSize: "11px", color: "var(--av3-subtle)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                            {fmtDate(a.createdAt)}
+                            {fmtRelative(a.createdAt)}
                           </span>
                         )}
                       </span>

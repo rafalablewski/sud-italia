@@ -514,9 +514,12 @@ auth canvas's signature lighting and the sign-in lockup:
   no new CSS. Gated by `comms.view` / `comms.manage` (owner-default, grantable).
   The receiving half is **`PortalInbox`** (`src/components/portal/PortalInbox.tsx`)
   on the Manager/Franchisee portals: announcements **lead the portal as a
-  Gmail-style notification inbox** (sender avatar + subject + snippet + timestamp,
-  unread bold with a brand dot, pinned flagged; tap a row to open the full
-  message and mark it read) above the personal **"Your to-do list"**, over the
+  Gmail-style notification inbox** (sender avatar + subject + snippet + a
+  **relative age** — "3h" / "Yesterday" / weekday / date, via `fmtRelative` in
+  `src/lib/relative-time.ts`; unread bold with a brand dot, pinned flagged; tap a
+  row to open the full message — which swaps the relative age for the precise
+  absolute date+time at the foot of the body — and mark it read) above the
+  personal **"Your to-do list"**, over the
   unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
   user). The inbox carries three **mailbox tabs — Inbox / Archived / Deleted** —
   with per-row actions **Mark read · Archive · Delete** (Archived/Deleted offer
