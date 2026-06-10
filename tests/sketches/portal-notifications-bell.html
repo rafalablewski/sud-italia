@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal notifications — bell · archive · history (av3 mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  STANDALONE, NON-SHIPPED mockup (lives in /tests). Alignment prototype for the
+  notifications rework — NOT wired to the app, sample data + vanilla JS only.
+
+  It demonstrates the four asks so we can agree on behaviour before code:
+    1. A NOTIFICATION BELL in the portal header with a live count badge
+       (count = unread announcements + open/overdue to-dos).
+    2. The bell opens a quick GLANCE panel; "View all" scrolls to the inbox.
+    3. The inbox shows ONLY THE 3 most-recent UNREAD rows; the rest hide behind
+       a "Load more" button.
+    4. Gmail-style per-row actions: MARK READ and ARCHIVE. Either one moves the
+       row into a HISTORY tab (archived + everything you've read). History is a
+       toggle next to "Inbox".
+
+  Tokens mirror themes/admin-v3/index.css. Faithful to values, not pixel-perfect.
+-->
+<style>
+  :root{
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-brand-line:color-mix(in oklab,var(--av3-brand) 42%,transparent);
+    --av3-brand-soft:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));
+    --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#5f9bd6; --av3-c2:#34b27b; --av3-c3:#cbb48a; --av3-c4:#c2384f;
+    --av3-c5:#9b6dd6; --av3-c6:#d6915f; --av3-c7:#5fc8d6; --av3-c8:#d65f9b;
+    --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+    --av3-gap-1:4px; --av3-gap-2:8px; --av3-gap-3:12px; --av3-gap-4:16px; --av3-gap-5:24px;
+    --av3-sh-1:0 1px 2px rgba(0,0,0,.4); --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+    --av3-ease:cubic-bezier(.4,0,.2,1); --av3-t-fast:110ms;
+    --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif; --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#050506;color:var(--av3-fg);font-family:var(--av3-ui);-webkit-font-smoothing:antialiased}
+  .caption{max-width:1000px;margin:0 auto;padding:22px 24px 0;font-family:var(--av3-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--av3-platinum)}
+  .caption small{display:block;text-transform:none;letter-spacing:0;font-family:var(--av3-ui);font-size:12px;color:var(--av3-muted);margin-top:6px;line-height:1.5}
+  svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .av3-portal{position:relative;padding:40px 24px 64px;overflow:hidden;background:var(--av3-bg)}
+  .av3-portal::before{content:"";position:absolute;left:50%;top:-34%;width:120vw;height:120vh;transform:translateX(-50%);pointer-events:none;background:radial-gradient(36% 42% at 50% 0%,color-mix(in oklab,var(--av3-brand) 20%,transparent),transparent 70%)}
+  .av3-portal-col{position:relative;z-index:1;width:100%;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:var(--av3-gap-5)}
+  .av3-portal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--av3-gap-4);flex-wrap:wrap}
+  .av3-portal-greet{font-family:var(--av3-display);font-size:27px;font-weight:600;line-height:1.08;margin:14px 0 0}
+  .av3-portal-sub{margin:5px 0 0;font-size:12.5px;color:var(--av3-muted)}
+  .av3-portal-section{display:flex;flex-direction:column;gap:var(--av3-gap-3)}
+  .av3-section-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--av3-subtle);display:flex;align-items:center;gap:8px}
+
+  .av3-auth-lockup{display:inline-flex;align-items:center;gap:12px}
+  .av3-auth-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:var(--av3-r-md);background:var(--av3-brand);color:#fff;font-family:var(--av3-display);font-size:17px;font-weight:600}
+  .av3-auth-wordmark{font-family:var(--av3-display);font-size:20px;font-weight:600;line-height:1.1}
+  .av3-auth-eyebrow{margin-top:2px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--av3-subtle)}
+
+  .av3-card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-1)}
+  .av3-card-p{padding:var(--av3-gap-4)}
+
+  /* header right side: bell + sign out */
+  .head-right{display:flex;align-items:center;gap:12px;position:relative}
+  .signout{font-size:12px;color:var(--av3-muted);background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);padding:8px 14px;cursor:pointer}
+
+  /* --- the bell --- */
+  .bell-btn{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:var(--av3-r-md);background:var(--av3-s2);border:1px solid var(--av3-line);color:var(--av3-fg);cursor:pointer;transition:border-color var(--av3-t-fast) var(--av3-ease),background var(--av3-t-fast)}
+  .bell-btn:hover{border-color:var(--av3-brand-line);background:var(--av3-s3)}
+  .bell-badge{position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--av3-brand);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--av3-bg);font-variant-numeric:tabular-nums}
+  .bell-badge[hidden]{display:none}
+
+  /* --- the bell dropdown panel --- */
+  .bell-panel{position:absolute;top:50px;right:0;width:340px;z-index:50;background:var(--av3-s1);border:1px solid var(--av3-line-strong);border-radius:var(--av3-r-lg);box-shadow:var(--av3-sh-2);overflow:hidden;display:none}
+  .bell-panel.open{display:block}
+  .bell-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--av3-line);font-size:13px;font-weight:600}
+  .bell-panel-head span{font-size:11px;color:var(--av3-subtle);font-weight:500}
+  .bell-glance{max-height:300px;overflow:auto}
+  .glance-row{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--av3-line);font-size:12.5px}
+  .glance-row:first-child{border-top:none}
+  .glance-dot{width:7px;height:7px;border-radius:999px;margin-top:5px;flex-shrink:0}
+  .glance-ttl{font-weight:600;color:var(--av3-fg)}
+  .glance-sub{color:var(--av3-muted);font-size:11.5px;margin-top:1px}
+  .bell-panel-foot{padding:10px 14px;border-top:1px solid var(--av3-line);text-align:center}
+  .bell-panel-foot button{background:none;border:none;color:var(--av3-info);font-size:12.5px;font-weight:600;cursor:pointer}
+
+  /* --- inbox tabs --- */
+  .tabs{display:flex;gap:4px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-pill);padding:3px}
+  .tab{border:none;background:none;color:var(--av3-muted);font-size:12px;font-weight:600;padding:6px 14px;border-radius:var(--av3-r-pill);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .tab.active{background:var(--av3-s3);color:var(--av3-fg)}
+  .tab .cnt{font-size:10.5px;background:var(--av3-brand);color:#fff;border-radius:999px;padding:1px 6px;font-weight:700}
+  .tab.active .cnt{background:var(--av3-brand)}
+
+  /* --- inbox rows --- */
+  .inbox{overflow:hidden;padding:0}
+  .row{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-top:1px solid var(--av3-line);position:relative;cursor:pointer}
+  .row:first-child{border-top:none}
+  .row.unread{background:var(--av3-s2)}
+  .row.archived{opacity:.62}
+  .avatar{flex-shrink:0;width:34px;height:34px;border-radius:999px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;margin-top:1px}
+  .row-body{flex:1;min-width:0}
+  .row-top{display:flex;align-items:center;gap:8px}
+  .row-from{flex:1;min-width:0;font-size:13px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.unread .row-from{font-weight:700}
+  .row-time{font-size:11px;color:var(--av3-subtle);flex-shrink:0;font-variant-numeric:tabular-nums}
+  .unread-dot{width:7px;height:7px;border-radius:999px;background:var(--av3-brand);flex-shrink:0}
+  .row-subj{display:block;font-size:12.5px;margin-top:2px;color:var(--av3-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.unread .row-subj{font-weight:600}
+  .row-subj .snip{font-weight:400;color:var(--av3-muted)}
+  .pin{width:12px;height:12px;color:var(--av3-platinum);flex-shrink:0}
+
+  /* hover actions (Gmail-style) */
+  .row-actions{position:absolute;top:8px;right:12px;display:flex;gap:4px;opacity:0;transition:opacity var(--av3-t-fast) var(--av3-ease);background:linear-gradient(90deg,transparent,var(--av3-s2) 22%);padding-left:28px}
+  .row:hover .row-actions{opacity:1}
+  .row.unread:hover .row-actions{background:linear-gradient(90deg,transparent,var(--av3-s2) 22%)}
+  .act{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--av3-r-md);background:var(--av3-s3);border:1px solid var(--av3-line);color:var(--av3-muted);cursor:pointer}
+  .act:hover{color:var(--av3-fg);border-color:var(--av3-line-strong);background:var(--av3-hover)}
+  .act svg{width:15px;height:15px}
+
+  .loadmore{width:100%;border:none;border-top:1px solid var(--av3-line);background:var(--av3-s1);color:var(--av3-info);font-size:12.5px;font-weight:600;padding:11px;cursor:pointer;font-family:var(--av3-ui)}
+  .loadmore:hover{background:var(--av3-s2)}
+  .empty{margin:0;padding:16px;font-size:12.5px;color:var(--av3-muted)}
+
+  /* to-do */
+  .todo-row{display:flex;align-items:flex-start;gap:12px}
+  .todo-row + .todo-row{margin-top:12px}
+  .todo-dot{width:7px;height:7px;border-radius:999px;margin-top:6px;flex-shrink:0}
+  .todo-ttl{font-size:13.5px;font-weight:600}
+  .todo-meta{font-size:11.5px;color:var(--av3-subtle);margin-top:3px}
+  .todo-meta .overdue{color:var(--av3-bad);font-weight:600}
+  .btn-sm{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--av3-s3);border:1px solid var(--av3-line);color:var(--av3-fg);border-radius:var(--av3-r-md);padding:6px 11px;cursor:pointer}
+  .btn-sm svg{width:13px;height:13px}
+</style>
+</head>
+<body>
+
+<div class="caption">
+  Mockup · Portal notifications — bell · 3-unread + load more · archive → history
+  <small>Not shipped. Click the <b>bell</b> (top-right), try <b>Mark read</b> / <b>Archive</b> on a row (hover to reveal), toggle <b>Inbox / History</b>, and <b>Load more</b>. The bell count = unread notifications + open/overdue to-dos, and updates live as you act.</small>
+</div>
+
+<div class="av3-portal">
+  <div class="av3-portal-col">
+
+    <!-- header with the bell -->
+    <div class="av3-portal-head">
+      <div>
+        <div class="av3-auth-lockup">
+          <span class="av3-auth-mark">SI</span>
+          <div>
+            <div class="av3-auth-wordmark">Ottaviano</div>
+            <div class="av3-auth-eyebrow">Manager · Wednesday, 10 June</div>
+          </div>
+        </div>
+        <h1 class="av3-portal-greet">Welcome, Rafał</h1>
+        <p class="av3-portal-sub">Kraków · Warszawa</p>
+      </div>
+      <div class="head-right">
+        <button class="bell-btn" id="bellBtn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="bell-badge" id="bellBadge">0</span>
+        </button>
+        <button class="signout">Sign out</button>
+
+        <!-- bell dropdown -->
+        <div class="bell-panel" id="bellPanel">
+          <div class="bell-panel-head">Notifications <span id="glanceCount"></span></div>
+          <div class="bell-glance" id="glance"></div>
+          <div class="bell-panel-foot"><button id="viewAll">View all in inbox ↓</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <section class="av3-portal-section" id="notifSection">
+      <div class="av3-section-label" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:8px">Notifications
+          <span id="unreadPill" style="font-size:10.5px;font-weight:700;color:#fff;background:var(--av3-brand);border-radius:999px;padding:3px 7px"></span>
+        </span>
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="inbox">Inbox <span class="cnt" id="inboxCnt"></span></button>
+          <button class="tab" data-tab="history">History</button>
+        </div>
+      </div>
+      <div class="av3-card inbox" id="inbox"></div>
+    </section>
+
+    <!-- TO-DO -->
+    <section class="av3-portal-section">
+      <div class="av3-section-label">Your to-do list</div>
+      <div class="av3-card av3-card-p" id="todoCard"></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ---- sample data (stands in for /api/admin/my-announcements) ---- */
+let notes = [
+  { id:"n1", from:"Marco Bianchi",  subj:"New winter menu launches Monday", snip:"Please brief your floor team on the three new pizzas and the truffle special.", time:"9 Jun", read:false, archived:false, pinned:true,  color:"--av3-c4" },
+  { id:"n2", from:"HQ Operations",   subj:"Stocktake window moved to Thursday", snip:"Inventory count is now Thu 06:00 — adjust the morning shift.", time:"9 Jun", read:false, archived:false, pinned:false, color:"--av3-c1" },
+  { id:"n3", from:"Anna Kowalska",   subj:"POS terminal #2 firmware update", snip:"Reboot terminal 2 before open; it will pull the patch automatically.", time:"8 Jun", read:false, archived:false, pinned:false, color:"--av3-c2" },
+  { id:"n4", from:"Finance",         subj:"May royalty statement is ready", snip:"Your statement is available; payment runs Monday 02:00 UTC.", time:"8 Jun", read:false, archived:false, pinned:false, color:"--av3-c3" },
+  { id:"n5", from:"Marco Bianchi",   subj:"Reminder: food-safety refresher", snip:"All managers complete the refresher module before end of month.", time:"7 Jun", read:false, archived:false, pinned:false, color:"--av3-c4" },
+  { id:"n6", from:"HQ Operations",   subj:"Supplier change — San Marzano tomatoes", snip:"We are switching the tomato supplier; first delivery next week.", time:"6 Jun", read:true,  archived:false, pinned:false, color:"--av3-c1" },
+];
+
+/* ---- to-dos (stands in for /api/admin/my-tasks). Open + due feed the bell ---- */
+let todos = [
+  { id:"t1", title:"Approve next week's staff schedule", from:"Marco Bianchi", due:"Due 11 Jun", overdue:false, prio:"--av3-bad" },
+  { id:"t2", title:"Submit May cash reconciliation",     from:"Finance",       due:"Overdue · 8 Jun", overdue:true,  prio:"--av3-bad" },
+  { id:"t3", title:"Reorder mozzarella (below par)",     from:"System",        due:"Due 12 Jun", overdue:false, prio:"--av3-warn" },
+];
+
+let activeTab = "inbox";
+let inboxLimit = 3;            // show only 3 unread, rest behind Load more
+const UNREAD_PAGE = 3;
+
+const $ = (s)=>document.querySelector(s);
+function initials(n){const p=n.trim().split(/\s+/);return (p.length===1?p[0].slice(0,2):p[0][0]+p[p.length-1][0]).toUpperCase();}
+
+/* derived sets */
+const inboxNotes  = ()=> notes.filter(n=>!n.archived);
+const unreadNotes = ()=> inboxNotes().filter(n=>!n.read);
+const historyNotes= ()=> notes.filter(n=>n.archived || n.read);
+
+function bellCount(){ return unreadNotes().length + todos.length; }
+
+/* ---- render ---- */
+function render(){
+  // bell badge
+  const c = bellCount();
+  const badge = $("#bellBadge");
+  badge.textContent = c; badge.hidden = c===0;
+
+  // unread pill + inbox count chip
+  const u = unreadNotes().length;
+  $("#unreadPill").style.display = u? "inline-block":"none";
+  $("#unreadPill").textContent = u;
+  $("#inboxCnt").style.display = u? "inline-block":"none";
+  $("#inboxCnt").textContent = u;
+
+  renderInbox();
+  renderTodos();
+  renderGlance();
+}
+
+function rowHTML(n, inHistory){
+  const cls = "row" + (!n.read && !inHistory ? " unread":"") + (n.archived?" archived":"");
+  const actions = inHistory
+    ? `<button class="act" title="Move back to inbox" onclick="unarchive(event,'${n.id}')">
+         <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg></button>`
+    : `${!n.read ? `<button class="act" title="Mark read" onclick="markRead(event,'${n.id}')">
+         <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></button>`:""}
+       <button class="act" title="Archive" onclick="archive(event,'${n.id}')">
+         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></button>`;
+  return `<div class="${cls}" onclick="openNote('${n.id}')">
+    <span class="avatar" style="background:var(${n.color})">${initials(n.from)}</span>
+    <div class="row-body">
+      <div class="row-top">
+        <span class="row-from">${n.from}</span>
+        ${n.pinned?`<svg class="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l2 3.2H7z"/></svg>`:""}
+        ${(!n.read && !inHistory)?`<span class="unread-dot"></span>`:""}
+        <span class="row-time">${n.time}</span>
+      </div>
+      <span class="row-subj">${n.subj}<span class="snip"> — ${n.snip}</span></span>
+    </div>
+    <div class="row-actions">${actions}</div>
+  </div>`;
+}
+
+function renderInbox(){
+  const box = $("#inbox");
+  if(activeTab==="history"){
+    const list = historyNotes();
+    box.innerHTML = list.length ? list.map(n=>rowHTML(n,true)).join("")
+      : `<p class="empty">Nothing archived yet — read or archived notifications land here.</p>`;
+    return;
+  }
+  // INBOX: pinned + unread first, then show only `inboxLimit` unread; read-but-not-archived stay visible under them
+  const active = inboxNotes();
+  const unread = active.filter(n=>!n.read).sort((a,b)=> (b.pinned?1:0)-(a.pinned?1:0));
+  const readKept = active.filter(n=>n.read); // read but not archived (e.g. just toggled) — kept until archived
+  const shownUnread = unread.slice(0, inboxLimit);
+  const hiddenUnread = unread.length - shownUnread.length;
+
+  let html = "";
+  if(active.length===0){
+    html = `<p class="empty">No notifications — you’re all caught up. 🎉</p>`;
+  } else {
+    html += shownUnread.map(n=>rowHTML(n,false)).join("");
+    if(hiddenUnread>0){
+      html += `<button class="loadmore" onclick="loadMore()">Load ${Math.min(UNREAD_PAGE,hiddenUnread)} more unread (${hiddenUnread} hidden)</button>`;
+    }
+    html += readKept.map(n=>rowHTML(n,false)).join("");
+  }
+  box.innerHTML = html;
+}
+
+function renderTodos(){
+  const c = $("#todoCard");
+  c.innerHTML = todos.length ? todos.map(t=>`
+    <div class="todo-row">
+      <span class="todo-dot" style="background:var(${t.prio})"></span>
+      <div style="flex:1;min-width:0">
+        <div class="todo-ttl">${t.title}</div>
+        <div class="todo-meta"><span class="${t.overdue?'overdue':''}">${t.due}</span> · from ${t.from}</div>
+      </div>
+      <button class="btn-sm" onclick="doneTodo('${t.id}')"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Done</button>
+    </div>`).join("")
+    : `<p class="empty" style="padding:0">Nothing on your list — you’re all caught up.</p>`;
+}
+
+function renderGlance(){
+  const g = $("#glance");
+  const u = unreadNotes();
+  const items = [
+    ...u.map(n=>({dot:"var(--av3-brand)", ttl:n.from, sub:n.subj})),
+    ...todos.map(t=>({dot:t.overdue?"var(--av3-bad)":"var(--av3-warn)", ttl:(t.overdue?"⚠ Overdue to-do":"To-do due soon"), sub:t.title})),
+  ];
+  $("#glanceCount").textContent = items.length? `${items.length} need attention` : "all clear";
+  g.innerHTML = items.length ? items.map(i=>`
+    <div class="glance-row"><span class="glance-dot" style="background:${i.dot}"></span>
+      <div><div class="glance-ttl">${i.ttl}</div><div class="glance-sub">${i.sub}</div></div></div>`).join("")
+    : `<p class="empty">You’re all caught up.</p>`;
+}
+
+/* ---- actions ---- */
+function markRead(e,id){ e.stopPropagation(); const n=notes.find(x=>x.id===id); if(n){n.read=true;} render(); }
+function archive(e,id){  e.stopPropagation(); const n=notes.find(x=>x.id===id); if(n){n.archived=true;n.read=true;} render(); }
+function unarchive(e,id){ e.stopPropagation(); const n=notes.find(x=>x.id===id); if(n){n.archived=false;} render(); }
+function openNote(id){ const n=notes.find(x=>x.id===id); if(n&&!n.read){n.read=true; render();} }
+function loadMore(){ inboxLimit += UNREAD_PAGE; render(); }
+function doneTodo(id){ todos = todos.filter(t=>t.id!==id); render(); }
+
+/* tabs */
+document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active"); activeTab = btn.dataset.tab; inboxLimit = UNREAD_PAGE; render();
+}));
+
+/* bell open/close */
+$("#bellBtn").addEventListener("click",(e)=>{ e.stopPropagation(); $("#bellPanel").classList.toggle("open"); });
+document.addEventListener("click",()=>$("#bellPanel").classList.remove("open"));
+$("#bellPanel").addEventListener("click",e=>e.stopPropagation());
+$("#viewAll").addEventListener("click",()=>{ $("#bellPanel").classList.remove("open"); $("#notifSection").scrollIntoView({behavior:"smooth"}); });
+
+render();
+</script>
+</body>
+</html>
