@@ -77,8 +77,29 @@ hex in a v3 component — use the token.
 a **232px sidebar that collapses to a 60px icon rail** (state persisted), a
 **44px topbar** with breadcrumb + the single shell-level scope switcher +
 theme toggle + notification bell, and a content well on a tight grid. Nav
-taxonomy + permission gating mirror v2 (`v3/nav.config.ts`, same sections,
-same `requiredRole` model via `@/lib/admin-roles`).
+taxonomy mirrors v2 (`v3/nav.config.ts`, same sections).
+
+**Access gating mirrors v2's two ANDed gates** (this is the UX layer — the
+server still enforces every `/api/admin/*` call). `SidebarV3` reads
+`/api/admin/me` and passes the viewer's role **and** effective permissions
+(`allAccess` / `permissions`) into `filterNavForRoleV3`:
+1. **Role-rank floor** — `requiredRole` via `@/lib/admin-roles`; the only gate
+   for items whose page has no mapped permission (Alerts, Boardroom, Payments,
+   QR ordering, Integrations).
+2. **Granular permission** — each item is shown only when the viewer's effective
+   permissions include the key `permissionForAdminPage(href)` requires, so the
+   admin's **Permission Matrix is the source of truth** for the rail. A
+   role-default user's effective set *is* their preset (no-op, same nav as
+   before); a per-user custom grant shows exactly the pages it permits. Owners
+   (`allAccess`) skip it.
+
+`AdminShellV3` also runs a **client page guard** (parity with `CoreProviders`):
+for any non-owner (`allAccess` skips) it `router.replace`s to their landing when
+the current page maps to a permission their effective set lacks, so a typed URL
+/ stale bookmark to a forbidden surface bounces home instead of loading a shell
+the API would 403. It gates the whole-preset, not just custom grants — because
+the manager default now excludes the owner-by-default surfaces (see below), a
+role-default manager is bounced from `/manager/reports` too.
 
 ## Responsive & touch
 
@@ -385,6 +406,36 @@ hover/press affordance) so the lock reads visually. Behaviour (location
 remembered in `localStorage`, PIN length gate, `POST /api/terminal/login` →
 role-routed landing) is unchanged.
 
+## Role portal home — Manager & Franchisee
+
+The standalone role dashboards (`src/app/manager/page.tsx`,
+`src/app/franchisee/page.tsx`) are the manager's / franchisee's home — scoped
+overviews that live **outside** `AdminShellV3` (the owner's HQ is `/admin`).
+They render in **av3** so the home reads as the same surface as the sign-in door
+the user just came through: their layouts load `themes/admin-v3/index.css` + the
+three `--font-admin-*` typefaces on `#admin-portal-root.av3-root` (dark
+canonical, no boot script), exactly like the doors. They previously rendered the
+base/v2 `.admin-bg` + `.glass-*` theme — that drift is gone.
+
+CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-portal*`), reusing the
+auth canvas's signature lighting and the sign-in lockup:
+
+- **`.av3-portal`** — the canvas: same overhead **brand spotlight** (`::before`)
+  and masked **scanline** (`::after`) as `.av3-auth`, but **top-aligned** and
+  scrollable (it's an overview, not a centred form).
+- **`.av3-portal-col`** — the max-1000px content column, entering with the same
+  `av3-auth-in` fade-rise.
+- **`.av3-portal-head`** — the header reuses the door's **`.av3-auth-lockup`**
+  (mark + Ottaviano wordmark + role `eyebrow`) beside `.av3-portal-greet`
+  (Fraunces welcome) + `.av3-portal-sub`, with the `.av3-btn-ghost` sign-out.
+- **Body** composes the standard primitives — `.av3-kpi-rail` / `.av3-kpi` for
+  the headline figures (per-tile `--av3-kpi-accent`), `.av3-card` (+ `.av3-card-head`)
+  for the sections, `.av3-cols-2` for the splits — plus three portal helpers:
+  **`.av3-portal-jump`** / **`.av3-portal-jcard`** (the permission-filtered
+  "Jump to" link grid, manager only), **`.av3-portal-chip`** (on-shift people)
+  and **`.av3-portal-stat-*`** (label/value/sub stat blocks). No new button or
+  input primitive — it reuses §4/§14 controls in scope.
+
 ## What v3 is not
 
 - **Not a re-skin of v2.** No `.v2-*` / `.glass-*` class is reused; v3 cannot
@@ -450,6 +501,20 @@ role-routed landing) is unchanged.
   Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
   and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
   §14 (`.av3-alert-*`). Nav: Overview section.
+- [x] Tasks & announcements (`/admin/comms`, `CommsV3`) — the internal comms
+  board. Two tabs (`ChipRow`): **Tasks** (assign a to-do to a person or a whole
+  role+location — fans out to one row per assignee, each with its own done-state)
+  and **Announcements** (post to everyone / roles / locations / named people,
+  pinnable, with edit-in-place + delete — the POST upserts on `id`). Built from the standard primitives (`Card`/`Button`/`Badge`/`Switch`
+  + `.av3-input`/`.av3-select`/`.av3-field`), no new CSS. Gated by `comms.view` /
+  `comms.manage` (owner-default, grantable). The receiving half is **`PortalInbox`**
+  (`src/components/portal/PortalInbox.tsx`) on the Manager/Franchisee portals —
+  "Your to-do list" + "Announcements" over the unmapped `/api/admin/my-tasks` +
+  `/api/admin/my-announcements` (any authed user). Types + recipient rule in
+  `src/lib/comms.ts`. **Distinct from Alerts:** announcements are human-authored
+  broadcasts; the bell + `/admin/alerts` are the *automated* operational
+  `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
+  no cross-writes — never wire one into the other. Nav: Overview section.
 - [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the

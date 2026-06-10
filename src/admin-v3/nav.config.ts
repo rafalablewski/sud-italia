@@ -34,6 +34,7 @@ import {
   MapPin,
   Brain,
   Bell,
+  Megaphone,
   Bot,
   Crown,
   ShieldCheck,
@@ -46,6 +47,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
+import { permissionForAdminPage } from "@/lib/permissions";
 
 // v3 nav — owned by the v3 tree (the implementation behind the canonical
 // `/admin` HQ). Hrefs are rooted at `/admin`; the shell re-roots them onto
@@ -78,6 +80,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
       { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
       { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
+      { href: `${P}/comms`, label: "Tasks & announcements", icon: Megaphone, requiredRole: "manager" },
     ],
   },
   {
@@ -185,12 +188,47 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
 
 export const ALL_NAV_ITEMS_V3: NavItemV3[] = NAV_SECTIONS_V3.flatMap((s) => s.items);
 
-/** Filter the v3 nav by role rank (mirrors v2's filterNavForRole). */
-export function filterNavForRoleV3(role: AdminRole | null): NavSectionV3[] {
-  if (!role) return [];
-  const rank = ROLE_RANK[role];
+/** The viewer's gate: their role plus their *effective* granular permissions
+ *  (from `/api/admin/me` — `allAccess` short-circuits owners, `permissions` is
+ *  the resolved key set, role default or per-user custom grant). */
+export interface NavGateV3 {
+  role: AdminRole | null;
+  allAccess?: boolean;
+  permissions?: readonly string[] | null;
+}
+
+/**
+ * Filter the v3 nav for a viewer. Two gates, ANDed:
+ *
+ *  1. **Role rank** (`requiredRole`) — the legacy floor; also the *only* gate
+ *     for items whose page has no mapped permission (Alerts, Boardroom,
+ *     Payments, QR ordering, Integrations).
+ *  2. **Granular permission** — the admin's Permission Matrix is the source of
+ *     truth. Each item is shown only when the viewer's effective permissions
+ *     include the key `permissionForAdminPage()` requires for its href. Owners
+ *     (`allAccess`) skip this; an unmapped href falls back to the rank gate.
+ *
+ * Because a role-default user's effective set *is* their role preset, this is a
+ * no-op for them (same nav as before) — but a per-user custom grant now shows
+ * exactly the pages it permits, and a forbidden page can never sit in the rail.
+ */
+export function filterNavForRoleV3(
+  gate: AdminRole | NavGateV3 | null,
+): NavSectionV3[] {
+  // Back-compat: a bare role still filters by rank alone.
+  const g: NavGateV3 | null =
+    gate === null ? null : typeof gate === "string" ? { role: gate } : gate;
+  if (!g || !g.role) return [];
+  const rank = ROLE_RANK[g.role];
+  const granted = new Set(g.permissions ?? []);
+  const permissionGated = g.allAccess !== true && Array.isArray(g.permissions);
   return NAV_SECTIONS_V3.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.requiredRole || ROLE_RANK[item.requiredRole] <= rank),
+    items: section.items.filter((item) => {
+      if (item.requiredRole && ROLE_RANK[item.requiredRole] > rank) return false;
+      if (!permissionGated) return true;
+      const need = permissionForAdminPage(item.href);
+      return !need || granted.has(need);
+    }),
   })).filter((section) => section.items.length > 0);
 }

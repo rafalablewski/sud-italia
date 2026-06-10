@@ -37,6 +37,50 @@ test("role default presets line up with the legacy role tiers", () => {
   assert.ok(!ROLE_DEFAULT_PERMISSIONS.kitchen.includes("orders.refund"));
 });
 
+test("manager default excludes owner-by-default surfaces but keeps floor tools", () => {
+  const mgr = ROLE_DEFAULT_PERMISSIONS.manager;
+  // Owner-by-default (operator policy) — still grantable per-person, but not in
+  // the manager preset: Finance reports, all Growth, governance/config.
+  for (const k of [
+    "reports.view", "business_costs.view", "simulation.view",
+    "growth.view", "upsell.view", "crosssell.view", "bundles.view",
+    "truck.view", "integrations.view",
+    "audit.view", "capabilities.view", "insights.view", "boardroom.view",
+    "payments.view", "qr_ordering.view",
+    "comms.view", "comms.manage",
+  ] as const) {
+    assert.ok(!mgr.includes(k), `manager should NOT default to ${k}`);
+  }
+  // Deliberately kept with the manager.
+  for (const k of ["cash.view", "compliance.view", "menu_engineering.view"] as const) {
+    assert.ok(mgr.includes(k), `manager should keep ${k}`);
+  }
+  // Franchisee inherits most tier-2 exclusions (built on MANAGER_PERMS)…
+  assert.ok(!ROLE_DEFAULT_PERMISSIONS.franchisee.includes("growth.view"));
+  assert.ok(!ROLE_DEFAULT_PERMISSIONS.franchisee.includes("boardroom.view"));
+  // …but owns its P&L, so Reports is restored (Cash is in the manager grant).
+  assert.ok(ROLE_DEFAULT_PERMISSIONS.franchisee.includes("reports.view"));
+  assert.ok(ROLE_DEFAULT_PERMISSIONS.franchisee.includes("cash.view"));
+});
+
+test("the four newly-catalogued pages gate on their own permission", () => {
+  assert.equal(permissionForAdminPage("/admin/boardroom"), "boardroom.view");
+  assert.equal(permissionForAdminPage("/admin/payments"), "payments.view");
+  assert.equal(permissionForAdminPage("/admin/qr-ordering"), "qr_ordering.view");
+  assert.equal(permissionForAdminPage("/admin/integrations"), "integrations.view");
+  assert.equal(permissionForAdminPage("/admin/comms"), "comms.view");
+  assert.equal(permissionForApiPath("/api/admin/tasks", "POST"), "comms.manage");
+  assert.equal(permissionForApiPath("/api/admin/announcements", "GET"), "comms.view");
+  // The personal feeds are intentionally unmapped (any authed user reads own).
+  assert.equal(permissionForApiPath("/api/admin/my-tasks", "GET"), null);
+  assert.equal(permissionForApiPath("/api/admin/my-announcements", "PUT"), null);
+  // …and don't get swallowed by a neighbouring rule (e.g. /admin/menu).
+  assert.equal(permissionForAdminPage("/admin/menu"), "menu.view");
+  // API side maps too, prefix-agnostic across role aliases.
+  assert.equal(permissionForApiPath("/api/admin/payments", "POST"), "payments.view");
+  assert.equal(permissionForAdminPage("/manager/boardroom"), "boardroom.view");
+});
+
 test("owner and the legacy shared session are always all-access", () => {
   const owner = resolveEffectivePermissions({ role: "owner" });
   assert.equal(owner.all, true);

@@ -182,16 +182,16 @@ actually reach.
   `/login`, `/terminal`, `/manager` and `/franchisee` live outside the
   AdminShell, so each ships its own `layout.tsx` (`src/app/login/layout.tsx`,
   `src/app/terminal/layout.tsx`, `src/app/manager/layout.tsx`,
-  `src/app/franchisee/layout.tsx`) that loads the Admin theme CSS + admin fonts
-  and wraps the page in a single
-  `<div id="admin-portal-root" className="… admin-bg">` — the same pattern
-  `/kitchen` uses. The **`id` is load-bearing, not just a portal mount**: these
-  layouts carry no theme-boot script, so the admin font tokens only re-resolve
-  at the `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
-  without it the bundled Inter/Fraunces never load. And without the layout
-  entirely the `glass-*` / `admin-text` utilities have no theme to read from and
-  the forms render unstyled (invisible `glass-btn` text), which previously
-  blocked staff from signing in.
+  `src/app/franchisee/layout.tsx`) that loads the **av3** stylesheet
+  (`themes/admin-v3/index.css`) + the three `--font-admin-*` typefaces and wraps
+  the page in a single `<div id="admin-portal-root" className="… av3-root flex
+  flex-col flex-1">` — so every door **and** both role portals render the same
+  av3 dark-canonical surface (the Manager/Franchisee homes match the sign-in
+  door they follow — see [v3 → Role portal home](../v3/README.md#role-portal-home--manager--franchisee)).
+  The **`id` is load-bearing, not just a portal mount**: these layouts carry no
+  theme-boot script, so the `--av3-*` font tokens only re-resolve at the
+  `#admin-portal-root` scope (see [theme → typography](../theme/typography.md));
+  without it the bundled Inter/Fraunces/JetBrains Mono never load.
 
   All mint the *same* signed, location-scoped session and route by role via
   `landingPathForRole` (`src/lib/staff-roles.ts`): `kitchen` → `/core/kds`,
@@ -210,9 +210,17 @@ actually reach.
   (`src/app/manager/page.tsx`), a scoped overview of the site(s) they run:
   today's revenue / orders / covers and who's on shift, all derived live from
   real `getOrders` + `getShifts`/`getStaff` filtered to the session's location
-  scope (no mock data), plus quick links into the operational pages
-  (Orders, KDS, Schedule, Inventory, POS, Team) their granular permissions
-  grant. The wall is **only** around the `/admin` HQ root — managers keep their
+  scope (no mock data), plus a **"Jump to"** rail into the operational pages
+  (Orders, KDS, Schedule, Inventory, POS, Team). Those cards are **not** rendered
+  unconditionally — they come from `getDashboardQuickLinks(user)`
+  (`src/lib/dashboard-links.ts`), which filters a permission-annotated registry
+  to the cards the viewer's *effective* permissions unlock (each card maps to the
+  same key `permissionForAdminPage()` gates its destination with) and re-roots
+  each href onto the role prefix. So the admin controls exactly what shows here
+  through the Permission Matrix (role default or per-user custom grant): drop
+  `pos.view` from a manager and the POS card disappears — and no card can ever be
+  shown to someone who'd just be bounced on click. The wall is **only** around
+  the `/admin` HQ root — managers keep their
   permission-scoped tools, but navigate them under **their own URL prefix**:
   `/manager/*` (a franchisee `/franchisee/*`, the owner `/admin/*`), via
   rewrites onto the shared `/admin/*` pages so the path reads as their space,
@@ -226,11 +234,28 @@ actually reach.
 ### Granular permissions (action-level RBAC)
 
 The unit of authority is a **permission**, not a role. The catalog —
-**71 action-level keys** grouped by domain (orders, guests, menu,
-inventory, people, finance, growth, intelligence, system) — lives in
+**77 action-level keys** grouped by domain (orders, guests, menu,
+inventory, people, communication, finance, growth, intelligence, system) — lives in
 `src/lib/permissions.ts` and is the **single source of truth that gates
 both the UI and the API**. Never hard-code a permission string at a call
 site; add/extend a key in the catalog so a typo fails to compile.
+
+**Manager default is deliberately narrow.** `MANAGER_PERMS` excludes two
+tiers (`MANAGER_EXCLUDE` in `permissions.ts`): (1) structurally owner-only —
+user/role + chain-settings admin and cross-location surfaces; and (2)
+*owner-by-default* head-office surfaces a floor manager shouldn't see in their
+rail out of the box — **Finance** (Reports, Business costs, Calculator; Cash
+stays), **Growth & marketing** (Campaigns, Upsell, Cross-sell, Bundles, Events,
+Integrations), and **Governance & config** (Boardroom, Audit log, Capabilities,
+Payments, QR ordering, AI Insights/Ops Agent), and the **Comms board**
+(`comms.view` / `comms.manage` — assigning tasks + posting announcements; note
+that *receiving* your own tasks/announcements on the portal needs no
+permission). Tier 2 is policy, not a wall:
+because every one of those pages gates on a *permission* (not role rank), an
+owner can hand a single manager `reports.view` in the Permission Matrix and
+Reports reappears for that person only. Kept with the manager on purpose: Cash,
+Compliance (the day-to-day calendar) and Menu engineering. Franchisees inherit
+the same tier-2 exclusions (`FRANCHISEE_PERMS` is built on `MANAGER_PERMS`).
 
 - **Editor** (`PermissionEditor` inside `AdminUsers.tsx`): a `Customize`
   `Switch` per non-owner account. Off = the account **inherits its

@@ -668,6 +668,46 @@ export const adminLoginSchema = z.object({
 
 // --- Helpers -------------------------------------------------------------
 
+// --- Internal comms: tasks + announcements ---
+// A dedicated role enum (the shared `adminRoleSchema` predates franchisee and
+// omits it; comms targeting needs all five roles).
+const commsRoleSchema = z.enum(["owner", "manager", "franchisee", "staff", "kitchen"]);
+
+export const taskCreateSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    detail: z.string().max(2000).optional(),
+    // Assign to specific users and/or fan out to whole roles (optionally scoped
+    // to locations). The handler resolves these to concrete assignees and
+    // rejects the request if none match.
+    assigneeIds: z.array(stableId).max(500).optional(),
+    assigneeRoles: z.array(commsRoleSchema).max(5).optional(),
+    locationSlugs: z.array(locationSlug).max(50).optional(),
+    locationSlug: locationSlug.optional(),
+    priority: z.enum(["low", "normal", "high"]).default("normal"),
+    dueDate: isoDate.optional(),
+  })
+  .strict();
+
+export const taskStatusSchema = z
+  .object({ id: stableId, status: z.enum(["open", "done"]) })
+  .strict();
+
+export const announcementCreateSchema = z
+  .object({
+    id: stableId.optional(),
+    title: z.string().min(1).max(200),
+    body: z.string().min(1).max(5000),
+    // Targeting axes — each empty means "no constraint"; all empty ⇒ everyone.
+    targetRoles: z.array(commsRoleSchema).max(5).optional(),
+    targetLocationSlugs: z.array(locationSlug).max(50).optional(),
+    targetUserIds: z.array(stableId).max(1000).optional(),
+    pinned: z.boolean().optional(),
+  })
+  .strict();
+
+export const announcementReadSchema = z.object({ id: stableId }).strict();
+
 /**
  * Parse a Next.js request body against a schema. On success returns
  * `{data}` with the validated value. On failure returns `{error}` — a

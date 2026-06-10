@@ -76,7 +76,7 @@ The shell owns:
   `filterNavForRole` for role-default users), and the shell runs a client
   page guard that bounces a custom-grant user away from a surface they
   lack. Both read `/api/admin/me` and mirror the server gate in
-  `withAdmin`. The full granular-permission model — the 70-key catalog
+  `withAdmin`. The full granular-permission model — the 77-key catalog
   (`src/lib/permissions.ts`), role-default presets, owner-only granting,
   and the call-site defence-in-depth gates — lives in
   [`sections/system.md`](./sections/system.md#granular-permissions-action-level-rbac).
@@ -110,9 +110,11 @@ The `/admin` HQ dashboard is **owner-only** (gated server-side in
 `src/app/admin/page.tsx`): a non-owner who reaches it is redirected to their own
 home via `landingPathForRole`. A **manager** lands on `/manager` — a scoped
 overview (today's revenue / orders / covers / who's on shift, derived live from
-real orders + shifts) with quick links into the operational pages their
-permissions grant. The wall is only around the HQ root; managers keep their
-permission-scoped tools.
+real orders + shifts) with a **"Jump to"** rail whose cards are filtered to the
+viewer's effective permissions by `getDashboardQuickLinks`
+(`src/lib/dashboard-links.ts`) — the admin decides what shows there via the
+Permission Matrix, and a card appears only when its destination is reachable.
+The wall is only around the HQ root; managers keep their permission-scoped tools.
 
 ### Role-prefixed back-office URLs
 

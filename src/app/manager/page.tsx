@@ -1,15 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  ClipboardList,
-  Flame,
-  CalendarDays,
-  Boxes,
-  Receipt,
-  Users,
-  TrendingUp,
-  ArrowRight,
-} from "lucide-react";
+import { Flame, Receipt, Users, TrendingUp, ArrowRight } from "lucide-react";
 import {
   getCurrentAdminUser,
   getCurrentLocationScope,
@@ -18,6 +9,8 @@ import {
 import { getOrders, getShifts, getStaff } from "@/lib/store";
 import { getActiveLocations } from "@/data/locations";
 import { landingPathForRole, STAFF_ROLE_LABEL } from "@/lib/staff-roles";
+import { getDashboardQuickLinks } from "@/lib/dashboard-links";
+import { PortalInbox } from "@/components/portal/PortalInbox";
 import { formatPricePLN } from "@/lib/utils";
 import { SignOutButton } from "./SignOutButton";
 
@@ -134,158 +127,172 @@ export default async function ManagerPortalPage() {
       label: "Revenue today",
       value: formatPricePLN(totals.revenue),
       icon: TrendingUp,
+      accent: "var(--av3-brand)",
     },
     {
       label: "Orders today",
       value: String(totals.orderCount),
       icon: Receipt,
+      accent: "var(--av3-info)",
     },
     {
       label: "Covers today",
       value: String(totals.covers),
       icon: Users,
+      accent: "var(--av3-platinum)",
     },
     {
       label: "On shift now",
       value: String(totals.onShift),
       icon: Flame,
+      accent: "var(--av3-ok)",
     },
   ];
 
-  // Manager's own prefix for the back-office tools (the KDS / POS live on the
-  // Core suite at /core/*, so they stay there). /manager/* rewrites onto the
-  // shared /admin/* pages — see src/lib/admin-base.ts.
-  const quickLinks = [
-    { href: "/manager/orders", label: "Orders", desc: "Live tickets & history", icon: ClipboardList },
-    { href: "/core/kds", label: "Kitchen Display", desc: "The line, by station", icon: Flame },
-    { href: "/manager/schedule", label: "Schedule", desc: "Shifts & rota", icon: CalendarDays },
-    { href: "/manager/inventory", label: "Inventory", desc: "Stock & counts", icon: Boxes },
-    { href: "/core/pos", label: "Point of sale", desc: "Take an order", icon: Receipt },
-    { href: "/manager/staff", label: "Team", desc: "Roster & hiring", icon: Users },
-  ];
+  // Quick links are derived from the viewer's *effective* permissions, not
+  // hard-coded — the admin controls exactly what shows here via the Permission
+  // Matrix (role default or per-user custom grant). Each card maps to the same
+  // permission `permissionForAdminPage()` gates its destination with, so a card
+  // appears only when the manager could actually open it (no click-then-bounce).
+  // Hrefs come back re-rooted onto the manager's /manager/* prefix; the KDS /
+  // POS cards stay on the shared /core/* suite. See src/lib/dashboard-links.ts.
+  const quickLinks = getDashboardQuickLinks(user);
+
+  const locationLine =
+    myLocations.length === 1
+      ? myLocations[0].name
+      : myLocations.length === 0
+        ? "No location assigned yet — ask the owner to scope your account."
+        : `${myLocations.length} locations · ${myLocations.map((l) => l.name).join(", ")}`;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8 sm:py-10">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-8">
-        <div>
-          <p className="admin-text-dim text-sm mb-1">{dateLabel}</p>
-          <h1 className="text-2xl sm:text-3xl font-bold font-heading gradient-text">
-            Welcome, {user.name.split(" ")[0]}
-          </h1>
-          <p className="admin-text-dim text-sm mt-1">
-            {myLocations.length === 1
-              ? myLocations[0].name
-              : myLocations.length === 0
-                ? "No location assigned yet — ask the owner to scope your account."
-                : `${myLocations.length} locations · ${myLocations.map((l) => l.name).join(", ")}`}
-          </p>
-        </div>
-        <SignOutButton />
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          return (
-            <div key={k.label} className="glass-card rounded-2xl p-4 sm:p-5">
-              <div className="flex items-center gap-2 admin-text-dim text-xs uppercase tracking-wide mb-2">
-                <Icon className="h-4 w-4" />
-                {k.label}
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold admin-text font-heading">
-                {k.value}
+    <main className="av3-portal">
+      <div className="av3-portal-col">
+        {/* Header — the sign-in lockup (mark + Ottaviano wordmark + eyebrow),
+            so the portal home reads as the same surface as the door. */}
+        <div className="av3-portal-head">
+          <div>
+            <div className="av3-auth-lockup" style={{ marginBottom: 0 }}>
+              <span className="av3-auth-mark">SI</span>
+              <div>
+                <div className="av3-auth-wordmark">Ottaviano</div>
+                <div className="av3-auth-eyebrow">Manager · {dateLabel}</div>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Per-location breakdown — only when the manager runs more than one site */}
-      {perLocation.length > 1 && (
-        <section className="mb-8">
-          <h2 className="admin-text-dim text-xs uppercase tracking-wide mb-3">
-            By location
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-            {perLocation.map((p) => (
-              <div key={p.loc.slug} className="glass-card rounded-2xl p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="admin-text font-semibold">{p.loc.name}</span>
-                  <span className="admin-text-dim text-sm">{p.onShift.length} on shift</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div className="admin-text font-bold">{formatPricePLN(p.revenue)}</div>
-                    <div className="admin-text-dim text-2xs uppercase tracking-wide">Revenue</div>
-                  </div>
-                  <div>
-                    <div className="admin-text font-bold">{p.orderCount}</div>
-                    <div className="admin-text-dim text-2xs uppercase tracking-wide">Orders</div>
-                  </div>
-                  <div>
-                    <div className="admin-text font-bold">{p.covers}</div>
-                    <div className="admin-text-dim text-2xs uppercase tracking-wide">Covers</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <h1 className="av3-portal-greet">Welcome, {user.name.split(" ")[0]}</h1>
+            <p className="av3-portal-sub">{locationLine}</p>
           </div>
-        </section>
-      )}
-
-      {/* Who's on now */}
-      <section className="mb-8">
-        <h2 className="admin-text-dim text-xs uppercase tracking-wide mb-3">On shift now</h2>
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
-          {totals.onShift === 0 ? (
-            <p className="admin-text-dim text-sm">No one is clocked on right now.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {perLocation.flatMap((p) =>
-                p.onShift.map((s, i) => (
-                  <span
-                    key={`${p.loc.slug}-${i}`}
-                    className="glass-input rounded-full px-3 py-1.5 text-sm admin-text"
-                  >
-                    {s.name}
-                    <span className="admin-text-dim">
-                      {" "}· {STAFF_ROLE_LABEL[s.role] ?? s.role}
-                    </span>
-                  </span>
-                )),
-              )}
-            </div>
-          )}
+          <SignOutButton />
         </div>
-      </section>
 
-      {/* Quick links into the operational tools the manager is allowed */}
-      <section>
-        <h2 className="admin-text-dim text-xs uppercase tracking-wide mb-3">Jump to</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {quickLinks.map((q) => {
-            const Icon = q.icon;
+        {/* KPI rail */}
+        <div className="av3-kpi-rail">
+          {kpis.map((k) => {
+            const Icon = k.icon;
             return (
-              <Link
-                key={q.href}
-                href={q.href}
-                className="glass-card rounded-2xl p-4 sm:p-5 flex items-center gap-4 group hover:scale-[1.01] transition-transform"
+              <div
+                key={k.label}
+                className="av3-kpi"
+                style={{ ["--av3-kpi-accent" as string]: k.accent }}
               >
-                <span className="w-10 h-10 rounded-xl glass-input flex items-center justify-center admin-text shrink-0">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="admin-text font-semibold block">{q.label}</span>
-                  <span className="admin-text-dim text-sm block truncate">{q.desc}</span>
-                </span>
-                <ArrowRight className="h-4 w-4 admin-text-dim group-hover:translate-x-0.5 transition-transform shrink-0" />
-              </Link>
+                <div className="av3-kpi-label">
+                  <Icon />
+                  {k.label}
+                </div>
+                <div className="av3-kpi-value">{k.value}</div>
+              </div>
             );
           })}
         </div>
-      </section>
+
+        {/* Personal comms — to-do tasks assigned to this manager + announcements */}
+        <PortalInbox />
+
+        {/* Per-location breakdown — only when the manager runs more than one site */}
+        {perLocation.length > 1 && (
+          <section className="av3-portal-section">
+            <div className="av3-section-label">By location</div>
+            <div className="av3-cols-2" style={{ gap: "var(--av3-gap-3)" }}>
+              {perLocation.map((p) => (
+                <div key={p.loc.slug} className="av3-card av3-card-p">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "var(--av3-gap-3)",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{p.loc.name}</span>
+                    <span style={{ fontSize: "11.5px", color: "var(--av3-muted)" }}>
+                      {p.onShift.length} on shift
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--av3-gap-3)" }}>
+                    <div>
+                      <div className="av3-portal-stat-value">{formatPricePLN(p.revenue)}</div>
+                      <div className="av3-portal-stat-label">Revenue</div>
+                    </div>
+                    <div>
+                      <div className="av3-portal-stat-value">{p.orderCount}</div>
+                      <div className="av3-portal-stat-label">Orders</div>
+                    </div>
+                    <div>
+                      <div className="av3-portal-stat-value">{p.covers}</div>
+                      <div className="av3-portal-stat-label">Covers</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Who's on now */}
+        <section className="av3-portal-section">
+          <div className="av3-section-label">On shift now</div>
+          <div className="av3-card av3-card-p">
+            {totals.onShift === 0 ? (
+              <p style={{ margin: 0, fontSize: "12.5px", color: "var(--av3-muted)" }}>
+                No one is clocked on right now.
+              </p>
+            ) : (
+              <div className="av3-portal-chips">
+                {perLocation.flatMap((p) =>
+                  p.onShift.map((s, i) => (
+                    <span key={`${p.loc.slug}-${i}`} className="av3-portal-chip">
+                      {s.name}
+                      <span>· {STAFF_ROLE_LABEL[s.role] ?? s.role}</span>
+                    </span>
+                  )),
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Quick links into the operational tools the manager is allowed */}
+        <section className="av3-portal-section">
+          <div className="av3-section-label">Jump to</div>
+          <div className="av3-portal-jump">
+            {quickLinks.map((q) => {
+              const Icon = q.icon;
+              return (
+                <Link key={q.href} href={q.href} className="av3-portal-jcard">
+                  <span className="av3-portal-jico">
+                    <Icon />
+                  </span>
+                  <span className="av3-portal-jbody">
+                    <span className="av3-portal-jname">{q.label}</span>
+                    <span className="av3-portal-jdesc">{q.desc}</span>
+                  </span>
+                  <ArrowRight />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

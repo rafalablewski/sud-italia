@@ -18,8 +18,11 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
   const pathname = usePathname();
   const [sections, setSections] = useState<NavSectionV3[]>([]);
 
-  // Resolve the operator's role once, then gate the nav the same way v2 does
-  // (server still enforces every /api/admin/* call — this is the UX layer).
+  // Resolve the operator's role + effective permissions once, then gate the nav
+  // on the exact set the admin controls in the Permission Matrix (the server
+  // still enforces every /api/admin/* call — this is the UX layer). Passing the
+  // granular permissions, not just the role, means a per-user custom grant
+  // shows exactly the pages it permits instead of the whole role-rank rail.
   useEffect(() => {
     let alive = true;
     fetch("/api/admin/me")
@@ -27,7 +30,13 @@ export function SidebarV3({ collapsed, onToggleCollapse, onNavigate }: Props) {
       .then((j) => {
         if (!alive) return;
         const role: AdminRole | null = j?.role ?? null;
-        setSections(filterNavForRoleV3(role));
+        setSections(
+          filterNavForRoleV3({
+            role,
+            allAccess: !!j?.allAccess,
+            permissions: Array.isArray(j?.permissions) ? j.permissions : null,
+          }),
+        );
       })
       .catch(() => {});
     return () => {

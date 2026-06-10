@@ -110,6 +110,14 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    id: "comms",
+    label: "Communication",
+    permissions: [
+      { key: "comms.view", label: "View comms board", description: "See the team Tasks & Announcements management board." },
+      { key: "comms.manage", label: "Assign tasks & announce", description: "Assign to-do tasks to teammates and post announcements to roles / locations / people." },
+    ],
+  },
+  {
     id: "finance",
     label: "Finance",
     permissions: [
@@ -136,6 +144,7 @@ export const PERMISSION_GROUPS = [
       { key: "bundles.edit", label: "Manage bundles", description: "Create and schedule bundle deals." },
       { key: "truck.view", label: "View truck ops", description: "See truck routes and events." },
       { key: "truck.edit", label: "Manage truck ops", description: "Edit truck routes and schedules." },
+      { key: "integrations.view", label: "Integrations", description: "See and configure third-party integrations." },
     ],
   },
   {
@@ -145,7 +154,8 @@ export const PERMISSION_GROUPS = [
       { key: "locations.view", label: "Multi-location view", description: "See the cross-location HQ rollups." },
       { key: "locations.manage", label: "Manage locations", description: "Add / edit locations." },
       { key: "menu_engineering.view", label: "Menu engineering", description: "Use the menu-engineering board." },
-      { key: "insights.view", label: "AI insights", description: "See the AI insights surface." },
+      { key: "insights.view", label: "AI insights", description: "See the AI insights surface and the Ops Agent." },
+      { key: "boardroom.view", label: "Boardroom", description: "See the executive boardroom cockpit (chain-wide exec KPIs)." },
       { key: "expansion.view", label: "View expansion", description: "See the expansion planner." },
       { key: "expansion.edit", label: "Edit expansion", description: "Edit expansion checklists and plans." },
     ],
@@ -160,6 +170,8 @@ export const PERMISSION_GROUPS = [
       { key: "compliance.edit", label: "Edit compliance", description: "Edit compliance items and regulatory disclosures." },
       { key: "audit.view", label: "View audit log", description: "Read the append-only audit trail." },
       { key: "capabilities.view", label: "View capabilities", description: "See the deployed-capabilities ledger." },
+      { key: "payments.view", label: "Payments", description: "See and configure the payments / Stripe surface." },
+      { key: "qr_ordering.view", label: "QR ordering", description: "See and configure table QR ordering." },
       { key: "settings.view", label: "View settings", description: "Read chain-wide settings, currency and languages." },
       { key: "settings.edit", label: "Edit settings", description: "Change chain-wide settings, currency and languages." },
     ],
@@ -197,12 +209,36 @@ const STAFF_PERMS: PermissionKey[] = [
   "menu.view", "feedback.view",
 ];
 
-// Manager = everything except the system-administration + cross-location keys
-// that have always been owner-only.
+// Manager default = everything except the keys below. Two tiers of exclusion:
+//
+//  1. Structurally owner-only — user/role + chain-settings administration and
+//     the cross-location surfaces. A manager never gets these, even custom.
+//  2. Owner-only *by default* (operator policy) — head-office surfaces a floor
+//     manager shouldn't see in their rail out of the box, but which an owner can
+//     still grant to an individual manager via a custom grant in the Permission
+//     Matrix. Because the gating is permission-based (not role-rank), the
+//     exception path works: hand a manager `reports.view` and Reports reappears.
+//     Kept with the manager on purpose: Cash, Compliance (the day-to-day
+//     calendar) and Menu engineering.
 const MANAGER_EXCLUDE = new Set<PermissionKey>([
+  // Tier 1 — structurally owner-only.
   "users.view", "users.edit", "settings.view", "settings.edit",
   "compliance.edit", "locations.view", "locations.manage",
   "expansion.view", "expansion.edit",
+  // Tier 2a — Finance (whole-business P&L + forecasting; Cash stays).
+  "reports.view", "reports.export", "business_costs.view", "business_costs.edit",
+  "simulation.view",
+  // Tier 2b — Growth & marketing (head-office controlled, not per-location).
+  "growth.view", "growth.edit", "upsell.view", "upsell.edit",
+  "crosssell.view", "crosssell.edit", "bundles.view", "bundles.edit",
+  "truck.view", "truck.edit", "integrations.view",
+  // Tier 2c — Governance & system config.
+  "audit.view", "capabilities.view", "insights.view", "boardroom.view",
+  "payments.view", "qr_ordering.view",
+  // Tier 2d — the comms management board (sending). Receiving your own tasks +
+  // announcements on the portal needs no permission; this gates assigning /
+  // posting, so it's owner-led by default but grantable to a manager.
+  "comms.view", "comms.manage",
 ]);
 const MANAGER_PERMS: PermissionKey[] = ALL_PERMISSION_KEYS.filter(
   (k) => !MANAGER_EXCLUDE.has(k),
@@ -210,8 +246,12 @@ const MANAGER_PERMS: PermissionKey[] = ALL_PERMISSION_KEYS.filter(
 
 // Franchisee (rank 70) sits above manager: same operational grant plus the
 // cross-location read surfaces, but still no user/settings administration.
+// Unlike a floor manager, a franchisee owns their P&L, so the Finance reads
+// (Reports; Cash is already in the manager grant) are restored on top of the
+// manager preset — the rest of the owner-by-default tier stays owner-only.
 const FRANCHISEE_PERMS: PermissionKey[] = [
   ...MANAGER_PERMS, "locations.view", "expansion.view", "settings.view",
+  "reports.view", "reports.export",
 ];
 
 export const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, PermissionKey[]> = {
@@ -323,9 +363,12 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/crosssell")) return "crosssell.view";
   if (is("/admin/scheduled-bundles")) return "bundles.view";
   if (is("/admin/truck")) return "truck.view";
+  if (is("/admin/integrations")) return "integrations.view";
   if (is("/admin/locations")) return "locations.view";
   if (is("/admin/expansion")) return "expansion.view";
   if (is("/admin/ai")) return "insights.view";
+  if (is("/admin/boardroom")) return "boardroom.view";
+  if (is("/admin/comms")) return "comms.view";
   if (is("/admin/users")) return "users.view";
   if (is("/admin/permissions")) return "users.view";
   // Owner-tier "rules" pages — gated by the stronger compliance.edit so a bare
@@ -336,6 +379,8 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/compliance")) return "compliance.view";
   if (is("/admin/audit-log")) return "audit.view";
   if (is("/admin/capabilities")) return "capabilities.view";
+  if (is("/admin/payments")) return "payments.view";
+  if (is("/admin/qr-ordering")) return "qr_ordering.view";
   if (is("/admin/currency")) return "settings.view";
   if (is("/admin/languages")) return "settings.view";
   if (is("/admin/settings")) return "settings.view";
@@ -446,6 +491,19 @@ export function permissionForApiPath(
       return "menu_engineering.view";
     case "ai":
       return "insights.view";
+    case "boardroom":
+      return "boardroom.view";
+    case "tasks":
+    case "announcements":
+      // The management board (assign/post/delete). Personal feeds live on the
+      // unmapped /api/admin/my-tasks + /api/admin/my-announcements (any authed).
+      return write ? "comms.manage" : "comms.view";
+    case "payments":
+      return "payments.view";
+    case "qr-ordering":
+      return "qr_ordering.view";
+    case "integrations":
+      return "integrations.view";
     default:
       return null;
   }

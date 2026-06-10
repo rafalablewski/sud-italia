@@ -8,6 +8,8 @@ import {
 } from "@/lib/store";
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
+import { SignOutButton } from "../manager/SignOutButton";
+import { PortalInbox } from "@/components/portal/PortalInbox";
 
 // Hoisted outside the component to keep
 // `react-hooks/components-and-hooks-must-be-pure` happy — the rule
@@ -76,75 +78,90 @@ export default async function FranchiseePortalPage() {
   );
 
   return (
-    <main style={{ maxWidth: "960px", margin: "0 auto", padding: "32px 16px" }}>
-      <h1 style={{ fontSize: "28px", marginBottom: "8px" }}>Franchisee Portal</h1>
-      <p style={{ color: "#666", marginBottom: "24px" }}>
-        Welcome, {user.name}. Royalty statements run every Monday at 02:00 UTC.
-      </p>
-
-      {data.length === 0 && (
-        <p style={{ color: "#666" }}>
-          No franchisee data linked to your account yet. Contact your brand owner.
-        </p>
-      )}
-
-      {data.map(({ franchisee, locations, rolling7, latestStatement }) => (
-        <section
-          key={franchisee.id}
-          style={{
-            background: "white",
-            border: "1px solid #e5e5e5",
-            borderRadius: "8px",
-            padding: "20px",
-            marginBottom: "16px",
-          }}
-        >
-          <h2 style={{ fontSize: "20px", marginBottom: "4px" }}>{franchisee.name}</h2>
-          <p style={{ color: "#666", fontSize: "13px", marginBottom: "16px" }}>
-            Royalty {franchisee.royaltyRateBps / 100}% · Marketing fund{" "}
-            {franchisee.marketingFundBps / 100}%
-          </p>
-
-          <h3 style={{ fontSize: "12px", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>
-            Locations ({locations.length})
-          </h3>
-          <ul style={{ marginBottom: "16px" }}>
-            {locations.map((loc) => (
-              <li key={loc.slug}>{loc.name}</li>
-            ))}
-            {locations.length === 0 && <li style={{ color: "#999" }}>No locations assigned</li>}
-          </ul>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div>
-              <h3 style={{ fontSize: "12px", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>
-                Last 7 days
-              </h3>
-              <div style={{ fontSize: "20px", fontWeight: 600 }}>
-                {formatPrice(rolling7.revenueGrosze)} PLN
+    <main className="av3-portal">
+      <div className="av3-portal-col">
+        <div className="av3-portal-head">
+          <div>
+            <div className="av3-auth-lockup" style={{ marginBottom: 0 }}>
+              <span className="av3-auth-mark">SI</span>
+              <div>
+                <div className="av3-auth-wordmark">Ottaviano</div>
+                <div className="av3-auth-eyebrow">Franchisee</div>
               </div>
-              <div style={{ color: "#666", fontSize: "13px" }}>{rolling7.orderCount} orders</div>
             </div>
-            <div>
-              <h3 style={{ fontSize: "12px", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>
-                Latest statement
-              </h3>
-              {latestStatement ? (
-                <>
-                  <div style={{ fontSize: "20px", fontWeight: 600 }}>
-                    {formatPrice(latestStatement.royaltyGrosze)} PLN
-                  </div>
-                  <div style={{ color: "#666", fontSize: "13px" }}>
-                    week ending {latestStatement.periodEnd.slice(0, 10)}
-                  </div>
-                </>
-              ) : (
-                <div style={{ color: "#999" }}>No statements yet</div>
-              )}
-            </div>
+            <h1 className="av3-portal-greet">Welcome, {user.name.split(" ")[0]}</h1>
+            <p className="av3-portal-sub">Royalty statements run every Monday at 02:00 UTC.</p>
           </div>
-        </section>
-      ))}
+          <SignOutButton />
+        </div>
+
+        {/* Personal comms — to-do tasks assigned to this franchisee + announcements */}
+        <PortalInbox />
+
+        {data.length === 0 && (
+          <div className="av3-card">
+            <p className="av3-portal-empty">
+              No franchisee data linked to your account yet. Contact your brand owner.
+            </p>
+          </div>
+        )}
+
+        {data.map(({ franchisee, locations, rolling7, latestStatement }) => (
+          <section className="av3-portal-section" key={franchisee.id}>
+            <div className="av3-card">
+              <div className="av3-card-head">
+                <div>
+                  <div className="av3-card-title">{franchisee.name}</div>
+                  <div className="av3-card-desc">
+                    Royalty {franchisee.royaltyRateBps / 100}% · Marketing fund{" "}
+                    {franchisee.marketingFundBps / 100}%
+                  </div>
+                </div>
+                <span className="av3-badge av3-badge-neutral">
+                  {locations.length} {locations.length === 1 ? "location" : "locations"}
+                </span>
+              </div>
+              <div className="av3-card-body">
+                <div className="av3-portal-chips" style={{ marginBottom: "var(--av3-gap-4)" }}>
+                  {locations.map((loc) => (
+                    <span key={loc.slug} className="av3-portal-chip">
+                      {loc.name}
+                    </span>
+                  ))}
+                  {locations.length === 0 && (
+                    <span style={{ fontSize: "12px", color: "var(--av3-subtle)" }}>
+                      No locations assigned
+                    </span>
+                  )}
+                </div>
+
+                <div className="av3-cols-2" style={{ gap: "var(--av3-gap-4)" }}>
+                  <div>
+                    <div className="av3-portal-stat-label">Last 7 days</div>
+                    <div className="av3-portal-stat-value">{formatPrice(rolling7.revenueGrosze)} PLN</div>
+                    <div className="av3-portal-stat-sub">{rolling7.orderCount} orders</div>
+                  </div>
+                  <div>
+                    <div className="av3-portal-stat-label">Latest statement</div>
+                    {latestStatement ? (
+                      <>
+                        <div className="av3-portal-stat-value">
+                          {formatPrice(latestStatement.royaltyGrosze)} PLN
+                        </div>
+                        <div className="av3-portal-stat-sub">
+                          week ending {latestStatement.periodEnd.slice(0, 10)}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="av3-portal-stat-sub">No statements yet</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        ))}
+      </div>
     </main>
   );
 }
