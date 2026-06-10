@@ -511,7 +511,10 @@ auth canvas's signature lighting and the sign-in lockup:
   (`src/components/portal/PortalInbox.tsx`) on the Manager/Franchisee portals —
   "Your to-do list" + "Announcements" over the unmapped `/api/admin/my-tasks` +
   `/api/admin/my-announcements` (any authed user). Types + recipient rule in
-  `src/lib/comms.ts`. Nav: Overview section.
+  `src/lib/comms.ts`. **Distinct from Alerts:** announcements are human-authored
+  broadcasts; the bell + `/admin/alerts` are the *automated* operational
+  `Notification` stream (orders/stock/disputes). Separate stores, separate APIs,
+  no cross-writes — never wire one into the other. Nav: Overview section.
 - [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the

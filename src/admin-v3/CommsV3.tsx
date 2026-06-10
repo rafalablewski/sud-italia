@@ -297,6 +297,7 @@ export function CommsV3() {
             <Card>
               <CardHead
                 title={<><Megaphone style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />{aEditId ? "Edit announcement" : "New announcement"}</>}
+                description="A message you send your team. Separate from Alerts — the automated operational feed (orders, low stock, disputes) that rings the bell."
                 actions={aEditId ? <Badge tone="info">editing</Badge> : undefined}
               />
               <CardBody>
@@ -331,7 +332,7 @@ export function CommsV3() {
                   </div>
                   {targetableUsers.length > 0 && (
                     <div className="av3-field">
-                      <label className="av3-field-label">Also notify specific people (optional)</label>
+                      <label className="av3-field-label">Also send to specific people (optional)</label>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                         {targetableUsers.map((u) => (
                           <button key={u.id} type="button" className={`av3-chip ${aUsers.includes(u.id) ? "is-active" : ""}`} onClick={() => toggleUser(u.id)}>

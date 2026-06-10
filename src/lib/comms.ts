@@ -9,6 +9,15 @@
  * locations / specific people — it lands in their announcements feed. Receiving
  * (reading your own tasks + announcements) needs no permission; only the
  * sending/management board is gated (`comms.view` / `comms.manage`).
+ *
+ * SEPARATION (deliberate — do not blur it): announcements are NOT operational
+ * notifications. The `Notification` system (store.ts → `notifications.json`, the
+ * topbar bell + `/admin/alerts`) is the AUTOMATED operational stream — new
+ * orders, low stock, disputes — fanned out by the app. Announcements are
+ * HUMAN-authored broadcasts. The two never share storage and must never
+ * cross-write: an announcement must not call `addNotification`, and the bell /
+ * Alerts must not read announcements. Keep them apart so an operator (and the
+ * code) can't confuse "I'm messaging my team" with "the system paged me".
  */
 
 import type { AdminRole } from "@/lib/admin-roles";
