@@ -13,6 +13,7 @@ import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import type { Experiment } from "@/lib/experiments";
 import type { MLUpsellModel } from "@/lib/ml-upsell";
+import type { Task, TaskStatus, Announcement } from "@/lib/comms";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -2488,6 +2489,120 @@ export async function pruneOrphanNewOrderNotifications(): Promise<number> {
 
 export async function getUnreadCount(): Promise<number> {
   return (await getNotifications()).filter((n) => !n.read).length;
+}
+
+// --- Internal comms: to-do tasks + announcements ---
+// Owner (or anyone with comms.manage) assigns tasks to teammates and posts
+// announcements; teammates read their own from the role portals. Persisted via
+// readJSON/writeJSON (Postgres KV + filesystem fallback), serialised by withLock
+// — same pattern as notifications. Types live in @/lib/comms (client-safe).
+
+export async function getTasks(): Promise<Task[]> {
+  return readJSON<Task[]>("tasks.json", []);
+}
+
+export async function getTasksForAssignee(assigneeId: string): Promise<Task[]> {
+  return (await getTasks()).filter((t) => t.assigneeId === assigneeId);
+}
+
+/** Upsert a task. New rows get an id + createdAt; existing rows are replaced. */
+export async function saveTask(
+  input: Omit<Task, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<Task> {
+  return withLock("tasks.json", async () => {
+    const list = await readJSON<Task[]>("tasks.json", []);
+    const id = input.id ?? `task-${crypto.randomUUID()}`;
+    const entry: Task = {
+      ...input,
+      id,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const idx = list.findIndex((t) => t.id === id);
+    if (idx >= 0) list[idx] = entry;
+    else list.unshift(entry);
+    if (list.length > 1000) list.length = 1000;
+    await writeJSON("tasks.json", list);
+    return entry;
+  });
+}
+
+/** Set a task's status. `done` stamps completedAt; reopening clears it. */
+export async function setTaskStatus(id: string, status: TaskStatus): Promise<Task | null> {
+  return withLock("tasks.json", async () => {
+    const list = await readJSON<Task[]>("tasks.json", []);
+    const t = list.find((x) => x.id === id);
+    if (!t) return null;
+    t.status = status;
+    t.completedAt = status === "done" ? new Date().toISOString() : undefined;
+    await writeJSON("tasks.json", list);
+    return t;
+  });
+}
+
+export async function deleteTask(id: string): Promise<boolean> {
+  return withLock("tasks.json", async () => {
+    const list = await readJSON<Task[]>("tasks.json", []);
+    const idx = list.findIndex((t) => t.id === id);
+    if (idx === -1) return false;
+    list.splice(idx, 1);
+    await writeJSON("tasks.json", list);
+    return true;
+  });
+}
+
+export async function getAnnouncements(): Promise<Announcement[]> {
+  return readJSON<Announcement[]>("announcements.json", []);
+}
+
+export async function saveAnnouncement(
+  input: Omit<Announcement, "id" | "createdAt" | "readBy"> & {
+    id?: string;
+    createdAt?: string;
+    readBy?: string[];
+  },
+): Promise<Announcement> {
+  return withLock("announcements.json", async () => {
+    const list = await readJSON<Announcement[]>("announcements.json", []);
+    const id = input.id ?? `ann-${crypto.randomUUID()}`;
+    const existing = list.find((a) => a.id === id);
+    const entry: Announcement = {
+      ...input,
+      id,
+      createdAt: input.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
+      readBy: input.readBy ?? existing?.readBy ?? [],
+    };
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx >= 0) list[idx] = entry;
+    else list.unshift(entry);
+    if (list.length > 500) list.length = 500;
+    await writeJSON("announcements.json", list);
+    return entry;
+  });
+}
+
+/** Record that `userId` has read announcement `id` (idempotent). */
+export async function markAnnouncementReadBy(id: string, userId: string): Promise<boolean> {
+  return withLock("announcements.json", async () => {
+    const list = await readJSON<Announcement[]>("announcements.json", []);
+    const a = list.find((x) => x.id === id);
+    if (!a) return false;
+    if (!a.readBy.includes(userId)) {
+      a.readBy.push(userId);
+      await writeJSON("announcements.json", list);
+    }
+    return true;
+  });
+}
+
+export async function deleteAnnouncement(id: string): Promise<boolean> {
+  return withLock("announcements.json", async () => {
+    const list = await readJSON<Announcement[]>("announcements.json", []);
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx === -1) return false;
+    list.splice(idx, 1);
+    await writeJSON("announcements.json", list);
+    return true;
+  });
 }
 
 // --- Menu Overrides ---

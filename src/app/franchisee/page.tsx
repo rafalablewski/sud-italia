@@ -9,6 +9,7 @@ import {
 import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { SignOutButton } from "../manager/SignOutButton";
+import { PortalInbox } from "@/components/portal/PortalInbox";
 
 // Hoisted outside the component to keep
 // `react-hooks/components-and-hooks-must-be-pure` happy — the rule
@@ -93,6 +94,9 @@ export default async function FranchiseePortalPage() {
           </div>
           <SignOutButton />
         </div>
+
+        {/* Personal comms — to-do tasks assigned to this franchisee + announcements */}
+        <PortalInbox />
 
         {data.length === 0 && (
           <div className="av3-card">

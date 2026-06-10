@@ -234,8 +234,8 @@ actually reach.
 ### Granular permissions (action-level RBAC)
 
 The unit of authority is a **permission**, not a role. The catalog —
-**75 action-level keys** grouped by domain (orders, guests, menu,
-inventory, people, finance, growth, intelligence, system) — lives in
+**77 action-level keys** grouped by domain (orders, guests, menu,
+inventory, people, communication, finance, growth, intelligence, system) — lives in
 `src/lib/permissions.ts` and is the **single source of truth that gates
 both the UI and the API**. Never hard-code a permission string at a call
 site; add/extend a key in the catalog so a typo fails to compile.
@@ -247,7 +247,10 @@ user/role + chain-settings admin and cross-location surfaces; and (2)
 rail out of the box — **Finance** (Reports, Business costs, Calculator; Cash
 stays), **Growth & marketing** (Campaigns, Upsell, Cross-sell, Bundles, Events,
 Integrations), and **Governance & config** (Boardroom, Audit log, Capabilities,
-Payments, QR ordering, AI Insights/Ops Agent). Tier 2 is policy, not a wall:
+Payments, QR ordering, AI Insights/Ops Agent), and the **Comms board**
+(`comms.view` / `comms.manage` — assigning tasks + posting announcements; note
+that *receiving* your own tasks/announcements on the portal needs no
+permission). Tier 2 is policy, not a wall:
 because every one of those pages gates on a *permission* (not role rank), an
 owner can hand a single manager `reports.view` in the Permission Matrix and
 Reports reappears for that person only. Kept with the manager on purpose: Cash,

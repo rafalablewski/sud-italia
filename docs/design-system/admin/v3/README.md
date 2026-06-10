@@ -501,6 +501,17 @@ auth canvas's signature lighting and the sign-in lockup:
   Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
   and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
   §14 (`.av3-alert-*`). Nav: Overview section.
+- [x] Tasks & announcements (`/admin/comms`, `CommsV3`) — the internal comms
+  board. Two tabs (`ChipRow`): **Tasks** (assign a to-do to a person or a whole
+  role+location — fans out to one row per assignee, each with its own done-state)
+  and **Announcements** (post to everyone / roles / locations / named people,
+  pinnable). Built from the standard primitives (`Card`/`Button`/`Badge`/`Switch`
+  + `.av3-input`/`.av3-select`/`.av3-field`), no new CSS. Gated by `comms.view` /
+  `comms.manage` (owner-default, grantable). The receiving half is **`PortalInbox`**
+  (`src/components/portal/PortalInbox.tsx`) on the Manager/Franchisee portals —
+  "Your to-do list" + "Announcements" over the unmapped `/api/admin/my-tasks` +
+  `/api/admin/my-announcements` (any authed user). Types + recipient rule in
+  `src/lib/comms.ts`. Nav: Overview section.
 - [x] Orders (`/admin/orders`) — live Kanban + table + detail dialog over
   the real SSE order stream (`useAdminOrdersStream`); status advances via
   `PUT /api/admin/orders`, staff+. **Refund flow restored to v2 parity:** the

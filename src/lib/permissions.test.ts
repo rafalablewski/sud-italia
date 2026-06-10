@@ -47,6 +47,7 @@ test("manager default excludes owner-by-default surfaces but keeps floor tools",
     "truck.view", "integrations.view",
     "audit.view", "capabilities.view", "insights.view", "boardroom.view",
     "payments.view", "qr_ordering.view",
+    "comms.view", "comms.manage",
   ] as const) {
     assert.ok(!mgr.includes(k), `manager should NOT default to ${k}`);
   }
@@ -67,6 +68,12 @@ test("the four newly-catalogued pages gate on their own permission", () => {
   assert.equal(permissionForAdminPage("/admin/payments"), "payments.view");
   assert.equal(permissionForAdminPage("/admin/qr-ordering"), "qr_ordering.view");
   assert.equal(permissionForAdminPage("/admin/integrations"), "integrations.view");
+  assert.equal(permissionForAdminPage("/admin/comms"), "comms.view");
+  assert.equal(permissionForApiPath("/api/admin/tasks", "POST"), "comms.manage");
+  assert.equal(permissionForApiPath("/api/admin/announcements", "GET"), "comms.view");
+  // The personal feeds are intentionally unmapped (any authed user reads own).
+  assert.equal(permissionForApiPath("/api/admin/my-tasks", "GET"), null);
+  assert.equal(permissionForApiPath("/api/admin/my-announcements", "PUT"), null);
   // …and don't get swallowed by a neighbouring rule (e.g. /admin/menu).
   assert.equal(permissionForAdminPage("/admin/menu"), "menu.view");
   // API side maps too, prefix-agnostic across role aliases.

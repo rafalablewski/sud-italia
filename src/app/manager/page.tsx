@@ -10,6 +10,7 @@ import { getOrders, getShifts, getStaff } from "@/lib/store";
 import { getActiveLocations } from "@/data/locations";
 import { landingPathForRole, STAFF_ROLE_LABEL } from "@/lib/staff-roles";
 import { getDashboardQuickLinks } from "@/lib/dashboard-links";
+import { PortalInbox } from "@/components/portal/PortalInbox";
 import { formatPricePLN } from "@/lib/utils";
 import { SignOutButton } from "./SignOutButton";
 
@@ -203,6 +204,9 @@ export default async function ManagerPortalPage() {
             );
           })}
         </div>
+
+        {/* Personal comms — to-do tasks assigned to this manager + announcements */}
+        <PortalInbox />
 
         {/* Per-location breakdown — only when the manager runs more than one site */}
         {perLocation.length > 1 && (

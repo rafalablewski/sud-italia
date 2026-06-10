@@ -34,6 +34,7 @@ import {
   MapPin,
   Brain,
   Bell,
+  Megaphone,
   Bot,
   Crown,
   ShieldCheck,
@@ -79,6 +80,7 @@ export const NAV_SECTIONS_V3: NavSectionV3[] = [
       { href: `${P}`, label: "Dashboard", icon: LayoutDashboard },
       { href: `${P}/orders`, label: "Orders", icon: ClipboardList, requiredRole: "staff" },
       { href: `${P}/alerts`, label: "Alerts", icon: Bell, requiredRole: "staff" },
+      { href: `${P}/comms`, label: "Tasks & announcements", icon: Megaphone, requiredRole: "manager" },
     ],
   },
   {

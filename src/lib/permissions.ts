@@ -110,6 +110,14 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    id: "comms",
+    label: "Communication",
+    permissions: [
+      { key: "comms.view", label: "View comms board", description: "See the team Tasks & Announcements management board." },
+      { key: "comms.manage", label: "Assign tasks & announce", description: "Assign to-do tasks to teammates and post announcements to roles / locations / people." },
+    ],
+  },
+  {
     id: "finance",
     label: "Finance",
     permissions: [
@@ -227,6 +235,10 @@ const MANAGER_EXCLUDE = new Set<PermissionKey>([
   // Tier 2c — Governance & system config.
   "audit.view", "capabilities.view", "insights.view", "boardroom.view",
   "payments.view", "qr_ordering.view",
+  // Tier 2d — the comms management board (sending). Receiving your own tasks +
+  // announcements on the portal needs no permission; this gates assigning /
+  // posting, so it's owner-led by default but grantable to a manager.
+  "comms.view", "comms.manage",
 ]);
 const MANAGER_PERMS: PermissionKey[] = ALL_PERMISSION_KEYS.filter(
   (k) => !MANAGER_EXCLUDE.has(k),
@@ -356,6 +368,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/expansion")) return "expansion.view";
   if (is("/admin/ai")) return "insights.view";
   if (is("/admin/boardroom")) return "boardroom.view";
+  if (is("/admin/comms")) return "comms.view";
   if (is("/admin/users")) return "users.view";
   if (is("/admin/permissions")) return "users.view";
   // Owner-tier "rules" pages — gated by the stronger compliance.edit so a bare
@@ -480,6 +493,11 @@ export function permissionForApiPath(
       return "insights.view";
     case "boardroom":
       return "boardroom.view";
+    case "tasks":
+    case "announcements":
+      // The management board (assign/post/delete). Personal feeds live on the
+      // unmapped /api/admin/my-tasks + /api/admin/my-announcements (any authed).
+      return write ? "comms.manage" : "comms.view";
     case "payments":
       return "payments.view";
     case "qr-ordering":
