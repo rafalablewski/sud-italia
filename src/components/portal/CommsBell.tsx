@@ -8,6 +8,13 @@ import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
 
+// Today's date as a local-time `YYYY-MM-DD` string — matches how task dueDates
+// are entered, so the overdue compare doesn't flip a day either side of UTC.
+function localISODate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /**
  * The personal-comms indicator — a small **inbox** button with an unread count,
  * deliberately distinct from the operational alerts **bell** (`TopbarV3`, the
@@ -64,16 +71,26 @@ export function CommsBell() {
     setOpen((o) => !o);
   };
 
-  // Close on outside click / Escape while open.
+  // Close on outside click / Escape while open. Re-pin to the button on resize
+  // (and scroll) so the fixed, body-portaled dropdown can't drift out of place.
   useEffect(() => {
     if (!open) return;
     const onClick = () => setOpen(false);
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const reposition = () => {
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
+      setCoords({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    };
     document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
     return () => {
       document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
     };
   }, [open]);
 
@@ -139,7 +156,7 @@ export function CommsBell() {
                   />
                 ))}
                 {openTasks.map((t) => {
-                  const overdue = !!t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10);
+                  const overdue = !!t.dueDate && t.dueDate < localISODate();
                   return (
                     <GlanceRow
                       key={t.id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pin, Archive, Trash2, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
 import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
@@ -109,11 +109,18 @@ export function PortalInbox() {
         : arr,
     );
     if (openId === id && (action === "archive" || action === "delete")) setOpenId(null);
-    await fetch("/api/admin/my-announcements", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action }),
-    });
+    // Optimistic above; if the write fails, re-sync from the server so the UI
+    // doesn't drift from the persisted mailbox state.
+    try {
+      const res = await fetch("/api/admin/my-announcements", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
   };
 
   // Open an email (Gmail behaviour): expand it, and mark it read on first open.
@@ -140,12 +147,16 @@ export function PortalInbox() {
   };
 
   // Inbox tab: unread first (capped at `unreadShown`), then read-but-kept rows.
+  // `shownUnreadCount` marks the boundary so "Load more" can sit directly below
+  // the last unread row, above the read rows (not buried at the card's bottom).
   let visible: AnnRow[] = inTab;
   let hiddenUnread = 0;
+  let shownUnreadCount = 0;
   if (tab === "inbox") {
     const unreadRows = inTab.filter((a) => !a.read);
     const readRows = inTab.filter((a) => a.read);
     const shownUnread = unreadRows.slice(0, unreadShown);
+    shownUnreadCount = shownUnread.length;
     hiddenUnread = unreadRows.length - shownUnread.length;
     visible = [...shownUnread, ...readRows];
   }
@@ -214,8 +225,8 @@ export function PortalInbox() {
               const isOpen = openId === a.id;
               const showUnread = tab === "inbox" && !a.read;
               return (
+                <Fragment key={a.id}>
                 <div
-                  key={a.id}
                   style={{
                     display: "flex", alignItems: "flex-start",
                     borderTop: i === 0 ? "none" : "1px solid var(--av3-line)",
@@ -315,14 +326,16 @@ export function PortalInbox() {
                     )}
                   </span>
                 </div>
+                {/* "Load more" sits directly under the last shown unread row,
+                    above the read-but-kept rows. */}
+                {tab === "inbox" && hiddenUnread > 0 && i === shownUnreadCount - 1 && (
+                  <button type="button" onClick={() => setUnreadShown((n) => n + UNREAD_PAGE)} style={loadMoreBtn}>
+                    Load {Math.min(UNREAD_PAGE, hiddenUnread)} more unread ({hiddenUnread} hidden)
+                  </button>
+                )}
+                </Fragment>
               );
             })
-          )}
-
-          {tab === "inbox" && hiddenUnread > 0 && (
-            <button type="button" onClick={() => setUnreadShown((n) => n + UNREAD_PAGE)} style={loadMoreBtn}>
-              Load {Math.min(UNREAD_PAGE, hiddenUnread)} more unread ({hiddenUnread} hidden)
-            </button>
           )}
         </div>
       </section>
