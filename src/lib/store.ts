@@ -11,6 +11,7 @@ import {
 } from "@/lib/cart-presence-redis";
 import { WALLET_MAX_PHONES } from "@/lib/constants";
 import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
+import { cashVarianceGrosze as computeCashVariance } from "@/lib/cash-recon";
 import type { Experiment } from "@/lib/experiments";
 import type { MLUpsellModel } from "@/lib/ml-upsell";
 import type { Task, TaskStatus, Announcement, AnnouncementState } from "@/lib/comms";
@@ -8704,12 +8705,10 @@ export async function closeCashSession(
     if (idx === -1) return null;
     if (all[idx].closedAt) return null;
     const session = all[idx];
-    const expected =
-      session.openingFloat + session.drops.reduce((acc, d) => acc + d.amountGrosze, 0);
     session.closingCountGrosze = Math.max(0, Math.round(closingCountGrosze));
     session.closedAt = new Date().toISOString();
     session.closedBy = closedBy;
-    session.varianceGrosze = session.closingCountGrosze - expected;
+    session.varianceGrosze = computeCashVariance(session, session.closingCountGrosze);
     if (notes) session.notes = notes;
     await writeJSON("cash-sessions.json", all);
     return session;
@@ -9973,9 +9972,7 @@ export async function saveShiftHandover(
     const sessions = await getCashSessions(input.locationSlug, { includeHidden: true });
     const session = sessions.find((s) => s.id === input.cashSessionId);
     if (session) {
-      const expected =
-        session.openingFloat + session.drops.reduce((acc, d) => acc + d.amountGrosze, 0);
-      cashVarianceGrosze = input.cashCountedGrosze - expected;
+      cashVarianceGrosze = computeCashVariance(session, input.cashCountedGrosze);
     }
   }
   return withLock("shift-handovers.json", async () => {

@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pin, Archive, Trash2, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
+import { fmtRelative } from "@/lib/relative-time";
 import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
@@ -273,9 +274,15 @@ export function PortalInbox() {
                         {showUnread && (
                           <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: "var(--av3-brand)", flexShrink: 0 }} />
                         )}
-                        <span style={{ fontSize: "11px", color: "var(--av3-subtle)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                          {fmtDate(a.createdAt)}
-                        </span>
+                        {/* Collapsed only: a scannable relative age ("3h",
+                            "Yesterday"). The full absolute date+time lives at the
+                            foot of the opened body, so repeating it here would be
+                            redundant. */}
+                        {!isOpen && (
+                          <span style={{ fontSize: "11px", color: "var(--av3-subtle)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                            {fmtRelative(a.createdAt)}
+                          </span>
+                        )}
                       </span>
                       {/* Row 2: subject + snippet (collapsed) */}
                       <span
@@ -418,8 +425,11 @@ const tabCntNeutral: React.CSSProperties = {
   fontSize: "10px", fontWeight: 600, color: "var(--av3-muted)", background: "var(--av3-s1)",
   border: "1px solid var(--av3-line)", borderRadius: 999, padding: "1px 6px",
 };
+// Pinned to the top of the row (not centered) so opening a message — which
+// grows the row taller — leaves Archive/Delete exactly where they were,
+// aligned with the sender line rather than sliding down to the new centre.
 const rowActions: React.CSSProperties = {
-  display: "flex", gap: 4, alignSelf: "center", padding: "0 12px 0 4px", flexShrink: 0,
+  display: "flex", gap: 4, alignSelf: "flex-start", padding: "13px 12px 0 4px", flexShrink: 0,
 };
 const actBtn: React.CSSProperties = {
   width: 30, height: 30, display: "grid", placeItems: "center", borderRadius: "var(--av3-r-md)",
