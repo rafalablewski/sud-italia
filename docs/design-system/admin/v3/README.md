@@ -5,9 +5,9 @@
 > the v2 system (`src/components/admin/v2/`, the top-level `Admin*.tsx` page
 > bodies, the `src/app/admin/*` routes) can be deleted without touching v3.
 > The shared base stylesheet (`src/app/themes/base/index.css`, formerly
-> `themes/admin`) is **kept** — it backs the staff/kitchen/terminal portals +
-> Core, so it outlives v2 (the login door itself now runs on av3 — see
-> [Auth door](#auth-door--the-login-surface)). **This doc grows with the code**
+> `themes/admin`) is **kept** — it backs the staff/kitchen portals +
+> Core, so it outlives v2 (the login door **and the shared-device PIN terminal**
+> now run on av3 — see [Auth door](#auth-door--the-login-surface)). **This doc grows with the code**
 > per design-system Rule #11.
 
 ## Why a v3
@@ -35,7 +35,7 @@ the single money CTA), colour is still signal, but the *grid is tighter* and
 
 | Concern        | v2 (to be deleted)                          | v3 (the rebuild)                               |
 | -------------- | ------------------------------------------- | ---------------------------------------------- |
-| Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs the staff/kitchen/terminal portals + Core — login moved to av3 §23) | `src/app/themes/admin-v3/index.css` (incl. the login door, §23) |
+| Theme CSS      | `src/app/themes/base/index.css` (**shared base — kept**; backs the staff/kitchen portals + Core — login + PIN terminal moved to av3 §23) | `src/app/themes/admin-v3/index.css` (incl. the login door + PIN terminal, §23) |
 | Class prefix   | `.v2-*`, `.glass-*`, `.admin-*`, `.app-sidebar` | `.av3-*` (single prefix, no legacy aliases) |
 | Token scope    | `[data-admin-theme]` on `<html>`            | `.av3-root` (reads the same `[data-admin-theme]` attr) |
 | JS token mirror| `src/components/admin/v2/theme.ts`          | `src/admin-v3/theme.ts`             |
@@ -316,16 +316,24 @@ refetches every 30s.
 ## Auth door — the login surface
 
 The sign-in surface (`src/components/auth/LoginForm.tsx`, shared by the universal
-team door **`/login`** and the owner-only **`/admin/login`**) is the one av3
-surface that renders **outside** `AdminShellV3`. Both route layouts
-(`src/app/login/layout.tsx`, `src/app/admin/login/layout.tsx`) load
-`themes/admin-v3/index.css` and the three `--font-admin-*` typefaces, then wrap
-the form in `#admin-portal-root.av3-root` (with `flex flex-col flex-1`, matching
-the shell, so the canvas fills the `flex-col` body) — so the door inherits the
-exact tokens, fonts and focus rings as the rest of admin, with no `AdminShellV3`
-chrome. Unlike the shell it ships **no `themeBootScriptV3`**: the door renders
-the av3 **dark canonical** theme (it's intentionally dark + pre-auth), which also
-means no `<html>` attribute mutation and therefore no hydration mismatch.
+team door **`/login`** and the owner-only **`/admin/login`**) plus the
+shared-device **PIN terminal** (`src/app/terminal/page.tsx`) are the av3
+surfaces that render **outside** `AdminShellV3`. Because every door does the same
+job — authenticate, then route — they share the **`AuthShell`** component
+(`src/components/auth/AuthShell.tsx`): it owns the canvas → column → bracket →
+brand-lockup chrome, and each door passes its `eyebrow` (portal label) +
+`footer` (cross-door links) and drops its controls in as `children` (the
+email/password form, or the PIN keypad), so the chrome can never drift between
+doors. All three route layouts
+(`src/app/login/layout.tsx`, `src/app/admin/login/layout.tsx`,
+`src/app/terminal/layout.tsx`) load `themes/admin-v3/index.css` and the three
+`--font-admin-*` typefaces, then wrap their body in `#admin-portal-root.av3-root`
+(with `flex flex-col flex-1`, matching the shell, so the canvas fills the
+`flex-col` body) — so each door inherits the exact tokens, fonts and focus rings
+as the rest of admin, with no `AdminShellV3` chrome. Unlike the shell they ship
+**no `themeBootScriptV3`**: the doors render the av3 **dark canonical** theme
+(intentionally dark + pre-auth), which also means no `<html>` attribute mutation
+and therefore no hydration mismatch.
 
 CSS lives in `themes/admin-v3/index.css` **§23** (`.av3-auth*`). The chosen
 direction is **"spotlight minimal"** — clean + futuristic **inside the token
@@ -360,6 +368,22 @@ adds only the auth-specific scaffold (canvas, column, bracket, lockup). The
 behaviour (email + password, optional TOTP reveal on `mfaRequired`, the
 passwordless passkey path, the owner-only portal gate) is unchanged — see
 [`../sections/system.md`](../sections/system.md) → sign-in & credentials.
+
+**PIN terminal (`/terminal`).** The shared-device keypad door is the keypad
+sibling of the form: same `.av3-auth` canvas, `.av3-auth-col`, `.av3-auth-frame`
+bracket and `.av3-auth-lockup` (eyebrow "Staff terminal"), with the cross-door
+link in `.av3-auth-foot`. Below the lockup it swaps the form for three
+keypad-only pieces, all token-built (no new hue, no card chrome): **`.av3-auth-locs`**
+/ **`.av3-auth-loc`** (the per-device location segmented control — `.is-active`
+fills brand), **`.av3-auth-dots`** / **`.av3-auth-dot`** (PIN-progress dots, one
+per digit down to `PIN_MIN_LENGTH`, brand on `.is-on`) and **`.av3-auth-keypad`**
+/ **`.av3-auth-key`** (a 3-col touch keypad of 56px targets; **`.av3-auth-key-del`**
+reads quieter, **`.av3-auth-key-go`** is the brand confirm CTA echoing
+`.av3-btn-primary`). While a PIN is in flight (`loading`) the location buttons
+and keypad are `disabled` — each has `:disabled` styling (dimmed, no
+hover/press affordance) so the lock reads visually. Behaviour (location
+remembered in `localStorage`, PIN length gate, `POST /api/terminal/login` →
+role-routed landing) is unchanged.
 
 ## What v3 is not
 

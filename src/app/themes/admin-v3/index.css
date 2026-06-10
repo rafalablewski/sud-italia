@@ -1480,4 +1480,79 @@
 .av3-auth-foot a { color: var(--av3-platinum); text-decoration: none; }
 .av3-auth-foot a:hover { text-decoration: underline; }
 
+/* PIN terminal — the shared-device keypad door (/terminal). Same canvas, column,
+   bracket + lockup as the sign-in form; below the lockup it swaps the form for a
+   location segmented control, a PIN-progress dot row and a touch keypad, all
+   built from the same --av3-* tokens (no new hue, no card chrome). */
+.av3-auth-locs { display: flex; gap: var(--av3-gap-2); margin-bottom: 20px; }
+.av3-auth-loc {
+  flex: 1;
+  height: 34px;
+  border: 1px solid var(--av3-line-strong);
+  border-radius: var(--av3-r-md);
+  background: transparent;
+  color: var(--av3-muted);
+  font-family: var(--av3-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease), background var(--av3-t-fast) var(--av3-ease);
+}
+.av3-auth-loc:hover { color: var(--av3-fg); border-color: var(--av3-muted); }
+.av3-auth-loc.is-active { background: var(--av3-brand); border-color: var(--av3-brand); color: #fff; }
+.av3-auth-loc:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+/* locked while a PIN is in flight — dim, no hover affordance */
+.av3-auth-loc:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-loc:disabled:hover { color: var(--av3-muted); border-color: var(--av3-line-strong); }
+
+/* PIN-progress dots — one per entered digit (min PIN_MIN_LENGTH), brand when filled */
+.av3-auth-dots { display: flex; justify-content: center; gap: var(--av3-gap-2); margin-bottom: 20px; }
+.av3-auth-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--av3-r-pill);
+  background: var(--av3-line-strong);
+  transition: background var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease);
+}
+.av3-auth-dot.is-on { background: var(--av3-brand); transform: scale(1.1); }
+
+/* touch keypad — 3-col grid, big targets, no keyboard */
+.av3-auth-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--av3-gap-3); }
+.av3-auth-key {
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--av3-line-strong);
+  border-radius: var(--av3-r-md);
+  background: var(--av3-s1);
+  color: var(--av3-fg);
+  font-family: var(--av3-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease);
+}
+.av3-auth-key:hover { background: var(--av3-s2); border-color: var(--av3-muted); }
+.av3-auth-key:active { transform: scale(0.96); }
+.av3-auth-key:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 2px; }
+/* locked while a PIN is in flight — dim, no hover/press affordance. Listed
+   before .av3-auth-key-go so the confirm CTA's own :disabled rules win. */
+.av3-auth-key:disabled { opacity: 0.5; cursor: not-allowed; }
+.av3-auth-key:disabled:hover { background: var(--av3-s1); border-color: var(--av3-line-strong); }
+.av3-auth-key:disabled:active { transform: none; }
+.av3-auth-key svg { width: 20px; height: 20px; }
+/* delete reads quieter; confirm is the brand CTA, echoing .av3-btn-primary */
+.av3-auth-key-del { color: var(--av3-muted); }
+.av3-auth-key-go {
+  background: var(--av3-brand);
+  border-color: var(--av3-brand);
+  color: #fff;
+  box-shadow: 0 10px 26px -12px color-mix(in oklab, var(--av3-brand) 85%, transparent);
+}
+.av3-auth-key-go:hover { background: color-mix(in oklab, var(--av3-brand) 88%, #fff); border-color: var(--av3-brand); }
+.av3-auth-key-go:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.av3-auth-key-go:disabled:hover { background: var(--av3-brand); }
+.av3-auth-keypad + .av3-auth-error { margin-top: 18px; }
+
 @media (max-width: 420px) { .av3-auth-frame { padding: 32px 18px 28px; } }
