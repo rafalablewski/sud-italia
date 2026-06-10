@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pin } from "lucide-react";
+import { Check, Pin, Archive, Trash2, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
-import type { Task, Announcement } from "@/lib/comms";
+import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
 
-type AnnRow = Announcement & { read: boolean };
+type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
 
 const PRIORITY_COLOR: Record<string, string> = {
   high: "var(--av3-bad)",
@@ -18,6 +18,15 @@ const AVATAR_COLORS = [
   "var(--av3-c1)", "var(--av3-c2)", "var(--av3-c3)", "var(--av3-c4)",
   "var(--av3-c5)", "var(--av3-c6)", "var(--av3-c7)", "var(--av3-c8)",
 ];
+
+const TABS: { key: AnnouncementState; label: string }[] = [
+  { key: "inbox", label: "Inbox" },
+  { key: "archived", label: "Archived" },
+  { key: "deleted", label: "Deleted" },
+];
+
+// How many unread rows the Inbox shows before "Load more" (Rule: last 3 unread).
+const UNREAD_PAGE = 3;
 
 function fmtDate(iso?: string) {
   return iso ? new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "short" }) : "";
@@ -50,15 +59,21 @@ function avatarColor(name?: string): string {
  * (`/api/admin/my-tasks`, `/api/admin/my-announcements`) — never the management
  * board — so it works for any role without a permission.
  *
- * Announcements lead the portal as a **Gmail-style notification inbox**: each
- * is an email row (sender avatar + subject + snippet + timestamp, unread bold
- * with a brand dot, pinned flagged). Tapping a row opens the full message and
- * marks it read. The personal to-do list follows beneath.
+ * Announcements lead as a **Gmail-style inbox** with three mailbox tabs —
+ * **Inbox / Archived / Deleted**. The Inbox shows only the most-recent
+ * `UNREAD_PAGE` unread rows with a "Load more" beneath (read-but-kept rows
+ * follow). Each row carries hover actions: **Mark read**, **Archive**, **Delete**
+ * (Archived/Deleted offer **Restore**). Every action hits
+ * `PUT /api/admin/my-announcements` with an `action`, which moves the per-user
+ * mailbox state AND writes an entry to the central Audit log (so an owner can
+ * review the open/archive/delete history). The personal to-do list follows.
  */
 export function PortalInbox() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [anns, setAnns] = useState<AnnRow[] | null>(null);
+  const [tab, setTab] = useState<AnnouncementState>("inbox");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [unreadShown, setUnreadShown] = useState(UNREAD_PAGE);
 
   const load = useCallback(async () => {
     const [t, a] = await Promise.all([
@@ -79,64 +94,133 @@ export function PortalInbox() {
     });
   };
 
-  const markRead = async (id: string) => {
-    setAnns((arr) => (arr ? arr.map((a) => (a.id === id ? { ...a, read: true } : a)) : arr));
+  // The single announcement-action path. Optimistically applies the new mailbox
+  // state, then persists + audit-logs it server-side.
+  const act = async (id: string, action: "read" | "archive" | "delete" | "restore") => {
+    setAnns((arr) =>
+      arr
+        ? arr.map((a) => {
+            if (a.id !== id) return a;
+            if (action === "read") return { ...a, read: true };
+            if (action === "archive") return { ...a, read: true, state: "archived" };
+            if (action === "delete") return { ...a, state: "deleted" };
+            return { ...a, state: "inbox" }; // restore
+          })
+        : arr,
+    );
+    if (openId === id && (action === "archive" || action === "delete")) setOpenId(null);
     await fetch("/api/admin/my-announcements", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, action }),
     });
   };
 
   // Open an email (Gmail behaviour): expand it, and mark it read on first open.
   const openEmail = (a: AnnRow) => {
     setOpenId((cur) => (cur === a.id ? null : a.id));
-    if (!a.read) markRead(a.id);
+    if (!a.read) act(a.id, "read");
   };
 
-  const unread = useMemo(() => (anns ? anns.filter((a) => !a.read).length : 0), [anns]);
+  const unread = useMemo(
+    () => (anns ? anns.filter((a) => a.state === "inbox" && !a.read).length : 0),
+    [anns],
+  );
 
-  // While the feeds resolve, hold the layout with a shimmer stand-in that
-  // mirrors the loaded shape (a Notifications inbox card + a to-do card). The
-  // portal renders these two sections in-place on the server-rendered page, so
-  // returning `null` here would collapse the space and shove everything below
-  // (per-location, on-shift, jump-to) down the moment the data lands — the
-  // "moving suddenly" jump. The skeleton reserves the room so it doesn't.
+  // Hold the layout with a shimmer stand-in while the feeds resolve, so the
+  // portal doesn't jump when the data lands (returning null would collapse it).
   if (tasks === null || anns === null) return <PortalInboxSkeleton />;
 
   const openTasks = tasks.filter((t) => t.status === "open");
+  const inTab = anns.filter((a) => a.state === tab);
+  const counts = {
+    inbox: anns.filter((a) => a.state === "inbox").length,
+    archived: anns.filter((a) => a.state === "archived").length,
+    deleted: anns.filter((a) => a.state === "deleted").length,
+  };
+
+  // Inbox tab: unread first (capped at `unreadShown`), then read-but-kept rows.
+  let visible: AnnRow[] = inTab;
+  let hiddenUnread = 0;
+  if (tab === "inbox") {
+    const unreadRows = inTab.filter((a) => !a.read);
+    const readRows = inTab.filter((a) => a.read);
+    const shownUnread = unreadRows.slice(0, unreadShown);
+    hiddenUnread = unreadRows.length - shownUnread.length;
+    visible = [...shownUnread, ...readRows];
+  }
+
+  const emptyCopy: Record<AnnouncementState, string> = {
+    inbox: "No notifications — you’re all caught up.",
+    archived: "Nothing archived.",
+    deleted: "Deleted is empty.",
+  };
 
   return (
     <>
-      {/* Notifications — the Gmail-style announcement inbox, leading the portal */}
+      {/* Notifications — the Gmail-style inbox with mailbox tabs */}
       <section className="av3-portal-section">
-        <div className="av3-section-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          Notifications
-          {unread > 0 && (
-            <span
-              style={{
-                fontSize: "10.5px", fontWeight: 700, lineHeight: 1, color: "#fff",
-                background: "var(--av3-brand)", borderRadius: 999, padding: "3px 7px",
-              }}
-            >
-              {unread}
-            </span>
-          )}
+        <div
+          className="av3-section-label"
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            Notifications
+            {unread > 0 && (
+              <span
+                style={{
+                  fontSize: "10.5px", fontWeight: 700, lineHeight: 1, color: "#fff",
+                  background: "var(--av3-brand)", borderRadius: 999, padding: "3px 7px",
+                }}
+              >
+                {unread}
+              </span>
+            )}
+          </span>
+          <div role="tablist" aria-label="Notification mailboxes" style={tabsWrap}>
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => { setTab(t.key); setOpenId(null); setUnreadShown(UNREAD_PAGE); }}
+                  style={{
+                    ...tabBtn,
+                    background: active ? "var(--av3-s3)" : "transparent",
+                    color: active ? "var(--av3-fg)" : "var(--av3-muted)",
+                  }}
+                >
+                  {t.label}
+                  {counts[t.key] > 0 && (
+                    <span style={t.key === "inbox" && unread > 0 ? tabCntBrand : tabCntNeutral}>
+                      {t.key === "inbox" ? unread || counts.inbox : counts[t.key]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
         <div className="av3-card" style={{ overflow: "hidden", padding: 0 }}>
-          {anns.length === 0 ? (
+          {visible.length === 0 ? (
             <p style={{ margin: 0, padding: "var(--av3-gap-4)", fontSize: "12.5px", color: "var(--av3-muted)" }}>
-              No notifications — you&rsquo;re all caught up.
+              {emptyCopy[tab]}
             </p>
           ) : (
-            anns.map((a, i) => {
+            visible.map((a, i) => {
               const isOpen = openId === a.id;
+              const showUnread = tab === "inbox" && !a.read;
               return (
                 <div
                   key={a.id}
                   style={{
+                    display: "flex", alignItems: "flex-start",
                     borderTop: i === 0 ? "none" : "1px solid var(--av3-line)",
-                    background: a.read ? "transparent" : "var(--av3-s2)",
+                    background: showUnread ? "var(--av3-s2)" : "transparent",
+                    opacity: tab === "inbox" ? 1 : 0.72,
                   }}
                 >
                   <button
@@ -144,7 +228,7 @@ export function PortalInbox() {
                     onClick={() => openEmail(a)}
                     aria-expanded={isOpen}
                     style={{
-                      width: "100%", display: "flex", alignItems: "flex-start", gap: 12,
+                      flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: 12,
                       padding: "11px 14px", background: "transparent", border: "none",
                       textAlign: "left", cursor: "pointer", color: "inherit",
                     }}
@@ -167,7 +251,7 @@ export function PortalInbox() {
                         <span
                           style={{
                             flex: 1, minWidth: 0, fontSize: "13px",
-                            fontWeight: a.read ? 500 : 700,
+                            fontWeight: showUnread ? 700 : 500,
                             color: "var(--av3-fg)",
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           }}
@@ -175,7 +259,7 @@ export function PortalInbox() {
                           {a.createdByName}
                         </span>
                         {a.pinned && <Pin style={{ width: 12, height: 12, color: "var(--av3-platinum)", flexShrink: 0 }} />}
-                        {!a.read && (
+                        {showUnread && (
                           <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, background: "var(--av3-brand)", flexShrink: 0 }} />
                         )}
                         <span style={{ fontSize: "11px", color: "var(--av3-subtle)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
@@ -186,8 +270,9 @@ export function PortalInbox() {
                       <span
                         style={{
                           display: "block", fontSize: "12.5px", marginTop: 2,
-                          fontWeight: a.read ? 400 : 600, color: "var(--av3-fg)",
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          fontWeight: showUnread ? 600 : 400, color: "var(--av3-fg)",
+                          overflow: isOpen ? "visible" : "hidden",
+                          textOverflow: "ellipsis", whiteSpace: isOpen ? "normal" : "nowrap",
                         }}
                       >
                         {a.title}
@@ -210,9 +295,34 @@ export function PortalInbox() {
                       )}
                     </span>
                   </button>
+
+                  {/* Hover actions (Gmail-style), per tab */}
+                  <span style={rowActions}>
+                    {tab === "inbox" && !a.read && (
+                      <ActBtn label="Mark read" onClick={() => act(a.id, "read")}><Check style={actIco} /></ActBtn>
+                    )}
+                    {tab === "inbox" && (
+                      <ActBtn label="Archive" onClick={() => act(a.id, "archive")}><Archive style={actIco} /></ActBtn>
+                    )}
+                    {tab === "archived" && (
+                      <ActBtn label="Move back to inbox" onClick={() => act(a.id, "restore")}><RotateCcw style={actIco} /></ActBtn>
+                    )}
+                    {tab === "deleted" && (
+                      <ActBtn label="Restore to inbox" onClick={() => act(a.id, "restore")}><RotateCcw style={actIco} /></ActBtn>
+                    )}
+                    {tab !== "deleted" && (
+                      <ActBtn label="Delete" danger onClick={() => act(a.id, "delete")}><Trash2 style={actIco} /></ActBtn>
+                    )}
+                  </span>
                 </div>
               );
             })
+          )}
+
+          {tab === "inbox" && hiddenUnread > 0 && (
+            <button type="button" onClick={() => setUnreadShown((n) => n + UNREAD_PAGE)} style={loadMoreBtn}>
+              Load {Math.min(UNREAD_PAGE, hiddenUnread)} more unread ({hiddenUnread} hidden)
+            </button>
           )}
         </div>
       </section>
@@ -251,17 +361,71 @@ export function PortalInbox() {
   );
 }
 
+/** A small hover action button on an inbox row. */
+function ActBtn({
+  label,
+  danger,
+  onClick,
+  children,
+}: {
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      style={{ ...actBtn, color: danger ? "var(--av3-bad)" : "var(--av3-muted)" }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* Inline style objects (this component is built from tokens + inline styles on
+   the .av3-portal / .av3-card scaffold — no bespoke CSS class, per the av3 doc). */
+const tabsWrap: React.CSSProperties = {
+  display: "flex", gap: 3, background: "var(--av3-s2)", border: "1px solid var(--av3-line)",
+  borderRadius: 999, padding: 3,
+};
+const tabBtn: React.CSSProperties = {
+  border: "none", fontSize: "11.5px", fontWeight: 600, padding: "5px 11px",
+  borderRadius: 999, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+  textTransform: "none", letterSpacing: 0,
+};
+const tabCntBrand: React.CSSProperties = {
+  fontSize: "10px", fontWeight: 700, color: "#fff", background: "var(--av3-brand)",
+  borderRadius: 999, padding: "1px 6px",
+};
+const tabCntNeutral: React.CSSProperties = {
+  fontSize: "10px", fontWeight: 600, color: "var(--av3-muted)", background: "var(--av3-s1)",
+  border: "1px solid var(--av3-line)", borderRadius: 999, padding: "1px 6px",
+};
+const rowActions: React.CSSProperties = {
+  display: "flex", gap: 4, alignSelf: "center", padding: "0 12px 0 4px", flexShrink: 0,
+};
+const actBtn: React.CSSProperties = {
+  width: 30, height: 30, display: "grid", placeItems: "center", borderRadius: "var(--av3-r-md)",
+  background: "var(--av3-s3)", border: "1px solid var(--av3-line)", color: "var(--av3-muted)", cursor: "pointer",
+};
+const actIco: React.CSSProperties = { width: 15, height: 15 };
+const loadMoreBtn: React.CSSProperties = {
+  width: "100%", border: "none", borderTop: "1px solid var(--av3-line)", background: "var(--av3-s1)",
+  color: "var(--av3-info)", fontSize: "12.5px", fontWeight: 600, padding: 11, cursor: "pointer",
+};
+
 /**
  * Loading stand-in for {@link PortalInbox}. Mirrors the loaded shape — a
  * Notifications inbox card (avatar + two text lines per row) above a to-do
  * card — so the portal reserves the space and doesn't jump when the feeds land.
- * Built on the same `.av3-portal-section` / `.av3-card` scaffold and the shared
- * `Skeleton` shimmer primitive (no new CSS), matching the rest of the av3 suite.
  */
 function PortalInboxSkeleton() {
   return (
     <>
-      {/* Notifications — same padding-0 card, a few inbox-row stand-ins */}
       <section className="av3-portal-section" aria-busy="true">
         <div className="av3-section-label">
           <Skeleton width={92} height={11} radius={999} />
@@ -271,10 +435,7 @@ function PortalInboxSkeleton() {
             <div
               key={i}
               style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 12,
-                padding: "11px 14px",
+                display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 14px",
                 borderTop: i === 0 ? "none" : "1px solid var(--av3-line)",
               }}
             >
@@ -288,7 +449,6 @@ function PortalInboxSkeleton() {
         </div>
       </section>
 
-      {/* Your to-do list — same padded card, a couple of task-row stand-ins */}
       <section className="av3-portal-section" aria-busy="true">
         <div className="av3-section-label">
           <Skeleton width={108} height={11} radius={999} />

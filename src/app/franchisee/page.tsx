@@ -10,6 +10,7 @@ import { getActiveLocations } from "@/data/locations";
 import { formatPrice } from "@/lib/utils";
 import { SignOutButton } from "../manager/SignOutButton";
 import { PortalInbox } from "@/components/portal/PortalInbox";
+import { CommsBell } from "@/components/portal/CommsBell";
 
 // Hoisted outside the component to keep
 // `react-hooks/components-and-hooks-must-be-pure` happy — the rule
@@ -92,7 +93,10 @@ export default async function FranchiseePortalPage() {
             <h1 className="av3-portal-greet">Welcome, {user.name.split(" ")[0]}</h1>
             <p className="av3-portal-sub">Royalty statements run every Monday at 02:00 UTC.</p>
           </div>
-          <SignOutButton />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <CommsBell />
+            <SignOutButton />
+          </div>
         </div>
 
         {/* Personal comms — announcement notifications inbox + this franchisee's to-do list */}

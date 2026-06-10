@@ -6,6 +6,7 @@ import { Bell, ChevronDown, Menu, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ALL_NAV_ITEMS_V3 } from "./nav.config";
 import { ThemeToggleV3 } from "./ThemeToggleV3";
+import { CommsBell } from "@/components/portal/CommsBell";
 import { useAdminLocationV3 } from "./LocationContext";
 import { adminV3BaseForPath, withAdminV3Base, canonicalAdminV3Path } from "@/lib/admin-base";
 
@@ -98,7 +99,12 @@ export function TopbarV3({ onOpenMobileNav }: Props) {
 
         <ThemeToggleV3 />
 
-        <button type="button" className="av3-icon-btn" aria-label={unread > 0 ? `${unread} unread notifications` : "Notifications"}>
+        {/* Personal comms (announcements + to-dos) — separate from the
+            operational alerts bell beside it, per the comms separation rule. */}
+        <CommsBell />
+
+        {/* Operational alerts (new orders / low stock / disputes). */}
+        <button type="button" className="av3-icon-btn" aria-label={unread > 0 ? `${unread} unread alerts` : "Alerts"}>
           <Bell className="av3-btn-ico" />
           {unread > 0 && <span className="av3-bell-badge" aria-hidden>{unread > 9 ? "9+" : unread}</span>}
         </button>

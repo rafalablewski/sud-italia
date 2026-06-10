@@ -64,6 +64,29 @@ export interface Announcement {
   createdAt: string;
   /** userIds who have read/dismissed it. */
   readBy: string[];
+  /**
+   * Per-recipient mailbox state. Archiving/deleting is personal (Gmail-style):
+   * one recipient archiving an announcement must not hide it for everyone else,
+   * so we track the userIds in each bucket rather than a single shared flag.
+   * `deletedBy` wins over `archivedBy`; absence of both = the Inbox.
+   */
+  archivedBy?: string[];
+  deletedBy?: string[];
+}
+
+/** Which mailbox tab an announcement sits in for a given user. */
+export type AnnouncementState = "inbox" | "archived" | "deleted";
+
+/**
+ * The per-user mailbox state. Deleted takes precedence over archived (a row a
+ * user both archived then deleted reads as deleted); neither = the Inbox. Read
+ * state is independent — a read announcement still lives in the Inbox until the
+ * user archives or deletes it.
+ */
+export function announcementStateFor(a: Announcement, userId: string): AnnouncementState {
+  if ((a.deletedBy ?? []).includes(userId)) return "deleted";
+  if ((a.archivedBy ?? []).includes(userId)) return "archived";
+  return "inbox";
 }
 
 /** The minimal user shape the recipient rule needs (matches AdminUser). */
