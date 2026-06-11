@@ -283,7 +283,7 @@ export function PortalInbox() {
       <section className="av3-portal-section">
         <div
           className="av3-section-label"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             Notifications
@@ -298,7 +298,7 @@ export function PortalInbox() {
               </span>
             )}
           </span>
-          <div role="tablist" aria-label="Notification mailboxes" style={tabsWrap}>
+          <div role="tablist" aria-label="Notification mailboxes" className="av3-todo-tabscroll" style={tabsWrap}>
             {TABS.map((t) => {
               const active = tab === t.key;
               return (
@@ -462,7 +462,7 @@ export function PortalInbox() {
       <section className="av3-portal-section">
         <div
           className="av3-section-label"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span>Daily routine</span>
           <span style={{ display: "flex", alignItems: "center", gap: 9, textTransform: "none", letterSpacing: 0 }}>
@@ -565,10 +565,10 @@ export function PortalInbox() {
       <section className="av3-portal-section">
         <div
           className="av3-section-label"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span>Your to-do list</span>
-          <div role="tablist" aria-label="To-do buckets" style={tabsWrap}>
+          <div role="tablist" aria-label="To-do buckets" className="av3-todo-tabscroll" style={tabsWrap}>
             {TASK_TABS.map((t) => {
               const active = taskTab === t.key;
               return (

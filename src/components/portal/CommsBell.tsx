@@ -126,7 +126,8 @@ export function CommsBell() {
           aria-label="Notifications and to-dos"
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: "fixed", top: coords.top, right: coords.right, zIndex: 1000, width: 340,
+            position: "fixed", top: coords.top, right: coords.right, zIndex: 1000,
+            width: "min(340px, calc(100vw - 16px))",
             background: "var(--av3-s1)", border: "1px solid var(--av3-line-strong)",
             borderRadius: "var(--av3-r-lg)", boxShadow: "var(--av3-sh-2)", overflow: "hidden",
             fontFamily: "var(--av3-ui)", color: "var(--av3-fg)",

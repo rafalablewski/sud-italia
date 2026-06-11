@@ -1626,6 +1626,12 @@
 /* Count pill on the to-do lifecycle tabs. */
 .av3-todo-tabcount { font-size: 10px; font-weight: 600; line-height: 1; color: var(--av3-muted); background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-pill); padding: 2px 6px; }
 .av3-todo-tabcount.is-active { color: var(--av3-fg); }
+/* Responsive header pill bar: on a narrow portal the tab group wraps under the
+   section title (the header is flex-wrap), and the pill bar itself scrolls
+   horizontally rather than overflowing the card — scrollbar hidden for polish. */
+.av3-todo-tabscroll { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.av3-todo-tabscroll::-webkit-scrollbar { display: none; }
+.av3-todo-tabscroll > button { flex: 0 0 auto; }
 
 /* PIN terminal — the shared-device keypad door (/terminal). Same canvas, column,
    bracket + lockup as the sign-in form; below the lockup it swaps the form for a
