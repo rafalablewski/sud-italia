@@ -3307,6 +3307,30 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
   });
 }
 
+/**
+ * Active AI model selection. Persists only the chosen model id (e.g.
+ * "claude-opus-4-7", "gemini-2.5-pro"); the catalog + validity live in
+ * src/lib/ai/models.ts so the store stays provider-agnostic. The AI gateway
+ * reads this at call time to route between Claude and Gemini. Empty = the
+ * caller's default (Claude).
+ */
+export interface AiModelSettings {
+  modelId: string | null;
+}
+
+export async function getAiModelSettings(): Promise<AiModelSettings> {
+  const saved = await readJSON<Partial<AiModelSettings>>("ai-model.json", {});
+  return { modelId: typeof saved.modelId === "string" && saved.modelId ? saved.modelId : null };
+}
+
+export async function updateAiModelSettings(modelId: string): Promise<AiModelSettings> {
+  return withLock("ai-model.json", async () => {
+    const next: AiModelSettings = { modelId };
+    await writeJSON("ai-model.json", next);
+    return next;
+  });
+}
+
 // --- Payment methods (admin/payments) ----------------------------------
 //
 // Which tender methods the storefront + QR ordering offer the guest, and

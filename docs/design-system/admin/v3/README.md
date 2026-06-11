@@ -207,6 +207,14 @@ plain controls are styled by class/element, no wrapper component needed:
   bare `<input type="checkbox">` looks right anywhere. Reserved for genuine
   multi-select; booleans use `Switch`. Radios keep their native shape with
   `accent-color: --av3-brand`.
+- **Chips** — `.av3-chip` is the bare pill (transparent, no border) used inside
+  an `.av3-chiprow` segmented track, where the track's own border frames the
+  group. For **free-standing multi-select choice chips** that aren't in a track
+  (e.g. the Comms "New daily routine" / announcement audience role + location
+  pickers), add `.av3-chip-outline`: it gives each option a `--av3-line` hairline
+  + `--av3-s1` surface so the choices read as distinct pills instead of bare
+  text, and `.is-active` fills `--av3-s3` and rings in `--av3-brand`. Reach for
+  the outline variant any time chips float directly on a card with no track.
 - **Focus rings** — keyboard `:focus-visible` on every interactive control
   (`.av3-btn`, `.av3-icon-btn`, `.av3-iconbtn-sm`, `.av3-chip`, `.av3-fchip`,
   `.av3-switch`, checkboxes) is a `2px solid --av3-brand` outline with offset;
@@ -470,11 +478,20 @@ auth canvas's signature lighting and the sign-in lockup:
   **human-in-the-loop tool approval** (mutating tools render a pending card with
   a Confirm & execute button; re-sends the turn with the approved tool id),
   executed/error tool cards with expandable input/output, recent-conversation
-  list, session-cost readout, and the API-key-not-configured empty state. CSS
+  list, session-cost readout, and the API-key-not-configured empty state. The
+  page is topped by `AiModelControl` (`AiModelControl.tsx`) — the global
+  Claude/Gemini model picker (`/api/admin/ai/model`, persisted to ai-model.json),
+  a `Card` with a provider-grouped `.av3-select` that saves on change. CSS
   §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
-- [x] Boardroom (`/admin/boardroom`) — the AI C-suite team (`BoardroomV3`,
-  with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Four persona
-  agents (CEO/COO/CFO/CMO) over the live store. **Tabs** (`.av3-filterchips`):
+- [x] Boardroom (`/admin/boardroom`) — the AI team (`BoardroomV3`,
+  with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Nine persona
+  agents over the live store: four C-suite (CEO/COO/CFO/CMO) who own the P&amp;L
+  KPIs + sit in the meeting round-robin, plus five chat-only specialist advisors
+  (Frontend Developer, Database Optimizer, UX/UI Designer &amp; Researcher, Market
+  Researcher, Chief Security Officer) defined in `src/lib/ai/boardroom/personas.ts`
+  (`ALL_BOARDROOM_PERSONA_IDS` drives the tabs + team cards; `BOARDROOM_PERSONA_ORDER`
+  stays the four-exec meeting roster). The model powering every chat/meeting is
+  switchable inline via `AiModelControl` (Overview tab + Ops Agent page). **Tabs** (`.av3-filterchips`):
   Overview — a calm, grouped layout: section labels (`SecLabel`) over two KPI
   rails (Sales &amp; growth · Cost &amp; quality) of bespoke tiles (`KpiTile`) that
   carry a single `StatusDot` + a five-section `InfoButton`, where only off-target

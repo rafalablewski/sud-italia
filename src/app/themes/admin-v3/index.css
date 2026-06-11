@@ -442,6 +442,13 @@
 .av3-chip:hover { color: var(--av3-fg); }
 .av3-chip:focus-visible { outline: 2px solid var(--av3-brand); outline-offset: 1px; }
 .av3-chip.is-active { background: var(--av3-s3); color: var(--av3-fg); box-shadow: inset 0 0 0 1px var(--av3-line-strong); }
+/* Outline variant — for free-standing multi-select choice chips (not inside an
+   .av3-chiprow segmented track). The hairline + surface give each option a
+   visible border so the choices read as distinct pills instead of bare text;
+   the active state fills + rings in brand. */
+.av3-chip-outline { background: var(--av3-s1); border: 1px solid var(--av3-line); }
+.av3-chip-outline:hover { border-color: var(--av3-line-strong); color: var(--av3-fg); }
+.av3-chip-outline.is-active { background: var(--av3-s3); color: var(--av3-fg); border-color: var(--av3-brand); box-shadow: inset 0 0 0 1px var(--av3-brand); }
 
 /* --------------------------------------------------------------------------
    5. KPI tile — the dense metric primitive

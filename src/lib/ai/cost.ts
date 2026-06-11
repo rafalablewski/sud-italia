@@ -28,6 +28,10 @@ const PRICING: Record<string, ModelPricing> = {
   "claude-opus-4-6": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreate: 6.25 },
   "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreate: 3.75 },
   "claude-haiku-4-5": { input: 1.0, output: 5.0, cacheRead: 0.1, cacheCreate: 1.25 },
+  // Google Gemini public pricing (≤200k context tier). No prompt cache rail,
+  // so cache columns mirror input — they're unused on the Gemini path.
+  "gemini-2.5-pro": { input: 1.25, output: 10.0, cacheRead: 1.25, cacheCreate: 1.25 },
+  "gemini-2.5-flash": { input: 0.3, output: 2.5, cacheRead: 0.3, cacheCreate: 0.3 },
 };
 
 const FALLBACK: ModelPricing = PRICING["claude-opus-4-7"];
