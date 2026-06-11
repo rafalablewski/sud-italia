@@ -488,7 +488,9 @@ auth canvas's signature lighting and the sign-in lockup:
   shell), `src/admin-v3/AgentPanel.tsx` (the dedicated per-agent page at
   `/admin/agent-hq/[id]`), `src/admin-v3/agent-hq/shared.tsx` (shared `Monogram`,
   `StatusDot`, `KpiTile`/`StatTile` built on the real `.av3-kpi`, and the
-  `ChatPanel`), and `src/admin-v3/AgentEditor.tsx` (the editor), with
+  `ChatPanel`), `src/admin-v3/agent-hq/AgentEditForm.tsx` (the full inline editor
+  — every field editable, Configure / Live-prompt / Timeline tabs + save/reset)
+  and `src/admin-v3/AgentEditor.tsx` (a thin `Dialog` wrapper around it), with
   `boardroom-explainers.ts` for the Rule #12 KPI explainers. (`/admin/boardroom`
   redirects here; the old `BoardroomV3.tsx` was deleted.) **Everything in a
   section loads in one pass** — Command center pulls a single aggregate
@@ -499,8 +501,9 @@ auth canvas's signature lighting and the sign-in lockup:
   (`KpiTile` with `StatusDot` + five-section `InfoButton`), then a 2-col card grid:
   org/reporting chart (rows link to the agent page), a 7-day activity bar chart,
   recent activity, upcoming work, daily digest and month-to-date cost; **Scorecards**
-  — one big readable card per agent (live owned KPIs + meta + authored targets,
-  "Open" → agent page); **Work** — operator-assigned board: an "Assign work" form,
+  — a master-detail editor: left third is the agent list, right two-thirds is the
+  full inline `AgentEditForm` (every field editable + the agent's live owned KPIs
+  + spend/schedule meta on top); **Work** — operator-assigned board: an "Assign work" form,
   agent drop-targets (HTML5 drag-to-assign), and Unassigned / Queued / Recent
   columns with per-item Run + delete (`…/work`, `…/work/[id]`, `…/work/[id]/run`);
   **Approvals** — the human-in-the-loop queue (Action / Mark done / Dismiss,
@@ -539,7 +542,8 @@ auth canvas's signature lighting and the sign-in lockup:
   persists per agent (`…/conversations/latest?persona=`, `HistoryView` flattening
   stored Anthropic blocks). Same human-in-the-loop tool-approval card flow + CSS
   (§17 `.av3-chat-*`, `.av3-tool-*`). Degrades to live-KPIs-only when
-  `ANTHROPIC_API_KEY` is unset. Nav: Intelligence section (icon `Bot`).
+  `ANTHROPIC_API_KEY` is unset — the read-only notice sits at the very bottom of
+  the page (below the section), not above the fold. Nav: Intelligence section (icon `Bot`).
 - [x] Alerts (`/admin/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/

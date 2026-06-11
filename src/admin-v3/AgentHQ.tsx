@@ -14,6 +14,7 @@ import {
   Monogram, StatusDot, KpiTile, StatTile, SecLabel, ChatPanel, RAIL,
   type BoardKpi, type KpiStatus,
 } from "./agent-hq/shared";
+import { AgentEditForm } from "./agent-hq/AgentEditForm";
 import { CADENCE_OPTIONS, type AgentConfig } from "@/lib/ai/boardroom/agent-config";
 
 /**
@@ -124,15 +125,6 @@ export function AgentHQ() {
         </div>
       </div>
 
-      {!gatewayConfigured && !loading && (
-        <Card padding="compact" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center" }}>
-          <AlertTriangle style={{ width: 18, height: 18, color: "var(--av3-warn)", flexShrink: 0 }} />
-          <div style={{ fontSize: 12.5, color: "var(--av3-muted)" }}>
-            KPIs &amp; configs are live, but agents are read-only until <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> is set.
-          </div>
-        </Card>
-      )}
-
       <div className="av3-filterchips" style={{ marginBottom: 16 }}>
         {SECTIONS.map((s) => (
           <button key={s.id} type="button" className={`av3-fchip ${section === s.id ? "is-active" : ""}`} onClick={() => setSection(s.id)}>{s.label}</button>
@@ -146,7 +138,7 @@ export function AgentHQ() {
       ) : section === "command" ? (
         <CommandCenter cmd={cmd} configById={configById} />
       ) : section === "scorecards" ? (
-        <Scorecards cmd={cmd} />
+        <Scorecards cmd={cmd} onConfigSaved={(u) => setCmd((prev) => (prev ? { ...prev, configs: prev.configs.map((c) => (c.id === u.id ? u : c)) } : prev))} />
       ) : section === "work" ? (
         <WorkBoard configs={cmd.configs} gatewayConfigured={gatewayConfigured} />
       ) : section === "approvals" ? (
@@ -155,6 +147,15 @@ export function AgentHQ() {
         <Inbox configs={cmd.configs} gatewayConfigured={gatewayConfigured} selectedId={inboxSel} onSelect={setInboxSel} seed={seed} onSeedConsumed={() => setSeed(null)} />
       ) : (
         <Reports configById={configById} gatewayConfigured={gatewayConfigured} onRan={load} />
+      )}
+
+      {!gatewayConfigured && !loading && (
+        <Card padding="compact" style={{ marginTop: 24, display: "flex", gap: 10, alignItems: "center" }}>
+          <AlertTriangle style={{ width: 18, height: 18, color: "var(--av3-warn)", flexShrink: 0 }} />
+          <div style={{ fontSize: 12.5, color: "var(--av3-muted)" }}>
+            KPIs &amp; configs are live, but agents are read-only until <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> is set.
+          </div>
+        </Card>
       )}
     </>
   );
@@ -332,38 +333,56 @@ function MonthlyCostCard({ stats }: { stats: FleetStats }) {
 
 /* ============================== Scorecards ============================= */
 
-function Scorecards({ cmd }: { cmd: CommandPayload }) {
+function Scorecards({ cmd, onConfigSaved }: { cmd: CommandPayload; onConfigSaved: (u: AgentConfig) => void }) {
+  const [selId, setSelId] = useState<string>(cmd.configs[0]?.id ?? "");
+  const toolCatalog = useMemo(() => {
+    const s = new Set<string>(); for (const c of cmd.configs) for (const t of c.toolNames) s.add(t); return [...s].sort();
+  }, [cmd.configs]);
+  const sel = cmd.configs.find((c) => c.id === selId) ?? cmd.configs[0] ?? null;
   const owned = (id: string) => cmd.snapshot.kpis.filter((k) => k.owner === id);
   const spend = (id: string) => cmd.agents.find((a) => a.id === id)?.spentTodayGrosze ?? 0;
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))", gap: 14 }}>
-      {cmd.configs.map((c) => {
-        const live = owned(c.id);
-        return (
-          <Card key={c.id}>
-            <CardHead
-              title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={c.initials} accentVar={c.accentVar} size={30} /> <span style={{ fontSize: 15 }}>{c.name}</span> <Badge tone={c.status === "active" ? "ok" : c.status === "paused" ? "warn" : "neutral"}>{c.status}</Badge></span>}
-              description={c.title}
-              actions={<Link href={`/admin/agent-hq/${c.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open <ArrowRight className="av3-btn-ico" /></Link>}
-            />
-            <CardBody style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {live.length > 0 ? <div style={RAIL}>{live.map((k) => <KpiTile key={k.id} k={k} />)}</div>
-                : <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Advisory agent — no live P&amp;L metric owned.</div>}
-              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                <Meta label="Model" value={c.modelId ? c.modelId : "Global"} />
-                <Meta label="Authority" value={c.authority} />
-                <Meta label="Spend today" value={zl(spend(c.id))} />
-                <Meta label="Schedule" value={CADENCE_OPTIONS.find((o) => o.value === c.schedule.cadence)?.label ?? c.schedule.cadence} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, marginBottom: 6 }}>Targets it answers for</div>
-                {c.kpis.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>No targets set.</div> :
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--av3-muted)", lineHeight: 1.7 }}>{c.kpis.map((k, i) => <li key={i}>{k}</li>)}</ul>}
-              </div>
-            </CardBody>
-          </Card>
-        );
-      })}
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 14, alignItems: "start" }}>
+      {/* Left 1/3 — choose an agent */}
+      <Card>
+        <CardHead title="Agents" description="Pick one to edit" />
+        <CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {cmd.configs.map((c) => (
+            <button key={c.id} type="button" className={`av3-conv-row ${selId === c.id ? "is-active" : ""}`} onClick={() => setSelId(c.id)}>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                <Monogram initials={c.initials} accentVar={c.accentVar} size={28} />
+                <span style={{ minWidth: 0, textAlign: "left" }}>
+                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 600 }}>{c.name}</span>
+                  <span style={{ display: "block", fontSize: 11, color: "var(--av3-subtle)" }}>{c.title.split("—")[0].trim()}</span>
+                </span>
+              </span>
+              <Badge tone={c.status === "active" ? "ok" : c.status === "paused" ? "warn" : "neutral"}>{c.status}</Badge>
+            </button>
+          ))}
+        </CardBody>
+      </Card>
+
+      {/* Right 2/3 — full editor for the chosen agent */}
+      {sel && (
+        <Card>
+          <CardHead
+            title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={sel.initials} accentVar={sel.accentVar} size={30} /> <span style={{ fontSize: 15 }}>Edit · {sel.name}</span></span>}
+            description={sel.title}
+            actions={<Link href={`/admin/agent-hq/${sel.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open panel <ArrowRight className="av3-btn-ico" /></Link>}
+          />
+          <CardBody>
+            {(() => { const live = owned(sel.id); return live.length > 0 ? (
+              <div style={{ ...RAIL, marginBottom: 4 }}>{live.map((k) => <KpiTile key={k.id} k={k} />)}</div>
+            ) : null; })()}
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", margin: "12px 0 18px" }}>
+              <Meta label="Spend today" value={zl(spend(sel.id))} />
+              <Meta label="Schedule" value={CADENCE_OPTIONS.find((o) => o.value === sel.schedule.cadence)?.label ?? sel.schedule.cadence} />
+            </div>
+            <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog} onSaved={onConfigSaved} />
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
