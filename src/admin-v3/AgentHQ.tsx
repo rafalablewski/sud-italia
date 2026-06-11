@@ -14,7 +14,7 @@ import {
   type BoardKpi, type KpiStatus,
 } from "./agent-hq/shared";
 import { AgentEditForm } from "./agent-hq/AgentEditForm";
-import { type AgentConfig, type AgentKpi } from "@/lib/ai/boardroom/agent-config";
+import { buildLiveSystemPrompt, type AgentConfig, type AgentKpi } from "@/lib/ai/boardroom/agent-config";
 
 /**
  * Agent HQ — the operator console for the AI agent fleet. Six sections:
@@ -337,24 +337,75 @@ function MonthlyCostCard({ stats }: { stats: FleetStats }) {
   );
 }
 
-/* ============================== Scorecards ============================= */
+/* =============================== Agents (Console) ===================== */
+
+interface ScData {
+  stats: { runs7d: number; cost7dGrosze: number; successRate7d: number | null; lastRunAt: string | null };
+  kpis: AgentKpi[];
+  actuals: Record<string, { value: string; at: string; by: string }>;
+}
+type ConsoleTab = "overview" | "charter" | "scorecard" | "timeline" | "chat";
 
 function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initialId: string | null; onConfigSaved: (u: AgentConfig) => void }) {
   const [selId, setSelId] = useState<string>(initialId ?? cmd.configs[0]?.id ?? "");
-  useEffect(() => { if (initialId) setSelId(initialId); }, [initialId]);
+  const [tab, setTab] = useState<ConsoleTab>("overview");
+  const [editing, setEditing] = useState(false);
+  const [scMap, setScMap] = useState<Record<string, ScData> | null>(null);
+  const [tl, setTl] = useState<AgentEvent[] | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => { if (initialId) { setSelId(initialId); setTab("overview"); setEditing(false); } }, [initialId]);
+
   const toolCatalog = useMemo(() => {
     const s = new Set<string>(); for (const c of cmd.configs) for (const t of c.toolNames) s.add(t); return [...s].sort();
   }, [cmd.configs]);
   const sel = cmd.configs.find((c) => c.id === selId) ?? cmd.configs[0] ?? null;
 
+  // Per-agent stats + KPI actuals, one fetch for the whole console.
+  useEffect(() => {
+    fetch("/api/admin/ai/boardroom/scorecards").then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => {
+      const m: Record<string, ScData> = {};
+      for (const s of (res?.scorecards ?? [])) m[s.id] = { stats: s.stats, kpis: s.kpis, actuals: s.actuals };
+      setScMap(m);
+    });
+  }, []);
+
+  // Timeline for the selected agent.
+  useEffect(() => {
+    if (!sel) return;
+    setTl(null);
+    fetch(`/api/admin/ai/boardroom/agents/${sel.id}/timeline`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setTl(res?.events ?? []));
+  }, [sel?.id]);
+
+  const pick = (id: string) => { setSelId(id); setTab("overview"); setEditing(false); };
+
+  const logActual = useCallback(async (agentId: string, kpiId: string) => {
+    const key = `${agentId}::${kpiId}`;
+    const value = (drafts[key] ?? "").trim();
+    if (!value) return;
+    setBusy(key);
+    const res = await fetch("/api/admin/ai/boardroom/scorecards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId, kpi: kpiId, value }) })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setBusy(null);
+    if (res?.actual) {
+      setScMap((m) => m ? { ...m, [agentId]: { ...m[agentId], actuals: { ...m[agentId].actuals, [kpiId]: { value: res.actual.value, at: res.actual.at, by: res.actual.by } } } } : m);
+      setDrafts((d) => ({ ...d, [key]: "" }));
+    }
+  }, [drafts]);
+
+  const ownedKpis = sel ? cmd.snapshot.kpis.filter((k) => k.owner === sel.id) : [];
+  const sc = sel ? scMap?.[sel.id] : undefined;
+  const TABS: ConsoleTab[] = ["overview", "charter", "scorecard", "timeline", "chat"];
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 14, alignItems: "start" }}>
-      {/* Left 1/3 — choose an agent */}
-      <Card>
-        <CardHead title="Agents" description="Pick one to edit" />
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 268px) minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
+      {/* Left — agent list */}
+      <Card style={{ position: "sticky", top: 14 }}>
+        <CardHead title="Agents" description="Pick one to open" />
         <CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {cmd.configs.map((c) => (
-            <button key={c.id} type="button" className={`av3-conv-row ${selId === c.id ? "is-active" : ""}`} onClick={() => setSelId(c.id)}>
+            <button key={c.id} type="button" className={`av3-conv-row ${selId === c.id ? "is-active" : ""}`} onClick={() => pick(c.id)}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                 <Monogram initials={c.initials} accentVar={c.accentVar} size={28} />
                 <span style={{ minWidth: 0, textAlign: "left" }}>
@@ -368,20 +419,167 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
         </CardBody>
       </Card>
 
-      {/* Right 2/3 — full editor for the chosen agent */}
+      {/* Right — working panel */}
       {sel && (
         <Card>
           <CardHead
-            title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={sel.initials} accentVar={sel.accentVar} size={30} /> <span style={{ fontSize: 15 }}>Edit · {sel.name}</span></span>}
-            description={sel.title}
+            title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={sel.initials} accentVar={sel.accentVar} size={32} /> <span style={{ fontSize: 16 }}>{sel.name}</span> <Badge tone={sel.status === "active" ? "ok" : sel.status === "paused" ? "warn" : "neutral"}>{sel.status}</Badge></span>}
+            description={`${sel.title} · ${sel.modelId ?? "global model"} · ${sel.authority} · effort ${sel.effort}`}
+            actions={<Button variant={editing ? "secondary" : "primary"} size="sm" onClick={() => setEditing((e) => !e)}>{editing ? "Close editor" : "Edit"}</Button>}
           />
+          {!editing && (
+            <div style={{ padding: "12px 16px 0" }}>
+              <div className="av3-filterchips">
+                {TABS.map((t) => <button key={t} type="button" className={`av3-fchip ${tab === t ? "is-active" : ""}`} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>)}
+              </div>
+            </div>
+          )}
           <CardBody>
-            <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog} onSaved={onConfigSaved} />
+            {editing ? (
+              <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog}
+                onSaved={(u) => { onConfigSaved(u); setEditing(false); }} onClose={() => setEditing(false)} />
+            ) : tab === "overview" ? (
+              <ConsoleOverview sc={sc} ownedKpis={ownedKpis} tl={tl} />
+            ) : tab === "charter" ? (
+              <ConsoleCharter sel={sel} onPick={pick} configs={cmd.configs} />
+            ) : tab === "scorecard" ? (
+              <ConsoleScorecard sel={sel} sc={sc} drafts={drafts} setDrafts={setDrafts} busy={busy} onLog={logActual} />
+            ) : tab === "timeline" ? (
+              tl === null ? <SkeletonRows rows={4} /> : <TimelineList events={tl} />
+            ) : (
+              <ChatPanel personaId={sel.id} name={sel.name} suggestion={sel.mandate} gatewayConfigured={cmd.gatewayConfigured} />
+            )}
           </CardBody>
         </Card>
       )}
     </div>
   );
+}
+
+function successBar(sr: number | null) {
+  return (
+    <div style={{ height: 6, borderRadius: 999, background: "var(--av3-s3)", overflow: "hidden", marginTop: 7 }}>
+      <div style={{ width: `${sr ?? 0}%`, height: "100%", background: sr == null ? "transparent" : sr >= 90 ? "var(--av3-ok)" : sr >= 70 ? "var(--av3-warn)" : "var(--av3-bad)" }} />
+    </div>
+  );
+}
+function SuccessRow({ sr }: { sr: number | null }) {
+  return (<>
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-muted)", fontWeight: 600 }}>
+      <span>Success rate · 7d</span><span style={{ color: sr == null ? "var(--av3-subtle)" : "var(--av3-fg)" }}>{sr == null ? "no runs" : `${sr}%`}</span>
+    </div>{successBar(sr)}
+  </>);
+}
+function statRail(sc: ScData | undefined) {
+  return (
+    <div style={{ ...RAIL, gridTemplateColumns: "repeat(4, 1fr)" }}>
+      <StatTile label="Runs 7d" value={`${sc?.stats.runs7d ?? 0}`} accent="--av3-c3" />
+      <StatTile label="Cost 7d" value={zl(sc?.stats.cost7dGrosze ?? 0)} accent="--av3-c5" />
+      <StatTile label="Last run" value={timeAgo(sc?.stats.lastRunAt ?? null)} accent="--av3-c2" />
+      <StatTile label="Success 7d" value={sc?.stats.successRate7d == null ? "—" : `${sc.stats.successRate7d}%`} accent="--av3-ok" />
+    </div>
+  );
+}
+
+function ConsoleOverview({ sc, ownedKpis, tl }: { sc: ScData | undefined; ownedKpis: BoardKpi[]; tl: AgentEvent[] | null }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {statRail(sc)}
+      <div><SuccessRow sr={sc?.stats.successRate7d ?? null} /></div>
+      <div>
+        <SecLabel first>KPIs it answers for</SecLabel>
+        {ownedKpis.length > 0 ? <div style={RAIL}>{ownedKpis.map((k) => <KpiTile key={k.id} k={k} />)}</div>
+          : <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Advisory agent — no owned P&amp;L metric. Targets + actuals live in the Scorecard tab.</div>}
+      </div>
+      <div>
+        <SecLabel>Recent</SecLabel>
+        {tl === null ? <SkeletonRows rows={3} /> : tl.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No activity yet.</div> : <TimelineList events={tl.slice(0, 5)} />}
+      </div>
+    </div>
+  );
+}
+
+function CharterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 13, lineHeight: 1.55 }}>{children}</div>
+    </div>
+  );
+}
+
+function ConsoleCharter({ sel, onPick, configs }: { sel: AgentConfig; onPick: (id: string) => void; configs: AgentConfig[] }) {
+  const Row = CharterRow;
+  const collabs = sel.collaborators.map((id) => configs.find((c) => c.id === id)).filter(Boolean) as AgentConfig[];
+  return (
+    <div>
+      <Row label="Mandate">{sel.mandate}</Row>
+      <Row label="Responsibilities"><ul style={{ margin: 0, paddingLeft: 16 }}>{sel.responsibilities.map((r, i) => <li key={i}>{r}</li>)}</ul></Row>
+      <Row label="KPIs"><ul style={{ margin: 0, paddingLeft: 16 }}>{sel.kpis.map((k) => <li key={k.id}>{k.title}{k.target ? ` — target ${k.target}` : ""}</li>)}</ul></Row>
+      <Row label="Tone & communication">{sel.tone}</Row>
+      <Row label="Guardrails & ethics">{sel.guardrails}</Row>
+      <Row label="Escalation threshold">{sel.escalationThreshold}</Row>
+      <Row label="Tools"><span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{sel.toolNames.map((t) => <span key={t} className="av3-badge av3-badge-neutral" style={{ fontFamily: "var(--av3-mono)" }}>{t}</span>)}</span></Row>
+      {collabs.length > 0 && (
+        <Row label="Collaborators"><span style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{collabs.map((c) => (
+          <button key={c.id} type="button" className="av3-conv-row" style={{ width: "auto", padding: "5px 9px", display: "inline-flex", gap: 7 }} onClick={() => onPick(c.id)}>
+            <Monogram initials={c.initials} accentVar={c.accentVar} size={20} /><span style={{ fontSize: 12.5 }}>{c.name}</span>
+          </button>))}</span></Row>
+      )}
+      <details>
+        <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--av3-subtle)" }}>Live system prompt — exactly what it runs on</summary>
+        <pre style={{ whiteSpace: "pre-wrap", fontSize: 11.5, lineHeight: 1.55, fontFamily: "var(--av3-mono)", background: "var(--av3-s2)", border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-md)", padding: 12, marginTop: 8, maxHeight: 340, overflow: "auto" }}>{buildLiveSystemPrompt(sel)}</pre>
+      </details>
+    </div>
+  );
+}
+
+function ConsoleScorecard({ sel, sc, drafts, setDrafts, busy, onLog }: {
+  sel: AgentConfig; sc: ScData | undefined; drafts: Record<string, string>;
+  setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>; busy: string | null; onLog: (a: string, k: string) => void;
+}) {
+  const kpis = sc?.kpis ?? sel.kpis;
+  return (
+    <div>
+      <SuccessRow sr={sc?.stats.successRate7d ?? null} />
+      <div style={{ marginTop: 14 }}>{statRail(sc)}</div>
+      <SecLabel>KPIs — target vs actual</SecLabel>
+      {kpis.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No KPI targets set — add them in the editor.</div> :
+        kpis.map((kpi, i) => {
+          const key = `${sel.id}::${kpi.id}`;
+          const actual = sc?.actuals[kpi.id];
+          return (
+            <div key={kpi.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--av3-line)" : "none" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{kpi.title}{kpi.target ? <span style={{ fontWeight: 400, color: "var(--av3-subtle)" }}>  ·  target {kpi.target}</span> : null}</div>
+              <div style={{ fontSize: 12, color: actual ? "var(--av3-fg)" : "var(--av3-subtle)", marginTop: 3 }}>
+                {actual ? <>actual: <span style={{ fontFamily: "var(--av3-mono)" }}>{actual.value}</span> <span style={{ color: "var(--av3-subtle)" }}>· {timeAgo(actual.at)} · {actual.by}</span></> : "no actual logged"}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                <input className="av3-input" placeholder="log actual…" value={drafts[key] ?? ""} onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onLog(sel.id, kpi.id); } }} style={{ flex: 1 }} />
+                <Button variant="secondary" size="sm" loading={busy === key} disabled={!(drafts[key] ?? "").trim()} onClick={() => onLog(sel.id, kpi.id)}>Log</Button>
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+function TimelineList({ events }: { events: AgentEvent[] }) {
+  if (events.length === 0) return <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No history yet.</div>;
+  return (<>
+    {events.map((e, i) => (
+      <div key={e.id} style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: i < events.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+        <Badge tone={TONE[e.type] ?? "neutral"}>{e.type}</Badge>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5 }}>{e.summary}{typeof e.costGrosze === "number" && e.costGrosze > 0 ? ` · ${zl(e.costGrosze)}` : ""}</div>
+          {e.detail && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 2 }}>{e.detail}</div>}
+          <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 3, fontFamily: "var(--av3-mono)" }}>{new Date(e.at).toLocaleString("pl-PL")} · {e.actor}</div>
+        </div>
+      </div>
+    ))}
+  </>);
 }
 
 /* ============================== Scorecards ============================= */

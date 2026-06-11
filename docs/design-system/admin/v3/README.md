@@ -499,10 +499,15 @@ auth canvas's signature lighting and the sign-in lockup:
   agents · runs today · success rate 7d · cost 7d · scheduled), the
   Sales &amp; growth + Cost &amp; quality KPI rails
   (`KpiTile` with `StatusDot` + five-section `InfoButton`), then a 2-col card grid:
-  org/reporting chart (click an agent → Agents editor), a 7-day activity bar chart,
+  org/reporting chart (click an agent → Agents console), a 7-day activity bar chart,
   recent activity, upcoming work, daily digest and month-to-date cost; **Agents**
-  — a master-detail editor: left third is the agent list, right two-thirds is the
-  full inline `AgentEditForm` (every field editable); **Scorecards** — a per-agent
+  — a master-detail **console**: left the agent list, right a working panel with
+  Overview / Charter / Scorecard / Timeline / Chat sub-tabs and an inline **Edit**
+  toggle that swaps in the full `AgentEditForm`. Overview = run/cost/last-run/success
+  `StatTile`s + owned KPIs + recent activity; Charter = the read view of every
+  prompt field + the generated live system prompt; Scorecard = success bar + tiles
+  + KPI target-vs-actual logging; Timeline = the agent's events; Chat = the
+  per-agent `ChatPanel`. **Scorecards** — a per-agent
   scorecard card (status + model + authority badge, a 7d success-rate bar,
   runs 7d / cost 7d / last-run `StatTile`s, and the agent's KPIs as
   **target-vs-actual** where operators log an actual value per KPI), over
