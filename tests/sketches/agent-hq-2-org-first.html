@@ -1,0 +1,123 @@
+<!doctype html><html lang="en" data-admin-theme="dark"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/><title>Agent HQ — Org Chart First</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+  --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+  --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+  --av3-brand:#c2384f; --av3-brand-soft:color-mix(in oklab,var(--av3-brand) 18%,var(--av3-s1));
+  --av3-brand-line:color-mix(in oklab,var(--av3-brand) 42%,transparent); --av3-platinum:#cbb48a;
+  --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+  --av3-ok-soft:color-mix(in oklab,var(--av3-ok) 16%,var(--av3-s1));
+  --av3-warn-soft:color-mix(in oklab,var(--av3-warn) 16%,var(--av3-s1));
+  --av3-bad-soft:color-mix(in oklab,var(--av3-bad) 16%,var(--av3-s1));
+  --av3-info-soft:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1));
+  --av3-brand-soft2:color-mix(in oklab,var(--av3-brand) 12%,var(--av3-s1));
+  --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6; --av3-c4:#34b27b;
+  --av3-c5:#d3884f; --av3-c6:#9b7ec0; --av3-c7:#e08aa2; --av3-c8:#80ac6e;
+  --av3-r-sm:5px; --av3-r-md:8px; --av3-r-lg:11px; --av3-r-pill:999px;
+  --av3-ui:"Inter",system-ui,sans-serif; --av3-display:"Fraunces",Georgia,serif;
+  --av3-mono:"JetBrains Mono",ui-monospace,monospace;
+  --av3-sh-2:0 8px 28px -8px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--av3-bg);color:var(--av3-fg);font-family:var(--av3-ui);
+  -webkit-font-smoothing:antialiased;padding:22px clamp(14px,3vw,40px) 60px;}
+h1{font-family:var(--av3-display);font-size:21px;font-weight:600;letter-spacing:-.01em;margin:0}
+a{color:inherit}
+.note{font-size:11.5px;color:var(--av3-subtle);background:var(--av3-s2);border:1px dashed var(--av3-line-strong);
+  border-radius:var(--av3-r-md);padding:8px 12px;margin-bottom:16px}
+.note b{color:var(--av3-platinum)}
+.head{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+.glyph{width:34px;height:34px;border-radius:var(--av3-r-md);display:grid;place-items:center;
+  background:var(--av3-brand-soft);color:var(--av3-brand);font-family:var(--av3-display);font-weight:600}
+.sub{font-size:12.5px;color:var(--av3-muted)}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--av3-subtle);font-weight:600;margin:22px 2px 10px}
+.eyebrow.platinum{color:var(--av3-platinum);font-weight:700}
+.eyebrow:first-child{margin-top:0}
+
+.card{background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg)}
+.card.pad{padding:14px}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:13px 14px;border-bottom:1px solid var(--av3-line)}
+.ctitle{font-size:13px;font-weight:600}
+.cdesc{font-size:11.5px;color:var(--av3-muted);margin-top:1px}
+.cbody{padding:14px}
+
+.chips{display:inline-flex;gap:2px;padding:2px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md);flex-wrap:wrap}
+.chip{appearance:none;border:0;background:none;color:var(--av3-muted);font:inherit;font-size:12px;font-weight:500;
+  padding:5px 11px;border-radius:6px;cursor:pointer}
+.chip:hover{color:var(--av3-fg)}
+.chip.on{background:var(--av3-s3);color:var(--av3-fg);box-shadow:inset 0 0 0 1px var(--av3-line-strong)}
+
+.btn{appearance:none;font:inherit;font-size:12px;font-weight:500;height:30px;padding:0 11px;border-radius:var(--av3-r-md);
+  border:1px solid var(--av3-line-strong);background:var(--av3-s2);color:var(--av3-fg);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--av3-s3)}
+.btn.pri{background:var(--av3-brand);border-color:var(--av3-brand);color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--av3-muted)}
+.btn.sm{height:26px;padding:0 9px;font-size:11.5px}
+
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--av3-r-pill);background:var(--av3-s3);color:var(--av3-muted)}
+.badge.ok{background:var(--av3-ok-soft);color:var(--av3-ok)}
+.badge.warn{background:var(--av3-warn-soft);color:var(--av3-warn)}
+.badge.bad{background:var(--av3-bad-soft);color:color-mix(in oklab,var(--av3-bad) 80%,var(--av3-fg))}
+.badge.info{background:var(--av3-info-soft);color:var(--av3-info)}
+.badge.brand{background:var(--av3-brand-soft);color:color-mix(in oklab,var(--av3-brand) 70%,var(--av3-fg))}
+
+.dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.dot.g{background:var(--av3-ok)} .dot.y{background:var(--av3-warn)} .dot.r{background:var(--av3-bad)}
+.dot.n{background:transparent;border:1.5px solid var(--av3-subtle)}
+
+.mono{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--av3-r-md);flex:0 0 auto;
+  font-family:var(--av3-mono);font-weight:700;letter-spacing:.2px}
+
+.kpi{position:relative;background:var(--av3-s1);border:1px solid var(--av3-line);border-radius:var(--av3-r-lg);
+  padding:13px 14px 12px;overflow:hidden;transition:transform .12s ease,border-color .12s ease}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--kpiac,var(--av3-subtle))}
+.kpi:hover{transform:translateY(-1px);border-color:var(--av3-line-strong)}
+.kpi .l{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--av3-muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-family:var(--av3-mono);font-size:23px;font-weight:500;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.05;margin:9px 0 5px}
+.kpi .f{font-size:11px;color:var(--av3-subtle)}
+.rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+  padding:8px 9px;border:0;background:none;border-radius:var(--av3-r-sm);color:var(--av3-fg);font:inherit;font-size:13px;cursor:pointer}
+.row:hover{background:var(--av3-hover)} .row.on{background:var(--av3-s3)}
+.muted{color:var(--av3-subtle)} .mut{color:var(--av3-muted)}
+.barwrap{height:6px;border-radius:999px;background:var(--av3-s3);overflow:hidden}
+.barwrap>span{display:block;height:100%}
+input,select,textarea{font-family:var(--av3-ui)}
+.inp{width:100%;background:var(--av3-s2);border:1px solid var(--av3-line);color:var(--av3-fg);border-radius:var(--av3-r-md);padding:8px 10px;font-size:12.5px}
+.og{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+   @media(max-width:1000px){.og{grid-template-columns:1fr}}
+   .tree ul{list-style:none;margin:0;padding-left:18px;position:relative}
+   .tree ul.root{padding-left:0}
+   .tree li{position:relative;padding:5px 0}
+   .tree ul:not(.root)>li::before{content:"";position:absolute;left:-10px;top:18px;width:10px;height:1px;background:var(--av3-line-strong)}
+   .tree ul:not(.root)::before{content:"";position:absolute;left:0;top:-6px;bottom:14px;width:1px;background:var(--av3-line-strong)}
+   .tnode{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--av3-s2);border:1px solid var(--av3-line);border-radius:var(--av3-r-md)}
+   .tnode.sel{box-shadow:inset 0 0 0 1px var(--av3-brand-line);background:var(--av3-brand-soft2)}</style></head>
+<body class="av3-root">
+<div class="note">Agent HQ redesign — <b>Org Chart First</b>. Hierarchy is the home. The reporting tree is the primary navigator; selecting a node opens its scorecard + charter beside it. · real av3 tokens + fonts (dark theme). Static mockup; data illustrative.</div>
+<div class="head"><span class="glyph">HQ</span><div><h1>Agent HQ</h1><div class="sub">AI agent fleet · All locations</div></div>
+<div style="margin-left:auto" class="chips"><button class="chip on">Command</button><button class="chip ">Agents</button><button class="chip ">Scorecards</button><button class="chip ">Work</button><button class="chip ">Approvals</button><button class="chip ">Inbox</button><button class="chip ">Reports</button><button class="chip ">Settings</button></div></div>
+<div class="og">
+    <div class="card pad">
+      <div class="eyebrow" style="margin-top:0">Reporting line</div>
+      <div class="tree">
+        <ul class="root"><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c4) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c4) 16%,transparent);color:var(--av3-c4)">EO</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">CEO</div><div class="muted" style="font-size:10.5px">Strategy & vision</div></div><span class="dot y" style="margin-left:auto"></span></div><ul><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c3) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c3) 16%,transparent);color:var(--av3-c3)">OO</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">COO</div><div class="muted" style="font-size:10.5px">Operations</div></div><span class="dot y" style="margin-left:auto"></span></div><ul><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c2) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c2) 16%,transparent);color:var(--av3-c2)">DB</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">Database Optimizer</div><div class="muted" style="font-size:10.5px">Data & perf</div></div><span class="dot n" style="margin-left:auto"></span></div></li><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c8) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c8) 16%,transparent);color:var(--av3-c8)">CSO</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">CSO</div><div class="muted" style="font-size:10.5px">Security & compliance</div></div><span class="dot n" style="margin-left:auto"></span></div></li></ul></li><li><div class="tnode sel" style="border-color:color-mix(in oklab,var(--av3-ok) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">FO</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">CFO</div><div class="muted" style="font-size:10.5px">Finance</div></div><span class="dot r" style="margin-left:auto"></span></div></li><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c5) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c5) 16%,transparent);color:var(--av3-c5)">MO</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">CMO</div><div class="muted" style="font-size:10.5px">Marketing</div></div><span class="dot g" style="margin-left:auto"></span></div><ul><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c1) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c1) 16%,transparent);color:var(--av3-c1)">FE</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">Frontend Dev</div><div class="muted" style="font-size:10.5px">Ordering UX</div></div><span class="dot n" style="margin-left:auto"></span></div></li><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c6) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c6) 16%,transparent);color:var(--av3-c6)">UX</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">UX/UI Designer</div><div class="muted" style="font-size:10.5px">Design & research</div></div><span class="dot n" style="margin-left:auto"></span></div></li><li><div class="tnode " style="border-color:color-mix(in oklab,var(--av3-c7) 38%,var(--av3-line))"><span class="mono" style="width:26px;height:26px;font-size:10px;background:color-mix(in oklab,var(--av3-c7) 16%,transparent);color:var(--av3-c7)">MKT</span><div style="min-width:0"><div style="font-size:12.5px;font-weight:600">Market Researcher</div><div class="muted" style="font-size:10.5px">Demand & competition</div></div><span class="dot n" style="margin-left:auto"></span></div></li></ul></li></ul></li></ul>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card"><div class="chead"><div style="display:flex;align-items:center;gap:9px"><span class="mono" style="width:30px;height:30px;font-size:11px;background:color-mix(in oklab,var(--av3-ok) 16%,transparent);color:var(--av3-ok)">FO</span><div><div class="ctitle" style="font-size:15px">CFO</div><div class="cdesc">Financial Guardian · reports to CEO</div></div></div><span class="badge brand">operator</span></div>
+        <div class="cbody">
+          <div style="display:flex;justify-content:space-between;font-size:11px" class="muted"><span style="text-transform:uppercase;letter-spacing:.5px">Success rate · 7d</span><span style="color:var(--av3-fg)">88%</span></div><div class="barwrap" style="margin-top:7px"><span style="width:88%;background:var(--av3-warn)"></span></div>
+          <div class="rail" style="grid-template-columns:repeat(3,1fr);margin-top:14px"><div class="kpi" style="--kpiac:var(--av3-c3)"><div class="l">Runs 7d</div><div class="v">18</div></div><div class="kpi" style="--kpiac:var(--av3-c5)"><div class="l">Cost 7d</div><div class="v">13.20 zł</div></div><div class="kpi" style="--kpiac:var(--av3-c2)"><div class="l">Last run</div><div class="v">2h ago</div></div></div>
+          <div class="eyebrow platinum">KPIs — target vs actual</div>
+          <div style="padding:9px 0;border-top:1px solid var(--av3-line)"><div style="font-size:13px;font-weight:600">Food cost % <span class="muted" style="font-weight:400">· target 28–32% healthy</span></div><div style="font-size:12px;margin-top:3px" class="">actual: <span style="font-family:var(--av3-mono)">36.1%</span></div></div><div style="padding:9px 0;border-top:1px solid var(--av3-line)"><div style="font-size:13px;font-weight:600">Prime cost % <span class="muted" style="font-weight:400">· target < 60%</span></div><div style="font-size:12px;margin-top:3px" class="">actual: <span style="font-family:var(--av3-mono)">67.5%</span></div></div><div style="padding:9px 0;border-top:1px solid var(--av3-line)"><div style="font-size:13px;font-weight:600">Average ticket <span class="muted" style="font-weight:400">· target price/mix-led</span></div><div style="font-size:12px;margin-top:3px" class="">actual: <span style="font-family:var(--av3-mono)">58.40 zł</span></div></div>
+        </div></div>
+      <div class="card"><div class="chead"><div class="ctitle">Charter</div><button class="btn ghost sm">✎ Edit</button></div><div class="cbody" style="font-size:12.5px;line-height:1.55"><div class="muted" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px;margin-bottom:3px">Mandate</div>Guard the margin — translate operations into money and money into decisions, and never accept a headline number without the ratio behind it.</div></div>
+    </div>
+  </div>
+</body></html>
