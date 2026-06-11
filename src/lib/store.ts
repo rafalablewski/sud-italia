@@ -32,6 +32,15 @@ import {
   mergeSurveysWithDefaults,
 } from "@/lib/surveys";
 import { withDistributedLock } from "@/lib/locks";
+import {
+  ALL_BOARDROOM_PERSONA_IDS,
+  type BoardroomPersonaId,
+} from "@/lib/ai/boardroom/personas";
+import {
+  mergeAgentConfig,
+  type AgentConfig,
+  type AgentConfigPatch,
+} from "@/lib/ai/boardroom/agent-config";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
@@ -8659,6 +8668,108 @@ export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurred
   // Normalized audit_log has no trim — keep forever.
   await dualWriteAuditEntry(entry);
   return entry;
+}
+
+// --- Agent HQ: editable agent configs + timeline -----------------------------
+//
+// Agent HQ turns the nine hardcoded Boardroom personas into EDITABLE agents.
+// The store keeps only the operator's overrides (a per-agent patch over the
+// seed defaults in src/lib/ai/boardroom/agent-config.ts) so an un-edited agent
+// always tracks the latest seed, and a saved override survives a seed change.
+// The runtime (agent loop + meetings) reads the resolved config and runs on the
+// generated LIVE SYSTEM PROMPT — edits take effect immediately (Rule #8).
+
+type AgentConfigOverrides = Record<string, AgentConfigPatch>;
+
+export async function getAgentConfigOverrides(): Promise<AgentConfigOverrides> {
+  return readJSON<AgentConfigOverrides>("agent-configs.json", {});
+}
+
+/** One agent, defaults ⊕ saved override, fully resolved. */
+export async function getResolvedAgentConfig(id: BoardroomPersonaId): Promise<AgentConfig> {
+  const overrides = await getAgentConfigOverrides();
+  return mergeAgentConfig(id, overrides[id]);
+}
+
+/** Every agent, resolved, in display order. */
+export async function getResolvedAgentConfigs(): Promise<AgentConfig[]> {
+  const overrides = await getAgentConfigOverrides();
+  return ALL_BOARDROOM_PERSONA_IDS.map((id) => mergeAgentConfig(id, overrides[id]));
+}
+
+/**
+ * Merge an editor patch into the agent's stored override and return the newly
+ * resolved config. Persists immediately (Rule #7) under a lock.
+ */
+export async function saveAgentConfigOverride(
+  id: BoardroomPersonaId,
+  patch: AgentConfigPatch,
+): Promise<AgentConfig> {
+  return withLock("agent-configs.json", async () => {
+    const all = await readJSON<AgentConfigOverrides>("agent-configs.json", {});
+    all[id] = { ...(all[id] ?? {}), ...patch };
+    await writeJSON("agent-configs.json", all);
+    return mergeAgentConfig(id, all[id]);
+  });
+}
+
+export type AgentEventType = "run" | "edit" | "escalation" | "approval" | "schedule" | "note";
+
+export interface AgentEvent {
+  id: string;
+  agentId: string;
+  type: AgentEventType;
+  /** One-line headline for the timeline. */
+  summary: string;
+  /** Optional longer body (a log excerpt, a diff note). */
+  detail?: string;
+  /** Spend attributed to this event, in grosze (run events). */
+  costGrosze?: number;
+  actor: string;
+  at: string;
+}
+
+const AGENT_EVENTS_MAX = 800;
+
+export async function appendAgentEvent(
+  input: Omit<AgentEvent, "id" | "at"> & { at?: string },
+): Promise<AgentEvent> {
+  const event: AgentEvent = {
+    id: `ae-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    agentId: input.agentId,
+    type: input.type,
+    summary: input.summary,
+    detail: input.detail,
+    costGrosze: input.costGrosze,
+    actor: input.actor,
+    at: input.at ?? new Date().toISOString(),
+  };
+  await withLock("agent-events.json", async () => {
+    const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+    list.push(event);
+    const trimmed = list.length > AGENT_EVENTS_MAX ? list.slice(list.length - AGENT_EVENTS_MAX) : list;
+    await writeJSON("agent-events.json", trimmed);
+  });
+  return event;
+}
+
+export async function listAgentEvents(opts?: { agentId?: string; limit?: number }): Promise<AgentEvent[]> {
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  const filtered = opts?.agentId ? list.filter((e) => e.agentId === opts.agentId) : list;
+  // Newest first.
+  const sorted = filtered.slice().sort((a, b) => b.at.localeCompare(a.at));
+  return typeof opts?.limit === "number" ? sorted.slice(0, opts.limit) : sorted;
+}
+
+/** Sum of an agent's run-event spend since local midnight — drives per-agent caps. */
+export async function getAgentDailySpendGrosze(agentId: string): Promise<number> {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  const sinceIso = since.toISOString();
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  return list
+    .filter((e) => e.agentId === agentId && e.at >= sinceIso && typeof e.costGrosze === "number")
+    .reduce((sum, e) => sum + (e.costGrosze ?? 0), 0);
 }
 
 // --- Compliance calendar -----------------------------------------------------

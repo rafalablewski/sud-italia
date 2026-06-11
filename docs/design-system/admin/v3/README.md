@@ -84,7 +84,7 @@ server still enforces every `/api/admin/*` call). `SidebarV3` reads
 `/api/admin/me` and passes the viewer's role **and** effective permissions
 (`allAccess` / `permissions`) into `filterNavForRoleV3`:
 1. **Role-rank floor** — `requiredRole` via `@/lib/admin-roles`; the only gate
-   for items whose page has no mapped permission (Alerts, Boardroom, Payments,
+   for items whose page has no mapped permission (Alerts, Payments,
    QR ordering, Integrations).
 2. **Granular permission** — each item is shown only when the viewer's effective
    permissions include the key `permissionForAdminPage(href)` requires, so the
@@ -483,39 +483,42 @@ auth canvas's signature lighting and the sign-in lockup:
   Claude/Gemini model picker (`/api/admin/ai/model`, persisted to ai-model.json),
   a `Card` with a provider-grouped `.av3-select` that saves on change. CSS
   §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
-- [x] Boardroom (`/admin/boardroom`) — the AI team (`BoardroomV3`,
-  with `boardroom-explainers.ts` for the Rule #12 KPI explainers). Nine persona
-  agents over the live store: four C-suite (CEO/COO/CFO/CMO) who own the P&amp;L
-  KPIs + sit in the meeting round-robin, plus five chat-only specialist advisors
-  (Frontend Developer, Database Optimizer, UX/UI Designer &amp; Researcher, Market
-  Researcher, Chief Security Officer) defined in `src/lib/ai/boardroom/personas.ts`
-  (`ALL_BOARDROOM_PERSONA_IDS` drives the tabs + team cards; `BOARDROOM_PERSONA_ORDER`
-  stays the four-exec meeting roster). The model powering every chat/meeting is
-  switchable inline via `AiModelControl` (Overview tab + Ops Agent page). **Tabs** (`.av3-filterchips`):
-  Overview — a calm, grouped layout: section labels (`SecLabel`) over two KPI
-  rails (Sales &amp; growth · Cost &amp; quality) of bespoke tiles (`KpiTile`) that
-  carry a single `StatusDot` + a five-section `InfoButton`, where only off-target
-  tiles get a faint wash/tinted border (`kpiSurface`); then agent-status cards
-  using `Monogram` chips + a status dot, the **What needs attention** flag card,
-  and the convene-the-board buttons. (Calm pass: no rainbow accent rails, no
-  status-word pills, emoji/per-agent icons → monogram chips; agent identity is
-  `Monogram` + `FUNCTION_LABEL` throughout.) One panel per persona (the persona's
-  owned KPIs + a `ChatPanel`), a **Team chat** (the generalist board assistant — a
-  `ChatPanel` with `personaId={null}`, all read tools), and Meetings (which a
-  daily cron, `/api/admin/cron/boardroom-briefing`, can also auto-populate). **Chat**
-  reuses the Ops Agent endpoints
-  (`/api/admin/ai-agent/*`) with a `personaId` body field that selects the agent
-  voice + tool allowlist. Each thread **persists per agent** (conversations are
-  tagged with a `persona` column; `…/conversations/latest?persona=` reopens and
-  re-renders the most recent thread on revisit, `HistoryView` flattening the
-  stored Anthropic blocks into bubbles + executed tool cards). Same
-  human-in-the-loop tool-approval card flow and CSS
-  (§17 `.av3-chat-*`, `.av3-tool-*`). **Meetings** call `/api/admin/ai/boardroom/
-  meeting` (run daily/weekly) + `…/overview` (KPIs): a real round-robin transcript
-  (avatar rows) + a decisions list whose "Action via {agent}" buttons seed the
-  owning persona's composer for an operator-approved, audit-logged action.
-  Degrades to live-KPIs-only when `ANTHROPIC_API_KEY` is unset. Nav: Intelligence
-  section (icon `Crown`).
+- [x] Agent HQ (`/admin/agent-hq`) — the Boardroom rebuilt as an editable
+  agent-operations console. Live code: `src/admin-v3/AgentHQ.tsx` (the shell +
+  six sections + chat/meeting machinery) and `src/admin-v3/AgentEditor.tsx` (the
+  per-agent editor), with `boardroom-explainers.ts` for the Rule #12 KPI
+  explainers. (`/admin/boardroom` now redirects here; the old `BoardroomV3.tsx`
+  was deleted.) **Sections** (`.av3-filterchips`): **Command center** — the
+  `AiModelControl` picker, two KPI rails (Sales &amp; growth · Cost &amp; quality)
+  of bespoke `KpiTile`s (a single `StatusDot` + five-section `InfoButton`,
+  off-target tiles get a faint wash via `kpiSurface`), then the **agent roster**
+  (one `AgentRosterCard` per agent: `Monogram`, status badge, model / authority /
+  effort / reports-to chips, Edit + Chat buttons), a **What needs attention**
+  flag card and convene-the-board buttons; **Scorecards** — a card per agent with
+  its live owned KPIs + the authored target list; **Work** — convene controls, a
+  schedules table, and the cross-agent activity feed (`/api/admin/ai/boardroom/
+  timeline`); **Approvals** — the human-in-the-loop queue of gated meeting actions
+  (`…/approvals`); **Inbox** — an agent list + `ChatPanel` (plus the generalist
+  Team chat); **Reports** — meeting transcripts + decisions + spend. **Editable
+  agents:** nine seed agents (four C-suite + five specialists) defined in
+  `src/lib/ai/boardroom/personas.ts`; each is fully editable via `AgentEditor`
+  (name, role, status, reporting line, model, effort, authority, runtime memory,
+  mandate, responsibilities, KPIs, guardrails, escalation threshold, tone,
+  collaborators, tool allowlist, spend caps, schedule). The editor's **Live
+  system prompt** tab renders `buildLiveSystemPrompt(config)` from
+  `src/lib/ai/boardroom/agent-config.ts` — exactly what the agent runs on — and a
+  **Timeline** tab shows the agent's run/edit history. Config = seed defaults ⊕
+  operator override (`agent-configs.json`); edits drive the runtime (the agent
+  loop + meetings read the resolved config: generated prompt, tools ∩ role ∩
+  authority, model, effort, spend caps, status). API: `…/agents` (GET roster),
+  `…/agents/[id]` (GET + PATCH), `…/agents/[id]/timeline`, `…/overview` (KPIs +
+  live status), `…/approvals`, `…/timeline`, `…/meeting` (run daily/weekly, also
+  the `/api/admin/cron/boardroom-briefing` cron). **Chat** reuses the Ops Agent
+  endpoints (`/api/admin/ai-agent/*`) with a `personaId` body field; each thread
+  persists per agent (`…/conversations/latest?persona=`, `HistoryView` flattening
+  stored Anthropic blocks). Same human-in-the-loop tool-approval card flow + CSS
+  (§17 `.av3-chat-*`, `.av3-tool-*`). Degrades to live-KPIs-only when
+  `ANTHROPIC_API_KEY` is unset. Nav: Intelligence section (icon `Bot`).
 - [x] Alerts (`/admin/alerts`) — the v3 home for the v2 `MobileAlerts` action
   queue (`AlertsV3`). Full-screen inbox over `/api/admin/notifications`: filter
   chips with live counts (Unread/All/Orders/Slots/Stock/Money), Today/Yesterday/

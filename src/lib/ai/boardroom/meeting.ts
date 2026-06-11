@@ -3,11 +3,12 @@ import { estimateCallCostGrosze, getDailyBudgetGrosze } from "../cost";
 import { getDailyAiSpendGrosze } from "../conversations";
 import { logger } from "@/lib/logger";
 import {
-  BOARDROOM_PERSONAS,
   BOARDROOM_PERSONA_ORDER,
   isBoardroomPersonaId,
   type BoardroomPersonaId,
 } from "./personas";
+import { buildLiveSystemPrompt, type AgentConfig } from "./agent-config";
+import { getResolvedAgentConfigs, appendAgentEvent } from "@/lib/store";
 import { computeBoardroomKpis } from "./kpis";
 import { saveMeeting, type BoardroomMeeting, type MeetingContribution, type MeetingDecision, type MeetingType } from "./store";
 
@@ -84,29 +85,48 @@ ${agendaBlock}`;
   let totalCost = 0;
   const contributions: MeetingContribution[] = [];
 
+  // Resolve the EDITABLE agent configs so the meeting runs on each agent's
+  // live generated prompt + chosen model, and paused/draft agents are skipped.
+  const configs = await getResolvedAgentConfigs();
+  const byId = new Map<BoardroomPersonaId, AgentConfig>(configs.map((c) => [c.id, c]));
+  const titleFor = (id: BoardroomPersonaId): string => byId.get(id)?.title ?? id;
+
   // --- Round-robin discussion ---
   for (const personaId of BOARDROOM_PERSONA_ORDER) {
-    const persona = BOARDROOM_PERSONAS[personaId];
+    const cfg = byId.get(personaId);
+    if (!cfg || cfg.status !== "active") continue;
     const priorBlock = contributions.length
       ? `\n\nWhat your colleagues have said so far:\n${contributions
-          .map((c) => `${BOARDROOM_PERSONAS[c.persona].title}: ${c.text}`)
+          .map((c) => `${titleFor(c.persona)}: ${c.text}`)
           .join("\n\n")}`
       : "\n\nYou speak first.";
     const userMessage = `${baseContext}${priorBlock}
 
-Speak now, as the ${persona.title}. 2–4 sentences in your own voice: your read of the numbers from your remit, and the single action you recommend. Be specific and reference the figures above. Do not repeat a colleague verbatim — build on or push back.`;
+Speak now, as the ${cfg.title}. 2–4 sentences in your own voice: your read of the numbers from your remit, and the single action you recommend. Be specific and reference the figures above. Do not repeat a colleague verbatim — build on or push back.`;
 
     try {
       const res = await callGateway({
         feature: `boardroom-meeting-${personaId}`,
-        system: persona.system,
+        system: buildLiveSystemPrompt(cfg),
         messages: [{ role: "user", content: userMessage }],
         maxTokens: 700,
         thinking: "off",
+        model: cfg.modelId ?? undefined,
+        effort: cfg.effort,
       });
-      totalCost += estimateCallCostGrosze(MODEL, res.usage);
+      const cost = estimateCallCostGrosze(cfg.modelId ?? MODEL, res.usage);
+      totalCost += cost;
       const text = extractText(res.message);
-      if (text) contributions.push({ persona: personaId, text });
+      if (text) {
+        contributions.push({ persona: personaId, text });
+        void appendAgentEvent({
+          agentId: personaId,
+          type: "run",
+          summary: `${input.type === "daily" ? "Daily briefing" : "Weekly review"} contribution`,
+          costGrosze: cost,
+          actor: `meeting:${input.userId}`,
+        }).catch(() => {});
+      }
     } catch (err) {
       logger.error("boardroom.meeting.persona_failed", { personaId }, err);
     }
@@ -117,7 +137,7 @@ Speak now, as the ${persona.title}. 2–4 sentences in your own voice: your read
   }
 
   // --- Synthesis: CEO converges the discussion into structured decisions ---
-  const decisions = await synthesizeDecisions(baseContext, contributions, (cost) => {
+  const decisions = await synthesizeDecisions(baseContext, contributions, titleFor, (cost) => {
     totalCost += cost;
   });
 
@@ -141,10 +161,11 @@ const KNOWN_TOOLS = ["update_item_price", "mark_item_86", "send_sms", "manage_sc
 async function synthesizeDecisions(
   baseContext: string,
   contributions: MeetingContribution[],
+  titleFor: (id: BoardroomPersonaId) => string,
   addCost: (grosze: number) => void,
 ): Promise<MeetingDecision[]> {
   const transcript = contributions
-    .map((c) => `${BOARDROOM_PERSONAS[c.persona].title}: ${c.text}`)
+    .map((c) => `${titleFor(c.persona)}: ${c.text}`)
     .join("\n\n");
 
   const system = `You are the chair of the Ottaviano leadership board. Convert a board discussion into a concise, prioritised decision list. Reply with ONLY a JSON object — no prose, no markdown fences.

@@ -155,7 +155,7 @@ export const PERMISSION_GROUPS = [
       { key: "locations.manage", label: "Manage locations", description: "Add / edit locations." },
       { key: "menu_engineering.view", label: "Menu engineering", description: "Use the menu-engineering board." },
       { key: "insights.view", label: "AI insights", description: "See the AI insights surface and the Ops Agent." },
-      { key: "boardroom.view", label: "Boardroom", description: "See the executive boardroom cockpit (chain-wide exec KPIs)." },
+      { key: "boardroom.view", label: "Agent HQ", description: "Open Agent HQ — the editable AI agent fleet console (command center, scorecards, work, approvals, inbox, reports)." },
       { key: "expansion.view", label: "View expansion", description: "See the expansion planner." },
       { key: "expansion.edit", label: "Edit expansion", description: "Edit expansion checklists and plans." },
     ],
@@ -367,6 +367,7 @@ export function permissionForAdminPage(pathname: string): PermissionKey | null {
   if (is("/admin/locations")) return "locations.view";
   if (is("/admin/expansion")) return "expansion.view";
   if (is("/admin/ai")) return "insights.view";
+  if (is("/admin/agent-hq")) return "boardroom.view";
   if (is("/admin/boardroom")) return "boardroom.view";
   if (is("/admin/comms")) return "comms.view";
   if (is("/admin/users")) return "users.view";

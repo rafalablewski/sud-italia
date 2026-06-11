@@ -1,14 +1,9 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/admin-auth";
-import { BoardroomV3 } from "@/admin-v3/BoardroomV3";
 
 /**
- * Boardroom — the AI C-suite team console (CEO/COO/CFO/CMO). Live
- * traffic-light KPIs, per-agent panels with Claude chat, and multi-agent
- * meetings. The component fetches everything from the boardroom API
- * routes, which enforce the manager+ gate server-side.
+ * The Boardroom was rebuilt as Agent HQ (the editable AI agent fleet console).
+ * Keep the old route working — bounce it to the canonical /admin/agent-hq.
  */
-export default async function AdminV3BoardroomPage() {
-  if (!(await isAuthenticated())) redirect("/login");
-  return <BoardroomV3 />;
+export default function AdminV3BoardroomRedirect() {
+  redirect("/admin/agent-hq");
 }
