@@ -545,7 +545,8 @@ export function mergeAgentConfig(id: BoardroomPersonaId, patch: AgentConfigPatch
     const sc = patch.schedule as Partial<AgentSchedule>;
     out.schedule = {
       cadence: CADENCE_OPTIONS.some((o) => o.value === sc.cadence) ? (sc.cadence as ScheduleCadence) : base.schedule.cadence,
-      time: str(sc.time) ? sc.time : base.schedule.time,
+      // Only accept a valid 24h HH:MM so a hand-crafted API payload can't store junk.
+      time: str(sc.time) && /^([01]\d|2[0-3]):[0-5]\d$/.test(sc.time) ? sc.time : base.schedule.time,
     };
   }
   if (str(patch.accentVar)) out.accentVar = patch.accentVar;

@@ -53,7 +53,9 @@ export const POST = withAdmin({ roles: ["manager"] }, async (req, _ctx, { user }
   );
   if (!meeting) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   const decision = meeting.decisions[index];
-  if (decision && isBoardroomPersonaId(decision.owner)) {
+  // Out-of-bounds index leaves the meeting unchanged — don't silently 200.
+  if (!decision) return NextResponse.json({ error: "Decision index out of range" }, { status: 400 });
+  if (isBoardroomPersonaId(decision.owner)) {
     await appendAgentEvent({
       agentId: decision.owner,
       type: "approval",

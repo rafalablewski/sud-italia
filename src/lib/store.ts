@@ -8776,7 +8776,31 @@ export async function listAgentEvents(opts?: { agentId?: string; limit?: number 
   return typeof opts?.limit === "number" ? sorted.slice(0, opts.limit) : sorted;
 }
 
-/** Sum of an agent's run-event spend since local midnight — drives per-agent caps. */
+/**
+ * Start-of-today and start-of-month as UTC instants, computed in the chain's
+ * timezone (Europe/Warsaw) — so "daily reset" for spend tracking + caps happens
+ * at Polish midnight regardless of the server's timezone (a UTC server would
+ * otherwise reset at 01:00/02:00 local). One offset read covers both.
+ */
+const CHAIN_TZ = "Europe/Warsaw";
+function chainPeriodStarts(): { dayIso: string; monthIso: string } {
+  const now = new Date();
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: CHAIN_TZ, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(now).map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  const y = +p.year, mo = +p.month, d = +p.day;
+  // Offset (ms) of Warsaw vs UTC at this instant, from the wall-clock parts.
+  const offset = Date.UTC(y, mo - 1, d, +p.hour, +p.minute, +p.second) - now.getTime();
+  return {
+    dayIso: new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) - offset).toISOString(),
+    monthIso: new Date(Date.UTC(y, mo - 1, 1, 0, 0, 0) - offset).toISOString(),
+  };
+}
+
+/** Sum of an agent's run-event spend since Warsaw midnight — drives per-agent caps. */
 export async function getAgentDailySpendGrosze(agentId: string): Promise<number> {
   const map = await getAgentDailySpendMap();
   return map[agentId] ?? 0;
@@ -8784,9 +8808,7 @@ export async function getAgentDailySpendGrosze(agentId: string): Promise<number>
 
 /** Today's spend per agent in one read — for the overview/roster cards. */
 export async function getAgentDailySpendMap(): Promise<Record<string, number>> {
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
-  const sinceIso = since.toISOString();
+  const sinceIso = chainPeriodStarts().dayIso;
   const list = await readJSON<AgentEvent[]>("agent-events.json", []);
   const out: Record<string, number> = {};
   for (const e of list) {
@@ -8816,8 +8838,9 @@ export interface AgentFleetStats {
  */
 export async function getAgentFleetStats(): Promise<AgentFleetStats> {
   const now = Date.now();
-  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+  const starts = chainPeriodStarts();
+  const startToday = Date.parse(starts.dayIso);
+  const startMonth = Date.parse(starts.monthIso);
   const weekAgo = now - 7 * 24 * 3600 * 1000;
   const list = await readJSON<AgentEvent[]>("agent-events.json", []);
 
@@ -8829,19 +8852,18 @@ export async function getAgentFleetStats(): Promise<AgentFleetStats> {
   for (const e of list) {
     const t = Date.parse(e.at);
     const cost = typeof e.costGrosze === "number" ? e.costGrosze : 0;
-    if (t >= startOfMonth.getTime()) costMonth += cost;
+    if (t >= startMonth) costMonth += cost;
     if (t >= weekAgo) {
       cost7d += cost;
       if (isRun(e)) {
         runs7d += 1;
         if (e.ok !== false) ok7d += 1;
-        // Bucket by LOCAL calendar day so "Today" is midnight→now, not a rolling 24h window.
-        const evDay = new Date(t); evDay.setHours(0, 0, 0, 0);
-        const dayIdx = 6 - Math.round((startOfToday.getTime() - evDay.getTime()) / (24 * 3600 * 1000));
-        if (dayIdx >= 0 && dayIdx < 7) runsByDay7d[dayIdx] += 1;
+        // Bucket by Warsaw calendar day (index 6 = today, anchored on startToday).
+        const idx = t >= startToday ? 6 : 6 - Math.ceil((startToday - t) / (24 * 3600 * 1000));
+        if (idx >= 0 && idx < 7) runsByDay7d[idx] += 1;
       }
     }
-    if (t >= startOfToday.getTime()) {
+    if (t >= startToday) {
       if (isRun(e)) runsToday += 1;
       if (cost) spendToday[e.agentId] = (spendToday[e.agentId] ?? 0) + cost;
     }
@@ -8992,14 +9014,13 @@ export async function getEffectiveDailyBudgetGrosze(): Promise<number> {
 /**
  * Today's TOTAL AI spend — the single source of truth for the daily-budget gate
  * and the Settings spend bar. Sums two ledgers without double-counting:
- *  - ai_messages (chat: the Ops Agent + persona chats) since local midnight, and
+ *  - ai_messages (chat: the Ops Agent + persona chats) since Warsaw midnight, and
  *  - agent-events run/schedule rows for meetings / scheduled runs / work, which
  *    bypass ai_messages (their actors are meeting:/schedule:/work:; persona chat
  *    events use actor claude: and are already in ai_messages, so are skipped).
  */
 export async function getTodayAiSpendGrosze(): Promise<number> {
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const sinceIso = start.toISOString();
+  const sinceIso = chainPeriodStarts().dayIso;
   const [chatGrosze, events] = await Promise.all([
     getDailyAiSpendGrosze(sinceIso),
     readJSON<AgentEvent[]>("agent-events.json", []),

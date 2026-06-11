@@ -68,6 +68,10 @@ test("nested spend + schedule patches merge field-by-field", () => {
   const sched = mergeAgentConfig("cmo", { schedule: { cadence: "weekly", time: "07:30" } });
   assert.equal(sched.schedule.cadence, "weekly");
   assert.equal(sched.schedule.time, "07:30");
+  // a malformed time is rejected (falls back to the default), not stored
+  const bad = mergeAgentConfig("cmo", { schedule: { cadence: "daily", time: "99:99" } });
+  assert.equal(bad.schedule.cadence, "daily");
+  assert.notEqual(bad.schedule.time, "99:99");
 });
 
 test("normalizeKpis accepts strings + objects and keeps stable ids", () => {

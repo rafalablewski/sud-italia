@@ -39,6 +39,23 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function TextInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return <input className="av3-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%" }} />;
 }
+/**
+ * Money input that keeps a local draft string so intermediate states (typing a
+ * trailing "." or "5.0") aren't normalized away by the grosze round-trip. Emits
+ * grosze (or null when blank). Re-syncs from the prop only when the prop maps to
+ * a different value than the current draft (e.g. a reset/agent switch).
+ */
+function CurrencyInput({ valueGrosze, onChange, placeholder }: { valueGrosze: number | null; onChange: (v: number | null) => void; placeholder?: string }) {
+  const [draft, setDraft] = useState(() => groszeToPln(valueGrosze));
+  useEffect(() => {
+    if (plnToGrosze(draft) !== valueGrosze) setDraft(groszeToPln(valueGrosze));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueGrosze]);
+  return (
+    <input className="av3-input" value={draft} placeholder={placeholder} style={{ width: "100%" }}
+      onChange={(e) => { setDraft(e.target.value); onChange(plnToGrosze(e.target.value)); }} />
+  );
+}
 function TextArea({ value, onChange, rows = 3 }: { value: string; onChange: (v: string) => void; rows?: number }) {
   return <textarea className="av3-input" value={value} onChange={(e) => onChange(e.target.value)} rows={rows} style={{ width: "100%", resize: "vertical", fontFamily: "var(--av3-ui)" }} />;
 }
@@ -256,8 +273,8 @@ export function AgentEditForm({ agentId, configs, toolCatalog, onSaved, onClose 
 
           <SectionTitle>Spend controls</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Daily cap (PLN)" hint="Blank = no per-agent cap (shared budget only)."><TextInput value={groszeToPln(form.spend.dailyCapGrosze)} onChange={(v) => patch("spend", { ...form.spend, dailyCapGrosze: plnToGrosze(v) })} placeholder="e.g. 50" /></Field>
-            <Field label="Per-run cap (PLN)" hint="Blank = no per-run cap."><TextInput value={groszeToPln(form.spend.perRunCapGrosze)} onChange={(v) => patch("spend", { ...form.spend, perRunCapGrosze: plnToGrosze(v) })} placeholder="e.g. 5" /></Field>
+            <Field label="Daily cap (PLN)" hint="Blank = no per-agent cap (shared budget only)."><CurrencyInput valueGrosze={form.spend.dailyCapGrosze} onChange={(v) => patch("spend", { ...form.spend, dailyCapGrosze: v })} placeholder="e.g. 50" /></Field>
+            <Field label="Per-run cap (PLN)" hint="Blank = no per-run cap."><CurrencyInput valueGrosze={form.spend.perRunCapGrosze} onChange={(v) => patch("spend", { ...form.spend, perRunCapGrosze: v })} placeholder="e.g. 5" /></Field>
           </div>
 
           <SectionTitle>Schedule</SectionTitle>
