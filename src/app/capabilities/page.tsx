@@ -518,21 +518,31 @@ export default async function CapabilitiesPage() {
       title: "AI Operating System",
       items: [
         {
-          name: "Boardroom (AI C-suite team)",
+          name: "Boardroom (AI C-suite + specialist advisors)",
           status: gatewayConfigured() ? "live" : "needs-config",
-          envVars: ["ANTHROPIC_API_KEY", "AI_DAILY_BUDGET_GROSZE"],
+          envVars: ["ANTHROPIC_API_KEY", "GEMINI_API_KEY", "AI_DAILY_BUDGET_GROSZE"],
           href: "/admin/boardroom",
           summary:
-            "Four specialist agents — CEO (strategy/OKRs), COO (operations), CFO (margin/pricing), CMO (growth/retention) — over the live store. A central dashboard shows traffic-light KPIs (today's sales, food cost %, labour %, prime cost, avg ticket, satisfaction, refund rate, SSSG) each with a 5-section ⓘ explainer; per-agent panels add a Claude chat scoped to that persona's voice + tool allowlist (each thread persists per agent and reopens on revisit), plus a Team-chat generalist for cross-functional questions. A daily cron auto-runs the briefing so operators walk in to a ready board. Meetings (daily briefing / weekly review) run a real round-robin (COO→CFO→CMO→CEO) then a CEO synthesis into a decisions list; decisions with a lever route back to the owning agent for an operator-approved, audit-logged action (update_item_price, mark_item_86, send_sms, manage_scheduled_bundle). KPIs render even without a key; chat + meetings degrade to 'needs-config'. Shares the gateway, tool registry, conversation store, and daily budget with the Ops Agent.",
+            "Nine agents over the live store: four C-suite executives — CEO (strategy/OKRs), COO (operations), CFO (margin/pricing), CMO (growth/retention) — plus five chat-only specialist advisors — Frontend Developer (ordering UX/conversion), Database Optimizer (data perf/integrity), UX/UI Designer & Researcher, Market Researcher (demand/competition), and Chief Security Officer (data protection/compliance). A central dashboard shows traffic-light KPIs (today's sales, food cost %, labour %, prime cost, avg ticket, satisfaction, refund rate, SSSG) each with a 5-section ⓘ explainer; per-agent panels add a chat scoped to that persona's voice + tool allowlist (each thread persists per agent and reopens on revisit), plus a Team-chat generalist for cross-functional questions. The active model (Claude or Gemini) is switchable inline — see 'AI model selector'. A daily cron auto-runs the briefing so operators walk in to a ready board. Meetings (daily briefing / weekly review) run a real round-robin of the four C-suite (COO→CFO→CMO→CEO) then a CEO synthesis into a decisions list; decisions with a lever route back to the owning agent for an operator-approved, audit-logged action (update_item_price, mark_item_86, send_sms, manage_scheduled_bundle). KPIs render even without a key; chat + meetings degrade to 'needs-config'. Shares the gateway, tool registry, conversation store, and daily budget with the Ops Agent.",
           caveats:
             "Food cost %, refund rate, and SSSG are chain-wide (computed across all locations); today's sales, labour %, and satisfaction honour the location switcher. Meeting decisions are advisory until an operator approves the proposed action.",
         },
         {
-          name: "Ops Agent (Claude)",
+          name: "Ops Agent (Claude / Gemini)",
           status: gatewayConfigured() ? "live" : "needs-config",
-          envVars: ["ANTHROPIC_API_KEY"],
+          envVars: ["ANTHROPIC_API_KEY", "GEMINI_API_KEY"],
           href: "/admin/ai/agent",
-          summary: "Conversational agent with read + write tools. Mutating actions require operator approval.",
+          summary: "Conversational agent with read + write tools. Mutating actions require operator approval. Runs on whichever model the AI-model selector points at (Claude or Gemini); the model picker sits at the top of this page.",
+        },
+        {
+          name: "AI model selector (Claude / Gemini)",
+          status: has("ANTHROPIC_API_KEY") || has("GEMINI_API_KEY") ? "live" : "needs-config",
+          envVars: ["ANTHROPIC_API_KEY", "GEMINI_API_KEY"],
+          href: "/admin/ai/agent",
+          summary:
+            "One global setting picks which model the whole AI OS talks to — Ops Agent, Boardroom chats + meetings, forecasting. Claude (Anthropic) and Gemini (Google) for now, persisted in ai-model.json and resolved by the gateway at call time, so switching providers is a single click with no redeploy. The gateway keeps every call in Anthropic's message shape internally and translates Gemini's REST request/response — including tool (function) calls — at the boundary, so a provider switch is transparent to the agent loop and conversation store. A model whose provider key is missing stays selectable but the call surfaces a clear 'needs-config' error. Default: Claude Opus 4.7. Picker: top of /admin/ai/agent and the Boardroom overview.",
+          caveats:
+            "Cost/budget math uses each model's published per-token pricing; the Gemini path has no prompt-cache rail. Gemini requires GEMINI_API_KEY; Claude requires ANTHROPIC_API_KEY.",
         },
         {
           name: "Tool registry + audit",

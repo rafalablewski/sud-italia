@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "@/lib/logger";
 import { incrCounter, recordHistogram } from "@/lib/metrics";
+import { getAiModelSettings } from "@/lib/store";
+import { providerConfigured, resolveModel, type AiModel } from "./models";
 
 /**
  * LLM gateway (m4_1). Every Claude call in the platform goes through
@@ -23,7 +25,6 @@ import { incrCounter, recordHistogram } from "@/lib/metrics";
  *   - effort: "high" (token-efficient sweet spot for ops tools)
  */
 
-const DEFAULT_MODEL = "claude-opus-4-7";
 const DEFAULT_MAX_TOKENS = 4096;
 
 export interface GatewayCallOptions {
@@ -60,8 +61,14 @@ function getClient(): Anthropic | null {
   return cachedClient;
 }
 
+/**
+ * True when AT LEAST ONE provider (Claude or Gemini) has its key set, so the
+ * AI surfaces can light up. The actual provider used per call is resolved from
+ * the operator's model selection; if the active provider's key is missing, the
+ * call throws a clear "needs-config" error the UI surfaces.
+ */
 export function gatewayConfigured(): boolean {
-  return getClient() !== null;
+  return providerConfigured("anthropic") || providerConfigured("google");
 }
 
 /**
@@ -77,13 +84,25 @@ export function fenceUserContent(label: string, content: string): string {
 }
 
 export async function callGateway(opts: GatewayCallOptions): Promise<GatewayCallResult> {
+  // Resolve the active model: an explicit opts.model wins (callers that pin a
+  // model), otherwise the operator's persisted selection, otherwise the
+  // platform default (Claude). The provider routes the call.
+  const selected = opts.model ?? (await getAiModelSettings()).modelId ?? undefined;
+  const model = resolveModel(selected);
+  if (model.provider === "google") {
+    return callGemini(opts, model);
+  }
+  return callAnthropic(opts, model.id);
+}
+
+async function callAnthropic(opts: GatewayCallOptions, modelId: string): Promise<GatewayCallResult> {
   const client = getClient();
   if (!client) {
     throw new Error("ANTHROPIC_API_KEY not configured");
   }
 
   const start = Date.now();
-  const model = opts.model ?? DEFAULT_MODEL;
+  const model = modelId;
 
   // System prompt cached so repeat operator turns reuse the prefix.
   // Anthropic prefix-match cache invalidates on any byte change, so
@@ -138,6 +157,206 @@ export async function callGateway(opts: GatewayCallOptions): Promise<GatewayCall
   } catch (err) {
     incrCounter(`ai.errors.${opts.feature}`, 1);
     logger.error("ai.gateway.error", { layer: "ai.gateway", feature: opts.feature, model }, err);
+    throw err;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Gemini (Google) provider.
+ *
+ * We keep the whole platform in Anthropic's message shape internally and
+ * translate at this boundary, so a provider switch is transparent to the agent
+ * loop, the Boardroom, and the conversation store. The call goes over the
+ * Generative Language REST API (no extra SDK dependency); request + response —
+ * including function (tool) calls — are translated both ways.
+ * ------------------------------------------------------------------------- */
+
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args?: Record<string, unknown> };
+  functionResponse?: { name: string; response: Record<string, unknown> };
+}
+interface GeminiContent { role: "user" | "model"; parts: GeminiPart[] }
+
+/** Strip JSON-Schema fields Gemini's function-declaration schema rejects. */
+function sanitizeSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(sanitizeSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
+    if (k === "$schema" || k === "additionalProperties" || k === "default") continue;
+    out[k] = sanitizeSchema(v);
+  }
+  return out;
+}
+
+/** Anthropic tool_result content (a JSON string in our code) → an object. */
+function toResponseObject(content: unknown): Record<string, unknown> {
+  if (typeof content === "string") {
+    try {
+      const parsed = JSON.parse(content);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : { result: parsed };
+    } catch {
+      return { result: content };
+    }
+  }
+  if (content && typeof content === "object" && !Array.isArray(content)) {
+    return content as Record<string, unknown>;
+  }
+  return { result: content };
+}
+
+/** Translate the running Anthropic message list into Gemini `contents`. */
+function toGeminiContents(messages: Anthropic.MessageParam[]): GeminiContent[] {
+  // tool_use id → function name, so a later tool_result can name its function.
+  const idToName = new Map<string, string>();
+  for (const m of messages) {
+    if (Array.isArray(m.content)) {
+      for (const b of m.content) {
+        if (b.type === "tool_use") idToName.set(b.id, b.name);
+      }
+    }
+  }
+
+  const contents: GeminiContent[] = [];
+  for (const m of messages) {
+    const role: "user" | "model" = m.role === "assistant" ? "model" : "user";
+    const parts: GeminiPart[] = [];
+    if (typeof m.content === "string") {
+      if (m.content.trim()) parts.push({ text: m.content });
+    } else {
+      for (const b of m.content) {
+        if (b.type === "text") {
+          if (b.text.trim()) parts.push({ text: b.text });
+        } else if (b.type === "tool_use") {
+          parts.push({ functionCall: { name: b.name, args: (b.input as Record<string, unknown>) ?? {} } });
+        } else if (b.type === "tool_result") {
+          parts.push({
+            functionResponse: {
+              name: idToName.get(b.tool_use_id) ?? "tool",
+              response: toResponseObject(b.content),
+            },
+          });
+        }
+      }
+    }
+    if (parts.length > 0) contents.push({ role, parts });
+  }
+  return contents;
+}
+
+function mapGeminiFinish(reason: string | undefined, hasTool: boolean): string {
+  if (hasTool) return "tool_use";
+  if (reason === "MAX_TOKENS") return "max_tokens";
+  return "end_turn";
+}
+
+async function callGemini(opts: GatewayCallOptions, model: AiModel): Promise<GatewayCallResult> {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  if (!key) {
+    throw new Error("GEMINI_API_KEY not configured");
+  }
+
+  const start = Date.now();
+  const body: Record<string, unknown> = {
+    systemInstruction: { parts: [{ text: opts.system }] },
+    contents: toGeminiContents(opts.messages),
+    generationConfig: { maxOutputTokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS },
+  };
+  if (opts.tools && opts.tools.length > 0) {
+    body.tools = [
+      {
+        functionDeclarations: opts.tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          parameters: sanitizeSchema(t.input_schema),
+        })),
+      },
+    ];
+  }
+
+  try {
+    const res = await fetch(
+      `${GEMINI_API_BASE}/models/${encodeURIComponent(model.id)}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 300)}`);
+    }
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: GeminiPart[] }; finishReason?: string }[];
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const content: Anthropic.ContentBlock[] = [];
+    let toolIdx = 0;
+    for (const part of parts) {
+      if (typeof part.text === "string" && part.text.length > 0) {
+        content.push({ type: "text", text: part.text, citations: null } as Anthropic.TextBlock);
+      } else if (part.functionCall) {
+        content.push({
+          type: "tool_use",
+          id: `gem_${Date.now().toString(36)}_${toolIdx++}`,
+          name: part.functionCall.name,
+          input: part.functionCall.args ?? {},
+        } as Anthropic.ToolUseBlock);
+      }
+    }
+    const hasTool = content.some((b) => b.type === "tool_use");
+    const stopReason = mapGeminiFinish(json.candidates?.[0]?.finishReason, hasTool);
+
+    const usage = {
+      inputTokens: json.usageMetadata?.promptTokenCount ?? 0,
+      outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+    };
+
+    const message = {
+      id: `gemini_${Date.now().toString(36)}`,
+      type: "message",
+      role: "assistant",
+      model: model.id,
+      content,
+      stop_reason: stopReason,
+      stop_sequence: null,
+      usage: {
+        input_tokens: usage.inputTokens,
+        output_tokens: usage.outputTokens,
+        cache_read_input_tokens: 0,
+        cache_creation_input_tokens: 0,
+      },
+    } as unknown as Anthropic.Message;
+
+    const elapsed = Date.now() - start;
+    recordHistogram(`ai.latency_ms.${opts.feature}`, elapsed);
+    incrCounter(`ai.calls.${opts.feature}`, 1);
+    incrCounter(`ai.input_tokens.${opts.feature}`, usage.inputTokens);
+    incrCounter(`ai.output_tokens.${opts.feature}`, usage.outputTokens);
+    logger.info("ai.gateway.call", {
+      layer: "ai.gateway",
+      feature: opts.feature,
+      model: model.id,
+      latencyMs: elapsed,
+      stopReason,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+    });
+
+    return { message, usage };
+  } catch (err) {
+    incrCounter(`ai.errors.${opts.feature}`, 1);
+    logger.error("ai.gateway.error", { layer: "ai.gateway", feature: opts.feature, model: model.id }, err);
     throw err;
   }
 }

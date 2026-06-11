@@ -16,6 +16,7 @@ import {
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
 import { Badge, Button, Card, CardBody, CardHead, InfoButton, SkeletonRows } from "./ui";
+import { AiModelControl } from "./AiModelControl";
 import { KPI_EXPLAINERS } from "./boardroom-explainers";
 
 /**
@@ -30,7 +31,16 @@ import { KPI_EXPLAINERS } from "./boardroom-explainers";
  * existing preview → approve → audit gate.
  */
 
-type PersonaId = "ceo" | "coo" | "cfo" | "cmo";
+type PersonaId =
+  | "ceo"
+  | "coo"
+  | "cfo"
+  | "cmo"
+  | "frontend"
+  | "database"
+  | "uxui"
+  | "market"
+  | "security";
 type KpiStatus = "green" | "yellow" | "red" | "neutral";
 
 interface BoardKpi {
@@ -90,6 +100,11 @@ const PERSONA_META: Record<PersonaId, { short: string; accentVar: string }> = {
   coo: { short: "COO", accentVar: "--av3-c3" },
   cfo: { short: "CFO", accentVar: "--av3-ok" },
   cmo: { short: "CMO", accentVar: "--av3-c5" },
+  frontend: { short: "FE", accentVar: "--av3-c1" },
+  database: { short: "DB", accentVar: "--av3-c2" },
+  uxui: { short: "UX", accentVar: "--av3-c6" },
+  market: { short: "MKT", accentVar: "--av3-c7" },
+  security: { short: "CSO", accentVar: "--av3-c8" },
 };
 
 // Short function label per agent (calmer than the full persona title).
@@ -98,6 +113,11 @@ const FUNCTION_LABEL: Record<PersonaId, string> = {
   coo: "Operations",
   cfo: "Finance",
   cmo: "Marketing",
+  frontend: "Frontend dev",
+  database: "Database",
+  uxui: "Design & UX",
+  market: "Market research",
+  security: "Security",
 };
 
 /** Monogram chip — the calm, consistent agent identity (replaces emoji /
@@ -194,6 +214,11 @@ export function BoardroomV3() {
     { id: "coo", label: "Operations · COO" },
     { id: "cfo", label: "Finance · CFO" },
     { id: "cmo", label: "Marketing · CMO" },
+    { id: "frontend", label: "Frontend · Dev" },
+    { id: "database", label: "Database · Optimizer" },
+    { id: "uxui", label: "Design · UX/UI" },
+    { id: "market", label: "Market · Research" },
+    { id: "security", label: "Security · CSO" },
     { id: "team", label: "Team chat" },
     { id: "meetings", label: "Meetings" },
   ];
@@ -206,7 +231,7 @@ export function BoardroomV3() {
           <div>
             <h1>Boardroom</h1>
             <div className="av3-pagehead-sub">
-              Your AI C-suite — CEO, COO, CFO, CMO — reading live data, flagging risks, and proposing actions · {city}
+              Your AI team — CEO, COO, CFO, CMO plus frontend, database, UX/UI, market &amp; security advisors — reading live data, flagging risks, and proposing actions · {city}
             </div>
           </div>
         </div>
@@ -233,6 +258,8 @@ export function BoardroomV3() {
           </button>
         ))}
       </div>
+
+      {tab === "overview" && <div style={{ marginBottom: 12 }}><AiModelControl /></div>}
 
       {loading ? (
         <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
@@ -315,7 +342,7 @@ function OverviewTab({
       )}
       {other.length > 0 && <div style={{ ...RAIL_STYLE, marginTop: 14 }}>{other.map((k) => <KpiTile key={k.id} k={k} />)}</div>}
 
-      <SecLabel>Your executives</SecLabel>
+      <SecLabel>Your team</SecLabel>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
         {agents.map((a) => (
           <button key={a.id} type="button" className="av3-conv-row" style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 13px" }} onClick={() => onOpenAgent(a.id)}>
@@ -490,6 +517,11 @@ const PERSONA_SUGGESTIONS: Record<PersonaId, string> = {
   coo: "What's my biggest operational risk for tomorrow's service?",
   cfo: "Which item is leaking margin, and what should I reprice it to?",
   cmo: "Which daypart is slow, and what campaign would lift it?",
+  frontend: "Where are customers dropping off in the ordering flow, and what UI change would fix it?",
+  database: "Are any of our reports slow or inconsistent as data grows? What should we optimise?",
+  uxui: "What does recent feedback tell us about a usability problem worth redesigning?",
+  market: "Which customer segment or daypart is the biggest untapped opportunity right now?",
+  security: "Where's our biggest data-protection or access-control risk, and how do we close it?",
 };
 
 function ChatPanel({

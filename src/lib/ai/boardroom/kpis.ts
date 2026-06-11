@@ -5,7 +5,7 @@ import {
   computeSimulationActuals,
   getFeedback,
 } from "@/lib/store";
-import type { BoardroomPersonaId } from "./personas";
+import { ALL_BOARDROOM_PERSONA_IDS, type BoardroomPersonaId } from "./personas";
 
 /**
  * Boardroom KPI / traffic-light engine. Computes the headline operating
@@ -173,7 +173,9 @@ export async function computeBoardroomKpis(scope?: string): Promise<BoardroomKpi
   ];
 
   const flags: string[] = [];
-  const agentConcerns: Record<BoardroomPersonaId, number> = { ceo: 0, coo: 0, cfo: 0, cmo: 0 };
+  const agentConcerns = Object.fromEntries(
+    ALL_BOARDROOM_PERSONA_IDS.map((id) => [id, 0]),
+  ) as Record<BoardroomPersonaId, number>;
   for (const k of kpis) {
     if (k.status === "red" || k.status === "yellow") {
       agentConcerns[k.owner] += 1;

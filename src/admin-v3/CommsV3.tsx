@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Megaphone, ListTodo, Plus, Trash2, Pin, Pencil, Repeat } from "lucide-react";
-import { Card, CardHead, CardBody, Button, Badge, Switch, type BadgeTone } from "./ui";
+import { Megaphone, Plus, Trash2, Pin, Pencil } from "lucide-react";
+import { Card, CardHead, CardBody, Button, Badge, Switch, SkeletonRows, type BadgeTone } from "./ui";
 import { useAdminLocationV3 } from "./LocationContext";
 import {
   TASK_PRIORITIES,
@@ -52,6 +52,10 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
   const [anns, setAnns] = useState<Announcement[]>([]);
   const [users, setUsers] = useState<DirUser[]>([]);
   const [busy, setBusy] = useState(false);
+  // Until the first load resolves, the lists render a skeleton rather than an
+  // empty state — so the board lands as one piece instead of the static form
+  // appearing first and the assignments popping in a beat later.
+  const [loaded, setLoaded] = useState(false);
 
   // New-task form.
   const [tTitle, setTTitle] = useState("");
@@ -93,6 +97,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
     setRoutines(Array.isArray(rt) ? rt : []);
     setAnns(Array.isArray(a) ? a : []);
     setUsers(Array.isArray(u) ? u : []);
+    setLoaded(true);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -277,7 +282,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--av3-gap-4)" }}>
           {canManage && (
             <Card>
-              <CardHead title={<><ListTodo style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />New task</>} />
+              <CardHead title="New task" />
               <CardBody>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div className="av3-field">
@@ -332,9 +337,11 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
           )}
 
           <Card>
-            <CardHead title="All tasks" actions={<Badge tone="neutral">{tasks.length}</Badge>} />
+            <CardHead title="All tasks" actions={loaded ? <Badge tone="neutral">{tasks.length}</Badge> : undefined} />
             <CardBody>
-              {tasks.length === 0 ? (
+              {!loaded ? (
+                <SkeletonRows rows={3} />
+              ) : tasks.length === 0 ? (
                 <p style={{ margin: 0, fontSize: 12.5, color: "var(--av3-muted)" }}>No tasks yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -368,7 +375,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
           {canManage && (
             <Card>
               <CardHead
-                title={<><Repeat style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />New daily routine</>}
+                title="New daily routine"
                 description="A standing task the team does every day. It shows on each matching teammate's portal and resets daily — they tick it off for their own day."
               />
               <CardBody>
@@ -385,7 +392,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                     <label className="av3-field-label">Who does it — roles (none = everyone)</label>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {TARGETABLE_ROLES.map((r) => (
-                        <button key={r} type="button" className={`av3-chip ${rRoles.includes(r) ? "is-active" : ""}`} onClick={() => toggleRRole(r)}>
+                        <button key={r} type="button" className={`av3-chip av3-chip-outline ${rRoles.includes(r) ? "is-active" : ""}`} onClick={() => toggleRRole(r)}>
                           {ROLE_LABEL[r]}
                         </button>
                       ))}
@@ -395,7 +402,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                     <label className="av3-field-label">Where — locations (none = all)</label>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {activeLocations.map((l) => (
-                        <button key={l.slug} type="button" className={`av3-chip ${rLocs.includes(l.slug) ? "is-active" : ""}`} onClick={() => toggleRLoc(l.slug)}>
+                        <button key={l.slug} type="button" className={`av3-chip av3-chip-outline ${rLocs.includes(l.slug) ? "is-active" : ""}`} onClick={() => toggleRLoc(l.slug)}>
                           {l.city}
                         </button>
                       ))}
@@ -418,9 +425,11 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
           )}
 
           <Card>
-            <CardHead title="Daily routines" actions={<Badge tone="neutral">{routines.length}</Badge>} />
+            <CardHead title="Daily routines" actions={loaded ? <Badge tone="neutral">{routines.length}</Badge> : undefined} />
             <CardBody>
-              {routines.length === 0 ? (
+              {!loaded ? (
+                <SkeletonRows rows={3} />
+              ) : routines.length === 0 ? (
                 <p style={{ margin: 0, fontSize: 12.5, color: "var(--av3-muted)" }}>No daily routines yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -456,7 +465,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
           {canManage && (
             <Card>
               <CardHead
-                title={<><Megaphone style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />{aEditId ? "Edit announcement" : "New announcement"}</>}
+                title={aEditId ? "Edit announcement" : "New announcement"}
                 description="A message you send your team. Separate from Alerts — the automated operational feed (orders, low stock, disputes) that rings the bell."
                 actions={aEditId ? <Badge tone="info">editing</Badge> : undefined}
               />
@@ -474,7 +483,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                     <label className="av3-field-label">Audience — roles (none = everyone)</label>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {TARGETABLE_ROLES.map((r) => (
-                        <button key={r} type="button" className={`av3-chip ${aRoles.includes(r) ? "is-active" : ""}`} onClick={() => toggleRole(r)}>
+                        <button key={r} type="button" className={`av3-chip av3-chip-outline ${aRoles.includes(r) ? "is-active" : ""}`} onClick={() => toggleRole(r)}>
                           {ROLE_LABEL[r]}
                         </button>
                       ))}
@@ -484,7 +493,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                     <label className="av3-field-label">Audience — locations (none = all)</label>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {activeLocations.map((l) => (
-                        <button key={l.slug} type="button" className={`av3-chip ${aLocs.includes(l.slug) ? "is-active" : ""}`} onClick={() => toggleLoc(l.slug)}>
+                        <button key={l.slug} type="button" className={`av3-chip av3-chip-outline ${aLocs.includes(l.slug) ? "is-active" : ""}`} onClick={() => toggleLoc(l.slug)}>
                           {l.city}
                         </button>
                       ))}
@@ -495,7 +504,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                       <label className="av3-field-label">Also send to specific people (optional)</label>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                         {targetableUsers.map((u) => (
-                          <button key={u.id} type="button" className={`av3-chip ${aUsers.includes(u.id) ? "is-active" : ""}`} onClick={() => toggleUser(u.id)}>
+                          <button key={u.id} type="button" className={`av3-chip av3-chip-outline ${aUsers.includes(u.id) ? "is-active" : ""}`} onClick={() => toggleUser(u.id)}>
                             {u.name}
                           </button>
                         ))}
@@ -519,9 +528,11 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
           )}
 
           <Card>
-            <CardHead title="Posted" actions={<Badge tone="neutral">{unreadAnns} unread by all</Badge>} />
+            <CardHead title="Posted" actions={loaded ? <Badge tone="neutral">{unreadAnns} unread by all</Badge> : undefined} />
             <CardBody>
-              {anns.length === 0 ? (
+              {!loaded ? (
+                <SkeletonRows rows={3} />
+              ) : anns.length === 0 ? (
                 <p style={{ margin: 0, fontSize: 12.5, color: "var(--av3-muted)" }}>No announcements yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
