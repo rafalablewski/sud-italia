@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Megaphone, ListTodo, Plus, Trash2, Pin, Pencil } from "lucide-react";
+import { Megaphone, ListTodo, Plus, Trash2, Pin, Pencil, Repeat } from "lucide-react";
 import { Card, CardHead, CardBody, Button, Badge, Switch, type BadgeTone } from "./ui";
 import { useAdminLocationV3 } from "./LocationContext";
 import {
   TASK_PRIORITIES,
   announcementAudienceLabel,
+  routineAudienceLabel,
   type Task,
   type TaskPriority,
   type Announcement,
+  type RoutineTemplate,
 } from "@/lib/comms";
 import type { AdminRole } from "@/lib/admin-roles";
 
@@ -46,6 +48,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
   const { activeLocations } = useAdminLocationV3();
   const [canManage, setCanManage] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [routines, setRoutines] = useState<RoutineTemplate[]>([]);
   const [anns, setAnns] = useState<Announcement[]>([]);
   const [users, setUsers] = useState<DirUser[]>([]);
   const [busy, setBusy] = useState(false);
@@ -58,6 +61,13 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
   const [tPriority, setTPriority] = useState<TaskPriority>("normal");
   const [tDue, setTDue] = useState("");
 
+  // New team-routine form (the recurring daily-ops checklist).
+  const [rTitle, setRTitle] = useState("");
+  const [rDetail, setRDetail] = useState("");
+  const [rPriority, setRPriority] = useState<TaskPriority>("normal");
+  const [rRoles, setRRoles] = useState<AdminRole[]>([]);
+  const [rLocs, setRLocs] = useState<string[]>([]);
+
   // New / edit-announcement form. `aEditId` is null for a fresh post, or the
   // id of the announcement being edited (the POST upserts on id).
   const [aEditId, setAEditId] = useState<string | null>(null);
@@ -69,9 +79,10 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
   const [aPinned, setAPinned] = useState(false);
 
   const load = useCallback(async () => {
-    const [me, t, a, u] = await Promise.all([
+    const [me, t, rt, a, u] = await Promise.all([
       fetch("/api/admin/me").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/admin/tasks").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch("/api/admin/routines").then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch("/api/admin/announcements").then((r) => (r.ok ? r.json() : [])).catch(() => []),
       // Owner gets the per-person picker; a comms-granted manager without
       // users.view degrades gracefully to role-group targeting (empty list).
@@ -79,6 +90,7 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
     ]);
     setCanManage(!!me && (me.allAccess || (Array.isArray(me.permissions) && me.permissions.includes("comms.manage"))));
     setTasks(Array.isArray(t) ? t : []);
+    setRoutines(Array.isArray(rt) ? rt : []);
     setAnns(Array.isArray(a) ? a : []);
     setUsers(Array.isArray(u) ? u : []);
   }, []);
@@ -121,6 +133,68 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
     setTasks((arr) => arr.filter((t) => t.id !== id));
     await fetch(`/api/admin/tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   };
+
+  const createRoutine = async () => {
+    if (!rTitle.trim()) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: rTitle.trim(),
+          detail: rDetail.trim() || undefined,
+          priority: rPriority,
+          assigneeRoles: rRoles.length ? rRoles : undefined,
+          locationSlugs: rLocs.length ? rLocs : undefined,
+        }),
+      });
+      if (res.ok) {
+        setRTitle(""); setRDetail(""); setRPriority("normal"); setRRoles([]); setRLocs([]);
+        await load();
+      } else {
+        const e = await res.json().catch(() => null);
+        alert(e?.error ?? "Could not create routine.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Pause / resume a routine without deleting it (drops off / returns to every
+  // matching teammate's daily list). Persists immediately — toggle = saved.
+  // Optimistic, then re-sync if the write fails so the switch can't lie.
+  const toggleRoutineActive = async (t: RoutineTemplate, active: boolean) => {
+    setRoutines((arr) => arr.map((x) => (x.id === t.id ? { ...x, active } : x)));
+    try {
+      const res = await fetch("/api/admin/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: t.id, title: t.title, detail: t.detail, priority: t.priority,
+          assigneeRoles: t.assigneeRoles, locationSlugs: t.locationSlugs, active,
+        }),
+      });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
+  };
+
+  const deleteRoutine = async (id: string) => {
+    setRoutines((arr) => arr.filter((t) => t.id !== id));
+    try {
+      const res = await fetch(`/api/admin/routines?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
+  };
+
+  const toggleRRole = (r: AdminRole) =>
+    setRRoles((s) => (s.includes(r) ? s.filter((x) => x !== r) : [...s, r]));
+  const toggleRLoc = (slug: string) =>
+    setRLocs((s) => (s.includes(slug) ? s.filter((x) => x !== slug) : [...s, slug]));
 
   const resetAnnForm = () => {
     setAEditId(null); setATitle(""); setABody("");
@@ -274,11 +348,99 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
                         </div>
                       </div>
                       <Badge tone={PRIORITY_TONE[t.priority]}>{t.priority}</Badge>
-                      <Badge tone={t.status === "done" ? "ok" : "warn"} dot>{t.status}</Badge>
+                      <Badge tone={t.status === "done" ? "ok" : t.status === "open" ? "warn" : "neutral"} dot>{t.status}</Badge>
                       {canManage && (
                         <Button variant="ghost" size="sm" onClick={() => deleteTask(t.id)} aria-label="Delete task">
                           <Trash2 style={{ width: 14, height: 14 }} />
                         </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Daily routines — the recurring "regular to-do list" (orders,
+              delivery, clean walls, coffee-machine maintenance…). Defined once,
+              they appear on every matching teammate's portal each day and reset
+              at midnight; ticking is per-person, tracked server-side. */}
+          {canManage && (
+            <Card>
+              <CardHead
+                title={<><Repeat style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 6 }} />New daily routine</>}
+                description="A standing task the team does every day. It shows on each matching teammate's portal and resets daily — they tick it off for their own day."
+              />
+              <CardBody>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div className="av3-field">
+                    <label className="av3-field-label">Routine</label>
+                    <input className="av3-input" value={rTitle} onChange={(e) => setRTitle(e.target.value)} placeholder="e.g. Clean the coffee machine before close" maxLength={200} />
+                  </div>
+                  <div className="av3-field">
+                    <label className="av3-field-label">Detail (optional)</label>
+                    <textarea className="av3-input" value={rDetail} onChange={(e) => setRDetail(e.target.value)} rows={2} maxLength={2000} style={{ fontFamily: "var(--av3-ui)", resize: "vertical" }} />
+                  </div>
+                  <div className="av3-field">
+                    <label className="av3-field-label">Who does it — roles (none = everyone)</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {TARGETABLE_ROLES.map((r) => (
+                        <button key={r} type="button" className={`av3-chip ${rRoles.includes(r) ? "is-active" : ""}`} onClick={() => toggleRRole(r)}>
+                          {ROLE_LABEL[r]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="av3-field">
+                    <label className="av3-field-label">Where — locations (none = all)</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {activeLocations.map((l) => (
+                        <button key={l.slug} type="button" className={`av3-chip ${rLocs.includes(l.slug) ? "is-active" : ""}`} onClick={() => toggleRLoc(l.slug)}>
+                          {l.city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="av3-field" style={{ maxWidth: 220 }}>
+                    <label className="av3-field-label">Priority</label>
+                    <select className="av3-select" value={rPriority} onChange={(e) => setRPriority(e.target.value as TaskPriority)}>
+                      {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p[0].toUpperCase() + p.slice(1)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Button variant="primary" onClick={createRoutine} loading={busy} disabled={!rTitle.trim()}>
+                      <Plus style={{ width: 14, height: 14 }} />Add routine
+                    </Button>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          <Card>
+            <CardHead title="Daily routines" actions={<Badge tone="neutral">{routines.length}</Badge>} />
+            <CardBody>
+              {routines.length === 0 ? (
+                <p style={{ margin: 0, fontSize: 12.5, color: "var(--av3-muted)" }}>No daily routines yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {routines.map((t) => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--av3-line)" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t.title}</div>
+                        {t.detail && <div style={{ fontSize: 12, color: "var(--av3-muted)", marginTop: 2 }}>{t.detail}</div>}
+                        <div style={{ fontSize: 11.5, color: "var(--av3-subtle)", marginTop: 4 }}>
+                          {routineAudienceLabel(t)} · by {t.createdByName}
+                        </div>
+                      </div>
+                      <Badge tone={PRIORITY_TONE[t.priority]}>{t.priority}</Badge>
+                      {canManage && (
+                        <>
+                          <Switch checked={t.active} onChange={(v) => toggleRoutineActive(t, v)} label="Active" />
+                          <Button variant="ghost" size="sm" onClick={() => deleteRoutine(t.id)} aria-label="Delete routine">
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </Button>
+                        </>
                       )}
                     </div>
                   ))}

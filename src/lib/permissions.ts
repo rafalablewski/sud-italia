@@ -495,8 +495,10 @@ export function permissionForApiPath(
       return "boardroom.view";
     case "tasks":
     case "announcements":
-      // The management board (assign/post/delete). Personal feeds live on the
-      // unmapped /api/admin/my-tasks + /api/admin/my-announcements (any authed).
+    case "routines":
+      // The management board (assign/post/delete tasks, define team routines).
+      // Personal feeds live on the unmapped /api/admin/my-tasks +
+      // /api/admin/my-routines + /api/admin/my-announcements (any authed).
       return write ? "comms.manage" : "comms.view";
     case "payments":
       return "payments.view";

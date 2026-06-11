@@ -14,7 +14,14 @@ import { normalizePlPhoneE164, phonesEqualPl } from "@/lib/phone";
 import { cashVarianceGrosze as computeCashVariance } from "@/lib/cash-recon";
 import type { Experiment } from "@/lib/experiments";
 import type { MLUpsellModel } from "@/lib/ml-upsell";
-import type { Task, TaskStatus, Announcement, AnnouncementState } from "@/lib/comms";
+import type {
+  Task,
+  TaskStatus,
+  Announcement,
+  AnnouncementState,
+  RoutineTemplate,
+  RoutineCompletion,
+} from "@/lib/comms";
 import { logger } from "@/lib/logger";
 import { hashPassword, hashPin, verifyPin } from "@/lib/password";
 import { staffRoleToAdminRole } from "@/lib/staff-roles";
@@ -2527,14 +2534,21 @@ export async function saveTask(
   });
 }
 
-/** Set a task's status. `done` stamps completedAt; reopening clears it. */
+/**
+ * Set a task's status (open / done / archived / deleted). Marking `done` stamps
+ * completedAt; reopening to `open` clears it. Archiving or deleting a task that
+ * was already done *keeps* completedAt, so the completion record survives being
+ * filed away.
+ */
 export async function setTaskStatus(id: string, status: TaskStatus): Promise<Task | null> {
   return withLock("tasks.json", async () => {
     const list = await readJSON<Task[]>("tasks.json", []);
     const t = list.find((x) => x.id === id);
     if (!t) return null;
     t.status = status;
-    t.completedAt = status === "done" ? new Date().toISOString() : undefined;
+    if (status === "done") t.completedAt = new Date().toISOString();
+    else if (status === "open") t.completedAt = undefined;
+    // archived / deleted: leave completedAt untouched (preserve any completion).
     await writeJSON("tasks.json", list);
     return t;
   });
@@ -2548,6 +2562,109 @@ export async function deleteTask(id: string): Promise<boolean> {
     list.splice(idx, 1);
     await writeJSON("tasks.json", list);
     return true;
+  });
+}
+
+// --- Recurring routines (the "regular daily to-do list") ---
+// Two stores: the TEMPLATES (standing routine definitions — team + personal) and
+// the per-day COMPLETIONS (who ticked which routine, which day). A teammate's
+// daily list is derived (templates that apply to them, annotated with today's
+// tick); it resets at midnight because the date key changes — no cron, no
+// per-day task rows. Types live in @/lib/comms (client-safe).
+
+/** Today's date as `yyyy-mm-dd` in the truck's timezone — the daily-reset key. */
+export function warsawToday(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+export async function getRoutineTemplates(): Promise<RoutineTemplate[]> {
+  return readJSON<RoutineTemplate[]>("routine-templates.json", []);
+}
+
+/** Upsert a routine template. New rows get an id + createdAt; existing replaced. */
+export async function saveRoutineTemplate(
+  input: Omit<RoutineTemplate, "id" | "createdAt"> & { id?: string; createdAt?: string },
+): Promise<RoutineTemplate> {
+  return withLock("routine-templates.json", async () => {
+    const list = await readJSON<RoutineTemplate[]>("routine-templates.json", []);
+    const id = input.id ?? `routine-${crypto.randomUUID()}`;
+    const entry: RoutineTemplate = {
+      ...input,
+      id,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
+    const idx = list.findIndex((t) => t.id === id);
+    if (idx >= 0) list[idx] = entry;
+    else list.unshift(entry);
+    if (list.length > 1000) list.length = 1000;
+    await writeJSON("routine-templates.json", list);
+    return entry;
+  });
+}
+
+export async function deleteRoutineTemplate(id: string): Promise<boolean> {
+  return withLock("routine-templates.json", async () => {
+    const list = await readJSON<RoutineTemplate[]>("routine-templates.json", []);
+    const idx = list.findIndex((t) => t.id === id);
+    if (idx === -1) return false;
+    list.splice(idx, 1);
+    await writeJSON("routine-templates.json", list);
+    // Also drop any completion rows for the removed routine so the file doesn't
+    // accrete orphans.
+    const comps = await readJSON<RoutineCompletion[]>("routine-completions.json", []);
+    const pruned = comps.filter((c) => c.templateId !== id);
+    if (pruned.length !== comps.length) await writeJSON("routine-completions.json", pruned);
+    return true;
+  });
+}
+
+/** Completion rows for one date (defaults to today, Warsaw). */
+export async function getRoutineCompletions(date?: string): Promise<RoutineCompletion[]> {
+  const day = date ?? warsawToday();
+  return (await readJSON<RoutineCompletion[]>("routine-completions.json", [])).filter(
+    (c) => c.date === day,
+  );
+}
+
+/** Tick a routine for a user on a day (idempotent). Prunes rows >30 days old. */
+export async function setRoutineDone(
+  templateId: string,
+  userId: string,
+  date: string,
+  doneByName?: string,
+): Promise<void> {
+  await withLock("routine-completions.json", async () => {
+    const list = await readJSON<RoutineCompletion[]>("routine-completions.json", []);
+    const exists = list.some(
+      (c) => c.templateId === templateId && c.userId === userId && c.date === date,
+    );
+    if (!exists) list.push({ templateId, userId, date, doneAt: new Date().toISOString(), doneByName });
+    // Keep the ledger bounded: drop completions older than 30 days.
+    const cutoff = warsawToday(new Date(Date.now() - 30 * 86_400_000));
+    const pruned = list.filter((c) => c.date >= cutoff);
+    await writeJSON("routine-completions.json", pruned);
+  });
+}
+
+/** Un-tick a routine for a user on a day. */
+export async function clearRoutineDone(
+  templateId: string,
+  userId: string,
+  date: string,
+): Promise<void> {
+  await withLock("routine-completions.json", async () => {
+    const list = await readJSON<RoutineCompletion[]>("routine-completions.json", []);
+    const next = list.filter(
+      (c) => !(c.templateId === templateId && c.userId === userId && c.date === date),
+    );
+    if (next.length !== list.length) await writeJSON("routine-completions.json", next);
   });
 }
 

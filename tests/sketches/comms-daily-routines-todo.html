@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-admin-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Comms — Daily routines + full to-do lifecycle (sketch)</title>
+<!--
+  Standalone visual sketch of the feature on branch
+  claude/todo-list-add-feature-2tjt9k:
+    • Daily routine — recurring checklist that resets daily (team + personal)
+    • Full to-do lifecycle — To-do / Done / Archived / Deleted tabs
+  Left: the teammate's portal (PortalInbox). Right: the manager's admin board
+  (CommsV3 Tasks view). Interactive: tabs switch, checkboxes tick, theme toggles.
+  Tokens copied from src/app/themes/admin-v3/index.css. Not wired to data — a
+  sketch for review, per /tests/README.md.
+-->
+<style>
+  :root, [data-admin-theme="dark"] {
+    --av3-bg:#0a0a0c; --av3-s1:#141417; --av3-s2:#1b1b1f; --av3-s3:#24242a; --av3-hover:#2c2c33;
+    --av3-line:rgba(255,255,255,.07); --av3-line-strong:rgba(255,255,255,.13);
+    --av3-fg:#f4f3f1; --av3-muted:#a6a099; --av3-subtle:#8a837b;
+    --av3-brand:#c2384f; --av3-platinum:#cbb48a;
+    --av3-ok:#34b27b; --av3-warn:#e0a93f; --av3-bad:#e8554f; --av3-info:#5f9bd6;
+    --av3-c1:#c2384f; --av3-c2:#cbb48a; --av3-c3:#5f9bd6;
+    --av3-r-md:8px; --av3-r-lg:11px; --av3-ui:"Inter",system-ui,sans-serif;
+  }
+  [data-admin-theme="light"] {
+    --av3-bg:#f7f5f1; --av3-s1:#fff; --av3-s2:#f6f3ee; --av3-s3:#efebe3; --av3-hover:#e9e4da;
+    --av3-line:rgba(28,24,21,.09); --av3-line-strong:rgba(28,24,21,.16);
+    --av3-fg:#1a1714; --av3-muted:#57504a; --av3-subtle:#756d65;
+    --av3-brand:#a82940; --av3-platinum:#9c7e4e;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--av3-bg); color:var(--av3-fg); font-family:var(--av3-ui);
+         -webkit-font-smoothing:antialiased; padding:28px; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; gap:16px; flex-wrap:wrap; }
+  h1.title { font-size:19px; margin:0; letter-spacing:-.01em; }
+  code { font-family:ui-monospace,monospace; font-size:.92em; }
+  .sub { font-size:12.5px; color:var(--av3-muted); margin-top:4px; }
+  .theme-toggle { display:flex; gap:4px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:999px; padding:3px; }
+  .theme-toggle button { border:none; background:transparent; color:var(--av3-muted); font-size:12px; font-weight:600;
+    padding:6px 14px; border-radius:999px; cursor:pointer; }
+  .theme-toggle button.on { background:var(--av3-s3); color:var(--av3-fg); }
+
+  .cols { display:grid; grid-template-columns:1fr; gap:30px; align-items:start; }
+  /* Daily routine + Your to-do list sit side by side on a wide portal, stack on narrow. */
+  .todo-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+  @media (max-width:720px){ .todo-grid{ grid-template-columns:1fr; } }
+  @media (max-width:480px){ body{ padding:16px; } .device{ padding:12px; } }
+
+  .col-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); margin-bottom:10px; }
+  .device { background:var(--av3-bg); border:1px solid var(--av3-line-strong); border-radius:16px; padding:16px; }
+
+  .section { margin-bottom:18px; }
+  .section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--av3-subtle);
+    margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .section-label .meta { font-size:11px; font-weight:500; text-transform:none; letter-spacing:0; color:var(--av3-subtle); }
+  .card { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:var(--av3-r-lg); }
+  .card-p { padding:14px; }
+
+  .tabs { display:flex; gap:3px; background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:999px; padding:3px;
+    max-width:100%; overflow-x:auto; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tabs button { border:none; font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:999px; cursor:pointer;
+    display:flex; align-items:center; gap:6px; background:transparent; color:var(--av3-muted); flex:0 0 auto; white-space:nowrap; }
+  .tabs button.on { background:var(--av3-s3); color:var(--av3-fg); }
+  .cnt { font-size:10px; font-weight:600; color:var(--av3-muted); background:var(--av3-s1); border:1px solid var(--av3-line);
+    border-radius:999px; padding:1px 6px; }
+  .cnt.brand { color:#fff; background:var(--av3-brand); border:none; }
+
+  .inbox-row { display:flex; align-items:flex-start; border-top:1px solid var(--av3-line); }
+  .inbox-row:first-child { border-top:none; }
+  .inbox-row.unread { background:var(--av3-s2); }
+  .inbox-btn { flex:1; min-width:0; display:flex; gap:12px; padding:11px 14px; background:transparent; border:none; text-align:left; cursor:pointer; color:inherit; }
+  .avatar { flex-shrink:0; width:34px; height:34px; border-radius:999px; display:grid; place-items:center; color:#fff; font-size:12px; font-weight:700; margin-top:1px; }
+  .sender { font-size:13px; font-weight:500; color:var(--av3-fg); }
+  .sender.b { font-weight:700; }
+  .age { font-size:11px; color:var(--av3-subtle); }
+  .subj { font-size:12.5px; margin-top:2px; color:var(--av3-fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .subj .snip { font-weight:400; color:var(--av3-muted); }
+  .brand-dot { width:7px; height:7px; border-radius:999px; background:var(--av3-brand); flex-shrink:0; }
+  .row-actions { display:flex; gap:4px; padding:13px 12px 0 4px; flex-shrink:0; }
+
+  .act { width:30px; height:30px; display:grid; place-items:center; border-radius:var(--av3-r-md); background:var(--av3-s3);
+    border:1px solid var(--av3-line); color:var(--av3-muted); cursor:pointer; }
+  .act:hover { color:var(--av3-fg); border-color:var(--av3-line-strong); }
+  .act.danger:hover { color:var(--av3-bad); border-color:color-mix(in oklab,var(--av3-bad) 45%,transparent); }
+  .acts .act { width:28px; height:28px; }
+  .act svg, .icoslot svg { width:15px; height:15px; }
+
+  /* Quick-add: full-width input above a controls row (priority [+ due] + Add,
+     Add pushed right). Equal-height add areas, all controls 32px. */
+  .add-box { display:flex; flex-direction:column; gap:8px; }
+  .add-box > .input { width:100%; }
+  .add-ctrls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .add-ctrls .btn { margin-left:auto; }
+  /* Floor both grid headers to one height so the cards line up. */
+  .todo-grid .section-label { min-height:30px; }
+  .input, .select { background:var(--av3-s2); border:1px solid var(--av3-line-strong); color:var(--av3-fg);
+    border-radius:var(--av3-r-md); padding:7px 10px; font-size:12.5px; font-family:var(--av3-ui); height:32px; }
+  .input:focus, .select:focus { outline:none; border-color:var(--av3-brand); }
+  .input.grow { flex:1; min-width:170px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:var(--av3-r-md);
+    font-size:12px; font-weight:600; border:1px solid var(--av3-line-strong); background:var(--av3-s2); color:var(--av3-fg); cursor:pointer; }
+  .btn svg { width:14px; height:14px; }
+  .btn.primary { background:var(--av3-brand); border-color:transparent; color:#fff; }
+  .btn.sm { height:28px; padding:0 9px; }
+
+  .list { margin-top:8px; }
+  /* progress bar */
+  .progress { height:5px; border-radius:999px; background:var(--av3-s3); overflow:hidden; width:72px; }
+  .progress > i { display:block; height:100%; border-radius:999px;
+    background:linear-gradient(90deg, color-mix(in oklab,var(--av3-ok) 78%,var(--av3-info)), var(--av3-ok)); transition:width .26s; }
+  .alldone { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--av3-ok); padding:4px 0; }
+  .alldone svg { width:16px; height:16px; }
+  /* shared row chrome — hover lifts surface + fades actions in */
+  .row { display:flex; align-items:flex-start; gap:11px; padding:9px 10px; margin:0 -10px; border-radius:var(--av3-r-md);
+    transition:background .11s; }
+  .row:hover { background:var(--av3-s2); }
+  .row .acts { display:flex; gap:4px; align-self:flex-start; flex-shrink:0; opacity:0; transform:translateX(3px); transition:opacity .11s,transform .11s; }
+  .row:hover .acts { opacity:1; transform:none; }
+  .checkbox { flex-shrink:0; width:20px; height:20px; margin-top:1px; border-radius:6px; cursor:pointer; display:grid; place-items:center;
+    border:1.5px solid var(--av3-line-strong); background:transparent; transition:background .11s,border-color .11s; }
+  .checkbox:hover { border-color:var(--av3-ok); }
+  .checkbox.done { border-color:var(--av3-ok); background:var(--av3-ok); }
+  .checkbox svg { width:12px; height:12px; color:#fff; opacity:0; transform:scale(.5); transition:opacity .11s,transform .11s; }
+  .checkbox.done svg { opacity:1; transform:scale(1); }
+  .pdot { width:7px; height:7px; border-radius:999px; margin-top:6px; flex-shrink:0; }
+  .pdot.sm { width:6px; height:6px; margin-top:0; }
+  .ttl { font-size:13.5px; font-weight:600; color:var(--av3-fg); }
+  .ttl.done { color:var(--av3-subtle); text-decoration:line-through; }
+  .det { font-size:12px; color:var(--av3-muted); margin-top:2px; }
+  .metaline { font-size:11.5px; color:var(--av3-subtle); margin-top:4px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .scope { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; border-radius:999px; padding:1px 7px; }
+  .scope.team { color:var(--av3-info); background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); }
+  .scope.mine { color:var(--av3-platinum); background:color-mix(in oklab,var(--av3-platinum) 15%,var(--av3-s1)); }
+  .empty { margin:12px 2px 0; font-size:12.5px; color:var(--av3-muted); line-height:1.5; }
+  .priword { font-size:11px; color:var(--av3-subtle); }
+
+  .pagehead h2 { font-size:17px; margin:0 0 2px; }
+  .pagehead .sub { margin:0; }
+  .acard { background:var(--av3-s1); border:1px solid var(--av3-line); border-radius:var(--av3-r-lg); margin-bottom:16px; }
+  .acard-head { padding:13px 15px 0; }
+  .acard-head .h { font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:6px; }
+  .acard-head .h .icoslot svg { width:14px; height:14px; }
+  .acard-head .d { font-size:12px; color:var(--av3-muted); margin-top:4px; }
+  .acard-body { padding:14px 15px 15px; }
+  .field { margin-bottom:10px; }
+  .field-label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--av3-subtle); margin-bottom:5px; }
+  .field .input, .field .select, .field textarea { width:100%; }
+  textarea.input { height:auto; resize:vertical; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; cursor:pointer;
+    background:var(--av3-s2); border:1px solid var(--av3-line-strong); color:var(--av3-muted); }
+  .chip.on { background:var(--av3-brand); border-color:transparent; color:#fff; }
+  .badge { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:2px 8px; border-radius:999px;
+    border:1px solid var(--av3-line-strong); color:var(--av3-muted); display:inline-flex; align-items:center; gap:5px; }
+  .badge.bad { color:var(--av3-bad); border-color:transparent; background:color-mix(in oklab,var(--av3-bad) 16%,transparent); }
+  .badge.info { color:var(--av3-info); border-color:transparent; background:color-mix(in oklab,var(--av3-info) 16%,transparent); }
+  .lrow { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--av3-line); }
+  .switch { display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--av3-muted); cursor:pointer; }
+  .track { width:34px; height:19px; border-radius:999px; background:var(--av3-s3); border:1px solid var(--av3-line-strong); position:relative; transition:background .15s; }
+  .track .knob { position:absolute; top:1px; left:1px; width:15px; height:15px; border-radius:999px; background:var(--av3-muted); transition:left .15s,background .15s; }
+  .switch.on .track { background:var(--av3-ok); border-color:transparent; }
+  .switch.on .track .knob { left:16px; background:#fff; }
+
+  .note { font-size:11.5px; color:var(--av3-subtle); margin-top:14px; line-height:1.6; }
+  .note b { color:var(--av3-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1 class="title">Comms — daily routines + full to-do lifecycle</h1>
+      <div class="sub">Sketch for review · branch <code>claude/todo-list-add-feature-2tjt9k</code> · not wired to data</div>
+    </div>
+    <div class="theme-toggle">
+      <button id="t-dark" class="on" onclick="setTheme('dark')">Dark</button>
+      <button id="t-light" onclick="setTheme('light')">Light</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- ===== LEFT: teammate portal ===== -->
+    <div>
+      <div class="col-label">Teammate portal — what staff see</div>
+      <div class="device">
+
+        <!-- Notifications (existing) -->
+        <div class="section">
+          <div class="section-label">
+            <span style="display:flex;align-items:center;gap:8px;">Notifications <span class="cnt brand">1</span></span>
+            <div class="tabs">
+              <button class="on">Inbox <span class="cnt brand">1</span></button>
+              <button>Archived</button>
+              <button>Deleted</button>
+            </div>
+          </div>
+          <div class="card" style="overflow:hidden;">
+            <div class="inbox-row unread">
+              <div class="inbox-btn">
+                <span class="avatar" style="background:var(--av3-c1)">MK</span>
+                <span style="flex:1;min-width:0;">
+                  <span style="display:flex;align-items:center;gap:8px;">
+                    <span class="sender b" style="flex:1;">Marco (owner)</span>
+                    <span class="brand-dot"></span><span class="age">3h</span>
+                  </span>
+                  <span class="subj"><b>Winter menu launches Monday</b><span class="snip"> — new truffle pizza + mulled wine, briefing 9am…</span></span>
+                </span>
+              </div>
+              <span class="row-actions">
+                <button class="act" title="Mark read"><span class="icoslot" data-ico="check"></span></button>
+                <button class="act" title="Archive"><span class="icoslot" data-ico="archive"></span></button>
+                <button class="act danger" title="Delete"><span class="icoslot" data-ico="trash"></span></button>
+              </span>
+            </div>
+            <div class="inbox-row">
+              <div class="inbox-btn">
+                <span class="avatar" style="background:var(--av3-c3)">AN</span>
+                <span style="flex:1;min-width:0;">
+                  <span style="display:flex;align-items:center;gap:8px;">
+                    <span class="sender" style="flex:1;">Anna (manager)</span>
+                    <span class="age">Yesterday</span>
+                  </span>
+                  <span class="subj">Great work on Saturday rush<span class="snip"> — record covers, zero comp tickets.</span></span>
+                </span>
+              </div>
+              <span class="row-actions">
+                <button class="act" title="Archive"><span class="icoslot" data-ico="archive"></span></button>
+                <button class="act danger" title="Delete"><span class="icoslot" data-ico="trash"></span></button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily routine + Your to-do list: side by side (2 columns) -->
+        <div class="todo-grid">
+        <!-- Daily routine (NEW) -->
+        <div class="section" style="margin-bottom:0;">
+          <div class="section-label">
+            <span>Daily routine</span>
+            <span style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;">
+              <span class="meta" id="routine-meta"></span>
+              <span class="progress" id="routine-progress"><i style="width:0%"></i></span>
+            </span>
+          </div>
+          <div class="card card-p">
+            <div class="add-box">
+              <input class="input" placeholder="Add a daily routine — e.g. Wipe down coffee machine" />
+              <div class="add-ctrls">
+                <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
+                <button class="btn primary"><span class="icoslot" data-ico="plus"></span> Add</button>
+              </div>
+            </div>
+            <div class="list" id="routine-list"></div>
+          </div>
+        </div>
+
+        <!-- Your to-do list (NEW lifecycle) -->
+        <div class="section" style="margin-bottom:0;">
+          <div class="section-label">
+            <span>Your to-do list</span>
+            <div class="tabs" id="task-tabs">
+              <button data-tab="open">To-do <span class="cnt"></span></button>
+              <button data-tab="done">Done <span class="cnt"></span></button>
+              <button data-tab="archived">Archived <span class="cnt"></span></button>
+              <button data-tab="deleted">Deleted <span class="cnt"></span></button>
+            </div>
+          </div>
+          <div class="card card-p">
+            <div class="add-box">
+              <input class="input" placeholder="Add a one-off task — e.g. Call supplier about flour" />
+              <div class="add-ctrls">
+                <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
+                <input class="input" type="date" value="2026-06-11" />
+                <button class="btn primary"><span class="icoslot" data-ico="plus"></span> Add</button>
+              </div>
+            </div>
+            <div class="list" id="task-list"></div>
+          </div>
+        </div>
+        </div><!-- /todo-grid -->
+
+        <div class="note">
+          <b>Daily routine</b> mixes manager-defined <span class="tag">Team</span> routines (matched to your role + location) with your own <span class="tag">Yours</span> items, and resets every midnight — a fresh checklist each shift.<br/>
+          <b>To-do lifecycle</b>: items move <b>To-do → Done → Archived → Deleted</b>, with Reopen / Restore to walk back. Try the tabs and checkboxes.
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT: manager admin board ===== -->
+    <div>
+      <div class="col-label">Manager admin board — /admin/comms/tasks</div>
+      <div class="pagehead" style="margin-bottom:14px;">
+        <h2>Tasks</h2>
+        <p class="sub">Assign to-dos & define daily routines for your team</p>
+      </div>
+
+      <!-- New daily routine (NEW) -->
+      <div class="acard">
+        <div class="acard-head">
+          <div class="h"><span class="icoslot" data-ico="repeat"></span> New daily routine</div>
+          <div class="d">A standing task the team does every day. It shows on each matching teammate's portal and resets daily — they tick it off for their own day.</div>
+        </div>
+        <div class="acard-body">
+          <div class="field">
+            <label class="field-label">Routine</label>
+            <input class="input" value="Clean the coffee machine before close" />
+          </div>
+          <div class="field">
+            <label class="field-label">Detail (optional)</label>
+            <textarea class="input" rows="2" placeholder="Purge group head, wipe steam wand, empty drip tray…"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">Who does it — roles (none = everyone)</label>
+            <div class="chips">
+              <span class="chip" onclick="this.classList.toggle('on')">Manager</span>
+              <span class="chip" onclick="this.classList.toggle('on')">Franchisee</span>
+              <span class="chip on" onclick="this.classList.toggle('on')">Staff</span>
+              <span class="chip on" onclick="this.classList.toggle('on')">Kitchen</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Where — locations (none = all)</label>
+            <div class="chips">
+              <span class="chip on" onclick="this.classList.toggle('on')">Kraków</span>
+              <span class="chip" onclick="this.classList.toggle('on')">Warszawa</span>
+            </div>
+          </div>
+          <div class="field" style="max-width:220px;">
+            <label class="field-label">Priority</label>
+            <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
+          </div>
+          <button class="btn primary"><span class="icoslot" data-ico="plus"></span> Add routine</button>
+        </div>
+      </div>
+
+      <!-- Daily routines list (NEW) -->
+      <div class="acard">
+        <div class="acard-head"><div class="h">Daily routines <span class="badge" style="margin-left:6px;">4</span></div></div>
+        <div class="acard-body" style="padding-top:6px;" id="admin-routines"></div>
+      </div>
+
+      <!-- All tasks (existing, lifecycle statuses) -->
+      <div class="acard">
+        <div class="acard-head"><div class="h">All tasks <span class="badge" style="margin-left:6px;">4</span></div></div>
+        <div class="acard-body" style="padding-top:6px;" id="admin-tasks"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ICONS = {
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  archive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  rotateccw:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+  rotatecw:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  checkcircle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+};
+const PCOL = { high:'var(--av3-bad)', normal:'var(--av3-info)', low:'var(--av3-subtle)' };
+
+function setTheme(t){
+  document.documentElement.setAttribute('data-admin-theme', t);
+  document.getElementById('t-dark').classList.toggle('on', t==='dark');
+  document.getElementById('t-light').classList.toggle('on', t==='light');
+}
+function fillIcons(root){
+  (root||document).querySelectorAll('.icoslot[data-ico]').forEach(e => { e.innerHTML = ICONS[e.dataset.ico] || ''; });
+}
+
+// ---------- daily routine (portal) ----------
+const routines = [
+  { id:'r1', title:'Take delivery & check off invoice', detail:'Match crates to the supplier invoice before signing.', scope:'team', priority:'high', done:false },
+  { id:'r2', title:'Clean walls & prep surfaces', scope:'team', priority:'normal', done:true },
+  { id:'r3', title:'Open till & check float', scope:'team', priority:'normal', done:false },
+  { id:'r4', title:'Refill my prep station', scope:'personal', priority:'low', done:false },
+];
+function renderRoutines(){
+  const host = document.getElementById('routine-list');
+  const done = routines.filter(r=>r.done).length;
+  const allDone = routines.length>0 && done===routines.length;
+  host.innerHTML =
+    (allDone?`<div class="alldone"><span class="icoslot" data-ico="checkcircle"></span> All done for today — nice work.</div>`:'')
+    + routines.map(r => `
+    <div class="row">
+      <button class="checkbox ${r.done?'done':''}" onclick="toggleRoutine('${r.id}')" aria-label="toggle"><span class="icoslot" data-ico="check"></span></button>
+      <div style="flex:1;min-width:0;">
+        <div class="ttl ${r.done?'done':''}">${r.title}</div>
+        ${r.detail?`<div class="det">${r.detail}</div>`:''}
+        <div class="metaline">
+          <span class="scope ${r.scope==='personal'?'mine':'team'}">${r.scope==='personal'?'Yours':'Team'}</span>
+          <span class="pdot sm" style="background:${PCOL[r.priority]}"></span>
+          <span class="priword">${r.priority}</span>
+        </div>
+      </div>
+      ${r.scope==='personal'?`<span class="acts"><button class="act danger" title="Remove routine" onclick="removeRoutine('${r.id}')"><span class="icoslot" data-ico="trash"></span></button></span>`:''}
+    </div>`).join('');
+  document.getElementById('routine-meta').textContent = `${done}/${routines.length} today`;
+  document.getElementById('routine-meta').style.color = allDone ? 'var(--av3-ok)' : 'var(--av3-subtle)';
+  document.querySelector('#routine-progress > i').style.width = Math.round(done/routines.length*100)+'%';
+  fillIcons(host);
+}
+function toggleRoutine(id){ const r=routines.find(x=>x.id===id); r.done=!r.done; renderRoutines(); }
+function removeRoutine(id){ routines.splice(routines.findIndex(x=>x.id===id),1); renderRoutines(); }
+
+// ---------- to-do lifecycle (portal) ----------
+let taskTab = 'open';
+const tasks = [
+  { id:'t1', title:'Recount walk-in freezer before close', detail:'Owner flagged a variance on mozzarella.', due:'12 Jun', from:'Anna', self:false, priority:'high', status:'open' },
+  { id:'t2', title:'Call supplier about flour', due:null, from:null, self:true, priority:'normal', status:'open' },
+  { id:'t3', title:'Photograph new menu boards', due:null, from:'Anna', self:false, priority:'normal', status:'done' },
+  { id:'t4', title:'Swap CO2 canister', due:null, from:null, self:true, priority:'low', status:'archived' },
+  { id:'t5', title:'Old promo idea — scrap', due:null, from:null, self:true, priority:'low', status:'deleted' },
+];
+function taskActions(t){
+  const A = (label,ico,fn,danger)=>`<button class="act ${danger?'danger':''}" title="${label}" onclick="${fn}"><span class="icoslot" data-ico="${ico}"></span></button>`;
+  if(t.status==='open')     return A('Mark done','check',`setStatus('${t.id}','done')`)+A('Archive','archive',`setStatus('${t.id}','archived')`)+A('Delete','trash',`setStatus('${t.id}','deleted')`,true);
+  if(t.status==='done')     return A('Reopen','rotatecw',`setStatus('${t.id}','open')`)+A('Archive','archive',`setStatus('${t.id}','archived')`)+A('Delete','trash',`setStatus('${t.id}','deleted')`,true);
+  if(t.status==='archived') return A('Restore','rotateccw',`setStatus('${t.id}','open')`)+A('Delete','trash',`setStatus('${t.id}','deleted')`,true);
+  return A('Restore','rotateccw',`setStatus('${t.id}','open')`)+(t.self?A('Delete forever','trash',`purge('${t.id}')`,true):'');
+}
+function renderTasks(){
+  const counts = { open:0,done:0,archived:0,deleted:0 };
+  tasks.forEach(t=>counts[t.status]++);
+  document.querySelectorAll('#task-tabs button').forEach(b=>{
+    const k=b.dataset.tab; b.classList.toggle('on', k===taskTab);
+    const c=b.querySelector('.cnt'); c.textContent=counts[k]; c.style.display=counts[k]>0?'':'none';
+  });
+  const host = document.getElementById('task-list');
+  const rows = tasks.filter(t=>t.status===taskTab);
+  if(rows.length===0){
+    const copy={ open:"Nothing on your list — you're all caught up.", done:'Nothing ticked off yet.', archived:'Nothing archived.', deleted:'Trash is empty.' };
+    host.innerHTML = `<p class="empty">${copy[taskTab]}</p>`; return;
+  }
+  host.innerHTML = rows.map(t=>`
+    <div class="row">
+      <span class="pdot" style="background:${PCOL[t.priority]}"></span>
+      <div style="flex:1;min-width:0;">
+        <div class="ttl ${t.status==='done'?'done':''}">${t.title}</div>
+        ${t.detail?`<div class="det">${t.detail}</div>`:''}
+        <div class="metaline">${t.due?`Due ${t.due}`:'No due date'} · ${t.self?'added by you':'from '+t.from}</div>
+      </div>
+      <span class="acts">${taskActions(t)}</span>
+    </div>`).join('');
+  fillIcons(host);
+}
+function setStatus(id,s){ tasks.find(t=>t.id===id).status=s; renderTasks(); }
+function purge(id){ tasks.splice(tasks.findIndex(t=>t.id===id),1); renderTasks(); }
+document.querySelectorAll('#task-tabs button').forEach(b => b.addEventListener('click',()=>{ taskTab=b.dataset.tab; renderTasks(); }));
+
+// ---------- admin board lists ----------
+const adminRoutines = [
+  { title:'Open till & check float', audience:'Manager · Kraków, Warszawa', pri:'normal', active:true },
+  { title:'Take delivery & check off invoice', audience:'Staff, Kitchen · all locations', pri:'high', active:true },
+  { title:'Clean walls & prep surfaces', audience:'Kitchen · all locations', pri:'normal', active:true },
+  { title:'Coffee machine maintenance', audience:'Staff · Kraków', pri:'low', active:false },
+];
+const adminTasks = [
+  { title:'Recount walk-in freezer before close', meta:'Tomek · due 12 Jun · by Anna', pri:'high', status:'open' },
+  { title:'Photograph new menu boards', meta:'Kasia · no due date · by Anna', pri:'normal', status:'done' },
+  { title:'Chase late linen delivery', meta:'Tomek · due 9 Jun · by Marco', pri:'normal', status:'archived' },
+  { title:'Old promo signage takedown', meta:'Kasia · no due date · by Marco', pri:'low', status:'deleted' },
+];
+function priTone(p){ return p==='high'?'bad':p==='normal'?'info':''; }
+function renderAdmin(){
+  document.getElementById('admin-routines').innerHTML = adminRoutines.map(r=>`
+    <div class="lrow">
+      <div style="flex:1;min-width:0;">
+        <div class="ttl" style="font-size:13.5px;">${r.title}</div>
+        <div class="metaline" style="margin-top:4px;">${r.audience} · by Anna</div>
+      </div>
+      <span class="badge ${priTone(r.pri)}">${r.pri}</span>
+      <span class="switch ${r.active?'on':''}" onclick="this.classList.toggle('on')"><span class="track"><span class="knob"></span></span>Active</span>
+      <button class="act danger" title="Delete routine"><span class="icoslot" data-ico="trash"></span></button>
+    </div>`).join('');
+  document.getElementById('admin-tasks').innerHTML = adminTasks.map(t=>{
+    const c = t.status==='done'?'var(--av3-ok)':t.status==='open'?'var(--av3-warn)':'var(--av3-muted)';
+    return `<div class="lrow">
+      <div style="flex:1;min-width:0;">
+        <div class="ttl" style="font-size:13.5px;">${t.title}</div>
+        <div class="metaline" style="margin-top:4px;">${t.meta}</div>
+      </div>
+      <span class="badge ${priTone(t.pri)}">${t.pri}</span>
+      <span class="badge" style="color:${c}"><span style="width:6px;height:6px;border-radius:999px;background:${c};display:inline-block;"></span>${t.status}</span>
+      <button class="act danger" title="Delete task"><span class="icoslot" data-ico="trash"></span></button>
+    </div>`;
+  }).join('');
+  fillIcons(document.getElementById('admin-routines'));
+  fillIcons(document.getElementById('admin-tasks'));
+}
+
+// init
+fillIcons(document);   // static icons (inbox actions, card heads, add buttons)
+renderRoutines();
+renderTasks();
+renderAdmin();
+</script>
+</body>
+</html>
