@@ -47,7 +47,7 @@
   /* Daily routine + Your to-do list sit side by side on a wide portal, stack on narrow. */
   .todo-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
   @media (max-width:720px){ .todo-grid{ grid-template-columns:1fr; } }
-  @media (max-width:480px){ body{ padding:16px; } .device{ padding:12px; } .add-row .input.grow{ min-width:0; } }
+  @media (max-width:480px){ body{ padding:16px; } .device{ padding:12px; } }
 
   .col-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); margin-bottom:10px; }
   .device { background:var(--av3-bg); border:1px solid var(--av3-line-strong); border-radius:16px; padding:16px; }
@@ -89,7 +89,14 @@
   .acts .act { width:28px; height:28px; }
   .act svg, .icoslot svg { width:15px; height:15px; }
 
-  .add-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  /* Quick-add: full-width input above a controls row (priority [+ due] + Add,
+     Add pushed right). Equal-height add areas, all controls 32px. */
+  .add-box { display:flex; flex-direction:column; gap:8px; }
+  .add-box > .input { width:100%; }
+  .add-ctrls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .add-ctrls .btn { margin-left:auto; }
+  /* Floor both grid headers to one height so the cards line up. */
+  .todo-grid .section-label { min-height:30px; }
   .input, .select { background:var(--av3-s2); border:1px solid var(--av3-line-strong); color:var(--av3-fg);
     border-radius:var(--av3-r-md); padding:7px 10px; font-size:12.5px; font-family:var(--av3-ui); height:32px; }
   .input:focus, .select:focus { outline:none; border-color:var(--av3-brand); }
@@ -240,10 +247,12 @@
             </span>
           </div>
           <div class="card card-p">
-            <div class="add-row">
-              <input class="input grow" placeholder="Add a daily routine — e.g. Wipe down coffee machine" />
-              <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
-              <button class="btn primary sm"><span class="icoslot" data-ico="plus"></span> Add</button>
+            <div class="add-box">
+              <input class="input" placeholder="Add a daily routine — e.g. Wipe down coffee machine" />
+              <div class="add-ctrls">
+                <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
+                <button class="btn primary"><span class="icoslot" data-ico="plus"></span> Add</button>
+              </div>
             </div>
             <div class="list" id="routine-list"></div>
           </div>
@@ -261,11 +270,13 @@
             </div>
           </div>
           <div class="card card-p">
-            <div class="add-row">
-              <input class="input grow" placeholder="Add a one-off task — e.g. Call supplier about flour" />
-              <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
-              <input class="input" type="date" style="min-width:140px;" />
-              <button class="btn primary sm"><span class="icoslot" data-ico="plus"></span> Add</button>
+            <div class="add-box">
+              <input class="input" placeholder="Add a one-off task — e.g. Call supplier about flour" />
+              <div class="add-ctrls">
+                <select class="select"><option>High</option><option selected>Normal</option><option>Low</option></select>
+                <input class="input" type="date" value="2026-06-11" />
+                <button class="btn primary"><span class="icoslot" data-ico="plus"></span> Add</button>
+              </div>
             </div>
             <div class="list" id="task-list"></div>
           </div>

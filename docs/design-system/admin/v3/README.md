@@ -191,7 +191,11 @@ Languages & Currency (it picks one option, it doesn't flip a boolean).
 
 **Form controls (CSS-only — section 14 of `themes/admin-v3/index.css`).** The
 plain controls are styled by class/element, no wrapper component needed:
-- `.av3-input` / `.av3-select` — 32px fields. On `:hover` the hairline lifts to
+- `.av3-input` / `.av3-select` / `.av3-btn` — the **one standard control height
+  is 32px**, shared across input, select and button so they line up in any
+  toolbar/form row. (Deliberate exceptions: the dense `.av3-btn-sm` (26px) and a
+  handful of context-scoped 28/30px inputs — clonebar, locrow, reciperow — stay
+  smaller on purpose.) On `:hover` the input/select hairline lifts to
   `--av3-muted`; on `:focus` the border goes brand + a 3px `--av3-brand-soft`
   ring. `.av3-select` is `appearance: none`, so it **paints its own chevron**
   (a muted inline-SVG background, theme-flipped via the `[data-admin-theme="light"]`
@@ -574,8 +578,11 @@ auth canvas's signature lighting and the sign-in lockup:
   bar in the Daily-routine header), `.av3-todo-scope.is-team|.is-mine` (the
   Team/Yours chips), `.av3-todo-title.is-done` / `.av3-todo-meta` /
   `.av3-todo-dot`, `.av3-todo-alldone` (the "all done for today" flourish),
-  `.av3-todo-tabcount` (the lifecycle-tab count pill) and `.av3-todo-grid` (the
-  two-up routine/to-do row).
+  `.av3-todo-tabcount` (the lifecycle-tab count pill), `.av3-todo-grid` (the
+  two-up routine/to-do row), `.av3-todo-head` (floors both columns' headers to
+  one height so the cards align) and `.av3-todo-add` / `.av3-todo-add-row` (the
+  quick-add box — a full-width field above a controls row with **Add** pushed to
+  the right edge, all controls the shared 32px height).
   While the feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
   (three-section scaffold, shimmer rows via the shared `Skeleton` primitive)
   instead of `null`, so the space is reserved and the portal doesn't jump when

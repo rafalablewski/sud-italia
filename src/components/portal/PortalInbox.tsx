@@ -484,7 +484,7 @@ export function PortalInbox() {
           and your own personal routines, ticked off for today. */}
       <section className="av3-portal-section">
         <div
-          className="av3-section-label"
+          className="av3-section-label av3-todo-head"
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span>Daily routine</span>
@@ -501,7 +501,7 @@ export function PortalInbox() {
         </div>
         <div className="av3-card av3-card-p">
           {/* Add a recurring item to your own routine (personal, only you see it). */}
-          <div style={addRow}>
+          <div className="av3-todo-add">
             <input
               className="av3-input"
               value={rtTitle}
@@ -510,29 +510,28 @@ export function PortalInbox() {
               placeholder="Add a daily routine — e.g. Wipe down coffee machine"
               maxLength={200}
               aria-label="New daily routine"
-              style={{ flex: 1, minWidth: 180 }}
             />
-            <select
-              className="av3-select"
-              value={rtPriority}
-              onChange={(e) => setRtPriority(e.target.value as TaskPriority)}
-              aria-label="Priority"
-              style={{ flexShrink: 0 }}
-            >
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-              <option value="low">Low</option>
-            </select>
-            <button
-              type="button"
-              className="av3-btn av3-btn-sm av3-btn-primary"
-              onClick={addRoutine}
-              disabled={!rtTitle.trim() || addingRt}
-              style={{ flexShrink: 0 }}
-            >
-              <Plus className="av3-btn-ico" />
-              Add
-            </button>
+            <div className="av3-todo-add-row">
+              <select
+                className="av3-select"
+                value={rtPriority}
+                onChange={(e) => setRtPriority(e.target.value as TaskPriority)}
+                aria-label="Priority"
+              >
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+              </select>
+              <button
+                type="button"
+                className="av3-btn av3-btn-primary"
+                onClick={addRoutine}
+                disabled={!rtTitle.trim() || addingRt}
+              >
+                <Plus className="av3-btn-ico" />
+                Add
+              </button>
+            </div>
           </div>
 
           {routines.length === 0 ? (
@@ -587,7 +586,7 @@ export function PortalInbox() {
           lifecycle: Done · Archive · Delete (and Restore / Reopen). */}
       <section className="av3-portal-section">
         <div
-          className="av3-section-label"
+          className="av3-section-label av3-todo-head"
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span>Your to-do list</span>
@@ -617,7 +616,7 @@ export function PortalInbox() {
         </div>
         <div className="av3-card av3-card-p">
           {/* Quick-add (one-off): anyone can put an item on their own list. */}
-          <div style={addRow}>
+          <div className="av3-todo-add">
             <input
               className="av3-input"
               value={newTitle}
@@ -626,37 +625,35 @@ export function PortalInbox() {
               placeholder="Add a one-off task — e.g. Call supplier about flour"
               maxLength={200}
               aria-label="New to-do"
-              style={{ flex: 1, minWidth: 180 }}
             />
-            <select
-              className="av3-select"
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
-              aria-label="Priority"
-              style={{ flexShrink: 0 }}
-            >
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-              <option value="low">Low</option>
-            </select>
-            <input
-              className="av3-input"
-              type="date"
-              value={newDue}
-              onChange={(e) => setNewDue(e.target.value)}
-              aria-label="Due date (optional)"
-              style={{ flexShrink: 0 }}
-            />
-            <button
-              type="button"
-              className="av3-btn av3-btn-sm av3-btn-primary"
-              onClick={addTask}
-              disabled={!newTitle.trim() || adding}
-              style={{ flexShrink: 0 }}
-            >
-              <Plus className="av3-btn-ico" />
-              Add
-            </button>
+            <div className="av3-todo-add-row">
+              <select
+                className="av3-select"
+                value={newPriority}
+                onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+                aria-label="Priority"
+              >
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+              </select>
+              <input
+                className="av3-input"
+                type="date"
+                value={newDue}
+                onChange={(e) => setNewDue(e.target.value)}
+                aria-label="Due date (optional)"
+              />
+              <button
+                type="button"
+                className="av3-btn av3-btn-primary"
+                onClick={addTask}
+                disabled={!newTitle.trim() || adding}
+              >
+                <Plus className="av3-btn-ico" />
+                Add
+              </button>
+            </div>
           </div>
 
           {tasksInTab.length === 0 ? (
@@ -808,9 +805,6 @@ const actBtn: React.CSSProperties = {
   background: "var(--av3-s3)", border: "1px solid var(--av3-line)", color: "var(--av3-muted)", cursor: "pointer",
 };
 const actIco: React.CSSProperties = { width: 15, height: 15 };
-const addRow: React.CSSProperties = {
-  display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8,
-};
 const loadMoreBtn: React.CSSProperties = {
   width: "100%", border: "none", borderTop: "1px solid var(--av3-line)", background: "var(--av3-s1)",
   color: "var(--av3-info)", fontSize: "12.5px", fontWeight: 600, padding: 11, cursor: "pointer",

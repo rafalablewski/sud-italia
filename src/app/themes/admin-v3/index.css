@@ -368,7 +368,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 30px;
+  /* One control height across the admin theme: button === input === select
+     (32px). The dense `.av3-btn-sm` variant (and a few context-scoped 28/30px
+     inputs) stay deliberately smaller for toolbars/rows. */
+  height: 32px;
   padding: 0 12px;
   border: 1px solid var(--av3-line-strong);
   border-radius: var(--av3-r-sm);
@@ -1630,6 +1633,18 @@
    on narrow ones. align-items:start so each column keeps its natural height. */
 .av3-todo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--av3-gap-5); align-items: start; }
 @media (max-width: 720px) { .av3-todo-grid { grid-template-columns: 1fr; } }
+/* Equal-height header for the two grid columns so the cards below them start on
+   the same line (the to-do header carries taller pill tabs; the routine header
+   is shorter — this floors both to the same height). */
+.av3-todo-head { min-height: 30px; }
+/* Quick-add box: a full-width text field above a controls row (priority [+ due]
+   + Add, with Add pushed to the right edge). Both columns' add areas are then
+   the same height and the Add buttons line up. All controls are the shared 32px
+   height (.av3-input / .av3-select / .av3-btn), so nothing is uneven. */
+.av3-todo-add { display: flex; flex-direction: column; gap: 8px; }
+.av3-todo-add > .av3-input { width: 100%; }
+.av3-todo-add-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.av3-todo-add-row .av3-btn { margin-left: auto; }
 /* Responsive header pill bar: on a narrow portal the tab group wraps under the
    section title (the header is flex-wrap), and the pill bar itself scrolls
    horizontally rather than overflowing the card — scrollbar hidden for polish. */
