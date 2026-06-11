@@ -132,7 +132,7 @@ export function AgentHQ() {
       </div>
 
       {loading ? (
-        <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={8} /></div>
+        <Card padding="default"><SkeletonRows rows={8} /></Card>
       ) : !cmd ? (
         <Card><CardBody>Could not load Agent HQ.</CardBody></Card>
       ) : section === "command" ? (
@@ -321,7 +321,7 @@ function MonthlyCostCard({ stats }: { stats: FleetStats }) {
     <Card>
       <CardHead title="Monthly cost" description="AI spend, month-to-date" />
       <CardBody>
-        <div style={{ fontFamily: "var(--av3-display)", fontSize: 30, fontWeight: 600, letterSpacing: "-0.01em" }}>{zl(stats.costMonthGrosze)}</div>
+        <div className="av3-kpi-value">{zl(stats.costMonthGrosze)}</div>
         <div style={{ display: "flex", gap: 18, marginTop: 12 }}>
           <div><div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Last 7 days</div><div style={{ fontFamily: "var(--av3-mono)", fontSize: 14 }}>{zl(stats.cost7dGrosze)}</div></div>
           <div><div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Runs (7d)</div><div style={{ fontFamily: "var(--av3-mono)", fontSize: 14 }}>{stats.runs7d}</div></div>
@@ -432,15 +432,15 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
     load();
   }, [load]);
 
-  if (items === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={6} /></div>;
+  if (items === null) return <Card padding="default"><SkeletonRows rows={6} /></Card>;
 
   const unassigned = items.filter((w) => w.status === "unassigned");
   const queued = items.filter((w) => w.status === "queued" || w.status === "running");
   const recent = items.filter((w) => w.status === "done" || w.status === "failed").slice(0, 12);
 
   const card = (w: WorkItem, opts?: { run?: boolean }) => (
-    <div key={w.id} draggable onDragStart={() => setDragId(w.id)} onDragEnd={() => setDragId(null)}
-      className="av3-card" style={{ padding: 11, marginBottom: 8, cursor: "grab" }}>
+    <Card key={w.id} padding="compact" draggable onDragStart={() => setDragId(w.id)} onDragEnd={() => setDragId(null)}
+      style={{ marginBottom: 8, cursor: "grab" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 600 }}>{w.title}</div>
@@ -456,7 +456,7 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
           <button className="av3-iconbtn-sm" title="Delete" onClick={() => remove(w.id)}><Trash2 style={{ width: 13, height: 13 }} /></button>
         </span>
       </div>
-    </div>
+    </Card>
   );
 
   return (
@@ -479,12 +479,12 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
       <SecLabel>Drop onto an agent to assign</SecLabel>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {configs.filter((c) => c.status === "active").map((c) => (
-          <div key={c.id}
+          <Card key={c.id} padding="none"
             onDragOver={(e) => { if (dragId) e.preventDefault(); }}
             onDrop={() => { if (dragId) { assign(dragId, c.id); setDragId(null); } }}
-            className="av3-card" style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, borderStyle: dragId ? "dashed" : "solid", borderColor: dragId ? "var(--av3-brand-line)" : "var(--av3-line)" }}>
+            style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, borderStyle: dragId ? "dashed" : "solid", borderColor: dragId ? "var(--av3-brand-line)" : "var(--av3-line)" }}>
             <Monogram initials={c.initials} accentVar={c.accentVar} size={24} /><span style={{ fontSize: 12.5, fontWeight: 600 }}>{c.name}</span>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -522,7 +522,7 @@ function Approvals({ configById, onAction }: { configById: Map<string, AgentConf
     setBusy(null); load();
   }, [load]);
 
-  if (rows === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={4} /></div>;
+  if (rows === null) return <Card padding="default"><SkeletonRows rows={4} /></Card>;
   return (
     <Card>
       <CardHead title="Pending approvals" description="Gated actions agents proposed. Action runs it via the owning agent (preview → approve → execute → audit); Mark done / Dismiss clear the queue." />
@@ -649,7 +649,7 @@ function Reports({ configById, gatewayConfigured, onRan }: { configById: Map<str
   const active = meetings?.find((m) => m.id === activeId) ?? null;
   const label = (id: string) => configById.get(id)?.name ?? id;
 
-  if (meetings === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={5} /></div>;
+  if (meetings === null) return <Card padding="default"><SkeletonRows rows={5} /></Card>;
 
   return (
     <>

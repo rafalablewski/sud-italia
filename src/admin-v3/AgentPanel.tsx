@@ -56,7 +56,7 @@ export function AgentPanel({ id }: { id: string }) {
     const s = new Set<string>(); for (const c of configs) for (const t of c.toolNames) s.add(t); return [...s].sort();
   }, [configs]);
 
-  if (loading) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={8} /></div>;
+  if (loading) return <Card padding="default"><SkeletonRows rows={8} /></Card>;
   if (notFound || !agent) {
     return (
       <Card><CardBody>
