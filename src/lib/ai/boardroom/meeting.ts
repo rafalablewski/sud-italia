@@ -1,6 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
 import { estimateCallCostGrosze } from "../cost";
-import { getDailyAiSpendGrosze } from "../conversations";
 import { logger } from "@/lib/logger";
 import {
   BOARDROOM_PERSONA_ORDER,
@@ -8,7 +7,7 @@ import {
   type BoardroomPersonaId,
 } from "./personas";
 import { buildLiveSystemPrompt, type AgentConfig } from "./agent-config";
-import { getResolvedAgentConfigs, appendAgentEvent, getEffectiveDailyBudgetGrosze } from "@/lib/store";
+import { getResolvedAgentConfigs, appendAgentEvent, getEffectiveDailyBudgetGrosze, getTodayAiSpendGrosze, getAiModelSettings } from "@/lib/store";
 import { computeBoardroomKpis } from "./kpis";
 import { saveMeeting, type BoardroomMeeting, type MeetingContribution, type MeetingDecision, type MeetingType } from "./store";
 
@@ -57,7 +56,7 @@ export async function runBoardroomMeeting(input: RunMeetingInput): Promise<RunMe
     return { ok: false, error: "ANTHROPIC_API_KEY is not configured. Add it to the environment to run meetings." };
   }
 
-  const dailySpend = await getDailyAiSpendGrosze();
+  const dailySpend = await getTodayAiSpendGrosze();
   const budget = await getEffectiveDailyBudgetGrosze();
   if (dailySpend >= budget) {
     return {
@@ -90,6 +89,9 @@ ${agendaBlock}`;
   const configs = await getResolvedAgentConfigs();
   const byId = new Map<BoardroomPersonaId, AgentConfig>(configs.map((c) => [c.id, c]));
   const titleFor = (id: BoardroomPersonaId): string => byId.get(id)?.title ?? id;
+  // The model an agent actually runs on when it inherits the global selection —
+  // used so cost is estimated against the real model, not a hardcoded one.
+  const globalModelId = (await getAiModelSettings()).modelId ?? MODEL;
 
   // --- Round-robin discussion ---
   for (const personaId of BOARDROOM_PERSONA_ORDER) {
@@ -114,7 +116,7 @@ Speak now, as the ${cfg.title}. 2–4 sentences in your own voice: your read of 
         model: cfg.modelId ?? undefined,
         effort: cfg.effort,
       });
-      const cost = estimateCallCostGrosze(cfg.modelId ?? MODEL, res.usage);
+      const cost = estimateCallCostGrosze(cfg.modelId ?? globalModelId, res.usage);
       totalCost += cost;
       const text = extractText(res.message);
       if (text) {
@@ -137,7 +139,7 @@ Speak now, as the ${cfg.title}. 2–4 sentences in your own voice: your read of 
   }
 
   // --- Synthesis: CEO converges the discussion into structured decisions ---
-  const decisions = await synthesizeDecisions(baseContext, contributions, titleFor, (cost) => {
+  const decisions = await synthesizeDecisions(baseContext, contributions, titleFor, globalModelId, (cost) => {
     totalCost += cost;
   });
 
@@ -162,6 +164,7 @@ async function synthesizeDecisions(
   baseContext: string,
   contributions: MeetingContribution[],
   titleFor: (id: BoardroomPersonaId) => string,
+  modelId: string,
   addCost: (grosze: number) => void,
 ): Promise<MeetingDecision[]> {
   const transcript = contributions
@@ -195,7 +198,7 @@ Produce the decision JSON now.`;
       maxTokens: 1200,
       thinking: "off",
     });
-    addCost(estimateCallCostGrosze(MODEL, res.usage));
+    addCost(estimateCallCostGrosze(modelId, res.usage));
     return parseDecisions(extractText(res.message));
   } catch (err) {
     logger.error("boardroom.meeting.synthesis_failed", {}, err);

@@ -14,7 +14,7 @@ import {
   type BoardKpi, type KpiStatus,
 } from "./agent-hq/shared";
 import { AgentEditForm } from "./agent-hq/AgentEditForm";
-import { type AgentConfig } from "@/lib/ai/boardroom/agent-config";
+import { type AgentConfig, type AgentKpi } from "@/lib/ai/boardroom/agent-config";
 
 /**
  * Agent HQ — the operator console for the AI agent fleet. Six sections:
@@ -388,7 +388,7 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
 
 interface ScCard {
   id: string; name: string; title: string; initials: string; accentVar: string;
-  status: "active" | "paused" | "draft"; authority: string; modelId: string | null; kpis: string[];
+  status: "active" | "paused" | "draft"; authority: string; modelId: string | null; kpis: AgentKpi[];
   stats: { runs7d: number; cost7dGrosze: number; successRate7d: number | null; lastRunAt: string | null };
   actuals: Record<string, { value: string; at: string; by: string }>;
 }
@@ -463,20 +463,20 @@ function Scorecards() {
 
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "var(--av3-platinum)", fontWeight: 700, margin: "20px 0 10px" }}>KPIs — target vs actual</div>
             {c.kpis.length === 0 ? (
-              <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No KPI targets set. Add them in the agent editor.</div>
+              <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No KPI targets set. Add them in the Agents editor.</div>
             ) : c.kpis.map((kpi, i) => {
-              const key = `${c.id}::${kpi}`;
-              const actual = c.actuals[kpi];
+              const key = `${c.id}::${kpi.id}`;
+              const actual = c.actuals[kpi.id];
               return (
-                <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--av3-line)" : "none" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{kpi}</div>
+                <div key={kpi.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--av3-line)" : "none" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{kpi.title}{kpi.target ? <span style={{ fontWeight: 400, color: "var(--av3-subtle)" }}>  ·  target {kpi.target}</span> : null}</div>
                   <div style={{ fontSize: 12, color: actual ? "var(--av3-fg)" : "var(--av3-subtle)", marginTop: 3 }}>
                     {actual ? <>actual: <span style={{ fontFamily: "var(--av3-mono)" }}>{actual.value}</span> <span style={{ color: "var(--av3-subtle)" }}>· {timeAgo(actual.at)} · {actual.by}</span></> : "no actual logged"}
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
                     <input className="av3-input" placeholder="log actual…" value={drafts[key] ?? ""} onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(c.id, kpi); } }} style={{ flex: 1 }} />
-                    <Button variant="secondary" size="sm" loading={busy === key} disabled={!(drafts[key] ?? "").trim()} onClick={() => void log(c.id, kpi)}>Log</Button>
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(c.id, kpi.id); } }} style={{ flex: 1 }} />
+                    <Button variant="secondary" size="sm" loading={busy === key} disabled={!(drafts[key] ?? "").trim()} onClick={() => void log(c.id, kpi.id)}>Log</Button>
                   </div>
                 </div>
               );
@@ -530,6 +530,12 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
     load();
   }, [load]);
 
+  const setStatus = useCallback(async (id: string, status: string) => {
+    await fetch(`/api/admin/ai/boardroom/work/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }).catch(() => null);
+    load();
+  }, [load]);
+
+  const activeAgents = configs.filter((c) => c.status === "active");
   if (items === null) return <Card padding="default"><SkeletonRows rows={6} /></Card>;
 
   const unassigned = items.filter((w) => w.status === "unassigned");
@@ -546,10 +552,17 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
         </div>
         {w.agentId && <Monogram initials={cfg.get(w.agentId)?.initials ?? "··"} accentVar={cfg.get(w.agentId)?.accentVar ?? "--av3-subtle"} size={24} />}
       </div>
-      <div style={{ display: "flex", gap: 6, marginTop: 9, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 6, marginTop: 9, alignItems: "center", flexWrap: "wrap" }}>
         <Badge tone={w.status === "done" ? "ok" : w.status === "failed" ? "bad" : w.status === "running" ? "warn" : "info"}>{w.status}</Badge>
         {typeof w.costGrosze === "number" && w.costGrosze > 0 && <span style={{ fontSize: 10.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{zl(w.costGrosze)}</span>}
+        {/* Keyboard-accessible (re)assign — the no-drag path. */}
+        <select className="av3-select" aria-label="Assign to agent" value={w.agentId ?? ""} style={{ height: 26, fontSize: 11.5, maxWidth: 130 }}
+          onChange={(e) => assign(w.id, e.target.value || null)}>
+          <option value="">Unassigned</option>
+          {activeAgents.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
         <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          {(w.status === "done" || w.status === "failed") && <Button variant="secondary" size="sm" onClick={() => setStatus(w.id, "queued")}>Re-queue</Button>}
           {opts?.run && w.agentId && <Button variant="primary" size="sm" loading={busy === w.id} disabled={!gatewayConfigured} onClick={() => run(w.id)}><Play className="av3-btn-ico" /> Run</Button>}
           <button className="av3-iconbtn-sm" title="Delete" onClick={() => remove(w.id)}><Trash2 style={{ width: 13, height: 13 }} /></button>
         </span>

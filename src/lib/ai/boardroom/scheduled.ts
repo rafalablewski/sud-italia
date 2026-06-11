@@ -1,6 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
 import { estimateCallCostGrosze } from "../cost";
-import { getDailyAiSpendGrosze } from "../conversations";
 import { computeBoardroomKpis } from "./kpis";
 import { buildLiveSystemPrompt } from "./agent-config";
 import {
@@ -8,6 +7,8 @@ import {
   appendAgentEvent,
   getAgentDailySpendMap,
   getEffectiveDailyBudgetGrosze,
+  getTodayAiSpendGrosze,
+  getAiModelSettings,
 } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import type { ScheduleCadence } from "./agent-config";
@@ -41,10 +42,11 @@ export async function runScheduledAgents(cadence: "daily" | "weekly", userId: st
 
   const budget = await getEffectiveDailyBudgetGrosze();
   const spendMap = await getAgentDailySpendMap();
+  const globalModelId = (await getAiModelSettings()).modelId ?? "claude-opus-4-7";
 
   for (const cfg of configs) {
     // Shared platform budget gate (re-read each loop so a long run stops in time).
-    if ((await getDailyAiSpendGrosze()) >= budget) { out.skipped.push(cfg.id); continue; }
+    if ((await getTodayAiSpendGrosze()) >= budget) { out.skipped.push(cfg.id); continue; }
     // Per-agent daily cap.
     if (cfg.spend.dailyCapGrosze != null && (spendMap[cfg.id] ?? 0) >= cfg.spend.dailyCapGrosze) {
       out.skipped.push(cfg.id);
@@ -71,7 +73,7 @@ In 2–4 sentences from your remit: your read of these numbers and the single ac
         model: cfg.modelId ?? undefined,
         effort: cfg.effort,
       });
-      const cost = estimateCallCostGrosze(cfg.modelId ?? "claude-opus-4-7", res.usage);
+      const cost = estimateCallCostGrosze(cfg.modelId ?? globalModelId, res.usage);
       out.costGrosze += cost;
       spendMap[cfg.id] = (spendMap[cfg.id] ?? 0) + cost;
       const text = extractText(res.message);

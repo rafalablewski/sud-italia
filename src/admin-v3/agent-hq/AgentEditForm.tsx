@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { Badge, Button, Switch } from "../ui";
 import {
   AUTHORITY_OPTIONS, CADENCE_OPTIONS, EFFORT_OPTIONS, STATUS_OPTIONS,
-  buildLiveSystemPrompt, type AgentConfig,
+  buildLiveSystemPrompt, type AgentConfig, type AgentKpi,
 } from "@/lib/ai/boardroom/agent-config";
 import { AI_MODELS } from "@/lib/ai/models";
 
@@ -79,6 +79,37 @@ function ChipToggle({ options, selected, onChange }: { options: { value: string;
     </div>
   );
 }
+/** KPI editor — each row is a title + target; ids are preserved so logged
+ *  actuals (keyed by id) survive a rename. */
+function KpiEditor({ items, onChange }: { items: AgentKpi[]; onChange: (next: AgentKpi[]) => void }) {
+  const [title, setTitle] = useState("");
+  const [target, setTarget] = useState("");
+  const add = () => {
+    if (!title.trim() && !target.trim()) return;
+    onChange([...items, { id: `kpi-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`, title: title.trim(), target: target.trim() }]);
+    setTitle(""); setTarget("");
+  };
+  const set = (i: number, patch: Partial<AgentKpi>) => onChange(items.map((k, j) => (j === i ? { ...k, ...patch } : k)));
+  return (
+    <div>
+      {items.map((k, i) => (
+        <div key={k.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+          <input className="av3-input" value={k.title} placeholder="KPI title" onChange={(e) => set(i, { title: e.target.value })} style={{ flex: 1 }} />
+          <input className="av3-input" value={k.target} placeholder="target" onChange={(e) => set(i, { target: e.target.value })} style={{ flex: 1 }} />
+          <button type="button" className="av3-iconbtn-sm" onClick={() => onChange(items.filter((_, j) => j !== i))} aria-label="Remove"><X style={{ width: 13, height: 13 }} /></button>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input className="av3-input" value={title} placeholder="New KPI title" onChange={(e) => setTitle(e.target.value)} style={{ flex: 1 }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <input className="av3-input" value={target} placeholder="target" onChange={(e) => setTarget(e.target.value)} style={{ flex: 1 }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <Button variant="secondary" size="sm" onClick={add}><Plus className="av3-btn-ico" /> Add</Button>
+      </div>
+    </div>
+  );
+}
+
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "var(--av3-fg)", margin: "18px 0 10px", paddingBottom: 6, borderBottom: "1px solid var(--av3-line)" }}>{children}</div>;
 }
@@ -200,7 +231,7 @@ export function AgentEditForm({ agentId, configs, toolCatalog, onSaved, onClose 
           <SectionTitle>Prompt spine</SectionTitle>
           <Field label="Mandate · one or two sentences — the spine of the prompt"><TextArea value={form.mandate} onChange={(v) => patch("mandate", v)} rows={3} /></Field>
           <Field label="Responsibilities"><StringList items={form.responsibilities} onChange={(v) => patch("responsibilities", v)} placeholder="Add a responsibility…" /></Field>
-          <Field label="KPIs it answers for"><StringList items={form.kpis} onChange={(v) => patch("kpis", v)} placeholder="Add a KPI / target…" /></Field>
+          <Field label="KPIs it answers for" hint="Title + target — actuals are logged against these in Scorecards."><KpiEditor items={form.kpis} onChange={(v) => patch("kpis", v)} /></Field>
           <Field label="Tone & communication"><TextArea value={form.tone} onChange={(v) => patch("tone", v)} rows={2} /></Field>
           <Field label="Guardrails & ethics"><TextArea value={form.guardrails} onChange={(v) => patch("guardrails", v)} rows={3} /></Field>
           <Field label="Escalation threshold · when to stop and ask the human admin"><TextArea value={form.escalationThreshold} onChange={(v) => patch("escalationThreshold", v)} rows={3} /></Field>

@@ -45,6 +45,39 @@ export interface AgentSchedule {
 }
 
 /**
+ * A KPI the agent answers for, split title + target so Scorecards can show
+ * "target vs actual". `id` is stable across title edits, so logged actuals
+ * (keyed by id) survive a rename.
+ */
+export interface AgentKpi {
+  id: string;
+  title: string;
+  target: string;
+}
+
+function kpiSlug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40);
+}
+
+/** Accept legacy string[] or the {id,title,target} shape and normalize to AgentKpi[]. */
+export function normalizeKpis(raw: unknown): AgentKpi[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item, i): AgentKpi => {
+      if (typeof item === "string") return { id: kpiSlug(item) || `kpi-${i}`, title: item, target: "" };
+      if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        const title = typeof o.title === "string" ? o.title : "";
+        const target = typeof o.target === "string" ? o.target : "";
+        const id = typeof o.id === "string" && o.id ? o.id : (kpiSlug(title) || `kpi-${i}`);
+        return { id, title, target };
+      }
+      return { id: `kpi-${i}`, title: "", target: "" };
+    })
+    .filter((k) => k.title.trim() || k.target.trim());
+}
+
+/**
  * The full, resolved agent configuration (defaults ⊕ operator override). Every
  * field is editable in the Agent HQ editor; {@link buildLiveSystemPrompt}
  * compiles the prose fields into the system prompt the agent actually runs on.
@@ -67,8 +100,8 @@ export interface AgentConfig {
   /** One or two sentences — the spine of the prompt. */
   mandate: string;
   responsibilities: string[];
-  /** Human-authored KPI targets / definitions this agent answers for. */
-  kpis: string[];
+  /** KPIs this agent answers for (title + target), used by Scorecards. */
+  kpis: AgentKpi[];
   guardrails: string;
   escalationThreshold: string;
   tone: string;
@@ -143,7 +176,7 @@ export function buildLiveSystemPrompt(cfg: AgentConfig): string {
   }
 
   if (cfg.kpis.length > 0) {
-    lines.push(`\nKPIs YOU ANSWER FOR\n${cfg.kpis.map((k) => `- ${k}`).join("\n")}`);
+    lines.push(`\nKPIs YOU ANSWER FOR\n${cfg.kpis.map((k) => `- ${k.title}${k.target ? `: ${k.target}` : ""}`).join("\n")}`);
   }
 
   if (cfg.tone.trim()) {
@@ -188,8 +221,10 @@ export function buildLiveSystemPrompt(cfg: AgentConfig): string {
  * file only stores the fields they changed.
  */
 
-type DefaultSeed = Omit<AgentConfig, "id" | "title" | "accentVar" | "initials" | "toolNames"> & {
+type DefaultSeed = Omit<AgentConfig, "id" | "title" | "accentVar" | "initials" | "toolNames" | "kpis"> & {
   toolNames?: string[];
+  /** Seed KPIs as plain titles; normalized to {id,title,target} at build. */
+  kpis: string[];
 };
 
 const NO_SPEND: AgentSpendControls = { dailyCapGrosze: null, perRunCapGrosze: null };
@@ -446,7 +481,7 @@ export const AGENT_CONFIG_DEFAULTS: Record<BoardroomPersonaId, AgentConfig> = Ob
       spend: { ...seed.spend },
       schedule: { ...seed.schedule },
       responsibilities: [...seed.responsibilities],
-      kpis: [...seed.kpis],
+      kpis: normalizeKpis(seed.kpis),
       collaborators: [...seed.collaborators],
       toolNames: seed.toolNames ? [...seed.toolNames] : [...persona.toolNames],
     };
@@ -462,7 +497,7 @@ function cloneDefault(id: BoardroomPersonaId): AgentConfig {
     spend: { ...d.spend },
     schedule: { ...d.schedule },
     responsibilities: [...d.responsibilities],
-    kpis: [...d.kpis],
+    kpis: d.kpis.map((k) => ({ ...k })),
     collaborators: [...d.collaborators],
     toolNames: [...d.toolNames],
   };
@@ -492,7 +527,7 @@ export function mergeAgentConfig(id: BoardroomPersonaId, patch: AgentConfigPatch
   if (typeof patch.runtimeManaged === "boolean") out.runtimeManaged = patch.runtimeManaged;
   if (str(patch.mandate)) out.mandate = patch.mandate;
   if (strArr(patch.responsibilities)) out.responsibilities = patch.responsibilities;
-  if (strArr(patch.kpis)) out.kpis = patch.kpis;
+  if (Array.isArray(patch.kpis)) out.kpis = normalizeKpis(patch.kpis);
   if (str(patch.guardrails)) out.guardrails = patch.guardrails;
   if (str(patch.escalationThreshold)) out.escalationThreshold = patch.escalationThreshold;
   if (str(patch.tone)) out.tone = patch.tone;

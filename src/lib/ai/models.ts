@@ -44,10 +44,24 @@ export const PROVIDER_LABEL: Record<AiProvider, string> = {
  */
 export const AI_MODELS: AiModel[] = [
   {
+    id: "claude-opus-4-8",
+    provider: "anthropic",
+    label: "Claude Opus 4.8",
+    hint: "Most capable — best for agentic tool use and nuanced reasoning.",
+    envVar: "ANTHROPIC_API_KEY",
+  },
+  {
+    id: "claude-sonnet-4-6",
+    provider: "anthropic",
+    label: "Claude Sonnet 4.6",
+    hint: "Balanced Claude — strong reasoning at lower cost than Opus.",
+    envVar: "ANTHROPIC_API_KEY",
+  },
+  {
     id: "claude-opus-4-7",
     provider: "anthropic",
     label: "Claude Opus 4.7",
-    hint: "Most capable — best for agentic tool use and nuanced reasoning.",
+    hint: "Prior Opus — kept for pinned configs.",
     envVar: "ANTHROPIC_API_KEY",
   },
   {
@@ -74,7 +88,7 @@ export const AI_MODELS: AiModel[] = [
 ];
 
 /** The model used when nothing is configured — Claude, the platform default. */
-export const DEFAULT_AI_MODEL_ID = "claude-opus-4-7";
+export const DEFAULT_AI_MODEL_ID = "claude-opus-4-8";
 
 export function getModelById(id: string | undefined | null): AiModel | undefined {
   return AI_MODELS.find((m) => m.id === id);

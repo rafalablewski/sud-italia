@@ -4,6 +4,7 @@ import {
   AGENT_CONFIG_DEFAULTS,
   buildLiveSystemPrompt,
   mergeAgentConfig,
+  normalizeKpis,
 } from "./ai/boardroom/agent-config";
 
 // Run with:  npx tsx --test src/lib/agent-config.test.ts
@@ -33,6 +34,7 @@ test("merge applies a valid patch and ignores junk", () => {
     name: "Chief",
     status: "paused",
     effort: "max",
+    // @ts-expect-error — legacy string KPIs are normalized to {id,title,target}
     kpis: ["North-star revenue"],
     // @ts-expect-error — deliberately invalid value is ignored
     authority: "god-mode",
@@ -40,7 +42,8 @@ test("merge applies a valid patch and ignores junk", () => {
   assert.equal(merged.name, "Chief");
   assert.equal(merged.status, "paused");
   assert.equal(merged.effort, "max");
-  assert.deepEqual(merged.kpis, ["North-star revenue"]);
+  assert.equal(merged.kpis[0].title, "North-star revenue");
+  assert.ok(merged.kpis[0].id, "normalized KPI has a stable id");
   // invalid authority falls back to the default ("operator")
   assert.equal(merged.authority, "operator");
 });
@@ -65,4 +68,23 @@ test("nested spend + schedule patches merge field-by-field", () => {
   const sched = mergeAgentConfig("cmo", { schedule: { cadence: "weekly", time: "07:30" } });
   assert.equal(sched.schedule.cadence, "weekly");
   assert.equal(sched.schedule.time, "07:30");
+});
+
+test("normalizeKpis accepts strings + objects and keeps stable ids", () => {
+  const fromStrings = normalizeKpis(["Food cost %", "Prime cost %"]);
+  assert.equal(fromStrings.length, 2);
+  assert.equal(fromStrings[0].id, "food-cost"); // deterministic slug → survives redeploy
+  assert.equal(fromStrings[0].target, "");
+  // an explicit id is preserved (so a title rename doesn't orphan its actuals)
+  const kept = normalizeKpis([{ id: "x1", title: "Renamed", target: "≤ 30%" }]);
+  assert.equal(kept[0].id, "x1");
+  assert.equal(kept[0].target, "≤ 30%");
+  // empty rows are dropped
+  assert.equal(normalizeKpis([{ id: "z", title: "", target: "" }, "real"]).length, 1);
+});
+
+test("seed KPIs normalize to {id,title,target} and render in the prompt", () => {
+  const cfg = AGENT_CONFIG_DEFAULTS.cfo;
+  assert.ok(cfg.kpis.length > 0 && cfg.kpis[0].id && cfg.kpis[0].title, "seed KPIs are objects with ids");
+  assert.ok(buildLiveSystemPrompt(cfg).includes(cfg.kpis[0].title), "KPI title appears in the live prompt");
 });

@@ -1,6 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
 import { estimateCallCostGrosze } from "../cost";
-import { getDailyAiSpendGrosze } from "../conversations";
 import { buildLiveSystemPrompt } from "./agent-config";
 import {
   getResolvedAgentConfig,
@@ -9,6 +8,8 @@ import {
   appendAgentEvent,
   getAgentDailySpendGrosze,
   getEffectiveDailyBudgetGrosze,
+  getTodayAiSpendGrosze,
+  getAiModelSettings,
   type AgentWorkItem,
 } from "@/lib/store";
 import { isBoardroomPersonaId } from "./personas";
@@ -25,6 +26,7 @@ export interface RunWorkResult { ok: boolean; error?: string; item?: AgentWorkIt
 export async function runAgentWorkItem(id: string, userId: string): Promise<RunWorkResult> {
   const item = await getWorkItem(id);
   if (!item) return { ok: false, error: "Work item not found." };
+  if (item.status === "running") return { ok: false, error: "This work item is already running." };
   if (!item.agentId || !isBoardroomPersonaId(item.agentId)) {
     return { ok: false, error: "Assign the work to an agent first." };
   }
@@ -33,7 +35,7 @@ export async function runAgentWorkItem(id: string, userId: string): Promise<RunW
   const cfg = await getResolvedAgentConfig(item.agentId);
   if (cfg.status !== "active") return { ok: false, error: `${cfg.name} is ${cfg.status}.` };
 
-  if ((await getDailyAiSpendGrosze()) >= (await getEffectiveDailyBudgetGrosze())) {
+  if ((await getTodayAiSpendGrosze()) >= (await getEffectiveDailyBudgetGrosze())) {
     return { ok: false, error: "Daily AI budget exhausted." };
   }
   if (cfg.spend.dailyCapGrosze != null && (await getAgentDailySpendGrosze(cfg.id)) >= cfg.spend.dailyCapGrosze) {
@@ -52,7 +54,7 @@ export async function runAgentWorkItem(id: string, userId: string): Promise<RunW
       model: cfg.modelId ?? undefined,
       effort: cfg.effort,
     });
-    const cost = estimateCallCostGrosze(cfg.modelId ?? "claude-opus-4-7", res.usage);
+    const cost = estimateCallCostGrosze(cfg.modelId ?? (await getAiModelSettings()).modelId ?? "claude-opus-4-7", res.usage);
     const text = extractText(res.message);
     const updated = await updateWorkItem(id, {
       status: "done",

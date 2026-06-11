@@ -28,9 +28,15 @@ registerTool<{ reason: string; severity?: "low" | "medium" | "high" }>({
   async execute(input, ctx) {
     const reason = (input.reason ?? "").trim();
     if (!reason) return { ok: false, error: "An escalation needs a reason." };
+    // Only an Agent HQ agent has the context to file an escalation against
+    // itself; the generalist Ops Agent has no agent id, so refuse rather than
+    // create an orphan Inbox item.
+    if (!ctx.agentId) {
+      return { ok: false, error: "Escalation is only available to an Agent HQ agent." };
+    }
     const severity = input.severity ?? "medium";
     await appendAgentEvent({
-      agentId: ctx.agentId ?? "unknown",
+      agentId: ctx.agentId,
       type: "escalation",
       summary: reason.slice(0, 240),
       detail: `Severity: ${severity}`,

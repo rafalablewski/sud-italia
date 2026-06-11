@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { callGateway, gatewayConfigured } from "./gateway";
 import { executeToolCall, toolsForApi, type ToolCallActor } from "./tools";
 import { getTool } from "./tools/registry";
-import { appendMessage, getMessages, getDailyAiSpendGrosze } from "./conversations";
+import { appendMessage, getMessages } from "./conversations";
 import { estimateCallCostGrosze } from "./cost";
 import "./tools/index";
 import type { AdminRole } from "@/lib/admin-auth";
@@ -14,6 +14,7 @@ import {
   appendAgentEvent,
   getAiModelSettings,
   getEffectiveDailyBudgetGrosze,
+  getTodayAiSpendGrosze,
 } from "@/lib/store";
 import { logger } from "@/lib/logger";
 
@@ -98,7 +99,7 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
   }
 
   // Budget gate before we spend anything.
-  const dailySpend = await getDailyAiSpendGrosze();
+  const dailySpend = await getTodayAiSpendGrosze();
   const budget = await getEffectiveDailyBudgetGrosze();
   if (dailySpend >= budget) {
     events.push({

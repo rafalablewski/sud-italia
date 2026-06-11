@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
-import { getAgentHqSettings, updateAgentHqSettings, getEffectiveDailyBudgetGrosze, type AgentHqSettings } from "@/lib/store";
-import { getDailyAiSpendGrosze } from "@/lib/ai/conversations";
+import { getAgentHqSettings, updateAgentHqSettings, getEffectiveDailyBudgetGrosze, getTodayAiSpendGrosze, type AgentHqSettings } from "@/lib/store";
 
 /**
  * Agent HQ → Settings: fleet-wide controls (daily AI budget, auto-briefing)
@@ -13,7 +12,7 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
   const [settings, effectiveBudgetGrosze, todaySpendGrosze] = await Promise.all([
     getAgentHqSettings(),
     getEffectiveDailyBudgetGrosze(),
-    getDailyAiSpendGrosze(),
+    getTodayAiSpendGrosze(),
   ]);
   return NextResponse.json({ settings, effectiveBudgetGrosze, todaySpendGrosze });
 });

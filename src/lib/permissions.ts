@@ -491,6 +491,9 @@ export function permissionForApiPath(
     case "menu-engineering":
       return "menu_engineering.view";
     case "ai":
+      // Agent HQ lives under /api/admin/ai/boardroom/* — gate it with its own
+      // permission, not the broader insights grant.
+      if (sub.startsWith("ai/boardroom/")) return "boardroom.view";
       return "insights.view";
     case "boardroom":
       return "boardroom.view";

@@ -42,6 +42,7 @@ import {
   type AgentConfigPatch,
 } from "@/lib/ai/boardroom/agent-config";
 import { getDailyBudgetGrosze } from "@/lib/ai/cost";
+import { getDailyAiSpendGrosze } from "@/lib/ai/conversations";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
@@ -8742,7 +8743,7 @@ export interface AgentEvent {
   at: string;
 }
 
-const AGENT_EVENTS_MAX = 800;
+const AGENT_EVENTS_MAX = 5000;
 
 export async function appendAgentEvent(
   input: Omit<AgentEvent, "id" | "at"> & { at?: string },
@@ -8822,7 +8823,7 @@ export async function getAgentFleetStats(): Promise<AgentFleetStats> {
 
   let runsToday = 0, cost7d = 0, costMonth = 0, runs7d = 0, ok7d = 0;
   const spendToday: Record<string, number> = {};
-  const runsByDay7d = [0, 0, 0, 0, 0, 0, 0]; // index 0 = 6 days ago … 6 = today
+  const runsByDay7d = [0, 0, 0, 0, 0, 0, 0]; // index 0 = 6 calendar days ago … 6 = today
   const isRun = (e: AgentEvent) => e.type === "run" || e.type === "schedule";
 
   for (const e of list) {
@@ -8834,7 +8835,9 @@ export async function getAgentFleetStats(): Promise<AgentFleetStats> {
       if (isRun(e)) {
         runs7d += 1;
         if (e.ok !== false) ok7d += 1;
-        const dayIdx = 6 - Math.floor((now - t) / (24 * 3600 * 1000));
+        // Bucket by LOCAL calendar day so "Today" is midnight→now, not a rolling 24h window.
+        const evDay = new Date(t); evDay.setHours(0, 0, 0, 0);
+        const dayIdx = 6 - Math.round((startOfToday.getTime() - evDay.getTime()) / (24 * 3600 * 1000));
         if (dayIdx >= 0 && dayIdx < 7) runsByDay7d[dayIdx] += 1;
       }
     }
@@ -8984,6 +8987,31 @@ export async function updateAgentHqSettings(patch: Partial<AgentHqSettings>): Pr
 export async function getEffectiveDailyBudgetGrosze(): Promise<number> {
   const settings = await getAgentHqSettings();
   return settings.dailyBudgetGrosze ?? getDailyBudgetGrosze();
+}
+
+/**
+ * Today's TOTAL AI spend — the single source of truth for the daily-budget gate
+ * and the Settings spend bar. Sums two ledgers without double-counting:
+ *  - ai_messages (chat: the Ops Agent + persona chats) since local midnight, and
+ *  - agent-events run/schedule rows for meetings / scheduled runs / work, which
+ *    bypass ai_messages (their actors are meeting:/schedule:/work:; persona chat
+ *    events use actor claude: and are already in ai_messages, so are skipped).
+ */
+export async function getTodayAiSpendGrosze(): Promise<number> {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const sinceIso = start.toISOString();
+  const [chatGrosze, events] = await Promise.all([
+    getDailyAiSpendGrosze(sinceIso),
+    readJSON<AgentEvent[]>("agent-events.json", []),
+  ]);
+  let offLedger = 0;
+  for (const e of events) {
+    if (e.at < sinceIso || typeof e.costGrosze !== "number") continue;
+    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
+      offLedger += e.costGrosze;
+    }
+  }
+  return chatGrosze + offLedger;
 }
 
 // --- Agent HQ: per-agent scorecard stats + KPI actuals ----------------------
