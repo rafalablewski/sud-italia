@@ -298,6 +298,7 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
         type: "run",
         summary: `Chat turn — ${(totalCost / 100).toFixed(2)} PLN`,
         costGrosze: totalCost,
+        ok: true,
         actor: `claude:${input.actor.userId}`,
       });
     } catch (err) {

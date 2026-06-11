@@ -1,139 +1,66 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  AlertTriangle,
-  Bot,
-  Check,
-  ChevronRight,
-  CircleDot,
-  LineChart,
-  Pencil,
-  RefreshCw,
-  Send,
-  Sparkles,
-  Users,
+  AlertTriangle, ArrowRight, Bot, Check, ChevronRight, FileDown,
+  LineChart, Play, Plus, Printer, RefreshCw, Sparkles, Trash2, Users,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, InfoButton, SkeletonRows } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, SkeletonRows } from "./ui";
 import { AiModelControl } from "./AiModelControl";
-import { KPI_EXPLAINERS } from "./boardroom-explainers";
-import { AgentEditor } from "./AgentEditor";
 import {
-  AGENT_CONFIG_DEFAULTS,
-  CADENCE_OPTIONS,
-  type AgentConfig,
-} from "@/lib/ai/boardroom/agent-config";
-import { resolveModel } from "@/lib/ai/models";
+  Monogram, StatusDot, KpiTile, StatTile, SecLabel, ChatPanel, RAIL,
+  type BoardKpi, type KpiStatus,
+} from "./agent-hq/shared";
+import { CADENCE_OPTIONS, type AgentConfig } from "@/lib/ai/boardroom/agent-config";
 
 /**
  * Agent HQ — the operator console for the AI agent fleet. Six sections:
- *   • Command center — the agent roster (status, model, authority, reporting
- *     line) over live traffic-light KPIs + what-needs-attention.
- *   • Scorecards — per-agent KPI scorecards (live owned metrics + authored
- *     targets).
- *   • Work — the cross-agent activity feed (runs / edits / escalations) plus
- *     schedules and the convene-the-board run controls.
- *   • Approvals — the human-in-the-loop queue of gated actions agents proposed.
- *   • Inbox — talk to any agent (its live generated prompt + tool allowlist).
- *   • Reports — meeting transcripts + decisions + spend.
+ *   • Command center — fleet KPIs + business KPIs + org chart + activity +
+ *     recent activity + upcoming work + daily digest + monthly cost, all from a
+ *     single aggregated request so the page renders in one pass (no pop-in).
+ *   • Scorecards — one big, readable scorecard per agent.
+ *   • Work — operator-created work items, drag-to-assign onto agents, queued +
+ *     recent, run on the assigned agent.
+ *   • Approvals — the human-in-the-loop queue of gated actions.
+ *   • Inbox — escalations + chat any agent.
+ *   • Reports — meeting transcripts + decisions, exportable to CSV / PDF.
  *
- * Every agent is editable (AgentEditor) — name, role, status, reporting line,
- * model, effort, authority, runtime memory, mandate, responsibilities, KPIs,
- * guardrails, escalation threshold, tone, collaborators, tools, spend controls,
- * schedule — and the editor shows the LIVE SYSTEM PROMPT generated from those
- * fields, which is exactly what the agent runs on (Rule #1, Rule #8).
- *
- * Real data only: configs come from /api/admin/ai/boardroom/agents, live KPIs
- * + status from …/overview, activity from …/timeline, approvals from
- * …/approvals, meetings from …/meeting. No mock data.
+ * Individual agents live on their own pages (/admin/agent-hq/[id]).
  */
 
-type KpiStatus = "green" | "yellow" | "red" | "neutral";
-
-interface BoardKpi {
-  id: string;
-  label: string;
-  display: string;
-  value: number;
-  status: KpiStatus;
-  owner: string;
-  benchmark: string;
+interface Snapshot { scope: string; kpis: BoardKpi[]; flags: string[] }
+interface StatusRow {
+  id: string; name: string; title: string; accentVar: string; initials: string;
+  agentStatus: "active" | "paused" | "draft"; authority: string; modelId: string | null;
+  reportsTo: string | null; spentTodayGrosze: number; dailyCapGrosze: number | null;
+  concerns: number; status: KpiStatus;
 }
-interface AgentStatusRow {
-  id: string;
-  name: string;
-  title: string;
-  remit: string;
-  accentVar: string;
-  initials: string;
-  agentStatus: "active" | "paused" | "draft";
-  authority: string;
-  modelId: string | null;
-  reportsTo: string | null;
-  spentTodayGrosze?: number;
-  dailyCapGrosze?: number | null;
-  concerns: number;
-  status: KpiStatus;
-  statusText: string;
+interface FleetStats {
+  runsToday: number; cost7dGrosze: number; costMonthGrosze: number;
+  successRate7d: number | null; runs7d: number; runsByDay7d: number[];
+  activeAgents: number; scheduledCount: number;
 }
-interface Snapshot {
-  scope: string;
-  generatedAt: string;
-  kpis: BoardKpi[];
-  flags: string[];
-}
-interface OverviewResponse {
+interface AgentEvent { id: string; agentId: string; type: string; summary: string; detail?: string; costGrosze?: number; ok?: boolean; actor: string; at: string }
+interface DigestDecision { title: string; owner: string; tool: string | null }
+interface DailyDigest { id: string; type: "daily" | "weekly"; createdAt: string; costGrosze: number; agendaCount: number; decisions: DigestDecision[] }
+interface ScheduledRow { id: string; name: string; initials: string; accentVar: string; cadence: string; time: string }
+interface UpcomingWork { id: string; title: string; agentId: string | null; status: string }
+interface CommandPayload {
   gatewayConfigured: boolean;
   snapshot: Snapshot;
-  agents: AgentStatusRow[];
-}
-
-interface Contribution { persona: string; text: string }
-interface Decision {
-  title: string;
-  owner: string;
-  rationale: string;
-  proposedTool?: string;
-  proposedInput?: Record<string, unknown>;
-  status?: string;
-}
-interface Meeting {
-  id: string;
-  type: "daily" | "weekly";
-  scope: string;
-  agenda: string[];
-  contributions: Contribution[];
-  decisions: Decision[];
-  costGrosze: number;
-  createdAt: string;
-}
-interface AgentEvent {
-  id: string;
-  agentId: string;
-  type: string;
-  summary: string;
-  detail?: string;
-  costGrosze?: number;
-  actor: string;
-  at: string;
-}
-interface ApprovalRow {
-  meetingId: string;
-  meetingType: "daily" | "weekly";
-  scope: string;
-  createdAt: string;
-  index: number;
-  title: string;
-  owner: string;
-  rationale: string;
-  proposedTool?: string;
-  proposedInput?: Record<string, unknown>;
+  agents: StatusRow[];
+  configs: AgentConfig[];
+  stats: FleetStats;
+  scheduled: ScheduledRow[];
+  recentActivity: AgentEvent[];
+  upcomingWork: UpcomingWork[];
+  dailyDigest: DailyDigest | null;
 }
 
 type SectionId = "command" | "scorecards" | "work" | "approvals" | "inbox" | "reports";
-
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "command", label: "Command center" },
   { id: "scorecards", label: "Scorecards" },
@@ -143,73 +70,10 @@ const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "reports", label: "Reports" },
 ];
 
-/* ------------------------------ small UI bits --------------------------- */
-
-function Monogram({ initials, accentVar, size = 32 }: { initials: string; accentVar: string; size?: number }) {
-  return (
-    <span
-      style={{
-        width: size, height: size, borderRadius: 8, flexShrink: 0,
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-        fontSize: size <= 30 ? 10 : 11, fontWeight: 800, letterSpacing: 0.3,
-        background: `color-mix(in oklab, var(${accentVar}) 16%, transparent)`,
-        color: `var(${accentVar})`,
-      }}
-    >
-      {initials}
-    </span>
-  );
-}
-
-function StatusDot({ status }: { status: KpiStatus }) {
-  const color =
-    status === "green" ? "var(--av3-ok)" : status === "yellow" ? "var(--av3-warn)" : status === "red" ? "var(--av3-bad)" : "transparent";
-  return <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: color, border: status === "neutral" ? "1.5px solid var(--av3-subtle)" : "none" }} />;
-}
-
-function StatusBadge({ s }: { s: "active" | "paused" | "draft" }) {
-  return <Badge tone={s === "active" ? "ok" : s === "paused" ? "warn" : "neutral"}>{s}</Badge>;
-}
-
-function kpiSurface(status: KpiStatus): { background: string; border: string } {
-  if (status === "red") return { background: "color-mix(in oklab, var(--av3-bad) 6%, var(--av3-s1))", border: "color-mix(in oklab, var(--av3-bad) 26%, var(--av3-line))" };
-  if (status === "yellow") return { background: "color-mix(in oklab, var(--av3-warn) 5%, var(--av3-s1))", border: "color-mix(in oklab, var(--av3-warn) 22%, var(--av3-line))" };
-  return { background: "var(--av3-s1)", border: "var(--av3-line)" };
-}
-
-const RAIL_STYLE: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 };
-
-function SecLabel({ children, first }: { children: React.ReactNode; first?: boolean }) {
-  return (
-    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.7, color: "var(--av3-subtle)", fontWeight: 600, margin: first ? "0 2px 10px" : "22px 2px 10px" }}>
-      {children}
-    </div>
-  );
-}
-
-function KpiTile({ k }: { k: BoardKpi }) {
-  const exp = KPI_EXPLAINERS[k.id];
-  const surface = kpiSurface(k.status);
-  return (
-    <div style={{ background: surface.background, border: `1px solid ${surface.border}`, borderRadius: "var(--av3-r-lg)", padding: "13px 14px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--av3-muted)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-        <StatusDot status={k.status} />
-        {k.label}
-        {exp && <span style={{ marginLeft: "auto" }}><InfoButton title={k.label} {...exp} /></span>}
-      </div>
-      <div style={{ fontSize: 23, fontWeight: 700, margin: "9px 0 5px", letterSpacing: -0.4 }}>{k.display}</div>
-      <div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{k.benchmark}</div>
-    </div>
-  );
-}
-
-function modelLabel(modelId: string | null): string {
-  if (!modelId) return "Global model";
-  return resolveModel(modelId).label;
-}
-
-const SALES_KPI_IDS = ["today-revenue", "avg-ticket", "revenue-growth", "refund-rate"];
-const COST_KPI_IDS = ["food-cost", "labor-cost", "prime-cost", "satisfaction"];
+const TONE: Record<string, "ok" | "warn" | "bad" | "info" | "neutral"> = {
+  run: "info", edit: "neutral", escalation: "bad", approval: "warn", schedule: "ok", note: "neutral",
+};
+const zl = (g: number) => `${(g / 100).toFixed(2)} zł`;
 
 /* =============================== root ================================== */
 
@@ -218,64 +82,39 @@ export function AgentHQ() {
   const all = useMemo(() => getActiveLocations(), []);
   const city = all.find((l) => l.slug === location)?.city ?? "All locations";
 
-  const [overview, setOverview] = useState<OverviewResponse | null>(null);
-  const [configs, setConfigs] = useState<AgentConfig[]>([]);
+  const [cmd, setCmd] = useState<CommandPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [section, setSection] = useState<SectionId>("command");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  // Inbox target + an optional seeded composer message (from an approval).
-  const [inboxAgentId, setInboxAgentId] = useState<string | null>(null);
+  const [inboxSel, setInboxSel] = useState<string | null>(null);
   const [seed, setSeed] = useState<{ agentId: string; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const qs = location ? `?location=${encodeURIComponent(location)}` : "";
-    const [ov, cf] = await Promise.all([
-      fetch(`/api/admin/ai/boardroom/overview${qs}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(`/api/admin/ai/boardroom/agents`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]);
-    setOverview(ov);
-    if (cf?.agents) setConfigs(cf.agents as AgentConfig[]);
+    const res = await fetch(`/api/admin/ai/boardroom/command${qs}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setCmd(res);
     setLoading(false);
     setRefreshing(false);
   }, [location]);
   useEffect(() => { void load(); }, [load]);
 
-  const gatewayConfigured = overview?.gatewayConfigured ?? false;
-  const snapshot = overview?.snapshot ?? null;
+  const configById = useMemo(() => new Map<string, AgentConfig>((cmd?.configs ?? []).map((c) => [c.id, c])), [cmd]);
+  const gatewayConfigured = cmd?.gatewayConfigured ?? false;
 
-  const configById = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
-  const statusById = useMemo(() => new Map<string, AgentStatusRow>((overview?.agents ?? []).map((a) => [a.id, a])), [overview]);
-
-  // The real tool catalog = the union of every agent's allowlist (we never
-  // invent a tool that the registry doesn't expose).
-  const toolCatalog = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of configs) for (const t of c.toolNames) set.add(t);
-    return [...set].sort();
-  }, [configs]);
-
-  const openChat = useCallback((agentId: string, seedText?: string) => {
-    setInboxAgentId(agentId);
-    if (seedText) setSeed({ agentId, text: seedText });
+  const openChat = useCallback((agentId: string, text?: string) => {
+    setInboxSel(agentId);
+    if (text) setSeed({ agentId, text });
     setSection("inbox");
   }, []);
-
-  const actionApproval = useCallback((a: ApprovalRow) => {
-    const args = a.proposedInput ? ` Proposed: ${a.proposedTool}(${JSON.stringify(a.proposedInput)}).` : "";
-    openChat(a.owner, `Let's action this board decision: ${a.title}.${args} Walk me through it and prepare the change for my approval.`);
-  }, [openChat]);
 
   return (
     <>
       <div className="av3-pagehead">
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Bot style={{ width: 20, height: 20, color: "var(--av3-c4)" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <span style={{ width: 34, height: 34, borderRadius: "var(--av3-r-md)", display: "grid", placeItems: "center", background: "var(--av3-brand-soft)", color: "var(--av3-brand)" }}><Bot style={{ width: 19, height: 19 }} /></span>
           <div>
             <h1>Agent HQ</h1>
-            <div className="av3-pagehead-sub">
-              Your AI agent fleet — command, scorecards, work, approvals, inbox &amp; reports. Each agent is editable end-to-end · {city}
-            </div>
+            <div className="av3-pagehead-sub">Command, scorecards, work, approvals, inbox &amp; reports for your AI agent fleet · {city}</div>
           </div>
         </div>
         <div className="av3-pagehead-actions">
@@ -286,65 +125,36 @@ export function AgentHQ() {
       </div>
 
       {!gatewayConfigured && !loading && (
-        <div className="av3-card" style={{ padding: "12px 14px", marginBottom: 12, display: "flex", gap: 10, alignItems: "center" }}>
+        <Card padding="compact" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center" }}>
           <AlertTriangle style={{ width: 18, height: 18, color: "var(--av3-warn)", flexShrink: 0 }} />
           <div style={{ fontSize: 12.5, color: "var(--av3-muted)" }}>
-            KPIs &amp; agent configs are live, but agents are read-only until <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> is set. Chat &amp; meetings stay disabled until then. You can still edit every agent.
+            KPIs &amp; configs are live, but agents are read-only until <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> is set.
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="av3-filterchips">
+      <div className="av3-filterchips" style={{ marginBottom: 16 }}>
         {SECTIONS.map((s) => (
-          <button key={s.id} type="button" className={`av3-fchip ${section === s.id ? "is-active" : ""}`} onClick={() => setSection(s.id)}>
-            {s.label}
-          </button>
+          <button key={s.id} type="button" className={`av3-fchip ${section === s.id ? "is-active" : ""}`} onClick={() => setSection(s.id)}>{s.label}</button>
         ))}
       </div>
 
       {loading ? (
-        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={6} /></div>
+        <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={8} /></div>
+      ) : !cmd ? (
+        <Card><CardBody>Could not load Agent HQ.</CardBody></Card>
       ) : section === "command" ? (
-        <CommandCenter
-          snapshot={snapshot}
-          configs={configs}
-          statusById={statusById}
-          gatewayConfigured={gatewayConfigured}
-          onEdit={setEditingId}
-          onChat={(id) => openChat(id)}
-          onRan={load}
-        />
+        <CommandCenter cmd={cmd} configById={configById} />
       ) : section === "scorecards" ? (
-        <Scorecards snapshot={snapshot} configs={configs} statusById={statusById} onEdit={setEditingId} />
+        <Scorecards cmd={cmd} />
       ) : section === "work" ? (
-        <WorkSection configs={configs} gatewayConfigured={gatewayConfigured} onRan={load} />
+        <WorkBoard configs={cmd.configs} gatewayConfigured={gatewayConfigured} />
       ) : section === "approvals" ? (
-        <ApprovalsSection configById={configById} onAction={actionApproval} />
+        <Approvals configById={configById} onAction={(owner, text) => openChat(owner, text)} />
       ) : section === "inbox" ? (
-        <InboxSection
-          configs={configs}
-          gatewayConfigured={gatewayConfigured}
-          selectedId={inboxAgentId}
-          onSelect={setInboxAgentId}
-          seed={seed}
-          onSeedConsumed={() => setSeed(null)}
-          onEdit={setEditingId}
-        />
+        <Inbox configs={cmd.configs} gatewayConfigured={gatewayConfigured} selectedId={inboxSel} onSelect={setInboxSel} seed={seed} onSeedConsumed={() => setSeed(null)} />
       ) : (
-        <ReportsSection configById={configById} gatewayConfigured={gatewayConfigured} onAction={actionApproval} onRan={load} />
-      )}
-
-      {editingId && (
-        <AgentEditor
-          agentId={editingId}
-          configs={configs}
-          toolCatalog={toolCatalog}
-          onClose={() => setEditingId(null)}
-          onSaved={(updated) => {
-            setConfigs((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-            void load();
-          }}
-        />
+        <Reports configById={configById} gatewayConfigured={gatewayConfigured} onRan={load} />
       )}
     </>
   );
@@ -352,170 +162,203 @@ export function AgentHQ() {
 
 /* =========================== Command center ============================ */
 
-function AgentRosterCard({ cfg, row, onEdit, onChat }: {
-  cfg: AgentConfig;
-  row?: AgentStatusRow;
-  onEdit: (id: string) => void;
-  onChat: (id: string) => void;
-}) {
-  const reportsToName = cfg.reportsTo ? AGENT_CONFIG_DEFAULTS[cfg.reportsTo]?.title.split("—")[0].trim() : null;
-  return (
-    <div className="av3-card" style={{ padding: 13, display: "flex", flexDirection: "column", gap: 9 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <Monogram initials={cfg.initials} accentVar={cfg.accentVar} size={36} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{cfg.name}</span>
-            <StatusBadge s={cfg.status} />
-            {row && <span style={{ marginLeft: "auto" }}><StatusDot status={row.status} /></span>}
-          </div>
-          <div style={{ fontSize: 11.5, color: "var(--av3-subtle)", marginTop: 1 }}>{cfg.title}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: 12, color: "var(--av3-muted)", lineHeight: 1.5 }}>{cfg.mandate}</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 10.5 }}>
-        <Badge tone="info">{modelLabel(cfg.modelId)}</Badge>
-        <Badge tone="neutral">{cfg.authority}</Badge>
-        <Badge tone="neutral">effort · {cfg.effort}</Badge>
-        {reportsToName && <Badge tone="neutral">↳ {reportsToName}</Badge>}
-      </div>
-      {row && <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>{row.statusText}</div>}
-      {row && (row.spentTodayGrosze ?? 0) >= 0 && (
-        <div style={{ fontSize: 11, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>
-          Today · {((row.spentTodayGrosze ?? 0) / 100).toFixed(2)} zł{cfg.spend.dailyCapGrosze != null ? ` / ${(cfg.spend.dailyCapGrosze / 100).toFixed(2)} cap` : ""}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-        <Button variant="secondary" size="sm" onClick={() => onEdit(cfg.id)}><Pencil className="av3-btn-ico" /> Edit</Button>
-        <Button variant="ghost" size="sm" onClick={() => onChat(cfg.id)}><Send className="av3-btn-ico" /> Chat</Button>
-      </div>
-    </div>
-  );
-}
+const SALES_IDS = ["today-revenue", "avg-ticket", "revenue-growth", "refund-rate"];
+const COST_IDS = ["food-cost", "labor-cost", "prime-cost", "satisfaction"];
 
-function CommandCenter({ snapshot, configs, statusById, gatewayConfigured, onEdit, onChat, onRan }: {
-  snapshot: Snapshot | null;
-  configs: AgentConfig[];
-  statusById: Map<string, AgentStatusRow>;
-  gatewayConfigured: boolean;
-  onEdit: (id: string) => void;
-  onChat: (id: string) => void;
-  onRan: () => void;
-}) {
-  const byId = snapshot ? new Map(snapshot.kpis.map((k) => [k.id, k])) : new Map<string, BoardKpi>();
+function CommandCenter({ cmd, configById }: { cmd: CommandPayload; configById: Map<string, AgentConfig> }) {
+  const byId = new Map(cmd.snapshot.kpis.map((k) => [k.id, k]));
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((k): k is BoardKpi => !!k);
-  const sales = pick(SALES_KPI_IDS);
-  const cost = pick(COST_KPI_IDS);
+  const sales = pick(SALES_IDS), cost = pick(COST_IDS);
+  const s = cmd.stats;
 
   return (
     <>
-      <div style={{ marginBottom: 12 }}><AiModelControl /></div>
-
-      {sales.length > 0 && (<><SecLabel first>Sales &amp; growth</SecLabel><div style={RAIL_STYLE}>{sales.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
-      {cost.length > 0 && (<><SecLabel>Cost &amp; quality</SecLabel><div style={RAIL_STYLE}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
-
-      <SecLabel>Agent roster ({configs.length})</SecLabel>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
-        {configs.map((cfg) => (
-          <AgentRosterCard key={cfg.id} cfg={cfg} row={statusById.get(cfg.id)} onEdit={onEdit} onChat={onChat} />
-        ))}
+      <SecLabel first>Fleet</SecLabel>
+      <div style={RAIL}>
+        <StatTile label="Active agents" value={`${s.activeAgents}`} sub={`of ${cmd.configs.length}`} accent="--av3-c4" />
+        <StatTile label="Runs today" value={`${s.runsToday}`} accent="--av3-c3" />
+        <StatTile label="Success rate · 7d" value={s.successRate7d == null ? "—" : `${s.successRate7d}%`} sub={`${s.runs7d} runs`} accent={s.successRate7d != null && s.successRate7d < 90 ? "--av3-warn" : "--av3-ok"} />
+        <StatTile label="Cost · 7d" value={zl(s.cost7dGrosze)} accent="--av3-c5" />
+        <StatTile label="Scheduled" value={`${s.scheduledCount}`} sub="agents on a cadence" accent="--av3-c6" />
       </div>
 
-      <SecLabel>Org &amp; reporting</SecLabel>
-      <Card><CardBody><OrgChart configs={configs} onEdit={onEdit} /></CardBody></Card>
+      <div style={{ marginTop: 16 }}><AiModelControl /></div>
 
-      <SecLabel>What needs attention</SecLabel>
-      <Card>
-        {!snapshot || snapshot.flags.length === 0 ? (
-          <CardBody>
-            <div className="av3-empty" style={{ padding: "20px 0" }}>
-              <CircleDot style={{ width: 22, height: 22, color: "var(--av3-ok)", margin: "0 auto 8px" }} />
-              <div className="av3-empty-title">All KPIs on target</div>
-              <div className="av3-empty-text">Convene the board in Reports to hunt the next growth lever.</div>
-            </div>
-          </CardBody>
-        ) : (
-          <>
-            <CardHead title={`${snapshot.flags.length} metric${snapshot.flags.length > 1 ? "s" : ""} off-target`} description="These seed the next board meeting" />
-            <CardBody style={{ paddingTop: 6, paddingBottom: 6 }}>
-              {snapshot.flags.map((f, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < snapshot.flags.length - 1 ? "1px solid var(--av3-line)" : "none", fontSize: 12.5, color: "var(--av3-muted)" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--av3-warn)", flexShrink: 0, marginTop: 5 }} />
-                  <span>{f}</span>
-                </div>
-              ))}
-            </CardBody>
-          </>
-        )}
-      </Card>
+      {sales.length > 0 && (<><SecLabel>Sales &amp; growth</SecLabel><div style={RAIL}>{sales.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
+      {cost.length > 0 && (<><SecLabel>Cost &amp; quality</SecLabel><div style={RAIL}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
 
-      <SecLabel>Convene the board</SecLabel>
-      <Card><CardBody><RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={onRan} compact /></CardBody></Card>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 22, alignItems: "start" }}>
+        <OrgCard configs={cmd.configs} statusById={new Map(cmd.agents.map((a) => [a.id, a]))} />
+        <ActivityCard runsByDay7d={s.runsByDay7d} />
+        <RecentActivityCard events={cmd.recentActivity} configById={configById} />
+        <UpcomingWorkCard work={cmd.upcomingWork} scheduled={cmd.scheduled} configById={configById} />
+        <DigestCard digest={cmd.dailyDigest} configById={configById} flags={cmd.snapshot.flags} />
+        <MonthlyCostCard stats={s} />
+      </div>
     </>
   );
 }
 
-function OrgChart({ configs, onEdit }: { configs: AgentConfig[]; onEdit: (id: string) => void }) {
-  const childrenOf = (id: string | null) => configs.filter((c) => c.reportsTo === id);
-  const row = (c: AgentConfig, depth: number) => (
+function OrgCard({ configs, statusById }: { configs: AgentConfig[]; statusById: Map<string, StatusRow> }) {
+  const kids = (id: string | null) => configs.filter((c) => c.reportsTo === id);
+  const rowFor = (c: AgentConfig, d: number): React.ReactNode => (
     <div key={c.id}>
-      <button
-        type="button"
-        className="av3-conv-row"
-        style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 10px", marginLeft: depth * 22, width: `calc(100% - ${depth * 22}px)` }}
-        onClick={() => onEdit(c.id)}
-      >
-        {depth > 0 && <span style={{ color: "var(--av3-subtle)", marginRight: 2 }}>↳</span>}
-        <Monogram initials={c.initials} accentVar={c.accentVar} size={24} />
-        <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "left" }}>{c.name}</span>
-        <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{c.title.split("—")[0].trim()}</span>
-        <StatusBadge s={c.status} />
-      </button>
-      {childrenOf(c.id).map((kid) => row(kid, depth + 1))}
+      <Link href={`/admin/agent-hq/${c.id}`} className="av3-conv-row" style={{ marginLeft: d * 20, width: `calc(100% - ${d * 20}px)` }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          {d > 0 && <span style={{ color: "var(--av3-subtle)" }}>↳</span>}
+          <Monogram initials={c.initials} accentVar={c.accentVar} size={22} />
+          <span style={{ fontSize: 12.5, fontWeight: 600 }}>{c.name}</span>
+          <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{c.title.split("—")[0].trim()}</span>
+        </span>
+        <StatusDot status={statusById.get(c.id)?.status ?? "neutral"} />
+      </Link>
+      {kids(c.id).map((k) => rowFor(k, d + 1))}
     </div>
   );
-  const roots = childrenOf(null);
-  return <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{roots.map((r) => row(r, 0))}</div>;
+  return (
+    <Card>
+      <CardHead title="Org & reporting" description="Click an agent for its dedicated panel" />
+      <CardBody style={{ display: "flex", flexDirection: "column", gap: 2 }}>{kids(null).map((c) => rowFor(c, 0))}</CardBody>
+    </Card>
+  );
+}
+
+function ActivityCard({ runsByDay7d }: { runsByDay7d: number[] }) {
+  const max = Math.max(1, ...runsByDay7d);
+  const days = ["6d", "5d", "4d", "3d", "2d", "1d", "Today"];
+  return (
+    <Card>
+      <CardHead title="Activity" description="Agent runs over the last 7 days" />
+      <CardBody>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 96 }}>
+          {runsByDay7d.map((n, i) => (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 10.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{n}</span>
+              <div title={`${n} runs`} style={{ width: "100%", height: `${Math.max(4, (n / max) * 70)}px`, borderRadius: "var(--av3-r-sm) var(--av3-r-sm) 0 0", background: i === 6 ? "var(--av3-brand)" : "color-mix(in oklab, var(--av3-c3) 55%, transparent)" }} />
+              <span style={{ fontSize: 10, color: "var(--av3-subtle)" }}>{days[i]}</span>
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function RecentActivityCard({ events, configById }: { events: AgentEvent[]; configById: Map<string, AgentConfig> }) {
+  return (
+    <Card>
+      <CardHead title="Recent activity" description="Runs, edits, escalations & approvals" />
+      <CardBody>
+        {events.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No activity yet.</div> :
+          events.slice(0, 7).map((e, i) => (
+            <div key={e.id} style={{ display: "flex", gap: 9, padding: "8px 0", borderBottom: i < Math.min(events.length, 7) - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+              <Badge tone={TONE[e.type] ?? "neutral"}>{e.type}</Badge>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, lineHeight: 1.4 }}><strong>{configById.get(e.agentId)?.name ?? e.agentId}</strong> — {e.summary}</div>
+                <div style={{ fontSize: 10.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{new Date(e.at).toLocaleString("pl-PL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+            </div>
+          ))}
+      </CardBody>
+    </Card>
+  );
+}
+
+function UpcomingWorkCard({ work, scheduled, configById }: { work: UpcomingWork[]; scheduled: ScheduledRow[]; configById: Map<string, AgentConfig> }) {
+  return (
+    <Card>
+      <CardHead title="Upcoming work" description="Queued items + scheduled runs" />
+      <CardBody>
+        {work.length === 0 && scheduled.length === 0 ? (
+          <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Nothing queued. Assign work in the Work tab.</div>
+        ) : (<>
+          {work.map((w) => (
+            <div key={w.id} style={{ display: "flex", gap: 9, padding: "7px 0", alignItems: "center" }}>
+              <Badge tone={w.status === "queued" ? "info" : "neutral"}>{w.status}</Badge>
+              <span style={{ fontSize: 12.5, flex: 1, minWidth: 0 }}>{w.title}</span>
+              {w.agentId && <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{configById.get(w.agentId)?.name}</span>}
+            </div>
+          ))}
+          {scheduled.map((s) => (
+            <div key={s.id} style={{ display: "flex", gap: 9, padding: "7px 0", alignItems: "center" }}>
+              <Monogram initials={s.initials} accentVar={s.accentVar} size={20} />
+              <span style={{ fontSize: 12.5, flex: 1 }}>{s.name}</span>
+              <Badge tone="ok">{s.cadence}</Badge>
+              <span style={{ fontSize: 11, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{s.time}</span>
+            </div>
+          ))}
+        </>)}
+      </CardBody>
+    </Card>
+  );
+}
+
+function DigestCard({ digest, configById, flags }: { digest: DailyDigest | null; configById: Map<string, AgentConfig>; flags: string[] }) {
+  return (
+    <Card>
+      <CardHead title="Daily digest" description={digest ? `${digest.type === "daily" ? "Daily briefing" : "Weekly review"} · ${new Date(digest.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}` : "No briefing yet"} />
+      <CardBody>
+        {!digest ? (
+          <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>{flags.length} metric{flags.length !== 1 ? "s" : ""} off-target. Run a briefing in Reports.</div>
+        ) : (<>
+          <div style={{ fontSize: 12, color: "var(--av3-muted)", marginBottom: 8 }}>{digest.agendaCount} metric{digest.agendaCount !== 1 ? "s" : ""} on the agenda · cost {zl(digest.costGrosze)}</div>
+          {digest.decisions.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>No decisions produced.</div> :
+            digest.decisions.map((d, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: "var(--av3-r-sm)", background: `color-mix(in oklab, var(${configById.get(d.owner)?.accentVar ?? "--av3-subtle"}) 16%, transparent)`, color: `var(${configById.get(d.owner)?.accentVar ?? "--av3-subtle"})` }}>{configById.get(d.owner)?.initials ?? "··"}</span>
+                <span style={{ fontSize: 12.5, flex: 1 }}>{d.title}</span>
+              </div>
+            ))}
+        </>)}
+      </CardBody>
+    </Card>
+  );
+}
+
+function MonthlyCostCard({ stats }: { stats: FleetStats }) {
+  return (
+    <Card>
+      <CardHead title="Monthly cost" description="AI spend, month-to-date" />
+      <CardBody>
+        <div style={{ fontFamily: "var(--av3-display)", fontSize: 30, fontWeight: 600, letterSpacing: "-0.01em" }}>{zl(stats.costMonthGrosze)}</div>
+        <div style={{ display: "flex", gap: 18, marginTop: 12 }}>
+          <div><div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Last 7 days</div><div style={{ fontFamily: "var(--av3-mono)", fontSize: 14 }}>{zl(stats.cost7dGrosze)}</div></div>
+          <div><div style={{ fontSize: 11, color: "var(--av3-subtle)" }}>Runs (7d)</div><div style={{ fontFamily: "var(--av3-mono)", fontSize: 14 }}>{stats.runs7d}</div></div>
+        </div>
+      </CardBody>
+    </Card>
+  );
 }
 
 /* ============================== Scorecards ============================= */
 
-function Scorecards({ snapshot, configs, statusById, onEdit }: {
-  snapshot: Snapshot | null;
-  configs: AgentConfig[];
-  statusById: Map<string, AgentStatusRow>;
-  onEdit: (id: string) => void;
-}) {
-  const owned = (id: string) => (snapshot?.kpis ?? []).filter((k) => k.owner === id);
+function Scorecards({ cmd }: { cmd: CommandPayload }) {
+  const owned = (id: string) => cmd.snapshot.kpis.filter((k) => k.owner === id);
+  const spend = (id: string) => cmd.agents.find((a) => a.id === id)?.spentTodayGrosze ?? 0;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 10 }}>
-      {configs.map((cfg) => {
-        const live = owned(cfg.id);
-        const row = statusById.get(cfg.id);
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))", gap: 14 }}>
+      {cmd.configs.map((c) => {
+        const live = owned(c.id);
         return (
-          <Card key={cfg.id}>
+          <Card key={c.id}>
             <CardHead
-              title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><Monogram initials={cfg.initials} accentVar={cfg.accentVar} size={26} /> {cfg.name}</span>}
-              description={cfg.title}
-              actions={<Button variant="ghost" size="sm" onClick={() => onEdit(cfg.id)}><Pencil className="av3-btn-ico" /> Edit</Button>}
+              title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={c.initials} accentVar={c.accentVar} size={30} /> <span style={{ fontSize: 15 }}>{c.name}</span> <Badge tone={c.status === "active" ? "ok" : c.status === "paused" ? "warn" : "neutral"}>{c.status}</Badge></span>}
+              description={c.title}
+              actions={<Link href={`/admin/agent-hq/${c.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open <ArrowRight className="av3-btn-ico" /></Link>}
             />
-            <CardBody style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {live.length > 0 ? (
-                <div style={RAIL_STYLE}>{live.map((k) => <KpiTile key={k.id} k={k} />)}</div>
-              ) : (
-                <div className="av3-cell-muted" style={{ fontSize: 12 }}>
-                  {row?.statusText ?? "No live P&L metric owned — advisory agent."}
-                </div>
-              )}
+            <CardBody style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {live.length > 0 ? <div style={RAIL}>{live.map((k) => <KpiTile key={k.id} k={k} />)}</div>
+                : <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Advisory agent — no live P&amp;L metric owned.</div>}
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                <Meta label="Model" value={c.modelId ? c.modelId : "Global"} />
+                <Meta label="Authority" value={c.authority} />
+                <Meta label="Spend today" value={zl(spend(c.id))} />
+                <Meta label="Schedule" value={CADENCE_OPTIONS.find((o) => o.value === c.schedule.cadence)?.label ?? c.schedule.cadence} />
+              </div>
               <div>
                 <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, marginBottom: 6 }}>Targets it answers for</div>
-                {cfg.kpis.length === 0 ? (
-                  <div className="av3-cell-muted" style={{ fontSize: 12 }}>No targets set.</div>
-                ) : (
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: "var(--av3-muted)", lineHeight: 1.7 }}>
-                    {cfg.kpis.map((k, i) => <li key={i}>{k}</li>)}
-                  </ul>
-                )}
+                {c.kpis.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>No targets set.</div> :
+                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--av3-muted)", lineHeight: 1.7 }}>{c.kpis.map((k, i) => <li key={i}>{k}</li>)}</ul>}
               </div>
             </CardBody>
           </Card>
@@ -524,144 +367,167 @@ function Scorecards({ snapshot, configs, statusById, onEdit }: {
     </div>
   );
 }
+function Meta({ label, value }: { label: string; value: string }) {
+  return <div><div style={{ fontSize: 10.5, color: "var(--av3-subtle)", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{value}</div></div>;
+}
 
 /* ================================ Work ================================= */
 
-const EVENT_TONE: Record<string, "ok" | "warn" | "bad" | "info" | "neutral"> = {
-  run: "info", edit: "neutral", escalation: "bad", approval: "warn", schedule: "ok", note: "neutral",
-};
+interface WorkItem { id: string; title: string; prompt: string; agentId: string | null; status: string; createdAt: string; completedAt?: string; costGrosze?: number; resultSummary?: string }
 
-function WorkSection({ configs, gatewayConfigured, onRan }: {
-  configs: AgentConfig[];
-  gatewayConfigured: boolean;
-  onRan: () => void;
-}) {
-  const [events, setEvents] = useState<AgentEvent[] | null>(null);
-  const nameById = useMemo(() => new Map<string, string>(configs.map((c) => [c.id, c.name])), [configs]);
+function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gatewayConfigured: boolean }) {
+  const [items, setItems] = useState<WorkItem[] | null>(null);
+  const [title, setTitle] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [assignTo, setAssignTo] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const cfg = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/ai/boardroom/timeline").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    setEvents(res?.events ?? []);
+    const res = await fetch("/api/admin/ai/boardroom/work").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setItems(res?.items ?? []);
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  const scheduled = configs.filter((c) => c.schedule.cadence !== "off");
+  const create = useCallback(async () => {
+    if (!title.trim() || !prompt.trim()) return;
+    setBusy("create");
+    await fetch("/api/admin/ai/boardroom/work", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, prompt, agentId: assignTo || null }) }).catch(() => null);
+    setTitle(""); setPrompt(""); setAssignTo(""); setBusy(null); load();
+  }, [title, prompt, assignTo, load]);
+
+  const assign = useCallback(async (id: string, agentId: string | null) => {
+    await fetch(`/api/admin/ai/boardroom/work/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId }) }).catch(() => null);
+    load();
+  }, [load]);
+
+  const run = useCallback(async (id: string) => {
+    setBusy(id);
+    await fetch(`/api/admin/ai/boardroom/work/${id}/run`, { method: "POST" }).catch(() => null);
+    setBusy(null); load();
+  }, [load]);
+
+  const remove = useCallback(async (id: string) => {
+    await fetch(`/api/admin/ai/boardroom/work/${id}`, { method: "DELETE" }).catch(() => null);
+    load();
+  }, [load]);
+
+  if (items === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={6} /></div>;
+
+  const unassigned = items.filter((w) => w.status === "unassigned");
+  const queued = items.filter((w) => w.status === "queued" || w.status === "running");
+  const recent = items.filter((w) => w.status === "done" || w.status === "failed").slice(0, 12);
+
+  const card = (w: WorkItem, opts?: { run?: boolean }) => (
+    <div key={w.id} draggable onDragStart={() => setDragId(w.id)} onDragEnd={() => setDragId(null)}
+      className="av3-card" style={{ padding: 11, marginBottom: 8, cursor: "grab" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600 }}>{w.title}</div>
+          <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{w.resultSummary || w.prompt}</div>
+        </div>
+        {w.agentId && <Monogram initials={cfg.get(w.agentId)?.initials ?? "··"} accentVar={cfg.get(w.agentId)?.accentVar ?? "--av3-subtle"} size={24} />}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginTop: 9, alignItems: "center" }}>
+        <Badge tone={w.status === "done" ? "ok" : w.status === "failed" ? "bad" : w.status === "running" ? "warn" : "info"}>{w.status}</Badge>
+        {typeof w.costGrosze === "number" && w.costGrosze > 0 && <span style={{ fontSize: 10.5, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{zl(w.costGrosze)}</span>}
+        <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          {opts?.run && w.agentId && <Button variant="primary" size="sm" loading={busy === w.id} disabled={!gatewayConfigured} onClick={() => run(w.id)}><Play className="av3-btn-ico" /> Run</Button>}
+          <button className="av3-iconbtn-sm" title="Delete" onClick={() => remove(w.id)}><Trash2 style={{ width: 13, height: 13 }} /></button>
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <>
       <Card>
-        <CardHead title="Run the fleet" description="Convene the board on today's live numbers — a real round-robin + synthesis into decisions." />
-        <CardBody><RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={() => { onRan(); void load(); }} /></CardBody>
-      </Card>
-
-      <SecLabel>Schedules</SecLabel>
-      <Card>
+        <CardHead title="Assign work" description="Create a task and drag it onto an agent — or pick one here. It runs on the agent's live config." />
         <CardBody>
-          {scheduled.length === 0 ? (
-            <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No agents on a schedule. Set a cadence per agent in the editor.</div>
-          ) : (
-            scheduled.map((c, i) => (
-              <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < scheduled.length - 1 ? "1px solid var(--av3-line)" : "none" }}>
-                <Monogram initials={c.initials} accentVar={c.accentVar} size={26} />
-                <span style={{ fontSize: 13, fontWeight: 600, minWidth: 130 }}>{c.name}</span>
-                <Badge tone="ok">{CADENCE_OPTIONS.find((o) => o.value === c.schedule.cadence)?.label ?? c.schedule.cadence}</Badge>
-                <span style={{ fontSize: 12, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>{c.schedule.time}</span>
-              </div>
-            ))
-          )}
-          <div className="av3-cell-muted" style={{ fontSize: 11, marginTop: 10 }}>
-            The daily-cadence executives auto-run via the boardroom briefing cron (<span style={{ fontFamily: "var(--av3-mono)" }}>/api/admin/cron/boardroom-briefing</span>).
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <input className="av3-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <select className="av3-select" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
+              <option value="">Leave unassigned (drag later)</option>
+              {configs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
+          <textarea className="av3-input" placeholder="What should the agent do?" rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ width: "100%", marginTop: 10, fontFamily: "var(--av3-ui)" }} />
+          <div style={{ marginTop: 10 }}><Button variant="primary" loading={busy === "create"} disabled={!title.trim() || !prompt.trim()} onClick={create}><Plus className="av3-btn-ico" /> Add work</Button></div>
         </CardBody>
       </Card>
 
-      <SecLabel>Activity</SecLabel>
-      <Card>
-        <CardBody>
-          {events === null ? (
-            <SkeletonRows rows={4} />
-          ) : events.length === 0 ? (
-            <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No agent activity yet. Chat with an agent or run a meeting to populate the log.</div>
-          ) : (
-            events.map((e, i) => (
-              <div key={e.id} style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: i < events.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
-                <Badge tone={EVENT_TONE[e.type] ?? "neutral"}>{e.type}</Badge>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5 }}><strong>{nameById.get(e.agentId) ?? e.agentId}</strong> — {e.summary}</div>
-                  {e.detail && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 2 }}>{e.detail}</div>}
-                  <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 3, fontFamily: "var(--av3-mono)" }}>
-                    {new Date(e.at).toLocaleString("pl-PL")} · {e.actor}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </CardBody>
-      </Card>
+      <SecLabel>Drop onto an agent to assign</SecLabel>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {configs.filter((c) => c.status === "active").map((c) => (
+          <div key={c.id}
+            onDragOver={(e) => { if (dragId) e.preventDefault(); }}
+            onDrop={() => { if (dragId) { assign(dragId, c.id); setDragId(null); } }}
+            className="av3-card" style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, borderStyle: dragId ? "dashed" : "solid", borderColor: dragId ? "var(--av3-brand-line)" : "var(--av3-line)" }}>
+            <Monogram initials={c.initials} accentVar={c.accentVar} size={24} /><span style={{ fontSize: 12.5, fontWeight: 600 }}>{c.name}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginTop: 18, alignItems: "start" }}>
+        <div onDragOver={(e) => { if (dragId) e.preventDefault(); }} onDrop={() => { if (dragId) { assign(dragId, null); setDragId(null); } }}>
+          <SecLabel first>Unassigned ({unassigned.length})</SecLabel>
+          {unassigned.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>Drop here to unassign.</div> : unassigned.map((w) => card(w))}
+        </div>
+        <div>
+          <SecLabel first>Queued ({queued.length})</SecLabel>
+          {queued.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>Nothing queued.</div> : queued.map((w) => card(w, { run: true }))}
+        </div>
+        <div>
+          <SecLabel first>Recent ({recent.length})</SecLabel>
+          {recent.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12 }}>No completed work yet.</div> : recent.map((w) => card(w))}
+        </div>
+      </div>
     </>
   );
 }
 
 /* ============================== Approvals ============================== */
 
-function ApprovalsSection({ configById, onAction }: {
-  configById: Map<string, AgentConfig>;
-  onAction: (a: ApprovalRow) => void;
-}) {
-  const [approvals, setApprovals] = useState<ApprovalRow[] | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+interface ApprovalRow { meetingId: string; index: number; createdAt: string; title: string; owner: string; rationale: string; proposedTool?: string }
 
-  const load = useCallback(() => {
-    fetch("/api/admin/ai/boardroom/approvals").then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setApprovals(res?.approvals ?? []));
-  }, []);
+function Approvals({ configById, onAction }: { configById: Map<string, AgentConfig>; onAction: (owner: string, text: string) => void }) {
+  const [rows, setRows] = useState<ApprovalRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => { fetch("/api/admin/ai/boardroom/approvals").then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setRows(res?.approvals ?? [])); }, []);
   useEffect(() => { load(); }, [load]);
 
   const setStatus = useCallback(async (a: ApprovalRow, status: "executed" | "dismissed") => {
-    const key = `${a.meetingId}-${a.index}`;
-    setBusy(key);
-    await fetch("/api/admin/ai/boardroom/approvals", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ meetingId: a.meetingId, index: a.index, status, owner: a.owner }),
-    }).catch(() => null);
-    setBusy(null);
-    load();
+    const key = `${a.meetingId}-${a.index}`; setBusy(key);
+    await fetch("/api/admin/ai/boardroom/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ meetingId: a.meetingId, index: a.index, status }) }).catch(() => null);
+    setBusy(null); load();
   }, [load]);
 
+  if (rows === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={4} /></div>;
   return (
     <Card>
-      <CardHead title="Pending approvals" description="Gated actions agents proposed — Action runs it via the owning agent (preview → approve → execute → audit); mark it executed or dismiss it to clear the queue." />
+      <CardHead title="Pending approvals" description="Gated actions agents proposed. Action runs it via the owning agent (preview → approve → execute → audit); Mark done / Dismiss clear the queue." />
       <CardBody>
-        {approvals === null ? (
-          <SkeletonRows rows={4} />
-        ) : approvals.length === 0 ? (
-          <div className="av3-empty" style={{ padding: "22px 0" }}>
-            <Check aria-hidden />
-            <div className="av3-empty-title">Nothing awaiting you</div>
-            <div className="av3-empty-text">When a meeting produces a gated action, it queues here for your approval.</div>
-          </div>
-        ) : (
-          approvals.map((a, i) => {
-            const owner = configById.get(a.owner);
-            const key = `${a.meetingId}-${a.index}`;
-            return (
-              <div key={key} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < approvals.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
-                {owner && <Monogram initials={owner.initials} accentVar={owner.accentVar} size={28} />}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{a.title}</div>
-                  {a.rationale && <div className="av3-cell-muted" style={{ fontSize: 12, marginTop: 2 }}>{a.rationale}</div>}
-                  <div style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--av3-mono)", color: "var(--av3-subtle)" }}>
-                    {a.proposedTool} · {owner?.name ?? a.owner} · {new Date(a.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  <Button variant="primary" size="sm" onClick={() => onAction(a)}>Action <ChevronRight className="av3-btn-ico" /></Button>
-                  <Button variant="secondary" size="sm" loading={busy === key} onClick={() => setStatus(a, "executed")}>Mark done</Button>
-                  <Button variant="ghost" size="sm" disabled={busy === key} onClick={() => setStatus(a, "dismissed")}>Dismiss</Button>
-                </div>
+        {rows.length === 0 ? (
+          <div className="av3-empty" style={{ padding: "26px 0" }}><Check aria-hidden /><div className="av3-empty-title">Nothing awaiting you</div><div className="av3-empty-text">Gated actions from meetings queue here.</div></div>
+        ) : rows.map((a, i) => {
+          const owner = configById.get(a.owner); const key = `${a.meetingId}-${a.index}`;
+          return (
+            <div key={key} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < rows.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+              {owner && <Monogram initials={owner.initials} accentVar={owner.accentVar} size={28} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{a.title}</div>
+                {a.rationale && <div className="av3-cell-muted" style={{ fontSize: 12, marginTop: 2 }}>{a.rationale}</div>}
+                <div style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--av3-mono)", color: "var(--av3-subtle)" }}>{a.proposedTool} · {owner?.name ?? a.owner} · {new Date(a.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}</div>
               </div>
-            );
-          })
-        )}
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <Button variant="primary" size="sm" onClick={() => onAction(a.owner, `Let's action this board decision: ${a.title}. ${a.proposedTool ? `(${a.proposedTool})` : ""} Walk me through it and prepare the change for my approval.`)}>Action <ChevronRight className="av3-btn-ico" /></Button>
+                <Button variant="secondary" size="sm" loading={busy === key} onClick={() => setStatus(a, "executed")}>Mark done</Button>
+                <Button variant="ghost" size="sm" disabled={busy === key} onClick={() => setStatus(a, "dismissed")}>Dismiss</Button>
+              </div>
+            </div>
+          );
+        })}
       </CardBody>
     </Card>
   );
@@ -669,20 +535,13 @@ function ApprovalsSection({ configById, onAction }: {
 
 /* ================================ Inbox =============================== */
 
-function InboxSection({ configs, gatewayConfigured, selectedId, onSelect, seed, onSeedConsumed, onEdit }: {
-  configs: AgentConfig[];
-  gatewayConfigured: boolean;
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  seed: { agentId: string; text: string } | null;
-  onSeedConsumed: () => void;
-  onEdit: (id: string) => void;
+function Inbox({ configs, gatewayConfigured, selectedId, onSelect, seed, onSeedConsumed }: {
+  configs: AgentConfig[]; gatewayConfigured: boolean; selectedId: string | null;
+  onSelect: (id: string) => void; seed: { agentId: string; text: string } | null; onSeedConsumed: () => void;
 }) {
-  // "team" = the generalist board assistant (no persona). Default to first agent.
   const effectiveId = selectedId ?? configs[0]?.id ?? null;
   const selected = effectiveId === "team" ? null : configs.find((c) => c.id === effectiveId) ?? null;
-  const nameById = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
-
+  const cfg = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
   const [escalations, setEscalations] = useState<AgentEvent[]>([]);
   useEffect(() => {
     fetch("/api/admin/ai/boardroom/timeline").then((r) => (r.ok ? r.json() : null)).catch(() => null)
@@ -696,7 +555,7 @@ function InboxSection({ configs, gatewayConfigured, selectedId, onSelect, seed, 
           <CardHead title={`${escalations.length} escalation${escalations.length > 1 ? "s" : ""} from your agents`} description="An agent hit its escalation threshold and is asking for you." />
           <CardBody>
             {escalations.map((e, i) => {
-              const a = nameById.get(e.agentId);
+              const a = cfg.get(e.agentId);
               return (
                 <div key={e.id} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < escalations.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
                   <AlertTriangle style={{ width: 16, height: 16, color: "var(--av3-warn)", flexShrink: 0, marginTop: 2 }} />
@@ -711,427 +570,159 @@ function InboxSection({ configs, gatewayConfigured, selectedId, onSelect, seed, 
           </CardBody>
         </Card>
       )}
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 240px) 1fr", gap: 12, alignItems: "start" }}>
-      <Card>
-        <CardBody style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 240px) 1fr", gap: 12, alignItems: "start" }}>
+        <Card><CardBody style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {configs.map((c) => (
-            <button key={c.id} type="button" className={`av3-conv-row ${effectiveId === c.id ? "is-active" : ""}`} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 10px" }} onClick={() => onSelect(c.id)}>
-              <Monogram initials={c.initials} accentVar={c.accentVar} size={28} />
-              <span style={{ minWidth: 0, textAlign: "left", flex: 1 }}>
-                <span style={{ display: "block", fontSize: 12.5, fontWeight: 600 }}>{c.name}</span>
-                <span style={{ display: "block", fontSize: 11, color: "var(--av3-subtle)" }}>{c.status === "active" ? c.authority : c.status}</span>
+            <button key={c.id} type="button" className={`av3-conv-row ${effectiveId === c.id ? "is-active" : ""}`} onClick={() => onSelect(c.id)}>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                <Monogram initials={c.initials} accentVar={c.accentVar} size={26} />
+                <span style={{ minWidth: 0 }}><span style={{ display: "block", fontSize: 12.5, fontWeight: 600 }}>{c.name}</span><span style={{ display: "block", fontSize: 11, color: "var(--av3-subtle)" }}>{c.status === "active" ? c.authority : c.status}</span></span>
               </span>
             </button>
           ))}
-          <button type="button" className={`av3-conv-row ${effectiveId === "team" ? "is-active" : ""}`} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 10px" }} onClick={() => onSelect("team")}>
-            <Users style={{ width: 28, height: 28, padding: 6, color: "var(--av3-subtle)" }} />
-            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Whole team</span>
+          <button type="button" className={`av3-conv-row ${effectiveId === "team" ? "is-active" : ""}`} onClick={() => onSelect("team")}>
+            <span style={{ display: "flex", alignItems: "center", gap: 9 }}><Users style={{ width: 26, height: 26, padding: 5, color: "var(--av3-subtle)" }} /><span style={{ fontSize: 12.5, fontWeight: 600 }}>Whole team</span></span>
           </button>
-        </CardBody>
-      </Card>
-
-      <div>
-        <Card>
-          <CardHead
-            title={selected ? selected.name : "Whole team"}
-            description={selected ? selected.title : "A generalist board assistant with every read tool — for cross-functional questions."}
-            actions={selected ? <Button variant="ghost" size="sm" onClick={() => onEdit(selected.id)}><Pencil className="av3-btn-ico" /> Edit</Button> : undefined}
-          />
-        </Card>
-        <ChatPanel
-          agent={selected}
-          gatewayConfigured={gatewayConfigured}
-          seed={seed && seed.agentId === effectiveId ? seed.text : null}
-          onSeedConsumed={onSeedConsumed}
-        />
-      </div>
-    </div>
-    </>
-  );
-}
-
-/* ================================ Reports ============================= */
-
-function ReportsSection({ configById, gatewayConfigured, onAction, onRan }: {
-  configById: Map<string, AgentConfig>;
-  gatewayConfigured: boolean;
-  onAction: (a: ApprovalRow) => void;
-  onRan: () => void;
-}) {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadMeetings = useCallback(async (selectNewest = false) => {
-    const res = await fetch("/api/admin/ai/boardroom/meeting").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    const list: Meeting[] = res?.meetings ?? [];
-    setMeetings(list);
-    if (selectNewest && list[0]) setActiveId(list[0].id);
-    else setActiveId((prev) => prev ?? list[0]?.id ?? null);
-    setLoading(false);
-  }, []);
-  useEffect(() => { void loadMeetings(); }, [loadMeetings]);
-
-  const active = meetings.find((m) => m.id === activeId) ?? null;
-
-  return (
-    <>
-      <Card>
-        <CardHead title="Reports" description="Daily briefings + weekly reviews — a real multi-agent meeting on live numbers, with transcript, decisions and spend." />
-        <CardBody><RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={() => { loadMeetings(true); onRan(); }} /></CardBody>
-      </Card>
-
-      {loading ? (
-        <div className="av3-card" style={{ padding: 12 }}><SkeletonRows rows={4} /></div>
-      ) : meetings.length === 0 ? (
-        <Card><CardBody>
-          <div className="av3-empty" style={{ padding: "22px 0" }}>
-            <Users aria-hidden />
-            <div className="av3-empty-title">No reports yet</div>
-            <div className="av3-empty-text">Run a daily briefing or weekly review to generate one.</div>
-          </div>
         </CardBody></Card>
-      ) : (
-        <>
-          <div className="av3-filterchips">
-            {meetings.map((m) => (
-              <button key={m.id} type="button" className={`av3-fchip ${activeId === m.id ? "is-active" : ""}`} onClick={() => setActiveId(m.id)}>
-                {m.type === "daily" ? "Daily" : "Weekly"} · {new Date(m.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
-              </button>
-            ))}
-          </div>
-          {active && <MeetingView meeting={active} configById={configById} onAction={onAction} />}
-        </>
-      )}
+        <div>
+          <Card><CardHead
+            title={selected ? selected.name : "Whole team"}
+            description={selected ? selected.title : "A generalist board assistant for cross-functional questions."}
+            actions={selected ? <Link href={`/admin/agent-hq/${selected.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open panel <ArrowRight className="av3-btn-ico" /></Link> : undefined}
+          /></Card>
+          <ChatPanel personaId={selected?.id ?? null} name={selected ? selected.name : "the team"} suggestion={selected ? selected.mandate : "Ask the whole team anything about the business."} gatewayConfigured={gatewayConfigured} seed={seed && seed.agentId === effectiveId ? seed.text : null} onSeedConsumed={onSeedConsumed} />
+        </div>
+      </div>
     </>
   );
 }
 
-function MeetingView({ meeting, configById, onAction }: {
-  meeting: Meeting;
-  configById: Map<string, AgentConfig>;
-  onAction: (a: ApprovalRow) => void;
-}) {
-  const label = (id: string) => configById.get(id)?.name ?? id;
-  const accent = (id: string) => configById.get(id)?.accentVar ?? "--av3-subtle";
-  const initials = (id: string) => configById.get(id)?.initials ?? "··";
-  return (
-    <>
-      <Card>
-        <CardHead
-          title={`${meeting.type === "daily" ? "Daily briefing" : "Weekly review"} — ${meeting.scope === "all" ? "All locations" : meeting.scope}`}
-          description={`${new Date(meeting.createdAt).toLocaleString("pl-PL")} · session cost ${(meeting.costGrosze / 100).toFixed(2)} zł`}
-        />
-        <CardBody>
-          {meeting.agenda.length > 0 && (
-            <div style={{ marginBottom: 12, fontSize: 12, color: "var(--av3-muted)" }}>
-              <strong style={{ color: "var(--av3-fg)" }}>Agenda:</strong> {meeting.agenda.length} off-target metric{meeting.agenda.length > 1 ? "s" : ""}.
-            </div>
-          )}
-          {meeting.contributions.map((c, i) => (
-            <div key={i} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < meeting.contributions.length - 1 ? "1px solid var(--av3-line)" : "none" }}>
-              <Monogram initials={initials(c.persona)} accentVar={accent(c.persona)} size={30} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: `var(${accent(c.persona)})` }}>{label(c.persona)}</div>
-                <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>{c.text}</div>
-              </div>
-            </div>
-          ))}
-        </CardBody>
-      </Card>
+/* =============================== Reports ============================== */
 
-      <Card>
-        <CardHead title="Decisions" description="What the board agreed — action the ones with a lever via the owning agent" actions={<Badge tone={meeting.decisions.length ? "brand" : "neutral"}>{meeting.decisions.length}</Badge>} />
-        <CardBody>
-          {meeting.decisions.length === 0 ? (
-            <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No structured decisions were produced this round.</div>
-          ) : (
-            meeting.decisions.map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < meeting.decisions.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.3, padding: "3px 8px", borderRadius: "var(--av3-r-sm)", flexShrink: 0, background: `color-mix(in oklab, var(${accent(d.owner)}) 16%, transparent)`, color: `var(${accent(d.owner)})` }}>{initials(d.owner)}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{d.title}</div>
-                  {d.rationale && <div className="av3-cell-muted" style={{ fontSize: 12, marginTop: 2 }}>{d.rationale}</div>}
-                  {d.proposedTool && <div style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--av3-mono)", color: "var(--av3-subtle)" }}>{d.proposedTool}</div>}
-                </div>
-                {d.proposedTool && (
-                  <Button variant="ghost" size="sm" onClick={() => onAction({ meetingId: meeting.id, meetingType: meeting.type, scope: meeting.scope, createdAt: meeting.createdAt, index: i, title: d.title, owner: d.owner, rationale: d.rationale, proposedTool: d.proposedTool, proposedInput: d.proposedInput })}>
-                    Action <ChevronRight className="av3-btn-ico" />
-                  </Button>
-                )}
-              </div>
-            ))
-          )}
-        </CardBody>
-      </Card>
-    </>
-  );
-}
+interface Decision { title: string; owner: string; rationale: string; proposedTool?: string; status?: string }
+interface Contribution { persona: string; text: string }
+interface Meeting { id: string; type: "daily" | "weekly"; scope: string; agenda: string[]; contributions: Contribution[]; decisions: Decision[]; costGrosze: number; createdAt: string }
 
-/* =============================== Meetings run ========================= */
-
-function RunMeetingButtons({ gatewayConfigured, onRan, compact }: { gatewayConfigured: boolean; onRan: () => void; compact?: boolean }) {
+function Reports({ configById, gatewayConfigured, onRan }: { configById: Map<string, AgentConfig>; gatewayConfigured: boolean; onRan: () => void }) {
   const { location } = useAdminLocationV3();
+  const [meetings, setMeetings] = useState<Meeting[] | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [running, setRunning] = useState<null | "daily" | "weekly">(null);
   const [error, setError] = useState<string | null>(null);
 
+  const load = useCallback(async (selectNewest = false) => {
+    const res = await fetch("/api/admin/ai/boardroom/meeting").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const list: Meeting[] = res?.meetings ?? [];
+    setMeetings(list);
+    setActiveId((prev) => (selectNewest && list[0] ? list[0].id : prev ?? list[0]?.id ?? null));
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
   const run = useCallback(async (type: "daily" | "weekly") => {
-    setRunning(type);
-    setError(null);
+    setRunning(type); setError(null);
     const qs = location ? `?location=${encodeURIComponent(location)}` : "";
-    const res = await fetch(`/api/admin/ai/boardroom/meeting${qs}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }),
-    }).then((r) => r.json().then((j) => ({ ok: r.ok, j }))).catch(() => ({ ok: false, j: { error: "Network error" } }));
+    const res = await fetch(`/api/admin/ai/boardroom/meeting${qs}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }) })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j }))).catch(() => ({ ok: false, j: { error: "Network error" } }));
     setRunning(null);
-    if (!res.ok) setError((res.j as { error?: string }).error ?? "Meeting failed.");
-    else onRan();
-  }, [location, onRan]);
+    if (!res.ok) setError((res.j as { error?: string }).error ?? "Meeting failed."); else { load(true); onRan(); }
+  }, [location, load, onRan]);
 
-  if (!gatewayConfigured) {
-    return <div className="av3-cell-muted" style={{ fontSize: 12 }}>Set <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> to convene the board.</div>;
-  }
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button variant="primary" size={compact ? "sm" : "md"} loading={running === "daily"} disabled={!!running} onClick={() => run("daily")}>
-          <Sparkles className="av3-btn-ico" /> Run daily briefing
-        </Button>
-        <Button variant="secondary" size={compact ? "sm" : "md"} loading={running === "weekly"} disabled={!!running} onClick={() => run("weekly")}>
-          <LineChart className="av3-btn-ico" /> Run weekly review
-        </Button>
-      </div>
-      {running && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>The board is deliberating — each active executive weighs in, then converges on decisions. ~20–40s.</div>}
-      {error && <div className="av3-chat-error" style={{ marginTop: 8 }}>{error}</div>}
-    </div>
-  );
-}
+  const active = meetings?.find((m) => m.id === activeId) ?? null;
+  const label = (id: string) => configById.get(id)?.name ?? id;
 
-/* ================================ Chat ================================ */
+  if (meetings === null) return <div className="av3-card" style={{ padding: 14 }}><SkeletonRows rows={5} /></div>;
 
-interface ChatEvent {
-  type: "text" | "tool_use" | "tool_result" | "error" | "done";
-  text?: string;
-  toolUse?: { id: string; name: string; input: unknown; executed: boolean; preview?: string; result?: unknown; error?: string };
-  totalCostGrosze?: number;
-}
-interface ChatTurn { id: string; userText: string; events: ChatEvent[] }
-type HistItem =
-  | { id: string; kind: "user"; text: string }
-  | { id: string; kind: "bot"; text: string }
-  | { id: string; kind: "tool"; name: string; input: unknown; result: unknown; isError: boolean };
-interface StoredMsg { role: string; content: unknown }
-
-function transformStoredMessages(messages: StoredMsg[]): HistItem[] {
-  const resultById = new Map<string, { isError: boolean; result: unknown }>();
-  for (const m of messages) {
-    if (m.role === "user" && Array.isArray(m.content)) {
-      for (const b of m.content as Record<string, unknown>[]) {
-        if (b && b.type === "tool_result" && typeof b.tool_use_id === "string") {
-          let result: unknown = b.content;
-          if (typeof b.content === "string") { try { result = JSON.parse(b.content); } catch { /* keep raw */ } }
-          resultById.set(b.tool_use_id, { isError: b.is_error === true, result });
-        }
-      }
-    }
-  }
-  const items: HistItem[] = [];
-  let n = 0;
-  for (const m of messages) {
-    const content = m.content;
-    if (m.role === "user") {
-      if (typeof content === "string") {
-        if (content.trim()) items.push({ id: `h-${n++}`, kind: "user", text: content });
-      } else if (Array.isArray(content)) {
-        for (const b of content as Record<string, unknown>[]) {
-          if (b && b.type === "text" && typeof b.text === "string" && b.text.trim()) items.push({ id: `h-${n++}`, kind: "user", text: b.text });
-        }
-      }
-    } else if (m.role === "assistant" && Array.isArray(content)) {
-      for (const b of content as Record<string, unknown>[]) {
-        if (b && b.type === "text" && typeof b.text === "string" && b.text.trim()) items.push({ id: `h-${n++}`, kind: "bot", text: b.text });
-        else if (b && b.type === "tool_use" && typeof b.name === "string" && typeof b.id === "string") {
-          const r = resultById.get(b.id as string);
-          items.push({ id: `h-${n++}`, kind: "tool", name: b.name as string, input: b.input, result: r?.result, isError: r?.isError ?? false });
-        }
-      }
-    }
-  }
-  return items;
-}
-
-function HistoryView({ items }: { items: HistItem[] }) {
   return (
     <>
-      {items.map((it) =>
-        it.kind === "user" ? (
-          <div key={it.id} className="av3-chat-user">{it.text}</div>
-        ) : it.kind === "bot" ? (
-          <div key={it.id} className="av3-chat-bot">{it.text}</div>
-        ) : (
-          <div key={it.id} className={`av3-tool ${it.isError ? "is-error" : "is-ok"}`}>
-            <div className="av3-tool-head">
-              <span className="av3-tool-name">{it.isError ? "× " : "✓ "}{it.name}</span>
-              {it.isError ? <Badge tone="bad">error</Badge> : <Badge tone="ok">executed</Badge>}
+      <Card>
+        <CardHead title="Reports" description="Daily briefings & weekly reviews — a real multi-agent meeting on live numbers, with transcript, decisions and spend." />
+        <CardBody>
+          {gatewayConfigured ? (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Button variant="primary" loading={running === "daily"} disabled={!!running} onClick={() => run("daily")}><Sparkles className="av3-btn-ico" /> Run daily briefing</Button>
+              <Button variant="secondary" loading={running === "weekly"} disabled={!!running} onClick={() => run("weekly")}><LineChart className="av3-btn-ico" /> Run weekly review</Button>
             </div>
-            <details className="av3-tool-details">
-              <summary><ChevronRight style={{ width: 12, height: 12, display: "inline" }} /> details</summary>
-              <pre>{JSON.stringify({ input: it.input, output: it.result }, null, 2)}</pre>
-            </details>
-          </div>
-        ),
-      )}
+          ) : <div className="av3-cell-muted" style={{ fontSize: 12 }}>Set <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> to convene the board.</div>}
+          {running && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>The board is deliberating — each active executive weighs in, then converges on decisions. ~20–40s.</div>}
+          {error && <div className="av3-chat-error" style={{ marginTop: 8 }}>{error}</div>}
+        </CardBody>
+      </Card>
+
+      {meetings.length === 0 ? (
+        <Card><CardBody><div className="av3-empty" style={{ padding: "26px 0" }}><Users aria-hidden /><div className="av3-empty-title">No reports yet</div><div className="av3-empty-text">Run a daily briefing or weekly review.</div></div></CardBody></Card>
+      ) : (<>
+        <div className="av3-filterchips" style={{ marginTop: 12 }}>
+          {meetings.map((m) => <button key={m.id} type="button" className={`av3-fchip ${activeId === m.id ? "is-active" : ""}`} onClick={() => setActiveId(m.id)}>{m.type === "daily" ? "Daily" : "Weekly"} · {new Date(m.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}</button>)}
+        </div>
+        {active && (
+          <Card style={{ marginTop: 12 }}>
+            <CardHead
+              title={`${active.type === "daily" ? "Daily briefing" : "Weekly review"} — ${active.scope === "all" ? "All locations" : active.scope}`}
+              description={`${new Date(active.createdAt).toLocaleString("pl-PL")} · session cost ${zl(active.costGrosze)}`}
+              actions={<span style={{ display: "flex", gap: 6 }}>
+                <Button variant="ghost" size="sm" onClick={() => exportCsv(active, label)}><FileDown className="av3-btn-ico" /> CSV</Button>
+                <Button variant="ghost" size="sm" onClick={() => exportPdf(active, label)}><Printer className="av3-btn-ico" /> PDF</Button>
+              </span>}
+            />
+            <CardBody>
+              {active.agenda.length > 0 && <div style={{ fontSize: 12, color: "var(--av3-muted)", marginBottom: 12 }}><strong style={{ color: "var(--av3-fg)" }}>Agenda:</strong> {active.agenda.length} off-target metric{active.agenda.length > 1 ? "s" : ""}.</div>}
+              {active.contributions.map((c, i) => (
+                <div key={i} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < active.contributions.length - 1 ? "1px solid var(--av3-line)" : "none" }}>
+                  <Monogram initials={configById.get(c.persona)?.initials ?? "··"} accentVar={configById.get(c.persona)?.accentVar ?? "--av3-subtle"} size={30} />
+                  <div><div style={{ fontSize: 11, fontWeight: 700, color: `var(${configById.get(c.persona)?.accentVar ?? "--av3-subtle"})` }}>{label(c.persona)}</div><div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 2 }}>{c.text}</div></div>
+                </div>
+              ))}
+              {active.decisions.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Decisions</div>
+                  {active.decisions.map((d, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: "var(--av3-r-sm)", background: `color-mix(in oklab, var(${configById.get(d.owner)?.accentVar ?? "--av3-subtle"}) 16%, transparent)`, color: `var(${configById.get(d.owner)?.accentVar ?? "--av3-subtle"})` }}>{configById.get(d.owner)?.initials ?? "··"}</span>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600 }}>{d.title}</div>{d.rationale && <div className="av3-cell-muted" style={{ fontSize: 12, marginTop: 2 }}>{d.rationale}</div>}{d.proposedTool && <div style={{ fontSize: 11, marginTop: 3, fontFamily: "var(--av3-mono)", color: "var(--av3-subtle)" }}>{d.proposedTool}</div>}</div>
+                      {d.status && d.status !== "proposed" && <Badge tone={d.status === "dismissed" ? "neutral" : "ok"}>{d.status}</Badge>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        )}
+      </>)}
     </>
   );
 }
 
-function ChatPanel({ agent, gatewayConfigured, seed, onSeedConsumed }: {
-  agent: AgentConfig | null;
-  gatewayConfigured: boolean;
-  seed?: string | null;
-  onSeedConsumed?: () => void;
-}) {
-  const tag = agent?.id ?? "team";
-  const [convId, setConvId] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistItem[]>([]);
-  const [turns, setTurns] = useState<ChatTurn[]>([]);
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [cost, setCost] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+/* ------------------------------- exports -------------------------------- */
 
-  const suggestion = agent ? `Ask ${agent.name} — ${agent.mandate}` : "Ask the whole team anything about the business.";
+function downloadBlob(name: string, type: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function csvCell(s: string) { return `"${String(s).replace(/"/g, '""')}"`; }
 
-  useEffect(() => {
-    let cancelled = false;
-    setConvId(null); setHistory([]); setTurns([]); setCost(0); setError(null);
-    if (!gatewayConfigured) return;
-    (async () => {
-      const res = await fetch(`/api/admin/ai-agent/conversations/latest?persona=${tag}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      if (cancelled || !res?.conversation) return;
-      setConvId(res.conversation.id);
-      setHistory(transformStoredMessages((res.messages ?? []) as StoredMsg[]));
-    })();
-    return () => { cancelled = true; };
-  }, [tag, gatewayConfigured]);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [turns, history]);
-
-  useEffect(() => {
-    if (seed) { setDraft(seed); onSeedConsumed?.(); }
-  }, [seed, onSeedConsumed]);
-
-  const send = useCallback(async (message: string, approvedToolUseIds: string[] = [], replaceLast = false) => {
-    setSending(true); setError(null);
-    try {
-      let id = convId;
-      if (!id) {
-        const created = await fetch("/api/admin/ai-agent/conversations", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: agent ? `${agent.name} chat` : "Team chat", persona: tag }),
-        }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-        id = created?.conversation?.id ?? null;
-        if (!id) { setError("Could not start a conversation."); return; }
-        setConvId(id);
-      }
-      const res = await fetch(`/api/admin/ai-agent/conversations/${id}/turn`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, approvedToolUseIds, personaId: agent?.id ?? undefined }),
-      });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(json.error ?? `Request failed (${res.status})`); return;
-      }
-      const json = (await res.json()) as { events: ChatEvent[] };
-      const c = json.events.find((e) => typeof e.totalCostGrosze === "number")?.totalCostGrosze;
-      if (typeof c === "number") setCost((p) => p + c);
-      setTurns((prev) => {
-        const turn: ChatTurn = { id: `t-${Date.now().toString(36)}`, userText: message, events: json.events };
-        return replaceLast ? [...prev.slice(0, -1), turn] : [...prev, turn];
-      });
-      setDraft("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error.");
-    } finally {
-      setSending(false);
-    }
-  }, [convId, agent, tag]);
-
-  const approve = useCallback((turn: ChatTurn, toolUseId: string) => { void send(turn.userText, [toolUseId], true); }, [send]);
-
-  if (!gatewayConfigured) {
-    return (
-      <Card><CardBody>
-        <div className="av3-empty" style={{ padding: "22px 0" }}>
-          <AlertTriangle aria-hidden />
-          <div className="av3-empty-title">Agent chat needs an API key</div>
-          <div className="av3-empty-text">Set <span style={{ fontFamily: "var(--av3-mono)" }}>ANTHROPIC_API_KEY</span> to talk to this agent. KPIs &amp; configs stay live regardless.</div>
-        </div>
-      </CardBody></Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardBody>
-        <div ref={scrollRef} className="av3-chat-scroll">
-          {history.length === 0 && turns.length === 0 ? (
-            <div className="av3-empty">
-              <Sparkles aria-hidden />
-              <div className="av3-empty-title">Ask {agent ? agent.name : "the team"}</div>
-              <div className="av3-empty-text">{suggestion}</div>
-            </div>
-          ) : (
-            <>
-              {history.length > 0 && <HistoryView items={history} />}
-              {turns.map((turn) => <TurnView key={turn.id} turn={turn} onApprove={approve} />)}
-            </>
-          )}
-        </div>
-        {error && <div className="av3-chat-error">{error}</div>}
-        <form className="av3-chat-composer" onSubmit={(e) => { e.preventDefault(); if (draft.trim() && !sending) void send(draft.trim()); }}>
-          <textarea className="av3-input av3-chat-input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={agent ? `Ask ${agent.name}…` : "Ask the team…"} rows={2} disabled={sending} />
-          <Button type="submit" variant="primary" loading={sending} disabled={sending || !draft.trim()}>
-            <Send className="av3-btn-ico" /> {sending ? "Thinking…" : "Send"}
-          </Button>
-        </form>
-        {cost > 0 && <div className="av3-cell-muted" style={{ fontSize: 11, marginTop: 6, fontFamily: "var(--av3-mono)" }}>Session cost · {(cost / 100).toFixed(2)} zł</div>}
-      </CardBody>
-    </Card>
-  );
+function exportCsv(m: Meeting, label: (id: string) => string) {
+  const rows: string[] = ["Section,Agent,Content"];
+  for (const c of m.contributions) rows.push([csvCell("Contribution"), csvCell(label(c.persona)), csvCell(c.text)].join(","));
+  for (const d of m.decisions) rows.push([csvCell("Decision"), csvCell(label(d.owner)), csvCell(`${d.title}${d.rationale ? ` — ${d.rationale}` : ""}${d.proposedTool ? ` [${d.proposedTool}]` : ""}`)].join(","));
+  const date = new Date(m.createdAt).toISOString().slice(0, 10);
+  downloadBlob(`agent-hq-${m.type}-${date}.csv`, "text/csv", rows.join("\n"));
 }
 
-function TurnView({ turn, onApprove }: { turn: ChatTurn; onApprove: (turn: ChatTurn, toolUseId: string) => void }) {
-  return (
-    <div className="av3-chat-turn">
-      <div className="av3-chat-user">{turn.userText}</div>
-      {turn.events.map((event, i) => {
-        if (event.type === "text" && event.text) return <div key={i} className="av3-chat-bot">{event.text}</div>;
-        if (event.type === "tool_use" && event.toolUse) {
-          const t = event.toolUse;
-          const pending = !t.executed && t.preview;
-          const state = pending ? "is-pending" : t.error ? "is-error" : "is-ok";
-          return (
-            <div key={i} className={`av3-tool ${state}`}>
-              <div className="av3-tool-head">
-                <span className="av3-tool-name">{pending ? "→ " : t.error ? "× " : "✓ "}{t.name}</span>
-                {pending ? <Badge tone="warn">awaiting approval</Badge> : t.error ? <Badge tone="bad">error</Badge> : <Badge tone="ok">executed</Badge>}
-              </div>
-              {t.preview && <p className="av3-tool-preview">{t.preview}</p>}
-              {t.error && <p style={{ color: "var(--av3-bad)", fontSize: 12 }}>{t.error}</p>}
-              {pending && <Button variant="primary" size="sm" onClick={() => onApprove(turn, t.id)}><Check className="av3-btn-ico" /> Confirm &amp; execute</Button>}
-              <details className="av3-tool-details">
-                <summary><ChevronRight style={{ width: 12, height: 12, display: "inline" }} /> details</summary>
-                <pre>{JSON.stringify({ input: t.input, output: t.result }, null, 2)}</pre>
-              </details>
-            </div>
-          );
-        }
-        if (event.type === "error" && event.text) return <div key={i} className="av3-chat-error">{event.text}</div>;
-        return null;
-      })}
-    </div>
-  );
+function exportPdf(m: Meeting, label: (id: string) => string) {
+  const date = new Date(m.createdAt).toLocaleString("pl-PL");
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] ?? c));
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${m.type} report</title>
+    <style>body{font:13px/1.6 Georgia,serif;color:#1a1714;max-width:720px;margin:32px auto;padding:0 20px}
+    h1{font-size:20px}h2{font-size:14px;margin-top:24px;border-bottom:1px solid #ccc;padding-bottom:4px}
+    .a{font-weight:700;margin-top:14px}.m{color:#666;font-size:12px}</style></head><body>
+    <h1>${m.type === "daily" ? "Daily briefing" : "Weekly review"} — ${esc(m.scope === "all" ? "All locations" : m.scope)}</h1>
+    <div class="m">${date} · session cost ${(m.costGrosze / 100).toFixed(2)} zł · agenda: ${m.agenda.length} off-target</div>
+    <h2>Transcript</h2>${m.contributions.map((c) => `<div class="a">${esc(label(c.persona))}</div><div>${esc(c.text)}</div>`).join("")}
+    <h2>Decisions</h2>${m.decisions.length ? m.decisions.map((d) => `<div class="a">${esc(label(d.owner))} — ${esc(d.title)}</div><div>${esc(d.rationale || "")}${d.proposedTool ? ` <em>[${esc(d.proposedTool)}]</em>` : ""}</div>`).join("") : "<div>None.</div>"}
+    </body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(() => w.print(), 350);
 }

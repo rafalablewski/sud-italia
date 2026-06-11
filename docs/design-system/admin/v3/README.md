@@ -484,22 +484,32 @@ auth canvas's signature lighting and the sign-in lockup:
   a `Card` with a provider-grouped `.av3-select` that saves on change. CSS
   §17 (`.av3-chat-*`, `.av3-tool-*`). Nav: Intelligence section.
 - [x] Agent HQ (`/admin/agent-hq`) — the Boardroom rebuilt as an editable
-  agent-operations console. Live code: `src/admin-v3/AgentHQ.tsx` (the shell +
-  six sections + chat/meeting machinery) and `src/admin-v3/AgentEditor.tsx` (the
-  per-agent editor), with `boardroom-explainers.ts` for the Rule #12 KPI
-  explainers. (`/admin/boardroom` now redirects here; the old `BoardroomV3.tsx`
-  was deleted.) **Sections** (`.av3-filterchips`): **Command center** — the
-  `AiModelControl` picker, two KPI rails (Sales &amp; growth · Cost &amp; quality)
-  of bespoke `KpiTile`s (a single `StatusDot` + five-section `InfoButton`,
-  off-target tiles get a faint wash via `kpiSurface`), then the **agent roster**
-  (one `AgentRosterCard` per agent: `Monogram`, status badge, model / authority /
-  effort / reports-to chips, Edit + Chat buttons), a **What needs attention**
-  flag card and convene-the-board buttons; **Scorecards** — a card per agent with
-  its live owned KPIs + the authored target list; **Work** — convene controls, a
-  schedules table, and the cross-agent activity feed (`/api/admin/ai/boardroom/
-  timeline`); **Approvals** — the human-in-the-loop queue of gated meeting actions
-  (`…/approvals`); **Inbox** — an agent list + `ChatPanel` (plus the generalist
-  Team chat); **Reports** — meeting transcripts + decisions + spend. **Editable
+  agent-operations console. Live code: `src/admin-v3/AgentHQ.tsx` (the six-section
+  shell), `src/admin-v3/AgentPanel.tsx` (the dedicated per-agent page at
+  `/admin/agent-hq/[id]`), `src/admin-v3/agent-hq/shared.tsx` (shared `Monogram`,
+  `StatusDot`, `KpiTile`/`StatTile` built on the real `.av3-kpi`, and the
+  `ChatPanel`), and `src/admin-v3/AgentEditor.tsx` (the editor), with
+  `boardroom-explainers.ts` for the Rule #12 KPI explainers. (`/admin/boardroom`
+  redirects here; the old `BoardroomV3.tsx` was deleted.) **Everything in a
+  section loads in one pass** — Command center pulls a single aggregate
+  (`/api/admin/ai/boardroom/command`) so nothing pops in or shifts. **Sections**
+  (`.av3-filterchips`): **Command center** — a fleet `.av3-kpi` rail (active
+  agents · runs today · success rate 7d · cost 7d · scheduled), the
+  `AiModelControl` picker, the Sales &amp; growth + Cost &amp; quality KPI rails
+  (`KpiTile` with `StatusDot` + five-section `InfoButton`), then a 2-col card grid:
+  org/reporting chart (rows link to the agent page), a 7-day activity bar chart,
+  recent activity, upcoming work, daily digest and month-to-date cost; **Scorecards**
+  — one big readable card per agent (live owned KPIs + meta + authored targets,
+  "Open" → agent page); **Work** — operator-assigned board: an "Assign work" form,
+  agent drop-targets (HTML5 drag-to-assign), and Unassigned / Queued / Recent
+  columns with per-item Run + delete (`…/work`, `…/work/[id]`, `…/work/[id]/run`);
+  **Approvals** — the human-in-the-loop queue (Action / Mark done / Dismiss,
+  `…/approvals`); **Inbox** — escalations panel + agent list + `ChatPanel`;
+  **Reports** — meeting transcripts + decisions with CSV + print-to-PDF export.
+  The **per-agent page** (`AgentPanel`) is the dedicated panel that replaced the
+  roster grid: identity + control chips, scorecard, charter (mandate /
+  responsibilities / KPIs / tone / guardrails / escalation), tools, collaborators,
+  the live system prompt, a timeline and a chat. **Editable
   agents:** nine seed agents (four C-suite + five specialists) defined in
   `src/lib/ai/boardroom/personas.ts`; each is fully editable via `AgentEditor`
   (name, role, status, reporting line, model, effort, authority, runtime memory,

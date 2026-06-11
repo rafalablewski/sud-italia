@@ -8735,6 +8735,8 @@ export interface AgentEvent {
   detail?: string;
   /** Spend attributed to this event, in grosze (run events). */
   costGrosze?: number;
+  /** For run/schedule events: did the run succeed? Drives the success-rate KPI. */
+  ok?: boolean;
   actor: string;
   at: string;
 }
@@ -8751,6 +8753,7 @@ export async function appendAgentEvent(
     summary: input.summary,
     detail: input.detail,
     costGrosze: input.costGrosze,
+    ok: input.ok,
     actor: input.actor,
     at: input.at ?? new Date().toISOString(),
   };
@@ -8790,6 +8793,148 @@ export async function getAgentDailySpendMap(): Promise<Record<string, number>> {
     }
   }
   return out;
+}
+
+export interface AgentFleetStats {
+  runsToday: number;
+  cost7dGrosze: number;
+  costMonthGrosze: number;
+  spendTodayByAgent: Record<string, number>;
+  /** % of runs in the last 7d that succeeded (null when there were none). */
+  successRate7d: number | null;
+  runs7d: number;
+  /** Per-agent run counts (7d) for the activity sparkbars. */
+  runsByDay7d: number[];
+}
+
+/**
+ * One pass over the agent timeline for every fleet metric the Agent HQ command
+ * center shows — so the page computes its KPIs from a single read and renders
+ * them together (no progressive pop-in).
+ */
+export async function getAgentFleetStats(): Promise<AgentFleetStats> {
+  const now = Date.now();
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+  const weekAgo = now - 7 * 24 * 3600 * 1000;
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+
+  let runsToday = 0, cost7d = 0, costMonth = 0, runs7d = 0, ok7d = 0;
+  const spendToday: Record<string, number> = {};
+  const runsByDay7d = [0, 0, 0, 0, 0, 0, 0]; // index 0 = 6 days ago … 6 = today
+  const isRun = (e: AgentEvent) => e.type === "run" || e.type === "schedule";
+
+  for (const e of list) {
+    const t = Date.parse(e.at);
+    const cost = typeof e.costGrosze === "number" ? e.costGrosze : 0;
+    if (t >= startOfMonth.getTime()) costMonth += cost;
+    if (t >= weekAgo) {
+      cost7d += cost;
+      if (isRun(e)) {
+        runs7d += 1;
+        if (e.ok !== false) ok7d += 1;
+        const dayIdx = 6 - Math.floor((now - t) / (24 * 3600 * 1000));
+        if (dayIdx >= 0 && dayIdx < 7) runsByDay7d[dayIdx] += 1;
+      }
+    }
+    if (t >= startOfToday.getTime()) {
+      if (isRun(e)) runsToday += 1;
+      if (cost) spendToday[e.agentId] = (spendToday[e.agentId] ?? 0) + cost;
+    }
+  }
+
+  return {
+    runsToday,
+    cost7dGrosze: cost7d,
+    costMonthGrosze: costMonth,
+    spendTodayByAgent: spendToday,
+    successRate7d: runs7d > 0 ? Math.round((ok7d / runs7d) * 100) : null,
+    runs7d,
+    runsByDay7d,
+  };
+}
+
+// --- Agent HQ: operator-assigned work items ---------------------------------
+//
+// A work item is a task (title + prompt) the operator creates and assigns to an
+// agent by dragging it onto them. It flows queued → running → done/failed and
+// runs on the assigned agent's live config (see runAgentWorkItem).
+
+export type WorkStatus = "unassigned" | "queued" | "running" | "done" | "failed";
+
+export interface AgentWorkItem {
+  id: string;
+  title: string;
+  prompt: string;
+  /** Assigned agent id, or null while it sits in the backlog. */
+  agentId: string | null;
+  status: WorkStatus;
+  createdBy: string;
+  createdAt: string;
+  assignedAt?: string;
+  completedAt?: string;
+  costGrosze?: number;
+  /** Short result line once the run completes. */
+  resultSummary?: string;
+}
+
+const WORK_MAX = 300;
+
+export async function listWorkItems(): Promise<AgentWorkItem[]> {
+  const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createWorkItem(input: {
+  title: string; prompt: string; agentId?: string | null; createdBy: string;
+}): Promise<AgentWorkItem> {
+  return withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    const now = new Date().toISOString();
+    const item: AgentWorkItem = {
+      id: `wk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      title: input.title,
+      prompt: input.prompt,
+      agentId: input.agentId ?? null,
+      status: input.agentId ? "queued" : "unassigned",
+      createdBy: input.createdBy,
+      createdAt: now,
+      assignedAt: input.agentId ? now : undefined,
+    };
+    list.push(item);
+    const trimmed = list.length > WORK_MAX ? list.slice(list.length - WORK_MAX) : list;
+    await writeJSON("agent-work.json", trimmed);
+    return item;
+  });
+}
+
+export async function updateWorkItem(id: string, patch: Partial<AgentWorkItem>): Promise<AgentWorkItem | null> {
+  return withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    const i = list.findIndex((w) => w.id === id);
+    if (i < 0) return null;
+    const next = { ...list[i], ...patch, id: list[i].id };
+    // Assigning (agentId set while unassigned) flips it to queued.
+    if (patch.agentId && list[i].status === "unassigned" && !patch.status) {
+      next.status = "queued";
+      next.assignedAt = new Date().toISOString();
+    }
+    list[i] = next;
+    await writeJSON("agent-work.json", list);
+    return next;
+  });
+}
+
+export async function deleteWorkItem(id: string): Promise<void> {
+  await withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    await writeJSON("agent-work.json", list.filter((w) => w.id !== id));
+  });
+}
+
+export async function getWorkItem(id: string): Promise<AgentWorkItem | null> {
+  const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+  return list.find((w) => w.id === id) ?? null;
 }
 
 // --- Compliance calendar -----------------------------------------------------

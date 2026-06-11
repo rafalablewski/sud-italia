@@ -80,6 +80,7 @@ In 2–4 sentences from your remit: your read of these numbers and the single ac
         summary: `Scheduled ${cadence} self-review`,
         detail: text.slice(0, 800),
         costGrosze: cost,
+        ok: true,
         actor: `schedule:${userId}`,
       });
       out.ran.push(cfg.id);
