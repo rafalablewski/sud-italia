@@ -128,7 +128,14 @@ export function PortalInbox() {
   // self-added rows in the Deleted bucket).
   const purgeTask = async (id: string) => {
     setTasks((arr) => (arr ? arr.filter((t) => t.id !== id) : arr));
-    await fetch(`/api/admin/my-tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    // Optimistic above; on a failed delete re-sync so the row doesn't vanish
+    // locally while it still lives on the server.
+    try {
+      const res = await fetch(`/api/admin/my-tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
   };
 
   // Add a one-off item to your own list. The server stamps you as both assignee
@@ -150,6 +157,10 @@ export function PortalInbox() {
         setNewPriority("normal");
         setNewDue("");
         setTaskTab("open");
+      } else {
+        // Keep the typed-in values so the user can retry; surface the reason.
+        const err = await res.json().catch(() => null);
+        alert(err?.error ?? "Could not add the task — please try again.");
       }
     } finally {
       setAdding(false);
@@ -187,6 +198,9 @@ export function PortalInbox() {
         setRoutines((arr) => [...(arr ?? []), created]);
         setRtTitle("");
         setRtPriority("normal");
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error ?? "Could not add the routine — please try again.");
       }
     } finally {
       setAddingRt(false);
@@ -196,7 +210,13 @@ export function PortalInbox() {
   // Remove a personal routine you own (team routines have no remove control).
   const removeRoutine = async (id: string) => {
     setRoutines((arr) => (arr ? arr.filter((r) => r.id !== id) : arr));
-    await fetch(`/api/admin/my-routines?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    // Optimistic above; re-sync if the delete didn't land.
+    try {
+      const res = await fetch(`/api/admin/my-routines?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
   };
 
   // The single announcement-action path. Optimistically applies the new mailbox

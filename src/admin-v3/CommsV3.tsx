@@ -163,21 +163,32 @@ export function CommsV3({ view }: { view: "tasks" | "announcements" }) {
 
   // Pause / resume a routine without deleting it (drops off / returns to every
   // matching teammate's daily list). Persists immediately — toggle = saved.
+  // Optimistic, then re-sync if the write fails so the switch can't lie.
   const toggleRoutineActive = async (t: RoutineTemplate, active: boolean) => {
     setRoutines((arr) => arr.map((x) => (x.id === t.id ? { ...x, active } : x)));
-    await fetch("/api/admin/routines", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: t.id, title: t.title, detail: t.detail, priority: t.priority,
-        assigneeRoles: t.assigneeRoles, locationSlugs: t.locationSlugs, active,
-      }),
-    });
+    try {
+      const res = await fetch("/api/admin/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: t.id, title: t.title, detail: t.detail, priority: t.priority,
+          assigneeRoles: t.assigneeRoles, locationSlugs: t.locationSlugs, active,
+        }),
+      });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
   };
 
   const deleteRoutine = async (id: string) => {
     setRoutines((arr) => arr.filter((t) => t.id !== id));
-    await fetch(`/api/admin/routines?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    try {
+      const res = await fetch(`/api/admin/routines?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) await load();
+    } catch {
+      await load();
+    }
   };
 
   const toggleRRole = (r: AdminRole) =>

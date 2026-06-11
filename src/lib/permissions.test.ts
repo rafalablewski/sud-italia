@@ -74,8 +74,13 @@ test("the four newly-catalogued pages gate on their own permission", () => {
   assert.equal(permissionForAdminPage("/admin/comms/announcements"), "comms.view");
   assert.equal(permissionForApiPath("/api/admin/tasks", "POST"), "comms.manage");
   assert.equal(permissionForApiPath("/api/admin/announcements", "GET"), "comms.view");
+  // The team-routine board is gated like the rest of the comms board.
+  assert.equal(permissionForApiPath("/api/admin/routines", "GET"), "comms.view");
+  assert.equal(permissionForApiPath("/api/admin/routines", "POST"), "comms.manage");
+  assert.equal(permissionForApiPath("/api/admin/routines", "DELETE"), "comms.manage");
   // The personal feeds are intentionally unmapped (any authed user reads own).
   assert.equal(permissionForApiPath("/api/admin/my-tasks", "GET"), null);
+  assert.equal(permissionForApiPath("/api/admin/my-routines", "PUT"), null);
   assert.equal(permissionForApiPath("/api/admin/my-announcements", "PUT"), null);
   // …and don't get swallowed by a neighbouring rule (e.g. /admin/menu).
   assert.equal(permissionForAdminPage("/admin/menu"), "menu.view");
