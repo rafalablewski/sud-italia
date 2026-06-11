@@ -523,8 +523,10 @@ auth canvas's signature lighting and the sign-in lockup:
   **relative age** — "3h" / "Yesterday" / weekday / date, via `fmtRelative` in
   `src/lib/relative-time.ts`; unread bold with a brand dot, pinned flagged; tap a
   row to open the full message — which swaps the relative age for the precise
-  absolute date+time at the foot of the body — and mark it read) above the
-  **"Daily routine"** checklist and the personal **"Your to-do list"**, over the
+  absolute date+time at the foot of the body — and mark it read) above a
+  **two-column row** (`.av3-todo-grid` — side by side on a wide portal, stacked
+  ≤720px) holding the **"Daily routine"** checklist and the personal
+  **"Your to-do list"**, over the
   unmapped `/api/admin/my-tasks` + `/api/admin/my-routines` +
   `/api/admin/my-announcements` (any authed user). **Daily routine** is a
   checkbox list that **resets every day** — it's *derived* (team routines that
@@ -571,8 +573,9 @@ auth canvas's signature lighting and the sign-in lockup:
   scales in on `aria-checked`), `.av3-todo-progress > i` (the daily-completion
   bar in the Daily-routine header), `.av3-todo-scope.is-team|.is-mine` (the
   Team/Yours chips), `.av3-todo-title.is-done` / `.av3-todo-meta` /
-  `.av3-todo-dot`, `.av3-todo-alldone` (the "all done for today" flourish) and
-  `.av3-todo-tabcount` (the lifecycle-tab count pill).
+  `.av3-todo-dot`, `.av3-todo-alldone` (the "all done for today" flourish),
+  `.av3-todo-tabcount` (the lifecycle-tab count pill) and `.av3-todo-grid` (the
+  two-up routine/to-do row).
   While the feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
   (three-section scaffold, shimmer rows via the shared `Skeleton` primitive)
   instead of `null`, so the space is reserved and the portal doesn't jump when

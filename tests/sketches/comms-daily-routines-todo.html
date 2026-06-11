@@ -43,8 +43,10 @@
     padding:6px 14px; border-radius:999px; cursor:pointer; }
   .theme-toggle button.on { background:var(--av3-s3); color:var(--av3-fg); }
 
-  .cols { display:grid; grid-template-columns:380px 1fr; gap:26px; align-items:start; }
-  @media (max-width:920px){ .cols{ grid-template-columns:1fr; } }
+  .cols { display:grid; grid-template-columns:1fr; gap:30px; align-items:start; }
+  /* Daily routine + Your to-do list sit side by side on a wide portal, stack on narrow. */
+  .todo-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+  @media (max-width:720px){ .todo-grid{ grid-template-columns:1fr; } }
   @media (max-width:480px){ body{ padding:16px; } .device{ padding:12px; } .add-row .input.grow{ min-width:0; } }
 
   .col-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--av3-subtle); margin-bottom:10px; }
@@ -226,8 +228,10 @@
           </div>
         </div>
 
+        <!-- Daily routine + Your to-do list: side by side (2 columns) -->
+        <div class="todo-grid">
         <!-- Daily routine (NEW) -->
-        <div class="section">
+        <div class="section" style="margin-bottom:0;">
           <div class="section-label">
             <span>Daily routine</span>
             <span style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;">
@@ -246,7 +250,7 @@
         </div>
 
         <!-- Your to-do list (NEW lifecycle) -->
-        <div class="section">
+        <div class="section" style="margin-bottom:0;">
           <div class="section-label">
             <span>Your to-do list</span>
             <div class="tabs" id="task-tabs">
@@ -266,6 +270,7 @@
             <div class="list" id="task-list"></div>
           </div>
         </div>
+        </div><!-- /todo-grid -->
 
         <div class="note">
           <b>Daily routine</b> mixes manager-defined <span class="tag">Team</span> routines (matched to your role + location) with your own <span class="tag">Yours</span> items, and resets every midnight — a fresh checklist each shift.<br/>

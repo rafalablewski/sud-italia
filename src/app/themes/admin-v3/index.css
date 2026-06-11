@@ -1626,6 +1626,10 @@
 /* Count pill on the to-do lifecycle tabs. */
 .av3-todo-tabcount { font-size: 10px; font-weight: 600; line-height: 1; color: var(--av3-muted); background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-pill); padding: 2px 6px; }
 .av3-todo-tabcount.is-active { color: var(--av3-fg); }
+/* Daily routine + Your to-do list sit side by side on wide portals, and stack
+   on narrow ones. align-items:start so each column keeps its natural height. */
+.av3-todo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--av3-gap-5); align-items: start; }
+@media (max-width: 720px) { .av3-todo-grid { grid-template-columns: 1fr; } }
 /* Responsive header pill bar: on a narrow portal the tab group wraps under the
    section title (the header is flex-wrap), and the pill bar itself scrolls
    horizontally rather than overflowing the card — scrollbar hidden for polish. */

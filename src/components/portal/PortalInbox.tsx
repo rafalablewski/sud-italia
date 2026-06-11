@@ -476,6 +476,9 @@ export function PortalInbox() {
         </div>
       </section>
 
+      {/* Daily routine + Your to-do list sit side by side (2 columns on a wide
+          portal, stacked on narrow screens). */}
+      <div className="av3-todo-grid">
       {/* Daily routine — the recurring "regular to-do list" that resets each
           day. Team routines (manager-defined, matched to your role + location)
           and your own personal routines, ticked off for today. */}
@@ -720,6 +723,7 @@ export function PortalInbox() {
           )}
         </div>
       </section>
+      </div>
     </>
   );
 }
@@ -843,6 +847,7 @@ function PortalInboxSkeleton() {
         </div>
       </section>
 
+      <div className="av3-todo-grid">
       {[0, 1].map((s) => (
         <section key={s} className="av3-portal-section" aria-busy="true">
           <div className="av3-section-label">
@@ -863,6 +868,7 @@ function PortalInboxSkeleton() {
           </div>
         </section>
       ))}
+      </div>
     </>
   );
 }
