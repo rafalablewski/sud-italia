@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pin, Archive, Trash2, RotateCcw, Plus, RotateCw } from "lucide-react";
+import { Check, CheckCircle2, Pin, Archive, Trash2, RotateCcw, Plus, RotateCw } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
 import { fmtRelative } from "@/lib/relative-time";
 import type { Task, TaskStatus, TaskPriority, Announcement, AnnouncementState, RoutineLine } from "@/lib/comms";
@@ -248,6 +248,7 @@ export function PortalInbox() {
   for (const t of tasks) taskCounts[t.status]++;
   const tasksInTab = tasks.filter((t) => t.status === taskTab);
   const routineDone = routines.filter((r) => r.done).length;
+  const routineAllDone = routines.length > 0 && routineDone === routines.length;
   const inTab = anns.filter((a) => a.state === tab);
   const counts = {
     inbox: anns.filter((a) => a.state === "inbox").length,
@@ -464,8 +465,15 @@ export function PortalInbox() {
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
         >
           <span>Daily routine</span>
-          <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--av3-subtle)", textTransform: "none", letterSpacing: 0 }}>
-            {routines.length > 0 ? `${routineDone}/${routines.length} done today · resets daily` : "resets daily"}
+          <span style={{ display: "flex", alignItems: "center", gap: 9, textTransform: "none", letterSpacing: 0 }}>
+            <span style={{ fontSize: "11px", fontWeight: 500, color: routineAllDone ? "var(--av3-ok)" : "var(--av3-subtle)" }}>
+              {routines.length > 0 ? `${routineDone}/${routines.length} today` : "resets daily"}
+            </span>
+            {routines.length > 0 && (
+              <span className="av3-todo-progress" style={{ width: 72 }} aria-hidden>
+                <i style={{ width: `${Math.round((routineDone / routines.length) * 100)}%` }} />
+              </span>
+            )}
           </span>
         </div>
         <div className="av3-card av3-card-p">
@@ -505,56 +513,44 @@ export function PortalInbox() {
           </div>
 
           {routines.length === 0 ? (
-            <p style={{ margin: "12px 0 0", fontSize: "12.5px", color: "var(--av3-muted)" }}>
+            <p style={{ margin: "12px 2px 0", fontSize: "12.5px", color: "var(--av3-muted)", lineHeight: 1.5 }}>
               No daily routine yet — your manager&rsquo;s team routines and anything you add above will show here each day.
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            <div style={{ marginTop: 8 }}>
+              {routineAllDone && (
+                <div className="av3-todo-alldone">
+                  <CheckCircle2 /> All done for today — nice work.
+                </div>
+              )}
               {routines.map((r) => (
-                <div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  {/* Tick box — toggles today's completion. */}
+                <div key={r.id} className="av3-todo-row">
+                  {/* Tick box — toggles today's completion (check animates via CSS). */}
                   <button
                     type="button"
                     role="checkbox"
                     aria-checked={r.done}
                     aria-label={r.done ? `Mark "${r.title}" not done` : `Mark "${r.title}" done`}
+                    className="av3-todo-check"
                     onClick={() => toggleRoutine(r.id, !r.done)}
-                    style={{
-                      flexShrink: 0, width: 19, height: 19, marginTop: 1, borderRadius: 6, cursor: "pointer",
-                      display: "grid", placeItems: "center",
-                      border: `1.5px solid ${r.done ? "var(--av3-ok, var(--av3-brand))" : "var(--av3-line-strong)"}`,
-                      background: r.done ? "var(--av3-ok, var(--av3-brand))" : "transparent",
-                    }}
                   >
-                    {r.done && <Check style={{ width: 12, height: 12, color: "#fff" }} />}
+                    <Check />
                   </button>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: "13.5px", fontWeight: 600,
-                      color: r.done ? "var(--av3-subtle)" : "var(--av3-fg)",
-                      textDecoration: r.done ? "line-through" : "none",
-                    }}>
-                      {r.title}
-                    </div>
-                    {r.detail && <div style={{ fontSize: "12px", color: "var(--av3-muted)", marginTop: 2 }}>{r.detail}</div>}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                      <span style={{
-                        fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-                        color: "var(--av3-muted)", background: "var(--av3-s2)", border: "1px solid var(--av3-line)",
-                        borderRadius: 999, padding: "1px 6px",
-                      }}>
+                    <div className={`av3-todo-title${r.done ? " is-done" : ""}`}>{r.title}</div>
+                    {r.detail && <div className="av3-todo-detail">{r.detail}</div>}
+                    <div className="av3-todo-meta">
+                      <span className={`av3-todo-scope ${r.scope === "personal" ? "is-mine" : "is-team"}`}>
                         {r.scope === "personal" ? "Yours" : "Team"}
                       </span>
-                      <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: PRIORITY_COLOR[r.priority] ?? "var(--av3-subtle)" }} />
-                      <span style={{ fontSize: "11px", color: "var(--av3-subtle)" }}>{r.priority}</span>
+                      <span aria-hidden className="av3-todo-dot" style={{ width: 6, height: 6, background: PRIORITY_COLOR[r.priority] ?? "var(--av3-subtle)" }} />
+                      <span>{r.priority}</span>
                     </div>
                   </div>
                   {/* Only your own routines can be removed; team ones are read-only. */}
                   {r.scope === "personal" && (
-                    <span style={{ alignSelf: "flex-start" }}>
-                      <ActBtn label="Remove routine" danger onClick={() => removeRoutine(r.id)}>
-                        <Trash2 style={actIco} />
-                      </ActBtn>
+                    <span className="av3-todo-acts">
+                      <TodoAct label="Remove routine" danger onClick={() => removeRoutine(r.id)}><Trash2 /></TodoAct>
                     </span>
                   )}
                 </div>
@@ -588,7 +584,9 @@ export function PortalInbox() {
                   }}
                 >
                   {t.label}
-                  {taskCounts[t.key] > 0 && <span style={tabCntNeutral}>{taskCounts[t.key]}</span>}
+                  {taskCounts[t.key] > 0 && (
+                    <span className={`av3-todo-tabcount${active ? " is-active" : ""}`}>{taskCounts[t.key]}</span>
+                  )}
                 </button>
               );
             })}
@@ -639,7 +637,7 @@ export function PortalInbox() {
           </div>
 
           {tasksInTab.length === 0 ? (
-            <p style={{ margin: "12px 0 0", fontSize: "12.5px", color: "var(--av3-muted)" }}>
+            <p style={{ margin: "12px 2px 0", fontSize: "12.5px", color: "var(--av3-muted)" }}>
               {taskTab === "open"
                 ? "Nothing on your list — you’re all caught up."
                 : taskTab === "done"
@@ -649,54 +647,48 @@ export function PortalInbox() {
                 : "Trash is empty."}
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+            <div style={{ marginTop: 8 }}>
               {tasksInTab.map((t) => {
                 const selfAdded = t.createdBy === t.assigneeId;
                 return (
-                <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, marginTop: 6, flexShrink: 0, background: PRIORITY_COLOR[t.priority] ?? "var(--av3-subtle)" }} />
+                <div key={t.id} className="av3-todo-row">
+                  <span aria-hidden className="av3-todo-dot" style={{ marginTop: 6, background: PRIORITY_COLOR[t.priority] ?? "var(--av3-subtle)" }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: "13.5px", fontWeight: 600,
-                      color: t.status === "done" ? "var(--av3-subtle)" : "var(--av3-fg)",
-                      textDecoration: t.status === "done" ? "line-through" : "none",
-                    }}>
-                      {t.title}
-                    </div>
-                    {t.detail && <div style={{ fontSize: "12px", color: "var(--av3-muted)", marginTop: 2 }}>{t.detail}</div>}
-                    <div style={{ fontSize: "11.5px", color: "var(--av3-subtle)", marginTop: 3 }}>
+                    <div className={`av3-todo-title${t.status === "done" ? " is-done" : ""}`}>{t.title}</div>
+                    {t.detail && <div className="av3-todo-detail">{t.detail}</div>}
+                    <div className="av3-todo-meta">
                       {t.dueDate ? `Due ${fmtDate(t.dueDate)}` : "No due date"} · {selfAdded ? "added by you" : `from ${t.createdByName}`}
                     </div>
                   </div>
-                  {/* Per-bucket actions — the lifecycle controls. */}
-                  <span style={{ display: "flex", gap: 4, alignSelf: "flex-start" }}>
+                  {/* Per-bucket actions — the lifecycle controls (reveal on hover). */}
+                  <span className="av3-todo-acts">
                     {taskTab === "open" && (
                       <>
-                        <ActBtn label="Mark done" onClick={() => setStatus(t.id, "done")}><Check style={actIco} /></ActBtn>
-                        <ActBtn label="Archive" onClick={() => setStatus(t.id, "archived")}><Archive style={actIco} /></ActBtn>
-                        <ActBtn label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 style={actIco} /></ActBtn>
+                        <TodoAct label="Mark done" onClick={() => setStatus(t.id, "done")}><Check /></TodoAct>
+                        <TodoAct label="Archive" onClick={() => setStatus(t.id, "archived")}><Archive /></TodoAct>
+                        <TodoAct label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 /></TodoAct>
                       </>
                     )}
                     {taskTab === "done" && (
                       <>
-                        <ActBtn label="Reopen" onClick={() => setStatus(t.id, "open")}><RotateCw style={actIco} /></ActBtn>
-                        <ActBtn label="Archive" onClick={() => setStatus(t.id, "archived")}><Archive style={actIco} /></ActBtn>
-                        <ActBtn label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 style={actIco} /></ActBtn>
+                        <TodoAct label="Reopen" onClick={() => setStatus(t.id, "open")}><RotateCw /></TodoAct>
+                        <TodoAct label="Archive" onClick={() => setStatus(t.id, "archived")}><Archive /></TodoAct>
+                        <TodoAct label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 /></TodoAct>
                       </>
                     )}
                     {taskTab === "archived" && (
                       <>
-                        <ActBtn label="Restore to to-do" onClick={() => setStatus(t.id, "open")}><RotateCcw style={actIco} /></ActBtn>
-                        <ActBtn label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 style={actIco} /></ActBtn>
+                        <TodoAct label="Restore to to-do" onClick={() => setStatus(t.id, "open")}><RotateCcw /></TodoAct>
+                        <TodoAct label="Delete" danger onClick={() => setStatus(t.id, "deleted")}><Trash2 /></TodoAct>
                       </>
                     )}
                     {taskTab === "deleted" && (
                       <>
-                        <ActBtn label="Restore to to-do" onClick={() => setStatus(t.id, "open")}><RotateCcw style={actIco} /></ActBtn>
+                        <TodoAct label="Restore to to-do" onClick={() => setStatus(t.id, "open")}><RotateCcw /></TodoAct>
                         {/* Only items you created yourself can be purged for good;
                             manager-assigned ones stay (record kept). */}
                         {selfAdded && (
-                          <ActBtn label="Delete forever" danger onClick={() => purgeTask(t.id)}><Trash2 style={actIco} /></ActBtn>
+                          <TodoAct label="Delete forever" danger onClick={() => purgeTask(t.id)}><Trash2 /></TodoAct>
                         )}
                       </>
                     )}
@@ -709,6 +701,31 @@ export function PortalInbox() {
         </div>
       </section>
     </>
+  );
+}
+
+/** A small lifecycle action button on a routine / to-do row (icon-only). */
+function TodoAct({
+  label,
+  danger,
+  onClick,
+  children,
+}: {
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className={`av3-todo-act${danger ? " is-danger" : ""}`}
+    >
+      {children}
+    </button>
   );
 }
 

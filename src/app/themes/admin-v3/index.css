@@ -1564,6 +1564,69 @@
 .av3-portal-stat-value { font-family: var(--av3-mono); font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 3px; }
 .av3-portal-stat-sub { font-size: 11.5px; color: var(--av3-muted); margin-top: 2px; }
 
+/* ---- Personal comms: the Daily routine checklist + Your to-do list rows ----
+   Shared row chrome for both lists in PortalInbox. Rows sit flush in the card;
+   hovering (or focusing) lifts a faint surface and fades the per-row action
+   buttons in — so the resting state reads clean and scannable, the controls
+   appear on intent. Touch devices (no hover) keep the actions always-visible. */
+.av3-todo-progress { height: 5px; border-radius: var(--av3-r-pill); background: var(--av3-s3); overflow: hidden; }
+.av3-todo-progress > i {
+  display: block; height: 100%; border-radius: var(--av3-r-pill);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--av3-ok) 78%, var(--av3-info)), var(--av3-ok));
+  transition: width var(--av3-t-slow) var(--av3-ease);
+}
+.av3-todo-row {
+  display: flex; align-items: flex-start; gap: 11px; padding: 9px 10px;
+  margin: 0 -10px; border-radius: var(--av3-r-md);
+  transition: background var(--av3-t-fast) var(--av3-ease);
+}
+.av3-todo-row:hover, .av3-todo-row:focus-within { background: var(--av3-s2); }
+.av3-todo-acts {
+  display: flex; gap: 4px; align-self: flex-start; flex-shrink: 0;
+  opacity: 0; transform: translateX(3px);
+  transition: opacity var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease);
+}
+.av3-todo-row:hover .av3-todo-acts, .av3-todo-row:focus-within .av3-todo-acts { opacity: 1; transform: none; }
+@media (hover: none) { .av3-todo-acts { opacity: 1; transform: none; } }
+.av3-todo-act {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--av3-r-md);
+  background: var(--av3-s3); border: 1px solid var(--av3-line); color: var(--av3-muted); cursor: pointer;
+  transition: color var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease);
+}
+.av3-todo-act:hover { color: var(--av3-fg); border-color: var(--av3-line-strong); }
+.av3-todo-act.is-danger:hover { color: var(--av3-bad); border-color: color-mix(in oklab, var(--av3-bad) 45%, transparent); }
+.av3-todo-act svg { width: 15px; height: 15px; }
+
+/* The square tick box for a routine — animates its check in/out on toggle. */
+.av3-todo-check {
+  flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; border-radius: 6px; cursor: pointer;
+  display: grid; place-items: center; background: transparent; border: 1.5px solid var(--av3-line-strong);
+  transition: background var(--av3-t-fast) var(--av3-ease), border-color var(--av3-t-fast) var(--av3-ease);
+}
+.av3-todo-check:hover { border-color: var(--av3-ok); }
+.av3-todo-check[aria-checked="true"] { background: var(--av3-ok); border-color: var(--av3-ok); }
+.av3-todo-check svg { width: 12px; height: 12px; color: #fff; opacity: 0; transform: scale(0.5); transition: opacity var(--av3-t-fast) var(--av3-ease), transform var(--av3-t-fast) var(--av3-ease); }
+.av3-todo-check[aria-checked="true"] svg { opacity: 1; transform: scale(1); }
+
+.av3-todo-title { font-size: 13.5px; font-weight: 600; color: var(--av3-fg); }
+.av3-todo-title.is-done { color: var(--av3-subtle); text-decoration: line-through; }
+.av3-todo-detail { font-size: 12px; color: var(--av3-muted); margin-top: 2px; }
+.av3-todo-meta { font-size: 11.5px; color: var(--av3-subtle); margin-top: 4px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.av3-todo-dot { width: 7px; height: 7px; border-radius: var(--av3-r-pill); flex-shrink: 0; }
+
+/* Scope chip — Team (manager-defined) vs Yours (personal). */
+.av3-todo-scope { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: var(--av3-r-pill); padding: 1px 7px; }
+.av3-todo-scope.is-team { color: var(--av3-info); background: var(--av3-info-soft); }
+.av3-todo-scope.is-mine { color: var(--av3-platinum); background: color-mix(in oklab, var(--av3-platinum) 15%, var(--av3-s1)); }
+
+/* "All caught up" flourish when every routine is ticked for the day. */
+.av3-todo-alldone { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--av3-ok); padding: 4px 0; }
+.av3-todo-alldone svg { width: 16px; height: 16px; }
+
+/* Count pill on the to-do lifecycle tabs. */
+.av3-todo-tabcount { font-size: 10px; font-weight: 600; line-height: 1; color: var(--av3-muted); background: var(--av3-s1); border: 1px solid var(--av3-line); border-radius: var(--av3-r-pill); padding: 2px 6px; }
+.av3-todo-tabcount.is-active { color: var(--av3-fg); }
+
 /* PIN terminal — the shared-device keypad door (/terminal). Same canvas, column,
    bracket + lockup as the sign-in form; below the lockup it swaps the form for a
    location segmented control, a PIN-progress dot row and a touch keypad, all

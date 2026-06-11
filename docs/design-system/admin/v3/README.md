@@ -562,7 +562,17 @@ auth canvas's signature lighting and the sign-in lockup:
   on both portal headers; its glance dropdown is portaled to `document.body`
   (dodging stacking traps) and links to the portal inbox. The inbox + bell are
   built from tokens + inline styles on the existing `.av3-portal-section` /
-  `.av3-card` / `.av3-icon-btn` / `.av3-bell-badge` scaffold (no new CSS class).
+  `.av3-card` / `.av3-icon-btn` / `.av3-bell-badge` scaffold; the routine + to-do
+  **rows** add one dedicated class family — **`.av3-todo-*`** (§ after the
+  `.av3-portal-*` block in `index.css`): `.av3-todo-row` (flush row that lifts a
+  faint `--av3-s2` surface on hover/focus and **fades its actions in** —
+  `.av3-todo-acts` / `.av3-todo-act[.is-danger]` — always-visible under
+  `@media (hover:none)`), `.av3-todo-check` (the square tick whose checkmark
+  scales in on `aria-checked`), `.av3-todo-progress > i` (the daily-completion
+  bar in the Daily-routine header), `.av3-todo-scope.is-team|.is-mine` (the
+  Team/Yours chips), `.av3-todo-title.is-done` / `.av3-todo-meta` /
+  `.av3-todo-dot`, `.av3-todo-alldone` (the "all done for today" flourish) and
+  `.av3-todo-tabcount` (the lifecycle-tab count pill).
   While the feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
   (three-section scaffold, shimmer rows via the shared `Skeleton` primitive)
   instead of `null`, so the space is reserved and the portal doesn't jump when

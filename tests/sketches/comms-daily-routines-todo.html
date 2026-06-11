@@ -79,8 +79,9 @@
 
   .act { width:30px; height:30px; display:grid; place-items:center; border-radius:var(--av3-r-md); background:var(--av3-s3);
     border:1px solid var(--av3-line); color:var(--av3-muted); cursor:pointer; }
-  .act:hover { color:var(--av3-fg); }
-  .act.danger { color:var(--av3-bad); }
+  .act:hover { color:var(--av3-fg); border-color:var(--av3-line-strong); }
+  .act.danger:hover { color:var(--av3-bad); border-color:color-mix(in oklab,var(--av3-bad) 45%,transparent); }
+  .acts .act { width:28px; height:28px; }
   .act svg, .icoslot svg { width:15px; height:15px; }
 
   .add-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
@@ -94,23 +95,35 @@
   .btn.primary { background:var(--av3-brand); border-color:transparent; color:#fff; }
   .btn.sm { height:28px; padding:0 9px; }
 
-  .list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
-  .rrow, .trow { display:flex; align-items:flex-start; gap:12px; }
-  .rrow { gap:10px; }
-  .checkbox { flex-shrink:0; width:19px; height:19px; margin-top:1px; border-radius:6px; cursor:pointer; display:grid; place-items:center;
-    border:1.5px solid var(--av3-line-strong); background:transparent; }
+  .list { margin-top:8px; }
+  /* progress bar */
+  .progress { height:5px; border-radius:999px; background:var(--av3-s3); overflow:hidden; width:72px; }
+  .progress > i { display:block; height:100%; border-radius:999px;
+    background:linear-gradient(90deg, color-mix(in oklab,var(--av3-ok) 78%,var(--av3-info)), var(--av3-ok)); transition:width .26s; }
+  .alldone { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--av3-ok); padding:4px 0; }
+  .alldone svg { width:16px; height:16px; }
+  /* shared row chrome — hover lifts surface + fades actions in */
+  .row { display:flex; align-items:flex-start; gap:11px; padding:9px 10px; margin:0 -10px; border-radius:var(--av3-r-md);
+    transition:background .11s; }
+  .row:hover { background:var(--av3-s2); }
+  .row .acts { display:flex; gap:4px; align-self:flex-start; flex-shrink:0; opacity:0; transform:translateX(3px); transition:opacity .11s,transform .11s; }
+  .row:hover .acts { opacity:1; transform:none; }
+  .checkbox { flex-shrink:0; width:20px; height:20px; margin-top:1px; border-radius:6px; cursor:pointer; display:grid; place-items:center;
+    border:1.5px solid var(--av3-line-strong); background:transparent; transition:background .11s,border-color .11s; }
+  .checkbox:hover { border-color:var(--av3-ok); }
   .checkbox.done { border-color:var(--av3-ok); background:var(--av3-ok); }
-  .checkbox svg { width:12px; height:12px; color:#fff; display:none; }
-  .checkbox.done svg { display:block; }
+  .checkbox svg { width:12px; height:12px; color:#fff; opacity:0; transform:scale(.5); transition:opacity .11s,transform .11s; }
+  .checkbox.done svg { opacity:1; transform:scale(1); }
   .pdot { width:7px; height:7px; border-radius:999px; margin-top:6px; flex-shrink:0; }
   .pdot.sm { width:6px; height:6px; margin-top:0; }
   .ttl { font-size:13.5px; font-weight:600; color:var(--av3-fg); }
   .ttl.done { color:var(--av3-subtle); text-decoration:line-through; }
   .det { font-size:12px; color:var(--av3-muted); margin-top:2px; }
-  .metaline { font-size:11.5px; color:var(--av3-subtle); margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .tag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--av3-muted);
-    background:var(--av3-s2); border:1px solid var(--av3-line); border-radius:999px; padding:1px 6px; }
-  .empty { margin:12px 0 0; font-size:12.5px; color:var(--av3-muted); }
+  .metaline { font-size:11.5px; color:var(--av3-subtle); margin-top:4px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .scope { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; border-radius:999px; padding:1px 7px; }
+  .scope.team { color:var(--av3-info); background:color-mix(in oklab,var(--av3-info) 16%,var(--av3-s1)); }
+  .scope.mine { color:var(--av3-platinum); background:color-mix(in oklab,var(--av3-platinum) 15%,var(--av3-s1)); }
+  .empty { margin:12px 2px 0; font-size:12.5px; color:var(--av3-muted); line-height:1.5; }
   .priword { font-size:11px; color:var(--av3-subtle); }
 
   .pagehead h2 { font-size:17px; margin:0 0 2px; }
@@ -214,7 +227,10 @@
         <div class="section">
           <div class="section-label">
             <span>Daily routine</span>
-            <span class="meta" id="routine-meta"></span>
+            <span style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;">
+              <span class="meta" id="routine-meta"></span>
+              <span class="progress" id="routine-progress"><i style="width:0%"></i></span>
+            </span>
           </div>
           <div class="card card-p">
             <div class="add-row">
@@ -326,6 +342,7 @@ const ICONS = {
   rotatecw:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  checkcircle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
 };
 const PCOL = { high:'var(--av3-bad)', normal:'var(--av3-info)', low:'var(--av3-subtle)' };
 
@@ -347,22 +364,27 @@ const routines = [
 ];
 function renderRoutines(){
   const host = document.getElementById('routine-list');
-  host.innerHTML = routines.map(r => `
-    <div class="rrow">
+  const done = routines.filter(r=>r.done).length;
+  const allDone = routines.length>0 && done===routines.length;
+  host.innerHTML =
+    (allDone?`<div class="alldone"><span class="icoslot" data-ico="checkcircle"></span> All done for today — nice work.</div>`:'')
+    + routines.map(r => `
+    <div class="row">
       <button class="checkbox ${r.done?'done':''}" onclick="toggleRoutine('${r.id}')" aria-label="toggle"><span class="icoslot" data-ico="check"></span></button>
       <div style="flex:1;min-width:0;">
         <div class="ttl ${r.done?'done':''}">${r.title}</div>
         ${r.detail?`<div class="det">${r.detail}</div>`:''}
         <div class="metaline">
-          <span class="tag">${r.scope==='personal'?'Yours':'Team'}</span>
+          <span class="scope ${r.scope==='personal'?'mine':'team'}">${r.scope==='personal'?'Yours':'Team'}</span>
           <span class="pdot sm" style="background:${PCOL[r.priority]}"></span>
           <span class="priword">${r.priority}</span>
         </div>
       </div>
-      ${r.scope==='personal'?`<button class="act danger" title="Remove routine" onclick="removeRoutine('${r.id}')"><span class="icoslot" data-ico="trash"></span></button>`:''}
+      ${r.scope==='personal'?`<span class="acts"><button class="act danger" title="Remove routine" onclick="removeRoutine('${r.id}')"><span class="icoslot" data-ico="trash"></span></button></span>`:''}
     </div>`).join('');
-  const done = routines.filter(r=>r.done).length;
-  document.getElementById('routine-meta').textContent = `${done}/${routines.length} done today · resets daily`;
+  document.getElementById('routine-meta').textContent = `${done}/${routines.length} today`;
+  document.getElementById('routine-meta').style.color = allDone ? 'var(--av3-ok)' : 'var(--av3-subtle)';
+  document.querySelector('#routine-progress > i').style.width = Math.round(done/routines.length*100)+'%';
   fillIcons(host);
 }
 function toggleRoutine(id){ const r=routines.find(x=>x.id===id); r.done=!r.done; renderRoutines(); }
@@ -398,14 +420,14 @@ function renderTasks(){
     host.innerHTML = `<p class="empty">${copy[taskTab]}</p>`; return;
   }
   host.innerHTML = rows.map(t=>`
-    <div class="trow">
+    <div class="row">
       <span class="pdot" style="background:${PCOL[t.priority]}"></span>
       <div style="flex:1;min-width:0;">
         <div class="ttl ${t.status==='done'?'done':''}">${t.title}</div>
         ${t.detail?`<div class="det">${t.detail}</div>`:''}
         <div class="metaline">${t.due?`Due ${t.due}`:'No due date'} · ${t.self?'added by you':'from '+t.from}</div>
       </div>
-      <span style="display:flex;gap:4px;">${taskActions(t)}</span>
+      <span class="acts">${taskActions(t)}</span>
     </div>`).join('');
   fillIcons(host);
 }
