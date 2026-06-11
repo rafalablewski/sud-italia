@@ -14,7 +14,7 @@ import {
   type BoardKpi, type KpiStatus,
 } from "./agent-hq/shared";
 import { AgentEditForm } from "./agent-hq/AgentEditForm";
-import { buildLiveSystemPrompt, type AgentConfig, type AgentKpi } from "@/lib/ai/boardroom/agent-config";
+import { type AgentConfig, type AgentKpi } from "@/lib/ai/boardroom/agent-config";
 
 /**
  * Agent HQ — the operator console for the AI agent fleet. Six sections:
@@ -344,18 +344,15 @@ interface ScData {
   kpis: AgentKpi[];
   actuals: Record<string, { value: string; at: string; by: string }>;
 }
-type ConsoleTab = "overview" | "charter" | "scorecard" | "timeline" | "chat";
+type ConsoleTab = "overview" | "goals" | "logs";
 
 function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initialId: string | null; onConfigSaved: (u: AgentConfig) => void }) {
   const [selId, setSelId] = useState<string>(initialId ?? cmd.configs[0]?.id ?? "");
   const [tab, setTab] = useState<ConsoleTab>("overview");
-  const [editing, setEditing] = useState(false);
   const [scMap, setScMap] = useState<Record<string, ScData> | null>(null);
   const [tl, setTl] = useState<AgentEvent[] | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => { if (initialId) { setSelId(initialId); setTab("overview"); setEditing(false); } }, [initialId]);
+  useEffect(() => { if (initialId) { setSelId(initialId); setTab("overview"); } }, [initialId]);
 
   const toolCatalog = useMemo(() => {
     const s = new Set<string>(); for (const c of cmd.configs) for (const t of c.toolNames) s.add(t); return [...s].sort();
@@ -378,25 +375,12 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
     fetch(`/api/admin/ai/boardroom/agents/${sel.id}/timeline`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setTl(res?.events ?? []));
   }, [sel?.id]);
 
-  const pick = (id: string) => { setSelId(id); setTab("overview"); setEditing(false); };
-
-  const logActual = useCallback(async (agentId: string, kpiId: string) => {
-    const key = `${agentId}::${kpiId}`;
-    const value = (drafts[key] ?? "").trim();
-    if (!value) return;
-    setBusy(key);
-    const res = await fetch("/api/admin/ai/boardroom/scorecards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId, kpi: kpiId, value }) })
-      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    setBusy(null);
-    if (res?.actual) {
-      setScMap((m) => m ? { ...m, [agentId]: { ...m[agentId], actuals: { ...m[agentId].actuals, [kpiId]: { value: res.actual.value, at: res.actual.at, by: res.actual.by } } } } : m);
-      setDrafts((d) => ({ ...d, [key]: "" }));
-    }
-  }, [drafts]);
+  const pick = (id: string) => { setSelId(id); setTab("overview"); };
 
   const ownedKpis = sel ? cmd.snapshot.kpis.filter((k) => k.owner === sel.id) : [];
   const sc = sel ? scMap?.[sel.id] : undefined;
-  const TABS: ConsoleTab[] = ["overview", "charter", "scorecard", "timeline", "chat"];
+  const TABS: ConsoleTab[] = ["overview", "goals", "logs"];
+  const TAB_LABEL: Record<ConsoleTab, string> = { overview: "Overview", goals: "Goals", logs: "Logs" };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 268px) minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
@@ -425,29 +409,19 @@ function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initia
           <CardHead
             title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={sel.initials} accentVar={sel.accentVar} size={32} /> <span style={{ fontSize: 16 }}>{sel.name}</span> <Badge tone={sel.status === "active" ? "ok" : sel.status === "paused" ? "warn" : "neutral"}>{sel.status}</Badge></span>}
             description={`${sel.title} · ${sel.modelId ?? "global model"} · ${sel.authority} · effort ${sel.effort}`}
-            actions={<Button variant={editing ? "secondary" : "primary"} size="sm" onClick={() => setEditing((e) => !e)}>{editing ? "Close editor" : "Edit"}</Button>}
           />
-          {!editing && (
-            <div style={{ padding: "12px 16px 0" }}>
-              <div className="av3-filterchips">
-                {TABS.map((t) => <button key={t} type="button" className={`av3-fchip ${tab === t ? "is-active" : ""}`} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>)}
-              </div>
+          <div style={{ padding: "12px 16px 0" }}>
+            <div className="av3-filterchips">
+              {TABS.map((t) => <button key={t} type="button" className={`av3-fchip ${tab === t ? "is-active" : ""}`} onClick={() => setTab(t)}>{TAB_LABEL[t]}</button>)}
             </div>
-          )}
+          </div>
           <CardBody>
-            {editing ? (
-              <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog}
-                onSaved={(u) => { onConfigSaved(u); setEditing(false); }} onClose={() => setEditing(false)} />
-            ) : tab === "overview" ? (
+            {tab === "overview" ? (
               <ConsoleOverview sc={sc} ownedKpis={ownedKpis} tl={tl} />
-            ) : tab === "charter" ? (
-              <ConsoleCharter sel={sel} onPick={pick} configs={cmd.configs} />
-            ) : tab === "scorecard" ? (
-              <ConsoleScorecard sel={sel} sc={sc} drafts={drafts} setDrafts={setDrafts} busy={busy} onLog={logActual} />
-            ) : tab === "timeline" ? (
-              tl === null ? <SkeletonRows rows={4} /> : <TimelineList events={tl} />
+            ) : tab === "goals" ? (
+              <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog} onSaved={onConfigSaved} />
             ) : (
-              <ChatPanel personaId={sel.id} name={sel.name} suggestion={sel.mandate} gatewayConfigured={cmd.gatewayConfigured} />
+              tl === null ? <SkeletonRows rows={4} /> : <TimelineList events={tl} />
             )}
           </CardBody>
         </Card>
@@ -489,79 +463,12 @@ function ConsoleOverview({ sc, ownedKpis, tl }: { sc: ScData | undefined; ownedK
       <div>
         <SecLabel first>KPIs it answers for</SecLabel>
         {ownedKpis.length > 0 ? <div style={RAIL}>{ownedKpis.map((k) => <KpiTile key={k.id} k={k} />)}</div>
-          : <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Advisory agent — no owned P&amp;L metric. Targets + actuals live in the Scorecard tab.</div>}
+          : <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>Advisory agent — no owned P&amp;L metric. Targets + actuals live in the Scorecards section.</div>}
       </div>
       <div>
         <SecLabel>Recent</SecLabel>
         {tl === null ? <SkeletonRows rows={3} /> : tl.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No activity yet.</div> : <TimelineList events={tl.slice(0, 5)} />}
       </div>
-    </div>
-  );
-}
-
-function CharterRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 13, lineHeight: 1.55 }}>{children}</div>
-    </div>
-  );
-}
-
-function ConsoleCharter({ sel, onPick, configs }: { sel: AgentConfig; onPick: (id: string) => void; configs: AgentConfig[] }) {
-  const Row = CharterRow;
-  const collabs = sel.collaborators.map((id) => configs.find((c) => c.id === id)).filter(Boolean) as AgentConfig[];
-  return (
-    <div>
-      <Row label="Mandate">{sel.mandate}</Row>
-      <Row label="Responsibilities"><ul style={{ margin: 0, paddingLeft: 16 }}>{sel.responsibilities.map((r, i) => <li key={i}>{r}</li>)}</ul></Row>
-      <Row label="KPIs"><ul style={{ margin: 0, paddingLeft: 16 }}>{sel.kpis.map((k) => <li key={k.id}>{k.title}{k.target ? ` — target ${k.target}` : ""}</li>)}</ul></Row>
-      <Row label="Tone & communication">{sel.tone}</Row>
-      <Row label="Guardrails & ethics">{sel.guardrails}</Row>
-      <Row label="Escalation threshold">{sel.escalationThreshold}</Row>
-      <Row label="Tools"><span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{sel.toolNames.map((t) => <span key={t} className="av3-badge av3-badge-neutral" style={{ fontFamily: "var(--av3-mono)" }}>{t}</span>)}</span></Row>
-      {collabs.length > 0 && (
-        <Row label="Collaborators"><span style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{collabs.map((c) => (
-          <button key={c.id} type="button" className="av3-conv-row" style={{ width: "auto", padding: "5px 9px", display: "inline-flex", gap: 7 }} onClick={() => onPick(c.id)}>
-            <Monogram initials={c.initials} accentVar={c.accentVar} size={20} /><span style={{ fontSize: 12.5 }}>{c.name}</span>
-          </button>))}</span></Row>
-      )}
-      <details>
-        <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--av3-subtle)" }}>Live system prompt — exactly what it runs on</summary>
-        <pre style={{ whiteSpace: "pre-wrap", fontSize: 11.5, lineHeight: 1.55, fontFamily: "var(--av3-mono)", background: "var(--av3-s2)", border: "1px solid var(--av3-line)", borderRadius: "var(--av3-r-md)", padding: 12, marginTop: 8, maxHeight: 340, overflow: "auto" }}>{buildLiveSystemPrompt(sel)}</pre>
-      </details>
-    </div>
-  );
-}
-
-function ConsoleScorecard({ sel, sc, drafts, setDrafts, busy, onLog }: {
-  sel: AgentConfig; sc: ScData | undefined; drafts: Record<string, string>;
-  setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>; busy: string | null; onLog: (a: string, k: string) => void;
-}) {
-  const kpis = sc?.kpis ?? sel.kpis;
-  return (
-    <div>
-      <SuccessRow sr={sc?.stats.successRate7d ?? null} />
-      <div style={{ marginTop: 14 }}>{statRail(sc)}</div>
-      <SecLabel>KPIs — target vs actual</SecLabel>
-      {kpis.length === 0 ? <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No KPI targets set — add them in the editor.</div> :
-        kpis.map((kpi, i) => {
-          const key = `${sel.id}::${kpi.id}`;
-          const actual = sc?.actuals[kpi.id];
-          return (
-            <div key={kpi.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--av3-line)" : "none" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{kpi.title}{kpi.target ? <span style={{ fontWeight: 400, color: "var(--av3-subtle)" }}>  ·  target {kpi.target}</span> : null}</div>
-              <div style={{ fontSize: 12, color: actual ? "var(--av3-fg)" : "var(--av3-subtle)", marginTop: 3 }}>
-                {actual ? <>actual: <span style={{ fontFamily: "var(--av3-mono)" }}>{actual.value}</span> <span style={{ color: "var(--av3-subtle)" }}>· {timeAgo(actual.at)} · {actual.by}</span></> : "no actual logged"}
-              </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
-                <input className="av3-input" placeholder="log actual…" value={drafts[key] ?? ""} onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onLog(sel.id, kpi.id); } }} style={{ flex: 1 }} />
-                <Button variant="secondary" size="sm" loading={busy === key} disabled={!(drafts[key] ?? "").trim()} onClick={() => onLog(sel.id, kpi.id)}>Log</Button>
-              </div>
-            </div>
-          );
-        })}
     </div>
   );
 }
@@ -774,7 +681,7 @@ function WorkBoard({ configs, gatewayConfigured }: { configs: AgentConfig[]; gat
         <CardHead title="Assign work" description="Create a task and drag it onto an agent — or pick one here. It runs on the agent's live config." />
         <CardBody>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <input className="av3-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input className="av3-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} style={{ fontFamily: "var(--av3-ui)" }} />
             <select className="av3-select" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
               <option value="">Leave unassigned (drag later)</option>
               {configs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

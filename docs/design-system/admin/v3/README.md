@@ -502,12 +502,13 @@ auth canvas's signature lighting and the sign-in lockup:
   org/reporting chart (click an agent → Agents console), a 7-day activity bar chart,
   recent activity, upcoming work, daily digest and month-to-date cost; **Agents**
   — a master-detail **console**: left the agent list, right a working panel with
-  Overview / Charter / Scorecard / Timeline / Chat sub-tabs and an inline **Edit**
-  toggle that swaps in the full `AgentEditForm`. Overview = run/cost/last-run/success
-  `StatTile`s + owned KPIs + recent activity; Charter = the read view of every
-  prompt field + the generated live system prompt; Scorecard = success bar + tiles
-  + KPI target-vs-actual logging; Timeline = the agent's events; Chat = the
-  per-agent `ChatPanel`. **Scorecards** — a per-agent
+  three sub-tabs — Overview / Goals / Logs. Overview = run/cost/last-run/success
+  `StatTile`s + owned KPIs + recent activity; **Goals** = the full inline
+  `AgentEditForm` (where everything is set — prompts, tools, schedule, spend, KPIs;
+  it carries its own Configure / Live-prompt / Timeline tabs and save/reset);
+  Logs = the agent's events (the `TimelineList`). Per-agent KPI target-vs-actual
+  logging and the per-agent chat live in the standalone **Scorecards** and
+  **Inbox** sections respectively. **Scorecards** — a per-agent
   scorecard card (status + model + authority badge, a 7d success-rate bar,
   runs 7d / cost 7d / last-run `StatTile`s, and the agent's KPIs as
   **target-vs-actual** where operators log an actual value per KPI), over
