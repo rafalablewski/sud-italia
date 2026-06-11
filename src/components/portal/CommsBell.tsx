@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
-import { Inbox, ArrowRight, AlertTriangle } from "lucide-react";
-import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
+import { Inbox, ArrowRight, AlertTriangle, Repeat } from "lucide-react";
+import type { Task, Announcement, AnnouncementState, RoutineLine } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
 
@@ -33,17 +33,20 @@ export function CommsBell() {
   const pathname = usePathname();
   const [anns, setAnns] = useState<AnnRow[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [routines, setRoutines] = useState<RoutineLine[]>([]);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
-    const [a, t] = await Promise.all([
-      fetch("/api/admin/my-announcements").then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      fetch("/api/admin/my-tasks").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    const [a, t, r] = await Promise.all([
+      fetch("/api/admin/my-announcements").then((res) => (res.ok ? res.json() : [])).catch(() => []),
+      fetch("/api/admin/my-tasks").then((res) => (res.ok ? res.json() : [])).catch(() => []),
+      fetch("/api/admin/my-routines").then((res) => (res.ok ? res.json() : [])).catch(() => []),
     ]);
     setAnns(Array.isArray(a) ? a : []);
     setTasks(Array.isArray(t) ? t : []);
+    setRoutines(Array.isArray(r) ? r : []);
   }, []);
 
   // Poll on the same 15s cadence as the operational bell so counts stay fresh.
@@ -57,7 +60,8 @@ export function CommsBell() {
 
   const unreadAnns = anns.filter((a) => a.state === "inbox" && !a.read);
   const openTasks = tasks.filter((t) => t.status === "open");
-  const count = unreadAnns.length + openTasks.length;
+  const pendingRoutines = routines.filter((r) => !r.done);
+  const count = unreadAnns.length + openTasks.length + pendingRoutines.length;
 
   // Portal base: a franchisee's inbox lives at /franchisee, everyone else (incl.
   // an owner previewing) at /manager.
@@ -168,6 +172,16 @@ export function CommsBell() {
                     />
                   );
                 })}
+                {pendingRoutines.map((r) => (
+                  <GlanceRow
+                    key={r.id}
+                    dot="var(--av3-info)"
+                    title="Daily routine"
+                    sub={r.title}
+                    icon={<Repeat style={{ width: 12, height: 12, color: "var(--av3-info)" }} />}
+                    onClick={goToInbox}
+                  />
+                ))}
               </>
             )}
           </div>

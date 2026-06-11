@@ -23,7 +23,13 @@
 import type { AdminRole } from "@/lib/admin-roles";
 
 export type TaskPriority = "low" | "normal" | "high";
-export type TaskStatus = "open" | "done";
+/**
+ * A one-off to-do's lifecycle. `open` (on the list) → `done` (ticked) → and the
+ * two filing states `archived` (kept, out of the active view) / `deleted`
+ * (trash, restorable). A single axis — the task is owned by exactly one
+ * assignee, so unlike an announcement there's no per-recipient mailbox to track.
+ */
+export type TaskStatus = "open" | "done" | "archived" | "deleted";
 
 export const TASK_PRIORITIES: TaskPriority[] = ["high", "normal", "low"];
 
@@ -44,6 +50,80 @@ export interface Task {
   status: TaskStatus;
   createdAt: string;
   completedAt?: string;
+}
+
+/**
+ * Recurring routine — the "regular to-do list" of things done every day
+ * (orders, delivery, clean walls, coffee-machine maintenance…). A **template**,
+ * not a task: it never moves to "done" itself. Instead each day it materialises
+ * as a checkable line on every applicable teammate's portal, and ticking it
+ * writes a {@link RoutineCompletion} for *that* user + *that* day — so the list
+ * auto-resets at midnight (a new day has no completion → every line is fresh)
+ * with no cron, and one person ticking it never ticks it for everyone else.
+ *
+ *  - `scope: "team"` — a manager-defined standing routine, targeted like a task
+ *    by role + location (both empty ⇒ everyone, everywhere).
+ *  - `scope: "personal"` — a routine a teammate added for themselves
+ *    (`ownerId` = them); nobody else ever sees it.
+ */
+export type RoutineScope = "team" | "personal";
+
+export interface RoutineTemplate {
+  id: string;
+  title: string;
+  detail?: string;
+  priority: TaskPriority;
+  scope: RoutineScope;
+  /** Team targeting — empty axis = no constraint (see {@link isRoutineForUser}). */
+  assigneeRoles?: AdminRole[];
+  locationSlugs?: string[];
+  /** Personal routines only: the teammate who owns it (and the only one who sees it). */
+  ownerId?: string;
+  ownerName?: string;
+  createdBy: string;
+  createdByName: string;
+  /** Paused routines stay defined but drop off everyone's daily list. */
+  active: boolean;
+  createdAt: string;
+}
+
+/** One teammate ticking one routine on one day. Absence = not done that day. */
+export interface RoutineCompletion {
+  templateId: string;
+  userId: string;
+  /** yyyy-mm-dd in the truck's timezone (Europe/Warsaw) — the daily reset key. */
+  date: string;
+  doneAt: string;
+  doneByName?: string;
+}
+
+/** A routine line as the portal sees it: the template plus today's tick state. */
+export type RoutineLine = RoutineTemplate & { done: boolean; doneAt?: string };
+
+/**
+ * Does routine `t` belong on `user`'s daily list?
+ *  - paused (`active === false`) → never;
+ *  - personal → only its owner;
+ *  - team → must pass every *constrained* axis: role ∈ assigneeRoles (if set)
+ *    AND a location ∈ locationSlugs (if set). Both empty ⇒ everyone, everywhere.
+ */
+export function isRoutineForUser(t: RoutineTemplate, user: CommsUser): boolean {
+  if (!t.active) return false;
+  if (t.scope === "personal") return t.ownerId === user.id;
+  const roles = t.assigneeRoles ?? [];
+  const locs = t.locationSlugs ?? [];
+  const roleOk = roles.length === 0 || roles.includes(user.role);
+  const locOk = locs.length === 0 || userLocations(user).some((s) => locs.includes(s));
+  return roleOk && locOk;
+}
+
+/** Human label of who a team routine reaches, for the management board. */
+export function routineAudienceLabel(t: RoutineTemplate): string {
+  if (t.scope === "personal") return t.ownerName ? `${t.ownerName} (personal)` : "Personal";
+  const parts: string[] = [];
+  if (t.assigneeRoles?.length) parts.push(t.assigneeRoles.join(", "));
+  if (t.locationSlugs?.length) parts.push(t.locationSlugs.join(", "));
+  return parts.length ? parts.join(" · ") : "Everyone";
 }
 
 export interface Announcement {

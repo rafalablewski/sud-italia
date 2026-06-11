@@ -689,8 +689,10 @@ export const taskCreateSchema = z
   })
   .strict();
 
+// Full lifecycle: tick done, file (archive), trash (delete) or restore (open) —
+// the personal to-do list and the management board both move tasks through it.
 export const taskStatusSchema = z
-  .object({ id: stableId, status: z.enum(["open", "done"]) })
+  .object({ id: stableId, status: z.enum(["open", "done", "archived", "deleted"]) })
   .strict();
 
 // A teammate adding an item to their OWN to-do list (the portal "Your to-do
@@ -703,6 +705,37 @@ export const myTaskCreateSchema = z
     priority: z.enum(["low", "normal", "high"]).default("normal"),
     dueDate: isoDate.optional(),
   })
+  .strict();
+
+// A manager-defined TEAM routine (the recurring daily-ops checklist) on the
+// comms board. `id` present ⇒ the store upserts (edit). Targeted by role +
+// location like a task; both empty ⇒ everyone, everywhere.
+export const routineCreateSchema = z
+  .object({
+    id: stableId.optional(),
+    title: z.string().min(1).max(200),
+    detail: z.string().max(2000).optional(),
+    priority: z.enum(["low", "normal", "high"]).default("normal"),
+    assigneeRoles: z.array(commsRoleSchema).max(5).optional(),
+    locationSlugs: z.array(locationSlug).max(50).optional(),
+    active: z.boolean().optional(),
+  })
+  .strict();
+
+// A teammate adding a recurring item to their OWN daily routine (the portal).
+// Always scope "personal", owned by the session user — never targets others.
+export const myRoutineCreateSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    detail: z.string().max(2000).optional(),
+    priority: z.enum(["low", "normal", "high"]).default("normal"),
+  })
+  .strict();
+
+// Tick / un-tick a routine for *today* (the server supplies the date, so a
+// stale client can't backdate a completion).
+export const routineToggleSchema = z
+  .object({ templateId: stableId, done: z.boolean() })
   .strict();
 
 export const announcementCreateSchema = z

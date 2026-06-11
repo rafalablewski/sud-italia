@@ -501,13 +501,18 @@ auth canvas's signature lighting and the sign-in lockup:
   Earlier recency buckets, per-type tone+icon, mark-read / mark-all-read (`PATCH`),
   and tap-to-jump to the relevant v3 surface. CSS in `themes/admin-v3/index.css`
   §14 (`.av3-alert-*`). Nav: Overview section.
-- [x] Tasks & announcements (`CommsV3`) — the internal comms board, split into
-  **two separate Overview nav entries / routes** (no more `ChipRow` tab): **Tasks**
-  (`/admin/comms/tasks`) — assign a to-do to a person or a whole role+location,
-  fans out to one row per assignee, each with its own done-state — and
-  **Announcements** (`/admin/comms/announcements`) — post to everyone / roles /
-  locations / named people, with a **Title (subject) + textarea body**, pinnable,
-  edit-in-place + delete (the POST upserts on `id`). One component takes a
+- [x] Tasks, daily routines & announcements (`CommsV3`) — the internal comms
+  board, split into **two separate Overview nav entries / routes** (no more
+  `ChipRow` tab): **Tasks** (`/admin/comms/tasks`) — assign a to-do to a person
+  or a whole role+location, fans out to one row per assignee, each with its own
+  done-state; this view ALSO hosts **Daily routines** (a "New daily routine"
+  card + list): the recurring "regular to-do list" (orders, delivery, clean
+  walls, coffee-machine maintenance), targeted by role + location like a task,
+  pausable via an **Active** `Switch`, over `/api/admin/routines` (GET/POST
+  upsert/DELETE, gated `comms`) — and **Announcements**
+  (`/admin/comms/announcements`) — post to everyone / roles / locations / named
+  people, with a **Title (subject) + textarea body**, pinnable, edit-in-place +
+  delete (the POST upserts on `id`). One component takes a
   `view: "tasks" | "announcements"` prop and renders just that surface; the bare
   `/admin/comms` index redirects to Tasks. Built from the standard primitives
   (`Card`/`Button`/`Badge`/`Switch` + `.av3-input`/`.av3-select`/`.av3-field`),
@@ -519,18 +524,28 @@ auth canvas's signature lighting and the sign-in lockup:
   `src/lib/relative-time.ts`; unread bold with a brand dot, pinned flagged; tap a
   row to open the full message — which swaps the relative age for the precise
   absolute date+time at the foot of the body — and mark it read) above the
-  personal **"Your to-do list"**, over the
-  unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
-  user). The to-do list isn't read-only: it leads with a **quick-add box**
-  (title + priority + optional due date, Enter or **Add** to submit) so any
-  teammate can put an item on their **own** list — `POST /api/admin/my-tasks`
-  always stamps the session user as both assignee and creator, so it can never
-  push a task onto someone else (that stays the gated management board). A
-  self-added item (`createdBy === assigneeId`) reads "added by you" and carries
-  a **remove** (trash) control alongside **Done**; manager-assigned tasks offer
-  only **Done** (the `DELETE` endpoint rejects deleting a task you didn't
-  create, keeping the manager's assignment record intact). The inbox carries
-  three **mailbox tabs — Inbox / Archived / Deleted** —
+  **"Daily routine"** checklist and the personal **"Your to-do list"**, over the
+  unmapped `/api/admin/my-tasks` + `/api/admin/my-routines` +
+  `/api/admin/my-announcements` (any authed user). **Daily routine** is a
+  checkbox list that **resets every day** — it's *derived* (team routines that
+  match you by role+location + your personal routines) and annotated with
+  today's tick from `routine-completions.json`, so a new day (Europe/Warsaw)
+  starts fresh with **no cron**; ticking is per-person (`PUT /api/admin/my-routines
+  {templateId, done}`), the box shows a `Team`/`Yours` tag, and a **quick-add**
+  adds a personal recurring item (scope `personal`, owned by you — `POST`), with
+  **remove** on your own routines only (`DELETE`). The **to-do list** isn't
+  read-only: a **quick-add box** (title + priority + optional due date, Enter or
+  **Add**) lets any teammate add a one-off item to their **own** list — `POST
+  /api/admin/my-tasks` always stamps the session user as both assignee and
+  creator, so it can never push a task onto someone else (that stays the gated
+  board) — and carries the **full lifecycle** across four tabs
+  (**To-do / Done / Archived / Deleted**, counts in the chips): per-row
+  **Done · Archive · Delete · Reopen · Restore** (`PUT /api/admin/my-tasks` with
+  `status open|done|archived|deleted` — a single axis since one task = one
+  owner). A self-added item (`createdBy === assigneeId`) reads "added by you" and
+  can be **purged for good** from the Deleted tab (`DELETE /api/admin/my-tasks`,
+  restricted to items you created — manager-assigned tasks keep the record). The
+  announcements inbox carries three **mailbox tabs — Inbox / Archived / Deleted** —
   with per-row actions **Mark read · Archive · Delete** (Archived/Deleted offer
   **Restore**); the Inbox shows only the most-recent 3 *unread* rows with a
   **"Load more"** beneath (read-but-kept rows follow). Mailbox state is
@@ -540,18 +555,22 @@ auth canvas's signature lighting and the sign-in lockup:
   state **and writes a `notification.{read,archive,delete,restore}` row to the
   central Audit log** (so an owner can review the open/archive/delete history —
   the logging target is the Audit log, not a portal-local feed). The unread +
-  open-to-do count also surfaces in **`CommsBell`**
+  open-to-do + pending-routine count also surfaces in **`CommsBell`**
   (`src/components/portal/CommsBell.tsx`) — an **inbox**-icon button (count =
-  unread Inbox announcements + open to-dos) rendered in the shell `TopbarV3` and
+  unread Inbox announcements + open to-dos + routines not yet ticked today)
+  rendered in the shell `TopbarV3` and
   on both portal headers; its glance dropdown is portaled to `document.body`
   (dodging stacking traps) and links to the portal inbox. The inbox + bell are
   built from tokens + inline styles on the existing `.av3-portal-section` /
   `.av3-card` / `.av3-icon-btn` / `.av3-bell-badge` scaffold (no new CSS class).
-  While the two feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
-  (same two-section scaffold, shimmer rows via the shared `Skeleton` primitive)
+  While the feeds resolve `PortalInbox` renders a `PortalInboxSkeleton`
+  (three-section scaffold, shimmer rows via the shared `Skeleton` primitive)
   instead of `null`, so the space is reserved and the portal doesn't jump when
-  the data lands. Types + recipient rule + mailbox-state helper
-  (`announcementStateFor`) in `src/lib/comms.ts`. **Distinct from Alerts:**
+  the data lands. Types + recipient rules (`isAnnouncementForUser`,
+  `isRoutineForUser`) + mailbox-state helper
+  (`announcementStateFor`) in `src/lib/comms.ts`; routine persistence
+  (`getRoutineTemplates`/`saveRoutineTemplate`/`set`/`clearRoutineDone`,
+  `warsawToday`) in `src/lib/store.ts`. **Distinct from Alerts:**
   `CommsBell` (inbox icon, personal comms) sits *beside* the operational alerts
   **bell** in the topbar but never reads it — announcements are human-authored
   broadcasts; the bell + `/admin/alerts` are the *automated* operational
