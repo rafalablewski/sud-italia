@@ -521,7 +521,16 @@ auth canvas's signature lighting and the sign-in lockup:
   absolute date+time at the foot of the body — and mark it read) above the
   personal **"Your to-do list"**, over the
   unmapped `/api/admin/my-tasks` + `/api/admin/my-announcements` (any authed
-  user). The inbox carries three **mailbox tabs — Inbox / Archived / Deleted** —
+  user). The to-do list isn't read-only: it leads with a **quick-add box**
+  (title + priority + optional due date, Enter or **Add** to submit) so any
+  teammate can put an item on their **own** list — `POST /api/admin/my-tasks`
+  always stamps the session user as both assignee and creator, so it can never
+  push a task onto someone else (that stays the gated management board). A
+  self-added item (`createdBy === assigneeId`) reads "added by you" and carries
+  a **remove** (trash) control alongside **Done**; manager-assigned tasks offer
+  only **Done** (the `DELETE` endpoint rejects deleting a task you didn't
+  create, keeping the manager's assignment record intact). The inbox carries
+  three **mailbox tabs — Inbox / Archived / Deleted** —
   with per-row actions **Mark read · Archive · Delete** (Archived/Deleted offer
   **Restore**); the Inbox shows only the most-recent 3 *unread* rows with a
   **"Load more"** beneath (read-but-kept rows follow). Mailbox state is

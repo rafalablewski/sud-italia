@@ -693,6 +693,18 @@ export const taskStatusSchema = z
   .object({ id: stableId, status: z.enum(["open", "done"]) })
   .strict();
 
+// A teammate adding an item to their OWN to-do list (the portal "Your to-do
+// list" add box). No assignee/role fields — the handler always assigns it to
+// the session user, so there's no way to push a task onto someone else here.
+export const myTaskCreateSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    detail: z.string().max(2000).optional(),
+    priority: z.enum(["low", "normal", "high"]).default("normal"),
+    dueDate: isoDate.optional(),
+  })
+  .strict();
+
 export const announcementCreateSchema = z
   .object({
     id: stableId.optional(),

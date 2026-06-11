@@ -1,10 +1,10 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pin, Archive, Trash2, RotateCcw } from "lucide-react";
+import { Check, Pin, Archive, Trash2, RotateCcw, Plus } from "lucide-react";
 import { Skeleton } from "@/admin-v3/ui/Skeleton";
 import { fmtRelative } from "@/lib/relative-time";
-import type { Task, Announcement, AnnouncementState } from "@/lib/comms";
+import type { Task, TaskPriority, Announcement, AnnouncementState } from "@/lib/comms";
 
 type AnnRow = Announcement & { read: boolean; state: AnnouncementState };
 
@@ -75,6 +75,11 @@ export function PortalInbox() {
   const [tab, setTab] = useState<AnnouncementState>("inbox");
   const [openId, setOpenId] = useState<string | null>(null);
   const [unreadShown, setUnreadShown] = useState(UNREAD_PAGE);
+  // Quick-add box for the personal to-do list.
+  const [newTitle, setNewTitle] = useState("");
+  const [newPriority, setNewPriority] = useState<TaskPriority>("normal");
+  const [newDue, setNewDue] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     const [t, a] = await Promise.all([
@@ -93,6 +98,37 @@ export function PortalInbox() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status: "done" }),
     });
+  };
+
+  // Add an item to your own list. The server stamps you as both assignee and
+  // creator, then we fold the created Task into local state so it shows at once.
+  const addTask = async () => {
+    const title = newTitle.trim();
+    if (!title || adding) return;
+    setAdding(true);
+    try {
+      const res = await fetch("/api/admin/my-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, priority: newPriority, dueDate: newDue || undefined }),
+      });
+      if (res.ok) {
+        const created: Task = await res.json();
+        setTasks((arr) => [created, ...(arr ?? [])]);
+        setNewTitle("");
+        setNewPriority("normal");
+        setNewDue("");
+      }
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // Remove a to-do you added yourself (manager-assigned tasks have no remove —
+  // the server rejects those, and the button only renders for self-added ones).
+  const removeTask = async (id: string) => {
+    setTasks((arr) => (arr ? arr.filter((t) => t.id !== id) : arr));
+    await fetch(`/api/admin/my-tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   };
 
   // The single announcement-action path. Optimistically applies the new mailbox
@@ -351,28 +387,88 @@ export function PortalInbox() {
       <section className="av3-portal-section">
         <div className="av3-section-label">Your to-do list</div>
         <div className="av3-card av3-card-p">
+          {/* Quick-add: anyone can put an item on their own list (assigned to
+              themselves server-side). Enter or the Add button submits. */}
+          <div style={addRow}>
+            <input
+              className="av3-input"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addTask(); }}
+              placeholder="Add to your list — e.g. Call supplier about flour"
+              maxLength={200}
+              aria-label="New to-do"
+              style={{ flex: 1, minWidth: 180 }}
+            />
+            <select
+              className="av3-select"
+              value={newPriority}
+              onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+              aria-label="Priority"
+              style={{ flexShrink: 0 }}
+            >
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+            <input
+              className="av3-input"
+              type="date"
+              value={newDue}
+              onChange={(e) => setNewDue(e.target.value)}
+              aria-label="Due date (optional)"
+              style={{ flexShrink: 0 }}
+            />
+            <button
+              type="button"
+              className="av3-btn av3-btn-sm av3-btn-primary"
+              onClick={addTask}
+              disabled={!newTitle.trim() || adding}
+              style={{ flexShrink: 0 }}
+            >
+              <Plus className="av3-btn-ico" />
+              Add
+            </button>
+          </div>
+
           {openTasks.length === 0 ? (
-            <p style={{ margin: 0, fontSize: "12.5px", color: "var(--av3-muted)" }}>
+            <p style={{ margin: "12px 0 0", fontSize: "12.5px", color: "var(--av3-muted)" }}>
               Nothing on your list — you&rsquo;re all caught up.
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {openTasks.map((t) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              {openTasks.map((t) => {
+                const selfAdded = t.createdBy === t.assigneeId;
+                return (
                 <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <span aria-hidden style={{ width: 7, height: 7, borderRadius: 999, marginTop: 6, flexShrink: 0, background: PRIORITY_COLOR[t.priority] ?? "var(--av3-subtle)" }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "13.5px", fontWeight: 600 }}>{t.title}</div>
                     {t.detail && <div style={{ fontSize: "12px", color: "var(--av3-muted)", marginTop: 2 }}>{t.detail}</div>}
                     <div style={{ fontSize: "11.5px", color: "var(--av3-subtle)", marginTop: 3 }}>
-                      {t.dueDate ? `Due ${fmtDate(t.dueDate)}` : "No due date"} · from {t.createdByName}
+                      {t.dueDate ? `Due ${fmtDate(t.dueDate)}` : "No due date"} · {selfAdded ? "added by you" : `from ${t.createdByName}`}
                     </div>
                   </div>
+                  {/* Self-added items can be removed outright; manager-assigned
+                      ones only offer Done (the server enforces this too). */}
+                  {selfAdded && (
+                    <button
+                      type="button"
+                      className="av3-btn av3-btn-sm"
+                      title="Remove from your list"
+                      aria-label="Remove from your list"
+                      onClick={() => removeTask(t.id)}
+                    >
+                      <Trash2 className="av3-btn-ico" />
+                    </button>
+                  )}
                   <button type="button" className="av3-btn av3-btn-sm" onClick={() => markDone(t.id)}>
                     <Check className="av3-btn-ico" />
                     Done
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -436,6 +532,9 @@ const actBtn: React.CSSProperties = {
   background: "var(--av3-s3)", border: "1px solid var(--av3-line)", color: "var(--av3-muted)", cursor: "pointer",
 };
 const actIco: React.CSSProperties = { width: 15, height: 15 };
+const addRow: React.CSSProperties = {
+  display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8,
+};
 const loadMoreBtn: React.CSSProperties = {
   width: "100%", border: "none", borderTop: "1px solid var(--av3-line)", background: "var(--av3-s1)",
   color: "var(--av3-info)", fontSize: "12.5px", fontWeight: 600, padding: 11, cursor: "pointer",
