@@ -1,5 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
-import { estimateCallCostGrosze, getDailyBudgetGrosze } from "../cost";
+import { estimateCallCostGrosze } from "../cost";
 import { getDailyAiSpendGrosze } from "../conversations";
 import { logger } from "@/lib/logger";
 import {
@@ -8,7 +8,7 @@ import {
   type BoardroomPersonaId,
 } from "./personas";
 import { buildLiveSystemPrompt, type AgentConfig } from "./agent-config";
-import { getResolvedAgentConfigs, appendAgentEvent } from "@/lib/store";
+import { getResolvedAgentConfigs, appendAgentEvent, getEffectiveDailyBudgetGrosze } from "@/lib/store";
 import { computeBoardroomKpis } from "./kpis";
 import { saveMeeting, type BoardroomMeeting, type MeetingContribution, type MeetingDecision, type MeetingType } from "./store";
 
@@ -58,7 +58,7 @@ export async function runBoardroomMeeting(input: RunMeetingInput): Promise<RunMe
   }
 
   const dailySpend = await getDailyAiSpendGrosze();
-  const budget = getDailyBudgetGrosze();
+  const budget = await getEffectiveDailyBudgetGrosze();
   if (dailySpend >= budget) {
     return {
       ok: false,

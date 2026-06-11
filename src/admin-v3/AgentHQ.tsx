@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
 import { useAdminLocationV3 } from "./LocationContext";
-import { Badge, Button, Card, CardBody, CardHead, SkeletonRows } from "./ui";
+import { Badge, Button, Card, CardBody, CardHead, SkeletonRows, Switch } from "./ui";
 import { AiModelControl } from "./AiModelControl";
 import {
   Monogram, StatusDot, KpiTile, StatTile, SecLabel, ChatPanel, RAIL,
@@ -61,7 +61,7 @@ interface CommandPayload {
   dailyDigest: DailyDigest | null;
 }
 
-type SectionId = "command" | "scorecards" | "work" | "approvals" | "inbox" | "reports";
+type SectionId = "command" | "scorecards" | "work" | "approvals" | "inbox" | "reports" | "settings";
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "command", label: "Command center" },
   { id: "scorecards", label: "Scorecards" },
@@ -69,6 +69,7 @@ const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "approvals", label: "Approvals" },
   { id: "inbox", label: "Inbox" },
   { id: "reports", label: "Reports" },
+  { id: "settings", label: "Settings" },
 ];
 
 const TONE: Record<string, "ok" | "warn" | "bad" | "info" | "neutral"> = {
@@ -145,8 +146,10 @@ export function AgentHQ() {
         <Approvals configById={configById} onAction={(owner, text) => openChat(owner, text)} />
       ) : section === "inbox" ? (
         <Inbox configs={cmd.configs} gatewayConfigured={gatewayConfigured} selectedId={inboxSel} onSelect={setInboxSel} seed={seed} onSeedConsumed={() => setSeed(null)} />
-      ) : (
+      ) : section === "reports" ? (
         <Reports configById={configById} gatewayConfigured={gatewayConfigured} onRan={load} />
+      ) : (
+        <SettingsSection />
       )}
 
       {!gatewayConfigured && !loading && (
@@ -182,8 +185,6 @@ function CommandCenter({ cmd, configById }: { cmd: CommandPayload; configById: M
         <StatTile label="Cost · 7d" value={zl(s.cost7dGrosze)} accent="--av3-c5" />
         <StatTile label="Scheduled" value={`${s.scheduledCount}`} sub="agents on a cadence" accent="--av3-c6" />
       </div>
-
-      <div style={{ marginTop: 16 }}><AiModelControl /></div>
 
       {sales.length > 0 && (<><SecLabel>Sales &amp; growth</SecLabel><div style={RAIL}>{sales.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
       {cost.length > 0 && (<><SecLabel>Cost &amp; quality</SecLabel><div style={RAIL}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
@@ -708,6 +709,91 @@ function Reports({ configById, gatewayConfigured, onRan }: { configById: Map<str
         )}
       </>)}
     </>
+  );
+}
+
+/* =============================== Settings ============================= */
+
+interface FleetSettings { dailyBudgetGrosze: number | null; autoBriefing: boolean; briefingTime: string }
+
+function SettingsSection() {
+  const [settings, setSettings] = useState<FleetSettings | null>(null);
+  const [effectiveBudget, setEffectiveBudget] = useState(0);
+  const [todaySpend, setTodaySpend] = useState(0);
+  const [budgetDraft, setBudgetDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/admin/ai/boardroom/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (res?.settings) {
+      setSettings(res.settings);
+      setEffectiveBudget(res.effectiveBudgetGrosze ?? 0);
+      setTodaySpend(res.todaySpendGrosze ?? 0);
+      setBudgetDraft(res.settings.dailyBudgetGrosze == null ? "" : (res.settings.dailyBudgetGrosze / 100).toString());
+    }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  const patch = useCallback(async (body: Partial<FleetSettings>, flash = false) => {
+    setSaving(true);
+    const res = await fetch("/api/admin/ai/boardroom/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setSaving(false);
+    if (res?.settings) { setSettings(res.settings); setEffectiveBudget(res.effectiveBudgetGrosze ?? 0); }
+    if (flash) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
+  }, []);
+
+  if (!settings) return <Card padding="default"><SkeletonRows rows={5} /></Card>;
+
+  const budgetPct = effectiveBudget > 0 ? Math.min(100, Math.round((todaySpend / effectiveBudget) * 100)) : 0;
+  const saveBudget = () => {
+    const t = budgetDraft.trim();
+    const grosze = t === "" ? null : Math.max(0, Math.round(Number(t) * 100));
+    void patch({ dailyBudgetGrosze: Number.isFinite(grosze as number) || grosze === null ? grosze : settings.dailyBudgetGrosze }, true);
+  };
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 14, alignItems: "start" }}>
+      <Card>
+        <CardHead title="AI model" description="The model the whole fleet runs on. Per-agent overrides inherit this when set to “Global model”." />
+        <CardBody><AiModelControl /></CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Daily AI budget" description="Fleet-wide spend ceiling. Every agent run, meeting and work item is gated by it." />
+        <CardBody>
+          <div className="av3-kpi-value" style={{ marginBottom: 4 }}>{zl(todaySpend)} <span style={{ fontSize: 13, color: "var(--av3-subtle)" }}>/ {zl(effectiveBudget)} today</span></div>
+          <div style={{ height: 6, borderRadius: 999, background: "var(--av3-s3)", overflow: "hidden", margin: "8px 0 16px" }}>
+            <div style={{ width: `${budgetPct}%`, height: "100%", background: budgetPct >= 90 ? "var(--av3-bad)" : budgetPct >= 70 ? "var(--av3-warn)" : "var(--av3-ok)" }} />
+          </div>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600, marginBottom: 5 }}>Daily cap (PLN)</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input className="av3-input" value={budgetDraft} onChange={(e) => setBudgetDraft(e.target.value)} placeholder="blank = env / default" style={{ flex: 1 }} />
+            <Button variant="primary" loading={saving} onClick={saveBudget}>Save</Button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 6 }}>Blank uses <span style={{ fontFamily: "var(--av3-mono)" }}>AI_DAILY_BUDGET_GROSZE</span> (or the 1000 PLN default).</div>
+          {saved && <div style={{ marginTop: 8 }}><Badge tone="ok">Saved</Badge></div>}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Automation" description="Fleet-wide scheduling defaults." />
+        <CardBody>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 0" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Auto daily briefing</div>
+              <div style={{ fontSize: 11.5, color: "var(--av3-subtle)", marginTop: 2 }}>The briefing cron convenes the board each morning.</div>
+            </div>
+            <Switch checked={settings.autoBriefing} onChange={(v) => void patch({ autoBriefing: v })} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid var(--av3-line)" }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Briefing time</div>
+            <input type="time" className="av3-input" value={settings.briefingTime} onChange={(e) => setSettings({ ...settings, briefingTime: e.target.value })} onBlur={(e) => void patch({ briefingTime: e.target.value })} style={{ width: 130 }} />
+          </div>
+        </CardBody>
+      </Card>
+    </div>
   );
 }
 

@@ -497,7 +497,7 @@ auth canvas's signature lighting and the sign-in lockup:
   (`/api/admin/ai/boardroom/command`) so nothing pops in or shifts. **Sections**
   (`.av3-filterchips`): **Command center** — a fleet `.av3-kpi` rail (active
   agents · runs today · success rate 7d · cost 7d · scheduled), the
-  `AiModelControl` picker, the Sales &amp; growth + Cost &amp; quality KPI rails
+  Sales &amp; growth + Cost &amp; quality KPI rails
   (`KpiTile` with `StatusDot` + five-section `InfoButton`), then a 2-col card grid:
   org/reporting chart (rows link to the agent page), a 7-day activity bar chart,
   recent activity, upcoming work, daily digest and month-to-date cost; **Scorecards**
@@ -508,7 +508,12 @@ auth canvas's signature lighting and the sign-in lockup:
   columns with per-item Run + delete (`…/work`, `…/work/[id]`, `…/work/[id]/run`);
   **Approvals** — the human-in-the-loop queue (Action / Mark done / Dismiss,
   `…/approvals`); **Inbox** — escalations panel + agent list + `ChatPanel`;
-  **Reports** — meeting transcripts + decisions with CSV + print-to-PDF export.
+  **Reports** — meeting transcripts + decisions with CSV + print-to-PDF export;
+  **Settings** — fleet-wide controls (not per-agent): the global AI model
+  (`AiModelControl`, moved here from Command center), the daily AI budget (a
+  persisted override of `AI_DAILY_BUDGET_GROSZE` via `getEffectiveDailyBudgetGrosze`,
+  with a today's-spend bar) and an auto-daily-briefing `Switch` + time the
+  briefing cron honours — over `…/settings` (GET/PATCH).
   The **per-agent page** (`AgentPanel`) is the dedicated panel that replaced the
   roster grid: identity + control chips, scorecard, charter (mandate /
   responsibilities / KPIs / tone / guardrails / escalation), tools, collaborators,

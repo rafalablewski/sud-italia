@@ -41,6 +41,7 @@ import {
   type AgentConfig,
   type AgentConfigPatch,
 } from "@/lib/ai/boardroom/agent-config";
+import { getDailyBudgetGrosze } from "@/lib/ai/cost";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
@@ -8935,6 +8936,54 @@ export async function deleteWorkItem(id: string): Promise<void> {
 export async function getWorkItem(id: string): Promise<AgentWorkItem | null> {
   const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
   return list.find((w) => w.id === id) ?? null;
+}
+
+// --- Agent HQ: fleet-wide settings ------------------------------------------
+//
+// Global controls that apply to the whole agent fleet instead of being set per
+// agent: the daily AI spend ceiling and whether the daily briefing auto-runs.
+// (The active AI model is a separate platform-wide setting — ai-model.json —
+// since the gateway uses it everywhere, not just Agent HQ.)
+
+export interface AgentHqSettings {
+  /** Fleet-wide daily spend ceiling in grosze; null = use the env/default. */
+  dailyBudgetGrosze: number | null;
+  /** Whether the daily-briefing cron convenes the board automatically. */
+  autoBriefing: boolean;
+  /** HH:MM the briefing is expected to fire (display + cron alignment). */
+  briefingTime: string;
+}
+
+const AGENT_HQ_DEFAULTS: AgentHqSettings = { dailyBudgetGrosze: null, autoBriefing: true, briefingTime: "08:00" };
+
+export async function getAgentHqSettings(): Promise<AgentHqSettings> {
+  const saved = await readJSON<Partial<AgentHqSettings>>("agent-hq-settings.json", {});
+  return {
+    dailyBudgetGrosze:
+      saved.dailyBudgetGrosze === null || typeof saved.dailyBudgetGrosze === "number" ? saved.dailyBudgetGrosze ?? null : null,
+    autoBriefing: typeof saved.autoBriefing === "boolean" ? saved.autoBriefing : AGENT_HQ_DEFAULTS.autoBriefing,
+    briefingTime: typeof saved.briefingTime === "string" && saved.briefingTime ? saved.briefingTime : AGENT_HQ_DEFAULTS.briefingTime,
+  };
+}
+
+export async function updateAgentHqSettings(patch: Partial<AgentHqSettings>): Promise<AgentHqSettings> {
+  return withLock("agent-hq-settings.json", async () => {
+    const current = await getAgentHqSettings();
+    const next: AgentHqSettings = {
+      dailyBudgetGrosze:
+        patch.dailyBudgetGrosze === null || typeof patch.dailyBudgetGrosze === "number" ? patch.dailyBudgetGrosze : current.dailyBudgetGrosze,
+      autoBriefing: typeof patch.autoBriefing === "boolean" ? patch.autoBriefing : current.autoBriefing,
+      briefingTime: typeof patch.briefingTime === "string" && patch.briefingTime ? patch.briefingTime : current.briefingTime,
+    };
+    await writeJSON("agent-hq-settings.json", next);
+    return next;
+  });
+}
+
+/** The daily budget the runtime enforces: the saved override, else env/default. */
+export async function getEffectiveDailyBudgetGrosze(): Promise<number> {
+  const settings = await getAgentHqSettings();
+  return settings.dailyBudgetGrosze ?? getDailyBudgetGrosze();
 }
 
 // --- Compliance calendar -----------------------------------------------------

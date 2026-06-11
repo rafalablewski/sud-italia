@@ -3,7 +3,7 @@ import { callGateway, gatewayConfigured } from "./gateway";
 import { executeToolCall, toolsForApi, type ToolCallActor } from "./tools";
 import { getTool } from "./tools/registry";
 import { appendMessage, getMessages, getDailyAiSpendGrosze } from "./conversations";
-import { estimateCallCostGrosze, getDailyBudgetGrosze } from "./cost";
+import { estimateCallCostGrosze } from "./cost";
 import "./tools/index";
 import type { AdminRole } from "@/lib/admin-auth";
 import { type BoardroomPersonaId } from "./boardroom/personas";
@@ -13,6 +13,7 @@ import {
   getAgentDailySpendGrosze,
   appendAgentEvent,
   getAiModelSettings,
+  getEffectiveDailyBudgetGrosze,
 } from "@/lib/store";
 import { logger } from "@/lib/logger";
 
@@ -98,7 +99,7 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
 
   // Budget gate before we spend anything.
   const dailySpend = await getDailyAiSpendGrosze();
-  const budget = getDailyBudgetGrosze();
+  const budget = await getEffectiveDailyBudgetGrosze();
   if (dailySpend >= budget) {
     events.push({
       type: "error",

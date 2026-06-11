@@ -1,5 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
-import { estimateCallCostGrosze, getDailyBudgetGrosze } from "../cost";
+import { estimateCallCostGrosze } from "../cost";
 import { getDailyAiSpendGrosze } from "../conversations";
 import { buildLiveSystemPrompt } from "./agent-config";
 import {
@@ -8,6 +8,7 @@ import {
   updateWorkItem,
   appendAgentEvent,
   getAgentDailySpendGrosze,
+  getEffectiveDailyBudgetGrosze,
   type AgentWorkItem,
 } from "@/lib/store";
 import { isBoardroomPersonaId } from "./personas";
@@ -32,7 +33,7 @@ export async function runAgentWorkItem(id: string, userId: string): Promise<RunW
   const cfg = await getResolvedAgentConfig(item.agentId);
   if (cfg.status !== "active") return { ok: false, error: `${cfg.name} is ${cfg.status}.` };
 
-  if ((await getDailyAiSpendGrosze()) >= getDailyBudgetGrosze()) {
+  if ((await getDailyAiSpendGrosze()) >= (await getEffectiveDailyBudgetGrosze())) {
     return { ok: false, error: "Daily AI budget exhausted." };
   }
   if (cfg.spend.dailyCapGrosze != null && (await getAgentDailySpendGrosze(cfg.id)) >= cfg.spend.dailyCapGrosze) {

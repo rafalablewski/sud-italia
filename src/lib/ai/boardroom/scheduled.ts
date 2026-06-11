@@ -1,5 +1,5 @@
 import { callGateway, gatewayConfigured, extractText } from "../gateway";
-import { estimateCallCostGrosze, getDailyBudgetGrosze } from "../cost";
+import { estimateCallCostGrosze } from "../cost";
 import { getDailyAiSpendGrosze } from "../conversations";
 import { computeBoardroomKpis } from "./kpis";
 import { buildLiveSystemPrompt } from "./agent-config";
@@ -7,6 +7,7 @@ import {
   getResolvedAgentConfigs,
   appendAgentEvent,
   getAgentDailySpendMap,
+  getEffectiveDailyBudgetGrosze,
 } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import type { ScheduleCadence } from "./agent-config";
@@ -38,7 +39,7 @@ export async function runScheduledAgents(cadence: "daily" | "weekly", userId: st
   );
   if (configs.length === 0) return out;
 
-  const budget = getDailyBudgetGrosze();
+  const budget = await getEffectiveDailyBudgetGrosze();
   const spendMap = await getAgentDailySpendMap();
 
   for (const cfg of configs) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
 import { gatewayConfigured } from "@/lib/ai/gateway";
 import { runBoardroomMeeting } from "@/lib/ai/boardroom/meeting";
+import { getAgentHqSettings } from "@/lib/store";
 
 /**
  * Boardroom daily briefing cron. Convenes the AI C-suite once a day on the
@@ -21,6 +22,13 @@ export async function POST(req: NextRequest) {
   if (!gatewayConfigured()) {
     logCronRun("boardroom-briefing", { skipped: "no-api-key" });
     return NextResponse.json({ ok: true, skipped: "ANTHROPIC_API_KEY not configured" });
+  }
+
+  // Operators can turn the auto-briefing off in Agent HQ → Settings.
+  const settings = await getAgentHqSettings();
+  if (!settings.autoBriefing) {
+    logCronRun("boardroom-briefing", { skipped: "auto-briefing-off" });
+    return NextResponse.json({ ok: true, skipped: "Auto-briefing disabled in Agent HQ settings" });
   }
 
   const result = await runBoardroomMeeting({ type: "daily", userId: "cron" });
