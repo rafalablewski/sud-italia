@@ -180,13 +180,24 @@ interface GeminiPart {
 }
 interface GeminiContent { role: "user" | "model"; parts: GeminiPart[] }
 
-/** Strip JSON-Schema fields Gemini's function-declaration schema rejects. */
+/**
+ * Strip JSON-Schema fields Gemini's function-declaration schema rejects, and
+ * normalise nullable union types. Gemini's schema validation doesn't accept an
+ * array `type` (e.g. `["string", "null"]` for optional fields) — it wants a
+ * single type plus `nullable: true`, so we rewrite those.
+ */
 function sanitizeSchema(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(sanitizeSchema);
   if (!schema || typeof schema !== "object") return schema;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
     if (k === "$schema" || k === "additionalProperties" || k === "default") continue;
+    if (k === "type" && Array.isArray(v)) {
+      const nonNull = v.filter((t) => t !== "null");
+      out.type = nonNull[0] ?? "string";
+      if (v.includes("null")) out.nullable = true;
+      continue;
+    }
     out[k] = sanitizeSchema(v);
   }
   return out;
@@ -263,10 +274,12 @@ async function callGemini(opts: GatewayCallOptions, model: AiModel): Promise<Gat
 
   const start = Date.now();
   const body: Record<string, unknown> = {
-    systemInstruction: { parts: [{ text: opts.system }] },
     contents: toGeminiContents(opts.messages),
     generationConfig: { maxOutputTokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS },
   };
+  if (opts.system) {
+    body.systemInstruction = { parts: [{ text: opts.system }] };
+  }
   if (opts.tools && opts.tools.length > 0) {
     body.tools = [
       {
@@ -295,9 +308,20 @@ async function callGemini(opts: GatewayCallOptions, model: AiModel): Promise<Gat
     const json = (await res.json()) as {
       candidates?: { content?: { parts?: GeminiPart[] }; finishReason?: string }[];
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+      promptFeedback?: { blockReason?: string };
     };
 
-    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    // Gemini can return 200 OK with no candidates when the prompt is blocked by
+    // a safety filter — surface that explicitly rather than returning a silent
+    // empty turn (which would look like a normal end_turn).
+    if (!json.candidates || json.candidates.length === 0) {
+      if (json.promptFeedback?.blockReason) {
+        throw new Error(`Gemini prompt blocked by safety filters: ${json.promptFeedback.blockReason}`);
+      }
+      throw new Error("Gemini API returned an empty response with no candidates.");
+    }
+
+    const parts = json.candidates[0]?.content?.parts ?? [];
     const content: Anthropic.ContentBlock[] = [];
     let toolIdx = 0;
     for (const part of parts) {

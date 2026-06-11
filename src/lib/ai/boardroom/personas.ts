@@ -313,7 +313,7 @@ export function getPersona(id: string | undefined | null): BoardroomPersona | nu
 }
 
 export function isBoardroomPersonaId(id: string | undefined | null): id is BoardroomPersonaId {
-  return !!id && id in BOARDROOM_PERSONAS;
+  return !!id && Object.prototype.hasOwnProperty.call(BOARDROOM_PERSONAS, id);
 }
 
 /**
