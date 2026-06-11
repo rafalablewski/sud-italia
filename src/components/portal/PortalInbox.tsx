@@ -488,16 +488,16 @@ export function PortalInbox() {
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}
         >
           <span>Daily routine</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, textTransform: "none", letterSpacing: 0 }}>
-            <span style={{ fontSize: "11px", fontWeight: 500, color: routineAllDone ? "var(--av3-ok)" : "var(--av3-subtle)" }}>
-              {routines.length > 0 ? `${routineDone}/${routines.length} today` : "resets daily"}
-            </span>
-            {routines.length > 0 && (
+          {routines.length > 0 && (
+            <span style={{ display: "flex", alignItems: "center", gap: 9, textTransform: "none", letterSpacing: 0 }}>
+              <span style={{ fontSize: "11px", fontWeight: 500, color: routineAllDone ? "var(--av3-ok)" : "var(--av3-subtle)" }}>
+                {routineDone}/{routines.length} today
+              </span>
               <span className="av3-todo-progress" style={{ width: 72 }} aria-hidden>
                 <i style={{ width: `${Math.round((routineDone / routines.length) * 100)}%` }} />
               </span>
-            )}
-          </span>
+            </span>
+          )}
         </div>
         <div className="av3-card av3-card-p">
           {/* Add a recurring item to your own routine (personal, only you see it). */}
