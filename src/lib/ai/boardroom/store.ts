@@ -140,6 +140,32 @@ export async function listMeetings(limit = 20): Promise<BoardroomMeeting[]> {
   }
 }
 
+/**
+ * Transition one meeting decision's status (proposed → approved / executed /
+ * dismissed). Powers the Agent HQ → Approvals queue so an actioned or
+ * dismissed item leaves the list. Returns the updated meeting (or null).
+ */
+export async function updateMeetingDecisionStatus(
+  meetingId: string,
+  index: number,
+  status: NonNullable<MeetingDecision["status"]>,
+): Promise<BoardroomMeeting | null> {
+  const meeting = await getMeeting(meetingId);
+  if (!meeting) return null;
+  if (index < 0 || index >= meeting.decisions.length) return meeting;
+  meeting.decisions[index] = { ...meeting.decisions[index], status };
+  if (dbReady()) {
+    const sql = neon(process.env.DATABASE_URL!);
+    await sql.query(`UPDATE boardroom_meetings SET decisions = $1::jsonb WHERE id = $2`, [
+      JSON.stringify(meeting.decisions),
+      meetingId,
+    ]);
+  } else {
+    mem.set(meetingId, meeting);
+  }
+  return meeting;
+}
+
 export async function getMeeting(id: string): Promise<BoardroomMeeting | null> {
   await ensureMeetingsTable();
   if (!dbReady()) return mem.get(id) ?? null;

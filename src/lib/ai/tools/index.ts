@@ -23,6 +23,7 @@ import "./marketing";
 import "./forecast";
 import "./update-item-price";
 import "./scheduled-bundles";
+import "./escalate";
 
 export {
   executeToolCall,

@@ -85,8 +85,13 @@ the same store functions.
 ## Extending it
 
 - **New agent or remit** → add a persona to `src/lib/ai/boardroom/personas.ts`
-  (system prompt + `toolNames` allowlist + accent), then add a tab in
-  `BoardroomV3.tsx`. The agent loop is already persona-aware.
+  (system prompt + `toolNames` allowlist + accent) and a seed in
+  `src/lib/ai/boardroom/agent-config.ts`. It shows up automatically in Agent HQ
+  (`src/admin-v3/AgentHQ.tsx`) and is editable via `AgentEditor.tsx`; the agent
+  loop is already persona-aware and runs on the generated live system prompt.
+- **Edit an existing agent** → no code change — open Agent HQ
+  (`/admin/agent-hq`), edit any field; the override persists and the runtime
+  picks up the regenerated live system prompt on the next turn.
 - **New tool** → drop a file in `src/lib/ai/tools/`, `registerTool(...)`, import it
   in `tools/index.ts`, and list its name in the relevant persona allowlist. Wrap a
   real store function — never hardcode data.

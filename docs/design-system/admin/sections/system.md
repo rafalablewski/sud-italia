@@ -246,7 +246,7 @@ user/role + chain-settings admin and cross-location surfaces; and (2)
 *owner-by-default* head-office surfaces a floor manager shouldn't see in their
 rail out of the box — **Finance** (Reports, Business costs, Calculator; Cash
 stays), **Growth & marketing** (Campaigns, Upsell, Cross-sell, Bundles, Events,
-Integrations), and **Governance & config** (Boardroom, Audit log, Capabilities,
+Integrations), and **Governance & config** (Agent HQ, Audit log, Capabilities,
 Payments, QR ordering, AI Insights/Ops Agent), and the **Comms board**
 (`comms.view` / `comms.manage` — assigning tasks + posting announcements; note
 that *receiving* your own tasks/announcements on the portal needs no

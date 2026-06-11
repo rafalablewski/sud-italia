@@ -24,6 +24,7 @@ interface ModelPricing {
 }
 
 const PRICING: Record<string, ModelPricing> = {
+  "claude-opus-4-8": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreate: 6.25 },
   "claude-opus-4-7": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreate: 6.25 },
   "claude-opus-4-6": { input: 5.0, output: 25.0, cacheRead: 0.5, cacheCreate: 6.25 },
   "claude-sonnet-4-6": { input: 3.0, output: 15.0, cacheRead: 0.3, cacheCreate: 3.75 },

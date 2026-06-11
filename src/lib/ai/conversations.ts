@@ -276,11 +276,14 @@ export async function getMessages(conversationId: string): Promise<AiMessageRow[
  * AI_DAILY_BUDGET_GROSZE in the agent route. Computed against
  * created_at >= start-of-today UTC.
  */
-export async function getDailyAiSpendGrosze(): Promise<number> {
+export async function getDailyAiSpendGrosze(sinceIso?: string): Promise<number> {
   await ensureAiTables();
-  const startOfDay = new Date();
-  startOfDay.setUTCHours(0, 0, 0, 0);
-  const startIso = startOfDay.toISOString();
+  let startIso = sinceIso;
+  if (!startIso) {
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    startIso = startOfDay.toISOString();
+  }
   if (!dbReady()) {
     let total = 0;
     for (const list of memMessages.values()) {

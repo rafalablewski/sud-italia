@@ -32,6 +32,17 @@ import {
   mergeSurveysWithDefaults,
 } from "@/lib/surveys";
 import { withDistributedLock } from "@/lib/locks";
+import {
+  ALL_BOARDROOM_PERSONA_IDS,
+  type BoardroomPersonaId,
+} from "@/lib/ai/boardroom/personas";
+import {
+  mergeAgentConfig,
+  type AgentConfig,
+  type AgentConfigPatch,
+} from "@/lib/ai/boardroom/agent-config";
+import { getDailyBudgetGrosze } from "@/lib/ai/cost";
+import { getDailyAiSpendGrosze } from "@/lib/ai/conversations";
 import { isSlotFull } from "@/lib/slot-capacity";
 import { emitOrderEvent } from "@/lib/order-events";
 import { appendOutboxEvent } from "@/lib/outbox";
@@ -8659,6 +8670,437 @@ export async function appendAuditLog(input: Omit<AuditLogEntry, "id" | "occurred
   // Normalized audit_log has no trim — keep forever.
   await dualWriteAuditEntry(entry);
   return entry;
+}
+
+// --- Agent HQ: editable agent configs + timeline -----------------------------
+//
+// Agent HQ turns the nine hardcoded Boardroom personas into EDITABLE agents.
+// The store keeps only the operator's overrides (a per-agent patch over the
+// seed defaults in src/lib/ai/boardroom/agent-config.ts) so an un-edited agent
+// always tracks the latest seed, and a saved override survives a seed change.
+// The runtime (agent loop + meetings) reads the resolved config and runs on the
+// generated LIVE SYSTEM PROMPT — edits take effect immediately (Rule #8).
+
+type AgentConfigOverrides = Record<string, AgentConfigPatch>;
+
+export async function getAgentConfigOverrides(): Promise<AgentConfigOverrides> {
+  return readJSON<AgentConfigOverrides>("agent-configs.json", {});
+}
+
+/** One agent, defaults ⊕ saved override, fully resolved. */
+export async function getResolvedAgentConfig(id: BoardroomPersonaId): Promise<AgentConfig> {
+  const overrides = await getAgentConfigOverrides();
+  return mergeAgentConfig(id, overrides[id]);
+}
+
+/** Every agent, resolved, in display order. */
+export async function getResolvedAgentConfigs(): Promise<AgentConfig[]> {
+  const overrides = await getAgentConfigOverrides();
+  return ALL_BOARDROOM_PERSONA_IDS.map((id) => mergeAgentConfig(id, overrides[id]));
+}
+
+/**
+ * Merge an editor patch into the agent's stored override and return the newly
+ * resolved config. Persists immediately (Rule #7) under a lock.
+ */
+export async function saveAgentConfigOverride(
+  id: BoardroomPersonaId,
+  patch: AgentConfigPatch,
+): Promise<AgentConfig> {
+  return withLock("agent-configs.json", async () => {
+    const all = await readJSON<AgentConfigOverrides>("agent-configs.json", {});
+    all[id] = { ...(all[id] ?? {}), ...patch };
+    await writeJSON("agent-configs.json", all);
+    return mergeAgentConfig(id, all[id]);
+  });
+}
+
+/** Drop an agent's override so it tracks the seed defaults again. */
+export async function clearAgentConfigOverride(id: BoardroomPersonaId): Promise<AgentConfig> {
+  return withLock("agent-configs.json", async () => {
+    const all = await readJSON<AgentConfigOverrides>("agent-configs.json", {});
+    delete all[id];
+    await writeJSON("agent-configs.json", all);
+    return mergeAgentConfig(id, undefined);
+  });
+}
+
+export type AgentEventType = "run" | "edit" | "escalation" | "approval" | "schedule" | "note";
+
+export interface AgentEvent {
+  id: string;
+  agentId: string;
+  type: AgentEventType;
+  /** One-line headline for the timeline. */
+  summary: string;
+  /** Optional longer body (a log excerpt, a diff note). */
+  detail?: string;
+  /** Spend attributed to this event, in grosze (run events). */
+  costGrosze?: number;
+  /** For run/schedule events: did the run succeed? Drives the success-rate KPI. */
+  ok?: boolean;
+  actor: string;
+  at: string;
+}
+
+const AGENT_EVENTS_MAX = 5000;
+
+export async function appendAgentEvent(
+  input: Omit<AgentEvent, "id" | "at"> & { at?: string },
+): Promise<AgentEvent> {
+  const event: AgentEvent = {
+    id: `ae-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    agentId: input.agentId,
+    type: input.type,
+    summary: input.summary,
+    detail: input.detail,
+    costGrosze: input.costGrosze,
+    ok: input.ok,
+    actor: input.actor,
+    at: input.at ?? new Date().toISOString(),
+  };
+  await withLock("agent-events.json", async () => {
+    const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+    list.push(event);
+    const trimmed = list.length > AGENT_EVENTS_MAX ? list.slice(list.length - AGENT_EVENTS_MAX) : list;
+    await writeJSON("agent-events.json", trimmed);
+  });
+  return event;
+}
+
+export async function listAgentEvents(opts?: { agentId?: string; limit?: number }): Promise<AgentEvent[]> {
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  const filtered = opts?.agentId ? list.filter((e) => e.agentId === opts.agentId) : list;
+  // Newest first.
+  const sorted = filtered.slice().sort((a, b) => b.at.localeCompare(a.at));
+  return typeof opts?.limit === "number" ? sorted.slice(0, opts.limit) : sorted;
+}
+
+/**
+ * Start-of-today and start-of-month as UTC instants, computed in the chain's
+ * timezone (Europe/Warsaw) — so "daily reset" for spend tracking + caps happens
+ * at Polish midnight regardless of the server's timezone (a UTC server would
+ * otherwise reset at 01:00/02:00 local). One offset read covers both.
+ */
+const CHAIN_TZ = "Europe/Warsaw";
+function chainPeriodStarts(): { dayIso: string; monthIso: string } {
+  const now = new Date();
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: CHAIN_TZ, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(now).map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  const y = +p.year, mo = +p.month, d = +p.day;
+  // Offset (ms) of Warsaw vs UTC at this instant, from the wall-clock parts.
+  const offset = Date.UTC(y, mo - 1, d, +p.hour, +p.minute, +p.second) - now.getTime();
+  return {
+    dayIso: new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) - offset).toISOString(),
+    monthIso: new Date(Date.UTC(y, mo - 1, 1, 0, 0, 0) - offset).toISOString(),
+  };
+}
+
+/** Sum of an agent's run-event spend since Warsaw midnight — drives per-agent caps. */
+export async function getAgentDailySpendGrosze(agentId: string): Promise<number> {
+  const map = await getAgentDailySpendMap();
+  return map[agentId] ?? 0;
+}
+
+/** Today's spend per agent in one read — for the overview/roster cards. */
+export async function getAgentDailySpendMap(): Promise<Record<string, number>> {
+  const sinceIso = chainPeriodStarts().dayIso;
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  const out: Record<string, number> = {};
+  for (const e of list) {
+    if (e.at >= sinceIso && typeof e.costGrosze === "number") {
+      out[e.agentId] = (out[e.agentId] ?? 0) + e.costGrosze;
+    }
+  }
+  return out;
+}
+
+export interface AgentFleetStats {
+  runsToday: number;
+  cost7dGrosze: number;
+  costMonthGrosze: number;
+  spendTodayByAgent: Record<string, number>;
+  /** % of runs in the last 7d that succeeded (null when there were none). */
+  successRate7d: number | null;
+  runs7d: number;
+  /** Per-agent run counts (7d) for the activity sparkbars. */
+  runsByDay7d: number[];
+}
+
+/**
+ * One pass over the agent timeline for every fleet metric the Agent HQ command
+ * center shows — so the page computes its KPIs from a single read and renders
+ * them together (no progressive pop-in).
+ */
+export async function getAgentFleetStats(): Promise<AgentFleetStats> {
+  const now = Date.now();
+  const starts = chainPeriodStarts();
+  const startToday = Date.parse(starts.dayIso);
+  const startMonth = Date.parse(starts.monthIso);
+  const weekAgo = now - 7 * 24 * 3600 * 1000;
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+
+  let runsToday = 0, cost7d = 0, costMonth = 0, runs7d = 0, ok7d = 0;
+  const spendToday: Record<string, number> = {};
+  const runsByDay7d = [0, 0, 0, 0, 0, 0, 0]; // index 0 = 6 calendar days ago … 6 = today
+  const isRun = (e: AgentEvent) => e.type === "run" || e.type === "schedule";
+
+  for (const e of list) {
+    const t = Date.parse(e.at);
+    const cost = typeof e.costGrosze === "number" ? e.costGrosze : 0;
+    if (t >= startMonth) costMonth += cost;
+    if (t >= weekAgo) {
+      cost7d += cost;
+      if (isRun(e)) {
+        runs7d += 1;
+        if (e.ok !== false) ok7d += 1;
+        // Bucket by Warsaw calendar day (index 6 = today, anchored on startToday).
+        const idx = t >= startToday ? 6 : 6 - Math.ceil((startToday - t) / (24 * 3600 * 1000));
+        if (idx >= 0 && idx < 7) runsByDay7d[idx] += 1;
+      }
+    }
+    if (t >= startToday) {
+      if (isRun(e)) runsToday += 1;
+      if (cost) spendToday[e.agentId] = (spendToday[e.agentId] ?? 0) + cost;
+    }
+  }
+
+  return {
+    runsToday,
+    cost7dGrosze: cost7d,
+    costMonthGrosze: costMonth,
+    spendTodayByAgent: spendToday,
+    successRate7d: runs7d > 0 ? Math.round((ok7d / runs7d) * 100) : null,
+    runs7d,
+    runsByDay7d,
+  };
+}
+
+// --- Agent HQ: operator-assigned work items ---------------------------------
+//
+// A work item is a task (title + prompt) the operator creates and assigns to an
+// agent by dragging it onto them. It flows queued → running → done/failed and
+// runs on the assigned agent's live config (see runAgentWorkItem).
+
+export type WorkStatus = "unassigned" | "queued" | "running" | "done" | "failed";
+
+export interface AgentWorkItem {
+  id: string;
+  title: string;
+  prompt: string;
+  /** Assigned agent id, or null while it sits in the backlog. */
+  agentId: string | null;
+  status: WorkStatus;
+  createdBy: string;
+  createdAt: string;
+  assignedAt?: string;
+  completedAt?: string;
+  costGrosze?: number;
+  /** Short result line once the run completes. */
+  resultSummary?: string;
+}
+
+const WORK_MAX = 300;
+
+export async function listWorkItems(): Promise<AgentWorkItem[]> {
+  const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+  return list.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createWorkItem(input: {
+  title: string; prompt: string; agentId?: string | null; createdBy: string;
+}): Promise<AgentWorkItem> {
+  return withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    const now = new Date().toISOString();
+    const item: AgentWorkItem = {
+      id: `wk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      title: input.title,
+      prompt: input.prompt,
+      agentId: input.agentId ?? null,
+      status: input.agentId ? "queued" : "unassigned",
+      createdBy: input.createdBy,
+      createdAt: now,
+      assignedAt: input.agentId ? now : undefined,
+    };
+    list.push(item);
+    const trimmed = list.length > WORK_MAX ? list.slice(list.length - WORK_MAX) : list;
+    await writeJSON("agent-work.json", trimmed);
+    return item;
+  });
+}
+
+export async function updateWorkItem(id: string, patch: Partial<AgentWorkItem>): Promise<AgentWorkItem | null> {
+  return withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    const i = list.findIndex((w) => w.id === id);
+    if (i < 0) return null;
+    const next = { ...list[i], ...patch, id: list[i].id };
+    // Assigning (agentId set while unassigned) flips it to queued.
+    if (patch.agentId && list[i].status === "unassigned" && !patch.status) {
+      next.status = "queued";
+      next.assignedAt = new Date().toISOString();
+    }
+    list[i] = next;
+    await writeJSON("agent-work.json", list);
+    return next;
+  });
+}
+
+export async function deleteWorkItem(id: string): Promise<void> {
+  await withLock("agent-work.json", async () => {
+    const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+    await writeJSON("agent-work.json", list.filter((w) => w.id !== id));
+  });
+}
+
+export async function getWorkItem(id: string): Promise<AgentWorkItem | null> {
+  const list = await readJSON<AgentWorkItem[]>("agent-work.json", []);
+  return list.find((w) => w.id === id) ?? null;
+}
+
+// --- Agent HQ: fleet-wide settings ------------------------------------------
+//
+// Global controls that apply to the whole agent fleet instead of being set per
+// agent: the daily AI spend ceiling and whether the daily briefing auto-runs.
+// (The active AI model is a separate platform-wide setting — ai-model.json —
+// since the gateway uses it everywhere, not just Agent HQ.)
+
+export interface AgentHqSettings {
+  /** Fleet-wide daily spend ceiling in grosze; null = use the env/default. */
+  dailyBudgetGrosze: number | null;
+  /** Whether the daily-briefing cron convenes the board automatically. */
+  autoBriefing: boolean;
+  /** HH:MM the briefing is expected to fire (display + cron alignment). */
+  briefingTime: string;
+}
+
+const AGENT_HQ_DEFAULTS: AgentHqSettings = { dailyBudgetGrosze: null, autoBriefing: true, briefingTime: "08:00" };
+
+export async function getAgentHqSettings(): Promise<AgentHqSettings> {
+  const saved = await readJSON<Partial<AgentHqSettings>>("agent-hq-settings.json", {});
+  return {
+    dailyBudgetGrosze:
+      saved.dailyBudgetGrosze === null || typeof saved.dailyBudgetGrosze === "number" ? saved.dailyBudgetGrosze ?? null : null,
+    autoBriefing: typeof saved.autoBriefing === "boolean" ? saved.autoBriefing : AGENT_HQ_DEFAULTS.autoBriefing,
+    briefingTime: typeof saved.briefingTime === "string" && saved.briefingTime ? saved.briefingTime : AGENT_HQ_DEFAULTS.briefingTime,
+  };
+}
+
+export async function updateAgentHqSettings(patch: Partial<AgentHqSettings>): Promise<AgentHqSettings> {
+  return withLock("agent-hq-settings.json", async () => {
+    const current = await getAgentHqSettings();
+    const next: AgentHqSettings = {
+      dailyBudgetGrosze:
+        patch.dailyBudgetGrosze === null || typeof patch.dailyBudgetGrosze === "number" ? patch.dailyBudgetGrosze : current.dailyBudgetGrosze,
+      autoBriefing: typeof patch.autoBriefing === "boolean" ? patch.autoBriefing : current.autoBriefing,
+      briefingTime: typeof patch.briefingTime === "string" && patch.briefingTime ? patch.briefingTime : current.briefingTime,
+    };
+    await writeJSON("agent-hq-settings.json", next);
+    return next;
+  });
+}
+
+/** The daily budget the runtime enforces: the saved override, else env/default. */
+export async function getEffectiveDailyBudgetGrosze(): Promise<number> {
+  const settings = await getAgentHqSettings();
+  return settings.dailyBudgetGrosze ?? getDailyBudgetGrosze();
+}
+
+/**
+ * Today's TOTAL AI spend — the single source of truth for the daily-budget gate
+ * and the Settings spend bar. Sums two ledgers without double-counting:
+ *  - ai_messages (chat: the Ops Agent + persona chats) since Warsaw midnight, and
+ *  - agent-events run/schedule rows for meetings / scheduled runs / work, which
+ *    bypass ai_messages (their actors are meeting:/schedule:/work:; persona chat
+ *    events use actor claude: and are already in ai_messages, so are skipped).
+ */
+export async function getTodayAiSpendGrosze(): Promise<number> {
+  const sinceIso = chainPeriodStarts().dayIso;
+  const [chatGrosze, events] = await Promise.all([
+    getDailyAiSpendGrosze(sinceIso),
+    readJSON<AgentEvent[]>("agent-events.json", []),
+  ]);
+  let offLedger = 0;
+  for (const e of events) {
+    if (e.at < sinceIso || typeof e.costGrosze !== "number") continue;
+    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
+      offLedger += e.costGrosze;
+    }
+  }
+  return chatGrosze + offLedger;
+}
+
+// --- Agent HQ: per-agent scorecard stats + KPI actuals ----------------------
+
+export interface AgentScorecard {
+  runs7d: number;
+  cost7dGrosze: number;
+  successRate7d: number | null;
+  lastRunAt: string | null;
+}
+
+/** Per-agent run/cost/last-run/success over 7d, in one pass over the timeline. */
+export async function getAgentScorecardStats(): Promise<Record<string, AgentScorecard>> {
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  const acc: Record<string, { runs: number; ok: number; cost: number; last: string | null }> = {};
+  const isRun = (e: AgentEvent) => e.type === "run" || e.type === "schedule";
+  for (const e of list) {
+    const a = (acc[e.agentId] ??= { runs: 0, ok: 0, cost: 0, last: null });
+    if (isRun(e)) { if (!a.last || e.at > a.last) a.last = e.at; }
+    if (Date.parse(e.at) >= weekAgo) {
+      if (typeof e.costGrosze === "number") a.cost += e.costGrosze;
+      if (isRun(e)) { a.runs += 1; if (e.ok !== false) a.ok += 1; }
+    }
+  }
+  const out: Record<string, AgentScorecard> = {};
+  for (const [id, a] of Object.entries(acc)) {
+    out[id] = { runs7d: a.runs, cost7dGrosze: a.cost, lastRunAt: a.last, successRate7d: a.runs > 0 ? Math.round((a.ok / a.runs) * 100) : null };
+  }
+  return out;
+}
+
+export interface AgentKpiActual {
+  id: string;
+  agentId: string;
+  /** The KPI/target text this actual is logged against. */
+  kpi: string;
+  value: string;
+  at: string;
+  by: string;
+}
+
+const KPI_ACTUALS_MAX = 1000;
+
+export async function logKpiActual(input: { agentId: string; kpi: string; value: string; by: string }): Promise<AgentKpiActual> {
+  const row: AgentKpiActual = {
+    id: `ka-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    agentId: input.agentId, kpi: input.kpi, value: input.value, by: input.by, at: new Date().toISOString(),
+  };
+  await withLock("agent-kpi-actuals.json", async () => {
+    const list = await readJSON<AgentKpiActual[]>("agent-kpi-actuals.json", []);
+    list.push(row);
+    const trimmed = list.length > KPI_ACTUALS_MAX ? list.slice(list.length - KPI_ACTUALS_MAX) : list;
+    await writeJSON("agent-kpi-actuals.json", trimmed);
+  });
+  return row;
+}
+
+/** Latest actual per (agentId, kpi) — agentId → kpi text → {value, at, by}. */
+export async function getLatestKpiActuals(): Promise<Record<string, Record<string, { value: string; at: string; by: string }>>> {
+  const list = await readJSON<AgentKpiActual[]>("agent-kpi-actuals.json", []);
+  const out: Record<string, Record<string, { value: string; at: string; by: string }>> = {};
+  for (const r of list) {
+    const byKpi = (out[r.agentId] ??= {});
+    const prev = byKpi[r.kpi];
+    if (!prev || r.at > prev.at) byKpi[r.kpi] = { value: r.value, at: r.at, by: r.by };
+  }
+  return out;
 }
 
 // --- Compliance calendar -----------------------------------------------------

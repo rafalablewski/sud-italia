@@ -48,7 +48,7 @@ export interface BoardroomPersona {
   toolNames: string[];
 }
 
-const SHARED_GUARDRAILS = `
+export const SHARED_GUARDRAILS = `
 Shared rules (all agents):
 - Money is in Polish grosze: 1 PLN = 100 grosze. Always show values to operators as PLN (e.g. "1 250.00 PLN").
 - Honour the operator's location scope. If a tool returns "not authorized", explain — do not retry.
@@ -58,7 +58,7 @@ Shared rules (all agents):
 - NEVER invent numbers. Pull them from your tools. If a tool returns nothing, say so.
 - Be concrete and decision-oriented: lead with the number, name the lever, recommend the action.`;
 
-const RESTAURANT_BENCHMARKS = `
+export const RESTAURANT_BENCHMARKS = `
 Industry benchmarks to anchor every judgement:
 - Food cost (COGS) %: 28–32% of revenue is healthy; >35% is a red flag.
 - Labour cost %: 25–30% of revenue is healthy; >35% is a red flag.
@@ -280,6 +280,15 @@ When asked: name the specific risk, rate its severity and likelihood, and prescr
 ${SHARED_GUARDRAILS}`,
   },
 };
+
+// Every agent can raise a flag to the human admin — escalate_to_admin is a
+// non-mutating, read-only-safe lever, so it belongs in every persona's
+// allowlist by default (still editable per agent in Agent HQ).
+for (const persona of Object.values(BOARDROOM_PERSONAS)) {
+  if (!persona.toolNames.includes("escalate_to_admin")) {
+    persona.toolNames.push("escalate_to_admin");
+  }
+}
 
 /**
  * The round-robin MEETING roster — the four C-suite executives who map to the

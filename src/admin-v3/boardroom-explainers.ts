@@ -5,7 +5,7 @@ import type { ExplainerProps } from "./ui";
  * Each entry supplies all five required parts — description, INSTITUTIONAL
  * ANALYSIS, IN PLAIN TERMS, TIPS, METHODOLOGY — rendered in the fixed
  * order by MetricExplainer/InfoButton. Keyed by the KPI id returned from
- * /api/admin/ai/boardroom/overview.
+ * /api/admin/ai/boardroom/command.
  */
 export const KPI_EXPLAINERS: Record<string, ExplainerProps> = {
   "today-revenue": {

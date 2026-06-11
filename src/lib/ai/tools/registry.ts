@@ -27,6 +27,8 @@ export interface ToolCallActor {
 export interface ToolExecutionContext {
   actor: ToolCallActor;
   dryRun: boolean;
+  /** The Agent HQ agent making the call, when invoked from a persona loop. */
+  agentId?: string;
 }
 
 export interface ToolExecutionResult {
