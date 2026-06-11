@@ -8713,6 +8713,16 @@ export async function saveAgentConfigOverride(
   });
 }
 
+/** Drop an agent's override so it tracks the seed defaults again. */
+export async function clearAgentConfigOverride(id: BoardroomPersonaId): Promise<AgentConfig> {
+  return withLock("agent-configs.json", async () => {
+    const all = await readJSON<AgentConfigOverrides>("agent-configs.json", {});
+    delete all[id];
+    await writeJSON("agent-configs.json", all);
+    return mergeAgentConfig(id, undefined);
+  });
+}
+
 export type AgentEventType = "run" | "edit" | "escalation" | "approval" | "schedule" | "note";
 
 export interface AgentEvent {
@@ -8763,13 +8773,23 @@ export async function listAgentEvents(opts?: { agentId?: string; limit?: number 
 
 /** Sum of an agent's run-event spend since local midnight — drives per-agent caps. */
 export async function getAgentDailySpendGrosze(agentId: string): Promise<number> {
+  const map = await getAgentDailySpendMap();
+  return map[agentId] ?? 0;
+}
+
+/** Today's spend per agent in one read — for the overview/roster cards. */
+export async function getAgentDailySpendMap(): Promise<Record<string, number>> {
   const since = new Date();
   since.setHours(0, 0, 0, 0);
   const sinceIso = since.toISOString();
   const list = await readJSON<AgentEvent[]>("agent-events.json", []);
-  return list
-    .filter((e) => e.agentId === agentId && e.at >= sinceIso && typeof e.costGrosze === "number")
-    .reduce((sum, e) => sum + (e.costGrosze ?? 0), 0);
+  const out: Record<string, number> = {};
+  for (const e of list) {
+    if (e.at >= sinceIso && typeof e.costGrosze === "number") {
+      out[e.agentId] = (out[e.agentId] ?? 0) + e.costGrosze;
+    }
+  }
+  return out;
 }
 
 // --- Compliance calendar -----------------------------------------------------

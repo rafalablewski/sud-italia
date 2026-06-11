@@ -281,6 +281,15 @@ ${SHARED_GUARDRAILS}`,
   },
 };
 
+// Every agent can raise a flag to the human admin — escalate_to_admin is a
+// non-mutating, read-only-safe lever, so it belongs in every persona's
+// allowlist by default (still editable per agent in Agent HQ).
+for (const persona of Object.values(BOARDROOM_PERSONAS)) {
+  if (!persona.toolNames.includes("escalate_to_admin")) {
+    persona.toolNames.push("escalate_to_admin");
+  }
+}
+
 /**
  * The round-robin MEETING roster — the four C-suite executives who map to the
  * P&L KPIs and converge a meeting into decisions. The specialist advisors are

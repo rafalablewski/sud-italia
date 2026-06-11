@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import { computeBoardroomKpis } from "@/lib/ai/boardroom/kpis";
 import { gatewayConfigured } from "@/lib/ai/gateway";
-import { getResolvedAgentConfigs } from "@/lib/store";
+import { getResolvedAgentConfigs, getAgentDailySpendMap } from "@/lib/store";
 import { BOARDROOM_PERSONA_ORDER } from "@/lib/ai/boardroom/personas";
 
 /**
@@ -18,9 +18,10 @@ const KPI_OWNERS = new Set<string>(BOARDROOM_PERSONA_ORDER);
 export const GET = withAdmin(
   { roles: ["manager"], locationParam: "location" },
   async (_req, _ctx, { locationSlug }) => {
-    const [snapshot, configs] = await Promise.all([
+    const [snapshot, configs, spendMap] = await Promise.all([
       computeBoardroomKpis(locationSlug ?? undefined),
       getResolvedAgentConfigs(),
+      getAgentDailySpendMap(),
     ]);
 
     const agents = configs.map((cfg) => {
@@ -54,6 +55,8 @@ export const GET = withAdmin(
         authority: cfg.authority,
         modelId: cfg.modelId,
         reportsTo: cfg.reportsTo,
+        spentTodayGrosze: spendMap[cfg.id] ?? 0,
+        dailyCapGrosze: cfg.spend.dailyCapGrosze,
         concerns,
         status,
         statusText,

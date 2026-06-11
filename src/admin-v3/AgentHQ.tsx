@@ -72,6 +72,8 @@ interface AgentStatusRow {
   authority: string;
   modelId: string | null;
   reportsTo: string | null;
+  spentTodayGrosze?: number;
+  dailyCapGrosze?: number | null;
   concerns: number;
   status: KpiStatus;
   statusText: string;
@@ -241,7 +243,6 @@ export function AgentHQ() {
 
   const gatewayConfigured = overview?.gatewayConfigured ?? false;
   const snapshot = overview?.snapshot ?? null;
-  const statusRows = overview?.agents ?? [];
 
   const configById = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
   const statusById = useMemo(() => new Map<string, AgentStatusRow>((overview?.agents ?? []).map((a) => [a.id, a])), [overview]);
@@ -379,6 +380,11 @@ function AgentRosterCard({ cfg, row, onEdit, onChat }: {
         {reportsToName && <Badge tone="neutral">↳ {reportsToName}</Badge>}
       </div>
       {row && <div style={{ fontSize: 11.5, color: "var(--av3-subtle)" }}>{row.statusText}</div>}
+      {row && (row.spentTodayGrosze ?? 0) >= 0 && (
+        <div style={{ fontSize: 11, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)" }}>
+          Today · {((row.spentTodayGrosze ?? 0) / 100).toFixed(2)} zł{cfg.spend.dailyCapGrosze != null ? ` / ${(cfg.spend.dailyCapGrosze / 100).toFixed(2)} cap` : ""}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
         <Button variant="secondary" size="sm" onClick={() => onEdit(cfg.id)}><Pencil className="av3-btn-ico" /> Edit</Button>
         <Button variant="ghost" size="sm" onClick={() => onChat(cfg.id)}><Send className="av3-btn-ico" /> Chat</Button>
@@ -415,6 +421,9 @@ function CommandCenter({ snapshot, configs, statusById, gatewayConfigured, onEdi
         ))}
       </div>
 
+      <SecLabel>Org &amp; reporting</SecLabel>
+      <Card><CardBody><OrgChart configs={configs} onEdit={onEdit} /></CardBody></Card>
+
       <SecLabel>What needs attention</SecLabel>
       <Card>
         {!snapshot || snapshot.flags.length === 0 ? (
@@ -444,6 +453,29 @@ function CommandCenter({ snapshot, configs, statusById, gatewayConfigured, onEdi
       <Card><CardBody><RunMeetingButtons gatewayConfigured={gatewayConfigured} onRan={onRan} compact /></CardBody></Card>
     </>
   );
+}
+
+function OrgChart({ configs, onEdit }: { configs: AgentConfig[]; onEdit: (id: string) => void }) {
+  const childrenOf = (id: string | null) => configs.filter((c) => c.reportsTo === id);
+  const row = (c: AgentConfig, depth: number) => (
+    <div key={c.id}>
+      <button
+        type="button"
+        className="av3-conv-row"
+        style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 10px", marginLeft: depth * 22, width: `calc(100% - ${depth * 22}px)` }}
+        onClick={() => onEdit(c.id)}
+      >
+        {depth > 0 && <span style={{ color: "var(--av3-subtle)", marginRight: 2 }}>↳</span>}
+        <Monogram initials={c.initials} accentVar={c.accentVar} size={24} />
+        <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "left" }}>{c.name}</span>
+        <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{c.title.split("—")[0].trim()}</span>
+        <StatusBadge s={c.status} />
+      </button>
+      {childrenOf(c.id).map((kid) => row(kid, depth + 1))}
+    </div>
+  );
+  const roots = childrenOf(null);
+  return <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{roots.map((r) => row(r, 0))}</div>;
 }
 
 /* ============================== Scorecards ============================= */
@@ -577,13 +609,27 @@ function ApprovalsSection({ configById, onAction }: {
   onAction: (a: ApprovalRow) => void;
 }) {
   const [approvals, setApprovals] = useState<ApprovalRow[] | null>(null);
-  useEffect(() => {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(() => {
     fetch("/api/admin/ai/boardroom/approvals").then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setApprovals(res?.approvals ?? []));
   }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const setStatus = useCallback(async (a: ApprovalRow, status: "executed" | "dismissed") => {
+    const key = `${a.meetingId}-${a.index}`;
+    setBusy(key);
+    await fetch("/api/admin/ai/boardroom/approvals", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meetingId: a.meetingId, index: a.index, status, owner: a.owner }),
+    }).catch(() => null);
+    setBusy(null);
+    load();
+  }, [load]);
 
   return (
     <Card>
-      <CardHead title="Pending approvals" description="Gated actions agents proposed — action each via the owning agent, where the preview → approve → execute → audit gate runs." />
+      <CardHead title="Pending approvals" description="Gated actions agents proposed — Action runs it via the owning agent (preview → approve → execute → audit); mark it executed or dismiss it to clear the queue." />
       <CardBody>
         {approvals === null ? (
           <SkeletonRows rows={4} />
@@ -596,8 +642,9 @@ function ApprovalsSection({ configById, onAction }: {
         ) : (
           approvals.map((a, i) => {
             const owner = configById.get(a.owner);
+            const key = `${a.meetingId}-${a.index}`;
             return (
-              <div key={`${a.meetingId}-${a.index}`} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < approvals.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+              <div key={key} style={{ display: "flex", gap: 11, padding: "12px 0", borderBottom: i < approvals.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
                 {owner && <Monogram initials={owner.initials} accentVar={owner.accentVar} size={28} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{a.title}</div>
@@ -606,7 +653,11 @@ function ApprovalsSection({ configById, onAction }: {
                     {a.proposedTool} · {owner?.name ?? a.owner} · {new Date(a.createdAt).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
                   </div>
                 </div>
-                <Button variant="primary" size="sm" onClick={() => onAction(a)}>Action <ChevronRight className="av3-btn-ico" /></Button>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <Button variant="primary" size="sm" onClick={() => onAction(a)}>Action <ChevronRight className="av3-btn-ico" /></Button>
+                  <Button variant="secondary" size="sm" loading={busy === key} onClick={() => setStatus(a, "executed")}>Mark done</Button>
+                  <Button variant="ghost" size="sm" disabled={busy === key} onClick={() => setStatus(a, "dismissed")}>Dismiss</Button>
+                </div>
               </div>
             );
           })
@@ -630,8 +681,36 @@ function InboxSection({ configs, gatewayConfigured, selectedId, onSelect, seed, 
   // "team" = the generalist board assistant (no persona). Default to first agent.
   const effectiveId = selectedId ?? configs[0]?.id ?? null;
   const selected = effectiveId === "team" ? null : configs.find((c) => c.id === effectiveId) ?? null;
+  const nameById = useMemo(() => new Map<string, AgentConfig>(configs.map((c) => [c.id, c])), [configs]);
+
+  const [escalations, setEscalations] = useState<AgentEvent[]>([]);
+  useEffect(() => {
+    fetch("/api/admin/ai/boardroom/timeline").then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((res) => setEscalations(((res?.events ?? []) as AgentEvent[]).filter((e) => e.type === "escalation").slice(0, 6)));
+  }, []);
 
   return (
+    <>
+      {escalations.length > 0 && (
+        <Card style={{ marginBottom: 12 }}>
+          <CardHead title={`${escalations.length} escalation${escalations.length > 1 ? "s" : ""} from your agents`} description="An agent hit its escalation threshold and is asking for you." />
+          <CardBody>
+            {escalations.map((e, i) => {
+              const a = nameById.get(e.agentId);
+              return (
+                <div key={e.id} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < escalations.length - 1 ? "1px solid var(--av3-line)" : "none", alignItems: "flex-start" }}>
+                  <AlertTriangle style={{ width: 16, height: 16, color: "var(--av3-warn)", flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5 }}><strong>{a?.name ?? e.agentId}</strong> — {e.summary}</div>
+                    <div style={{ fontSize: 11, color: "var(--av3-subtle)", marginTop: 2, fontFamily: "var(--av3-mono)" }}>{e.detail} · {new Date(e.at).toLocaleString("pl-PL")}</div>
+                  </div>
+                  {a && <Button variant="ghost" size="sm" onClick={() => onSelect(a.id)}>Open <ChevronRight className="av3-btn-ico" /></Button>}
+                </div>
+              );
+            })}
+          </CardBody>
+        </Card>
+      )}
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 240px) 1fr", gap: 12, alignItems: "start" }}>
       <Card>
         <CardBody style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -667,6 +746,7 @@ function InboxSection({ configs, gatewayConfigured, selectedId, onSelect, seed, 
         />
       </div>
     </div>
+    </>
   );
 }
 

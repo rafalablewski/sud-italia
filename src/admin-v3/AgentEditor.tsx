@@ -120,6 +120,14 @@ export function AgentEditor({ agentId, configs, toolCatalog, onClose, onSaved }:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<AgentEvent[] | null>(null);
+  const [catalog, setCatalog] = useState<{ name: string; mutates: boolean; minRole: string; description: string }[] | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // Full tool registry the operator's role can grant (not just current allowlist).
+  useEffect(() => {
+    fetch("/api/admin/ai/boardroom/tools").then((r) => (r.ok ? r.json() : null)).catch(() => null).then((res) => setCatalog(res?.tools ?? null));
+  }, []);
 
   // Refresh canonical config from the server on open (override may be newer).
   useEffect(() => {
@@ -170,9 +178,25 @@ export function AgentEditor({ agentId, configs, toolCatalog, onClose, onSaved }:
     }
   }, [form, agentId, onSaved, onClose]);
 
+  const reset = useCallback(async () => {
+    setResetting(true); setError(null);
+    try {
+      const res = await fetch(`/api/admin/ai/boardroom/agents/${agentId}`, { method: "DELETE" });
+      if (!res.ok) { setError(`Reset failed (${res.status})`); return; }
+      const j = (await res.json()) as { agent: AgentConfig };
+      onSaved(j.agent);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reset failed.");
+    } finally {
+      setResetting(false);
+    }
+  }, [agentId, onSaved, onClose]);
+
   if (!form) return null;
 
   const otherAgents = configs.filter((c) => c.id !== agentId);
+  const toolOptions = catalog ?? toolCatalog.map((name) => ({ name, mutates: false, minRole: "manager", description: "" }));
   const reportsToOptions = [{ value: "", label: "— Top of org (no manager)" }, ...otherAgents.map((c) => ({ value: c.id, label: c.title }))];
   const modelOptions = [{ value: "", label: "Inherit global model" }, ...AI_MODELS.map((m) => ({ value: m.id, label: m.label }))];
 
@@ -185,8 +209,14 @@ export function AgentEditor({ agentId, configs, toolCatalog, onClose, onSaved }:
       subtitle={form.title}
       headerExtra={<Badge tone={form.status === "active" ? "ok" : form.status === "paused" ? "warn" : "neutral"}>{form.status}</Badge>}
       footer={
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%", alignItems: "center" }}>
-          {error && <span className="av3-chat-error" style={{ marginRight: "auto" }}>{error}</span>}
+        <div style={{ display: "flex", gap: 8, width: "100%", alignItems: "center" }}>
+          {confirmReset ? (
+            <Button variant="danger" size="sm" loading={resetting} onClick={reset}>Confirm reset</Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setConfirmReset(true)}>Reset to defaults</Button>
+          )}
+          {error && <span className="av3-chat-error">{error}</span>}
+          <span style={{ marginLeft: "auto" }} />
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="primary" loading={saving} onClick={save}>Save agent</Button>
         </div>
@@ -251,8 +281,23 @@ export function AgentEditor({ agentId, configs, toolCatalog, onClose, onSaved }:
           </Field>
 
           <SectionTitle>Tools</SectionTitle>
-          <Field label="Tool allowlist" hint="Intersected with the operator's role gate + authority at runtime. Observer authority strips mutating tools.">
-            <ChipToggle options={toolCatalog.map((t) => ({ value: t, label: t }))} selected={form.toolNames} onChange={(v) => patch("toolNames", v)} />
+          <Field label="Tool allowlist" hint="The full registry your role can grant. Intersected with the role gate + authority at runtime — observer authority strips ·writes (mutating) tools. Hover for what each does.">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {toolOptions.map((t) => {
+                const on = form.toolNames.includes(t.name);
+                return (
+                  <button
+                    key={t.name}
+                    type="button"
+                    title={t.description || undefined}
+                    className={`av3-fchip ${on ? "is-active" : ""}`}
+                    onClick={() => patch("toolNames", on ? form.toolNames.filter((x) => x !== t.name) : [...form.toolNames, t.name])}
+                  >
+                    {t.name}{t.mutates ? <span style={{ color: "var(--av3-warn)", marginLeft: 4, fontSize: 10 }}>·writes</span> : null}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
 
           <SectionTitle>Spend controls</SectionTitle>

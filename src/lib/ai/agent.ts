@@ -242,7 +242,7 @@ export async function runAgentTurn(input: AgentTurnInput): Promise<AgentTurnEven
       const def = getTool(tu.name);
       const dryRun = def?.mutates ? !isApproved : false;
 
-      const result = await executeToolCall(tu.name, tu.input, { actor: input.actor, dryRun });
+      const result = await executeToolCall(tu.name, tu.input, { actor: input.actor, dryRun, agentId: agent?.id });
 
       events.push({
         type: "tool_use",

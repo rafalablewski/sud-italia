@@ -509,11 +509,22 @@ auth canvas's signature lighting and the sign-in lockup:
   `src/lib/ai/boardroom/agent-config.ts` — exactly what the agent runs on — and a
   **Timeline** tab shows the agent's run/edit history. Config = seed defaults ⊕
   operator override (`agent-configs.json`); edits drive the runtime (the agent
-  loop + meetings read the resolved config: generated prompt, tools ∩ role ∩
-  authority, model, effort, spend caps, status). API: `…/agents` (GET roster),
-  `…/agents/[id]` (GET + PATCH), `…/agents/[id]/timeline`, `…/overview` (KPIs +
-  live status), `…/approvals`, `…/timeline`, `…/meeting` (run daily/weekly, also
-  the `/api/admin/cron/boardroom-briefing` cron). **Chat** reuses the Ops Agent
+  loop + meetings + scheduled runs read the resolved config: generated prompt,
+  tools ∩ role ∩ authority, model, effort, spend caps, status). The editor's tool
+  picker lists the full role-gated registry (`…/tools`) with `·writes` badges on
+  mutating tools; **Reset to defaults** (DELETE on the agent) drops the override;
+  a PATCH writes a before/after audit row. Every agent carries an
+  `escalate_to_admin` tool (non-mutating, observer-safe) that lands an item in the
+  **Inbox** escalations panel + the agent timeline. **Approvals** transitions
+  decision status (Action / Mark done / Dismiss) via `POST …/approvals` so an
+  actioned/dismissed item leaves the queue. **Command center** shows an org chart
+  (from `reportsTo`) + today's spend vs cap per agent. API: `…/agents` (GET
+  roster), `…/agents/[id]` (GET + PATCH + DELETE), `…/agents/[id]/timeline`,
+  `…/tools`, `…/overview` (KPIs + live status + spend), `…/approvals` (GET +
+  POST), `…/timeline`, `…/meeting` (run daily/weekly). Two crons:
+  `/api/admin/cron/boardroom-briefing` (whole board) and
+  `/api/admin/cron/agent-runs?cadence=daily|weekly` (per-agent self-reviews,
+  `src/lib/ai/boardroom/scheduled.ts`). **Chat** reuses the Ops Agent
   endpoints (`/api/admin/ai-agent/*`) with a `personaId` body field; each thread
   persists per agent (`…/conversations/latest?persona=`, `HistoryView` flattening
   stored Anthropic blocks). Same human-in-the-loop tool-approval card flow + CSS
