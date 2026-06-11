@@ -7,10 +7,9 @@ import { KPI_EXPLAINERS } from "../boardroom-explainers";
 import { resolveModel } from "@/lib/ai/models";
 
 /**
- * Shared Agent HQ primitives — used by both the command/section page
- * (AgentHQ.tsx) and the dedicated per-agent page (AgentPanel.tsx) so the chat,
- * KPI tiles and agent identity render identically and from one source.
- * Everything is built on the real av3-* design-system classes.
+ * Shared Agent HQ primitives — the chat, KPI tiles and agent identity used
+ * across the Agent HQ sections, from one source, built on the real av3-*
+ * design-system classes.
  */
 
 export type KpiStatus = "green" | "yellow" | "red" | "neutral";

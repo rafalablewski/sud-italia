@@ -8986,6 +8986,74 @@ export async function getEffectiveDailyBudgetGrosze(): Promise<number> {
   return settings.dailyBudgetGrosze ?? getDailyBudgetGrosze();
 }
 
+// --- Agent HQ: per-agent scorecard stats + KPI actuals ----------------------
+
+export interface AgentScorecard {
+  runs7d: number;
+  cost7dGrosze: number;
+  successRate7d: number | null;
+  lastRunAt: string | null;
+}
+
+/** Per-agent run/cost/last-run/success over 7d, in one pass over the timeline. */
+export async function getAgentScorecardStats(): Promise<Record<string, AgentScorecard>> {
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const list = await readJSON<AgentEvent[]>("agent-events.json", []);
+  const acc: Record<string, { runs: number; ok: number; cost: number; last: string | null }> = {};
+  const isRun = (e: AgentEvent) => e.type === "run" || e.type === "schedule";
+  for (const e of list) {
+    const a = (acc[e.agentId] ??= { runs: 0, ok: 0, cost: 0, last: null });
+    if (isRun(e)) { if (!a.last || e.at > a.last) a.last = e.at; }
+    if (Date.parse(e.at) >= weekAgo) {
+      if (typeof e.costGrosze === "number") a.cost += e.costGrosze;
+      if (isRun(e)) { a.runs += 1; if (e.ok !== false) a.ok += 1; }
+    }
+  }
+  const out: Record<string, AgentScorecard> = {};
+  for (const [id, a] of Object.entries(acc)) {
+    out[id] = { runs7d: a.runs, cost7dGrosze: a.cost, lastRunAt: a.last, successRate7d: a.runs > 0 ? Math.round((a.ok / a.runs) * 100) : null };
+  }
+  return out;
+}
+
+export interface AgentKpiActual {
+  id: string;
+  agentId: string;
+  /** The KPI/target text this actual is logged against. */
+  kpi: string;
+  value: string;
+  at: string;
+  by: string;
+}
+
+const KPI_ACTUALS_MAX = 1000;
+
+export async function logKpiActual(input: { agentId: string; kpi: string; value: string; by: string }): Promise<AgentKpiActual> {
+  const row: AgentKpiActual = {
+    id: `ka-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    agentId: input.agentId, kpi: input.kpi, value: input.value, by: input.by, at: new Date().toISOString(),
+  };
+  await withLock("agent-kpi-actuals.json", async () => {
+    const list = await readJSON<AgentKpiActual[]>("agent-kpi-actuals.json", []);
+    list.push(row);
+    const trimmed = list.length > KPI_ACTUALS_MAX ? list.slice(list.length - KPI_ACTUALS_MAX) : list;
+    await writeJSON("agent-kpi-actuals.json", trimmed);
+  });
+  return row;
+}
+
+/** Latest actual per (agentId, kpi) — agentId → kpi text → {value, at, by}. */
+export async function getLatestKpiActuals(): Promise<Record<string, Record<string, { value: string; at: string; by: string }>>> {
+  const list = await readJSON<AgentKpiActual[]>("agent-kpi-actuals.json", []);
+  const out: Record<string, Record<string, { value: string; at: string; by: string }>> = {};
+  for (const r of list) {
+    const byKpi = (out[r.agentId] ??= {});
+    const prev = byKpi[r.kpi];
+    if (!prev || r.at > prev.at) byKpi[r.kpi] = { value: r.value, at: r.at, by: r.by };
+  }
+  return out;
+}
+
 // --- Compliance calendar -----------------------------------------------------
 
 export async function getComplianceItems(locationSlug?: string): Promise<ComplianceItem[]> {

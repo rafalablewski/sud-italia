@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  AlertTriangle, ArrowRight, Bot, Check, ChevronRight, FileDown,
+  AlertTriangle, Bot, Check, ChevronRight, FileDown,
   LineChart, Play, Plus, Printer, RefreshCw, Sparkles, Trash2, Users,
 } from "lucide-react";
 import { getActiveLocations } from "@/data/locations";
@@ -15,7 +14,7 @@ import {
   type BoardKpi, type KpiStatus,
 } from "./agent-hq/shared";
 import { AgentEditForm } from "./agent-hq/AgentEditForm";
-import { CADENCE_OPTIONS, type AgentConfig } from "@/lib/ai/boardroom/agent-config";
+import { type AgentConfig } from "@/lib/ai/boardroom/agent-config";
 
 /**
  * Agent HQ — the operator console for the AI agent fleet. Six sections:
@@ -29,7 +28,8 @@ import { CADENCE_OPTIONS, type AgentConfig } from "@/lib/ai/boardroom/agent-conf
  *   • Inbox — escalations + chat any agent.
  *   • Reports — meeting transcripts + decisions, exportable to CSV / PDF.
  *
- * Individual agents live on their own pages (/admin/agent-hq/[id]).
+ * Agents are edited in the Agents section (left list · right full editor);
+ * their metrics + KPI target-vs-actual live in Scorecards.
  */
 
 interface Snapshot { scope: string; kpis: BoardKpi[]; flags: string[] }
@@ -61,9 +61,10 @@ interface CommandPayload {
   dailyDigest: DailyDigest | null;
 }
 
-type SectionId = "command" | "scorecards" | "work" | "approvals" | "inbox" | "reports" | "settings";
+type SectionId = "command" | "agents" | "scorecards" | "work" | "approvals" | "inbox" | "reports" | "settings";
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "command", label: "Command center" },
+  { id: "agents", label: "Agents" },
   { id: "scorecards", label: "Scorecards" },
   { id: "work", label: "Work" },
   { id: "approvals", label: "Approvals" },
@@ -103,11 +104,13 @@ export function AgentHQ() {
   const configById = useMemo(() => new Map<string, AgentConfig>((cmd?.configs ?? []).map((c) => [c.id, c])), [cmd]);
   const gatewayConfigured = cmd?.gatewayConfigured ?? false;
 
+  const [agentSel, setAgentSel] = useState<string | null>(null);
   const openChat = useCallback((agentId: string, text?: string) => {
     setInboxSel(agentId);
     if (text) setSeed({ agentId, text });
     setSection("inbox");
   }, []);
+  const openAgent = useCallback((agentId: string) => { setAgentSel(agentId); setSection("agents"); }, []);
 
   return (
     <>
@@ -137,9 +140,11 @@ export function AgentHQ() {
       ) : !cmd ? (
         <Card><CardBody>Could not load Agent HQ.</CardBody></Card>
       ) : section === "command" ? (
-        <CommandCenter cmd={cmd} configById={configById} />
+        <CommandCenter cmd={cmd} configById={configById} onOpenAgent={openAgent} />
+      ) : section === "agents" ? (
+        <Agents cmd={cmd} initialId={agentSel} onConfigSaved={(u) => setCmd((prev) => (prev ? { ...prev, configs: prev.configs.map((c) => (c.id === u.id ? u : c)) } : prev))} />
       ) : section === "scorecards" ? (
-        <Scorecards cmd={cmd} onConfigSaved={(u) => setCmd((prev) => (prev ? { ...prev, configs: prev.configs.map((c) => (c.id === u.id ? u : c)) } : prev))} />
+        <Scorecards />
       ) : section === "work" ? (
         <WorkBoard configs={cmd.configs} gatewayConfigured={gatewayConfigured} />
       ) : section === "approvals" ? (
@@ -169,7 +174,7 @@ export function AgentHQ() {
 const SALES_IDS = ["today-revenue", "avg-ticket", "revenue-growth", "refund-rate"];
 const COST_IDS = ["food-cost", "labor-cost", "prime-cost", "satisfaction"];
 
-function CommandCenter({ cmd, configById }: { cmd: CommandPayload; configById: Map<string, AgentConfig> }) {
+function CommandCenter({ cmd, configById, onOpenAgent }: { cmd: CommandPayload; configById: Map<string, AgentConfig>; onOpenAgent: (id: string) => void }) {
   const byId = new Map(cmd.snapshot.kpis.map((k) => [k.id, k]));
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((k): k is BoardKpi => !!k);
   const sales = pick(SALES_IDS), cost = pick(COST_IDS);
@@ -190,7 +195,7 @@ function CommandCenter({ cmd, configById }: { cmd: CommandPayload; configById: M
       {cost.length > 0 && (<><SecLabel>Cost &amp; quality</SecLabel><div style={RAIL}>{cost.map((k) => <KpiTile key={k.id} k={k} />)}</div></>)}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 22, alignItems: "start" }}>
-        <OrgCard configs={cmd.configs} statusById={new Map(cmd.agents.map((a) => [a.id, a]))} />
+        <OrgCard configs={cmd.configs} statusById={new Map(cmd.agents.map((a) => [a.id, a]))} onOpenAgent={onOpenAgent} />
         <ActivityCard runsByDay7d={s.runsByDay7d} />
         <RecentActivityCard events={cmd.recentActivity} configById={configById} />
         <UpcomingWorkCard work={cmd.upcomingWork} scheduled={cmd.scheduled} configById={configById} />
@@ -201,11 +206,11 @@ function CommandCenter({ cmd, configById }: { cmd: CommandPayload; configById: M
   );
 }
 
-function OrgCard({ configs, statusById }: { configs: AgentConfig[]; statusById: Map<string, StatusRow> }) {
+function OrgCard({ configs, statusById, onOpenAgent }: { configs: AgentConfig[]; statusById: Map<string, StatusRow>; onOpenAgent: (id: string) => void }) {
   const kids = (id: string | null) => configs.filter((c) => c.reportsTo === id);
   const rowFor = (c: AgentConfig, d: number): React.ReactNode => (
     <div key={c.id}>
-      <Link href={`/admin/agent-hq/${c.id}`} className="av3-conv-row" style={{ marginLeft: d * 20, width: `calc(100% - ${d * 20}px)` }}>
+      <button type="button" className="av3-conv-row" style={{ marginLeft: d * 20, width: `calc(100% - ${d * 20}px)` }} onClick={() => onOpenAgent(c.id)}>
         <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           {d > 0 && <span style={{ color: "var(--av3-subtle)" }}>↳</span>}
           <Monogram initials={c.initials} accentVar={c.accentVar} size={22} />
@@ -213,13 +218,13 @@ function OrgCard({ configs, statusById }: { configs: AgentConfig[]; statusById: 
           <span style={{ fontSize: 11, color: "var(--av3-subtle)" }}>{c.title.split("—")[0].trim()}</span>
         </span>
         <StatusDot status={statusById.get(c.id)?.status ?? "neutral"} />
-      </Link>
+      </button>
       {kids(c.id).map((k) => rowFor(k, d + 1))}
     </div>
   );
   return (
     <Card>
-      <CardHead title="Org & reporting" description="Click an agent for its dedicated panel" />
+      <CardHead title="Org & reporting" description="Click an agent to edit it" />
       <CardBody style={{ display: "flex", flexDirection: "column", gap: 2 }}>{kids(null).map((c) => rowFor(c, 0))}</CardBody>
     </Card>
   );
@@ -334,14 +339,13 @@ function MonthlyCostCard({ stats }: { stats: FleetStats }) {
 
 /* ============================== Scorecards ============================= */
 
-function Scorecards({ cmd, onConfigSaved }: { cmd: CommandPayload; onConfigSaved: (u: AgentConfig) => void }) {
-  const [selId, setSelId] = useState<string>(cmd.configs[0]?.id ?? "");
+function Agents({ cmd, initialId, onConfigSaved }: { cmd: CommandPayload; initialId: string | null; onConfigSaved: (u: AgentConfig) => void }) {
+  const [selId, setSelId] = useState<string>(initialId ?? cmd.configs[0]?.id ?? "");
+  useEffect(() => { if (initialId) setSelId(initialId); }, [initialId]);
   const toolCatalog = useMemo(() => {
     const s = new Set<string>(); for (const c of cmd.configs) for (const t of c.toolNames) s.add(t); return [...s].sort();
   }, [cmd.configs]);
   const sel = cmd.configs.find((c) => c.id === selId) ?? cmd.configs[0] ?? null;
-  const owned = (id: string) => cmd.snapshot.kpis.filter((k) => k.owner === id);
-  const spend = (id: string) => cmd.agents.find((a) => a.id === id)?.spentTodayGrosze ?? 0;
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 14, alignItems: "start" }}>
@@ -370,16 +374,8 @@ function Scorecards({ cmd, onConfigSaved }: { cmd: CommandPayload; onConfigSaved
           <CardHead
             title={<span style={{ display: "flex", alignItems: "center", gap: 9 }}><Monogram initials={sel.initials} accentVar={sel.accentVar} size={30} /> <span style={{ fontSize: 15 }}>Edit · {sel.name}</span></span>}
             description={sel.title}
-            actions={<Link href={`/admin/agent-hq/${sel.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open panel <ArrowRight className="av3-btn-ico" /></Link>}
           />
           <CardBody>
-            {(() => { const live = owned(sel.id); return live.length > 0 ? (
-              <div style={{ ...RAIL, marginBottom: 4 }}>{live.map((k) => <KpiTile key={k.id} k={k} />)}</div>
-            ) : null; })()}
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", margin: "12px 0 18px" }}>
-              <Meta label="Spend today" value={zl(spend(sel.id))} />
-              <Meta label="Schedule" value={CADENCE_OPTIONS.find((o) => o.value === sel.schedule.cadence)?.label ?? sel.schedule.cadence} />
-            </div>
             <AgentEditForm key={sel.id} agentId={sel.id} configs={cmd.configs} toolCatalog={toolCatalog} onSaved={onConfigSaved} />
           </CardBody>
         </Card>
@@ -387,8 +383,109 @@ function Scorecards({ cmd, onConfigSaved }: { cmd: CommandPayload; onConfigSaved
     </div>
   );
 }
-function Meta({ label, value }: { label: string; value: string }) {
-  return <div><div style={{ fontSize: 10.5, color: "var(--av3-subtle)", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{value}</div></div>;
+
+/* ============================== Scorecards ============================= */
+
+interface ScCard {
+  id: string; name: string; title: string; initials: string; accentVar: string;
+  status: "active" | "paused" | "draft"; authority: string; modelId: string | null; kpis: string[];
+  stats: { runs7d: number; cost7dGrosze: number; successRate7d: number | null; lastRunAt: string | null };
+  actuals: Record<string, { value: string; at: string; by: string }>;
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "—";
+  const ms = Date.now() - Date.parse(iso);
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60); if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+function Scorecards() {
+  const [cards, setCards] = useState<ScCard[] | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/admin/ai/boardroom/scorecards").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setCards(res?.scorecards ?? []);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  const log = useCallback(async (agentId: string, kpi: string) => {
+    const key = `${agentId}::${kpi}`;
+    const value = (drafts[key] ?? "").trim();
+    if (!value) return;
+    setBusy(key);
+    const res = await fetch("/api/admin/ai/boardroom/scorecards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId, kpi, value }) })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setBusy(null);
+    if (res?.actual) {
+      setCards((prev) => prev?.map((c) => c.id === agentId ? { ...c, actuals: { ...c.actuals, [kpi]: { value: res.actual.value, at: res.actual.at, by: res.actual.by } } } : c) ?? prev);
+      setDrafts((d) => ({ ...d, [key]: "" }));
+    }
+  }, [drafts]);
+
+  if (cards === null) return <Card padding="default"><SkeletonRows rows={8} /></Card>;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 14, alignItems: "start" }}>
+      {cards.map((c) => {
+        const pct = c.stats.successRate7d;
+        return (
+          <Card key={c.id} padding="default">
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ marginTop: 6 }}><StatusDot status={c.status === "active" ? "green" : c.status === "paused" ? "yellow" : "neutral"} /></span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "var(--av3-display)", fontSize: 17, fontWeight: 600 }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: "var(--av3-subtle)", fontFamily: "var(--av3-mono)", marginTop: 1 }}>{c.title.split("—")[0].trim()} · {c.modelId ?? "global"}</div>
+              </div>
+              <Badge tone="brand">{c.authority}</Badge>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--av3-subtle)", fontWeight: 600 }}>
+                <span>Success rate (7d)</span>
+                <span style={{ color: pct == null ? "var(--av3-subtle)" : "var(--av3-fg)" }}>{pct == null ? "no runs" : `${pct}%`}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: "var(--av3-s3)", overflow: "hidden", marginTop: 7 }}>
+                <div style={{ width: `${pct ?? 0}%`, height: "100%", background: pct == null ? "transparent" : pct >= 90 ? "var(--av3-ok)" : pct >= 70 ? "var(--av3-warn)" : "var(--av3-bad)" }} />
+              </div>
+            </div>
+
+            <div style={{ ...RAIL, gridTemplateColumns: "repeat(3, 1fr)", marginTop: 14 }}>
+              <StatTile label="Runs 7d" value={`${c.stats.runs7d}`} />
+              <StatTile label="Cost 7d" value={zl(c.stats.cost7dGrosze)} />
+              <StatTile label="Last run" value={timeAgo(c.stats.lastRunAt)} />
+            </div>
+
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "var(--av3-platinum)", fontWeight: 700, margin: "20px 0 10px" }}>KPIs — target vs actual</div>
+            {c.kpis.length === 0 ? (
+              <div className="av3-cell-muted" style={{ fontSize: 12.5 }}>No KPI targets set. Add them in the agent editor.</div>
+            ) : c.kpis.map((kpi, i) => {
+              const key = `${c.id}::${kpi}`;
+              const actual = c.actuals[kpi];
+              return (
+                <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--av3-line)" : "none" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{kpi}</div>
+                  <div style={{ fontSize: 12, color: actual ? "var(--av3-fg)" : "var(--av3-subtle)", marginTop: 3 }}>
+                    {actual ? <>actual: <span style={{ fontFamily: "var(--av3-mono)" }}>{actual.value}</span> <span style={{ color: "var(--av3-subtle)" }}>· {timeAgo(actual.at)} · {actual.by}</span></> : "no actual logged"}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                    <input className="av3-input" placeholder="log actual…" value={drafts[key] ?? ""} onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(c.id, kpi); } }} style={{ flex: 1 }} />
+                    <Button variant="secondary" size="sm" loading={busy === key} disabled={!(drafts[key] ?? "").trim()} onClick={() => void log(c.id, kpi)}>Log</Button>
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+        );
+      })}
+    </div>
+  );
 }
 
 /* ================================ Work ================================= */
@@ -608,7 +705,6 @@ function Inbox({ configs, gatewayConfigured, selectedId, onSelect, seed, onSeedC
           <Card><CardHead
             title={selected ? selected.name : "Whole team"}
             description={selected ? selected.title : "A generalist board assistant for cross-functional questions."}
-            actions={selected ? <Link href={`/admin/agent-hq/${selected.id}`} className="av3-btn av3-btn-ghost av3-btn-sm">Open panel <ArrowRight className="av3-btn-ico" /></Link> : undefined}
           /></Card>
           <ChatPanel personaId={selected?.id ?? null} name={selected ? selected.name : "the team"} suggestion={selected ? selected.mandate : "Ask the whole team anything about the business."} gatewayConfigured={gatewayConfigured} seed={seed && seed.agentId === effectiveId ? seed.text : null} onSeedConsumed={onSeedConsumed} />
         </div>
