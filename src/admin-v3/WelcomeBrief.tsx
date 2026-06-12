@@ -26,7 +26,7 @@ interface Brief {
   constraint: { peakHour: number; peakAvgPerHour: number; peakTotal: number } | null;
   leading: { repeatRatePct: number | null; newCustomersPerMonth: number | null; bookingsCount: number; bookingsAttendance: number; pulse: number | null; pulseDeltaPts: number | null; pulseResponses: number };
   anomaly: { city: string; avgTicketGrosze: number; chainAvgGrosze: number; deltaPct: number } | null;
-  ai: { todayGrosze: number; yesterdayGrosze: number; budgetGrosze: number } | null;
+  ai: { yesterdayGrosze: number; last30Grosze: number; changePct: number | null } | null;
   locations: { slug: string; city: string; revenue: number; orderCount: number; avgOrderValue: number | null }[];
 }
 interface Notif { id: string; type: string; title: string; message: string; createdAt: string; read: boolean }
@@ -208,24 +208,24 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
         {/* AI AGENT SPEND */}
         {!loading && brief?.ai && (
           <div className="wb-group">
-            <div className="wb-glabel">AI agents <span className="n">· spend, today &amp; yesterday</span> <InfoButton title="AI agent spend" {...AI_SPEND_EXPLAINER} /></div>
+            <div className="wb-glabel">AI agents <span className="n">· spend</span> <InfoButton title="AI agent spend" {...AI_SPEND_EXPLAINER} /></div>
             <div className="wb-grid4">
-              <div className="wb-tcell">
-                <div className="k">Today</div>
-                <div className="v wb-num">{exact(brief.ai.todayGrosze)}</div>
-                <div className="d">{brief.ai.budgetGrosze > 0 ? `${Math.round((brief.ai.todayGrosze / brief.ai.budgetGrosze) * 100)}% of budget` : "no budget set"}</div>
-              </div>
               <div className="wb-tcell">
                 <div className="k">Yesterday</div>
                 <div className="v wb-num">{exact(brief.ai.yesterdayGrosze)}</div>
-                {brief.ai.yesterdayGrosze > 0 ? (
-                  <div className={`d ${brief.ai.todayGrosze >= brief.ai.yesterdayGrosze ? "up" : "down"}`}>{brief.ai.todayGrosze >= brief.ai.yesterdayGrosze ? "▲" : "▼"} {Math.abs(Math.round(((brief.ai.todayGrosze - brief.ai.yesterdayGrosze) / brief.ai.yesterdayGrosze) * 100))}% vs today</div>
-                ) : <div className="d">full day</div>}
+                {brief.ai.changePct != null
+                  ? <div className="d">{brief.ai.changePct >= 0 ? "▲" : "▼"} {Math.abs(brief.ai.changePct)}% vs prior day</div>
+                  : <div className="d">closed day</div>}
               </div>
               <div className="wb-tcell">
-                <div className="k">Daily budget</div>
-                <div className="v wb-num">{brief.ai.budgetGrosze > 0 ? exact(brief.ai.budgetGrosze) : "—"}</div>
-                <div className="d">the cap on AI spend</div>
+                <div className="k">Last 30 days</div>
+                <div className="v wb-num">{exact(brief.ai.last30Grosze)}</div>
+                <div className="d">{exact(Math.round(brief.ai.last30Grosze / 30))}/day avg</div>
+              </div>
+              <div className="wb-tcell">
+                <div className="k">Day-over-day</div>
+                <div className="v wb-num">{brief.ai.changePct != null ? `${brief.ai.changePct >= 0 ? "+" : "−"}${Math.abs(brief.ai.changePct)}%` : "—"}</div>
+                <div className="d">vs the prior day</div>
               </div>
             </div>
             <Link className="wb-lk" href={link("/admin/agent-hq")}>Open Agent HQ →</Link>
@@ -312,9 +312,9 @@ const PULSE_EXPLAINER = {
   methodology: "pulseBreakdown over getSurveyResponses: promoter = 5★, detractor ≤ 3★, passive = 4★; Pulse = round((promoters − detractors) ÷ total × 100). Last-30-day window, with the trend versus the prior 30 days. Computed server-side in /api/admin/welcome.",
 };
 const AI_SPEND_EXPLAINER = {
-  description: "What your AI agents cost in LLM spend today versus yesterday, against the daily budget that caps them.",
-  institutional: "AI spend is an operating cost that must earn its keep — read it next to the decisions and segments the agents produced. The gate is the daily budget: spend running flat at the cap day after day means the board is throttled (raise it or the briefings truncate); a sudden drop to zero means the agents stopped working (missing API key, budget exhausted, or — by design — Sandbox mode paused every job). A non-zero figure here is the receipt that the autonomous board actually ran on your numbers. In Simulation mode this is exactly your dry-run check: the agents analyse the data you hand-entered, and this is what that analysis cost.",
-  plain: "Say yesterday the daily briefing + segment rebuild cost 3.40 zł and today's chat + meetings are at 1.10 zł so far — you're at 1.10 of, say, a 20 zł budget (≈6%). If today still read 0.00 by mid-morning you'd know the agents never fired and go check the key or the budget.",
-  tips: "Raise or lower the cap in Agent HQ → Settings → daily AI budget; turn the daily auto-briefing on/off there too. If spend is pinned at the cap, either lift it or trim each agent's per-run cap so the budget spreads across more agents. If it's zero when it shouldn't be, confirm ANTHROPIC_API_KEY is set and you're not in Sandbox mode.",
-  methodology: "getAiSpendTodayYesterdayGrosze sums two ledgers per Warsaw day — ai_messages.cost_grosze (chat) + off-ledger meeting/schedule/work agent-events — bucketed into today vs yesterday by Warsaw midnight (DST-correct). Budget = getEffectiveDailyBudgetGrosze (the Agent HQ override of AI_DAILY_BUDGET_GROSZE). Computed server-side in /api/admin/welcome.",
+  description: "What your AI agents cost in LLM spend yesterday, across the last 30 days, and how yesterday moved versus the day before.",
+  institutional: "AI spend is an operating cost that must earn its keep — read it next to the decisions and segments the agents produced. A morning brief reports on closed days, so it never shows the partial current day. The 30-day total is the run-rate to budget against; the day-over-day change is the anomaly flag — a sharp jump warrants a look at what ran, and a drop to zero means the agents stopped working (missing API key, budget exhausted, or — by design — Sandbox mode paused every job). A non-zero figure here is the receipt that the autonomous board actually ran on your numbers; in Simulation mode it's your dry-run check that the agents analysed the data you hand-entered.",
+  plain: "Say yesterday the daily briefing + segment rebuild cost 5.30 zł, the prior day was 4.70 zł (so +13% day-over-day), and the last 30 days total 142 zł — about 4.70 zł a day. If yesterday had read 0.00 you'd know the agents never fired and go check the key or the budget.",
+  tips: "Set the daily cap in Agent HQ → Settings → daily AI budget, and turn the daily auto-briefing on/off there. If the 30-day run-rate is creeping up, trim each agent's per-run cap or effort, or narrow their tool allowlists so fewer hops are needed. If yesterday is zero when it shouldn't be, confirm ANTHROPIC_API_KEY is set and you're not in Sandbox mode.",
+  methodology: "getAiSpendBriefGrosze sums two ledgers — ai_messages.cost_grosze (chat) + off-ledger meeting/schedule/work agent-events — bucketed by Warsaw midnight (DST-correct): yesterday = the last complete day; 30 days = the trailing 30 complete days ending yesterday; change = (yesterday − prior day) ÷ prior day. Computed server-side in /api/admin/welcome.",
 };

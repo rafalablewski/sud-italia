@@ -502,16 +502,17 @@ auth canvas's signature lighting and the sign-in lockup:
   named from the agents roster), **what needs you** (unread notifications), **the
   constraint** (your busiest hour / throughput ceiling), **leading indicators**
   (30-day repeat rate, new customers/mo, the 14-day bookings pipeline, and the
-  **Pulse/NPS** score + 30-day trend), an **AI agents** module (LLM **spend today
-  vs yesterday** against the daily budget — the "are the agents working / what do
-  they cost" check, doubling as the Simulation-mode dry-run receipt), an **anomaly
-  to copy** (the location whose avg ticket most beats the chain), the
-  **per-location** split, **today's goal/forecast + profit-per-order**, and a
-  demoted **yesterday recap**. The analytics half is computed **server-side in one
-  pass** at `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` /
+  **Pulse/NPS** score + 30-day trend), an **AI agents** module (LLM spend as a
+  closed-day view — **yesterday**, the **trailing 30 days**, and the **day-over-day
+  % change** — the "are the agents working / what do they cost" check, doubling as
+  the Simulation-mode dry-run receipt; no partial-current-day figure on a morning
+  brief), an **anomaly to copy** (the location whose avg ticket most beats the
+  chain), the **per-location** split, **today's goal/forecast + profit-per-order**,
+  and a demoted **yesterday recap**. The analytics half is computed **server-side
+  in one pass** at `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` /
   `getOpsGoals` / `computeLaborEfficiencyDaily` / `computeHourlyThroughput` /
   `computeCohortSnapshot` / `getTruckEvents` + `pulseBreakdown` over
-  `getSurveyResponses` + `getAiSpendTodayYesterdayGrosze`) so it can't drift from
+  `getSurveyResponses` + `getAiSpendBriefGrosze`) so it can't drift from
   Dashboard / Reports / Calculator / Surveys / Agent HQ; decisions + alerts stay
   on `…/ai/boardroom/{approvals,agents}` + `…/notifications`. Every module is live data and **degrades to nothing** when
   its source 403s/empties — never a placeholder (pacing omits with no revenue

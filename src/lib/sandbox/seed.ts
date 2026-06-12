@@ -173,22 +173,27 @@ export async function seedSandbox(): Promise<void> {
   await addPointAdjustment({ phone: GUESTS[0].phone, amount: 150, reason: "Anniversary gesture (demo)", adjustedBy: "owner", adjustedAt: iso(days(2)) });
   await addPointAdjustment({ phone: GUESTS[2].phone, amount: -50, reason: "Goodwill correction (demo)", adjustedBy: "manager", adjustedAt: iso(days(5)) });
 
-  // AI agent spend (chain-wide) — a daily boardroom briefing + a few scheduled
-  // self-reviews on both today and yesterday, so the Morning Brief's "AI agents ·
-  // spend today & yesterday" module shows a full picture. Actors meeting:/schedule:
-  // are the off-ledger rows getAiSpendTodayYesterday/getTodayAiSpend sum. Offsets
-  // stay within the last few hours / ~yesterday so both day-buckets are non-empty.
-  const aiRuns: { agentId: string; actor: string; summary: string; cost: number; ageMs: number }[] = [
-    { agentId: "ceo", actor: "meeting:daily", summary: "Daily boardroom briefing — chain numbers reviewed", cost: 280, ageMs: hours(3) },
-    { agentId: "coo", actor: "schedule:cron", summary: "Ops self-review — KDS pace + waste flags", cost: 120, ageMs: hours(5) },
-    { agentId: "cfo", actor: "schedule:cron", summary: "Finance self-review — margin + cash variance", cost: 140, ageMs: hours(6) },
-    { agentId: "cmo", actor: "schedule:cron", summary: "Growth self-review — repeat rate + segments", cost: 110, ageMs: hours(8) },
-    { agentId: "ceo", actor: "meeting:daily", summary: "Daily boardroom briefing — chain numbers reviewed", cost: 265, ageMs: days(1) + hours(3) },
-    { agentId: "coo", actor: "schedule:cron", summary: "Ops self-review — labour vs sales gap", cost: 130, ageMs: days(1) + hours(5) },
-    { agentId: "cfo", actor: "schedule:cron", summary: "Finance self-review — refund-adjusted net sales", cost: 135, ageMs: days(1) + hours(7) },
-  ];
-  for (const r of aiRuns) {
-    await appendAgentEvent({ agentId: r.agentId, type: r.actor.startsWith("meeting:") ? "schedule" : "run", summary: r.summary, costGrosze: r.cost, ok: true, actor: r.actor, at: iso(r.ageMs) });
+  // AI agent spend (chain-wide) — a daily boardroom briefing plus rotating
+  // scheduled self-reviews across the trailing ~2 weeks, so the Morning Brief's
+  // "AI agents · spend" module (yesterday / last 30 days / day-over-day) and Agent
+  // HQ aren't empty. Actors meeting:/schedule: are the off-ledger rows the spend
+  // helpers sum. d=1 is yesterday, d=2 the prior day — both are populated so the
+  // day-over-day change has a denominator. All offsets stay inside the 30d window.
+  const aiPersonas = ["coo", "cfo", "cmo", "ceo"];
+  for (let d = 1; d <= 14; d++) {
+    await appendAgentEvent({
+      agentId: "ceo", type: "schedule", actor: "meeting:daily",
+      summary: "Daily boardroom briefing — chain numbers reviewed",
+      costGrosze: 250 + (d % 4) * 15, ok: true, at: iso(days(d) + hours(3)),
+    });
+    if (d % 2 === 1 || d <= 2) {
+      const a = aiPersonas[d % aiPersonas.length];
+      await appendAgentEvent({
+        agentId: a, type: "run", actor: "schedule:cron",
+        summary: `${a.toUpperCase()} scheduled self-review`,
+        costGrosze: 100 + (d % 3) * 20, ok: true, at: iso(days(d) + hours(6)),
+      });
+    }
   }
 
   // Suppliers (chain-wide) + a couple of POs.

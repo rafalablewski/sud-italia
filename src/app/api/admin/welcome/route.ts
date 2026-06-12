@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import {
   getSummary, getInsights, getOpsGoals, getTruckEvents, getSurveyResponses,
-  computeHourlyThroughput, computeCohortSnapshot, getAiSpendTodayYesterdayGrosze,
+  computeHourlyThroughput, computeCohortSnapshot, getAiSpendBriefGrosze,
 } from "@/lib/store";
 import { computeLaborEfficiencyDaily } from "@/lib/labor-efficiency";
 import { pulseBreakdown } from "@/lib/surveys";
@@ -39,7 +39,7 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
     computeCohortSnapshot(30).catch(() => null),
     getTruckEvents({ from: today, to: in14 }).catch(() => []),
     getSurveyResponses().catch(() => []),
-    getAiSpendTodayYesterdayGrosze().catch(() => null),
+    getAiSpendBriefGrosze().catch(() => null),
   ]);
 
   // ── yesterday's close + contribution per order ──
@@ -115,11 +115,11 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
     constraint,
     leading,
     anomaly,
-    // AI agent spend — today vs yesterday + the daily budget, so the operator can
-    // see the agents are actually working (and what they cost). null when the
-    // ledger can't be read.
+    // AI agent spend — a closed-day view: yesterday, the trailing 30 days, and
+    // the day-over-day % change, so the operator can see the agents are working
+    // (and what they cost). null when the ledger can't be read.
     ai: aiSpend
-      ? { todayGrosze: aiSpend.todayGrosze, yesterdayGrosze: aiSpend.yesterdayGrosze, budgetGrosze: aiSpend.budgetGrosze }
+      ? { yesterdayGrosze: aiSpend.yesterdayGrosze, last30Grosze: aiSpend.last30Grosze, changePct: aiSpend.changePct }
       : null,
     locations: locs.map((l) => ({ slug: l.locationSlug, city: l.city, revenue: l.revenue, orderCount: l.orderCount, avgOrderValue: l.avgOrderValue ?? null })),
   });

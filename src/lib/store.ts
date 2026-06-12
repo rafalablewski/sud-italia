@@ -9111,34 +9111,41 @@ function offLedgerAiSpend(events: AgentEvent[], fromIso: string, toIso?: string)
 }
 
 /**
- * AI spend for the current Warsaw day and the one before it — the Morning Brief
- * "are the agents actually working / what are they costing" check. Buckets the
- * same two ledgers as getTodayAiSpendGrosze (ai_messages chat + off-ledger
- * meeting/schedule/work agent-events) into today vs yesterday by Warsaw midnight,
- * and returns the effective daily budget so the brief can show spend-vs-budget.
+ * AI spend for the Morning Brief — a closed-day report, so it never includes
+ * the partial current day: yesterday's spend, the trailing 30 complete days,
+ * and the day-over-day % change (yesterday vs the day before). Buckets the same
+ * two ledgers as getTodayAiSpendGrosze (ai_messages chat + off-ledger
+ * meeting/schedule/work agent-events) by Warsaw midnight (DST-correct).
  */
-export async function getAiSpendTodayYesterdayGrosze(): Promise<{
-  todayGrosze: number;
+export async function getAiSpendBriefGrosze(): Promise<{
   yesterdayGrosze: number;
-  budgetGrosze: number;
+  last30Grosze: number;
+  changePct: number | null;
 }> {
   const now = new Date();
   const todayStartIso = chainMidnightIso(now);
-  // Step back 12h from today's midnight to land safely inside yesterday (DST-proof),
-  // then take that day's midnight.
+  // Step back 12h from each midnight to land safely inside the prior day (DST-proof).
   const yestStartIso = chainMidnightIso(new Date(Date.parse(todayStartIso) - 12 * 3600_000));
+  const prevStartIso = chainMidnightIso(new Date(Date.parse(yestStartIso) - 12 * 3600_000));
+  // 30 complete days ending at yesterday's close (a one-hour DST wobble at the
+  // far boundary is immaterial to a month-long sum).
+  const thirtyStartIso = new Date(Date.parse(todayStartIso) - 30 * 86_400_000).toISOString();
 
-  const [chatToday, chatYest, events, budgetGrosze] = await Promise.all([
-    getDailyAiSpendGrosze(todayStartIso),
+  const [chatYest, chatPrev, chat30, events] = await Promise.all([
     getDailyAiSpendGrosze(yestStartIso, todayStartIso),
+    getDailyAiSpendGrosze(prevStartIso, yestStartIso),
+    getDailyAiSpendGrosze(thirtyStartIso, todayStartIso),
     readJSON<AgentEvent[]>("agent-events.json", []),
-    getEffectiveDailyBudgetGrosze(),
   ]);
 
+  const yesterdayGrosze = chatYest + offLedgerAiSpend(events, yestStartIso, todayStartIso);
+  const prevDayGrosze = chatPrev + offLedgerAiSpend(events, prevStartIso, yestStartIso);
+  const last30Grosze = chat30 + offLedgerAiSpend(events, thirtyStartIso, todayStartIso);
+
   return {
-    todayGrosze: chatToday + offLedgerAiSpend(events, todayStartIso),
-    yesterdayGrosze: chatYest + offLedgerAiSpend(events, yestStartIso, todayStartIso),
-    budgetGrosze,
+    yesterdayGrosze,
+    last30Grosze,
+    changePct: prevDayGrosze > 0 ? Math.round(((yesterdayGrosze - prevDayGrosze) / prevDayGrosze) * 1000) / 10 : null,
   };
 }
 
