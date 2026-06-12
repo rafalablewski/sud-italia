@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Morning Brief · 1 · The Front Page</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root{
+    --paper:#f6f1e7; --ink:#1c1a16; --muted:#6b6357; --line:#d8cfbd; --line2:#c4b9a3;
+    --red:#b3122a; --green:#1f7a44; --gold:#9a7b1f;
+  }
+  body{ background:#e7ddca; font-family:Inter,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; padding:26px; }
+  .sheet{ max-width:1180px; margin:0 auto; background:var(--paper); border:1px solid var(--line2); box-shadow:0 30px 80px -40px rgba(40,30,10,.5); padding:34px 40px 30px; }
+  .toprule{ display:flex; justify-content:space-between; align-items:flex-end; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .enter{ color:var(--red); text-decoration:none; font-weight:600; }
+  .masthead{ text-align:center; padding:14px 0 10px; border-bottom:3px double var(--line2); }
+  .masthead h1{ font-family:Fraunces,serif; font-weight:600; font-size:54px; letter-spacing:.01em; }
+  .masthead .sub{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.35em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+  .dateline{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:7px 0; border-bottom:1px solid var(--line); }
+
+  .lead{ display:grid; grid-template-columns: 1.55fr 1fr; gap:30px; padding:22px 0; border-bottom:2px solid var(--line2); }
+  .lead h2{ font-family:Fraunces,serif; font-weight:600; font-size:40px; line-height:1.05; }
+  .lead .deck{ font-size:15px; color:var(--muted); margin-top:10px; line-height:1.5; max-width:46ch; }
+  .lead .byline{ font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--red); margin-top:14px; }
+  .herofig{ border-left:1px solid var(--line); padding-left:26px; }
+  .herofig .k{ font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  .herofig .big{ font-family:Fraunces,serif; font-size:58px; font-weight:600; line-height:1; margin-top:4px; }
+  .herofig .up{ color:var(--green); font-weight:600; font-size:15px; margin-top:8px; }
+  .herofig .mini{ margin-top:16px; display:flex; flex-direction:column; gap:9px; }
+  .herofig .mini div{ display:flex; justify-content:space-between; font-size:13px; padding-bottom:8px; border-bottom:1px dotted var(--line2); }
+  .herofig .mini b{ font-family:'JetBrains Mono',monospace; font-weight:600; }
+
+  .cols{ display:grid; grid-template-columns: repeat(3,1fr); gap:0; padding-top:18px; }
+  .col{ padding:0 22px; border-right:1px solid var(--line); }
+  .col:first-child{ padding-left:0; } .col:last-child{ padding-right:0; border-right:none; }
+  .col h3{ font-family:Fraunces,serif; font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.12em; padding-bottom:7px; border-bottom:2px solid var(--ink); margin-bottom:12px; }
+  .story{ padding:11px 0; border-bottom:1px solid var(--line); }
+  .story .h{ font-family:Fraunces,serif; font-size:16.5px; font-weight:600; line-height:1.18; }
+  .story .b{ font-size:13px; color:var(--muted); line-height:1.5; margin-top:4px; }
+  .story .by{ font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--red); margin-top:6px; }
+  .tag{ display:inline-block; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.05em; text-transform:uppercase; padding:2px 6px; border:1px solid var(--line2); border-radius:2px; color:var(--muted); margin-right:5px; }
+  .tag.red{ color:var(--red); border-color:var(--red); }
+  .numrow{ display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0; border-bottom:1px dotted var(--line2); }
+  .numrow b{ font-family:'JetBrains Mono',monospace; }
+  .weatherbox{ background:#efe7d6; border:1px solid var(--line2); padding:12px 14px; margin-top:14px; }
+  .weatherbox .wh{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .weatherbox .wr{ display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
+  .footer{ margin-top:18px; border-top:3px double var(--line2); padding-top:12px; display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .cta{ background:var(--ink); color:var(--paper); text-decoration:none; padding:10px 18px; font-weight:600; letter-spacing:.04em; font-size:11px; }
+  @media(max-width:880px){ .lead,.cols{ grid-template-columns:1fr; } .col{ border-right:none; border-bottom:1px solid var(--line); padding:0 0 14px; } .herofig{ border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:18px;} .masthead h1{font-size:38px;} }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="toprule">
+      <span>No. 1,284 · Confidential — Office of the CEO</span>
+      <a class="enter" href="#">Enter dashboard →</a>
+    </div>
+    <div class="masthead">
+      <h1>The Morning Brief</h1>
+      <div class="sub">Sud Italia · Neapolitan Pizza Co.</div>
+    </div>
+    <div class="dateline">
+      <span>Friday, 12 June 2026 · 06:42</span>
+      <span>Edition: Kraków &amp; Warszawa</span>
+      <span>Prepared by your AI boardroom</span>
+    </div>
+
+    <div class="lead">
+      <div>
+        <h2>Warszawa surges 17% as the chain closes its best Thursday of Q2</h2>
+        <div class="deck">Yesterday brought 48,250 zł across the two trucks on 612 covers — the strongest weekday since the spring relaunch. Margin held at 23.1% despite a cheese-price bump. The board flags three moves to lock the run in.</div>
+        <div class="byline">— Overnight summary, 11 June</div>
+      </div>
+      <div class="herofig">
+        <div class="k">Revenue · yesterday</div>
+        <div class="big">48,250<span style="font-size:24px;"> zł</span></div>
+        <div class="up">▲ 12.4% vs prior Thursday</div>
+        <div class="mini">
+          <div><span>Orders</span><b>612</b></div>
+          <div><span>Avg ticket</span><b>78.80 zł</b></div>
+          <div><span>Profit margin</span><b>23.1%</b></div>
+          <div><span>Forecast today</span><b>51,200 zł</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <h3>Yesterday by the numbers</h3>
+        <div class="numrow"><span>Kraków</span><b>27,400 zł ▲9%</b></div>
+        <div class="numrow"><span>Warszawa</span><b>20,850 zł ▲17%</b></div>
+        <div class="numrow"><span>Best seller</span><b>Margherita ×148</b></div>
+        <div class="numrow"><span>Diavola</span><b>×96</b></div>
+        <div class="numrow"><span>New loyalty members</span><b>+38</b></div>
+        <div class="numrow"><span>Avg prep time</span><b>9.2 min</b></div>
+        <div class="story" style="border-bottom:none;">
+          <div class="h">Reports digest</div>
+          <div class="b">7-day revenue trend up and to the right; labour ratio the one metric off-target. Full P&amp;L, cohorts and the location network table are ready in Reports.</div>
+          <div class="by">Finance · /admin/reports</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>From the Boardroom</h3>
+        <div class="story">
+          <span class="tag red">Decision</span>
+          <div class="h">Trim Warszawa Saturday AM shift</div>
+          <div class="b">Labour ran 31% Thursday in Warszawa, three points over target. Cutting one prep hand on the slow Saturday open recovers ~620 zł/wk.</div>
+          <div class="by">Sofia — CFO</div>
+        </div>
+        <div class="story">
+          <span class="tag red">Decision</span>
+          <div class="h">“We miss you” SMS to 320 lapsed guests</div>
+          <div class="b">Repeat-customer rate slipped to 41%. A targeted win-back with a free-coffee hook should reactivate ~9%.</div>
+          <div class="by">Marco — CMO</div>
+        </div>
+        <div class="story" style="border-bottom:none;">
+          <span class="tag red">Decision</span>
+          <div class="h">Re-quote the dairy supplier</div>
+          <div class="b">Margherita food cost crept to 28% on a 6% cheese rise. Two alternate distributors already in the system.</div>
+          <div class="by">Luca — COO · approve in Agent HQ</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>Needs your attention</h3>
+        <div class="story"><span class="tag red">Cash</span><div class="h">−85 zł drawer variance, Kraków close</div><div class="b">Above the 50 zł review threshold.</div></div>
+        <div class="story"><span class="tag">Reviews</span><div class="h">1 one-star: “25-min wait”</div><div class="b">Plus two five-star. Reply suggested.</div></div>
+        <div class="story"><span class="tag red">Stock</span><div class="h">San Marzano low — 1.2 days cover</div><div class="b">Warszawa. PO draft ready.</div></div>
+        <div class="story" style="border-bottom:none;"><span class="tag">Compliance</span><div class="h">HACCP temp-log gap 14:00–16:00</div><div class="b">Backfill before inspection window.</div></div>
+        <div class="weatherbox">
+          <div class="wh">Today on the trucks</div>
+          <div class="wr"><span>Kraków</span><span>☀ 24° · great truck day</span></div>
+          <div class="wr"><span>Warszawa</span><span>☁ 19° · cloudy</span></div>
+          <div class="wr"><span>Booked</span><span>Corporate lunch · 40 pax · 12:30</span></div>
+          <div class="wr"><span>Staffed today</span><span>9 across both sites</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>7 unread notifications · 3 board decisions await approval</span>
+      <a class="cta" href="#">Read the full picture →</a>
+    </div>
+  </div>
+</body>
+</html>
