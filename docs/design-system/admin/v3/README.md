@@ -846,13 +846,20 @@ auth canvas's signature lighting and the sign-in lockup:
   a **KPI rail** (open POs / on-order value / awaiting delivery / received).
 - [x] People — Staff (`/admin/staff`): directory + clock in/out
   (`/api/admin/time-punches`) + add/edit/delete (`/api/admin/staff`), on-shift +
-  active KPIs, **search** (name / role / email). Schedule (`/admin/schedule`): this week's shifts with
+  active KPIs, **search** (name / role / email). The **Rate/hr** column + the
+  edit-dialog rate field are labelled **(brutto)** — the stored `hourlyRateGrosze`
+  is the gross rate, so everything derived from it (Schedule labour cost, the
+  Calculator labour lines, the boardroom labour-cost % methodology) says brutto
+  too. Schedule (`/admin/schedule`): this week's shifts with
   add/edit/delete (`/api/admin/shifts`). **Visual upgrade:** a **KPI rail**
-  (shifts / hours / labour cost from `hourlyRateGrosze` / on-rota / uncovered
-  days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
+  (shifts / hours / **labour cost (brutto)** from `hourlyRateGrosze` / on-rota /
+  uncovered days), a **Week-grid⇄List** view toggle, and a default **week grid** — 7 day
   columns (horizontal-scroll on narrow, today highlighted) of role-coloured shift
   cards (time, name, role + status badge, hover-delete), per-column add. The shift
-  dialog gained the missing **Notes** field. CSS §20 (`.av3-week`, `.av3-shiftcard`).
+  dialog gained the missing **Notes** field and, when **adding**, a **Repeat
+  through** end-date so one person can be assigned for several days at once (one
+  shift created per day in the inclusive range; per-day scheduling-rule conflicts
+  are reported and skipped, not silently dropped). CSS §20 (`.av3-week`, `.av3-shiftcard`).
 - [x] Customers (`/admin/customers`) — phone-based directory (search,
   repeat/CLV KPIs, per-customer detail) derived from real orders. **Flag #6
   restored:** a **"Send today"** outreach card (today's birthdays + first-order
