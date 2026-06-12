@@ -7,33 +7,30 @@ import { adminV3BaseForPath, withAdminV3Base } from "@/lib/admin-base";
 
 /**
  * WelcomeBrief — the wired Morning Brief (design direction #5). Full-bleed,
- * shell-less. Lead with yesterday's close + today's goal/forecast (a morning
- * brief runs before the day has traded), then the board decisions awaiting
- * you, what-needs-you, the location split and a demoted recap. Every module is
- * live data; any source that 403s or returns nothing simply drops out — no
- * placeholders, no fake numbers. Deferred to phase 2 (need new computation):
- * monthly goal-pacing, the capacity "constraint", margin/pizza, NPS trend,
- * leading indicators, anomaly detection.
+ * shell-less. The analytics half (yesterday, pacing, the constraint, leading
+ * indicators, anomaly, locations) comes from /api/admin/welcome in one pass;
+ * the decisions + alerts come from the boardroom approvals + notifications
+ * routes. Every module is live data and degrades to nothing when its source
+ * 403s or is empty — no placeholders, no fake numbers.
  */
 
-interface Summary { totalRevenue: number; totalOrders: number; avgOrderValue: number; profitMargin: number; topItems?: { name: string; quantity: number }[] }
-interface LocCompare { locationSlug: string; city: string; revenue: number; orderCount: number; avgOrderValue?: number }
+interface Brief {
+  yesterday: { revenue: number; prevRevenue: number; deltaPct: number | null; orders: number; avgOrderValue: number; profitMargin: number; perOrderProfitGrosze: number; topItems: { name: string; quantity: number }[] };
+  today: { goalGrosze: number; forecastGrosze: number | null; pacePct: number | null };
+  pacing: { mtdGrosze: number; monthGoalGrosze: number; projectionGrosze: number; aheadGrosze: number; pct: number; dayOfMonth: number; daysInMonth: number } | null;
+  constraint: { peakHour: number; peakAvgPerHour: number; peakTotal: number } | null;
+  leading: { repeatRatePct: number | null; newCustomersPerMonth: number | null; bookingsCount: number; bookingsAttendance: number; pulse: number | null; pulseDeltaPts: number | null; pulseResponses: number };
+  anomaly: { city: string; avgTicketGrosze: number; chainAvgGrosze: number; deltaPct: number } | null;
+  locations: { slug: string; city: string; revenue: number; orderCount: number; avgOrderValue: number | null }[];
+}
 interface Notif { id: string; type: string; title: string; message: string; createdAt: string; read: boolean }
 interface Approval { meetingId: string; index: number; title: string; owner: string; rationale: string; proposedTool?: string }
 interface AgentLite { id: string; name: string; initials: string }
-interface Goals { dailyRevenueGoalGrosze?: number; byLocation?: Record<string, number> }
-interface LaborEff { perLocation?: { locationSlug: string; today?: { forecastOrders?: number; forecastSource?: string } }[] }
 
-interface Data {
-  yest: Summary | null; prev: Summary | null; locs: LocCompare[];
-  notifs: Notif[]; approvals: Approval[]; agents: Map<string, AgentLite>;
-  goalGrosze: number; forecastRevGrosze: number | null;
-}
-
-const iso = (d: Date) => d.toISOString().slice(0, 10);
 const zl = (g: number) => `${Math.round(g / 100).toLocaleString("pl-PL")} zł`;
 const zl2 = (g: number) => `${(g / 100).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
 const j = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
 function greetingFor(d: Date) {
   const h = d.getHours();
@@ -52,49 +49,26 @@ export function WelcomeBrief({ name }: { name: string }) {
   const base = adminV3BaseForPath(pathname);
   const link = useCallback((href: string) => withAdminV3Base(base, href), [base]);
 
-  const [data, setData] = useState<Data | null>(null);
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [decisions, setDecisions] = useState<Approval[]>([]);
+  const [agents, setAgents] = useState<Map<string, AgentLite>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    const now = new Date();
-    const yest = iso(new Date(now.getTime() - 864e5));
-    const prev = iso(new Date(now.getTime() - 2 * 864e5));
     (async () => {
-      const [aY, aP, insRes, goalsRes, effRes, nRes, apRes, agRes] = await Promise.all([
-        j(`/api/admin/analytics?from=${yest}&to=${yest}`),
-        j(`/api/admin/analytics?from=${prev}&to=${prev}`),
-        j(`/api/admin/insights?from=${yest}&to=${yest}`),
-        j(`/api/admin/ops-goals`),
-        j(`/api/admin/labor-efficiency`),
+      const [b, nRes, apRes, agRes] = await Promise.all([
+        j(`/api/admin/welcome`),
         j(`/api/admin/notifications`),
         j(`/api/admin/ai/boardroom/approvals`),
         j(`/api/admin/ai/boardroom/agents`),
       ]);
       if (cancelled) return;
-
-      const goals: Goals = goalsRes ?? {};
-      const eff: LaborEff = effRes ?? {};
-      const yov = (aY as Summary | null)?.avgOrderValue ?? 0;
-      const forecastOrders = (eff.perLocation ?? []).reduce(
-        (s, p) => s + (p.today?.forecastSource && p.today.forecastSource !== "none" ? p.today?.forecastOrders ?? 0 : 0), 0,
-      );
-      const forecastRev = forecastOrders > 0 && yov > 0 ? Math.round(forecastOrders * yov) : null;
-
-      const agents = new Map<string, AgentLite>(
-        ((agRes?.agents ?? []) as AgentLite[]).map((a) => [a.id, { id: a.id, name: a.name, initials: a.initials }]),
-      );
-
-      setData({
-        yest: aY as Summary | null,
-        prev: aP as Summary | null,
-        locs: (insRes?.locationComparison ?? []) as LocCompare[],
-        notifs: (Array.isArray(nRes) ? nRes : []) as Notif[],
-        approvals: (apRes?.approvals ?? []) as Approval[],
-        agents,
-        goalGrosze: goals.dailyRevenueGoalGrosze ?? 0,
-        forecastRevGrosze: forecastRev,
-      });
+      setBrief(b as Brief | null);
+      setNotifs((Array.isArray(nRes) ? nRes : []) as Notif[]);
+      setDecisions((apRes?.approvals ?? []) as Approval[]);
+      setAgents(new Map(((agRes?.agents ?? []) as AgentLite[]).map((a) => [a.id, { id: a.id, name: a.name, initials: a.initials }])));
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -103,24 +77,21 @@ export function WelcomeBrief({ name }: { name: string }) {
   const now = useMemo(() => new Date(), []);
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const yRev = data?.yest?.totalRevenue ?? 0;
-  const pRev = data?.prev?.totalRevenue ?? 0;
-  const delta = pRev > 0 ? ((yRev - pRev) / pRev) * 100 : null;
-  const goal = data?.goalGrosze ?? 0;
-  const forecast = data?.forecastRevGrosze ?? null;
-  const pacePct = goal > 0 && forecast != null ? Math.min(100, Math.round((forecast / goal) * 100)) : null;
-  const unread = (data?.notifs ?? []).filter((n) => !n.read);
-  const decisions = data?.approvals ?? [];
+  const y = brief?.yesterday;
+  const pacing = brief?.pacing ?? null;
+  const goal = brief?.today.goalGrosze ?? 0;
+  const forecast = brief?.today.forecastGrosze ?? null;
+  const unread = notifs.filter((n) => !n.read);
 
   const tldr = useMemo(() => {
-    if (!data) return null;
-    const parts: React.ReactNode[] = [];
-    if (yRev > 0) parts.push(<span key="r">Yesterday closed at <b>{zl(yRev)}</b>{delta != null ? ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%)` : ""}.</span>);
+    if (!brief) return null;
+    const out: React.ReactNode[] = [];
+    if (y && y.revenue > 0) out.push(<span key="r">Yesterday closed at <b>{zl(y.revenue)}</b>{y.deltaPct != null ? ` (${y.deltaPct >= 0 ? "+" : ""}${y.deltaPct}%)` : ""}.</span>);
+    if (pacing) out.push(<span key="p"> On pace for <b>{zl(pacing.projectionGrosze)}</b> this month.</span>);
     const d = decisions.length, u = unread.length;
-    if (d || u) parts.push(<span key="n"> {d ? `${d} decision${d > 1 ? "s" : ""}` : ""}{d && u ? " and " : ""}{u ? `${u} alert${u > 1 ? "s" : ""}` : ""} need you.</span>);
-    else parts.push(<span key="c"> Nothing needs you — a clean start.</span>);
-    return parts;
-  }, [data, yRev, delta, decisions.length, unread.length]);
+    out.push(d || u ? <span key="n"> {d ? `${d} decision${d > 1 ? "s" : ""}` : ""}{d && u ? " and " : ""}{u ? `${u} alert${u > 1 ? "s" : ""}` : ""} need you.</span> : <span key="c"> Nothing needs you — a clean start.</span>);
+    return out;
+  }, [brief, y, pacing, decisions.length, unread.length]);
 
   const skel = (w: string, h = 14) => <span className="wb-skel" style={{ display: "inline-block", width: w, height: h, borderRadius: 6 }} />;
 
@@ -135,20 +106,21 @@ export function WelcomeBrief({ name }: { name: string }) {
 
         <div className="wb-pace">
           <div className="k">Yesterday’s close</div>
-          <div className="v wb-num">{loading ? skel("60%", 48) : zl(yRev)}</div>
-          {!loading && delta != null && (
-            <div className="cap wb-num">
-              <span className={delta >= 0 ? "wb-pos" : "wb-neg"}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}%</span> vs the prior day
-            </div>
+          <div className="v wb-num">{loading ? skel("60%", 48) : zl(y?.revenue ?? 0)}</div>
+          {!loading && y?.deltaPct != null && (
+            <div className="cap wb-num"><span className={y.deltaPct >= 0 ? "wb-pos" : "wb-neg"}>{y.deltaPct >= 0 ? "▲" : "▼"} {Math.abs(y.deltaPct)}%</span> vs the prior day</div>
           )}
-          {!loading && goal > 0 && (
+          {!loading && pacing && (
             <>
-              <div className="track" style={{ marginTop: 16 }}><i style={{ width: `${pacePct ?? 0}%` }} /></div>
-              <div className="eng wb-num">
-                Today’s goal <b style={{ color: "var(--fg)" }}>{zl(goal)}</b>
-                {forecast != null ? <> — forecast <b>{zl(forecast)}</b>{pacePct != null ? ` · ${pacePct}% of goal` : ""}</> : <> — forecast pending</>}
+              <div className="track" style={{ marginTop: 16 }}><i style={{ width: `${Math.min(100, pacing.pct)}%` }} /></div>
+              <div className="cap wb-num">
+                Month <b style={{ color: "var(--fg)" }}>{zl(pacing.mtdGrosze)}</b> of {zl(pacing.monthGoalGrosze)} · {pacing.pct}% · day {pacing.dayOfMonth}/{pacing.daysInMonth}
               </div>
+              <div className="eng wb-num">On pace for <b>{zl(pacing.projectionGrosze)}</b> · <span className={pacing.aheadGrosze >= 0 ? "wb-pos" : "wb-neg"}>{pacing.aheadGrosze >= 0 ? "+" : "−"}{zl(Math.abs(pacing.aheadGrosze))}</span> {pacing.aheadGrosze >= 0 ? "ahead of" : "behind"} goal</div>
             </>
+          )}
+          {!loading && !pacing && goal > 0 && (
+            <div className="eng wb-num" style={{ marginTop: 14 }}>Today’s goal <b style={{ color: "var(--fg)" }}>{zl(goal)}</b>{forecast != null ? <> — forecast <b>{zl(forecast)}</b></> : null}</div>
           )}
         </div>
 
@@ -171,7 +143,7 @@ export function WelcomeBrief({ name }: { name: string }) {
           {loading ? skel("100%", 60) : decisions.length === 0 ? (
             <div className="wb-empty">Nothing waiting on your approval.</div>
           ) : decisions.slice(0, 4).map((a) => {
-            const o = data!.agents.get(a.owner);
+            const o = agents.get(a.owner);
             return (
               <div className="wb-dec" key={`${a.meetingId}-${a.index}`}>
                 <span className="wb-ava">{o?.initials ?? "··"}</span>
@@ -200,12 +172,44 @@ export function WelcomeBrief({ name }: { name: string }) {
           {!loading && unread.length > 0 && <Link className="wb-lk" href={link("/admin/alerts")}>Open all alerts →</Link>}
         </div>
 
+        {/* THE CONSTRAINT */}
+        {!loading && brief?.constraint && (
+          <div className="wb-group">
+            <div className="wb-glabel">The constraint <span className="n">· your throughput ceiling</span></div>
+            <div className="wb-constraint">
+              <div className="h">Busiest stretch · {hh(brief.constraint.peakHour)}–{hh((brief.constraint.peakHour + 1) % 24)}</div>
+              <div className="b">Across the last 30 days that hour ran <b>~{brief.constraint.peakAvgPerHour} orders/hr</b> on average — your peak load and the ceiling to watch when you add covers or a delivery push.</div>
+            </div>
+          </div>
+        )}
+
+        {/* LEADING INDICATORS */}
+        {!loading && brief?.leading && (brief.leading.repeatRatePct != null || brief.leading.pulse != null || brief.leading.bookingsCount > 0) && (
+          <div className="wb-group">
+            <div className="wb-glabel">Leading indicators <span className="n">· next month, today</span></div>
+            <div className="wb-grid4">
+              <div className="wb-tcell"><div className="k">Repeat rate</div><div className="v wb-num">{brief.leading.repeatRatePct != null ? `${brief.leading.repeatRatePct}%` : "—"}</div><div className="d">30-day</div></div>
+              <div className="wb-tcell"><div className="k">New cust / mo</div><div className="v wb-num">{brief.leading.newCustomersPerMonth ?? "—"}</div></div>
+              <div className="wb-tcell"><div className="k">Bookings · 14d</div><div className="v wb-num">{brief.leading.bookingsCount}</div><div className="d">{brief.leading.bookingsAttendance > 0 ? `${brief.leading.bookingsAttendance} pax` : "events"}</div></div>
+              <div className="wb-tcell"><div className="k">Pulse (NPS)</div><div className="v wb-num">{brief.leading.pulse != null ? brief.leading.pulse : "—"}</div>{brief.leading.pulseDeltaPts != null ? <div className={`d ${brief.leading.pulseDeltaPts >= 0 ? "up" : "down"}`}>{brief.leading.pulseDeltaPts >= 0 ? "▲" : "▼"} {Math.abs(brief.leading.pulseDeltaPts)} pts</div> : <div className="d">{brief.leading.pulseResponses} answers</div>}</div>
+            </div>
+          </div>
+        )}
+
+        {/* ANOMALY */}
+        {!loading && brief?.anomaly && (
+          <div className="wb-group">
+            <div className="wb-glabel">Worth copying</div>
+            <div className="wb-anom"><b>{brief.anomaly.city}</b>’s average ticket — <b>{zl2(brief.anomaly.avgTicketGrosze)}</b> — runs <b>{brief.anomaly.deltaPct}% above</b> the chain ({zl2(brief.anomaly.chainAvgGrosze)}). Whatever’s working there is worth rolling out everywhere.</div>
+          </div>
+        )}
+
         {/* LOCATIONS */}
-        {!loading && data!.locs.length > 0 && (
+        {!loading && brief && brief.locations.length > 0 && (
           <div className="wb-group">
             <div className="wb-glabel">By location <span className="n">· yesterday</span></div>
-            {data!.locs.map((l) => (
-              <div className="wb-loc" key={l.locationSlug}>
+            {brief.locations.map((l) => (
+              <div className="wb-loc" key={l.slug}>
                 <div><div className="nm">{l.city}</div><div className="sub">{l.orderCount} orders{l.avgOrderValue ? ` · ${zl2(l.avgOrderValue)} avg` : ""}</div></div>
                 <div className="val wb-num">{zl(l.revenue)}</div>
               </div>
@@ -214,28 +218,26 @@ export function WelcomeBrief({ name }: { name: string }) {
         )}
 
         {/* TODAY AHEAD */}
-        {!loading && (goal > 0 || forecast != null) && (
+        {!loading && y && (goal > 0 || forecast != null) && (
           <div className="wb-group">
             <div className="wb-glabel">Today, ahead</div>
             <div className="wb-today">
               <div className="wb-tcell"><div className="k">Revenue goal</div><div className="v wb-num">{goal > 0 ? zl(goal) : "—"}</div></div>
-              <div className="wb-tcell"><div className="k">Forecast</div><div className="v wb-num">{forecast != null ? zl(forecast) : "—"}</div><div className="d">{forecast != null && pacePct != null ? `${pacePct}% of goal` : "from labour model"}</div></div>
-              <div className="wb-tcell"><div className="k">Awaiting you</div><div className="v wb-num">{decisions.length + unread.length}</div><div className="d">{decisions.length} decisions · {unread.length} alerts</div></div>
+              <div className="wb-tcell"><div className="k">Forecast</div><div className="v wb-num">{forecast != null ? zl(forecast) : "—"}</div><div className="d">{forecast != null && brief?.today.pacePct != null ? `${brief.today.pacePct}% of goal` : "labour model"}</div></div>
+              <div className="wb-tcell"><div className="k">Profit / order</div><div className="v wb-num">{zl2(y.perOrderProfitGrosze)}</div><div className="d">{Math.round(y.profitMargin)}% margin</div></div>
             </div>
           </div>
         )}
 
         {/* YESTERDAY RECAP (demoted) */}
-        {!loading && data!.yest && (
+        {!loading && y && (
           <div className="wb-group">
             <div className="wb-glabel">Yesterday · for the record</div>
             <div className="wb-recap">
-              <span className="it"><b>{data!.yest.totalOrders}</b> orders</span>
-              <span className="it">avg <b>{zl2(data!.yest.avgOrderValue)}</b></span>
-              <span className="it">margin <b>{Math.round(data!.yest.profitMargin)}%</b></span>
-              {(data!.yest.topItems ?? []).slice(0, 2).map((t) => (
-                <span className="it" key={t.name}>{t.name} <b>×{t.quantity}</b></span>
-              ))}
+              <span className="it"><b>{y.orders}</b> orders</span>
+              <span className="it">avg <b>{zl2(y.avgOrderValue)}</b></span>
+              <span className="it">margin <b>{Math.round(y.profitMargin)}%</b></span>
+              {y.topItems.map((t) => (<span className="it" key={t.name}>{t.name} <b>×{t.quantity}</b></span>))}
             </div>
           </div>
         )}

@@ -489,20 +489,29 @@ auth canvas's signature lighting and the sign-in lockup:
   `welcome.css` (warm-dark editorial — **Instrument Serif** greeting, Inter
   body, JetBrains Mono meta, a single ember accent; it does **not** use the av3
   theme). Live code: `src/admin-v3/WelcomeBrief.tsx` (design direction #5 from
-  `tests/sketches/welcome-brief/`). A morning brief runs before the day has
-  traded, so it leads with **yesterday's close + delta** and **today's
-  goal/forecast** (a forecast-vs-goal bar), then **decisions awaiting you** (the
-  AI boardroom approval queue, owners named from the agents roster), **what
-  needs you** (unread notifications), the **per-location** split and a demoted
-  **yesterday recap**. Every module is live data and **degrades to nothing**
-  when its source 403s/empties — never a placeholder. Reads
-  `/api/admin/{analytics (yesterday + prior),insights,ops-goals,labor-efficiency,notifications}`
-  + `…/ai/boardroom/{approvals,agents}`. Phase 1 — deferred (need new
-  computation, so omitted not faked): monthly goal-pacing, the capacity
-  "constraint", margin/pizza, NPS trend, leading indicators, anomaly detection.
-  Re-roots its links with `withAdminV3Base`. Nav: still listed first in Overview
-  (clicking it leaves the shell). A one-tap **Enter the dashboard** returns to
-  the `/admin` HQ.
+  `tests/sketches/welcome-brief/`). Built as a **command brief** (the Cook/Musk
+  lens), not a recap: it leads with **yesterday's close + delta** and **monthly
+  goal-pacing** (MTD vs target with a run-rate **projection** + ahead/behind
+  bar), then **decisions awaiting you** (the AI boardroom approval queue, owners
+  named from the agents roster), **what needs you** (unread notifications), **the
+  constraint** (your busiest hour / throughput ceiling), **leading indicators**
+  (30-day repeat rate, new customers/mo, the 14-day bookings pipeline, and the
+  **Pulse/NPS** score + 30-day trend), an **anomaly to copy** (the location whose
+  avg ticket most beats the chain), the **per-location** split, **today's
+  goal/forecast + profit-per-order**, and a demoted **yesterday recap**. The
+  analytics half is computed **server-side in one pass** at
+  `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` / `getOpsGoals` /
+  `computeLaborEfficiencyDaily` / `computeHourlyThroughput` /
+  `computeCohortSnapshot` / `getTruckEvents` + `pulseBreakdown` over
+  `getSurveyResponses`) so it can't drift from Dashboard / Reports / Calculator /
+  Surveys; decisions + alerts stay on `…/ai/boardroom/{approvals,agents}` +
+  `…/notifications`. Every module is live data and **degrades to nothing** when
+  its source 403s/empties — never a placeholder (pacing omits with no revenue
+  goal set; Pulse omits below 3 recent answers). The constraint is the real
+  busiest-hour load signal, **not** a fabricated capacity %; margin shows as
+  profit-per-order, **not** a per-ingredient decomposition. Re-roots its links
+  with `withAdminV3Base`. Nav: still listed first in Overview (clicking it leaves
+  the shell). A one-tap **Enter the dashboard** returns to the `/admin` HQ.
 - [x] Ops Agent (`/admin/ai/agent`) — the v3 home for the v2 `OpsAgentChat`
   (`AgentV3`). Claude with role-gated read+write tools over
   `/api/admin/ai-agent/*` (conversations + `…/turn`): single-column chat,
