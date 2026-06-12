@@ -46,6 +46,7 @@ const locationSchema = z.object({
   isActive: z.boolean().default(false),
   currency: z.literal("PLN").default("PLN"),
   servesAlcohol: z.boolean().default(false),
+  teamLead: z.string().max(200).default(""),
   displayOrder: z.number().int().min(0).max(9999).default(0),
 });
 

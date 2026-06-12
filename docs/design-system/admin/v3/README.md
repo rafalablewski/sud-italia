@@ -991,8 +991,14 @@ auth canvas's signature lighting and the sign-in lockup:
   new-site readiness checklists (toggle items, add planned site,
   `PUT /api/admin/expansion`).
 - [x] Intelligence complete — Manage locations (`/admin/locations/manage`):
-  site CRUD (hours editor, coordinates, active/alcohol) round-tripping the full
-  record + re-seed (`/api/admin/locations`). Insights (`/admin/ai`): **five
+  **full per-site detail editor** — name / city / slug / address, short +
+  long description, team-lead attribution, hero-image path, coordinates,
+  hours editor, active/alcohol — round-tripping the whole record via
+  `/api/admin/locations` (the GET returns `{ locations: [...] }`, so the list
+  reads `res.locations`). `teamLead` now persists end-to-end (DB column
+  `team_lead` + zod field), and the **welcome brief's "trucks open" count**
+  reads the same DB-backed `getActiveLocationsAsync()` so edits here move that
+  number. + re-seed. Insights (`/admin/ai`): **five
   tabs restored to v2 parity (flag #5)** — **Forecast** bars
   (`/api/admin/ai/forecast`), **Anomalies** (today vs trailing 28-day avg from
   `/api/admin/analytics`), **Reorder** (SKUs ≤ reorder point from
