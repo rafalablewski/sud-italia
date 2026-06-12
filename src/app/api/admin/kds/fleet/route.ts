@@ -17,15 +17,12 @@ import {
  * every active truck, plus the predicted-ready engine and the capacity-vs-
  * demand Pace layer, all from real data:
  *
- *   - active tickets + counts read the same real orders the KDS boards do.
- *     getOrders strips simulated demo tickets by default; the Atlas board opts
- *     in with ?includeSimulated=1 (like the floor board) so a marked SIMULATION
- *     rush lights up the ticket stacks, counts and Pace layer for demos/training,
+ *   - active tickets + counts read the same real orders the KDS boards do
+ *     (getOrders strips any simulated records by default),
  *   - predicted-ready + at-risk come from analyzeTruck (prep times + live queue),
  *   - covers/hr, revenue/hr, throughput from completed orders in the window,
  *   - promise-accuracy + the throughput sparkline from the kds_tickets ledger
- *     (getKdsServiceHistory) — sims never write that ledger, so those benchmarks
- *     stay real even when sandbox tickets are on the board,
+ *     (getKdsServiceHistory),
  *   - on-shift from real open time-punches (getLaborCostInRange).
  *
  * Owner-only and inherently cross-location, so no locationParam.

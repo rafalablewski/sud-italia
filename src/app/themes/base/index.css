@@ -2893,10 +2893,11 @@ button.v2-card:active { transform: translateY(0); }
   color: var(--success);
 }
 
-/* KDS order simulator — unmistakable but tasteful purple marking so a demo
-   rush can never be confused with real service: a slim top tag on each ticket
-   plus a board-wide banner. A neutral dashed treatment keeps it clearly
-   "not real" without competing with the red "late" signal. */
+/* Simulated KDS ticket marking — unmistakable but tasteful purple so a
+   synthetic ticket can never be confused with real service: a slim top tag
+   plus a board-wide banner, a neutral dashed treatment that reads clearly
+   "not real" without competing with the red "late" signal. Reserved
+   scaffolding — the KDS order simulator that produced these was removed. */
 .v2-ticket-sim { border-style: dashed; border-color: var(--border-strong); }
 .v2-ticket-sim-tag {
   display: flex;

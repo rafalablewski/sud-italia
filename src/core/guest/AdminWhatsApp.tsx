@@ -77,7 +77,7 @@ interface ConversationRow {
   lastBody: string;
   /** True when an active session row contributes to this conversation. */
   hasActiveSession: boolean;
-  /** True for sandbox conversations staged by the chat simulator. */
+  /** True for synthetic / sandbox conversations (reserved; never set by the live bot). */
   simulated: boolean;
 }
 

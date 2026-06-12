@@ -545,12 +545,12 @@ export interface Order {
    *  orders, SMS otherwise. "qr" = in-restaurant QR-code table ordering
    *  (a walk-in dine-in order, no time-slot booking). */
   channel?: "web" | "whatsapp" | "qr";
-  /** Synthetic order produced by the KDS live-order simulator. These stream
-   *  onto the Kitchen Display board (clearly marked as SIMULATION) so staff
-   *  can train against a live rush, but getOrders() filters them out of every
-   *  other read by default — they never reach the dashboard, Orders list,
+  /** Marks a synthetic / simulated order. Reserved scaffolding — the KDS
+   *  order simulator that produced these was removed, but the flag stays for
+   *  future simulation tooling: getOrders() filters simulated records out of
+   *  every read by default, so they never reach the dashboard, Orders list,
    *  reports or CRM, and never trigger stock decrement, customer rollups, or
-   *  customer comms. Purged when the simulation toggle is turned off. */
+   *  customer comms. */
   simulated?: boolean;
 }
 

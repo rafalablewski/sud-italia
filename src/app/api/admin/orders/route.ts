@@ -10,9 +10,9 @@ import { appendAuditLog, getOrders, updateOrderStatus, deleteOrder } from "@/lib
 export const GET = withAdmin(
   { locationParam: "location" },
   async (req, _ctx, { locationSlug }) => {
-    // Simulator tickets are opt-in (?includeSimulated=1) — only the Kitchen
-    // Display board asks for them, so they surface on the KDS (clearly marked)
-    // but never leak into the dashboard, Orders list or any report.
+    // Simulated records are stripped by default; ?includeSimulated=1 is a
+    // reserved opt-in for future simulation tooling (no current consumer —
+    // the KDS order simulator was removed).
     const includeSimulated = req.nextUrl.searchParams.get("includeSimulated") === "1";
     const orders = await getOrders(locationSlug ?? undefined, undefined, { includeSimulated });
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
