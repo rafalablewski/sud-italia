@@ -1,254 +1,191 @@
-# POS — fast, dense, calm
+# Core v2 · POS
 
-← back to [README](../README.md)
+The till. `/core/pos`.
 
-The money surface. The hardest test of the system — has to be **clean,
-calm, and fast at once** — and the highest daily-use surface for staff.
+- **Live code:** `src/core/pos/CorePos.tsx` (client surface) +
+  `src/app/core/pos/page.tsx` (server: resolves per-location menu
+  snapshots and passes them in).
+- **Theme:** `.core-pos` + `.core-rail` / `.core-cat` / `.core-menu` /
+  `.core-prod` / `.core-ticket` in `themes/core/index.css`.
 
-**Live code:** `src/core/pos/AdminPos.tsx`.
-**Mockups:** `pos.html` + `pos-tender.html` + `pos-tables.html`.
-**Theme:** renders on the unified Core suite shell (`<CoreShell>`,
-`.core-suite` in `src/app/themes/core/suite.css`) — the shared two-row
-header with **no sidebar**: the location toggle + fullscreen sit in the
-header right (row 1), the channel segmented control + Steer toggle in the
-subbar right (row 2). `/core/pos` is a top-level `/core/*` route with its
-own layout (`src/app/core/layout.tsx` + `CoreProviders`), so there's no
-admin chrome.
-The tab rail, category rail, text-forward `.prod` cards and the coursing
-`.ticket` are all ported 1:1 from `pos.html`; tender is a `.core-suite-
-overlay` dialog, and table-assign / address use the shared v2 `Dialog`
-with `theme="core"` (dark `.v2-dialog-core` skin) so they match the dark
-surface.
+## Layout
 
-## Layout — two-pane, iPad-first
+A full-width **open-check bar** (`.core-checkbar`) over a three-column grid
+inside the shell body: **rail · menu · ticket**.
 
-A slim `.intro.intro-slim` banner (the mockup pane header) opens the
-surface above the till — same banner family as the rest of Core, tightened
-so the bordered-card `.pos-shell` keeps its vertical room.
+- **`.core-checkbar`** — spans the whole width above the panes (so it sits
+  over the menu's steering banner): an optional `.core-sync-pill`, then the
+  `.core-tabrail-sum` rollup
+  (`N tabs · R ready to pay · P parked · VALUE open`) over the wrapping
+  `.core-tabrail` of `.core-ttab` open-check chips + `+ New`. The active check
+  gets a brand outline; the rail wraps (capped height + scroll) so a busy
+  till's checks stay browsable without a horizontal hunt. **`+ New` opens
+  optimistically** — the check appears and goes active instantly under a
+  client `tmp-` id, then reconciles to the server id when the background
+  `POST` returns (carrying over anything rung in the meantime), so the till
+  never blocks on a round-trip.
+- **`.core-sync-pill`** — amber rounded status chip (`--amber` on
+  `--amber-wash`), shown only when the durable write outbox
+  (`src/store/writeQueue.ts`) holds unsent writes: `↻ N writes syncing`. It
+  tells staff a send/charge made offline is saved and will land on
+  reconnect — the visible end of the Phase 2b durable-queue path.
 
-An **Order / Tender** `viewnav` rides the subbar (mockup). **Order** is the
-till; **Charge** (or the Tender tab) switches to the **Tender** view — the
-mockup `.tender-grid` (order summary + a `.tender-dialog` with the amount,
-`.paymethods`, and the charge/back actions), wired to the same server-
-authoritative `pay()`. Paying resets to Order.
+- **`.core-rail`** — the category rail. An **All** chip (stacks every
+  category as `.core-menu-sec` blocks with `.core-menu-sec-h` headers) over
+  the per-category `.core-cat` buttons — each lists only categories present
+  on the active location's menu, with a live item count (`.n`) and, when
+  steering is active, a `.core-cat-promise` per-category ETA (`~Nm` from
+  `promiseSecondsByCategory`). `.on` = the selected category (filled ink).
+- **`.core-menu` / `.core-menu-grid`** — auto-fill grid of `.core-prod` cards.
+  Each card is **text-forward** (no photo dependency): `.pn` (display
+  name, with a `.core-role` menu-engineering badge — Hero / Profit / Anchor
+  / LTO from `menuRole`) · `.pd` (description, clamped to 2 lines) ·
+  `.core-tagrow` of `.core-tag` chips (veg/vegan → `.veg`, spicy → `.hot`,
+  gluten-free → `.fast`) plus a live `.core-steer-tag` pace cue (**★ make
+  now** for `makeNow` ids, **▼ ease** for `throttle` ids) · `.pf` footer
+  with the `.pp` mono price and the burgundy `.add` button. Cards **stretch to equal height per row** and the `.pf`
+  footer is pinned to the bottom (`margin-top: auto`), so a long
+  description can't make one card taller than its row-mates.
+- **`.core-ticket`** — the open-check panel. Today it shows
+  `.core-ticket-empty` (the no-open-check state).
 
-```
-+----------------------------------------------------------+
-|  brand · POS·KDS·Guest·Service nav · location · ⛶  (head) |
-|  Point of sale · KRAKÓW   |   channel seg · Steer (subbar) |
-+---------------------------------+------------------------+
-|  ──── Open checks (tab rail) ────                         |
-+-------+-------------------------+------------------------+
-| cat-  |  menu grid              | live ticket             |
-| rail  |                         | (persistent)            |
-| (86px)|                         | (396px)                 |
-+-------+-------------------------+------------------------+
-```
+## The ticket (open check)
 
-- **Vertical category rail** on the left (86px) — short thumb travel on
-  an iPad. Each category shows a capacity-true promise time
-  (`Pizze · ~14m`).
-- **Menu grid** — 3-column responsive grid of product cards (see below).
-- **Persistent live ticket** on the right (396px) — never disappears,
-  never collapses. The ticket *is* the order.
+Wired 1:1 to the same server engine as today's `/core/pos` — fresh `core-`
+UI, identical contract.
 
-**Responsive.** The mobile shell is retired (`useIsMobile()` is a desktop
-shim), so the POS renders this same `.core-suite` layout at **every** width
-and reflows in CSS — there is no separate mobile POS. Tablet narrows the
-rails (cat-rail 64px, ticket 320px) and drops the menu to 2 cols; **phone
-(≤ 680px)** stacks it — the cat-rail becomes a horizontal scroller across the
-top, the menu goes 1-col, and the ticket drops below with its own capped
-(`46vh`) scroll. The shared header reflows — the brand label collapses to its
-mark and the `.core-nav` switcher drops its labels to icons so all four
-surfaces still fit one row. See the breakpoint table in
-[`../theme/README.md`](../theme/README.md#responsive--phone--tablet--web).
+The open-check selector (`.core-tabrail-sum` + `.core-tabrail`) lives in the
+top `.core-checkbar` (see Layout) — the `.core-ticket` column below shows the
+**active** check only:
 
-## Concurrent open checks — tab rail
+- **`.core-thead`** — `.core-th-name` (the check name is an **inline editable
+  input** — click to rename, persisted via the same debounced `PUT`) ·
+  channel/order tag · a `.core-tabpromise` per-check ETA (max
+  `promiseSecondsByCategory` across the lines, toned by the bottleneck
+  tier) · the `.core-covers` stepper (dine-in) and, right beside it, the
+  `.core-chan-aux` button — **Assign table / Table N** (dine-in, opens the
+  in-pane table picker) or **Add / Edit address** (delivery, opens the
+  address dialog). Both sit next to the covers count so the seating /
+  destination control lives with the party size. A `.core-delivery-paused`
+  banner shows when steering has capped the next delivery window
+  (`deliveryCapNextWindow === 0`).
+- **`.core-chanrow` / `.core-chan`** — the channel selector (dine-in /
+  takeaway / delivery), now just the three channel buttons.
+- **`.core-timing` / `.core-seg`** — dine-in **kitchen-timing** toggle
+  (Coursed ↔ All together); writes `tab.coursed`, which the `.core-lines`
+  renderer reads to course or flat-list the ticket.
+- **`.core-lines`** — `.core-line` rows. The row body is `.core-line-main`: a
+  `.core-grip` handle (`⠿`) then a `.core-qstep` −/＋ counter and a mono line
+  price. Dine-in coursed checks group lines into `.core-course` blocks with a
+  `.core-course-h` header and a per-course **Fire** button; fired courses dim
+  (`.core-course.fired`) and show `✓ Fired`. **Re-coursing is touch-first:** on
+  a coursed line the grip is a `<button>` that toggles `.core-line.picking`,
+  revealing an inline `.core-recourse` chooser (`.core-recourse-opt` per course,
+  current one `.on`) — one tap moves the line. Native drag stays as a
+  mouse-only enhancement (`.core-line[draggable="true"]` shows the grab cursor +
+  grip bob; dragging onto a course tints it via `.core-course.drop`). Flat
+  (non-coursed) lines render the grip as an inert `<span>` and aren't
+  draggable.
+- **`.core-offer`** — cross-sell suggestions (`getCartSuggestions`), plus a
+  `.core-offer.combo` **combo-completion** prompt when a deal is one or two
+  items short (`getActiveComboDeals` → `missingItems` / `missingCategories`
+  / `missingQuantity`); tapping it adds exactly the missing items so the
+  real discount fires.
+- **`.core-foot`** — an optional `.core-frow.member` chip (attached loyalty
+  guest, with a remove ✕), `.core-frow` subtotal, `.core-frow.disc` combo
+  discount **and** a `.core-frow.disc` manual-discount line, `.core-ftot` total,
+  then `.core-foot-actions` (`.core-send` Send to KDS + `.core-charge`) and a
+  -- each button carries an inline `.core-glyph` line-SVG (send · card ·
+  park-bars · tag · person · trash, core's own glyphs, not lucide) --
+  secondary `.core-foot-actions2` grid of `.core-foot-aux` buttons (`data-on`
+  when active): **Park / hold** full-width (`.core-foot-aux-wide`; the park
+  toggle now lives by Charge, not the top bar) over a 2-column row of
+  **Add / Edit discount** | **Add membership / Member ✓**, then a
+  full-width **Void check** (`.core-foot-aux.danger.core-foot-aux-wide`).
+- **Discount + membership** — `DiscountDialog` (amount-zł or percent + an
+  optional reason) and `MemberDialog` (phone + optional name) write
+  `tab.discount` / `tab.customerPhone` + `tab.customerName` via the normal
+  debounced tab PUT. The charged total is recomputed **server-side**
+  (`buildOrderShape` → `manualDiscountGrosze`, the shared `@/lib/pos-discount`
+  helper the footer preview also uses), and the member phone becomes the
+  order's `customerPhone` (normalised) so loyalty points accrue on payment
+  (Rule #6). Verified: a 10% discount on a 27.90 zł pizza charges 25.11 zł
+  to `+48…`.
+- **Void** — the footer's **Void check** button deletes the active open
+  check (`DELETE /api/admin/pos/tabs?id=`). Optimistic: the row vanishes at
+  once. An **empty** check is dropped on tap; a check with rung items
+  confirms via a `CoreDialog` first (its danger button is
+  `.core-btn.danger`). An unsaved optimistic (`tmp-`) check is removed locally
+  only.
 
-A horizontal rail of tabs above the body. Each tab is a status pill:
+## Engine + API contract
 
-| Status | Tone |
-|---|---|
-| `Open` | success-soft / success text |
-| `Ready·Pay` | warning-soft / warning text |
-| `Parked` | surface-hover / fg-subtle text |
+Real, server-resolved; **no mock data** (Rule #1). The server owns the
+total and the `orderId` — the till only ever sends item ids + quantities.
 
-Tab top-border accent encodes channel:
-- `dine-in` → platinum top border
-- `delivery` → info (steel) top border
-- `takeaway` → neutral
+- `page.tsx` resolves `menusByLocation` (`getMenuWithOverrides`) +
+  `upsellByLocation` (`getUpsellSettings`). The surface picks the menu for
+  the `LocationContext` truck (shell chip), falling back to the first.
+- **Tabs** — `GET/POST/PUT/DELETE /api/admin/pos/tabs?location=`. `POST`
+  opens a check (fired in the background behind the optimistic chip); local
+  edits debounce 350ms to `PUT` (temp `tmp-` ids are never PUT — their edits
+  flush once under the real id at reconcile); `DELETE` voids a check. A
+  visibility-aware 5s poll (`usePolling`) syncs other tills — skipped while an
+  edit is mid-debounce **or** any save/open/void is still on the wire
+  (`pendingSaves`, so an in-flight open or void can't be resurrected), and
+  reconciled by `updatedAt` so an already-in-flight poll can't revert a
+  fresher local edit.
+- **Send / Fire** — `POST /api/admin/pos/orders` `{ tabId, courses? }`.
+- **Charge** — `PATCH /api/admin/pos/orders` `{ tabId }` → marks `paidAt`,
+  returns the authoritative `totalAmount`, closes the tab.
+- **Pricing** — `getActiveComboDeals` (discount gated on `isComplete`,
+  subtracted from the real total) + `getCartSuggestions`, both from
+  `@/lib/upsell`; prices in grosze, formatted `27,90`.
 
-Above the rail: summary stats (`4 tabs · 1 ready to pay · 1 parked ·
-681 zł open`). The current tab gets the brand-accent top border.
+## Own UI primitives
 
-## Menu cards — text-forward
+POS uses Core v2's **own** kit (no `src/ui`): `CoreDialog`
+(`src/core/ui/Dialog.tsx`, the tender / address modals) and
+`useCoreToast` (`src/core/ui/Toast.tsx`) — both portaled into the
+`.core` theme root. Classes: `.core-scrim` / `.core-modal*` / `.core-btn` /
+`.core-toast*`.
 
-**The empty image-box pattern is forbidden.** Until real food photography
-exists, menu cards lead with type. The text-forward card contract lives
-in the Core theme ([`../theme/`](../theme/)).
+The **table picker** is **not** a modal — it takes over the middle (menu)
+pane (`.core-tablepick`) for a full-size, **zone-grouped** board
+(`.core-tablezone` → `.core-tablegrid.big` / `.core-tablebtn`) with a *← Back to
+menu* return; switching checks closes it. Each table shows seats + zone
+and flags conflicts with `.core-tbadge` chips — *In use* (another open
+dine-in check is on it), *Seats N < party* (undersized), *Reserved*,
+*Out of service* — and toasts a warning when you seat onto a conflicted/
+over-capacity table.
 
-| Slot | Content |
-|---|---|
-| `.phead` | 17px category icon (`.catico`) + dish name (Fraunces) + role badge (right) |
-| `.desc` | menu copy (12px muted, e.g. *"San Marzano, fior di latte, basil, EVOO"*) |
-| `.row` | category badge + optional pace chip — price (pinned to bottom) |
+## At parity
 
-Reserve a **2-line min-height on both the name and the desc** so every card
-is identical and the price sits in the same place across every row.
+Pace-steering banner (`GET /api/admin/pace/steering`), park/resume,
+tap- or drag-to-recourse (tap a line's grip for the inline course chooser,
+or drop a line on a course header), kitchen-timing toggle,
+inline check rename, optimistic check open + void/delete, double-seat /
+over-capacity guards, the tab-rail rollup, a hydration-aware empty state,
+and the fullscreen kiosk are all wired — feature-for-feature with today's
+`/core/pos`.
 
-## One primary action
+## QR table-order queue
 
-`Charge` is the single primary CTA — burgundy fill, full-width `xl`, at the
-bottom of the ticket. Everything else (Park, Send to KDS) is secondary.
+Live code: `src/core/pos/CoreQrQueue.tsx` · API `src/app/api/admin/pos/qr-orders/route.ts`.
 
-```html
-<a class="btn primary xl" href="/mockups/core-suite/pos-tender.html"
-   style="width:100%;justify-content:center">Charge 280.80 zł</a>
-```
+A **QR pill** in the POS sub-header (`subRight`, beside the channel chip +
+Park) surfaces the dine-in orders guests placed by scanning a table QR
+(`channel: "qr"`, from `/qr`). It polls `GET /api/admin/pos/qr-orders?location=`
+every 8s; the pill goes `on` and shows an "N to pay" count when any are
+unpaid. Opening it lists each order in a `CoreDialog` — table number,
+guest, party size, line items, elapsed time, total and a paid/unpaid·status
+chip. **Mark paid** (`.core-charge`) posts `{ orderId, action: "settle" }`,
+which sets `paidAt` and fires a still-pending demo-mode order to the kitchen
+(status → `confirmed`). The order stays the single source of truth — no
+duplicate tab is created, mirroring how the POS already owns totals
+server-side.
 
-The tender sheet (`pos-tender.html`) is a centered dialog with two big
-buttons: **Card** (primary) + **Cash** (secondary). Both 18-pt Fraunces
-display total above.
-
-## Live pace steering — capacity-true promise times
-
-A warning strip at the top of the menu pane surfaces the bottleneck:
-
-> **Oven** at 86% — nearing capacity. Pushing **pasta & antipasti**; easing
-> pizza. ··· *Delivery cap 2 / 20m*
-
-Per-category chips on the cat-rail carry **promise times** (`~14m` /
-`~9m` / etc.) computed from `analyzeTruck` on live orders. Per-product
-**pace tags** sit inline in the menu card's tags row:
-
-- `★ Make now` (success-soft) — off-bottleneck items the kitchen wants
-- `Ease — oven busy` (warning-soft) — items the kitchen wants throttled
-
-These are the same `--cmd-warn`/`--cmd-ready` palette used by the KDS pace
-gauges — one system, both surfaces.
-
-The active check carries a `Mains firing · ~14 min` promise badge in its
-header (platinum soft, inset platinum hairline ring).
-
-## Coursing — dine-in only
-
-The defining POS feature for fine dining. **Coursing is per-tab** and only
-for dine-in. Lines carry a `course` (`PosTabLine.course`:
-`starter | main | dessert | drink`, defaulted from the menu category by
-`defaultCourseForCategory` in `src/lib/pos-coursing.ts`); the tab carries
-a `coursed` flag (default true for dine-in) and a server-owned
-`firedCourses[]`.
-
-### Kitchen-timing toggle
-
-An order-level segmented control (`.pos-coursing-toggle` over the shared
-`.cmd-seg-group`) sits above the ticket lines, dine-in only:
-
-```
-Kitchen timing                                [ Coursed ] [ All together ]
-```
-
-- **Coursed** — the ticket splits into per-course sections, each fired on
-  its own. Toggling persists `coursed=true` on the tab.
-- **All together** — flat ticket; `Send to KDS` fires every course at
-  once (`coursed=false`).
-
-### Course sections in the ticket
-
-In coursed mode lines group into **Starters / Mains / Dessert / Drinks**
-sections (`.pos-course`, ordered by `POS_COURSE_ORDER`, empty courses
-dropped), each with a header state:
-
-| State | Control |
-|---|---|
-| not yet fired | `.pos-course-fire` — a `--pos-firing` Fire button |
-| fired | `.pos-course-st.sent` — a green check + `Fired` |
-
-### Incremental firing → KDS
-
-Firing a course `POST /api/admin/pos/orders { tabId, courses:[course] }`.
-The server **accumulates** it onto `firedCourses` and rebuilds the tab's
-linked Order from the union of fired courses' lines — so each fire grows
-the kitchen ticket and **held courses never hit the KDS**. A bare send
-(non-coursed tab, or `Send to KDS`) fires everything. **Charge bills the
-whole tab** regardless of what's been fired. One growing Order per tab
-(not a separate ticket per course) keeps the charge/totals model intact;
-a future revision could split tickets per course. The fire also stamps
-`Order.coursing = { fired, held }`, which the KDS ticket reads to show a
-**"courses held"** hint (see [`kds.md`](./kds.md)) so the line knows more
-is coming.
-
-### Re-course a line (drag **or** tap)
-
-Each un-fired line is `draggable` (`.line.drag`); the `.course` sections are
-drop zones (`.course.drop` highlights on hover). Dropping calls
-`recourse(menuItemId, course)`, which patches the line's `course` and
-persists via the tabs PUT — re-pacing a held item without retyping and
-without un-firing what's already away.
-
-Because POS is **iPad-first** and the HTML5 drag API doesn't fire on touch,
-every un-fired coursed line *also* carries a native course `<select>`
-(`.line-course`) — the reliable touch/keyboard path to the same `recourse`
-call. Drag is the desktop power-user shortcut; the picker is the floor.
-
-## Fulfilment channel + table assignment
-
-A segmented control in the topbar (`Dine-in` / `Takeaway` / `Delivery`)
-sets the order's channel. Dine-in unlocks:
-
-- **Table assignment** — opens `pos-tables.html`, a grid of tables with
-  seats / zone / status / "in use" / over-capacity flags.
-- **Covers stepper** — 1–50, with a soft warning if covers > seats.
-- The kitchen-timing toggle (above).
-
-Delivery unlocks the address dialog (textarea, 400-char). Takeaway has
-neither.
-
-## Tender sheet (`pos-tender.html`)
-
-Centered dialog over a dimmed backdrop. Shows:
-
-- Server-authoritative total (Fraunces 44px), `tabular-nums`
-- `Card` primary + `Cash` secondary + `Cancel` ghost
-- Footer hint: *"Server-authoritative total · marks paidAt and closes the
-  tab. Card opens the terminal flow."*
-
-## Suggestions — combo + cross-sell
-
-A small `.offers` block below the lines:
-
-| Type | Tone | Example |
-|---|---|---|
-| Combo completion | success | *"Complete the Famiglia — add tiramisù, save 12 zł"* |
-| Cross-sell | platinum | *"2× espresso — fire with dessert"* |
-
-Driven by `getCartSuggestions()` / `getActiveComboDeals()` in
-`src/lib/upsell.ts`. The discount line in the totals is **success-tinted**
-(`color: var(--success)`).
-
-## Real fullscreen
-
-The topbar fullscreen button is wired to a real `requestFullscreen()`
-toggle via a small inline script (CSP-permitted). The POS goes
-**kiosk-fullscreen** on iPad on click.
-
-## Keyboard
-
-Inline hint row at the bottom of the ticket pane:
-
-```
-N new       1–9 switch tab       F fullscreen       Esc close
-```
-
-The hint is `11px var(--fg-subtle)` with `kbd` chips for the keys.
-
-## What never happens
-
-- No image placeholder boxes on cards.
-- No two-line modifier dropping the prices out of alignment — heights are
-  reserved.
-- No `Send to KDS` button being more prominent than `Charge`.
-- No card height drifting with name length — 2-line reserve makes them
-  uniform.
-- No `Signature SIGNATURE` duplication — the role badge and category
-  badge must be different (anchors badge **DOP / Veg**, not Signature).
+The same dialog's **Print table QR** tab generates a printable per-table QR
+(an SVG from `GET /api/admin/qr-code?location=&table=&base=`, encoding
+`<origin>/qr?location=&table=`) and opens a clean print window — so staff
+can produce the codes guests scan, closing the QR loop.

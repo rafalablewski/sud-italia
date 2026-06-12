@@ -3,7 +3,7 @@ import type { PosTabDiscount } from "@/data/types";
 /**
  * The grosze value of a manual POS discount against a base amount (the
  * subtotal after any auto combo deal). Shared by the client footer preview
- * (CoreV2Pos) and the server charge pipeline (pos/orders) so the displayed
+ * (CorePos) and the server charge pipeline (pos/orders) so the displayed
  * total always matches the charged total. Never exceeds the base, never
  * negative; percent is clamped 0–100.
  */

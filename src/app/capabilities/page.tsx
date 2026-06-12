@@ -675,7 +675,7 @@ export default async function CapabilitiesPage() {
           status: "live",
           href: "/qr",
           summary:
-            "Standalone table-ordering surface at /qr?location=<slug>&table=<n> (the qr.<domain> subdomain until DNS is wired). A seated guest scans the QR, browses the location's real menu (available, non-delivery-exclusive items), and pays. Checkout posts to /api/checkout with channel='qr' — createOrderFromCart runs in immediate dine-in mode: no time-slot booking, synthesises slot fields from now, and seats the order at the scanned table (matched by FloorTable.number, else the Floor Twin's best-fit pick). The order is a real dine-in Order (channel='qr', tableId set, partySize) that flows to KDS and the core-v2 POS QR queue. Pays through the enabled methods (Stripe session driven by /admin/payments) or demo mode. Verified end-to-end: a scan of table 12 creates a dine-in order seated at that table.",
+            "Standalone table-ordering surface at /qr?location=<slug>&table=<n> (the qr.<domain> subdomain until DNS is wired). A seated guest scans the QR, browses the location's real menu (available, non-delivery-exclusive items), and pays. Checkout posts to /api/checkout with channel='qr' — createOrderFromCart runs in immediate dine-in mode: no time-slot booking, synthesises slot fields from now, and seats the order at the scanned table (matched by FloorTable.number, else the Floor Twin's best-fit pick). The order is a real dine-in Order (channel='qr', tableId set, partySize) that flows to KDS and the core POS QR queue. Pays through the enabled methods (Stripe session driven by /admin/payments) or demo mode. Verified end-to-end: a scan of table 12 creates a dine-in order seated at that table.",
         },
         {
           name: "QR ordering controls",
@@ -685,25 +685,25 @@ export default async function CapabilitiesPage() {
             "Operator control over the /qr table-ordering surface (qr-ordering-settings.json, GET/PUT /api/admin/qr-ordering, toggle = saved): a chain-wide master switch, per-location overrides (dark-launch / pause one restaurant), require-a-scanned-table-number, and show-prices. The /qr page reads isQrOrderingEnabled() + these options server-side per request, so a toggle gates ordering on the next scan — when off, guests see an 'order with a member of staff' message instead of the menu.",
         },
         {
-          name: "POS QR-order queue (core-v2)",
+          name: "POS QR-order queue (core)",
           status: "live",
-          href: "/core-v2/pos",
+          href: "/core/pos",
           summary:
-            "The core-v2 POS sub-header carries a QR pill that surfaces incoming QR table orders (channel='qr') for the location — table number, guest, party size, line items, total and paid/unpaid status — polling /api/admin/pos/qr-orders every 8s. 'Mark paid' settles an order (POST … action=settle → updateOrder sets paidAt and fires a demo-mode pending order to the kitchen by flipping it to confirmed; audited pos.qr_settle). The dialog's 'Print table QR' tab generates a printable per-table QR (SVG from /api/admin/qr-code, encoding <origin>/qr?location=&table=). Keeps the single Order as the source of truth — no duplicate tab. Verified end-to-end: a QR order listed unpaid/pending settled to paid/confirmed.",
+            "The core POS sub-header carries a QR pill that surfaces incoming QR table orders (channel='qr') for the location — table number, guest, party size, line items, total and paid/unpaid status — polling /api/admin/pos/qr-orders every 8s. 'Mark paid' settles an order (POST … action=settle → updateOrder sets paidAt and fires a demo-mode pending order to the kitchen by flipping it to confirmed; audited pos.qr_settle). The dialog's 'Print table QR' tab generates a printable per-table QR (SVG from /api/admin/qr-code, encoding <origin>/qr?location=&table=). Keeps the single Order as the source of truth — no duplicate tab. Verified end-to-end: a QR order listed unpaid/pending settled to paid/confirmed.",
         },
         {
-          name: "Notifications center (core-v2)",
+          name: "Notifications center (core)",
           status: "live",
-          href: "/core-v2/pos",
+          href: "/core/pos",
           summary:
-            "A notifications bell in the core-v2 shell command bar (every surface) over the real notifications store. Polls /api/admin/notifications?count=true every 20s for the unread badge; opening the dropdown loads the list (new_order / low_stock / low_slots / slot_full / bundle_low_margin / dispute / order_status / daily_summary) with type-coloured dots, relative timestamps, and per-item + Mark-all-read (PUT /api/admin/notifications). Verified: unread count + the live 'New QR table order' notifications surface in the panel.",
+            "A notifications bell in the core shell command bar (every surface) over the real notifications store. Polls /api/admin/notifications?count=true every 20s for the unread badge; opening the dropdown loads the list (new_order / low_stock / low_slots / slot_full / bundle_low_margin / dispute / order_status / daily_summary) with type-coloured dots, relative timestamps, and per-item + Mark-all-read (PUT /api/admin/notifications). Verified: unread count + the live 'New QR table order' notifications surface in the panel.",
         },
         {
-          name: "Orders surface (core-v2)",
+          name: "Orders surface (core)",
           status: "live",
-          href: "/core-v2/orders",
+          href: "/core/orders",
           summary:
-            "A dedicated core-v2 surface (5th nav tab) for every order at the location — live and paid history — so staff aren't limited to the POS's open tickets. Reads /api/admin/orders (all orders) + /api/admin/floor/tables (table numbers), polled every 15s. Scope tabs (Current / Paid / All), a channel filter (QR / Web / WhatsApp / POS), and search over id / guest / phone / table; a KPI strip (orders today / current / to pay / paid today zł); and a detail dialog with the full ticket + a Mark-paid action (POST /api/admin/floor/orders settle). Verified: 38 orders list with filter + search + settle.",
+            "A dedicated core surface (5th nav tab) for every order at the location — live and paid history — so staff aren't limited to the POS's open tickets. Reads /api/admin/orders (all orders) + /api/admin/floor/tables (table numbers), polled every 15s. Scope tabs (Current / Paid / All), a channel filter (QR / Web / WhatsApp / POS), and search over id / guest / phone / table; a KPI strip (orders today / current / to pay / paid today zł); and a detail dialog with the full ticket + a Mark-paid action (POST /api/admin/floor/orders settle). Verified: 38 orders list with filter + search + settle.",
         },
         {
           name: "Payment methods manager",
@@ -1163,11 +1163,11 @@ export default async function CapabilitiesPage() {
             "Module 3 keystone (blueprint §4): turns the floor from a status board into a live economic simulation of the room. The Twin view on /admin/floor derives, per table, the realized turn-time, spend velocity (zł per occupied table-hour), live occupancy + a predicted free-in time (median turn − elapsed), and surfaces a predictive-seating recommender (type a party size → best-fit open tables first, then the soonest to free — computed live client-side). KPI strip: occupancy %, open tables, freeing ≤15m, median turn, floor spend/hour. Turn-time has two sources: MEASURED seat-occupancy (the §4.2 instrumentation — table status transitions are now logged on every save via saveTable → recordFloorEvent → floor-events.json, and seated→cleared pairs give true dwell incl. pre-order wait + bussing; a still-open seated run gives an exact live seat time) and, as a fallback when a table has no transition history, the dine-in order-timeline proxy (createdAt→paidAt). Measured rows are tagged. Phase 2 — the acts: predictive-seating moves (Seat / Clear a table straight from the Twin table or the recommender — POST /api/admin/floor-twin flips the status via saveTable, which logs the transition, closing the loop with the measured-dwell instrumentation) and bottleneck pre-emption (the Twin runs the live KDS pace engine, analyzeTruck, and shows a 'Kitchen filling up / overloaded — pace new seating' banner with the bottleneck station + utilisation when the line can't absorb more covers). Pure-compute engine src/lib/floor-twin.ts (buildFloorTwin + recommendSeating, 7 unit tests, dwell guardrails 5–360m); GET/POST /api/admin/floor-twin?location=, staff+.",
         },
         {
-          name: "Floor — live orders, lookup & notes (core-v2)",
+          name: "Floor — live orders, lookup & notes (core)",
           status: "live",
-          href: "/core-v2/service",
+          href: "/core/service",
           summary:
-            "The core-v2 Service → Floor board pairs the predictive Twin with each table's live orders. GET /api/admin/floor/orders returns today's active orders grouped by tableId, tagged with channel (web/whatsapp/qr/pos) + paid/unpaid + a line summary, polled every 10s. Each table tile shows what it owes — an unpaid 'QR · … to pay' chip (brand) or '✓ paid' (basil) — plus a 📝 service-note glyph and a 'To pay' KPI. An order-lookup box filters active orders by id / guest / table with a Mark paid action (POST … {action:'settle'} → updateOrder sets paidAt, fires a still-pending order to the kitchen; audited floor.order_settle). The table-detail editor gains a Service note (persisted on FloorTable.notes, threaded through buildFloorTwin → TwinTableRow.notes) and an 'Orders at this table' settle list. Verified end-to-end: a QR order at table 5 shows unpaid 27.90 zł and settles to paid.",
+            "The core Service → Floor board pairs the predictive Twin with each table's live orders. GET /api/admin/floor/orders returns today's active orders grouped by tableId, tagged with channel (web/whatsapp/qr/pos) + paid/unpaid + a line summary, polled every 10s. Each table tile shows what it owes — an unpaid 'QR · … to pay' chip (brand) or '✓ paid' (basil) — plus a 📝 service-note glyph and a 'To pay' KPI. An order-lookup box filters active orders by id / guest / table with a Mark paid action (POST … {action:'settle'} → updateOrder sets paidAt, fires a still-pending order to the kitchen; audited floor.order_settle). The table-detail editor gains a Service note (persisted on FloorTable.notes, threaded through buildFloorTwin → TwinTableRow.notes) and an 'Orders at this table' settle list. Verified end-to-end: a QR order at table 5 shows unpaid 27.90 zł and settles to paid.",
         },
         {
           name: "Unified booking — slot + table in one step",
@@ -1369,10 +1369,10 @@ export default async function CapabilitiesPage() {
         {
           name: "Receipt printer (ESC/POS)",
           status: has("RECEIPT_PRINTER_HOST") ? "live" : "needs-config",
-          href: "/core-v2/orders",
+          href: "/core/orders",
           envVars: ["RECEIPT_PRINTER_HOST", "RECEIPT_PRINTER_PORT"],
           summary:
-            "Thermal receipt printing (audit §11.2 / §12.4 #7). 'Print receipt' on the Orders detail dialog (/core-v2/orders) POSTs /api/admin/orders/[id]/print-receipt, which builds an 80mm ESC/POS payload (src/lib/receipt/escpos.ts — header, per-line items with resolved modifiers + notes, modifier-inclusive prices, total, partial cut; unit-tested) and streams it over a raw TCP socket to RECEIPT_PRINTER_HOST:RECEIPT_PRINTER_PORT (default 9100). With no host set it runs as a SIMULATOR — returns the exact byte count + a plain-text preview and the UI falls back to a browser print, so a receipt comes out with or without hardware. Go-live for a truck-local printer: run a print-bridge on the truck or expose the printer via a reverse tunnel, then set RECEIPT_PRINTER_HOST — see docs/design-system/core-v2/modules/receipt-printer.md. Every print is audit-logged as receipt.print.",
+            "Thermal receipt printing (audit §11.2 / §12.4 #7). 'Print receipt' on the Orders detail dialog (/core/orders) POSTs /api/admin/orders/[id]/print-receipt, which builds an 80mm ESC/POS payload (src/lib/receipt/escpos.ts — header, per-line items with resolved modifiers + notes, modifier-inclusive prices, total, partial cut; unit-tested) and streams it over a raw TCP socket to RECEIPT_PRINTER_HOST:RECEIPT_PRINTER_PORT (default 9100). With no host set it runs as a SIMULATOR — returns the exact byte count + a plain-text preview and the UI falls back to a browser print, so a receipt comes out with or without hardware. Go-live for a truck-local printer: run a print-bridge on the truck or expose the printer via a reverse tunnel, then set RECEIPT_PRINTER_HOST — see docs/design-system/core/modules/receipt-printer.md. Every print is audit-logged as receipt.print.",
         },
         {
           name: "Courier / driver dispatch",

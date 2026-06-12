@@ -3,22 +3,18 @@ import { isAuthenticated } from "@/lib/admin-auth";
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 import { getUpsellSettings } from "@/lib/store";
-import { AdminPos } from "@/core/pos/AdminPos";
+import { CorePos } from "@/core/pos/CorePos";
 import type { MenuItem } from "@/data/types";
 import type { UpsellConfig } from "@/lib/upsell";
 
-export default async function AdminPosPage() {
+export default async function CorePosPage() {
   if (!(await isAuthenticated())) {
     redirect("/login");
   }
-  // Menu + combo config are per-location and rarely change — pass each active
-  // truck's snapshot to the client so the POS can switch locations without a
-  // round-trip. Prices / availability / discounts are the server's, never
-  // client-supplied (the till only ever sends item ids + quantities back).
-  const [locations, upsell] = await Promise.all([
-    getActiveLocationsAsync(),
-    getUpsellSettings(),
-  ]);
+  // Per-location menu + combo/cross-sell config, server-resolved (prices,
+  // availability and discounts are the server's — the till only ever sends
+  // item ids + quantities back).
+  const [locations, upsell] = await Promise.all([getActiveLocationsAsync(), getUpsellSettings()]);
   const menusByLocation: Record<string, MenuItem[]> = {};
   const upsellByLocation: Record<string, UpsellConfig | null> = {};
   await Promise.all(
@@ -27,5 +23,5 @@ export default async function AdminPosPage() {
       upsellByLocation[l.slug] = (upsell[l.slug] as UpsellConfig | undefined) ?? null;
     }),
   );
-  return <AdminPos menusByLocation={menusByLocation} upsellByLocation={upsellByLocation} />;
+  return <CorePos menusByLocation={menusByLocation} upsellByLocation={upsellByLocation} />;
 }

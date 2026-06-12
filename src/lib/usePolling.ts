@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Visibility-aware polling — the one primitive every core-v2 screen uses instead
+ * Visibility-aware polling — the one primitive every core screen uses instead
  * of a hand-rolled `setInterval`. It:
  *
  *  - runs `fn` every `ms` **only while the tab is visible**, so a backgrounded

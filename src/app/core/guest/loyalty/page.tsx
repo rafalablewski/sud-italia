@@ -1,13 +1,8 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { AdminLoyalty } from "@/core/guest/AdminLoyalty";
+import { CoreLoyalty } from "@/core/guest/CoreLoyalty";
 
-/**
- * Guest Engagement · Loyalty — member roster + family wallets + redemption log.
- * One view of the unified Guest hub; see
- * docs/design-system/core/modules/guest.md.
- */
-export default async function GuestLoyaltyPage() {
+export default async function CoreLoyaltyPage() {
   if (!(await isAuthenticated())) redirect("/login");
-  return <AdminLoyalty />;
+  return <CoreLoyalty />;
 }

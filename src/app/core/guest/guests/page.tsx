@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { CoreBook } from "@/core/guest/CoreBook";
+import { CoreCrm } from "@/core/guest/CoreCrm";
 
-export default async function CoreBookPage() {
+export default async function CoreGuestsPage() {
   if (!(await isAuthenticated())) redirect("/login");
-  return <CoreBook />;
+  return <CoreCrm />;
 }

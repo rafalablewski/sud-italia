@@ -1,51 +1,29 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { LocationProvider } from "@/shared/LocationContext";
-import { ShellContext, type ShellOverlays } from "@/shared/ShellContext";
-import { ToastProvider } from "@/ui/Toast";
+import { CoreToastProvider } from "@/core/ui/Toast";
 import { permissionForAdminPage } from "@/lib/permissions";
 
 /**
- * Provider envelope for the Core suite (`/core/*` — POS, KDS, Guest, Service).
+ * Provider envelope for Core v2 (`/core/*`). Core v2 is a separate entity
+ * from /admin and from the current /core — but it keeps the same *technicals*
+ * (location context + the client page-guard) so every functionality carries
+ * over. Styling is 100% the core theme; these are data/infra only.
  *
- * These surfaces used to live under `/admin/*` and borrow the providers from
- * AdminShell's "core" branch (chrome stepped aside, providers stayed). Now that
- * they have their own top-level `/core` segment, this client wrapper owns the
- * exact same trio — location context, the shell-overlay context (Topbar is the
- * only consumer and Core renders its own, so a minimal working value suffices)
- * and the toast portal — so CoreShell / AdminPos / AdminKDS keep working
- * unchanged.
+ * Core v2 builds its OWN UI primitives (toasts, dialogs, buttons) under
+ * `src/core/ui/` rather than importing the admin-styled `src/ui` kit — it
+ * loads none of the admin CSS those rely on. `CoreToastProvider` is mounted
+ * here so any surface can `useCoreToast()`.
  *
- * It also re-creates AdminShell's client page-guard: a custom-grant user who
- * lacks a surface's `.view` permission is bounced to their own home (the server
- * still enforces the real boundary on every /api/admin/* call — this is the UX
- * layer). Role-default + owner users are untouched, exactly as before.
+ * The page-guard mirrors the current Core: a custom-grant user who lacks a
+ * surface's `.view` permission is bounced to their own home. The server still
+ * enforces the real boundary on every /api/admin/* call — this is the UX layer.
  */
 export function CoreProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifVersion, setNotifVersion] = useState(0);
-
-  const value = useMemo<ShellOverlays>(
-    () => ({
-      openPalette: () => setPaletteOpen(true),
-      closePalette: () => setPaletteOpen(false),
-      openNotifications: () => setNotifOpen(true),
-      closeNotif: () => setNotifOpen(false),
-      openHelp: () => {},
-      paletteOpen,
-      notifOpen,
-      notificationsVersion: notifVersion,
-      bumpNotifications: () => setNotifVersion((v) => v + 1),
-    }),
-    [paletteOpen, notifOpen, notifVersion],
-  );
 
   const [gate, setGate] = useState<{ keys: Set<string>; custom: boolean; home: string } | null>(null);
   useEffect(() => {
@@ -69,8 +47,9 @@ export function CoreProviders({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!gate || !gate.custom) return;
-    const need = permissionForAdminPage(pathname);
+    if (!gate || !gate.custom || !pathname) return;
+    // Map /core/* onto the same permission keys the current Core uses.
+    const need = permissionForAdminPage(pathname.replace("/core", "/core"));
     if (need && !gate.keys.has(need)) {
       router.replace(gate.home);
     }
@@ -78,9 +57,7 @@ export function CoreProviders({ children }: { children: ReactNode }) {
 
   return (
     <LocationProvider>
-      <ShellContext.Provider value={value}>
-        <ToastProvider>{children}</ToastProvider>
-      </ShellContext.Provider>
+      <CoreToastProvider>{children}</CoreToastProvider>
     </LocationProvider>
   );
 }
