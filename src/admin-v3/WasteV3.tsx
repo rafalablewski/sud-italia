@@ -134,7 +134,7 @@ export function WasteV3() {
   // Picking a known ingredient pre-fills its default unit; free text still works.
   const onItemChange = (value: string) => {
     setItem(value);
-    const match = ingredients.find((ing) => ing.name.toLowerCase() === value.trim().toLowerCase());
+    const match = ingredients.find((ing) => ing?.name?.toLowerCase() === value.trim().toLowerCase());
     if (match?.unit && KNOWN_UNITS.has(match.unit)) setUnit(match.unit);
   };
 

@@ -38,7 +38,9 @@ const STATUS_TONE: Record<OrderStatus, BadgeTone> = {
 function fmtWhen(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pl-PL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Pin to the restaurant's timezone so the history reads in Warsaw time on
+  // every viewer (and SSR matches the client — no hydration drift).
+  return d.toLocaleString("pl-PL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Warsaw" });
 }
 function fmtAgo(iso: string): string {
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
