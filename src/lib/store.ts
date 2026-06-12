@@ -3043,35 +3043,9 @@ export interface AppSettings {
     regular?: number;
     vip?: number;
   };
-  /** Master toggle for /admin/simulation. When false the nav link is
-   *  hidden and the page redirects to /admin. */
+  /** Master toggle for /admin/simulation (the Calculator). When false the nav
+   *  link is hidden and the page redirects to /admin. */
   simulationEnabled?: boolean;
-  /** Master toggle for the live-order KDS simulator. When true an Order
-   *  simulator tab (/admin/kds-simulator) appears under Kitchen Display; when
-   *  false the tab is hidden and the simulator API rejects spawn/advance
-   *  (purge still works, so disabling can clear leftover sims). */
-  kdsSimulatorEnabled?: boolean;
-  /** Master toggle for the WhatsApp chat simulator. When true the WhatsApp
-   *  console shows Add 1 / Add 5 / Purge controls that stage sandbox
-   *  conversations (built only from the real menu); when false the controls
-   *  are hidden and the simulator API rejects spawn (purge still works). */
-  whatsappSimulatorEnabled?: boolean;
-  /** Toggle for the Cohort & CLTV what-if sandbox embedded at the bottom of
-   *  the cohort report (/admin/reports/cohort, CohortSandbox.tsx). When false
-   *  the sandbox section renders null. Seeds from the real cohort report and
-   *  projects forward under operator-set retention / AOV / frequency levers
-   *  (worked example fallback when there's no data) — never writes live data. */
-  cohortSimulationEnabled?: boolean;
-  /** Toggle for the LTV/CAC what-if sandbox embedded at the bottom of the
-   *  LTV/CAC report (/admin/reports/ltv-cac, LtvCacSandbox.tsx). When false the
-   *  sandbox renders null. Lets operators flex CAC, retention, AOV, margin and
-   *  frequency to see the LTV:CAC ratio + payback move. */
-  ltvCacSimulationEnabled?: boolean;
-  /** Toggle for the Menu-engineering what-if sandbox embedded at the bottom of
-   *  the matrix (/admin/menu-engineering, MenuEngineeringSandbox.tsx). When
-   *  false the sandbox renders null. Re-prices / re-promotes items to project
-   *  the contribution-margin impact before touching the live menu. */
-  menuEngineeringSimulationEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -11251,54 +11225,6 @@ export async function deleteWaTranscript(rawPhone: string): Promise<boolean> {
     await writeJSON("whatsapp-transcripts.json", all);
     return true;
   });
-}
-
-// --- WhatsApp chat simulator (admin-gated demo / training tool) ----------
-//
-// Mirrors the KDS order simulator: an owner toggle (whatsappSimulatorEnabled)
-// surfaces Add / Purge controls in the WhatsApp console. Each spawn writes a
-// real session + transcript (built from the real menu by the API route) so the
-// console renders them exactly like a live chat, but the phone is recorded in a
-// registry so Purge can find and remove every sandbox conversation in one shot.
-// Sessions carry simulated:true so the console can badge them.
-
-const WA_SIM_REGISTRY_KEY = "whatsapp-sim-phones.json";
-
-/** Persist one sandbox conversation (session + transcript) and register its
- *  phone so it can be purged later. */
-export async function saveSimulatedWaConversation(
-  session: WaSession,
-  messages: WaMessage[],
-): Promise<void> {
-  await setWaSession({ ...session, simulated: true });
-  for (const msg of messages) {
-    await appendWaMessage(session.phone, msg);
-  }
-  await withLock(WA_SIM_REGISTRY_KEY, async () => {
-    const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
-    const canonical = normalizePlPhoneE164(session.phone) ?? session.phone;
-    if (!phones.includes(canonical)) phones.push(canonical);
-    await writeJSON(WA_SIM_REGISTRY_KEY, phones);
-  });
-}
-
-/** Phones of every registered sandbox conversation (drives the active cap). */
-export async function listSimulatedWaPhones(): Promise<string[]> {
-  return readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
-}
-
-/** Remove every registered sandbox conversation — clears the session and the
- *  transcript for each phone, then empties the registry. Returns the count. */
-export async function deleteSimulatedWaConversations(): Promise<number> {
-  const phones = await readJSON<string[]>(WA_SIM_REGISTRY_KEY, []);
-  let removed = 0;
-  for (const phone of phones) {
-    await clearWaSession(phone);
-    await deleteWaTranscript(phone);
-    removed++;
-  }
-  await writeJSON(WA_SIM_REGISTRY_KEY, []);
-  return removed;
 }
 
 // --- WhatsApp conversation flags (operator console: archive / pin) -------

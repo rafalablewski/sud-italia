@@ -1026,9 +1026,13 @@ auth canvas's signature lighting and the sign-in lockup:
   consistency fix applied to Currency + Languages (enable/default persist
   immediately; FX rates save on blur). **Visual upgrade:** a summary **KPI rail**
   (sites / default pack / zones in use / disclosures active).
-- [x] Settings (`/admin/settings`, owner-only): five tabs — **General**
+- [x] Settings (`/admin/settings`, owner-only): six tabs — **General**
   (business details + delivery fee / min order + social links, Save),
-  **Storefront** (layout visibility toggles + feature flags, toggle = saved),
+  **Storefront** (layout visibility toggles, toggle = saved), **Simulations**
+  (every simulation in the app, in one explicit place — currently just the
+  **Calculator** toggle; the former KDS / WhatsApp simulators and report
+  what-if sandboxes were removed, and a footnote names Floor Twin + Demand
+  Exchange as always-on operational models, not toggled sandboxes),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
   `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**

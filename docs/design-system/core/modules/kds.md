@@ -20,7 +20,7 @@ POS · KDS · Guest · Service `<CoreNav>` + the stage filter / clock /
 controls) over the **dark `.kds-core.in-shell` wall body**. There is **no
 sidebar** (Core is a separate entity from `/admin`, and the old "Admin"
 back link is gone). The Fleet/Floor/Chef switch rides the subbar
-`.viewnav`; the stage filter + Sandbox badge ride the subbar right; the
+`.viewnav`; the stage filter rides the subbar right; the
 clock + sound/pause/refresh/fullscreen ride the header right. The
 Both Fleet and Floor open the wall with the mockup's `.kpi-dark` 7-up KPI
 band (`.kc` cells, `.v.warn/.late/.good` tones) wired to live counts —
@@ -278,7 +278,7 @@ live inside the wall.
 ## Top controls
 
 The same set, in this order — in the shared CoreShell header (windowed:
-viewswitch in the subbar `.viewnav`, stage + Sandbox in the subbar right,
+viewswitch in the subbar `.viewnav`, stage in the subbar right,
 clock + buttons in the header right) and in the kiosk wall's sticky
 `.kds-top`:
 
@@ -298,11 +298,7 @@ wired in on the live app and the mockup. (The mobile shell was deleted, so
 `.kds-core` renders at every width and these reflow tiers carry phone +
 tablet.)
 
-When the owner-only sandbox simulator is on, a **`.kds-badge.platinum`**
-pill (soft-platinum fill + a 6px dot, the mockup's `.badge.platinum`
-re-scoped to `.kds-core` since the core-suite badge lives under
-`.core-suite`) flags the board next to the wordmark — never a loud colour,
-just the platinum jewellery tone. The owner's `[Fleet/Floor/Chef]`
+The owner's `[Fleet/Floor/Chef]`
 viewswitch is a **live switcher** (see the role triad); for scoped roles it
 stays decorative. Fleet revenue figures use a compact złoty (`1,8k zł`) so
 the dense `.cstat` / `.met` tiles don't overflow with real takings.

@@ -11,7 +11,6 @@ import { ticketTone, computeHealth, type PaceTier, type TicketTone } from "@/lib
 import { useFullscreen } from "@/core/kds/useFullscreen";
 import { fmtWallClock } from "@/core/kds/kds-board";
 import type { KdsTicket } from "@/lib/kds-ticket";
-import { useKdsSimulator } from "@/lib/useKdsSimulator";
 import { CoreShell } from "@/core/shell/CoreShell";
 
 /* ============================ Wire types ============================ */
@@ -97,9 +96,6 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
 
 export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?: "floor" | "chef") => void }) {
   const toast = useToast();
-  // The sandbox simulator is a global setting, so the fleet wall flags it the
-  // same way the floor board does (the fleet feed opts into simulated tickets).
-  const { enabled: simEnabled } = useKdsSimulator(null);
   const [data, setData] = useState<FleetPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,9 +113,7 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      // Opt into sandbox tickets like the floor board — a no-op when the
-      // simulator is off (sims are purged then), a marked SIMULATION rush when on.
-      const res = await fetch("/api/admin/kds/fleet?includeSimulated=1");
+      const res = await fetch("/api/admin/kds/fleet");
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       setData((await res.json()) as FleetPayload);
       setError(null);
@@ -261,14 +255,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
       bleed
       eyebrow="Kitchen · Fleet"
       viewnav={viewswitchNodes}
-      subRight={
-        simEnabled ? (
-          <span className="badge platinum">
-            <span className="d" />
-            Sandbox
-          </span>
-        ) : undefined
-      }
       right={
         <>
           <span className="core-clock">{clock}</span>
@@ -312,12 +298,6 @@ export function AdminKdsFleet({ onDrillIn }: { onDrillIn?: (slug: string, lens?:
             </div>
           </div>
           <div className="kds-viewswitch">{viewswitchNodes}</div>
-          {simEnabled && (
-            <span className="kds-badge platinum">
-              <span className="d" />
-              Sandbox
-            </span>
-          )}
           <div className="kds-clock" style={{ marginLeft: "auto" }}>{clock}</div>
           <button type="button" className="kds-ctrl" onClick={() => void load()} title="Refresh now">
             <RefreshCw className="h-4 w-4" />

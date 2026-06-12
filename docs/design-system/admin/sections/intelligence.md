@@ -6,21 +6,10 @@ The surfaces where signal becomes decision: multi-location overview,
 location admin, cohort + CLTV, LTV / CAC, menu engineering, AI insights,
 expansion planning.
 
-Three of these reports embed a **what-if sandbox** at the bottom of the
-page — *not* a separate route. Each sandbox seeds from the report's own
-real data and projects it forward under operator-set levers. The sandbox
-components **self-gate**: they fetch `/api/admin/settings` and render
-`null` unless their flag is on (`cohortSimulationEnabled`,
-`ltvCacSimulationEnabled`, `menuEngineeringSimulationEnabled` — all **off by
-default**, toggled in Settings → General → Simulator card). They are also
-**self-seeding**: when there is no live data yet they fall back to a worked
-Ottaviano example, badged `Example data`, so the sandbox is never empty.
-Read-only on live data — nothing they do writes back.
-
 Every **KPI card carries its own `InfoButton` (ⓘ)** in the card label
 (`kpiInfo()` helper → the shared `InfoButton` primitive, `size="sm"`) — on
-the three reports (Cohort & CLTV, LTV/CAC, Menu engineering) **and** their
-embedded sandboxes. Its dialog is built from **`MetricExplainer`**
+the three reports (Cohort & CLTV, LTV/CAC, Menu engineering). Its dialog is
+built from **`MetricExplainer`**
 (`Explainers.tsx`), which — per **CLAUDE.md Rule #12** — renders all five
 required sections in a fixed order with fixed labels: a one-line
 **description**, **INSTITUTIONAL ANALYSIS**, **IN PLAIN TERMS**, **TIPS — HOW

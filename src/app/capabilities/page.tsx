@@ -485,24 +485,6 @@ export default async function CapabilitiesPage() {
           summary: "EU 1169/2011 + FDA Big-9 allergens (gluten, dairy, eggs, fish, shellfish, nuts, peanuts, soy, celery, mustard, sesame, sulfites, lupin, molluscs) on each menu item. Editable from the recipe editor at /admin/recipes — tap a chip in the Dietary disclosures section to toggle. Persists through MenuOverride.allergens (seed items) or CustomMenuItem.allergens (admin-created items); `null` clears the override and the customer falls back to the kodawari seed; `[]` declares 'no major allergens' explicitly. Render surfaces: customer item-detail drawer, kitchen expo board (/kitchen/[slug]/expo). Not yet rendered on the per-station AdminKDS ticket or on the menu-card CompliancePills row — both planned. The merge in getMenuWithOverrides() backfills item.allergens from src/data/kodawari.ts when no override is set, so the data path is unified for downstream consumers.",
         },
         {
-          name: "KDS order simulator",
-          status: "live",
-          href: "/core/kds",
-          summary:
-            "Demo / training tool with no separate page: flip kdsSimulatorEnabled in /admin/settings (owner-only toggle) and the Kitchen Display shows a 'Sandbox — not real orders' badge beside the page title and manual Add 1 / Add 5 / Purge all controls in its top toolbar (desktop + mobile). There is NO auto-spawn or auto-advance — the operator adds a controlled batch of tickets, then works each one through the board with the normal Start prep / Mark ready / Bump buttons, so the demo is fully under their control rather than a random trickle. Every ticket is unmistakably marked — a purple dashed frame + 'SIMULATION — not a real order' tag per ticket, plus the sandbox badge beside the page title. Orders are built ONLY from the truck's real menu via getMenuWithOverrides() (no made-up products) through createSimulatedOrder(), which fires the same order-created SSE event a real checkout does so the board lights up live (the board also calls refresh() after each Add/Purge for instant feedback). Every order carries simulated:true, so getOrders() filters them out of EVERY non-KDS read by default: the dashboard, Orders list, /kitchen station + expo screens, the floor-ops + fleet roll-ups (promise-accuracy / throughput sparkline) and every report / CRM / analytics stay clean, and sims never trigger stock decrement, customer rollups or outbox SMS/email. Only the Kitchen Display boards opt in (?includeSimulated=1) — the floor board AND the owner Atlas fleet board, on both desktop and mobile. Advancing a sim on the board is routed through updateOrderStatus, which short-circuits all side effects for simulated:true. Targets the truck in the top-bar location selector; the endpoint self-caps active sims (40) and bounds reads to the last 24h. Turning the toggle off purges every simulated ticket.",
-          caveats:
-            "Off by default — flip it on at /admin/settings (owner). Add (spawn) API rejected when the toggle is off (purge always allowed for cleanup); the endpoint is kitchen+ so the controls work for whoever is at the pass. Add 5 is the per-tap max (count clamped 1–5); keep tapping to build a bigger rush up to the 40-active cap. Sims drive the orders-based board but do NOT fire per-station kds_tickets rows (that table has no cascade on order delete, so firing them would orphan rows on purge), so bump-time P95 stays '—' during a pure-sim demo.",
-        },
-        {
-          name: "WhatsApp chat simulator",
-          status: "live",
-          href: "/core/guest/whatsapp",
-          summary:
-            "Demo / training tool with no separate page (mirrors the KDS order simulator): flip whatsappSimulatorEnabled in /admin/settings (owner-only toggle) and the WhatsApp console shows a 'Sandbox' tag plus manual Add 1 / Add 5 / Purge controls on the stats/filter strip. There is NO auto-spawn — the operator adds a controlled batch, then reads/replies to each chat with the normal thread composer. Each spawn (POST /api/admin/whatsapp-simulator, action: spawn, count clamped 1–5) builds a synthetic-but-real conversation ONLY from a real truck menu via getMenuWithOverrides() (no made-up products), at a random funnel stage (browsing / cart / fulfillment+slot / awaiting payment), and writes it through saveSimulatedWaConversation() — a real WaSession (simulated:true) + a real transcript — so the console renders it exactly like a live chat. Sandbox chats use a reserved +48999XXXXXX phone range, carry a '(sim)' customer name and a purple 'sim' badge in the list + 'sandbox' badge in the thread head, and never send a real WhatsApp message (the simulator writes straight to the store, bypassing the Meta provider). Spawned phones are tracked in a whatsapp-sim-phones.json registry so Purge (action: purge) clears every sandbox session + transcript in one shot. Spread across active trucks for variety unless scoped to one location.",
-          caveats:
-            "Off by default — flip it on at /admin/settings (owner). Spawn API rejected when the toggle is off (purge always allowed for cleanup); the endpoint is manager+ so the controls work for whoever is at the console. Registry self-caps at 30 active sandbox conversations — purge before adding more. Sandbox sessions are real store rows, so while live they DO appear in the WhatsApp channel metrics strip (active sessions / awaiting-pay counts) — that's intended for the demo; they create no real Order, so the orders/conversion/revenue metrics stay clean. Turning the toggle off purges every sandbox conversation.",
-        },
-        {
           name: "Role-aware KDS — owner / manager / chef lenses",
           status: "live",
           href: "/core/kds",
@@ -1255,27 +1237,6 @@ export default async function CapabilitiesPage() {
           href: "/admin/simulation",
           summary:
             "Sandbox monthly P&L bound to real-order actuals (orders/day, AOV, weighted COGS, delivery share, refund rate, median ticket time — all pulled from /api/admin/orders over a 90-day rolling window and applied with one click). Tune revenue inputs, labor mix (with volume-flex), fixed costs, waste / refund / loyalty / CIT / D&A / interest, kitchen capacity (peak-hour throughput ceiling), and channel-split payment fees (cash / on-site card / Glovo / Wolt). 9 behavior levers, 5 weather/calendar levers, per-month seasonality overrides. Institutional-grade KPI suite: EBITDA, EBITDAR, cash-on-cash return, occupancy ratio, refund-adjusted net sales, contribution per labor hour (QSR target ≥150 zł/h), promo-adjusted AOV, peak orders/hour, median ticket time, true contribution margin, kitchen-capacity utilisation. Two 2-D heatmaps, scenario comparison, ±20% sensitivity, sensitivity tornado across all key drivers, 12-month operational projection, and a 24-month investor view with 4-month opening ramp surfacing NPV @ 10/15/20%, IRR, and cumulative-cash break-even. Break-even chart shows the current operating point vs ceiling at a glance. Master toggle in Settings → General. Defaults are Warsaw 2026 (gross × 1.22 ZUS narzut, 5-year truck depreciation). Zero writes to the business-costs ledger.",
-        },
-        {
-          name: "Cohort & CLTV what-if sandbox",
-          status: "live",
-          href: "/admin/reports/cohort",
-          summary:
-            "A what-if sandbox embedded at the bottom of the Cohort & CLTV report (CohortSandbox.tsx). Seeds the real cohort numbers (repeat rate, orders/customer, cohort-size-weighted 365-day CLTV, blended retention curve) and projects them forward under three levers — repeat-rate uplift (pp), AOV growth (%), new customers/month. CLTV = orders/customer × value/order; the repeat lever holds 'extra orders per repeater' constant and re-derives orders/customer; the retention curve is scaled by the repeat-rate ratio (capped 100%). KPIs vs baseline. When there are no paid orders yet it runs on a worked Ottaviano example (badged 'Example data') so it's never empty. Read-only on live data. Off by default; toggle in Settings → General (Simulator card).",
-        },
-        {
-          name: "LTV / CAC what-if sandbox",
-          status: "live",
-          href: "/admin/reports/ltv-cac",
-          summary:
-            "A what-if sandbox embedded at the bottom of the LTV/CAC report (LtvCacSandbox.tsx). Seeds the real margin-LTV, blended margin and CAC, then flexes CAC (absolute zł), retention/frequency (%), AOV (%), gross-margin (pp) and new customers/month. Revenue-LTV is recovered as LTV ÷ margin, scaled, then re-margined; ratio = LTV ÷ CAC; payback = 12 × CAC ÷ LTV. KPIs tone against the 3× gate plus profit/customer and monthly cohort profit. Falls back to a worked example when there's no acquisition data. Off by default; toggle in Settings → General (Simulator card).",
-        },
-        {
-          name: "Menu-engineering what-if sandbox",
-          status: "live",
-          href: "/admin/menu-engineering",
-          summary:
-            "A what-if sandbox embedded at the bottom of the Menu engineering matrix (MenuEngineeringSandbox.tsx). Seeds per-item units / revenue / cost / quadrant (30/60/90/180-day window) and re-prices a target group with a demand response of (1+Δprice)^(−elasticity), promotes puzzle velocity, or removes dogs. Recovers per-unit price/cost from real revenue÷units, recomputes contribution = projected revenue − cost across the menu. KPIs + a 'biggest movers' table. Falls back to a worked 10-dish Ottaviano menu when nothing has sold. Off by default; toggle in Settings → General (Simulator card).",
         },
         {
           name: "Calculator actuals (real-order ground truth)",

@@ -15,8 +15,7 @@ interface Settings {
   socialLinks?: { instagram: string; facebook: string; tiktok: string };
   refundControls?: { singleMaxGrosze?: number; compDailyCapGrosze?: number };
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
-  simulationEnabled?: boolean; kdsSimulatorEnabled?: boolean; whatsappSimulatorEnabled?: boolean;
-  cohortSimulationEnabled?: boolean; ltvCacSimulationEnabled?: boolean; menuEngineeringSimulationEnabled?: boolean;
+  simulationEnabled?: boolean;
   layout?: Layout;
 }
 interface Me {
@@ -42,15 +41,12 @@ const LAYOUT_KEYS: { key: keyof Layout; label: string }[] = [
   { key: "showChatWidget", label: "Chat widget" },
 ];
 // Every simulation in the app, declared in one place. The toggle gates the
-// real feature behind it (each key is read server-side / by the hook that
-// powers the surface — none are cosmetic). Toggles save instantly.
+// real feature behind it (the key gates /admin/simulation — not cosmetic).
+// Toggles save instantly. The Calculator is the only simulation in the app;
+// the former KDS / WhatsApp simulators and report what-if sandboxes were
+// removed.
 const SIMULATIONS: { key: keyof Settings; label: string; href?: string; desc: string }[] = [
   { key: "simulationEnabled", label: "Calculator", href: "/admin/simulation", desc: "The financial what-if modeller — P&L scenarios, tornado sensitivity, ROI/payback, fleet & channel economics — all computed on your real numbers." },
-  { key: "kdsSimulatorEnabled", label: "KDS ticket simulator", href: "/admin/kds", desc: "Spawns synthetic kitchen tickets on the KDS board to rehearse the flow. Tagged simulated and excluded from real analytics." },
-  { key: "whatsappSimulatorEnabled", label: "WhatsApp inbound simulator", href: "/admin/whatsapp", desc: "Generates sandbox inbound messages on a reserved +48 999 number range to test the ordering / agent flow without real traffic." },
-  { key: "cohortSimulationEnabled", label: "Cohort sandbox", href: "/admin/simulation", desc: "Retention cohort what-if inside the Calculator — repeat-rate and lifetime-value levers." },
-  { key: "ltvCacSimulationEnabled", label: "LTV / CAC sandbox", href: "/admin/simulation", desc: "Unit-economics what-if inside the Calculator — acquisition cost versus lifetime value." },
-  { key: "menuEngineeringSimulationEnabled", label: "Menu-engineering sandbox", href: "/admin/simulation", desc: "Kasavana-Smith star / plowhorse / puzzle / dog what-if inside the Calculator." },
 ];
 const THRESHOLD_KEYS: { key: keyof NonNullable<Settings["deliveryThresholds"]>; label: string }[] = [
   { key: "firstTime", label: "First-time" }, { key: "growing", label: "Growing" }, { key: "regular", label: "Regular" }, { key: "vip", label: "VIP" },
