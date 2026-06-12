@@ -151,27 +151,34 @@ const SANDBOX_SHARED_KEYS = new Set<string>([
 
 const SANDBOX_TTL_MS = 2_500;
 let sandboxCache: { on: boolean; at: number } | null = null;
-let sandboxRefreshing = false;
+let sandboxInflight: Promise<boolean> | null = null;
 
-/** Sync snapshot of the sandbox flag — drives key prefixing + sync guards. */
+/** Sync snapshot of the sandbox flag — drives key prefixing + sync guards.
+ *  Only trustworthy once refreshSandboxFlag() has primed the cache for this
+ *  process; namespaced reads/writes await that first (see readJSON/writeJSON
+ *  and the withAdmin entry primer). */
 function isSandboxActiveSync(): boolean {
   return sandboxCache?.on ?? false;
 }
 
 /** Refresh the cached flag from the SHARED settings blob (never prefixed, so
- *  it can't recurse). Primed early in getSettings(); a cold first read reads
- *  "off" until primed, then stays accurate within SANDBOX_TTL_MS. */
+ *  it can't recurse). Primed early in getSettings() and before every namespaced
+ *  read/write. Concurrent cold callers dedupe onto one settings round-trip so a
+ *  burst of reads on a fresh instance all resolve to the SAME value instead of
+ *  some racing ahead with the stale "off" default. */
 async function refreshSandboxFlag(): Promise<boolean> {
-  if (sandboxRefreshing) return sandboxCache?.on ?? false;
   if (sandboxCache && Date.now() - sandboxCache.at < SANDBOX_TTL_MS) return sandboxCache.on;
-  sandboxRefreshing = true;
-  try {
-    const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean }>("settings.json", {});
-    sandboxCache = { on: raw.sandboxModeEnabled === true, at: Date.now() };
-    return sandboxCache.on;
-  } finally {
-    sandboxRefreshing = false;
-  }
+  if (sandboxInflight) return sandboxInflight;
+  sandboxInflight = (async () => {
+    try {
+      const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean }>("settings.json", {});
+      sandboxCache = { on: raw.sandboxModeEnabled === true, at: Date.now() };
+      return sandboxCache.on;
+    } finally {
+      sandboxInflight = null;
+    }
+  })();
+  return sandboxInflight;
 }
 
 /** Clear the cache so the next read reflects a just-toggled value. */
@@ -219,6 +226,13 @@ function getDomainDb() {
 }
 
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
+  // Resolve the sandbox namespace from the LIVE flag, not a possibly-cold
+  // module cache. Separate Next bundles (RSC vs route handlers) and fresh
+  // serverless instances each start with an unprimed cache, which would
+  // silently read the REAL dataset while sandbox mode is on. Shared keys are
+  // never namespaced, so they skip the round-trip (and avoid recursing on
+  // settings.json, which refreshSandboxFlag reads raw).
+  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshSandboxFlag();
   return rawReadJSON(resolveKey(key), fallback);
 }
 
@@ -252,6 +266,10 @@ async function rawReadJSON<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function writeJSON<T>(key: string, data: T): Promise<void> {
+  // Same namespace guard as readJSON: a cold cache must not route a sandbox
+  // write into the REAL dataset (which would both corrupt real data and leave
+  // the sandbox surface empty). Shared keys are never namespaced.
+  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshSandboxFlag();
   await rawWriteJSON(resolveKey(key), data);
   invalidateKvCache(key);
 }

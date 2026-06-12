@@ -13,6 +13,7 @@ import {
 import { logger } from "@/lib/logger";
 import { deriveRequestId, runWithRequestContext } from "@/lib/request-context";
 import { enforceRateLimit, getClientIp, isAdminIpAllowed } from "@/lib/rate-limit";
+import { isSandboxActive } from "@/lib/store";
 
 /**
  * Per-user ceiling on admin API calls, applied by withAdmin to every wrapped
@@ -215,6 +216,15 @@ export function withAdmin<RouteCtx = { params: Promise<Record<string, never>> }>
         }
       }
     }
+
+    // Prime the sandbox-mode flag before the handler runs. The store's
+    // namespace resolver is sync (isSandboxActiveSync), so on a cold Next
+    // route-handler bundle / fresh serverless instance it would otherwise read
+    // the REAL dataset while sandbox mode is on — leaving every admin surface
+    // (orders, staff, HACCP, waste, reports…) looking empty. This awaited
+    // primer guarantees both the kv path and the DB-mode domain branch (which
+    // picks its handle via getDomainDb() before any read) see the right mode.
+    await isSandboxActive();
 
     // Set the per-request context so every log line + audit entry inside
     // the handler gets requestId / userId / locationSlug for free.
