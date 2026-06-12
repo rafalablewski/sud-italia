@@ -293,9 +293,14 @@ The V8 Trattoria top nav.
 ### `<LiveActivityBar />` — `src/components/location/LiveActivityBar.tsx`
 
 Real, location-scoped social-proof strip. Mounted on `/locations/[slug]`
-directly under `<LocationHero />` (the order-flow context). A slim
-espresso bar (`bg-gradient from-italia-dark to-#2a1a0a`, white text) of
-operator-chosen "live signals", scrollable on overflow.
+directly under `<LocationHero />` (the order-flow context). Styled to the
+V8 editorial treatment — a **parchment band** (`--color-parchment-deep`
+with `--color-line-soft` hairline top + bottom), **italic Cormorant**
+(`--font-heading`) in `--color-muted`, values upright in
+`--color-espresso`, the trending dish in `--color-oxblood`, a pulsing
+**basil pip** on the live-orders signal and small terracotta-tinted
+icons — not a dark strip. Operator-chosen "live signals", scrollable on
+overflow.
 
 - **The operator picks which widgets show** in admin **Growth → Live
   activity widgets** (`liveWidgets` in loyalty settings, served via
