@@ -17,6 +17,7 @@ interface Settings {
   deliveryThresholds?: { firstTime?: number; growing?: number; regular?: number; vip?: number };
   simulationEnabled?: boolean;
   sandboxModeEnabled?: boolean;
+  simulationModeEnabled?: boolean;
   layout?: Layout;
 }
 interface Me {
@@ -101,6 +102,18 @@ export function SettingsV3() {
       if (res.ok) window.location.reload();
       else setSandboxBusy(null);
     } catch { setSandboxBusy(null); }
+  };
+
+  // Simulation mode mirrors sandbox but writes to an isolated, initially-empty
+  // `sim:` namespace — same whole-app reload so banner + every surface refresh.
+  const [simBusy, setSimBusy] = useState<null | "toggle" | "wipe">(null);
+  const simCall = async (kind: "toggle" | "wipe", body: Record<string, unknown>) => {
+    setSimBusy(kind);
+    try {
+      const res = await fetch("/api/admin/simulation-mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) window.location.reload();
+      else setSimBusy(null);
+    } catch { setSimBusy(null); }
   };
 
   const saveBiz = async () => {
@@ -243,6 +256,37 @@ export function SettingsV3() {
                     Reset sandbox data
                   </Button>
                   <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Wipe the demo dataset and re-seed a clean one.</span>
+                </div>
+              )}
+            </CardBody>
+          )}
+
+          {me?.role === "owner" && (
+            <CardBody style={{ borderTop: "2px solid var(--av3-line)", paddingTop: 16 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>Simulation mode</span>
+                    {s.simulationModeEnabled && <Badge tone="info" dot>ON · your test data</Badge>}
+                  </div>
+                  <div className="av3-cell-muted" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 4 }}>
+                    A pre-launch <strong>dry-run</strong>. Like Sandbox it flips the <strong>whole business</strong> — admin and storefront — onto an isolated dataset, real data untouched. But it starts <strong>completely empty</strong>: you push your own test orders, waste, costs, customers and bookings by hand, exactly as you would once open, to rehearse the full flow before go-live. Your <strong>AI agents keep working</strong> — they analyse this hand-entered data (daily briefings, customer segments, summaries) so they learn and you can check their output. No real payments, SMS, WhatsApp, billing or backups fire. Switch it off and every test row disappears instantly (it&apos;s kept, so you can switch back on and continue). Enabling it turns Sandbox mode off.
+                  </div>
+                </div>
+                <Switch
+                  aria-label="Simulation mode"
+                  checked={!!s.simulationModeEnabled}
+                  disabled={simBusy != null || sandboxBusy != null}
+                  onChange={() => simCall("toggle", { enabled: !s.simulationModeEnabled })}
+                />
+              </div>
+              {simBusy === "toggle" && <div className="av3-cell-muted" style={{ fontSize: 11.5, marginTop: 8 }}>Switching… the page will reload.</div>}
+              {s.simulationModeEnabled && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <Button variant="secondary" size="sm" loading={simBusy === "wipe"} onClick={() => simCall("wipe", { action: "wipe" })}>
+                    Wipe simulation data
+                  </Button>
+                  <span className="av3-cell-muted" style={{ fontSize: 11.5 }}>Clear every test row and start the dry-run from scratch.</span>
                 </div>
               )}
             </CardBody>

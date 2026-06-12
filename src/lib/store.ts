@@ -123,14 +123,37 @@ async function ensureDataDir() {
   }
 }
 
-// --- Sandbox / Simulation mode -------------------------------------------
-// A whole-business demo dataset isolated behind a `sandbox:` key prefix. When
-// active, every non-shared store key is namespaced so real data is physically
-// untouched (un-prefixed keys are never read or written in sandbox). Driven by
-// the `sandboxModeEnabled` setting; toggled via /api/admin/sandbox; populated
-// by seedSandbox(). Distinct from the per-record `simulated` flag.
+// --- Isolated data modes: Sandbox & Simulation ---------------------------
+// Two whole-business datasets isolated behind a key prefix, so real data is
+// physically untouched (un-prefixed keys are never read or written while a mode
+// is active). They are MUTUALLY EXCLUSIVE — at most one prefix is live at a time:
+//
+//   ""          live / real operations
+//   "sandbox:"  Sandbox mode — a rich demo dataset auto-seeded by seedSandbox()
+//               so every screen shows a full picture for exploring/demoing.
+//   "sim:"      Simulation mode — starts EMPTY; the owner pushes their own test
+//               orders/waste/costs/customers by hand as a dry-run before opening.
+//               Toggling it off hides every test row instantly (data is kept so
+//               you can resume; "wipe" clears it).
+//
+// Both modes suppress real-world side-effects (payments, SMS, WhatsApp, cron) —
+// see isSandboxActive(). Driven by the `sandboxModeEnabled` / `simulationModeEnabled`
+// settings; toggled via /api/admin/sandbox + /api/admin/simulation-mode. Distinct
+// from the per-record `simulated` flag.
 
 const SANDBOX_PREFIX = "sandbox:";
+const SIMULATION_PREFIX = "sim:";
+
+/** The active namespace prefix for a given settings blob (simulation wins if
+ *  both flags are somehow set; "" = live). */
+function prefixForSettings(s: {
+  sandboxModeEnabled?: boolean;
+  simulationModeEnabled?: boolean;
+}): string {
+  if (s.simulationModeEnabled === true) return SIMULATION_PREFIX;
+  if (s.sandboxModeEnabled === true) return SANDBOX_PREFIX;
+  return "";
+}
 
 // Keys that STAY real/shared even in sandbox: the menu (prices/86s, recipes,
 // ingredients), auth, locations, and config/credentials. settings.json holds
@@ -149,55 +172,64 @@ const SANDBOX_SHARED_KEYS = new Set<string>([
   "whatsapp-settings.json",
 ]);
 
-const SANDBOX_TTL_MS = 2_500;
-let sandboxCache: { on: boolean; at: number } | null = null;
-let sandboxInflight: Promise<boolean> | null = null;
+const DATA_MODE_TTL_MS = 2_500;
+let dataModeCache: { prefix: string; at: number } | null = null;
+let dataModeInflight: Promise<string> | null = null;
 
-/** Sync snapshot of the sandbox flag — drives key prefixing + sync guards.
- *  Only trustworthy once refreshSandboxFlag() has primed the cache for this
- *  process; namespaced reads/writes await that first (see readJSON/writeJSON
- *  and the withAdmin entry primer). */
-function isSandboxActiveSync(): boolean {
-  return sandboxCache?.on ?? false;
+/** Sync snapshot of the active namespace prefix — drives key prefixing + sync
+ *  guards. "" = live. Only trustworthy once refreshDataMode() has primed the
+ *  cache for this process; namespaced reads/writes await that first (see
+ *  readJSON/writeJSON and the withAdmin entry primer). */
+function activePrefixSync(): string {
+  return dataModeCache?.prefix ?? "";
 }
 
-/** Refresh the cached flag from the SHARED settings blob (never prefixed, so
+/** Refresh the cached prefix from the SHARED settings blob (never prefixed, so
  *  it can't recurse). Primed early in getSettings() and before every namespaced
  *  read/write. Concurrent cold callers dedupe onto one settings round-trip so a
  *  burst of reads on a fresh instance all resolve to the SAME value instead of
  *  some racing ahead with the stale "off" default. */
-async function refreshSandboxFlag(): Promise<boolean> {
-  if (sandboxCache && Date.now() - sandboxCache.at < SANDBOX_TTL_MS) return sandboxCache.on;
-  if (sandboxInflight) return sandboxInflight;
-  sandboxInflight = (async () => {
+async function refreshDataMode(): Promise<string> {
+  if (dataModeCache && Date.now() - dataModeCache.at < DATA_MODE_TTL_MS) return dataModeCache.prefix;
+  if (dataModeInflight) return dataModeInflight;
+  dataModeInflight = (async () => {
     try {
-      const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean }>("settings.json", {});
-      sandboxCache = { on: raw.sandboxModeEnabled === true, at: Date.now() };
-      return sandboxCache.on;
+      const raw = await rawReadJSON<{ sandboxModeEnabled?: boolean; simulationModeEnabled?: boolean }>("settings.json", {});
+      dataModeCache = { prefix: prefixForSettings(raw), at: Date.now() };
+      return dataModeCache.prefix;
     } finally {
-      sandboxInflight = null;
+      dataModeInflight = null;
     }
   })();
-  return sandboxInflight;
+  return dataModeInflight;
 }
 
 /** Clear the cache so the next read reflects a just-toggled value. */
 export function bustSandboxCache(): void {
-  sandboxCache = null;
+  dataModeCache = null;
 }
 
-/** Public async guard for external side-effects (Stripe, comms, push, cron). */
+/** Public async guard for external side-effects (Stripe, comms, push, cron):
+ *  true whenever ANY isolated test mode (Sandbox OR Simulation) is active, so
+ *  no real charge/message/job ever fires against test data. */
 export async function isSandboxActive(): Promise<boolean> {
-  return refreshSandboxFlag();
+  return (await refreshDataMode()) !== "";
 }
 
-/** Wipe the entire sandbox dataset (the reset action). Real/shared keys are
- *  never touched — only `sandbox:`-prefixed keys are removed. */
-export async function wipeSandboxData(): Promise<void> {
+/** Which isolated data mode is live right now — for banners, wipes and the
+ *  toggle routes. */
+export async function getActiveDataMode(): Promise<"live" | "sandbox" | "simulation"> {
+  const p = await refreshDataMode();
+  return p === SANDBOX_PREFIX ? "sandbox" : p === SIMULATION_PREFIX ? "simulation" : "live";
+}
+
+/** Wipe every key under one namespace prefix. Real/shared keys are never
+ *  touched — only `prefix`-prefixed keys are removed. */
+async function wipeNamespace(prefix: string): Promise<void> {
   if (useDB) {
     await ensureDB();
     const db = sql();
-    await db`DELETE FROM kv_store WHERE key LIKE ${SANDBOX_PREFIX + "%"}`;
+    await db`DELETE FROM kv_store WHERE key LIKE ${prefix + "%"}`;
     return;
   }
   await ensureDataDir();
@@ -205,7 +237,7 @@ export async function wipeSandboxData(): Promise<void> {
     const files = await readdir(DATA_DIR);
     await Promise.all(
       files
-        .filter((f) => f.startsWith(SANDBOX_PREFIX))
+        .filter((f) => f.startsWith(prefix))
         .map((f) => unlink(join(DATA_DIR, f)).catch(() => {})),
     );
   } catch {
@@ -213,33 +245,42 @@ export async function wipeSandboxData(): Promise<void> {
   }
 }
 
-function resolveKey(key: string): string {
-  if (SANDBOX_SHARED_KEYS.has(key)) return key;
-  return isSandboxActiveSync() ? SANDBOX_PREFIX + key : key;
+/** Wipe the entire Sandbox dataset (the reset action). */
+export async function wipeSandboxData(): Promise<void> {
+  return wipeNamespace(SANDBOX_PREFIX);
 }
 
-/** A DB handle that disappears in sandbox mode so the normalized-table
+/** Wipe the entire Simulation dataset — clears every hand-entered test row. */
+export async function wipeSimulationData(): Promise<void> {
+  return wipeNamespace(SIMULATION_PREFIX);
+}
+
+function resolveKey(key: string): string {
+  if (SANDBOX_SHARED_KEYS.has(key)) return key;
+  return activePrefixSync() + key;
+}
+
+/** A DB handle that disappears in any isolated mode so the normalized-table
  *  branches fall through to their kv path (which resolveKey namespaces). Used
  *  ONLY in sandboxed-domain fns; infra keeps calling getDb() directly.
  *
- *  Awaits the live sandbox flag first: the DB-mode domain branch picks its
- *  handle here BEFORE any read/write, so a cold module cache (RSC pages, the
- *  storefront checkout route, or any path not wrapped by withAdmin) must not be
- *  handed the REAL database while sandbox mode is on — that would both leak real
- *  data into the sandbox view and pollute the real tables with sandbox writes. */
+ *  Awaits the live mode first: the DB-mode domain branch picks its handle here
+ *  BEFORE any read/write, so a cold module cache (RSC pages, the storefront
+ *  checkout route, or any path not wrapped by withAdmin) must not be handed the
+ *  REAL database while a test mode is on — that would both leak real data into
+ *  the test view and pollute the real tables with test writes. */
 async function getDomainDb() {
-  await refreshSandboxFlag();
-  return isSandboxActiveSync() ? null : getDb();
+  await refreshDataMode();
+  return activePrefixSync() === "" ? getDb() : null;
 }
 
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
-  // Resolve the sandbox namespace from the LIVE flag, not a possibly-cold
-  // module cache. Separate Next bundles (RSC vs route handlers) and fresh
-  // serverless instances each start with an unprimed cache, which would
-  // silently read the REAL dataset while sandbox mode is on. Shared keys are
-  // never namespaced, so they skip the round-trip (and avoid recursing on
-  // settings.json, which refreshSandboxFlag reads raw).
-  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshSandboxFlag();
+  // Resolve the namespace from the LIVE mode, not a possibly-cold module cache.
+  // Separate Next bundles (RSC vs route handlers) and fresh serverless instances
+  // each start with an unprimed cache, which would silently read the REAL dataset
+  // while a test mode is on. Shared keys are never namespaced, so they skip the
+  // round-trip (and avoid recursing on settings.json, which refreshDataMode reads raw).
+  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshDataMode();
   return rawReadJSON(resolveKey(key), fallback);
 }
 
@@ -273,10 +314,10 @@ async function rawReadJSON<T>(key: string, fallback: T): Promise<T> {
 }
 
 async function writeJSON<T>(key: string, data: T): Promise<void> {
-  // Same namespace guard as readJSON: a cold cache must not route a sandbox
+  // Same namespace guard as readJSON: a cold cache must not route a test-mode
   // write into the REAL dataset (which would both corrupt real data and leave
-  // the sandbox surface empty). Shared keys are never namespaced.
-  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshSandboxFlag();
+  // the test surface empty). Shared keys are never namespaced.
+  if (!SANDBOX_SHARED_KEYS.has(key)) await refreshDataMode();
   await rawWriteJSON(resolveKey(key), data);
   invalidateKvCache(key);
 }
@@ -3074,6 +3115,11 @@ export interface AppSettings {
    *  Distinct from simulationEnabled (which only gates the Calculator).
    *  Toggled owner-only via /api/admin/sandbox. */
   sandboxModeEnabled?: boolean;
+  /** Whole-business simulation: like sandbox but starts EMPTY — the owner pushes
+   *  their own test orders/waste/costs/customers by hand as a pre-launch dry-run,
+   *  isolated behind a `sim:` namespace. Toggling off hides every test row. Mutually
+   *  exclusive with sandboxModeEnabled. Toggled owner-only via /api/admin/simulation. */
+  simulationModeEnabled?: boolean;
   /** Display-currency config — customer-side switcher + admin rates.
    *  Charges always settle in PLN; this controls the rendered amount. */
   currency?: CurrencyConfig;
@@ -3302,9 +3348,9 @@ function mergeSettings(
 
 export async function getSettings(): Promise<AppSettings> {
   const saved = await readJSON<Partial<AppSettings>>("settings.json", {});
-  // Prime the sandbox-flag cache off the same (shared, never-namespaced) read
-  // so cold requests pick up the mode without a second round-trip.
-  sandboxCache = { on: saved.sandboxModeEnabled === true, at: Date.now() };
+  // Prime the data-mode cache off the same (shared, never-namespaced) read
+  // so cold requests pick up the active mode without a second round-trip.
+  dataModeCache = { prefix: prefixForSettings(saved), at: Date.now() };
   return mergeSettings(saved);
 }
 
@@ -3313,10 +3359,10 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
     const current = await readJSON<Partial<AppSettings>>("settings.json", {});
     const merged = mergeSettings(current, updates);
     await writeJSON("settings.json", merged);
-    // Prime the sandbox-flag cache to the new value so the mode takes effect
+    // Prime the data-mode cache to the new value so the mode takes effect
     // immediately in-process (a flipped toggle must be live for the very next
     // read/write — e.g. the seeder that runs right after enabling).
-    sandboxCache = { on: merged.sandboxModeEnabled === true, at: Date.now() };
+    dataModeCache = { prefix: prefixForSettings(merged), at: Date.now() };
     return merged;
   });
 }
@@ -9028,14 +9074,74 @@ export async function getTodayAiSpendGrosze(): Promise<number> {
     getDailyAiSpendGrosze(sinceIso),
     readJSON<AgentEvent[]>("agent-events.json", []),
   ]);
-  let offLedger = 0;
+  return chatGrosze + offLedgerAiSpend(events, sinceIso);
+}
+
+/** Warsaw-local midnight (as a UTC instant ISO) for the calendar day that the
+ *  instant `at` falls in — DST-correct, mirrors chainPeriodStarts(). */
+function chainMidnightIso(at: Date): string {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: CHAIN_TZ, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(at).map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  const y = +p.year, mo = +p.month, d = +p.day;
+  const offset = Date.UTC(y, mo - 1, d, +p.hour, +p.minute, +p.second) - at.getTime();
+  return new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) - offset).toISOString();
+}
+
+/** Off-ledger AI spend (meeting/schedule/work agent-events) within [from, to).
+ *  Defensive against malformed rows: a missing `at`/`actor` is skipped rather
+ *  than throwing or slipping past the window guard. */
+function offLedgerAiSpend(events: AgentEvent[], fromIso: string, toIso?: string): number {
+  let total = 0;
   for (const e of events) {
-    if (e.at < sinceIso || typeof e.costGrosze !== "number") continue;
-    if (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:")) {
-      offLedger += e.costGrosze;
+    if (typeof e.costGrosze !== "number" || typeof e.at !== "string" || e.at < fromIso || (toIso && e.at >= toIso)) continue;
+    if (typeof e.actor === "string" && (e.actor.startsWith("meeting:") || e.actor.startsWith("schedule:") || e.actor.startsWith("work:"))) {
+      total += e.costGrosze;
     }
   }
-  return chatGrosze + offLedger;
+  return total;
+}
+
+/**
+ * AI spend for the Morning Brief — a closed-day report, so it never includes
+ * the partial current day: yesterday's spend, the trailing 30 complete days,
+ * and the day-over-day % change (yesterday vs the day before). Buckets the same
+ * two ledgers as getTodayAiSpendGrosze (ai_messages chat + off-ledger
+ * meeting/schedule/work agent-events) by Warsaw midnight (DST-correct).
+ */
+export async function getAiSpendBriefGrosze(): Promise<{
+  yesterdayGrosze: number;
+  last30Grosze: number;
+  changePct: number | null;
+}> {
+  const now = new Date();
+  const todayStartIso = chainMidnightIso(now);
+  // Step back 12h from each midnight to land safely inside the prior day (DST-proof).
+  const yestStartIso = chainMidnightIso(new Date(Date.parse(todayStartIso) - 12 * 3600_000));
+  const prevStartIso = chainMidnightIso(new Date(Date.parse(yestStartIso) - 12 * 3600_000));
+  // 30 complete days ending at yesterday's close (a one-hour DST wobble at the
+  // far boundary is immaterial to a month-long sum).
+  const thirtyStartIso = new Date(Date.parse(todayStartIso) - 30 * 86_400_000).toISOString();
+
+  const [chatYest, chatPrev, chat30, events] = await Promise.all([
+    getDailyAiSpendGrosze(yestStartIso, todayStartIso),
+    getDailyAiSpendGrosze(prevStartIso, yestStartIso),
+    getDailyAiSpendGrosze(thirtyStartIso, todayStartIso),
+    readJSON<AgentEvent[]>("agent-events.json", []),
+  ]);
+
+  const yesterdayGrosze = chatYest + offLedgerAiSpend(events, yestStartIso, todayStartIso);
+  const prevDayGrosze = chatPrev + offLedgerAiSpend(events, prevStartIso, yestStartIso);
+  const last30Grosze = chat30 + offLedgerAiSpend(events, thirtyStartIso, todayStartIso);
+
+  return {
+    yesterdayGrosze,
+    last30Grosze,
+    changePct: prevDayGrosze > 0 ? Math.round(((yesterdayGrosze - prevDayGrosze) / prevDayGrosze) * 1000) / 10 : null,
+  };
 }
 
 // --- Agent HQ: per-agent scorecard stats + KPI actuals ----------------------

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logCronRun, withCron } from "@/lib/cron";
 import { logger } from "@/lib/logger";
-import { isSandboxActive } from "@/lib/store";
+import { getActiveDataMode } from "@/lib/store";
 
 /**
  * Single-cron fan-out dispatcher. Vercel Hobby caps the deployment
@@ -26,34 +26,46 @@ import { isSandboxActive } from "@/lib/store";
  * When the project upgrades to Vercel Pro, switch back to the
  * per-job schedule by editing vercel.json — the sibling routes
  * have no dispatcher-specific code so the move is free.
+ *
+ * Data modes (see src/lib/store.ts):
+ *   - Sandbox    → skip everything (a throwaway demo; no point spending
+ *                  AI budget or running ops on seeded data).
+ *   - Simulation → run the analysis / AI jobs so they learn from and report
+ *                  on the owner's hand-entered dry-run data (the operator can
+ *                  then check their output), but skip jobs with real-world
+ *                  reach: customer sends (SMS/WhatsApp/email/reminders),
+ *                  billing, and infra (DB backup / retention-trim of real
+ *                  audit tables). Those carry `realWorld: true` below.
  */
 
 const ALL_JOBS = [
-  { path: "/api/admin/cron/outbox-drain", everyDay: true },
+  // Drains the outbox → real SMS/email recipients.
+  { path: "/api/admin/cron/outbox-drain", everyDay: true, realWorld: true },
   { path: "/api/admin/cron/slots-auto-close", everyDay: true },
   { path: "/api/admin/cron/daily-summary", everyDay: true },
   { path: "/api/admin/cron/customers-lapsed-detect", everyDay: true },
   { path: "/api/admin/cron/weather-staffing", everyDay: true },
   // Audit §3.4 — corporate auto-pre-order reminders fire daily and self-
   // skip when no corporate has a schedule matching today within the
-  // lead window.
-  { path: "/api/admin/cron/corporate-preorder-reminder", everyDay: true },
+  // lead window. Sends to real corporate clients.
+  { path: "/api/admin/cron/corporate-preorder-reminder", everyDay: true, realWorld: true },
   { path: "/api/admin/cron/inventory-variance", everyDay: false, dow: 0 },
   // Audit §3 row 2 — PAR-driven draft POs every day so the operator
   // walks in to a populated drafts queue instead of eyeballing the
   // dough bucket and calling the supplier.
   { path: "/api/admin/cron/par-purchase-orders", everyDay: true },
   { path: "/api/admin/cron/loyalty-expire-points", everyDay: false, dom: 1 },
-  // Audit §3.4 — monthly corporate invoice on the 1st of each month.
-  { path: "/api/admin/cron/corporate-invoices", everyDay: false, dom: 1 },
+  // Audit §3.4 — monthly corporate invoice on the 1st of each month. Bills
+  // real corporate accounts.
+  { path: "/api/admin/cron/corporate-invoices", everyDay: false, dom: 1, realWorld: true },
   { path: "/api/admin/cron/royalty-weekly", everyDay: false, dow: 1 },
   // Audit §2 defensibility — weekly RFM rebuild powers the data moat:
   // personalized upsell, lapse detection, CLTV-by-segment dashboards.
   { path: "/api/admin/cron/customer-segments-rebuild", everyDay: false, dow: 1 },
   // Audit §6 #5 — daily retention-trim of webhook_events + audit_log
   // tables. Without this they grow unbounded and the customer query path
-  // slows over months.
-  { path: "/api/admin/cron/retention-trim", everyDay: true },
+  // slows over months. Operates on REAL infra tables (never namespaced).
+  { path: "/api/admin/cron/retention-trim", everyDay: true, realWorld: true },
   // Audit §3 — daily sales-per-labor-hour + schedule-vs-sales gap
   // calculation, written to a daily summary the dashboard can read.
   { path: "/api/admin/cron/labor-efficiency", everyDay: true },
@@ -61,13 +73,13 @@ const ALL_JOBS = [
   // the Meetings tab. Self-skips when ANTHROPIC_API_KEY is unset.
   { path: "/api/admin/cron/boardroom-briefing", everyDay: true },
   // WhatsApp abandoned-cart recovery — re-open template to carts left unpaid.
-  // Self-skips when the toggle is off or no template is configured.
-  { path: "/api/admin/cron/whatsapp-abandoned-cart", everyDay: true },
-  // WhatsApp broadcast backstop — finishes any campaign left mid-send.
-  { path: "/api/admin/cron/whatsapp-broadcast-drain", everyDay: true },
+  // Self-skips when the toggle is off or no template is configured. Sends real WhatsApp.
+  { path: "/api/admin/cron/whatsapp-abandoned-cart", everyDay: true, realWorld: true },
+  // WhatsApp broadcast backstop — finishes any campaign left mid-send. Sends real WhatsApp.
+  { path: "/api/admin/cron/whatsapp-broadcast-drain", everyDay: true, realWorld: true },
   // Appendix A — nightly logical DB backup to S3. Self-skips when S3 isn't
-  // configured. Restore: docs/runbooks/backup-restore.md.
-  { path: "/api/admin/cron/db-backup", everyDay: true },
+  // configured. Backs up the REAL database. Restore: docs/runbooks/backup-restore.md.
+  { path: "/api/admin/cron/db-backup", everyDay: true, realWorld: true },
 ] as const;
 
 function shouldRun(
@@ -84,11 +96,16 @@ export async function POST(req: NextRequest) {
   const auth = await withCron(req);
   if (auth) return auth;
 
-  // Sandbox mode pauses the whole business — skip every scheduled job (they
-  // send real SMS/WhatsApp, generate invoices, run backups, etc.).
-  if (await isSandboxActive()) {
+  // Sandbox mode pauses the whole business — skip every scheduled job (it's a
+  // throwaway demo). Simulation mode is a genuine pre-launch dry-run: let the
+  // analysis / AI jobs run so they learn from and report on the owner's
+  // hand-entered data, but still skip every job with real-world reach
+  // (customer sends, billing, infra backups/trims) — see `realWorld` above.
+  const mode = await getActiveDataMode();
+  if (mode === "sandbox") {
     return NextResponse.json({ skipped: "sandbox" });
   }
+  const simulation = mode === "simulation";
 
   const now = new Date();
   const origin = req.nextUrl.origin;
@@ -97,10 +114,14 @@ export async function POST(req: NextRequest) {
     ? { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }
     : { "Content-Type": "application/json" };
 
-  const results: { path: string; status: number; ok: boolean; error?: string }[] = [];
+  const results: { path: string; status: number; ok: boolean; error?: string; skipped?: string }[] = [];
   for (const job of ALL_JOBS) {
     if (!shouldRun(job, now)) {
       results.push({ path: job.path, status: 0, ok: true });
+      continue;
+    }
+    if (simulation && "realWorld" in job && job.realWorld) {
+      results.push({ path: job.path, status: 0, ok: true, skipped: "simulation" });
       continue;
     }
     try {

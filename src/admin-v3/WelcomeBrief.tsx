@@ -26,6 +26,7 @@ interface Brief {
   constraint: { peakHour: number; peakAvgPerHour: number; peakTotal: number } | null;
   leading: { repeatRatePct: number | null; newCustomersPerMonth: number | null; bookingsCount: number; bookingsAttendance: number; pulse: number | null; pulseDeltaPts: number | null; pulseResponses: number };
   anomaly: { city: string; avgTicketGrosze: number; chainAvgGrosze: number; deltaPct: number } | null;
+  ai: { yesterdayGrosze: number; last30Grosze: number; changePct: number | null } | null;
   locations: { slug: string; city: string; revenue: number; orderCount: number; avgOrderValue: number | null }[];
 }
 interface Notif { id: string; type: string; title: string; message: string; createdAt: string; read: boolean }
@@ -204,6 +205,32 @@ export function WelcomeBrief({ name, locationCount, openNow }: { name: string; l
           </div>
         )}
 
+        {/* AI AGENT SPEND */}
+        {!loading && brief?.ai && (
+          <div className="wb-group">
+            <div className="wb-glabel">AI agents <span className="n">· spend</span> <InfoButton title="AI agent spend" {...AI_SPEND_EXPLAINER} /></div>
+            <div className="wb-grid4">
+              <div className="wb-tcell">
+                <div className="k">Yesterday</div>
+                <div className="v wb-num">{exact(brief.ai.yesterdayGrosze)}</div>
+                {brief.ai.changePct != null
+                  ? <div className="d">{brief.ai.changePct >= 0 ? "▲" : "▼"} {Math.abs(brief.ai.changePct)}% vs prior day</div>
+                  : <div className="d">closed day</div>}
+              </div>
+              <div className="wb-tcell">
+                <div className="k">Last 30 days</div>
+                <div className="v wb-num">{exact(brief.ai.last30Grosze)}</div>
+                <div className="d">{exact(Math.round(brief.ai.last30Grosze / 30))}/day avg</div>
+              </div>
+              <div className="wb-tcell">
+                <div className="k">Day-over-day</div>
+                <div className="v wb-num">{brief.ai.changePct != null ? `${brief.ai.changePct >= 0 ? "+" : "−"}${Math.abs(brief.ai.changePct)}%` : "—"}</div>
+                <div className="d">vs the prior day</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ANOMALY */}
         {!loading && brief?.anomaly && (
           <div className="wb-group">
@@ -282,4 +309,11 @@ const PULSE_EXPLAINER = {
   plain: "If 60 guests answered this month — 33 gave 5★ (promoters), 9 gave ≤3★ (detractors) — your Pulse is round((33−9)/60×100) = +40. A ▲ on last month means the fixes are landing; a ▼ means a snag is spreading before it shows up in revenue.",
   tips: "Open Surveys → Responses and fix the top recurring detractor comment first; turn 4★ passives into promoters with a small post-order delight; activate the survey whose 'fires-on' moment you most want to read.",
   methodology: "pulseBreakdown over getSurveyResponses: promoter = 5★, detractor ≤ 3★, passive = 4★; Pulse = round((promoters − detractors) ÷ total × 100). Last-30-day window, with the trend versus the prior 30 days. Computed server-side in /api/admin/welcome.",
+};
+const AI_SPEND_EXPLAINER = {
+  description: "What your AI agents cost in LLM spend yesterday, across the last 30 days, and how yesterday moved versus the day before.",
+  institutional: "AI spend is an operating cost that must earn its keep — read it next to the decisions and segments the agents produced. A morning brief reports on closed days, so it never shows the partial current day. The 30-day total is the run-rate to budget against; the day-over-day change is the anomaly flag — a sharp jump warrants a look at what ran, and a drop to zero means the agents stopped working (missing API key, budget exhausted, or — by design — Sandbox mode paused every job). A non-zero figure here is the receipt that the autonomous board actually ran on your numbers; in Simulation mode it's your dry-run check that the agents analysed the data you hand-entered.",
+  plain: "Say yesterday the daily briefing + segment rebuild cost 5.30 zł, the prior day was 4.70 zł (so +13% day-over-day), and the last 30 days total 142 zł — about 4.70 zł a day. If yesterday had read 0.00 you'd know the agents never fired and go check the key or the budget.",
+  tips: "Set the daily cap in Agent HQ → Settings → daily AI budget, and turn the daily auto-briefing on/off there. If the 30-day run-rate is creeping up, trim each agent's per-run cap or effort, or narrow their tool allowlists so fewer hops are needed. If yesterday is zero when it shouldn't be, confirm ANTHROPIC_API_KEY is set and you're not in Sandbox mode.",
+  methodology: "getAiSpendBriefGrosze sums two ledgers — ai_messages.cost_grosze (chat) + off-ledger meeting/schedule/work agent-events — bucketed by Warsaw midnight (DST-correct): yesterday = the last complete day; 30 days = the trailing 30 complete days ending yesterday; change = (yesterday − prior day) ÷ prior day. Computed server-side in /api/admin/welcome.",
 };

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdmin } from "@/lib/api-middleware";
 import {
   getSummary, getInsights, getOpsGoals, getTruckEvents, getSurveyResponses,
-  computeHourlyThroughput, computeCohortSnapshot,
+  computeHourlyThroughput, computeCohortSnapshot, getAiSpendBriefGrosze,
 } from "@/lib/store";
 import { computeLaborEfficiencyDaily } from "@/lib/labor-efficiency";
 import { pulseBreakdown } from "@/lib/surveys";
@@ -28,7 +28,7 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
   const daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate();
   const in14 = iso(new Date(now.getTime() + 14 * 864e5));
 
-  const [sY, sP, sM, ins, goals, eff, hourly, cohort, events, surveys] = await Promise.all([
+  const [sY, sP, sM, ins, goals, eff, hourly, cohort, events, surveys, aiSpend] = await Promise.all([
     getSummary(undefined, yest, yest),
     getSummary(undefined, prev, prev),
     getSummary(undefined, monthStart, today),
@@ -39,6 +39,7 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
     computeCohortSnapshot(30).catch(() => null),
     getTruckEvents({ from: today, to: in14 }).catch(() => []),
     getSurveyResponses().catch(() => []),
+    getAiSpendBriefGrosze().catch(() => null),
   ]);
 
   // ── yesterday's close + contribution per order ──
@@ -114,6 +115,12 @@ export const GET = withAdmin({ roles: ["manager"] }, async () => {
     constraint,
     leading,
     anomaly,
+    // AI agent spend — a closed-day view: yesterday, the trailing 30 days, and
+    // the day-over-day % change, so the operator can see the agents are working
+    // (and what they cost). null when the ledger can't be read.
+    ai: aiSpend
+      ? { yesterdayGrosze: aiSpend.yesterdayGrosze, last30Grosze: aiSpend.last30Grosze, changePct: aiSpend.changePct }
+      : null,
     locations: locs.map((l) => ({ slug: l.locationSlug, city: l.city, revenue: l.revenue, orderCount: l.orderCount, avgOrderValue: l.avgOrderValue ?? null })),
   });
 });

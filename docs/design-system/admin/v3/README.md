@@ -502,16 +502,19 @@ auth canvas's signature lighting and the sign-in lockup:
   named from the agents roster), **what needs you** (unread notifications), **the
   constraint** (your busiest hour / throughput ceiling), **leading indicators**
   (30-day repeat rate, new customers/mo, the 14-day bookings pipeline, and the
-  **Pulse/NPS** score + 30-day trend), an **anomaly to copy** (the location whose
-  avg ticket most beats the chain), the **per-location** split, **today's
-  goal/forecast + profit-per-order**, and a demoted **yesterday recap**. The
-  analytics half is computed **server-side in one pass** at
-  `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` / `getOpsGoals` /
-  `computeLaborEfficiencyDaily` / `computeHourlyThroughput` /
+  **Pulse/NPS** score + 30-day trend), an **AI agents** module (LLM spend as a
+  closed-day view — **yesterday**, the **trailing 30 days**, and the **day-over-day
+  % change** — the "are the agents working / what do they cost" check, doubling as
+  the Simulation-mode dry-run receipt; no partial-current-day figure on a morning
+  brief), an **anomaly to copy** (the location whose avg ticket most beats the
+  chain), the **per-location** split, **today's goal/forecast + profit-per-order**,
+  and a demoted **yesterday recap**. The analytics half is computed **server-side
+  in one pass** at `/api/admin/welcome/route.ts` (`getSummary` / `getInsights` /
+  `getOpsGoals` / `computeLaborEfficiencyDaily` / `computeHourlyThroughput` /
   `computeCohortSnapshot` / `getTruckEvents` + `pulseBreakdown` over
-  `getSurveyResponses`) so it can't drift from Dashboard / Reports / Calculator /
-  Surveys; decisions + alerts stay on `…/ai/boardroom/{approvals,agents}` +
-  `…/notifications`. Every module is live data and **degrades to nothing** when
+  `getSurveyResponses` + `getAiSpendBriefGrosze`) so it can't drift from
+  Dashboard / Reports / Calculator / Surveys / Agent HQ; decisions + alerts stay
+  on `…/ai/boardroom/{approvals,agents}` + `…/notifications`. Every module is live data and **degrades to nothing** when
   its source 403s/empties — never a placeholder (pacing omits with no revenue
   goal set; Pulse omits below 3 recent answers). The constraint is the real
   busiest-hour load signal, **not** a fabricated capacity %; margin shows as
@@ -1029,11 +1032,14 @@ auth canvas's signature lighting and the sign-in lockup:
 - [x] Settings (`/admin/settings`, owner-only): six tabs — **General**
   (business details + delivery fee / min order + social links, Save),
   **Storefront** (layout visibility toggles, toggle = saved), **Simulations**
-  (every simulation in one explicit place — the **Calculator** toggle, plus the
-  owner-only **Sandbox mode** switch + "Reset sandbox" that flips the whole app
-  onto an isolated `sandbox:`-namespaced demo dataset via `/api/admin/sandbox`;
-  a footnote names Floor Twin + Demand Exchange as always-on operational
-  models, not toggled sandboxes),
+  (every simulation in one explicit place — the **Calculator** toggle, plus two
+  owner-only whole-app data modes: **Sandbox mode** switch + "Reset sandbox" that
+  flips the whole app onto an isolated `sandbox:`-namespaced *seeded demo* dataset
+  via `/api/admin/sandbox`, and **Simulation mode** switch + "Wipe simulation data"
+  that flips it onto an isolated `sim:`-namespaced dataset that starts *empty* for a
+  hand-entered pre-launch dry-run via `/api/admin/simulation-mode` — the two are
+  mutually exclusive, enabling either forces the other off; a footnote names Floor
+  Twin + Demand Exchange as always-on operational models, not toggled sandboxes),
   **Security** (restored, flag #5: read-only "how you sign in" panel from
   `/api/admin/me` + refund/comp caps + free-delivery thresholds editor —
   passkey/MFA *enrolment* lives in Users, not duplicated here), **Themes**

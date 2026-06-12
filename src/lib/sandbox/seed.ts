@@ -12,7 +12,7 @@
 import { getActiveLocationsAsync } from "@/lib/locations-store";
 import { getMenuWithOverrides } from "@/data/menus";
 import {
-  isSandboxActive,
+  getActiveDataMode,
   createOrder,
   saveTable,
   createSlot,
@@ -36,6 +36,7 @@ import {
   getIngredients,
   fireKdsTickets,
   recomputeCustomerRollup,
+  appendAgentEvent,
 } from "@/lib/store";
 import { createBooking } from "@/lib/booking";
 import type {
@@ -157,7 +158,7 @@ const STAFF_ROLES: { role: StaffRole; rate: number }[] = [
 ];
 
 export async function seedSandbox(): Promise<void> {
-  if (!(await isSandboxActive())) {
+  if ((await getActiveDataMode()) !== "sandbox") {
     throw new Error("seedSandbox refused: sandbox mode is not active");
   }
   const locations = await getActiveLocationsAsync();
@@ -171,6 +172,29 @@ export async function seedSandbox(): Promise<void> {
   }
   await addPointAdjustment({ phone: GUESTS[0].phone, amount: 150, reason: "Anniversary gesture (demo)", adjustedBy: "owner", adjustedAt: iso(days(2)) });
   await addPointAdjustment({ phone: GUESTS[2].phone, amount: -50, reason: "Goodwill correction (demo)", adjustedBy: "manager", adjustedAt: iso(days(5)) });
+
+  // AI agent spend (chain-wide) — a daily boardroom briefing plus rotating
+  // scheduled self-reviews across the trailing ~2 weeks, so the Morning Brief's
+  // "AI agents · spend" module (yesterday / last 30 days / day-over-day) and Agent
+  // HQ aren't empty. Actors meeting:/schedule: are the off-ledger rows the spend
+  // helpers sum. d=1 is yesterday, d=2 the prior day — both are populated so the
+  // day-over-day change has a denominator. All offsets stay inside the 30d window.
+  const aiPersonas = ["coo", "cfo", "cmo", "ceo"];
+  for (let d = 1; d <= 14; d++) {
+    await appendAgentEvent({
+      agentId: "ceo", type: "schedule", actor: "meeting:daily",
+      summary: "Daily boardroom briefing — chain numbers reviewed",
+      costGrosze: 250 + (d % 4) * 15, ok: true, at: iso(days(d) + hours(3)),
+    });
+    if (d % 2 === 1 || d <= 2) {
+      const a = aiPersonas[d % aiPersonas.length];
+      await appendAgentEvent({
+        agentId: a, type: "run", actor: "schedule:cron",
+        summary: `${a.toUpperCase()} scheduled self-review`,
+        costGrosze: 100 + (d % 3) * 20, ok: true, at: iso(days(d) + hours(6)),
+      });
+    }
+  }
 
   // Suppliers (chain-wide) + a couple of POs.
   const suppliers = [
